@@ -11,7 +11,7 @@ let compress uncompressed =
     Hashtbl.add dictionary str i
   done;
 
-  let f = (fun (w, dict_size, result) c ->
+  let f  (w, dict_size, result) c =
     let c = String.make 1 c in
     let wc = w ^ c in
     if Hashtbl.mem dictionary wc then
@@ -23,7 +23,7 @@ let compress uncompressed =
         let this = Hashtbl.find dictionary w in
         (c, dict_size + 1, this::result)
       end
-  ) in
+  in
   let w, _, result =
     String.fold f ("", dict_size, []) uncompressed
   in
@@ -43,14 +43,14 @@ let decompress compressed =
   (* build the dictionary *)
   let dict_size = 256 in
   let dictionary = Hashtbl.create 397 in
-  for i=0 to pred dict_size do
+  for i=0 to dict_size - 1 do
     let str = String.make 1 (char_of_int i) in
     Hashtbl.add dictionary i str
   done;
 
   let w, compressed =
     match compressed with
-    | hd::tl -> (String.make 1 (char_of_int hd)), tl
+    | hd::tl -> String.make 1 @@ char_of_int hd, tl
     | [] -> failwith "empty input"
   in
 

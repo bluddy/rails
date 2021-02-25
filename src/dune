@@ -1,6 +1,6 @@
-(library
-  (name lzw)
-  (libraries containers))
+(executable
+  (name pic_dump)
+  (libraries containers lzw))
 
 (env
   (dev

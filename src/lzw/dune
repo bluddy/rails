@@ -1,0 +1,4 @@
+(library
+  (name lzw)
+  (libraries containers))
+
