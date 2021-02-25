@@ -1,0 +1,7 @@
+(library
+  (name lzw)
+  (libraries containers))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
