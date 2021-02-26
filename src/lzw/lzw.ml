@@ -1,6 +1,8 @@
 (** Lempel-Ziv-Welch compression algorithm *)
 open Containers
 
+(* TODO: dynamic bit sizes *)
+
 (** compress a string to a list of output symbols *)
 let compress uncompressed =
   (* build the dictionary *)
@@ -38,40 +40,129 @@ let compress uncompressed =
 
 exception ValueError of string
 
+module ReadBytes = struct
+  type t = {
+    buffer: Bytes.t;
+    mutable byte_idx: int;
+    mutable bit_idx: int;
+  }
+
+  let of_bytes b = {buffer=b; byte_idx=0; bit_idx=0}
+
+  let eof b = b.byte_idx >= Bytes.length b.buffer
+
+  let get_bits v num_bits =
+    assert (num_bits >= 8);
+    assert (num_bits <= 16);
+
+    (* get 3 bytes *)
+    let word = Bytes.get_uint8 v.buffer v.byte_idx in
+    let word =
+      if v.byte_idx < Bytes.length v.buffer - 1 then
+        let byte2 = Bytes.get_uint8 v.buffer (v.byte_idx + 1) in
+        word lor (byte2 lsl 8)
+      else word
+    in
+    let word =
+      if v.byte_idx < Bytes.length v.buffer - 2 then
+        let byte3 = Bytes.get_uint8 v.buffer (v.byte_idx + 2) in
+        word lor (byte3 lsl 16)
+      else word
+    in
+
+    (* shift right to get needed bits *)
+    let word = word lsr v.bit_idx in
+
+    (* mask out unneeded bits *)
+    let mask = lnot (0x7FFFFFFF lsl num_bits) in
+    let res = word land mask in
+
+    let () =
+      match num_bits with
+      | 8  -> v.byte_idx <- v.byte_idx + 1
+      | 16 -> v.byte_idx <- v.byte_idx + 2
+      | _ ->
+          v.byte_idx <- v.byte_idx + 1;
+          v.bit_idx <- v.bit_idx + (num_bits - 8);
+          if v.bit_idx >= 8 then begin
+            v.byte_idx <- v.byte_idx + 1;
+            v.bit_idx <- v.bit_idx - 8
+          end
+    in
+    res
+
+  let iter_bits v i f =
+    let bit_size = ref i in
+    while not @@ eof v do
+      let b = f (get_bits v !bit_size) in
+      bit_size := b
+    done
+
+  let fold_bits v i f ~zero =
+    let bit_size = ref i in
+    let acc_ref = ref zero in
+    while not @@ eof v do
+      let acc, b = f !acc_ref !bit_size (get_bits v !bit_size) in
+      acc_ref := acc;
+      bit_size := b;
+    done;
+    !acc_ref
+end
+
+
 (** decompress a list of output symbols to a string *)
-let decompress compressed =
+let decompress compressed ~max_bit_size =
   (* build the dictionary *)
-  let dict_size = 256 in
+  let compressed = ReadBytes.of_bytes compressed in
   let dictionary = Hashtbl.create 397 in
-  for i=0 to dict_size - 1 do
-    let str = String.make 1 (char_of_int i) in
-    Hashtbl.add dictionary i str
-  done;
 
-  let w, compressed =
-    match compressed with
-    | hd::tl -> String.make 1 @@ char_of_int hd, tl
-    | [] -> failwith "empty input"
+  let reset () =
+    let dict_size = 256 in
+    Hashtbl.reset dictionary;
+    for i=0 to dict_size - 1 do
+      let str = String.make 1 (char_of_int i) in
+      Hashtbl.add dictionary i str
+    done
+  in
+  reset ();
+
+  let w =
+    let x = ReadBytes.get_bits compressed 8 in
+    Hashtbl.find dictionary x
   in
 
-  let result = w::[] in
+  let result = Buffer.create 1024 in
 
-  let result, _, _ =
-    List.fold_left (fun (result, w, dict_size) k ->
-      let entry =
-        if Hashtbl.mem dictionary k then
-          Hashtbl.find dictionary k
-        else if k = Hashtbl.length dictionary then
-          w ^ (String.make 1 w.[0])
-        else
-          raise(ValueError(Printf.sprintf "Bad compressed k: %d" k))
-      in
-      let result = entry :: result in
+  let _ =
+    ReadBytes.fold_bits compressed 8 ~zero:w @@
+      fun w bit_size k ->
+        let entry =
+          match Hashtbl.find_opt dictionary k with
+          | Some s ->
+              Printf.printf "Found %d in dictionary: len %d\n" k (String.length s);
+              s
+          | None when k = Hashtbl.length dictionary -> (* Sanity check *)
+              (* Add first letter of last matched word *)
+              w ^ String.sub w 0 1
+          | _ ->
+              raise @@
+              ValueError(Printf.sprintf "Bad compressed k: %d, size is %d" k (Hashtbl.length dictionary))
+        in
+        Buffer.add_string result entry;
 
-      (* add (w ^ entry.[0]) to the dictionary *)
-      Hashtbl.add dictionary dict_size (w ^ (String.make 1 entry.[0]));
-      (result, entry, dict_size + 1)
-    ) (result, w, dict_size)
-    compressed
+        (* add (w ^ entry.[0]) to the dictionary *)
+        let dict_size = Hashtbl.length dictionary in
+        Hashtbl.add dictionary dict_size (w ^ (String.sub entry 0 1));
+
+        let bit_size =
+          let dict_size = dict_size + 1 in
+          if dict_size > 1 lsl bit_size then bit_size + 1 else bit_size
+        in
+        if bit_size > max_bit_size then begin
+          reset ();
+          (entry, 8)
+        end else
+          (entry, bit_size)
   in
-  (List.rev result)
+  Buffer.contents result
+

@@ -47,7 +47,8 @@ let decode_rle bytes =
         rle := true
     | 0 when !rle ->
         Buffer.add_uint8 out 0x90;
-        rle := false
+        rle := false;
+        last_val := 0x90
     | x when !rle ->
         (* do one less than normal *)
         for i = 0 to x - 2 do
@@ -69,23 +70,28 @@ let int_list_of_bytes bytes =
   List.rev !compressed
 
 let main filename =
-  let rle_bytes =
+  let bytes =
     IO.with_in filename @@
       fun in_channel -> IO.read_all_bytes in_channel
   in
-  let bytes = decode_rle rle_bytes in
-  let compressed = int_list_of_bytes bytes in
-
-  let decompressed = Lzw.decompress compressed
-    |> String.concat ""
+  let start_offset =
+    match Bytes.get_uint16_le bytes 0 with
+    | 0xF -> 23
+    | 0x7 -> 7
+    | _ -> failwith "Unknown format"
   in
+  let rle_bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
+
+  let compressed = decode_rle rle_bytes in
+
+  let decompressed = Lzw.decompress compressed ~max_bit_size:10 in
 
   print_endline "--- Pic dump";
 
   Printf.printf "Length original: %d\n" (Bytes.length rle_bytes);
   Printf.printf "Length rle decompressed: %d\n" (Bytes.length bytes);
 
-  Printf.printf "Length compressed: %d\n" (List.length compressed);
+  Printf.printf "Length compressed: %d\n" (Bytes.length compressed);
   Printf.printf "Length decompressed: %d\n" (String.length decompressed);
   ()
 
