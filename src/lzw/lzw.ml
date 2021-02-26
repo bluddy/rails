@@ -130,22 +130,24 @@ let decompress compressed ~max_bit_size =
   in
   reset ();
 
+  let result = Buffer.create 1024 in
+
   let w =
     let x = ReadBytes.get_bits compressed 9 in
     Hashtbl.find dictionary x
   in
-
-  let result = Buffer.create 1024 in
+  Buffer.add_string result w;
 
   let _ =
-    ReadBytes.fold_bits compressed 9 ~zero:w @@
-      fun w bit_size k ->
+    (* Start at 257 rather than 256 for no reason *)
+    ReadBytes.fold_bits compressed 9 ~zero:(w,257) @@
+      fun (w,count) bit_size k ->
         let entry =
           match Hashtbl.find_opt dictionary k with
           | Some s ->
-              Printf.printf "Found %d(0x%x) bitsize=%d in dictionary: len %d\n" k k bit_size (String.length s);
+              Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s);
               s
-          | None when k = Hashtbl.length dictionary -> (* Sanity check *)
+          | None when k = count -> (* Only option *)
               (* Add first letter of last matched word *)
               w ^ String.sub w 0 1
           | _ ->
@@ -155,18 +157,17 @@ let decompress compressed ~max_bit_size =
         Buffer.add_string result entry;
 
         (* add (w ^ entry.[0]) to the dictionary *)
-        let dict_size = Hashtbl.length dictionary in
-        Hashtbl.add dictionary dict_size (w ^ (String.sub entry 0 1));
+        Hashtbl.replace dictionary count (w ^ (String.sub entry 0 1));
 
         let bit_size =
-          let dict_size = dict_size + 1 in
-          if dict_size > 1 lsl bit_size then bit_size + 1 else bit_size
+          let count' = count + 1 in
+          if count' > 1 lsl bit_size then bit_size + 1 else bit_size
         in
         if bit_size > max_bit_size then begin
           reset ();
-          (entry, 8)
+          ((entry, count+1), 8)
         end else
-          (entry, bit_size)
+          ((entry, count+1), bit_size)
   in
   Buffer.to_bytes result
 
