@@ -71,11 +71,11 @@ module ReadBytes = struct
         word lor (byte3 lsl 16)
       else word
     in
-    Printf.printf "word=0x%x\n" word;
+    (* Printf.printf "word=0x%x\n" word; *)
 
     (* shift right to get needed bits *)
     let word = word lsr v.bit_idx in
-    Printf.printf "post-shift word=0x%x\n" word;
+    (* Printf.printf "post-shift word=0x%x\n" word; *)
 
     (* mask out unneeded bits *)
     let mask = lnot (0x7FFFFFFF lsl num_bits) in
