@@ -70,6 +70,8 @@ let int_list_of_bytes bytes =
   List.rev !compressed
 
 let main filename =
+  print_endline "--- Pic dump";
+
   let bytes =
     IO.with_in filename @@
       fun in_channel -> IO.read_all_bytes in_channel
@@ -80,19 +82,20 @@ let main filename =
     | 0x7 -> 7
     | _ -> failwith "Unknown format"
   in
-  let rle_bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
+  Printf.printf "Length original: %d\n" (Bytes.length bytes);
+  let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
 
-  let compressed = decode_rle rle_bytes in
+  let bytes = Lzw.decompress bytes ~max_bit_size:10 in
+  Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes);
 
-  let decompressed = Lzw.decompress compressed ~max_bit_size:10 in
-
-  print_endline "--- Pic dump";
-
-  Printf.printf "Length original: %d\n" (Bytes.length rle_bytes);
+  let bytes = decode_rle bytes in
   Printf.printf "Length rle decompressed: %d\n" (Bytes.length bytes);
 
-  Printf.printf "Length compressed: %d\n" (Bytes.length compressed);
-  Printf.printf "Length decompressed: %d\n" (String.length decompressed);
+  (*
+  IO.with_out "./temp.bin" @@
+    fun ch -> Stdlib.output_bytes ch compressed;
+  *)
+
   ()
 
 let () =

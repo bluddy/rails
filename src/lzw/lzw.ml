@@ -55,6 +55,8 @@ module ReadBytes = struct
     assert (num_bits >= 8);
     assert (num_bits <= 16);
 
+    Printf.printf "byte_idx: %x, bit_idx: %d, d=0x%x\n" v.byte_idx v.bit_idx (Bytes.get_uint8 v.buffer v.byte_idx);
+
     (* get 3 bytes *)
     let word = Bytes.get_uint8 v.buffer v.byte_idx in
     let word =
@@ -69,9 +71,11 @@ module ReadBytes = struct
         word lor (byte3 lsl 16)
       else word
     in
+    Printf.printf "word=0x%x\n" word;
 
     (* shift right to get needed bits *)
     let word = word lsr v.bit_idx in
+    Printf.printf "post-shift word=0x%x\n" word;
 
     (* mask out unneeded bits *)
     let mask = lnot (0x7FFFFFFF lsl num_bits) in
@@ -127,26 +131,26 @@ let decompress compressed ~max_bit_size =
   reset ();
 
   let w =
-    let x = ReadBytes.get_bits compressed 8 in
+    let x = ReadBytes.get_bits compressed 9 in
     Hashtbl.find dictionary x
   in
 
   let result = Buffer.create 1024 in
 
   let _ =
-    ReadBytes.fold_bits compressed 8 ~zero:w @@
+    ReadBytes.fold_bits compressed 9 ~zero:w @@
       fun w bit_size k ->
         let entry =
           match Hashtbl.find_opt dictionary k with
           | Some s ->
-              Printf.printf "Found %d in dictionary: len %d\n" k (String.length s);
+              Printf.printf "Found %d(0x%x) bitsize=%d in dictionary: len %d\n" k k bit_size (String.length s);
               s
           | None when k = Hashtbl.length dictionary -> (* Sanity check *)
               (* Add first letter of last matched word *)
               w ^ String.sub w 0 1
           | _ ->
               raise @@
-              ValueError(Printf.sprintf "Bad compressed k: %d, size is %d" k (Hashtbl.length dictionary))
+              ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), size is %d" k k (Hashtbl.length dictionary))
         in
         Buffer.add_string result entry;
 
@@ -164,5 +168,5 @@ let decompress compressed ~max_bit_size =
         end else
           (entry, bit_size)
   in
-  Buffer.contents result
+  Buffer.to_bytes result
 
