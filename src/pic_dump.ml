@@ -35,6 +35,17 @@ Each pixel byte represents two 16-color pixels. I'm not sure what they're doing 
 possible they're just using the "normal" 16 color palette.
 *)
 
+let chunk_writer_of_out_channel och =
+  function
+  | `String x ->
+    ( try Ok (output_string och x) with
+      | _ -> close_out och; Error `Write_error)
+  | `Close ->
+      close_out och; Ok ()
+
+let chunk_writer_of_path fn =
+  chunk_writer_of_out_channel (open_out_bin fn)
+
 let decode_rle bytes =
   let out = Buffer.create 100 in
 
@@ -88,15 +99,44 @@ let main filename =
   let bytes = Lzw.decompress bytes ~max_bit_size:10 in
   Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes);
 
-  let bytes = decode_rle bytes in
-  Printf.printf "Length rle decompressed: %d\n" (Bytes.length bytes);
+  let s = decode_rle bytes |> Bytes.to_string in
+  Printf.printf "Length rle decompressed: %d\n" (String.length s);
+
+  let img = Image.create_rgb 320 200 in
+  let ega_palette =
+    [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0xAA00AA; 0xAA5500; 0xAAAAAA;
+     0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
+  in
+  let _ =
+    String.fold (fun dim c -> 
+      match dim with
+      | None -> None
+      | Some (x, y) ->
+        let c = int_of_char c in
+        let h, l = c lsr 4, c land 0x0F in
+        let write_color x index =
+          let color = ega_palette.(index) in
+          let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
+          (* Printf.printf "x:%d y:%d\n" x y; *)
+          Image.write_rgb img x y r g b;
+        in
+        write_color x l;
+        write_color (x+1) h;
+        let x, y = 
+          if x + 2 >= 320 then 0, y+1 else x + 2, y
+        in
+        if y >= 200 then None else Some (x, y))
+    (Some (0,0))
+    s
+  in
+  let och = chunk_writer_of_path "./out.png" in
+  ImagePNG.write och img
 
   (*
   IO.with_out "./temp.bin" @@
     fun ch -> Stdlib.output_bytes ch compressed;
   *)
 
-  ()
 
 let () =
   main Sys.argv.(1)

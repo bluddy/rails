@@ -1,6 +1,6 @@
 (executable
   (name pic_dump)
-  (libraries containers lzw))
+  (libraries containers lzw imagelib))
 
 (env
   (dev
