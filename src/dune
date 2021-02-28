@@ -1,5 +1,5 @@
 (executable
-  (name pic_dump)
+  (name main)
   (libraries containers iter lzw imagelib))
 
 

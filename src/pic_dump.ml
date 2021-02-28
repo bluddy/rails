@@ -96,8 +96,4 @@ let main filename =
   *)
 
 
-let () =
-  main Sys.argv.(1)
-
-
 

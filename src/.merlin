@@ -13,7 +13,7 @@ B /home/ybarnoy/.opam/4.11.0/lib/optint
 B /home/ybarnoy/.opam/4.11.0/lib/result
 B /home/ybarnoy/.opam/4.11.0/lib/seq
 B /home/ybarnoy/.opam/4.11.0/lib/stdlib-shims
-B _build/default/.pic_dump.eobjs/byte
+B _build/default/.main.eobjs/byte
 B _build/default/lzw/.lzw.objs/byte
 S /home/ybarnoy/.opam/4.11.0/lib/bigarray-compat
 S /home/ybarnoy/.opam/4.11.0/lib/bytes
