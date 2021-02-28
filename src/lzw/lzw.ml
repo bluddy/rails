@@ -55,7 +55,7 @@ module ReadBytes = struct
     assert (num_bits >= 8);
     assert (num_bits <= 16);
 
-    Printf.printf "byte_idx: %x, bit_idx: %d, d=0x%x\n" v.byte_idx v.bit_idx (Bytes.get_uint8 v.buffer v.byte_idx);
+    (*Printf.printf "byte_idx: %x, bit_idx: %d, d=0x%x\n" v.byte_idx v.bit_idx (Bytes.get_uint8 v.buffer v.byte_idx); *)
 
     (* get 3 bytes *)
     let word = Bytes.get_uint8 v.buffer v.byte_idx in
@@ -145,7 +145,7 @@ let decompress compressed ~max_bit_size =
         let entry =
           match Hashtbl.find_opt dictionary k with
           | Some s ->
-              Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s);
+              (*Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s); *)
               s
           | None when k = count -> (* Only option *)
               (* Add first letter of last matched word *)
@@ -165,7 +165,7 @@ let decompress compressed ~max_bit_size =
         in
         if bit_size > 11 (* max_bit_size + 3 *) then begin
           reset ();
-          ((entry, 257), 9)
+          ((entry, 256), 9)
         end else
           ((entry, count+1), bit_size)
   in
