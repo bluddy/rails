@@ -81,7 +81,10 @@ let int_list_of_bytes bytes =
   List.rev !compressed
 
 let main filename =
-  print_endline "--- Pic dump";
+  Printf.printf "--- Pic dump: %s" filename;
+
+  let filepath = Filename.remove_extension filename in
+  let destpath = filepath ^ ".png" in
 
   let bytes =
     IO.with_in filename @@
@@ -108,7 +111,7 @@ let main filename =
      0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
   in
   let _ =
-    String.fold (fun dim c -> 
+    String.fold (fun dim c ->
       match dim with
       | None -> None
       | Some (x, y) ->
@@ -122,14 +125,14 @@ let main filename =
         in
         write_color x l;
         write_color (x+1) h;
-        let x, y = 
+        let x, y =
           if x + 2 >= 320 then 0, y+1 else x + 2, y
         in
         if y >= 200 then None else Some (x, y))
     (Some (0,0))
     s
   in
-  let och = chunk_writer_of_path "./out.png" in
+  let och = chunk_writer_of_path destpath in
   ImagePNG.write och img
 
   (*
