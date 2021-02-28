@@ -152,7 +152,8 @@ let decompress compressed ~max_bit_size =
               w ^ String.sub w 0 1
           | _ ->
               raise @@
-              ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), size is %d" k k (Hashtbl.length dictionary))
+              ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), bitsize=%d size=%d count=%d"
+                k k bit_size (Hashtbl.length dictionary) count)
         in
         Buffer.add_string result entry;
 
@@ -160,12 +161,11 @@ let decompress compressed ~max_bit_size =
         Hashtbl.replace dictionary count (w ^ (String.sub entry 0 1));
 
         let bit_size =
-          let count' = count + 1 in
-          if count' > 1 lsl bit_size then bit_size + 1 else bit_size
+          if count + 2 > 1 lsl bit_size then bit_size + 1 else bit_size
         in
-        if bit_size > max_bit_size then begin
+        if bit_size > 11 (* max_bit_size + 3 *) then begin
           reset ();
-          ((entry, count+1), 8)
+          ((entry, 257), 9)
         end else
           ((entry, count+1), bit_size)
   in
