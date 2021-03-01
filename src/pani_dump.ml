@@ -98,7 +98,7 @@ let main filename =
 
     let img = Image.create_rgb width height in
     let ega_palette =
-      [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0xAA00AA; 0xAA5500; 0xAAAAAA;
+      [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x000000; 0xAA5500; 0xAAAAAA;
       0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
     in
     let idx = ref 0 in
@@ -116,7 +116,7 @@ let main filename =
         write_color x y nibble;
 
         (* advance *)
-        if !low then begin
+        if !low && x < width-1 then begin
           low := false
         end else begin
           low := true;
