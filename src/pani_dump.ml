@@ -1,4 +1,5 @@
 open Containers
+open Iter.Infix
 
 (*
 PANI format (format flag PANI)
@@ -52,77 +53,80 @@ let decode_rle bytes =
   done;
   Buffer.to_bytes out
 
-let int_list_of_bytes bytes =
-  let compressed = ref [] in
-  for i=0 to Bytes.length bytes - 1 do
-    let v = Bytes.get_uint8 bytes i in
-    compressed := v :: !compressed;
-  done;
-  List.rev !compressed
-
 let main filename =
   Printf.printf "--- PANI dump: %s\n" filename;
 
   let filepath = Filename.remove_extension filename in
-  let destpath = filepath ^ ".png" in
 
   let bytes =
     IO.with_in filename @@
       fun in_channel -> IO.read_all_bytes in_channel
   in
-  let offset = 0x2B in
-  let start_offset =
-    match Bytes.get_uint16_le bytes 0x24 with
-    | 0x7 -> offset
-    | 0x2007 -> offset
-    | x -> failwith @@ Printf.sprintf "Unknown format %x" x
+  (* Find all images *)
+  let offset_list =
+    let diff = 6 in
+    Iter.fold (fun acc i ->
+      let v1 = Bytes.get_uint16_le bytes i in
+      let b2 = Bytes.get_uint8 bytes (i+diff) in
+      match v1, b2 with
+      | 0x07, 0xb -> i::acc
+      | _ -> acc
+    )
+    []
+    (0x24 -- (Bytes.length bytes - diff - 1))
+    |> List.rev
   in
-  let width = Bytes.get_uint16_le bytes 0x26 in
-  let height = Bytes.get_uint16_le bytes 0x28 in
-  Printf.printf "width=%d, height=%d, total_size=%d\n" width height (width*height/2);
-  Printf.printf "Length original: %d\n" (Bytes.length bytes);
-  let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
+  Printf.printf "Found %d images\n" @@ List.length offset_list;
 
-  let bytes = Lzw.decompress bytes ~max_bit_size:11 ~report_offset:offset ~suppress_error:true in
-  Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes);
+  List.iteri (fun i offset ->
+    let destpath = Printf.sprintf "%s_%03d.png" filepath i in
 
-  let s = decode_rle bytes |> Bytes.to_string in
-  Printf.printf "Length rle decompressed: %d\n" (String.length s);
+    let width  = Bytes.get_uint16_le bytes @@ offset + 2 in
+    let height = Bytes.get_uint16_le bytes @@ offset + 4 in
+    Printf.printf "width=%d, height=%d, total_size=%d\n" width height (width*height/2);
+    Printf.printf "Length original: %d\n" (Bytes.length bytes);
 
-  let img = Image.create_rgb width height in
-  let ega_palette =
-    [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0xAA00AA; 0xAA5500; 0xAAAAAA;
-     0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
-  in
-  let _ =
-    String.fold (fun dim c ->
-      match dim with
-      | None -> None
-      | Some (x, y) ->
-        let c = int_of_char c in
-        let h, l = c lsr 4, c land 0x0F in
-        let write_color x index =
-          let color = ega_palette.(index) in
-          let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
-          (* Printf.printf "x:%d y:%d\n" x y; *)
-          Image.write_rgb img x y r g b;
-        in
-        write_color x l;
-        write_color (x+1) h;
-        let x, y =
-          if x + 2 >= width then 0, y+1 else x + 2, y
-        in
-        if y >= height then None else Some (x, y))
-    (Some (0,0))
-    s
-  in
-  let och = Png.chunk_writer_of_path destpath in
-  ImagePNG.write och img
+    let start_offset = offset + 7 in
+    let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
 
-  (*
-  IO.with_out "./temp.bin" @@
-    fun ch -> Stdlib.output_bytes ch compressed;
-  *)
+    let bytes = Lzw.decompress bytes ~max_bit_size:11 ~report_offset:offset ~suppress_error:true in
+    Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes);
+
+    let s = decode_rle bytes |> Bytes.to_string in
+    Printf.printf "Length rle decompressed: %d\n" (String.length s);
+
+    let img = Image.create_rgb width height in
+    let ega_palette =
+      [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0xAA00AA; 0xAA5500; 0xAAAAAA;
+      0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
+    in
+    let _ =
+      String.fold (fun dim c ->
+        match dim with
+        | None -> None
+        | Some (x, y) ->
+          let c = int_of_char c in
+          let h, l = c lsr 4, c land 0x0F in
+          let write_color x index =
+            let color = ega_palette.(index) in
+            let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
+            (* Printf.printf "x:%d y:%d\n" x y; *)
+            Image.write_rgb img x y r g b;
+          in
+          write_color x l;
+          write_color (x+1) h;
+          let x, y =
+            if x + 2 >= width then 0, y+1 else x + 2, y
+          in
+          if y >= height then None else Some (x, y))
+      (Some (0,0))
+      s
+    in
+    let och = Png.chunk_writer_of_path destpath in
+    ImagePNG.write och img
+  )
+  offset_list
+
 
 
 
