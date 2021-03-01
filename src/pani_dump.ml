@@ -1,26 +1,16 @@
 open Containers
 
 (*
-PIC format (format flag 0xF)
+PANI format (format flag PANI)
 
 ofs | datatype | description
 ----+----------+------------
-0 | 16 bits | Format flag.
-2 | 16 bits | Width, always 320
-4 | 16 bits | Height, always 200
-6 | 16 bytes | Pixel color mappings for cga mode (apparently)
-22 | byte | Max LZW dictionary bit width, always 0xB
-23 | LZW data | image data in LZW+RLE compressed format
-
-PIC format (format flag 0x7)
-
-ofs | datatype | description
-----+----------+------------
-0 | 16 bits | Format flag.
-2 | 16 bits | Width, always 320
-4 | 16 bits | Height, always 200
-6 | byte | Max LZW dictionary bit width, always 0x0B
-7 | LZW data | image data in LZW+RLE compressed format
+0 | PANI
+0x24 | 16 bits | Format flag.
+0x26 | 16 bits | Width, always 320
+0x28 | 16 bits | Height, always 200
+0x2A | byte | Max LZW dictionary bit width, always 0x0B
+0x2B | LZW data | image data in LZW+RLE compressed format
 
 The image data is stored as LZW compressed RLE stream. The LZW resets when the dictionary gets full (i.e, there's no separate reset signal).
 Under the LZW the data is compressed with RLE, so that if a pixel byte is 0x90, the previous pixel is repeated as many times as the next byte says; if the repeat value is 0, the pixel value is 0x90.
@@ -71,7 +61,7 @@ let int_list_of_bytes bytes =
   List.rev !compressed
 
 let main filename =
-  Printf.printf "--- Pic dump: %s" filename;
+  Printf.printf "--- PANI dump: %s\n" filename;
 
   let filepath = Filename.remove_extension filename in
   let destpath = filepath ^ ".png" in
@@ -80,23 +70,26 @@ let main filename =
     IO.with_in filename @@
       fun in_channel -> IO.read_all_bytes in_channel
   in
+  let offset = 0x2B in
   let start_offset =
-    match Bytes.get_uint16_le bytes 0 with
-    | 0xF -> 23
-    | 0x7 -> 7
-    | 0x6 -> 7
-    | _ -> failwith "Unknown format"
+    match Bytes.get_uint16_le bytes 0x24 with
+    | 0x7 -> offset
+    | 0x2007 -> offset
+    | x -> failwith @@ Printf.sprintf "Unknown format %x" x
   in
+  let width = Bytes.get_uint16_le bytes 0x26 in
+  let height = Bytes.get_uint16_le bytes 0x28 in
+  Printf.printf "width=%d, height=%d, total_size=%d\n" width height (width*height/2);
   Printf.printf "Length original: %d\n" (Bytes.length bytes);
   let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
 
-  let bytes = Lzw.decompress bytes ~max_bit_size:11 in
+  let bytes = Lzw.decompress bytes ~max_bit_size:11 ~report_offset:offset ~suppress_error:true in
   Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes);
 
   let s = decode_rle bytes |> Bytes.to_string in
   Printf.printf "Length rle decompressed: %d\n" (String.length s);
 
-  let img = Image.create_rgb 320 200 in
+  let img = Image.create_rgb width height in
   let ega_palette =
     [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0xAA00AA; 0xAA5500; 0xAAAAAA;
      0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
@@ -117,9 +110,9 @@ let main filename =
         write_color x l;
         write_color (x+1) h;
         let x, y =
-          if x + 2 >= 320 then 0, y+1 else x + 2, y
+          if x + 2 >= width then 0, y+1 else x + 2, y
         in
-        if y >= 200 then None else Some (x, y))
+        if y >= height then None else Some (x, y))
     (Some (0,0))
     s
   in

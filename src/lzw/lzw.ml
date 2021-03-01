@@ -45,9 +45,10 @@ module ReadBytes = struct
     buffer: Bytes.t;
     mutable byte_idx: int;
     mutable bit_idx: int;
+    report_offset: int; (* for debug only *)
   }
 
-  let of_bytes b = {buffer=b; byte_idx=0; bit_idx=0}
+  let of_bytes ?(report_offset=0) b = {buffer=b; byte_idx=0; bit_idx=0; report_offset}
 
   let eof b = b.byte_idx >= Bytes.length b.buffer
 
@@ -55,7 +56,7 @@ module ReadBytes = struct
     assert (num_bits >= 8);
     assert (num_bits <= 16);
 
-    (*Printf.printf "byte_idx: %x, bit_idx: %d, d=0x%x\n" v.byte_idx v.bit_idx (Bytes.get_uint8 v.buffer v.byte_idx); *)
+    (* Printf.printf "byte_idx: %x, bit_idx: %d, d=0x%x\n" (v.byte_idx + v.report_offset) v.bit_idx (Bytes.get_uint8 v.buffer v.byte_idx); *)
 
     (* get 3 bytes *)
     let word = Bytes.get_uint8 v.buffer v.byte_idx in
@@ -98,7 +99,7 @@ module ReadBytes = struct
   let iter_bits v i f =
     let bit_size = ref i in
     while not @@ eof v do
-      let b = f (get_bits v !bit_size) in
+      let b = f @@ get_bits v !bit_size in
       bit_size := b
     done
 
@@ -115,9 +116,9 @@ end
 
 
 (** decompress a list of output symbols to a string *)
-let decompress compressed ~max_bit_size =
+let decompress ?(report_offset=0) ?(suppress_error=false) compressed ~max_bit_size =
   (* build the dictionary *)
-  let compressed = ReadBytes.of_bytes compressed in
+  let compressed = ReadBytes.of_bytes compressed ~report_offset in
   let dictionary = Hashtbl.create 397 in
 
   let reset () =
@@ -139,35 +140,38 @@ let decompress compressed ~max_bit_size =
   Buffer.add_string result w;
 
   let _ =
-    (* Start at 257 rather than 256 for no reason *)
-    ReadBytes.fold_bits compressed 9 ~zero:(w,257) @@
-      fun (w,count) bit_size k ->
-        let entry =
-          match Hashtbl.find_opt dictionary k with
-          | Some s ->
-              (*Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s); *)
-              s
-          | None when k = count -> (* Only option *)
-              (* Add first letter of last matched word *)
-              w ^ String.sub w 0 1
-          | _ ->
-              raise @@
-              ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), bitsize=%d size=%d count=%d"
-                k k bit_size (Hashtbl.length dictionary) count)
-        in
-        Buffer.add_string result entry;
+    try begin
+      (* Start at 257 rather than 256 for no reason *)
+      ReadBytes.fold_bits compressed 9 ~zero:(w,257) @@
+        fun (w,count) bit_size k ->
+          let entry =
+            match Hashtbl.find_opt dictionary k with
+            | Some s ->
+                (* Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s); *)
+                s
+            | None when k = count -> (* Only option *)
+                (* Add first letter of last matched word *)
+                w ^ String.sub w 0 1
+            | _ ->
+                raise @@
+                ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), bitsize=%d size=%d count=%d"
+                  k k bit_size (Hashtbl.length dictionary) count)
+          in
+          Buffer.add_string result entry;
 
-        (* add (w ^ entry.[0]) to the dictionary *)
-        Hashtbl.replace dictionary count (w ^ (String.sub entry 0 1));
+          (* add (w ^ entry.[0]) to the dictionary *)
+          Hashtbl.replace dictionary count (w ^ (String.sub entry 0 1));
 
-        let bit_size =
-          if count + 2 > 1 lsl bit_size then bit_size + 1 else bit_size
-        in
-        if bit_size > 11 (* max_bit_size + 3 *) then begin
-          reset ();
-          ((entry, 256), 9)
-        end else
-          ((entry, count+1), bit_size)
+          let bit_size =
+            if count + 2 > 1 lsl bit_size then bit_size + 1 else bit_size
+          in
+          if bit_size > max_bit_size then begin
+            reset ();
+            ((entry, 256), 9)
+          end else
+            ((entry, count+1), bit_size)
+    end with ValueError _ as e ->
+      if suppress_error then ("", 0) else raise e
   in
   Buffer.to_bytes result
 
