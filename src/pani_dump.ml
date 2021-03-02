@@ -105,7 +105,7 @@ let decode_rle bytes =
         last_val := 0x90
     | x when !rle ->
         (* do one less than normal *)
-        for i = 0 to x - 2 do
+        for _i = 0 to x - 2 do
           Buffer.add_uint8 out !last_val
         done;
         rle := false
