@@ -13,6 +13,68 @@ ofs | datatype | description
 0x2A | byte | Max LZW dictionary bit width, always 0x0B
 0x2B | LZW data | image data in LZW+RLE compressed format
 
+Layout
+------
+First image
+Gap of 500 bytes (with some data)
+   - 0s except for a short for each image!
+   - Increasing numbers
+then next images
+
+Data collected
+--------------
+~1041: 14 images
+WRECKM: 3664 105 images, 148 times 0500
+FOLLOWED.PAN 1680: 29 images, 42 times 0500
+FLOODM.PAN 88 images, 172 times 0500
+WOOD2 52 images
+HQ 14 images: 0-E, E1c start: 0, 1, 2, 5, 6, 7, 8, b, c, d, e, f, 10, 11
+CAPTURED: 0:bckgrnd, 1:bcgrnd2 5,6,7,8,9: over same spot (captured)
+- possibly mapped to 2, 4, 6, 8, 9, C, E, 10, 12
+
+Program section
+---------------
+* ends with 0a
+
+CAPTRED
+- Commands separated by 0500
+- 2300: animation, long
+
+          0500 ffff 0600 00 0500 ea 00 05
+# ffff -> maybe z layer?
+00 13 00 0500 ffff 0500 0000 0500 0000 05
+# 13 is the command?
+# ffff, 0000, 0000: move line to right, down
+00 ff 0005 0001 0000 0500 ed00 0500 1400 # ed is critical
+0500 ffff 0500 5d00 0500 0000 0500 ff00
+0500 0000 0005 00e7 0005 0003 0005 00ff
+ff05 0000 0005 0030 0005 00ff 0005 0000
+0000 0500 f600 0500 0700 0500 ffff 0500
+# ffff->0000: raise whole animation of cpatured!
+0100 0500 7100 0500 ff00 0500 0000 0005
+# 0100->2000: move whole animation to right
+# 7100->0000: move whole animation way up!
+# 0000 00 -> disturb these values and the animation goes wonky
+0100 0013 8500 13dd 00 07 05 00 0100 0812 (* 07 -> 06, or 05->06 man to lady! *)
+9100 13b1 0005 00f3 0005 0004 0005 00ff
+ff05 0012 0005 0031 0005 00ff 0005 0000
+0000 1382 0007 0500 ffff 0812 bd00 13dd
+0005 00f0 0005 0004 0005 00ff ff05 0012
+0005 0031 0005 00ff 0005 0000 0000 1382
+0006 ffff 0500 2300 02 14 1400 0209 0008 # 08-> 09: clone the suit?
+# 1st 14: type of animation that waits for key. 15: doesn't wait when done (needs 02 first). 16:looping
+# 2nd 14: seems irrelevant
+0900 0909 0004 0900 0609 050f 0000 ff06 # 0004->02: clone the frame?
+f900 00 1300 1202 fcff 0000 0010 0204 00
+# fcff 0000: Middle frame right, down (affects last frame too)
+# f900 -> f000: duplicate suit where animatino should have been
+0000 00 0e02 0200 0200 000c 0900 0005 00
+# 0200 0200: final frame right, down (can be neg for left, up)
+0000 0500
+
+IRONM: 42sec
+WOOD2: 18sec
+
 The image data is stored as LZW compressed RLE stream. The LZW resets when the dictionary gets full (i.e, there's no separate reset signal).
 Under the LZW the data is compressed with RLE, so that if a pixel byte is 0x90, the previous pixel is repeated as many times as the next byte says; if the repeat value is 0, the pixel value is 0x90.
 
