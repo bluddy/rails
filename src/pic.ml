@@ -93,7 +93,7 @@ let ega_palette =
   [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x0; 0xAA5500; 0xAAAAAA;
     0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
 
-module BigArr = Bigarray.Array3
+module Ndarray = Owl_base_dense_ndarray_generic
 
 let translate_str str write_f width height =
   let idx = ref 0 in
@@ -122,13 +122,13 @@ let translate_str str write_f width height =
   ()
 
 let bigarray_write arr x y (r:int) (g:int) (b:int) =
-  BigArr.set arr x y 0 r;
-  BigArr.set arr x y 1 g;
-  BigArr.set arr x y 2 b;
+  Ndarray.set arr [|x;y;0|] r;
+  Ndarray.set arr [|x;y;1|] g;
+  Ndarray.set arr [|x;y;2|] b;
   ()
 
 let create_rgb_img width height =
-  BigArr.create Int8_unsigned C_layout width height 3
+  Ndarray.empty Int8_unsigned [|width; height; 3|]
 
 let load_to_bigarray filename =
   let str, width, height = load_to_str filename in
