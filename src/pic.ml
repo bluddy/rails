@@ -62,20 +62,7 @@ let decode_rle bytes =
   done;
   Buffer.to_bytes out
 
-let int_list_of_bytes bytes =
-  let compressed = ref [] in
-  for i=0 to Bytes.length bytes - 1 do
-    let v = Bytes.get_uint8 bytes i in
-    compressed := v :: !compressed;
-  done;
-  List.rev !compressed
-
-let main filename =
-  Printf.printf "--- Pic dump: %s" filename;
-
-  let filepath = Filename.remove_extension filename in
-  let destpath = filepath ^ ".png" in
-
+let load_to_str filename =
   let bytes =
     IO.with_in filename @@
       fun in_channel -> IO.read_all_bytes in_channel
@@ -87,49 +74,76 @@ let main filename =
     | 0x6 -> 7
     | _ -> failwith "Unknown format"
   in
-  Printf.printf "Length original: %d\n" (Bytes.length bytes);
+  let width  = Bytes.get_uint16_le bytes 2 in
+  let height = Bytes.get_uint16_le bytes 4 in
+
+  (* Printf.printf "Length original: %d\n" (Bytes.length bytes); *)
   let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
 
   let bytes = Lzw.decompress bytes ~max_bit_size:11 in
-  Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes);
+  (* Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes); *)
 
-  let s = decode_rle bytes |> Bytes.to_string in
-  Printf.printf "Length rle decompressed: %d\n" (String.length s);
+  let str = decode_rle bytes |> Bytes.to_string in
+  (* Printf.printf "Length rle decompressed: %d\n" (String.length s); *)
 
+  str, width, height
+
+
+let ega_palette =
+  [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x0; 0xAA5500; 0xAAAAAA;
+    0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
+
+module BigArr = Bigarray.Array3
+
+let translate_str str write_f width height =
+  let idx = ref 0 in
+  let low = ref true in (* low then high *)
+  for y=0 to height-1 do
+    for x=0 to width-1 do
+      let c = int_of_char str.[!idx] in
+      let nibble = if !low then c land 0x0f else c lsr 4 in
+      let write_color x y index =
+        let color = ega_palette.(index) in
+        let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
+        (* Printf.printf "x:%d y:%d\n" x y; *)
+        write_f x y r g b;
+      in
+      write_color x y nibble;
+
+      (* advance *)
+      if !low && x < width-1 then begin
+        low := false
+      end else begin
+        low := true;
+        incr idx
+      end
+    done
+  done;
+  ()
+
+let bigarray_write arr x y (r:int) (g:int) (b:int) =
+  BigArr.set arr x y 0 r;
+  BigArr.set arr x y 1 g;
+  BigArr.set arr x y 2 b;
+  ()
+
+let create_rgb_img width height =
+  BigArr.create Int8_unsigned C_layout width height 3
+
+let load_to_bigarray filename =
+  let str, width, height = load_to_str filename in
+  let arr = create_rgb_img width height in
+  translate_str str (bigarray_write arr) width height;
+  arr
+
+let dump filename =
+  Printf.printf "--- Pic dump: %s" filename;
+  let filepath = Filename.remove_extension filename in
+  let destpath = filepath ^ ".png" in
+
+  let str, width, height = load_to_str filename in
   let img = Image.create_rgb 320 200 in
-  let ega_palette =
-    [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0xAA00AA; 0xAA5500; 0xAAAAAA;
-     0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
-  in
-  let _ =
-    String.fold (fun dim c ->
-      match dim with
-      | None -> None
-      | Some (x, y) ->
-        let c = int_of_char c in
-        let h, l = c lsr 4, c land 0x0F in
-        let write_color x index =
-          let color = ega_palette.(index) in
-          let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
-          (* Printf.printf "x:%d y:%d\n" x y; *)
-          Image.write_rgb img x y r g b;
-        in
-        write_color x l;
-        write_color (x+1) h;
-        let x, y =
-          if x + 2 >= 320 then 0, y+1 else x + 2, y
-        in
-        if y >= 200 then None else Some (x, y))
-    (Some (0,0))
-    s
-  in
+  translate_str str (Image.write_rgb img) width height;
   let och = Png.chunk_writer_of_path destpath in
   ImagePNG.write och img
-
-  (*
-  IO.with_out "./temp.bin" @@
-    fun ch -> Stdlib.output_bytes ch compressed;
-  *)
-
-
 
