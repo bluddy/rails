@@ -1,6 +1,6 @@
 (executable
   (name main)
-  (libraries containers iter lzw imagelib tsdl))
+  (libraries containers iter lzw imagelib tsdl owl-base))
 
 
 (env
