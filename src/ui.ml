@@ -3,7 +3,7 @@ open Tsdl
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 let sdl_texture_of_ndarray renderer arr =
-  let w, h = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
+  let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
   let open Result.Infix in
   Sdl.create_rgb_surface_with_format_from (Bigarray.reshape_1 arr (w*h*3))
     ~w ~h ~depth:24 ~pitch:(w*3) Sdl.Pixel.format_rgb24

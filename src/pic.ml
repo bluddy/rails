@@ -122,13 +122,13 @@ let translate_str str write_f width height =
   ()
 
 let bigarray_write arr x y (r:int) (g:int) (b:int) =
-  Ndarray.set arr [|x;y;0|] r;
-  Ndarray.set arr [|x;y;1|] g;
-  Ndarray.set arr [|x;y;2|] b;
+  Ndarray.set arr [|y;x;0|] r;
+  Ndarray.set arr [|y;x;1|] g;
+  Ndarray.set arr [|y;x;2|] b;
   ()
 
 let create_rgb_img width height =
-  Ndarray.empty Int8_unsigned [|width; height; 3|]
+  Ndarray.empty Int8_unsigned [|height; width; 3|]
 
 let load_to_bigarray filename =
   let str, width, height = load_to_str filename in
