@@ -88,35 +88,44 @@ let load_to_str filename =
 
   str, width, height
 
-
 let ega_palette =
+  (* black, blue, green, cyan, red, black, brown, gray *)
   [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x0; 0xAA5500; 0xAAAAAA;
+  (* dark gray, br blue, br green, br cyan, br red, br magenta, br yellow, br white *)
     0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
 
 module Ndarray = Owl_base_dense_ndarray_generic
 
-let translate_str str write_f width height =
+let array_of_str str ~w ~h =
+  let arr = Array.make (w*h) 0 in
   let idx = ref 0 in
   let low = ref true in (* low then high *)
-  for y=0 to height-1 do
-    for x=0 to width-1 do
+  for y=0 to h-1 do
+    for x=0 to w-1 do
       let c = int_of_char str.[!idx] in
       let nibble = if !low then c land 0x0f else c lsr 4 in
-      let write_color x y index =
-        let color = ega_palette.(index) in
-        let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
-        (* Printf.printf "x:%d y:%d\n" x y; *)
-        write_f x y r g b;
-      in
-      write_color x y nibble;
-
+      arr.(y*w + x) <- nibble;
       (* advance *)
-      if !low && x < width-1 then begin
+      if !low && x < w-1 then begin
         low := false
       end else begin
         low := true;
         incr idx
       end
+    done
+  done;
+  arr
+
+let translate_ega arr ~f ~w ~h =
+  for y=0 to h-1 do
+    for x=0 to w-1 do
+      let write_color x y index =
+        let color = Ega.get_color index in
+        let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
+        (* Printf.printf "x:%d y:%d\n" x y; *)
+        f x y r g b;
+      in
+      write_color x y arr.(y*w + x);
     done
   done;
   ()
@@ -131,19 +140,21 @@ let create_rgb_img width height =
   Ndarray.empty Int8_unsigned [|height; width; 3|]
 
 let load_to_bigarray filename =
-  let str, width, height = load_to_str filename in
-  let arr = create_rgb_img width height in
-  translate_str str (bigarray_write arr) width height;
-  arr
+  let str, w, h = load_to_str filename in
+  let arr = array_of_str str ~w ~h in
+  let img = create_rgb_img w h in
+  translate_ega arr ~w ~h ~f:(bigarray_write img);
+  img
 
 let dump filename =
   Printf.printf "--- Pic dump: %s" filename;
   let filepath = Filename.remove_extension filename in
   let destpath = filepath ^ ".png" in
 
-  let str, width, height = load_to_str filename in
+  let str, w, h = load_to_str filename in
+  let arr = array_of_str str ~w ~h in
   let img = Image.create_rgb 320 200 in
-  translate_str str (Image.write_rgb img) width height;
+  translate_ega arr ~f:(Image.write_rgb img) ~w ~h;
   let och = Png.chunk_writer_of_path destpath in
   ImagePNG.write och img
 

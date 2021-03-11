@@ -10,6 +10,7 @@ let sdl_texture_of_ndarray renderer arr =
   >>= fun surf ->
   Sdl.create_texture_from_surface renderer surf
 
+
 let main () =
   let window, renderer =
     match Sdl.init Sdl.Init.video with
@@ -31,7 +32,7 @@ let main () =
       if Sdl.poll_event (Some event) then
         match Sdl.Event.(enum (get event typ)) with
         | `Quit -> true
-        | `Key_down | `Key_up ->
+        | `Key_down ->
             let keycode = Sdl.Event.(get event keyboard_keycode) in
             keycode = Sdl.K.escape
         | _ -> false
