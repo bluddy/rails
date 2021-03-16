@@ -20,7 +20,7 @@ let main () =
       | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
       | Ok (r,w) -> r,w
   in
-  let west_us_pic = Pic.load_to_bigarray "./WESTUS.PIC" in
+  let west_us_pic = Pic.img_of_file "./WESTUS.PIC" in
   let texture =
     match sdl_texture_of_ndarray renderer west_us_pic with
     | Error(`Msg e) -> Sdl.log "Couldn't create texture from surface: %s" e; exit 1

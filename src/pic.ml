@@ -94,17 +94,17 @@ let ega_palette =
   (* dark gray, br blue, br green, br cyan, br red, br magenta, br yellow, br white *)
     0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
 
-module Ndarray = Owl_base_dense_ndarray_generic
+module Ndarray = Owl_base_dense_ndarray.Generic
 
-let array_of_str str ~w ~h =
-  let arr = Array.make (w*h) 0 in
+let bigarray_of_str str ~w ~h =
+  let arr = Ndarray.empty Int8_unsigned [|h; w|] in
   let idx = ref 0 in
   let low = ref true in (* low then high *)
   for y=0 to h-1 do
     for x=0 to w-1 do
       let c = int_of_char str.[!idx] in
       let nibble = if !low then c land 0x0f else c lsr 4 in
-      arr.(y*w + x) <- nibble;
+      Ndarray.set arr [|y;x|] nibble;
       (* advance *)
       if !low && x < w-1 then begin
         low := false
@@ -125,12 +125,12 @@ let translate_ega arr ~f ~w ~h =
         (* Printf.printf "x:%d y:%d\n" x y; *)
         f x y r g b;
       in
-      write_color x y arr.(y*w + x);
+      write_color x y @@ Ndarray.get arr [|y;x|]
     done
   done;
   ()
 
-let bigarray_write arr x y (r:int) (g:int) (b:int) =
+let img_write arr x y (r:int) (g:int) (b:int) =
   Ndarray.set arr [|y;x;0|] r;
   Ndarray.set arr [|y;x;1|] g;
   Ndarray.set arr [|y;x;2|] b;
@@ -139,20 +139,23 @@ let bigarray_write arr x y (r:int) (g:int) (b:int) =
 let create_rgb_img width height =
   Ndarray.empty Int8_unsigned [|height; width; 3|]
 
-let load_to_bigarray filename =
+let bigarray_of_file filename =
   let str, w, h = load_to_str filename in
-  let arr = array_of_str str ~w ~h in
+  bigarray_of_str str ~w ~h
+
+let img_of_file filename =
+  let str, w, h = load_to_str filename in
+  let arr = bigarray_of_str str ~w ~h in
   let img = create_rgb_img w h in
-  translate_ega arr ~w ~h ~f:(bigarray_write img);
+  translate_ega arr ~w ~h ~f:(img_write img);
   img
 
-let dump filename =
+let png_of_file filename =
   Printf.printf "--- Pic dump: %s" filename;
   let filepath = Filename.remove_extension filename in
   let destpath = filepath ^ ".png" in
-
   let str, w, h = load_to_str filename in
-  let arr = array_of_str str ~w ~h in
+  let arr = bigarray_of_str str ~w ~h in
   let img = Image.create_rgb 320 200 in
   translate_ega arr ~f:(Image.write_rgb img) ~w ~h;
   let och = Png.chunk_writer_of_path destpath in
