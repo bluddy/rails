@@ -136,17 +136,24 @@ let img_write arr x y (r:int) (g:int) (b:int) =
   Ndarray.set arr [|y;x;2|] b;
   ()
 
-let create_rgb_img width height =
-  Ndarray.empty Int8_unsigned [|height; width; 3|]
+let create_rgb_img ~w ~h =
+  Ndarray.empty Int8_unsigned [|h; w; 3|]
 
 let bigarray_of_file filename =
   let str, w, h = load_to_str filename in
   bigarray_of_str str ~w ~h
 
+let img_of_bigarray arr =
+  let dims = Ndarray.shape arr in
+  let w, h = dims.(1), dims.(0) in
+  let img = create_rgb_img ~w ~h in
+  translate_ega arr ~w ~h ~f:(img_write img);
+  img
+
 let img_of_file filename =
   let str, w, h = load_to_str filename in
   let arr = bigarray_of_str str ~w ~h in
-  let img = create_rgb_img w h in
+  let img = create_rgb_img ~w ~h in
   translate_ega arr ~w ~h ~f:(img_write img);
   img
 

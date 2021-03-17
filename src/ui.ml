@@ -21,8 +21,10 @@ let main () =
       | Ok (r,w) -> r,w
   in
   let west_us_pic = Pic.img_of_file "./WESTUS.PIC" in
+  let map = Game_map.map_of_file "./WESTUS.PIC" in
+  let pic = Game_map.pic_of_map map in
   let texture =
-    match sdl_texture_of_ndarray renderer west_us_pic with
+    match sdl_texture_of_ndarray renderer pic with
     | Error(`Msg e) -> Sdl.log "Couldn't create texture from surface: %s" e; exit 1
     | Ok t -> t
   in

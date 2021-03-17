@@ -49,8 +49,12 @@ let tile_of_int_default = function
 let map_of_file filename =
   let arr = Pic.bigarray_of_file filename in
   (* All maps are 256*192 *)
-  let bigarr = Ndarray.get_slice [[0;192]; [0;256]] bigarr in
+  let bigarr = Ndarray.get_slice [[0;191]; [0;255]] arr in
   bigarr
+
+let pic_of_map map =
+  Pic.img_of_bigarray map
+
 
 
 
