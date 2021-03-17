@@ -10,25 +10,27 @@ let sdl_texture_of_ndarray renderer arr =
   >>= fun surf ->
   Sdl.create_texture_from_surface renderer surf
 
+let make_texture r pic =
+  match sdl_texture_of_ndarray r pic with
+  | Error(`Msg e) -> Sdl.log "Couldn't create texture from surface: %s" e; exit 1
+  | Ok t -> t
 
 let main () =
-  let window, renderer =
+  let win_w, win_h = 640, 480 in
+  let window, r =
     match Sdl.init Sdl.Init.video with
     | Error(`Msg e) -> Sdl.log "Init error: %s" e; exit 1
     | Ok () ->
-      match Sdl.create_window_and_renderer ~w:640 ~h:480 Sdl.Window.opengl with
+      match Sdl.create_window_and_renderer ~w:win_w ~h:win_h Sdl.Window.opengl with
       | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
       | Ok (r,w) -> r,w
   in
-  let west_us_pic = Pic.img_of_file "./WESTUS.PIC" in
+  let bg_tex = Pic.img_of_file "./WESTUS.PIC" |> make_texture r in
   let map = Game_map.map_of_file "./WESTUS.PIC" in
-  let pic = Game_map.pic_of_map map in
-  let texture =
-    match sdl_texture_of_ndarray renderer pic with
-    | Error(`Msg e) -> Sdl.log "Couldn't create texture from surface: %s" e; exit 1
-    | Ok t -> t
-  in
+  let map_tex = Game_map.pic_of_map map |> make_texture r in
   let event = Sdl.Event.create () in
+  let w, h = win_w * 256 / 320, win_h * 192 / 200 in
+  let map_rect = Sdl.Rect.create ~x:0 ~y:0 ~w ~h in
   let rec loop () =
     let stop =
       if Sdl.poll_event (Some event) then
@@ -43,15 +45,16 @@ let main () =
     if stop then () else
       let open Result.Infix in
       let _ =
-        Sdl.render_clear renderer >>= fun () ->
-        Sdl.render_copy renderer texture
+        Sdl.render_clear r >>= fun () ->
+        Sdl.render_copy r bg_tex >>= fun () ->
+        Sdl.render_copy r map_tex ~dst:map_rect
       in
-      Sdl.render_present renderer;
+      Sdl.render_present r;
       Sdl.delay 10l;
       loop ()
   in
   loop ();
-  Sdl.destroy_renderer renderer;
+  Sdl.destroy_renderer r;
   Sdl.destroy_window window;
   Sdl.quit ();
   exit 0
