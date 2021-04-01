@@ -11,6 +11,18 @@ let main () =
   let map = Game_map.map_of_file "./WESTUS.PIC" in
   let map_tex = Game_map.pic_of_map map |> R.Texture.make win in
   let event = Sdl.Event.create () in
+  let fonts = Font.load_all () in
+
+  let font = fonts.(0) in
+  let letter = Font.get_letter font 'n' in
+
+  for y=0 to Ndarray.nth_dim letter 0 - 1 do
+    for x=0 to Ndarray.nth_dim letter 1 - 1 do
+      Printf.printf "%d" @@ Ndarray.get letter [|y;x|]
+    done;
+    print_newline ()
+  done;
+
   let rec loop () =
     let stop =
       if Sdl.poll_event (Some event) then

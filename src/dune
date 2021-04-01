@@ -1,6 +1,8 @@
 (executable
   (name main)
-  (libraries containers iter lzw imagelib tsdl owl-base))
+  (libraries iter lzw imagelib tsdl owl-base)
+  (preprocess (pps ppx_deriving.show))
+  (modes exe))
 
 
 (env

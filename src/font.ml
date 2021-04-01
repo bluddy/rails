@@ -14,14 +14,9 @@ type font =
     characters: (char, string) Hashtbl.t;
     height: int;
     char_count: int;
-  }
+  } [@@ deriving show]
 
-let main filename =
-  Printf.printf "--- Font dump: %s\n" filename;
-
-  let filepath = Filename.remove_extension filename in
-  let destpath = filepath ^ ".png" in
-
+let of_file filename =
   let bytes =
     IO.with_in filename @@
       fun in_channel -> IO.read_all_bytes in_channel
@@ -78,9 +73,69 @@ let main filename =
       height=1+char_bot_row - char_top_row;
     }
   in
-  let fonts = List.map (fun offset -> create_font bytes offset) font_offsets in
-  Printf.printf "Num fonts: %d\n" (List.length fonts)
+  let fonts = List.map (fun offset -> create_font bytes offset) font_offsets |> Array.of_list in
+  fonts
 
+let main filename =
+  Printf.printf "--- Font dump: %s\n" filename;
+  let fonts = of_file filename in
+  Printf.printf "Num fonts: %d\n" (Array.length fonts)
 
+let load_all () =
+  let fonts = of_file "./FONTS.RR" in
+  fonts
 
+let get_str font c =
+  Hashtbl.find font.characters c
+
+let get_width font c =
+  Hashtbl.find font.char_widths c
+
+module Ndarray = Owl_base_dense_ndarray.Generic
+
+let write_letter font ~pixels c ~x ~y =
+  (* create an ARGB array with the letter *)
+  let x_off, y_off = x, y in
+  let width = Hashtbl.find font.char_widths c in
+  let char_str = Hashtbl.find font.characters c in
+  let byte, bit = ref 0, ref 0 in
+  for y=0 to font.height - 1 do
+    if !bit > 0 then begin
+      bit := 0;
+      incr byte;
+    end;
+    for x=0 to font.char_byte_length * 8 - 1 do
+      if x < width then begin
+        let color =
+          if ((Char.to_int char_str.[!byte]) land (0x80 lsr !bit)) > 0 then 0xFFFFFFFFl else 0l
+        in
+        Ndarray.set pixels [|y_off + y;x_off + x|] color
+      end;
+      incr bit;
+      if !bit = 8 then begin
+        bit := 0;
+        incr byte;
+      end
+    done;
+  done;
+  width
+
+let get_letter font c =
+  let width = Hashtbl.find font.char_widths c in
+  let pixels = Ndarray.empty Int32 [|font.height; width|] in
+  ignore @@ write_letter font ~pixels c ~y:0 ~x:0;
+  pixels
+
+  (* write to RGBA ndarray *)
+let write ~font str ~pixels ~x ~y =
+  let x_off, y_off = x, y in
+  String.fold (fun (x,y) c ->
+    let w = write_letter font ~pixels c ~x ~y in
+    (* Check if we ran out of horizontal space *)
+    if w + font.space_x >= Ndarray.nth_dim pixels 1 then
+      (x_off, y + font.height + font.space_y)
+    else
+      x + w + font.space_x, y)
+  (x_off, y_off)
+  str
 
