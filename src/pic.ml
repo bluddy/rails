@@ -88,12 +88,6 @@ let load_to_str filename =
 
   str, width, height
 
-let ega_palette =
-  (* black, blue, green, cyan, red, black, brown, gray *)
-  [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x0; 0xAA5500; 0xAAAAAA;
-  (* dark gray, br blue, br green, br cyan, br red, br magenta, br yellow, br white *)
-    0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
-
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 let bigarray_of_str str ~w ~h =
@@ -130,14 +124,15 @@ let translate_ega arr ~f ~w ~h =
   done;
   ()
 
-let img_write arr x y (r:int) (g:int) (b:int) =
+let img_write ?(a=0xFF) arr x y (r:int) (g:int) (b:int) =
   Ndarray.set arr [|y;x;0|] r;
   Ndarray.set arr [|y;x;1|] g;
   Ndarray.set arr [|y;x;2|] b;
+  Ndarray.set arr [|y;x;3|] a;
   ()
 
 let create_rgb_img ~w ~h =
-  Ndarray.empty Int8_unsigned [|h; w; 3|]
+  Ndarray.empty Int8_unsigned [|h; w; 4|]
 
 let bigarray_of_file filename =
   let str, w, h = load_to_str filename in

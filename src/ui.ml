@@ -13,6 +13,7 @@ let main () =
   let event = Sdl.Event.create () in
   let fonts = Font.load_all () in
 
+  (*
   let font = fonts.(0) in
   let letter = Font.get_letter font 'n' in
 
@@ -22,6 +23,7 @@ let main () =
     done;
     print_newline ()
   done;
+  *)
 
   let rec loop () =
     let stop =

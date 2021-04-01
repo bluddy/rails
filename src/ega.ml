@@ -16,7 +16,7 @@ let palette =
     0xff5555; (* c, bred *)
     0xff55ff; (* d, bmagenta *)
     0xffff55; (* e, byellow *)
-    0xffffff  (* f, bwhite *)
+    0xffffff; (* f, bwhite *)
   |]
 
 let get_color i = palette.(i)

@@ -107,9 +107,11 @@ let write_letter font ~pixels c ~x ~y =
     for x=0 to font.char_byte_length * 8 - 1 do
       if x < width then begin
         let color =
-          if ((Char.to_int char_str.[!byte]) land (0x80 lsr !bit)) > 0 then 0xFFFFFFFFl else 0l
+          if ((Char.to_int char_str.[!byte]) land (0x80 lsr !bit)) > 0 then 0xFF else 0
         in
-        Ndarray.set pixels [|y_off + y;x_off + x|] color
+        for i=0 to 3 do
+          Ndarray.set pixels [|y_off + y;x_off + x; i|] color
+        done
       end;
       incr bit;
       if !bit = 8 then begin
@@ -122,7 +124,7 @@ let write_letter font ~pixels c ~x ~y =
 
 let get_letter font c =
   let width = Hashtbl.find font.char_widths c in
-  let pixels = Ndarray.empty Int32 [|font.height; width|] in
+  let pixels = Ndarray.empty Int8_unsigned [|font.height; width; 4|] in
   ignore @@ write_letter font ~pixels c ~y:0 ~x:0;
   pixels
 
