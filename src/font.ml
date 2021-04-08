@@ -93,7 +93,7 @@ let get_width font c =
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
-let write_letter font ~pixels c ~x ~y =
+let write_letter ?(x=0) ?(y=0) font ~pixels c =
   (* create an ARGB array with the letter *)
   let x_off, y_off = x, y in
   let width = Hashtbl.find font.char_widths c in
@@ -110,6 +110,7 @@ let write_letter font ~pixels c ~x ~y =
           if ((Char.to_int char_str.[!byte]) land (0x80 lsr !bit)) > 0 then 0xFF else 0
         in
         for i=0 to 3 do
+          Printf.printf "y_off:%d, y:%d, x_off:%d, x:%d, i:%d" y_off y x_off x i;
           Ndarray.set pixels [|y_off + y;x_off + x; i|] color
         done
       end;
@@ -119,25 +120,34 @@ let write_letter font ~pixels c ~x ~y =
         incr byte;
       end
     done;
-  done;
-  width
+  done
 
 let get_letter font c =
   let width = Hashtbl.find font.char_widths c in
   let pixels = Ndarray.empty Int8_unsigned [|font.height; width; 4|] in
-  ignore @@ write_letter font ~pixels c ~y:0 ~x:0;
+  ignore @@ write_letter font ~pixels c;
   pixels
 
+let get_letter_width font c =
+  Hashtbl.find font.char_widths c
+
   (* write to RGBA ndarray *)
-let write ~font str ~pixels ~x ~y =
+let write ?(x=0) ?(y=0) ~font str ~pixels =
+  Printf.printf "pixels: %d x %d" (Ndarray.nth_dim pixels 1) (Ndarray.nth_dim pixels 0);
   let x_off, y_off = x, y in
-  String.fold (fun (x,y) c ->
-    let w = write_letter font ~pixels c ~x ~y in
-    (* Check if we ran out of horizontal space *)
-    if w + font.space_x >= Ndarray.nth_dim pixels 1 then
-      (x_off, y + font.height + font.space_y)
-    else
-      x + w + font.space_x, y)
-  (x_off, y_off)
-  str
+  let _ =
+    String.fold (fun (x,y) c ->
+      let w = get_letter_width font c in
+      let x, y =
+        (* check if we fit on the line *)
+        if Char.equal c '\n' || x + w >= Ndarray.nth_dim pixels 1 then
+          (x_off, y + font.height + font.space_y)
+        else
+          (x, y)
+      in
+      write_letter font ~pixels c ~x ~y;
+      (x + w + font.space_x, y))
+    (x_off, y_off)
+    str
+  in ()
 

@@ -4,26 +4,23 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Renderer
 
+let create_pixels (w,h) =
+  Ndarray.create Int8_unsigned [|h;w;4|] 0
+
 let main () =
   let win = R.create 320 200 ~zoom:2. in
 
   let bg_tex = Pic.img_of_file "./WESTUS.PIC" |> R.Texture.make win in
+  (* Map area: 256 * 192 *)
   let map = Game_map.map_of_file "./WESTUS.PIC" in
   let map_tex = Game_map.pic_of_map map |> R.Texture.make win in
   let event = Sdl.Event.create () in
   let fonts = Font.load_all () in
-
-  (*
   let font = fonts.(0) in
-  let letter = Font.get_letter font 'n' in
 
-  for y=0 to Ndarray.nth_dim letter 0 - 1 do
-    for x=0 to Ndarray.nth_dim letter 1 - 1 do
-      Printf.printf "%d" @@ Ndarray.get letter [|y;x|]
-    done;
-    print_newline ()
-  done;
-  *)
+  let pixels = create_pixels (320-256,192) in
+  Font.write ~font "Testing" ~pixels;
+  let text_tex = pixels |> R.Texture.make win in
 
   let rec loop () =
     let stop =
@@ -41,6 +38,7 @@ let main () =
       let* () = Sdl.render_clear win.renderer in
       let* () = Renderer.render win bg_tex in
       let* () = Renderer.render win map_tex in
+      let* () = Renderer.render win text_tex in
 
       Sdl.render_present win.renderer;
       Sdl.delay 10l;
