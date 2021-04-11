@@ -1,6 +1,13 @@
 open Containers
 open Iter.Infix
 
+(* fonts:
+  0: fancy olde style
+  1: all-caps
+  2: large
+  4: standard
+*)
+
 type font =
   {
     ascii_first: char;
@@ -110,7 +117,7 @@ let write_letter ?(x=0) ?(y=0) font ~pixels c =
           if ((Char.to_int char_str.[!byte]) land (0x80 lsr !bit)) > 0 then 0xFF else 0
         in
         for i=0 to 3 do
-          Printf.printf "y_off:%d, y:%d, x_off:%d, x:%d, i:%d" y_off y x_off x i;
+          (* Printf.printf "y_off:%d, y:%d, x_off:%d, x:%d, i:%d" y_off y x_off x i; *)
           Ndarray.set pixels [|y_off + y;x_off + x; i|] color
         done
       end;
@@ -133,21 +140,25 @@ let get_letter_width font c =
 
   (* write to RGBA ndarray *)
 let write ?(x=0) ?(y=0) ~font str ~pixels =
-  Printf.printf "pixels: %d x %d" (Ndarray.nth_dim pixels 1) (Ndarray.nth_dim pixels 0);
   let x_off, y_off = x, y in
-  let _ =
+  let x, y =
     String.fold (fun (x,y) c ->
-      let w = get_letter_width font c in
-      let x, y =
-        (* check if we fit on the line *)
-        if Char.equal c '\n' || x + w >= Ndarray.nth_dim pixels 1 then
-          (x_off, y + font.height + font.space_y)
-        else
-          (x, y)
+      let y_down = y + font.height + font.space_y in
+      if Char.equal c '\n' then
+        (x_off, y_down)
+      else
+        let w = get_letter_width font c in
+        let x, y =
+          (* check if we fit on the line *)
+          if x + w >= Ndarray.nth_dim pixels 1 then
+            (x_off, y_down)
+          else
+            (x, y)
       in
       write_letter font ~pixels c ~x ~y;
       (x + w + font.space_x, y))
     (x_off, y_off)
     str
-  in ()
+  in
+  x, y
 

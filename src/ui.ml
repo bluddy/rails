@@ -16,10 +16,16 @@ let main () =
   let map_tex = Game_map.pic_of_map map |> R.Texture.make win in
   let event = Sdl.Event.create () in
   let fonts = Font.load_all () in
-  let font = fonts.(0) in
 
-  let pixels = create_pixels (320-256,192) in
-  Font.write ~font "Testing" ~pixels;
+  (* let pixels = create_pixels (320-256,192) in *)
+  let pixels = create_pixels (320,192) in
+  let _ =
+    Array.foldi (fun (x, y) i font ->
+      Font.write ~font (Printf.sprintf "Font%d\n" i) ~pixels ~x ~y
+    )
+    (0, 0)
+    fonts
+  in
   let text_tex = pixels |> R.Texture.make win in
 
   let rec loop () =
@@ -38,7 +44,7 @@ let main () =
       let* () = Sdl.render_clear win.renderer in
       let* () = Renderer.render win bg_tex in
       let* () = Renderer.render win map_tex in
-      let* () = Renderer.render win text_tex in
+      let* () = Renderer.render win ~x:257 text_tex in
 
       Sdl.render_present win.renderer;
       Sdl.delay 10l;
