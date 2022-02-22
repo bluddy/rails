@@ -127,7 +127,7 @@ let decode_rle bytes =
   Buffer.to_bytes out
 
 (* Fill a color Image based on image bits *)
-let fill_image img_str img =
+let fill_image img_str img width height =
   let ega_palette =
     [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x000000; 0xAA5500; 0xAAAAAA;
     0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
@@ -200,7 +200,7 @@ let main filename =
     Printf.printf "Length rle decompressed: %d\n" (String.length img_str);
 
     let img = Image.create_rgb width height in
-    fill_image img_str img;
+    fill_image img_str img width height;
 
     (* Dump PNG *)
     let och = Png.chunk_writer_of_path destpath in
