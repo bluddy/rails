@@ -126,6 +126,36 @@ let decode_rle bytes =
   done;
   Buffer.to_bytes out
 
+(* Fill a color Image based on image bits *)
+let fill_image img_str img =
+  let ega_palette =
+    [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x000000; 0xAA5500; 0xAAAAAA;
+    0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
+  in
+  let idx = ref 0 in
+  let low = ref true in (* low then high *)
+  for y=0 to height-1 do
+    for x=0 to width-1 do
+      let c = int_of_char img_str.[!idx] in
+      let nibble = if !low then c land 0x0f else c lsr 4 in
+      let write_color x y index =
+        let color = ega_palette.(index) in
+        let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
+        (* Printf.printf "x:%d y:%d\n" x y; *)
+        Image.write_rgb img x y r g b;
+      in
+      write_color x y nibble;
+
+      (* advance *)
+      if !low && x < width-1 then begin
+        low := false
+      end else begin
+        low := true;
+        incr idx
+      end
+    done
+  done
+
 let main filename =
   Printf.printf "--- PANI dump: %s\n" filename;
 
@@ -135,31 +165,32 @@ let main filename =
     IO.with_in filename @@
       fun in_channel -> IO.read_all_bytes in_channel
   in
-
-  let offset = ref 0 in
-
-  let read_byte () =
-    let x = Bytes.get_uint8 bytes !offset;
-    inc offset 1
+  (* Find all images *)
+  let offset_list =
+    let diff = 6 in
+    Iter.fold (fun acc i ->
+      let v1 = Bytes.get_uint16_le bytes i in
+      let b2 = Bytes.get_uint8 bytes (i+diff) in
+      match v1, b2 with
+      | 0x07, 0xb -> i::acc
+      | _ -> acc
+    )
+    []
+    (0x24 -- (Bytes.length bytes - diff - 1))
+    |> List.rev
   in
-  let read_word () =
-    let x = Bytes.get_uint16_le bytes !offset;
-    inc offset 2
-  in
+  Printf.printf "Found %d images\n" @@ List.length offset_list;
 
-  while !offset < Bytes.length bytes do
+  List.iteri (fun i offset ->
 
     let destpath = Printf.sprintf "./png/%s_%03d.png" filepath i in
 
-    let format = read_word () in
-    let width  = read_word () in
-    let height = read_word () in
-
-    Printf.printf "idx=%d offset=%x width=%d, height=%d, total_size=%d\n" i !offset width height (width*height/2);
+    let width  = Bytes.get_uint16_le bytes @@ offset + 2 in
+    let height = Bytes.get_uint16_le bytes @@ offset + 4 in
+    Printf.printf "idx=%d offset=%x width=%d, height=%d, total_size=%d\n" i offset width height (width*height/2);
     Printf.printf "Length original: %d\n" (Bytes.length bytes);
 
-    let max_lzw = read_byte () in
-
+    let start_offset = offset + 7 in
     let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
 
     let bytes = Lzw.decompress bytes ~max_bit_size:11 ~report_offset:offset ~suppress_error:true in
@@ -169,36 +200,13 @@ let main filename =
     Printf.printf "Length rle decompressed: %d\n" (String.length img_str);
 
     let img = Image.create_rgb width height in
-    let ega_palette =
-      [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x000000; 0xAA5500; 0xAAAAAA;
-      0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
-    in
-    let idx = ref 0 in
-    let low = ref true in (* low then high *)
-    for y=0 to height-1 do
-      for x=0 to width-1 do
-        let c = int_of_char img_str.[!idx] in
-        let nibble = if !low then c land 0x0f else c lsr 4 in
-        let write_color x y index =
-          let color = ega_palette.(index) in
-          let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
-          (* Printf.printf "x:%d y:%d\n" x y; *)
-          Image.write_rgb img x y r g b;
-        in
-        write_color x y nibble;
+    fill_image img_str img;
 
-        (* advance *)
-        if !low && x < width-1 then begin
-          low := false
-        end else begin
-          low := true;
-          incr idx
-        end
-      done
-    done;
+    (* Dump PNG *)
     let och = Png.chunk_writer_of_path destpath in
     ImagePNG.write och img
-  done
+  )
+  offset_list
 
 
 
