@@ -1,4 +1,3 @@
-open Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 type tile =

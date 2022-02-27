@@ -85,46 +85,7 @@ f900 00 1300 1202 fcff 0000 0010 0204 00
 
 IRONM: 42sec
 WOOD2: 18sec
-
-The image data is stored as LZW compressed RLE stream. The LZW resets when the dictionary gets full (i.e, there's no separate reset signal).
-Under the LZW the data is compressed with RLE, so that if a pixel byte is 0x90, the previous pixel is repeated as many times as the next byte says; if the repeat value is 0, the pixel value is 0x90.
-
-To reiterate, the RLE works this way:
-aa 90 bb
-if bb = 0, output is "aa 90"
-if bb != 0, output is "aa" * (bb+1)
-
-And yes, if you want a stream of 90's, you do 90 00 90 xx.
-
-Each pixel byte represents two 16-color pixels. I'm not sure what they're doing with palette, it's
-possible they're just using the "normal" 16 color palette.
 *)
-
-let decode_rle bytes =
-  let out = Buffer.create 100 in
-
-  let rle = ref false in
-  let last_val = ref 0 in
-  for i = 0 to Bytes.length bytes - 1 do
-    let v = Bytes.get_uint8 bytes i in
-    match v with
-    | 0x90 ->
-        rle := true
-    | 0 when !rle ->
-        Buffer.add_uint8 out 0x90;
-        rle := false;
-        last_val := 0x90
-    | x when !rle ->
-        (* do one less than normal *)
-        for _i = 0 to x - 2 do
-          Buffer.add_uint8 out !last_val
-        done;
-        rle := false
-    | x ->
-        Buffer.add_uint8 out x;
-        last_val := x;
-  done;
-  Buffer.to_bytes out
 
 (* Fill a color Image based on image bits *)
 let fill_image img_str img width height =
@@ -161,10 +122,12 @@ let main filename =
 
   let filepath = Filename.remove_extension filename in
 
-  let bytes =
+  let buffer =
     IO.with_in filename @@
-      fun in_channel -> IO.read_all_bytes in_channel
+      fun in_channel -> IO.read_all in_channel
   in
+  let buf_stream = String.to_seqi buffer in
+  
   (* Find all images *)
   let offset_list =
     let diff = 6 in

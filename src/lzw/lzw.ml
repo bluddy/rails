@@ -42,12 +42,12 @@ exception ValueError of string
 
 module BitReader = struct
   type t = {
-    buffer: int;
+    mutable buffer: int;
     mutable bit_idx: int;
-    source: (int * char) Seq.t;
+    source: char Gen.t;
   }
 
-  let of_seq source = {buffer=0; bit_idx=0; source}
+  let of_stream source = {buffer=0; bit_idx=0; source}
 
   let get_bits v num_bits =
     assert (num_bits >= 8);
@@ -59,11 +59,11 @@ module BitReader = struct
       if num_bits > 8 then 2 else 1
     in
     let byte_offset =
-      match bit_idx with
+      match v.bit_idx with
       | 0 -> 0
       | _ -> 1
     in
-    let get_byte () = Char.code @@ snd @@ Seq.head_exn v.source in
+    let get_byte () : int = Char.code @@ Option.get_exn @@ Gen.get v.source in
 
     (* Add one byte *)
     v.buffer <- v.buffer lor ((get_byte ()) lsl 8 * byte_offset);
@@ -82,30 +82,27 @@ module BitReader = struct
 
     (* Update buffer for next time *)
     let () =
-      match num_bits with
-      | 8  -> v.buffer <- v.buffer lsr 8
-      | 16 -> v.buffer <- v.buffer lsr 16
-      | _ ->
-          v.buffer <- v.buffer lsr 8
-          v.bit_idx <- v.bit_idx + (num_bits - 8);
-          (* Reduce bit_idx >= 8 to < 8 *)
-          if v.bit_idx >= 8 then begin
-            v.buffer <- v.buffer lsr 8
-            v.bit_idx <- v.bit_idx - 8
-          end
+        v.buffer <- v.buffer lsr 8;
+        v.bit_idx <- v.bit_idx + (num_bits - 8);
+        (* Reduce bit_idx >= 8 to < 8 *)
+        if v.bit_idx >= 8 then begin
+          v.buffer <- v.buffer lsr 8;
+          v.bit_idx <- v.bit_idx - 8;
+        end
     in
     res
 
 end
 
 
-(** decompress a list of output symbols to a string *)
-let decompress ?(report_offset=0) ?(suppress_error=false) compressed ~max_bit_size =
+(** decompress a stream of output symbols to a string *)
+let decompress (compressed:char Gen.t) ~max_bit_size : char Gen.t =
   (* build the dictionary *)
-  let compressed = ReadBytes.of_bytes compressed ~report_offset in
+  let compressed = BitReader.of_stream compressed in
   let dictionary = Hashtbl.create 397 in
 
   let reset () =
+    (* Reset the dictionary *)
     let dict_size = 256 in
     Hashtbl.reset dictionary;
     for i=0 to dict_size - 1 do
@@ -115,19 +112,20 @@ let decompress ?(report_offset=0) ?(suppress_error=false) compressed ~max_bit_si
   in
   reset ();
 
-  let result = Buffer.create 1024 in
-
   let w =
-    let x = ReadBytes.get_bits compressed 9 in
+    let x = BitReader.get_bits compressed 9 in
     Hashtbl.find dictionary x
   in
-  Buffer.add_string result w;
 
-  let _ =
-    try begin
+  let add_string s = Gen.of_string s in
+
+  let stream1 : char Gen.t = add_string w in
+
+  let stream2 : char Gen.t =
+      Gen.flatten @@
       (* Start at 257 rather than 256 for no reason *)
-      ReadBytes.fold_bits compressed 9 ~zero:(w,257) @@
-        fun (w,count) bit_size k ->
+      Gen.unfold (fun (w, count, bit_size) ->
+          let k = BitReader.get_bits compressed bit_size in
           let entry =
             match Hashtbl.find_opt dictionary k with
             | Some s ->
@@ -141,21 +139,57 @@ let decompress ?(report_offset=0) ?(suppress_error=false) compressed ~max_bit_si
                 ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), bitsize=%d size=%d count=%d"
                   k k bit_size (Hashtbl.length dictionary) count)
           in
-          Buffer.add_string result entry;
-
           (* add (w ^ entry.[0]) to the dictionary *)
           Hashtbl.replace dictionary count (w ^ (String.sub entry 0 1));
 
+          let result: char Gen.t = add_string entry in
+
           let bit_size =
-            if count + 2 > 1 lsl bit_size then bit_size + 1 else bit_size
+            if count + 2 > 1 lsl bit_size
+            then bit_size + 1 else bit_size
           in
+
           if bit_size > max_bit_size then begin
             reset ();
-            ((entry, 256), 9)
+            Some (result, (entry, 256, 9))
           end else
-            ((entry, count+1), bit_size)
-    end with ValueError _ as e ->
-      if suppress_error then ("", 0) else raise e
+            Some (result, (entry, count+1, bit_size))
+      )
+      (w, 257, 9)
   in
-  Buffer.to_bytes result
+  Gen.append stream1 stream2
+
+(*
+The image data is stored as LZW compressed RLE stream. The LZW resets when the dictionary gets full (i.e, there's no separate reset signal).
+Under the LZW the data is compressed with RLE, so that if a pixel byte is 0x90, the previous pixel is repeated as many times as the next byte says; if the repeat value is 0, the pixel value is 0x90.
+
+To reiterate, the RLE works this way:
+aa 90 bb
+if bb = 0, output is "aa 90"
+if bb != 0, output is "aa" * (bb+1)
+
+And yes, if you want a stream of 90's, you do 90 00 90 xx.
+
+*)
+
+let decode_rle (stream: char Gen.t) : char Gen.t =
+
+  let get_byte s : int = Char.code @@ Option.get_exn @@ Gen.get s in
+  let add_byte b = Gen.return @@ Char.chr b in
+
+  let result : char Gen.t =
+    Gen.flatten @@
+    Gen.unfold (fun (rle, last_val) ->
+      match get_byte stream with
+      | 0x90 -> Some (Gen.empty, (true, last_val))
+      | 0 when rle -> Some (add_byte 0x90, (false, 0x90))
+      | x when rle ->
+          (* repeat x-1 times *)
+          let g = Gen.init ~limit:(x-1) (fun _ -> Char.chr last_val) in
+          Some (g, (false, last_val))
+      | x -> Some (add_byte x, (rle, x))
+    )
+    (false, 0)
+  in
+  result
 

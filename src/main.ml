@@ -17,7 +17,7 @@ let () =
     Font.main !font_file
   else if !pic_file <> "" then
     Pic.png_of_file !pic_file
-  else if !pani_file <> "" then
-    Pani_dump.main !pani_file
+(*  else if !pani_file <> "" then
+    Pani_dump.main !pani_file *)
   else
     Ui.main ()

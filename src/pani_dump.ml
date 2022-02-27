@@ -89,32 +89,8 @@ Each pixel byte represents two 16-color pixels. I'm not sure what they're doing 
 possible they're just using the "normal" 16 color palette.
 *)
 
-let decode_rle bytes =
-  let out = Buffer.create 100 in
 
-  let rle = ref false in
-  let last_val = ref 0 in
-  for i = 0 to Bytes.length bytes - 1 do
-    let v = Bytes.get_uint8 bytes i in
-    match v with
-    | 0x90 ->
-        rle := true
-    | 0 when !rle ->
-        Buffer.add_uint8 out 0x90;
-        rle := false;
-        last_val := 0x90
-    | x when !rle ->
-        (* do one less than normal *)
-        for _i = 0 to x - 2 do
-          Buffer.add_uint8 out !last_val
-        done;
-        rle := false
-    | x ->
-        Buffer.add_uint8 out x;
-        last_val := x;
-  done;
-  Buffer.to_bytes out
-
+(*
 let main filename =
   Printf.printf "--- PANI dump: %s\n" filename;
 
@@ -191,6 +167,6 @@ let main filename =
   )
   offset_list
 
-
+*)
 
 
