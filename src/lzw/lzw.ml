@@ -40,17 +40,14 @@ let compress uncompressed =
 
 exception ValueError of string
 
-module ReadBytes = struct
+module BitReader = struct
   type t = {
-    buffer: Bytes.t;
-    mutable byte_idx: int;
+    buffer: int;
     mutable bit_idx: int;
-    report_offset: int; (* for debug only *)
+    source: (int * char) Seq.t;
   }
 
-  let of_bytes ?(report_offset=0) b = {buffer=b; byte_idx=0; bit_idx=0; report_offset}
-
-  let eof b = b.byte_idx >= Bytes.length b.buffer
+  let of_seq source = {buffer=0; bit_idx=0; source}
 
   let get_bits v num_bits =
     assert (num_bits >= 8);
@@ -58,60 +55,47 @@ module ReadBytes = struct
 
     (* Printf.printf "byte_idx: %x, bit_idx: %d, d=0x%x\n" (v.byte_idx + v.report_offset) v.bit_idx (Bytes.get_uint8 v.buffer v.byte_idx); *)
 
-    (* get 3 bytes *)
-    let word = Bytes.get_uint8 v.buffer v.byte_idx in
-    let word =
-      if v.byte_idx < Bytes.length v.buffer - 1 then
-        let byte2 = Bytes.get_uint8 v.buffer (v.byte_idx + 1) in
-        word lor (byte2 lsl 8)
-      else word
+    let bytes_to_read =
+      if num_bits > 8 then 2 else 1
     in
-    let word =
-      if v.byte_idx < Bytes.length v.buffer - 2 then
-        let byte3 = Bytes.get_uint8 v.buffer (v.byte_idx + 2) in
-        word lor (byte3 lsl 16)
-      else word
+    let byte_offset =
+      match bit_idx with
+      | 0 -> 0
+      | _ -> 1
     in
-    (* Printf.printf "word=0x%x\n" word; *)
+    let get_byte () = Char.code @@ snd @@ Seq.head_exn v.source in
+
+    (* Add one byte *)
+    v.buffer <- v.buffer lor ((get_byte ()) lsl 8 * byte_offset);
+
+    (* Add second byte if needed *)
+    if bytes_to_read > 1 then
+      v.buffer <- v.buffer lor ((get_byte ()) lsl 8 * (byte_offset + 1));
 
     (* shift right to get needed bits *)
-    let word = word lsr v.bit_idx in
+    let word = v.buffer lsr v.bit_idx in
     (* Printf.printf "post-shift word=0x%x\n" word; *)
 
     (* mask out unneeded bits *)
     let mask = lnot (0x7FFFFFFF lsl num_bits) in
     let res = word land mask in
 
+    (* Update buffer for next time *)
     let () =
       match num_bits with
-      | 8  -> v.byte_idx <- v.byte_idx + 1
-      | 16 -> v.byte_idx <- v.byte_idx + 2
+      | 8  -> v.buffer <- v.buffer lsr 8
+      | 16 -> v.buffer <- v.buffer lsr 16
       | _ ->
-          v.byte_idx <- v.byte_idx + 1;
+          v.buffer <- v.buffer lsr 8
           v.bit_idx <- v.bit_idx + (num_bits - 8);
+          (* Reduce bit_idx >= 8 to < 8 *)
           if v.bit_idx >= 8 then begin
-            v.byte_idx <- v.byte_idx + 1;
+            v.buffer <- v.buffer lsr 8
             v.bit_idx <- v.bit_idx - 8
           end
     in
     res
 
-  let iter_bits v i f =
-    let bit_size = ref i in
-    while not @@ eof v do
-      let b = f @@ get_bits v !bit_size in
-      bit_size := b
-    done
-
-  let fold_bits v i f ~zero =
-    let bit_size = ref i in
-    let acc_ref = ref zero in
-    while not @@ eof v do
-      let acc, b = f !acc_ref !bit_size (get_bits v !bit_size) in
-      acc_ref := acc;
-      bit_size := b;
-    done;
-    !acc_ref
 end
 
 
