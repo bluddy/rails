@@ -26,24 +26,26 @@ Each pixel byte represents two 16-color pixels. I'm not sure what they're doing 
 possible they're just using the "normal" 16 color palette.
 *)
 
-let load_to_str filename =
-  let bytes =
-    IO.with_in filename @@
-      fun in_channel -> IO.read_all_bytes in_channel
+let str_of_stream (stream: char Gen.t) =
+
+  let get_byte s : int = Char.code @@ Option.get_exn @@ Gen.get s in
+  let get_word s : int =
+    let word = get_byte s in
+    word lor ((get_byte s) lsl 8)
   in
-  let start_offset =
-    match Bytes.get_uint16_le bytes 0 with
-    | 0xF -> 23
-    | 0x7 -> 7
-    | 0x6 -> 7
+  let discard_bytes =
+    match get_word stream with
+    | 0xF -> 23 - 4
+    | 0x7 | 0x6 -> 7 - 4 
     | _ -> failwith "Unknown format"
   in
-  let width  = Bytes.get_uint16_le bytes 2 in
-  let height = Bytes.get_uint16_le bytes 4 in
+  let width  = get_word stream in (* 2 *)
+  let height = get_word stream in (* 4 *)
 
   (* Printf.printf "Length original: %d\n" (Bytes.length bytes); *)
-  let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
-  let stream = Gen.of_string @@ String.of_bytes bytes in
+  for _i=0 to discard_bytes - 1 do
+    Gen.junk stream
+  done;
 
   let lzw_stream = Lzw.decompress stream ~max_bit_size:11 in
   (* Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes); *)
@@ -54,6 +56,14 @@ let load_to_str filename =
   let str = Gen.take (width * height) lre_stream |> Gen.to_string in
 
   str, width, height
+
+
+let load_to_str filename =
+  let str =
+    IO.with_in filename @@ fun in_channel -> IO.read_all in_channel
+  in
+  let stream = Gen.of_string str in
+  str_of_stream stream
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
@@ -131,7 +141,7 @@ let png_of_file filename =
   let destpath = filepath ^ ".png" in
   let str, w, h = load_to_str filename in
   let arr = bigarray_of_str str ~w ~h in
-  let img = Image.create_rgb 320 200 in
+  let img = Image.create_rgb w h in
   translate_ega arr ~f:(Image.write_rgb img) ~w ~h;
   let och = Png.chunk_writer_of_path destpath in
   ImagePNG.write och img
