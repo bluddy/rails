@@ -60,13 +60,10 @@ module BitReader = struct
       let have_bits = v.length * 8 - v.bit_idx in
       let need_bits = num_bits - have_bits in
       int_of_float @@ ceil @@ float_of_int need_bits /. 8.
-      (*
-      let need_bits = v.bit_idx + num_bits - v.length * 8 in
-      if need_bits <= 0 then 0
-      else need_bits / 8 + 1 *)
     in
 
-    (* Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d, btr:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length bytes_to_read; (* debug *) *)
+    if !debug then
+      Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d, btr:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length bytes_to_read; (* debug *)
 
     (* Add bytes *)
     for _i=0 to bytes_to_read - 1 do
@@ -82,7 +79,8 @@ module BitReader = struct
     let mask = lnot (0x7FFFFFFF lsl num_bits) in
     let res = word land mask in
 
-    (* Printf.printf "0x%x: get %d bits, after buffer:0x%x bitidx:%d length:%d, read 0x%x\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length res; (* debug *) *)
+    if !debug then
+      Printf.printf "0x%x: get %d bits, after buffer:0x%x bitidx:%d length:%d, read 0x%x\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length res; (* debug *)
 
     (* Update buffer for next time *)
     v.buffer  <- v.buffer lsr 8;

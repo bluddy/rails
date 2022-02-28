@@ -18,7 +18,10 @@ let of_stringi ?(start=0) ?len s =
 let last_i = ref 0
 
 let get_bytei s : int =
-  let i, c = Option.get_exn @@ Gen.get s in
+  let i, c = match Gen.get s with
+    | Some (i, c) -> i, c
+    | None -> !last_i, Char.chr 0 (* hack: files allow for 0 past end *)
+  in
   last_i := i;
   Char.code c
 
