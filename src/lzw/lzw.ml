@@ -147,10 +147,11 @@ let decompress ?(report_offset=0) ?(suppress_error=false) compressed ~max_bit_si
           let entry =
             match Hashtbl.find_opt dictionary k with
             | Some s ->
-                (* Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s); *)
+                Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s);
                 s
             | None when k = count -> (* Only option *)
                 (* Add first letter of last matched word *)
+                Printf.printf "%d: Not found but ok." k;
                 w ^ String.sub w 0 1
             | _ ->
                 raise @@
