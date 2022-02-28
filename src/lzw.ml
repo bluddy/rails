@@ -57,9 +57,13 @@ module BitReader = struct
     assert (num_bits <= 16);
 
     let bytes_to_read =
+      let have_bits = v.length * 8 - v.bit_idx in
+      let need_bits = num_bits - have_bits in
+      int_of_float @@ ceil @@ float_of_int need_bits /. 8.
+      (*
       let need_bits = v.bit_idx + num_bits - v.length * 8 in
       if need_bits <= 0 then 0
-      else need_bits / 8 + 1
+      else need_bits / 8 + 1 *)
     in
 
     Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d, btr:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length bytes_to_read; (* debug *)
