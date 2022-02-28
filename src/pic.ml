@@ -26,6 +26,8 @@ Each pixel byte represents two 16-color pixels. I'm not sure what they're doing 
 possible they're just using the "normal" 16 color palette.
 *)
 
+let debug = ref false
+
 let str_of_stream (stream: (int * char) Gen.t) =
 
   let discard_bytes =
@@ -37,7 +39,8 @@ let str_of_stream (stream: (int * char) Gen.t) =
   let width  = My_gen.get_wordi stream in (* 2 *)
   let height = My_gen.get_wordi stream in (* 4 *)
 
-  (* Printf.printf "0x%x: width: %d, height: %d\n" (My_gen.pos ()) width height; (* debug *) *)
+  if !debug then
+    Printf.printf "0x%x: width: %d, height: %d\n" (My_gen.pos ()) width height; (* debug *)
 
   for _i=0 to discard_bytes - 1 do
     My_gen.junki stream
@@ -135,7 +138,7 @@ let img_of_file filename =
   img
 
 let png_of_file filename =
-  Printf.printf "--- Pic dump: %s" filename;
+  Printf.printf "--- Pic dump: %s\n" filename;
   let filepath = Filename.remove_extension filename in
   let destpath = filepath ^ ".png" in
   let str, w, h = load_to_str filename in

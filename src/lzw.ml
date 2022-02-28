@@ -3,7 +3,7 @@ open Containers
 
 (* TODO: dynamic bit sizes *)
 
-let last_i = ref 0
+let debug = ref false
 
 (** compress a string to a list of output symbols *)
 let compress uncompressed =
