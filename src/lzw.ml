@@ -3,7 +3,7 @@ open Containers
 
 (* TODO: dynamic bit sizes *)
 
-let debug = ref false
+let debug = ref true
 
 (** compress a string to a list of output symbols *)
 let compress uncompressed =
@@ -133,9 +133,11 @@ let decompress (compressed:(int*char) Gen.t) ~max_bit_size : char Gen.t =
 
           let entry =
             match Hashtbl.find_opt dictionary k with
-            | Some s -> s
-                 (* Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n"
-                   count k k bit_size (String.length s); (* debug *) *)
+            | Some s ->
+                if !debug then
+                  Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n"
+                   count k k bit_size (String.length s); (* debug *)
+                s
             | None when k = count -> (* Only option *)
                 (* Add first letter of last matched word *)
                 w ^ String.sub w 0 1
