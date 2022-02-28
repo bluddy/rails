@@ -66,7 +66,7 @@ module BitReader = struct
       else need_bits / 8 + 1 *)
     in
 
-    Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d, btr:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length bytes_to_read; (* debug *)
+    (* Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d, btr:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length bytes_to_read; (* debug *) *)
 
     (* Add bytes *)
     for _i=0 to bytes_to_read - 1 do
@@ -82,7 +82,7 @@ module BitReader = struct
     let mask = lnot (0x7FFFFFFF lsl num_bits) in
     let res = word land mask in
 
-    Printf.printf "0x%x: get %d bits, after buffer:0x%x bitidx:%d length:%d, read 0x%x\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length res; (* debug *)
+    (* Printf.printf "0x%x: get %d bits, after buffer:0x%x bitidx:%d length:%d, read 0x%x\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length res; (* debug *) *)
 
     (* Update buffer for next time *)
     v.buffer  <- v.buffer lsr 8;
@@ -117,7 +117,6 @@ let decompress (compressed:(int*char) Gen.t) ~max_bit_size : char Gen.t =
 
   let w =
     let x = BitReader.get_bits compressed 9 in
-    Printf.printf "0x%x: read 0x%x\n" (My_gen.pos ()) x; (* debug *)
     Hashtbl.find dictionary x
   in
 
@@ -132,14 +131,11 @@ let decompress (compressed:(int*char) Gen.t) ~max_bit_size : char Gen.t =
       Gen.unfold (fun (w, count, bit_size) ->
           let k = BitReader.get_bits compressed bit_size in
 
-          Printf.printf "0x%x: 0x%x\n" (My_gen.pos ()) k; (* debug *)
-
           let entry =
             match Hashtbl.find_opt dictionary k with
-            | Some s ->
-                 Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n"
-                   count k k bit_size (String.length s); (* debug *)
-                s
+            | Some s -> s
+                 (* Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n"
+                   count k k bit_size (String.length s); (* debug *) *)
             | None when k = count -> (* Only option *)
                 (* Add first letter of last matched word *)
                 w ^ String.sub w 0 1

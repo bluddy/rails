@@ -37,13 +37,13 @@ let str_of_stream (stream: (int * char) Gen.t) =
   let width  = My_gen.get_wordi stream in (* 2 *)
   let height = My_gen.get_wordi stream in (* 4 *)
 
-  Printf.printf "0x%x: width: %d, height: %d\n" (My_gen.pos ()) width height; (* debug *)
+  (* Printf.printf "0x%x: width: %d, height: %d\n" (My_gen.pos ()) width height; (* debug *) *)
 
   for _i=0 to discard_bytes - 1 do
     My_gen.junki stream
   done;
 
-  Printf.printf "offset before lzw: %d\n" (My_gen.pos ()); (* debug *)
+  (* Printf.printf "offset before lzw: %d\n" (My_gen.pos ()); (* debug *) *)
 
   let lzw_stream = Lzw.decompress stream ~max_bit_size:11 in
   (* Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes); *)
@@ -51,7 +51,8 @@ let str_of_stream (stream: (int * char) Gen.t) =
   let lre_stream = Lzw.decode_rle lzw_stream in
   (* Printf.printf "Length rle decompressed: %d\n" (String.length s); *)
 
-  let str = Gen.take (width * height) lre_stream |> Gen.to_string in
+  (* Half the number: nibbles not bytes *)
+  let str = Gen.take (width * height / 2) lre_stream |> Gen.to_string in
 
   str, width, height
 

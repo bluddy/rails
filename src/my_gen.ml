@@ -39,3 +39,17 @@ let get_byte s : int =
 let get_word s : int =
   let word = get_byte s in
   word lor ((get_byte s) lsl 8)
+
+let take n gen =
+  assert (n >= 0);
+  let count = ref 0 in  (* how many yielded elements *)
+  fun () ->
+    if !count = n || !count = ~-1
+    then None
+    else match gen() with
+      | None -> count := ~-1; None   (* indicate stop *)
+      | (Some _) as x ->
+          incr count;
+          Printf.printf "take: %d\n" !count;
+          x
+
