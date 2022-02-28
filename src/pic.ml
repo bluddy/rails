@@ -26,26 +26,24 @@ Each pixel byte represents two 16-color pixels. I'm not sure what they're doing 
 possible they're just using the "normal" 16 color palette.
 *)
 
-let str_of_stream (stream: char Gen.t) =
+let str_of_stream (stream: (int * char) Gen.t) =
 
-  let get_byte s : int = Char.code @@ Option.get_exn @@ Gen.get s in
-  let get_word s : int =
-    let word = get_byte s in
-    word lor ((get_byte s) lsl 8)
-  in
   let discard_bytes =
-    match get_word stream with
-    | 0xF -> 23 - 4
-    | 0x7 | 0x6 -> 7 - 4 
+    match My_gen.get_wordi stream with
+    | 0xF -> 23 - 6
+    | 0x7 | 0x6 -> 7 - 6 
     | _ -> failwith "Unknown format"
   in
-  let width  = get_word stream in (* 2 *)
-  let height = get_word stream in (* 4 *)
+  let width  = My_gen.get_wordi stream in (* 2 *)
+  let height = My_gen.get_wordi stream in (* 4 *)
 
-  (* Printf.printf "Length original: %d\n" (Bytes.length bytes); *)
+  Printf.printf "0x%x: width: %d, height: %d\n" (My_gen.pos ()) width height; (* debug *)
+
   for _i=0 to discard_bytes - 1 do
-    Gen.junk stream
+    My_gen.junki stream
   done;
+
+  Printf.printf "offset before lzw: %d\n" (My_gen.pos ()); (* debug *)
 
   let lzw_stream = Lzw.decompress stream ~max_bit_size:11 in
   (* Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes); *)
@@ -62,7 +60,7 @@ let load_to_str filename =
   let str =
     IO.with_in filename @@ fun in_channel -> IO.read_all in_channel
   in
-  let stream = Gen.of_string str in
+  let stream = My_gen.of_stringi str in
   str_of_stream stream
 
 module Ndarray = Owl_base_dense_ndarray.Generic

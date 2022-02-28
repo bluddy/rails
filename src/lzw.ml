@@ -3,6 +3,8 @@ open Containers
 
 (* TODO: dynamic bit sizes *)
 
+let last_i = ref 0
+
 (** compress a string to a list of output symbols *)
 let compress uncompressed =
   (* build the dictionary *)
@@ -44,7 +46,7 @@ module BitReader = struct
   type t = {
     mutable buffer: int;
     mutable bit_idx: int;
-    source: char Gen.t;
+    source: (int * char) Gen.t;
   }
 
   let of_stream source = {buffer=0; bit_idx=0; source}
@@ -52,8 +54,6 @@ module BitReader = struct
   let get_bits v num_bits =
     assert (num_bits >= 8);
     assert (num_bits <= 16);
-
-    (* Printf.printf "byte_idx: %x, bit_idx: %d, d=0x%x\n" (v.byte_idx + v.report_offset) v.bit_idx (Bytes.get_uint8 v.buffer v.byte_idx); *)
 
     let bytes_to_read =
       if num_bits > 8 then 2 else 1
@@ -63,14 +63,16 @@ module BitReader = struct
       | 0 -> 0
       | _ -> 1
     in
-    let get_byte () : int = Char.code @@ Option.get_exn @@ Gen.get v.source in
+
+    Printf.printf "0x%x: get %d bits, before buffer:0x%x\n" (My_gen.pos ()) num_bits v.buffer; (* debug *)
 
     (* Add one byte *)
-    v.buffer <- v.buffer lor ((get_byte ()) lsl 8 * byte_offset);
-
+    v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * byte_offset));
     (* Add second byte if needed *)
-    if bytes_to_read > 1 then
-      v.buffer <- v.buffer lor ((get_byte ()) lsl 8 * (byte_offset + 1));
+    if bytes_to_read > 1 then begin
+      let byte_offset = byte_offset + 1 in
+      v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * byte_offset));
+    end;
 
     (* shift right to get needed bits *)
     let word = v.buffer lsr v.bit_idx in
@@ -80,23 +82,22 @@ module BitReader = struct
     let mask = lnot (0x7FFFFFFF lsl num_bits) in
     let res = word land mask in
 
-    (* Update buffer for next time *)
-    let () =
-        v.buffer <- v.buffer lsr 8;
-        v.bit_idx <- v.bit_idx + (num_bits - 8);
-        (* Reduce bit_idx >= 8 to < 8 *)
-        if v.bit_idx >= 8 then begin
-          v.buffer <- v.buffer lsr 8;
-          v.bit_idx <- v.bit_idx - 8;
-        end
-    in
-    res
+    Printf.printf "0x%x: get %d bits, after buffer:0x%x, read 0x%x\n" (My_gen.pos ()) num_bits v.buffer res; (* debug *)
 
+    (* Update buffer for next time *)
+    v.buffer  <- v.buffer lsr 8;
+    v.bit_idx <- v.bit_idx + num_bits - 8;
+    (* Reduce bit_idx >= 8 to < 8 *)
+    if v.bit_idx >= 8 then begin
+      v.buffer  <- v.buffer lsr 8;
+      v.bit_idx <- v.bit_idx - 8;
+    end;
+    res
 end
 
 
 (** decompress a stream of output symbols to a string *)
-let decompress (compressed:char Gen.t) ~max_bit_size : char Gen.t =
+let decompress (compressed:(int*char) Gen.t) ~max_bit_size : char Gen.t =
   (* build the dictionary *)
   let compressed = BitReader.of_stream compressed in
   let dictionary = Hashtbl.create 397 in
@@ -114,6 +115,7 @@ let decompress (compressed:char Gen.t) ~max_bit_size : char Gen.t =
 
   let w =
     let x = BitReader.get_bits compressed 9 in
+    Printf.printf "0x%x: read 0x%x\n" (My_gen.pos ()) x; (* debug *)
     Hashtbl.find dictionary x
   in
 
@@ -121,23 +123,28 @@ let decompress (compressed:char Gen.t) ~max_bit_size : char Gen.t =
 
   let stream1 : char Gen.t = add_string w in
 
+
   let stream2 : char Gen.t =
       Gen.flatten @@
       (* Start at 257 rather than 256 for no reason *)
       Gen.unfold (fun (w, count, bit_size) ->
           let k = BitReader.get_bits compressed bit_size in
+
+          Printf.printf "0x%x: 0x%x\n" (My_gen.pos ()) k; (* debug *)
+
           let entry =
             match Hashtbl.find_opt dictionary k with
             | Some s ->
-                (* Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n" count k k bit_size (String.length s); *)
+                 Printf.printf "%d: Found %d(0x%x) bitsize=%d in dictionary: len %d\n"
+                   count k k bit_size (String.length s); (* debug *)
                 s
             | None when k = count -> (* Only option *)
                 (* Add first letter of last matched word *)
                 w ^ String.sub w 0 1
             | _ ->
                 raise @@
-                ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), bitsize=%d size=%d count=%d"
-                  k k bit_size (Hashtbl.length dictionary) count)
+                ValueError(Printf.sprintf "Bad compressed k: %d(0x%x), offset=0x%x bitsize=%d size=%d count=%d"
+                  k k (My_gen.pos ()) bit_size (Hashtbl.length dictionary) count)
           in
           (* add (w ^ entry.[0]) to the dictionary *)
           Hashtbl.replace dictionary count (w ^ (String.sub entry 0 1));
