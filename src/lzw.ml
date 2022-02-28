@@ -46,32 +46,39 @@ module BitReader = struct
   type t = {
     mutable buffer: int;
     mutable bit_idx: int;
+    mutable length: int; (* in bytes *)
     source: (int * char) Gen.t;
   }
 
-  let of_stream source = {buffer=0; bit_idx=0; source}
+  let of_stream source = {buffer=0; bit_idx=0; length=0; source}
 
   let get_bits v num_bits =
     assert (num_bits >= 8);
     assert (num_bits <= 16);
 
     let bytes_to_read =
-      if num_bits > 8 then 2 else 1
-    in
-    let byte_offset =
-      match v.bit_idx with
-      | 0 -> 0
-      | _ -> 1
+      let need_bits = v.bit_idx + num_bits - v.length * 8 in
+      if need_bits <= 0 then 0
+      else need_bits / 8 + 1
     in
 
-    Printf.printf "0x%x: get %d bits, before buffer:0x%x\n" (My_gen.pos ()) num_bits v.buffer; (* debug *)
+    Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length; (* debug *)
 
     (* Add one byte *)
-    v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * byte_offset));
-    (* Add second byte if needed *)
-    if bytes_to_read > 1 then begin
-      let byte_offset = byte_offset + 1 in
+    if bytes_to_read > 0 then begin
+      let byte_offset =
+        match v.bit_idx with
+        | 0 -> 0
+        | _ -> 1
+      in
       v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * byte_offset));
+      v.length <- v.length + 1;
+      (* Add second byte if needed *)
+      if bytes_to_read > 1 then begin
+        let byte_offset = byte_offset + 1 in
+        v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * byte_offset));
+        v.length <- v.length + 1;
+      end
     end;
 
     (* shift right to get needed bits *)
@@ -82,14 +89,16 @@ module BitReader = struct
     let mask = lnot (0x7FFFFFFF lsl num_bits) in
     let res = word land mask in
 
-    Printf.printf "0x%x: get %d bits, after buffer:0x%x, read 0x%x\n" (My_gen.pos ()) num_bits v.buffer res; (* debug *)
+    Printf.printf "0x%x: get %d bits, after buffer:0x%x bitidx:%d length:%d, read 0x%x\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length res; (* debug *)
 
     (* Update buffer for next time *)
     v.buffer  <- v.buffer lsr 8;
+    v.length  <- v.length - 1;
     v.bit_idx <- v.bit_idx + num_bits - 8;
     (* Reduce bit_idx >= 8 to < 8 *)
     if v.bit_idx >= 8 then begin
       v.buffer  <- v.buffer lsr 8;
+      v.length  <- v.length - 1;
       v.bit_idx <- v.bit_idx - 8;
     end;
     res
