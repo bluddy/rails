@@ -62,24 +62,13 @@ module BitReader = struct
       else need_bits / 8 + 1
     in
 
-    Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length; (* debug *)
+    Printf.printf "0x%x: get %d bits, before buffer:0x%x, bitidx:%d, length:%d, btr:%d\n" (My_gen.pos ()) num_bits v.buffer v.bit_idx v.length bytes_to_read; (* debug *)
 
-    (* Add one byte *)
-    if bytes_to_read > 0 then begin
-      let byte_offset =
-        match v.bit_idx with
-        | 0 -> 0
-        | _ -> 1
-      in
-      v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * byte_offset));
+    (* Add bytes *)
+    for _i=0 to bytes_to_read - 1 do
+      v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * v.length));
       v.length <- v.length + 1;
-      (* Add second byte if needed *)
-      if bytes_to_read > 1 then begin
-        let byte_offset = byte_offset + 1 in
-        v.buffer <- v.buffer lor ((My_gen.get_bytei v.source) lsl (8 * byte_offset));
-        v.length <- v.length + 1;
-      end
-    end;
+    done;
 
     (* shift right to get needed bits *)
     let word = v.buffer lsr v.bit_idx in
