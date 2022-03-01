@@ -1,5 +1,4 @@
 open Containers
-open Iter.Infix
 
 (*
 PANI format (format flag PANI)
@@ -7,9 +6,10 @@ PANI format (format flag PANI)
 ofs  | datatype | description
 -----+----------+------------
 0x0  | PANI     |
-0x4  | byte     | Always 3
-0x5  | byte
-0x6  | file_type | 0: 17 byte header. 1: no header. 2: 774 byte header
+0x4  | pani_byte1     | Always 3
+0x5  | pani_byte2
+0x6  | pani_byte3 | 0: skip next part 1: don't skip
+0x6  | header_type | 0: 17 byte header. 1: no header. 2: 774 byte header
 
 No header:
 0x7  | 9 words  | PANI struct
@@ -55,63 +55,28 @@ IRONM: 42sec
 WOOD2: 18sec
 *)
 
-(* Fill a color Image based on image bits *)
-let fill_image img_str img width height =
-  let ega_palette =
-    [|0x0; 0xAA; 0xAA00; 0xAAAA; 0xAA0000; 0x000000; 0xAA5500; 0xAAAAAA;
-    0x555555; 0x5555FF; 0x55FF55; 0x55ffff; 0xff5555; 0xff55ff; 0xffff55; 0xffffff|]
+let pani_of_stream (s:(int*char) Gen.t) =
+  let pani = Gen.take 4 s |> My_gen.to_stringi in
+  if String.(pani = "PANI")
+  then ()
+  else failwith "Not a PANI file";
+  let pani_byte1 = My_gen.get_bytei s in
+  let pani_byte2 = My_gen.get_bytei s in
+  let pani_byte3 = My_gen.get_bytei s in
+  Printf.printf "byte3: 0x%x\n" pani_byte3; (* debug *)
+  let header_type = My_gen.get_bytei s in
+  Printf.printf "header_type: 0x%x\n" header_type; (* debug *)
+  let subheader =
+    match header_type with
+    | 0 -> Gen.take 17 s |> My_gen.to_stringi
+    | 1 -> ""
+    | 2 -> Gen.take 774 s |>  My_gen.to_stringi
+    | n -> failwith @@ Printf.sprintf "Bad header_type %d" n
   in
-  let idx = ref 0 in
-  let low = ref true in (* low then high *)
-  for y=0 to height-1 do
-    for x=0 to width-1 do
-      let c = int_of_char img_str.[!idx] in
-      let nibble = if !low then c land 0x0f else c lsr 4 in
-      let write_color x y index =
-        let color = ega_palette.(index) in
-        let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
-        (* Printf.printf "x:%d y:%d\n" x y; *)
-        Image.write_rgb img x y r g b;
-      in
-      write_color x y nibble;
+  ()
 
-      (* advance *)
-      if !low && x < width-1 then begin
-        low := false
-      end else begin
-        low := true;
-        incr idx
-      end
-    done
-  done
 
-let main filename =
-  Printf.printf "--- PANI dump: %s\n" filename;
-
-  let filepath = Filename.remove_extension filename in
-
-  let buffer =
-    IO.with_in filename @@
-      fun in_channel -> IO.read_all in_channel
-  in
-  let buf_stream = String.to_seqi buffer in
-  
-  (* Find all images *)
-  let offset_list =
-    let diff = 6 in
-    Iter.fold (fun acc i ->
-      let v1 = Bytes.get_uint16_le bytes i in
-      let b2 = Bytes.get_uint8 bytes (i+diff) in
-      match v1, b2 with
-      | 0x07, 0xb -> i::acc
-      | _ -> acc
-    )
-    []
-    (0x24 -- (Bytes.length bytes - diff - 1))
-    |> List.rev
-  in
-  Printf.printf "Found %d images\n" @@ List.length offset_list;
-
+  (*
   List.iteri (fun i offset ->
 
     let destpath = Printf.sprintf "./png/%s_%03d.png" filepath i in
@@ -138,7 +103,19 @@ let main filename =
     ImagePNG.write och img
   )
   offset_list
+  *)
 
 
+let main filename =
+  Printf.printf "--- PANI dump: %s\n" filename;
+
+  (* let filepath = Filename.remove_extension filename in *)
+
+  let str =
+    IO.with_in filename @@
+      fun in_channel -> IO.read_all in_channel
+  in
+  let stream = My_gen.of_stringi str in
+  pani_of_stream stream
 
 

@@ -17,22 +17,25 @@ let of_stringi ?(start=0) ?len s =
 
 let last_i = ref 0
 
-let get_bytei s : int =
+let get_chari s : char =
   let i, c = match Gen.get s with
     | Some (i, c) -> i, c
     | None -> !last_i, Char.chr 0 (* hack: files allow for 0 past end *)
   in
   last_i := i;
-  Char.code c
+  c
+
+let get_bytei s : int =
+  get_chari s |> Char.code
+
+let get_wordi s : int =
+  let word = get_bytei s in
+  word lor ((get_bytei s) lsl 8)
 
 let junki s =
   let i, _ = Option.get_exn @@ Gen.get s in
   last_i := i;
   ()
-
-let get_wordi s : int =
-  let word = get_bytei s in
-  word lor ((get_bytei s) lsl 8)
 
 let pos () = !last_i
 
@@ -55,4 +58,19 @@ let take n gen =
           incr count;
           Printf.printf "take: %d\n" !count;
           x
+
+let rec iteri f (gen:(int*char) Gen.t) =
+  match gen () with
+  | None -> ()
+  | Some (i,x) -> f x;
+      last_i := i;
+      iteri f gen
+
+let to_bufferi buf (g:(int*char) Gen.t) =
+  iteri (Buffer.add_char buf) g
+
+let to_stringi (s:(int * char) Gen.t) =
+  let buf = Buffer.create 16 in
+  to_bufferi buf s;
+  Buffer.contents buf
 
