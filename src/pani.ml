@@ -55,6 +55,7 @@ IRONM: 42sec
 WOOD2: 18sec
 *)
 
+
 let pani_of_stream (s:(int*char) Gen.t) =
   let pani = Gen.take 4 s |> My_gen.to_stringi in
   if String.(pani = "PANI")
@@ -63,7 +64,7 @@ let pani_of_stream (s:(int*char) Gen.t) =
   let pani_byte1 = My_gen.get_bytei s in
   let pani_byte2 = My_gen.get_bytei s in
   let pani_byte3 = My_gen.get_bytei s in
-  Printf.printf "byte3: 0x%x\n" pani_byte3; (* debug *)
+  Printf.printf "byte2: 0x%x\nbyte3: 0x%x\n" pani_byte2 pani_byte3; (* debug *)
   let header_type = My_gen.get_bytei s in
   Printf.printf "header_type: 0x%x\n" header_type; (* debug *)
   let subheader =
@@ -73,6 +74,21 @@ let pani_of_stream (s:(int*char) Gen.t) =
     | 2 -> Gen.take 774 s |>  My_gen.to_stringi
     | n -> failwith @@ Printf.sprintf "Bad header_type %d" n
   in
+  let vec = Vector.create () in (* Actually 9 words *)
+  Vector.push vec (My_gen.get_wordi s);
+  Vector.push vec (My_gen.get_wordi s);
+  Vector.push vec (My_gen.get_wordi s);
+  Vector.push vec (My_gen.get_wordi s);
+  let pani_type = My_gen.get_bytei s in
+  Printf.printf "pani_type: 0x%x\n" pani_type; (* debug *)
+  begin
+    match pani_type with
+    | 0 -> ()
+    | 1 ->
+        Pic.png_of_stream s ~filename:"pani_pic1.png"
+    | 2 -> ()
+    | _ -> failwith "Unknown value for pani_type"
+  end;
   ()
 
 

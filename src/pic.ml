@@ -29,7 +29,6 @@ possible they're just using the "normal" 16 color palette.
 let debug = ref false
 
 let str_of_stream (stream: (int * char) Gen.t) =
-
   let discard_bytes =
     match My_gen.get_wordi stream with
     | 0xF -> 23 - 6
@@ -58,7 +57,6 @@ let str_of_stream (stream: (int * char) Gen.t) =
   let str = Gen.take (width * height / 2) lre_stream |> Gen.to_string in
 
   str, width, height
-
 
 let load_to_str filename =
   let str =
@@ -130,6 +128,10 @@ let img_of_bigarray arr =
   translate_ega arr ~w ~h ~f:(img_write img);
   img
 
+let ndarray_of_stream stream =
+  let str, w, h = str_of_stream stream in
+  bigarray_of_str str ~w ~h
+
 let img_of_file filename =
   let str, w, h = load_to_str filename in
   let arr = bigarray_of_str str ~w ~h in
@@ -137,14 +139,21 @@ let img_of_file filename =
   translate_ega arr ~w ~h ~f:(img_write img);
   img
 
+let png_of_str str w h ~filename =
+  let ndarray = bigarray_of_str str ~w ~h in
+  let img = Image.create_rgb w h in
+  translate_ega ndarray ~f:(Image.write_rgb img) ~w ~h;
+  let och = Png.chunk_writer_of_path filename in
+  ImagePNG.write och img
+
+let png_of_stream stream ~filename =
+  let str, w, h = str_of_stream stream in
+  png_of_str str w h ~filename
+
 let png_of_file filename =
   Printf.printf "--- Pic dump: %s\n" filename;
   let filepath = Filename.remove_extension filename in
   let destpath = filepath ^ ".png" in
   let str, w, h = load_to_str filename in
-  let arr = bigarray_of_str str ~w ~h in
-  let img = Image.create_rgb w h in
-  translate_ega arr ~f:(Image.write_rgb img) ~w ~h;
-  let och = Png.chunk_writer_of_path destpath in
-  ImagePNG.write och img
+  png_of_str str w h ~filename:destpath
 
