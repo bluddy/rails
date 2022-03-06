@@ -93,7 +93,21 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
     | 2 -> ()
     | _ -> failwith "Unknown value for pani_type"
   end;
-  ()
+  (* Support up to 250 images, lined up towards end, zeros before then *)
+  let pani_pic_ptrs = Array.create 250 0 in
+  for i=0 to 249 do
+    let word = My_gen.get_wordi s in
+    Printf.printf "0x%x " word;
+    pani_pic_ptrs.(i) <- word
+  done;
+  let num = Array.fold (fun acc x -> if x = 0 then acc else acc + 1) 0 pani_pic_ptrs in
+  Printf.printf "%d pictures expected\n" num;
+  Array.iteri (fun i x ->
+    match x with
+    | 0 -> ()
+    | _ -> Pic.png_of_stream s ~filename:(Printf.sprintf "%s_%d.png" filepath i)
+  )
+  pani_pic_ptrs
 
 
   (*
