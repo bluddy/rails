@@ -56,7 +56,7 @@ WOOD2: 18sec
 *)
 
 
-let pani_of_stream (s:(int*char) Gen.t) =
+let pani_of_stream (s:(int*char) Gen.t) filepath =
   let pani = Gen.take 4 s |> My_gen.to_stringi in
   if String.(pani = "PANI")
   then ()
@@ -74,18 +74,22 @@ let pani_of_stream (s:(int*char) Gen.t) =
     | 2 -> Gen.take 774 s |>  My_gen.to_stringi
     | n -> failwith @@ Printf.sprintf "Bad header_type %d" n
   in
-  let vec = Vector.create () in (* Actually 9 words *)
-  Vector.push vec (My_gen.get_wordi s);
-  Vector.push vec (My_gen.get_wordi s);
-  Vector.push vec (My_gen.get_wordi s);
-  Vector.push vec (My_gen.get_wordi s);
+  let pani_struct = Vector.create () in (* Actually 9 words *)
+  Vector.push pani_struct (My_gen.get_wordi s);
+  Vector.push pani_struct (My_gen.get_wordi s);
+  Vector.push pani_struct (My_gen.get_wordi s);
+  Vector.push pani_struct (My_gen.get_wordi s);
+  let pani_word = My_gen.get_wordi s in
+  (* pani_read_buffer_2 *)
   let pani_type = My_gen.get_bytei s in
   Printf.printf "pani_type: 0x%x\n" pani_type; (* debug *)
   begin
     match pani_type with
     | 0 -> ()
     | 1 ->
-        Pic.png_of_stream s ~filename:"pani_pic1.png"
+        (* let byte = My_gen.get_bytei s in  (* optional *)
+        Printf.printf "byte: 0x%x pos: 0x%x\n" byte (My_gen.pos ());  *)
+        Pic.png_of_stream s ~filename:(filepath^"_bgnd.png")
     | 2 -> ()
     | _ -> failwith "Unknown value for pani_type"
   end;
@@ -125,13 +129,13 @@ let pani_of_stream (s:(int*char) Gen.t) =
 let main filename =
   Printf.printf "--- PANI dump: %s\n" filename;
 
-  (* let filepath = Filename.remove_extension filename in *)
+  let filepath = Filename.remove_extension filename in
 
   let str =
     IO.with_in filename @@
       fun in_channel -> IO.read_all in_channel
   in
   let stream = My_gen.of_stringi str in
-  pani_of_stream stream
+  pani_of_stream stream filepath
 
 
