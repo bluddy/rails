@@ -70,23 +70,26 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 exception Done
 
 let bigarray_of_str str ~w ~h =
+  (* Convert str to bigarray of nibbles *)
   let arr = Ndarray.empty Int8_unsigned [|h; w|] in
   let idx = ref 0 in
   let low = ref true in (* low then high *)
   begin try
     for y=0 to h-1 do
       for x=0 to w-1 do
-        let c = int_of_char str.[!idx] in
-        let nibble = if !low then c land 0x0f else c lsr 4 in
+        let c = Char.code str.[!idx] in
+        let nibble = if !low then c land 0xf else (c lsr 4) land 0xf in
         Ndarray.set arr [|y;x|] nibble;
         (* advance *)
-        if !low && x < w-1 then begin
-          low := false
-        end else begin
-          low := true;
-          incr idx;
-          if !idx >= String.length str then raise Done
-        end
+        match !low with
+          | true  ->
+              low := false
+          | false ->
+              begin
+                low := true;
+                incr idx;
+                if !idx >= String.length str then raise Done
+              end
       done
     done
   with
