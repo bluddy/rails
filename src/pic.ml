@@ -30,10 +30,14 @@ let debug = ref false
 
 let str_of_stream (stream: (int * char) Gen.t) =
   let discard_bytes =
-    match My_gen.get_wordi stream with
-    | 0xF -> 23 - 6
-    | 0x7 | 0x6 -> 7 - 6 
-    | _ -> failwith "Unknown format"
+    let rec loop () =
+      match My_gen.get_wordi stream with
+      | 0x0 -> loop ()
+      | 0xF -> 23 - 6
+      | 0x7 | 0x6 -> 7 - 6 
+      | x -> failwith @@ Printf.sprintf "Unknown format 0x%x" x
+    in
+    loop ()
   in
   let width  = My_gen.get_wordi stream in (* 2 *)
   let height = My_gen.get_wordi stream in (* 4 *)
@@ -53,10 +57,14 @@ let str_of_stream (stream: (int * char) Gen.t) =
   let lre_stream = Lzw.decode_rle lzw_stream in
   (* Printf.printf "Length rle decompressed: %d\n" (String.length s); *)
 
-  (* Half the number: nibbles not bytes *)
-  let str = Gen.take (width * height / 2) lre_stream |> Gen.to_string in
-
-  str, width, height
+  (* We read a line at a time and discard a nibble if it works out that way *)
+  let buffer = Buffer.create 10 in
+  for i=0 to height-1 do
+    let num_bytes = int_of_float @@ ceil @@ (float_of_int width) /. 2. in
+    let str = Gen.take num_bytes lre_stream |> Gen.to_string in
+    Buffer.add_string buffer str;
+  done;
+  Buffer.contents buffer, width, height
 
 let load_to_str filename =
   let str =
@@ -67,9 +75,8 @@ let load_to_str filename =
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
-exception Done
-
 let bigarray_of_str str ~w ~h =
+  let exception Done in
   (* Convert str to bigarray of nibbles *)
   let arr = Ndarray.empty Int8_unsigned [|h; w|] in
   let idx = ref 0 in
@@ -82,14 +89,14 @@ let bigarray_of_str str ~w ~h =
         Ndarray.set arr [|y;x|] nibble;
         (* advance *)
         match !low with
-          | true  ->
-              low := false
-          | false ->
-              begin
-                low := true;
-                incr idx;
-                if !idx >= String.length str then raise Done
-              end
+        | true  ->
+            low := false
+        | false ->
+            begin
+              low := true;
+              incr idx;
+              if !idx >= String.length str then raise_notrace Done
+            end
       done
     done
   with

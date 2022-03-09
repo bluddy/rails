@@ -95,6 +95,7 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
   end;
   (* Support up to 250 images, lined up towards end, zeros before then *)
   let pani_pic_ptrs = Array.create 250 0 in
+  Printf.printf "Post-Background pos: 0x%x\n" (My_gen.pos () + 1);
   for i=0 to 249 do
     let word = My_gen.get_wordi s in
     (* Printf.printf "0x%x " word; *)
@@ -111,8 +112,9 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
         (* let byte1 = My_gen.get_bytei s in
            let byte2 = My_gen.get_bytei s in
            Printf.printf "0x%x: 0x%x 0x%x\n" pos byte1 byte2; *)
-        (* if pos land 1 = 1 then My_gen.junki s; *)
-        Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos ());
+        (* We can only start at word boundaries *)
+        if pos land 1 = 1 then My_gen.junki s;
+        Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
         Pic.png_of_stream s ~filename:(Printf.sprintf "%s_%d.png" filepath i)
   )
   pani_pic_ptrs
