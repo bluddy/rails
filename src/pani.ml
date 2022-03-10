@@ -109,45 +109,21 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
     | _ ->
         let pos = My_gen.pos () + 1 in
         Printf.printf "pos: 0x%x\n" pos;
-        (* let byte1 = My_gen.get_bytei s in
-           let byte2 = My_gen.get_bytei s in
-           Printf.printf "0x%x: 0x%x 0x%x\n" pos byte1 byte2; *)
         (* We can only start at word boundaries *)
         if pos land 1 = 1 then My_gen.junki s;
         Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
         Pic.png_of_stream s ~filename:(Printf.sprintf "%s_%d.png" filepath i)
   )
-  pani_pic_ptrs
+  pani_pic_ptrs;
 
-
-  (*
-  List.iteri (fun i offset ->
-
-    let destpath = Printf.sprintf "./png/%s_%03d.png" filepath i in
-
-    let width  = Bytes.get_uint16_le bytes @@ offset + 2 in
-    let height = Bytes.get_uint16_le bytes @@ offset + 4 in
-    Printf.printf "idx=%d offset=%x width=%d, height=%d, total_size=%d\n" i offset width height (width*height/2);
-    Printf.printf "Length original: %d\n" (Bytes.length bytes);
-
-    let start_offset = offset + 7 in
-    let bytes = Bytes.sub bytes start_offset (Bytes.length bytes - start_offset) in
-
-    let bytes = Lzw.decompress bytes ~max_bit_size:11 ~report_offset:offset ~suppress_error:true in
-    Printf.printf "Length LZW decompressed: %d\n" (Bytes.length bytes);
-
-    let img_str = decode_rle bytes |> Bytes.to_string in
-    Printf.printf "Length rle decompressed: %d\n" (String.length img_str);
-
-    let img = Image.create_rgb width height in
-    fill_image img_str img width height;
-
-    (* Dump PNG *)
-    let och = Png.chunk_writer_of_path destpath in
-    ImagePNG.write och img
-  )
-  offset_list
-  *)
+  let pos = My_gen.pos () + 1 in
+  let size_ending = My_gen.get_wordi s in
+  Printf.printf "0x%x: %d entries\n" pos size_ending;
+  (* fill with words for now *)
+  let pani_arr = Array.make (size_ending * 8) 0 in
+  for i=0 to size_ending * 8 - 1 do
+    pani_arr.(i) <- My_gen.get_wordi s;
+  done
 
 
 let main filename =
