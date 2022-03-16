@@ -144,8 +144,7 @@ let read_word v =
 
 let is_true x = x <> 0
 
-let run str =
-  let v = create str in
+let interpret v =
   let op = op_of_byte @@ read_byte v in 
   match op with
   | Add | Sub | Mult | Div
@@ -191,7 +190,7 @@ let run str =
       end
   | DeleteAnimation ->
       begin match v.stack with
-      | anim_idx::rest when 
+      | anim_idx::rest ->
           if anim_idx > 0 && anim_idx <= 50 then begin
             v.animations.(anim_idx).used <- false
           end;
@@ -208,7 +207,7 @@ let run str =
       end
   | DebugWrite ->
       begin match v.stack with
-      | v::rest ->
+      | _::rest ->
           Printf.printf "do debug_write";
           v.stack <- rest
       | _ -> failwith "DebugWrite: missing value argument"
@@ -225,7 +224,7 @@ let run str =
   | TimeoutOps ->
       let test = read_byte v in
       let timeout = read_word v in
-      if test <> 0 then begin
+      begin if test <> 0 then 
         v.timeout <- v.pani_array.(timeout)
       else
         v.timeout <- timeout
@@ -254,7 +253,7 @@ let run str =
           let addr = read_word v in
           if is_true do_jump then begin
             v.read_ptr <- addr
-          end
+          end;
           v.stack <- rest
       | _ -> failwith "JumpIfTrue: missing argument"
       end
@@ -271,11 +270,27 @@ let run str =
       v.read_ptr <- jump_addr
   | Return ->
       begin match v.stack with
-      | ret_add::rest ->
+      | ret_addr::rest ->
         v.read_ptr <- ret_addr;
         v.stack <- rest
       | _ -> failwith "Return: missing return address"
       end
 
-
+let run str =
+  let v = create str in
+  let rec loop () =
+    if v.error then ()
+    else begin
+      if v.do_timeout then begin
+        v.timeout <- v.timeout - 1;
+        if v.timeout = 0 then begin
+          v.do_timeout <- false;
+          loop ()
+        end
+      end;
+      interpret v;
+      loop ()
+    end
+  in
+  loop ()
 
