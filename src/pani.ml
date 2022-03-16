@@ -118,12 +118,17 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
 
   let pos = My_gen.pos () + 1 in
   let size_ending = My_gen.get_wordi s in
-  Printf.printf "0x%x: %d entries\n" pos size_ending;
+  Printf.printf "0x%x: %d 16-byte entries\n" pos size_ending;
   (* fill with words for now *)
+  (*
   let pani_arr = Array.make (size_ending * 8) 0 in
   for i=0 to size_ending * 8 - 1 do
     pani_arr.(i) <- My_gen.get_wordi s;
+    Printf.printf "0x%x: 0x%x\n" (My_gen.pos ()) pani_arr.(i);
   done
+  *)
+  let pani_code_s = My_gen.to_stringi s in
+  Pani_interp.run pani_code_s
 
 
 let main filename =
