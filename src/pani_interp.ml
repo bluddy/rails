@@ -56,24 +56,24 @@ end
 
 type t = {
   mutable error: bool;
-  mutable do_timeout: bool;
-  mutable timeout: int;
+  mutable timeout: bool;
+  mutable register: int;    (* single register. also used for timeout *)
   buffer: bytes;
   mutable read_ptr: int;
   mutable stack: int list;
-  pani_array: int Array.t;
+  animation_registers: int Array.t;
   animations: Animation.t Array.t;
 }
 
 let create s =
 {
   error=false;
-  do_timeout=false;
-  timeout=0;
+  timeout=false;
+  register=0;
   read_ptr=0;
   buffer=s;
   stack=[];
-  pani_array=Array.make 52 0;
+  animation_registers=Array.make 52 0;
   animations=Array.init 50 (fun _ -> Animation.empty ());
 }
 
@@ -83,8 +83,10 @@ type op =
   | SetTimeout
   | DebugWrite
   | ActivateAnimation
-  | TimeoutPush
-  | SetTimeoutWriteAnimArray
+  | PushSetRegister
+    (* Push to stack, either from register or from animation registers *)
+  | SetRegisters 
+    (* Set main register from code. If 0<value<=50, also set animation reg from stack *)
   | Copy
   | Eq
   | Neq
@@ -110,8 +112,8 @@ let op_of_byte = function
   | 2 -> SetTimeout
   | 3 -> DebugWrite
   | 4 -> ActivateAnimation
-  | 5 -> TimeoutPush
-  | 6 -> SetTimeoutWriteAnimArray
+  | 5 -> PushSetRegister
+  | 6 -> SetRegisters
   | 7 -> Copy
   | 8 -> Eq
   | 9 -> Neq
@@ -149,166 +151,177 @@ let is_true x = x <> 0
 let interpret v =
   let byte = read_byte v in
   let op = op_of_byte byte in
-  if debug then begin
-    Printf.printf "%s(0x%x) stack: %s\n" (show_op op) byte (str_of_stack v);
-  end;
-  match op with
-  | Add | Sub | Mult | Div
-  | Eq | Neq | Gt | Lt | Geq | Leq ->
-      let g f x y = if f x y then 1 else 0 in
-      let f = match op with
-        | Add  -> (+)
-        | Sub  -> (-)
-        | Mult -> ( * )
-        | Div  -> (/)
-        | Eq   -> g (=)
-        | Neq  -> g (<>)
-        | Gt   -> g (>)
-        | Lt   -> g (<) 
-        | Geq  -> g (>=)
-        | Leq  -> g (<=)
-        | _ -> assert false
-      in
-      let stack' =
-        match v.stack with
-        | x::y::z ->
-            let result = f y x in
-            result::z
-        | _ -> failwith "Cannot add. Stack has < 2 elements"
-      in
-      v.stack <- stack';
-      true
-  | CreateAnimation ->
-      begin match v.stack with
-      | pic_far::delay::y_diff::x_diff::other_anim_idx::anim_idx::data_ptr::rest -> 
-        let anim_idx =
-          if anim_idx = 0xFFFF then begin
-            Printf.printf "call find_unused_anim\n";
-            0
-          end else anim_idx
+  if debug then
+    Printf.printf "%s(0x%x)\n" (show_op op) byte;
+
+  let ret =
+    match op with
+    | Add | Sub | Mult | Div
+    | Eq | Neq | Gt | Lt | Geq | Leq ->
+        let g f x y = if f x y then 1 else 0 in
+        let f = match op with
+          | Add  -> (+)
+          | Sub  -> (-)
+          | Mult -> ( * )
+          | Div  -> (/)
+          | Eq   -> g (=)
+          | Neq  -> g (<>)
+          | Gt   -> g (>)
+          | Lt   -> g (<) 
+          | Geq  -> g (>=)
+          | Leq  -> g (<=)
+          | _ -> assert false
         in
-        if anim_idx > 0 && anim_idx <= 50 then begin
-          let anim = 
-            let pic_far = pic_far = 1 in
-            Animation.create ~pic_far ~delay ~y_diff ~x_diff ~other_anim_idx ~data_ptr
+        let stack' =
+          match v.stack with
+          | x::y::z ->
+              let result = f y x in
+              result::z
+          | _ -> failwith "Cannot add. Stack has < 2 elements"
+        in
+        v.stack <- stack';
+        true
+    | CreateAnimation ->
+        begin match v.stack with
+        | pic_far::delay::y_diff::x_diff::other_anim_idx::anim_idx::data_ptr::rest -> 
+          let anim_idx =
+            if anim_idx = 0xFFFF then begin
+              Printf.printf "call find_unused_anim\n";
+              0
+            end else anim_idx
           in
+          if anim_idx > 0 && anim_idx <= 50 then begin
+            let anim = 
+              let pic_far = pic_far = 1 in
+              Animation.create ~pic_far ~delay ~y_diff ~x_diff ~other_anim_idx ~data_ptr
+            in
+            if debug then
+              Printf.printf "Animation %d:\n%s\n" anim_idx (Animation.show anim);
+            v.animations.(anim_idx) <- anim
+          end;
+          v.stack <- rest
+        | _ -> failwith "Invalid stack for animation creation"
+        end;
+        true
+    | DeleteAnimation ->
+        begin match v.stack with
+        | anim_idx::rest ->
+            if anim_idx > 0 && anim_idx <= 50 then begin
+              v.animations.(anim_idx).used <- false
+            end;
+            v.stack <- rest
+        | _ -> failwith "DeleteAnimation: missing anim_idx on stack"
+        end;
+        true
+    | SetTimeout ->
+        begin match v.stack with
+        | timeout :: rest ->
+            if debug then
+              Printf.printf "setting timeout of %d\n" timeout;
+            v.timeout <- true;
+            v.register <- timeout;
+            v.stack <- rest
+        | _ -> failwith "SetTimeout: missing timeout argument"
+        end;
+        true
+    | DebugWrite ->
+        begin match v.stack with
+        | _::rest ->
+            Printf.printf "do debug_write";
+            v.stack <- rest
+        | _ -> failwith "DebugWrite: missing value argument"
+        end;
+        true
+    | ActivateAnimation ->
+        begin match v.stack with
+        | anim_idx::rest ->
+            if anim_idx > 0 && anim_idx <= 50 then begin
+              v.animations.(anim_idx).active <- true
+            end;
+            v.stack <- rest
+        | _ -> failwith "ActivateAnimation: missing argument"
+        end;
+        true
+    | PushSetRegister ->
+        let test = read_byte v in
+        let value = read_word v in
+        if is_true test then begin
           if debug then
-            Printf.printf "Animation %d:\n%s\n" anim_idx (Animation.show anim);
-          v.animations.(anim_idx) <- anim
+            Printf.printf "Push %d from animation_registers[%d]\n" v.animation_registers.(value) value;
+          v.register <- v.animation_registers.(value)
+        end else begin
+          if debug then
+            Printf.printf "Push %d\n" value;
+          v.register <- value
         end;
-        v.stack <- rest
-      | _ -> failwith "Invalid stack for animation creation"
-      end;
-      true
-  | DeleteAnimation ->
-      begin match v.stack with
-      | anim_idx::rest ->
-          if anim_idx > 0 && anim_idx <= 50 then begin
-            v.animations.(anim_idx).used <- false
+        v.stack <- v.register::v.stack;
+        true
+    | SetRegisters ->
+        begin match v.stack with
+        | newval::rest ->
+          let value = read_word v in
+          v.register <- value;
+          if value > 0 && value <= 50 then begin
+            v.animation_registers.(value) <- newval
           end;
           v.stack <- rest
-      | _ -> failwith "DeleteAnimation: missing anim_idx on stack"
-      end;
-      true
-  | SetTimeout ->
-      begin match v.stack with
-      | timeout :: rest ->
-          v.do_timeout <- true;
-          v.timeout <- timeout;
-          v.stack <- rest
-      | _ -> failwith "SetTimeout: missing timeout argument"
-      end;
-      true
-  | DebugWrite ->
-      begin match v.stack with
-      | _::rest ->
-          Printf.printf "do debug_write";
-          v.stack <- rest
-      | _ -> failwith "DebugWrite: missing value argument"
-      end;
-      true
-  | ActivateAnimation ->
-      begin match v.stack with
-      | anim_idx::rest ->
-          if anim_idx > 0 && anim_idx <= 50 then begin
-            v.animations.(anim_idx).active <- true
-          end;
-          v.stack <- rest
-      | _ -> failwith "ActivateAnimation: missing argument"
-      end;
-      true
-  | TimeoutPush ->
-      let test = read_byte v in
-      let timeout = read_word v in
-      begin if is_true test then 
-        v.timeout <- v.pani_array.(timeout)
-      else
-        v.timeout <- timeout
-      end;
-      v.stack <- v.timeout::v.stack;
-      true
-  | SetTimeoutWriteAnimArray ->
-      begin match v.stack with
-      | newval::rest ->
-        let timeout = read_word v in
-        v.timeout <- timeout;
-        if timeout > 0 && timeout <= 50 then begin
-          v.pani_array.(timeout) <- newval
+        | _ -> failwith "SetTimeoutWriteAnimArray: missing argument"
         end;
-        v.stack <- rest
-      | _ -> failwith "SetTimeoutWriteAnimArray: missing argument"
-      end;
-      true
-  | Copy ->
-      begin match v.stack with
-      | x::rest ->
-        v.stack <- x::x::rest
-      | _ -> failwith "Copy: missing argument"
-      end;
-      true
-  | JumpIfTrue ->
-      begin match v.stack with
-      | do_jump::rest ->
-          let addr = read_word v in
-          if is_true do_jump then begin
-            v.read_ptr <- addr
-          end;
+        true
+    | Copy ->
+        begin match v.stack with
+        | x::rest ->
+          v.stack <- x::x::rest
+        | _ -> failwith "Copy: missing argument"
+        end;
+        true
+    | JumpIfTrue ->
+        begin match v.stack with
+        | do_jump::rest ->
+            let addr = read_word v in
+            if is_true do_jump then begin
+              v.read_ptr <- addr
+            end;
+            v.stack <- rest
+        | _ -> failwith "JumpIfTrue: missing argument"
+        end;
+        true
+    | Jump ->
+        let addr = read_word v in
+        v.read_ptr <- addr;
+        true
+    | SetError ->
+        v.error <- true;
+        true
+    | Exit ->
+        false
+    | CallFunc ->
+        let jump_addr = read_word v in
+        v.stack <- v.read_ptr :: v.stack;
+        v.read_ptr <- jump_addr;
+        true
+    | Return ->
+        begin match v.stack with
+        | ret_addr::rest ->
+          v.read_ptr <- ret_addr;
           v.stack <- rest
-      | _ -> failwith "JumpIfTrue: missing argument"
-      end;
-      true
-  | Jump ->
-      let addr = read_word v in
-      v.read_ptr <- addr;
-      true
-  | SetError ->
-      v.error <- true;
-      true
-  | Exit ->
-      false
-  | CallFunc ->
-      let jump_addr = read_word v in
-      v.stack <- v.read_ptr :: v.stack;
-      v.read_ptr <- jump_addr;
-      true
-  | Return ->
-      begin match v.stack with
-      | ret_addr::rest ->
-        v.read_ptr <- ret_addr;
-        v.stack <- rest
-      | _ -> failwith "Return: missing return address"
-      end;
-      true
+        | _ -> failwith "Return: missing return address"
+        end;
+        true
+  in
+  if debug then
+    Printf.printf "register: %d stack: %s\n" (v.register) (str_of_stack v);
+  ret
 
 let run str =
   let v = create str in
   let rec loop () =
     if v.error then ()
     else begin
-      if v.do_timeout then begin
-        v.timeout <- v.timeout - 1;
-        if v.timeout = 0 then begin
-          v.do_timeout <- false;
+      if v.timeout then begin
+        v.register <- v.register - 1;
+        if v.register = 0 then begin
+          v.timeout <- false;
           loop ()
         end
       end;
