@@ -1,6 +1,7 @@
 open Containers
 
 (* Pani Interpreter: interprets the language of the PANI file *)
+(* Notes: pay attention to signed vs unsigned comparisons *)
 
 let debug = true
 
@@ -24,7 +25,8 @@ type t = {
   far_ptr_flag: bool;
   data_size: int;
   pic_idx: int;
-}
+} 
+[@@deriving show]
 
 let empty () = {
   used=false; active=false; other_anim_idx=0; x_diff=0; y_diff=0; x=0; y=0;
@@ -56,7 +58,7 @@ type t = {
   mutable error: bool;
   mutable do_timeout: bool;
   mutable timeout: int;
-  buffer: string;
+  buffer: bytes;
   mutable read_ptr: int;
   mutable stack: int list;
   pani_array: int Array.t;
@@ -81,7 +83,7 @@ type op =
   | SetTimeout
   | DebugWrite
   | ActivateAnimation
-  | TimeoutOps
+  | TimeoutPush
   | SetTimeoutWriteAnimArray
   | Copy
   | Eq
@@ -108,7 +110,7 @@ let op_of_byte = function
   | 2 -> SetTimeout
   | 3 -> DebugWrite
   | 4 -> ActivateAnimation
-  | 5 -> TimeoutOps
+  | 5 -> TimeoutPush
   | 6 -> SetTimeoutWriteAnimArray
   | 7 -> Copy
   | 8 -> Eq
@@ -135,12 +137,12 @@ let str_of_stack v =
 let read_byte v =
   let ptr = v.read_ptr in
   v.read_ptr <- v.read_ptr + 1;
-  Char.code v.buffer.[ptr]
+  Bytes.get_int8 v.buffer ptr
 
 let read_word v =
-  let c1 = read_byte v in
-  let c2 = read_byte v in
-  (c2 lsl 8) lor c1
+  let ptr = v.read_ptr in
+  v.read_ptr <- v.read_ptr + 2;
+  Bytes.get_int16_le v.buffer ptr
 
 let is_true x = x <> 0
 
@@ -190,6 +192,8 @@ let interpret v =
             let pic_far = pic_far = 1 in
             Animation.create ~pic_far ~delay ~y_diff ~x_diff ~other_anim_idx ~data_ptr
           in
+          if debug then
+            Printf.printf "Animation %d:\n%s\n" anim_idx (Animation.show anim);
           v.animations.(anim_idx) <- anim
         end;
         v.stack <- rest
@@ -233,7 +237,7 @@ let interpret v =
       | _ -> failwith "ActivateAnimation: missing argument"
       end;
       true
-  | TimeoutOps ->
+  | TimeoutPush ->
       let test = read_byte v in
       let timeout = read_word v in
       begin if is_true test then 

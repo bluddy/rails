@@ -127,7 +127,7 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
     Printf.printf "0x%x: 0x%x\n" (My_gen.pos ()) pani_arr.(i);
   done
   *)
-  let pani_code_s = My_gen.to_stringi s in
+  let pani_code_s = My_gen.to_stringi s |> Bytes.of_string in
   Pani_interp.run pani_code_s
 
 
