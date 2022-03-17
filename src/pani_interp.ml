@@ -152,7 +152,7 @@ let interpret v =
   let byte = read_byte v in
   let op = op_of_byte byte in
   if debug then
-    Printf.printf "%s(0x%x)\n" (show_op op) byte;
+    Printf.printf "0x%x: %s(0x%x)\n" v.read_ptr (show_op op) byte;
 
   let ret =
     match op with
@@ -310,7 +310,7 @@ let interpret v =
         true
   in
   if debug then
-    Printf.printf "register: %d stack: %s\n" (v.register) (str_of_stack v);
+    Printf.printf "reg: %d stack: %s\n" (v.register) (str_of_stack v);
   ret
 
 let run str =
