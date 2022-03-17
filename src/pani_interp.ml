@@ -2,7 +2,7 @@ open Containers
 
 (* Pani Interpreter: interprets the language of the PANI file *)
 
-let debug = false
+let debug = true
 
 module Animation = struct
 
@@ -130,7 +130,7 @@ let op_of_byte = function
   | x  -> failwith @@ Printf.sprintf "Unknown op code %d" x
 
 let str_of_stack v =
-  String.concat ", " @@ List.map Int.to_string v.stack
+  "[" ^ (String.concat ", " @@ List.map Int.to_string v.stack) ^ "]"
 
 let read_byte v =
   let ptr = v.read_ptr in
@@ -145,7 +145,11 @@ let read_word v =
 let is_true x = x <> 0
 
 let interpret v =
-  let op = op_of_byte @@ read_byte v in 
+  let byte = read_byte v in
+  let op = op_of_byte byte in
+  if debug then begin
+    Printf.printf "%s(0x%x) stack: %s\n" (show_op op) byte (str_of_stack v);
+  end;
   match op with
   | Add | Sub | Mult | Div
   | Eq | Neq | Gt | Lt | Geq | Leq ->
@@ -165,10 +169,13 @@ let interpret v =
       in
       let stack' =
         match v.stack with
-        | x::y::z -> (f y x)::z
+        | x::y::z ->
+            let result = f y x in
+            result::z
         | _ -> failwith "Cannot add. Stack has < 2 elements"
       in
-      v.stack <- stack'
+      v.stack <- stack';
+      true
   | CreateAnimation ->
       begin match v.stack with
       | pic_far::delay::y_diff::x_diff::other_anim_idx::anim_idx::data_ptr::rest -> 
@@ -187,7 +194,8 @@ let interpret v =
         end;
         v.stack <- rest
       | _ -> failwith "Invalid stack for animation creation"
-      end
+      end;
+      true
   | DeleteAnimation ->
       begin match v.stack with
       | anim_idx::rest ->
@@ -196,7 +204,8 @@ let interpret v =
           end;
           v.stack <- rest
       | _ -> failwith "DeleteAnimation: missing anim_idx on stack"
-      end
+      end;
+      true
   | SetTimeout ->
       begin match v.stack with
       | timeout :: rest ->
@@ -204,14 +213,16 @@ let interpret v =
           v.timeout <- timeout;
           v.stack <- rest
       | _ -> failwith "SetTimeout: missing timeout argument"
-      end
+      end;
+      true
   | DebugWrite ->
       begin match v.stack with
       | _::rest ->
           Printf.printf "do debug_write";
           v.stack <- rest
       | _ -> failwith "DebugWrite: missing value argument"
-      end
+      end;
+      true
   | ActivateAnimation ->
       begin match v.stack with
       | anim_idx::rest ->
@@ -220,16 +231,18 @@ let interpret v =
           end;
           v.stack <- rest
       | _ -> failwith "ActivateAnimation: missing argument"
-      end
+      end;
+      true
   | TimeoutOps ->
       let test = read_byte v in
       let timeout = read_word v in
-      begin if test <> 0 then 
+      begin if is_true test then 
         v.timeout <- v.pani_array.(timeout)
       else
         v.timeout <- timeout
       end;
-      v.stack <- v.timeout::v.stack
+      v.stack <- v.timeout::v.stack;
+      true
   | SetTimeoutWriteAnimArray ->
       begin match v.stack with
       | newval::rest ->
@@ -240,13 +253,15 @@ let interpret v =
         end;
         v.stack <- rest
       | _ -> failwith "SetTimeoutWriteAnimArray: missing argument"
-      end
+      end;
+      true
   | Copy ->
       begin match v.stack with
       | x::rest ->
         v.stack <- x::x::rest
       | _ -> failwith "Copy: missing argument"
-      end
+      end;
+      true
   | JumpIfTrue ->
       begin match v.stack with
       | do_jump::rest ->
@@ -256,25 +271,30 @@ let interpret v =
           end;
           v.stack <- rest
       | _ -> failwith "JumpIfTrue: missing argument"
-      end
+      end;
+      true
   | Jump ->
       let addr = read_word v in
-      v.read_ptr <- addr
+      v.read_ptr <- addr;
+      true
   | SetError ->
-      v.error <- true
+      v.error <- true;
+      true
   | Exit ->
-      ()
+      false
   | CallFunc ->
       let jump_addr = read_word v in
       v.stack <- v.read_ptr :: v.stack;
-      v.read_ptr <- jump_addr
+      v.read_ptr <- jump_addr;
+      true
   | Return ->
       begin match v.stack with
       | ret_addr::rest ->
         v.read_ptr <- ret_addr;
         v.stack <- rest
       | _ -> failwith "Return: missing return address"
-      end
+      end;
+      true
 
 let run str =
   let v = create str in
@@ -288,8 +308,8 @@ let run str =
           loop ()
         end
       end;
-      interpret v;
-      loop ()
+      if interpret v then loop ()
+      else ()
     end
   in
   loop ()
