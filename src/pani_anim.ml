@@ -1,7 +1,6 @@
 open Containers
 
-(* Pani Interpreter: interprets the language of the PANI file *)
-(* Notes: pay attention to signed vs unsigned comparisons *)
+(* Pani animations: interpret the code of the individual animations *)
 
 let debug = true
 
@@ -36,12 +35,13 @@ type op =
   | Jump
     (* We can only jump based on timer stack *)
   | Reset
+    (* Reset all *)
   | ResetReadPtr
   | Nop
   | Delete
   [@@deriving show]
 
-let op_of_byte = function
+let op_of_byte ?(idx=0) = function
   | 0 -> SetPicIdx
   | 1 -> SetXY
   | 2 -> AddXY
@@ -53,7 +53,7 @@ let op_of_byte = function
   | 8 -> ResetReadPtr
   | 9 -> Nop
   | 10 -> Delete
-  | x -> failwith @@ Printf.sprintf "Unsupported byte %d" x
+  | x -> failwith @@ Printf.sprintf "anim[%d]: Unsupported byte %d" idx x
 
 let empty () = {
   used=false; active=false; other_anim_idx=0; reset_x=0; reset_y=0; x=0; y=0;
@@ -92,69 +92,76 @@ let read_word v =
   Bytes.get_int16_le v.buffer ptr
 
 let interpret_step v idx =
-  if not v.used then () else begin
+  let debug_state = ref true in
+  if v.used then begin
     v.total_delay <- v.total_delay + v.delay;
 
     if v.total_delay > 255 then begin
       v.total_delay <- v.total_delay - 255;
       let byte = read_byte v in
-      let op = op_of_byte byte in
+      let op = op_of_byte byte ~idx in
 
       if debug then
-        Printf.printf "anim[%d] 0x%x: %s(0x%x)\n" idx v.read_ptr (show_op op) byte;
+        Printf.printf "anim[%d] 0x%x: %s(0x%x)\n" idx (v.read_ptr-1) (show_op op) byte;
 
-      match op with
-      | SetPicIdx ->
-          let pic_idx = read_byte v in
-          v.pic_idx <- pic_idx
-      | SetXY ->
-          let x = read_word v in
-          let y = read_word v in
-          v.x <- x;
-          v.y <- y;
-      | AddXY ->
-          let x = read_word v in
-          let y = read_word v in
-          v.x <- v.x + x;
-          v.y <- v.y + y
-      | SetDelay ->
-          let delay = read_byte v in
-          v.delay <- delay
-      | AddDelay ->
-          let delay = read_byte v in
-          v.delay <- v.delay + delay
-      | SetTimer ->
-          let timer = read_byte v in
-          v.timer_stack <- timer::v.timer_stack
-      | Jump ->
-          begin match v.timer_stack with
-          | timer::rest when timer = 1 ->
-              v.timer_stack <- rest
-          | timer::rest ->
-              v.timer_stack <- (timer-1)::rest;
-              (* Jump *)
-              let addr = read_byte v in
-              v.read_ptr <- addr
-          | _ -> failwith "Jump: missing timer value on stack"
-          end
-      | Reset ->
-          if v.other_anim_idx + 2 = 0 then begin
-            v.x <- 0;
-            v.y <- 0
-          end else begin
-            v.x <- v.reset_x;
-            v.y <- v.reset_y
-          end;
-          v.delay <- v.reset_delay;
-          v.total_delay <- 255;
-          v.timer_stack <- [];
-          v.read_ptr <- v.reset_read_ptr;
-      | ResetReadPtr ->
-          v.timer_stack <- [];
-          v.read_ptr <- v.reset_read_ptr;
-      | Nop -> ()
-      | Delete ->
-          v.used <- false
+      let () =
+        match op with
+        | SetPicIdx ->
+            let pic_idx = read_byte v in
+            v.pic_idx <- pic_idx
+        | SetXY ->
+            let x = read_word v in
+            let y = read_word v in
+            v.x <- x;
+            v.y <- y;
+        | AddXY ->
+            let x = read_word v in
+            let y = read_word v in
+            v.x <- v.x + x;
+            v.y <- v.y + y
+        | SetDelay ->
+            let delay = read_byte v in
+            v.delay <- delay
+        | AddDelay ->
+            let delay = read_byte v in
+            v.delay <- v.delay + delay
+        | SetTimer ->
+            let timer = read_word v in
+            v.timer_stack <- timer::v.timer_stack
+        | Jump ->
+            begin match v.timer_stack with
+            | timer::rest when timer = 1 ->
+                v.timer_stack <- rest
+            | timer::rest ->
+                v.timer_stack <- (timer-1)::rest;
+                (* Jump *)
+                let addr = read_byte v in
+                v.read_ptr <- addr
+            | _ -> failwith "Jump: missing timer value on stack"
+            end
+        | Reset ->
+            if v.other_anim_idx + 2 = 0 then (
+              v.x <- 0;
+              v.y <- 0
+            ) else (
+              v.x <- v.reset_x;
+              v.y <- v.reset_y
+            );
+            v.delay <- v.reset_delay;
+            v.total_delay <- 255;
+            v.timer_stack <- [];
+            v.read_ptr <- v.reset_read_ptr;
+        | ResetReadPtr ->
+            v.timer_stack <- [];
+            v.read_ptr <- v.reset_read_ptr;
+        | Nop ->
+            (* nop never advances *)
+            v.read_ptr <- v.read_ptr - 1;
+            debug_state := false;
+        | Delete ->
+            v.used <- false
+      in
+
+      if debug && !debug_state then print_endline @@ show v
     end
-    else ()
   end

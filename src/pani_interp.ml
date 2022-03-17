@@ -266,8 +266,13 @@ let interpret v =
   ret
 
 let step_all_animations v =
+  if debug then
+    print_endline "\n--- Step through all animations ---\n";
+
   Array.iteri (fun i anim ->
-    Pani_anim.interpret_step anim i) v.animations
+    Pani_anim.interpret_step anim i;
+  )
+  v.animations
 
 let run str =
   let v = make str in
