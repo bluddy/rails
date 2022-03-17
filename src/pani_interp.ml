@@ -134,7 +134,7 @@ let interpret v =
         true
     | CreateAnimation ->
         begin match v.stack with
-        | pic_far::delay::y_diff::x_diff::other_anim_idx::anim_idx::data_ptr::rest -> 
+        | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
           let anim_idx =
             if anim_idx = 0xFFFF then begin
               Printf.printf "call find_unused_anim\n";
@@ -144,7 +144,8 @@ let interpret v =
           if anim_idx > 0 && anim_idx <= 50 then begin
             let anim = 
               let pic_far = pic_far = 1 in
-              Pani_anim.make ~pic_far ~delay ~y_diff ~x_diff ~other_anim_idx ~data_ptr
+              let buffer = v.buffer in
+              Pani_anim.make ~pic_far ~delay ~reset_x ~reset_y ~other_anim_idx ~data_ptr ~buffer
             in
             if debug then
               Printf.printf "Animation %d:\n%s\n" anim_idx (Pani_anim.show anim);
@@ -264,21 +265,28 @@ let interpret v =
     Printf.printf "reg: %d stack: %s\n" (v.register) (str_of_stack v);
   ret
 
+let step_all_animations v =
+  Array.iteri (fun i anim ->
+    Pani_anim.interpret_step anim i) v.animations
+
 let run str =
   let v = make str in
   let rec loop () =
-    if v.error then ()
-    else begin
-      if v.timeout then begin
-        v.register <- v.register - 1;
-        if v.register = 0 then begin
-          v.timeout <- false;
-          loop ()
-        end
-      end;
-      if interpret v then loop ()
-      else ()
-    end
+    if v.error then failwith "Pani interpreter error";
+
+    if v.timeout then (
+      v.register <- v.register - 1;
+
+      if v.register = 0 then (
+        v.timeout <- false;
+        loop ()
+      ) else (
+        (* do other stuff *)
+        step_all_animations v;
+        loop ()
+      )
+    )
+    else if interpret v then loop ()
   in
   loop ()
 
