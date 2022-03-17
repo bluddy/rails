@@ -5,22 +5,21 @@ open Containers
 let debug = true
 
 type t = {
+  mutable read_ptr: int;
   mutable used: bool;
   mutable active: bool;
+  mutable pic_idx: int;
+  mutable x: int;
+  mutable y: int;
+  mutable counter_stack: int list;
   other_anim_idx: int;
   reset_x: int;
   reset_y: int;
-  mutable x: int;
-  mutable y: int;
   reset_delay: int;
   mutable delay: int;
   mutable total_delay: int;
-  mutable timer_stack: int list;
   reset_read_ptr: int;
-  mutable read_ptr: int;
-  far_ptr_flag: bool;
   data_size: int;
-  mutable pic_idx: int;
   buffer: bytes; [@opaque]
 } 
 [@@deriving show]
@@ -31,9 +30,10 @@ type op =
   | AddXY
   | SetDelay
   | AddDelay
-  | SetTimer
-  | Jump
-    (* We can only jump based on timer stack *)
+  | PushCounter
+    (* Set counter at the top of the counter stack *)
+  | JumpN
+    (* Jump N iterations, based on top of counter stack *)
   | Reset
     (* Reset all *)
   | ResetReadPtr
@@ -47,8 +47,8 @@ let op_of_byte ?(idx=0) = function
   | 2 -> AddXY
   | 3 -> SetDelay
   | 4 -> AddDelay
-  | 5 -> SetTimer
-  | 6 -> Jump
+  | 5 -> PushCounter
+  | 6 -> JumpN
   | 7 -> Reset
   | 8 -> ResetReadPtr
   | 9 -> Nop
@@ -57,8 +57,8 @@ let op_of_byte ?(idx=0) = function
 
 let empty () = {
   used=false; active=false; other_anim_idx=0; reset_x=0; reset_y=0; x=0; y=0;
-  reset_delay=0; delay=0; total_delay=255; timer_stack=[];
-  reset_read_ptr=0; read_ptr=0; far_ptr_flag=false; data_size=0; pic_idx=0;
+  reset_delay=0; delay=0; total_delay=255; counter_stack=[];
+  reset_read_ptr=0; read_ptr=0; data_size=0; pic_idx=0;
   buffer=Bytes.empty
 }
 
@@ -77,7 +77,6 @@ let make ~data_ptr ~other_anim_idx ~reset_x ~reset_y ~delay ~pic_far ~buffer =
     x; y;
     reset_delay=delay;
     delay;
-    far_ptr_flag=pic_far;
     buffer;
   }
 
@@ -125,19 +124,21 @@ let interpret_step v idx =
         | AddDelay ->
             let delay = read_byte v in
             v.delay <- v.delay + delay
-        | SetTimer ->
-            let timer = read_word v in
-            v.timer_stack <- timer::v.timer_stack
-        | Jump ->
-            begin match v.timer_stack with
-            | timer::rest when timer = 1 ->
-                v.timer_stack <- rest
-            | timer::rest ->
-                v.timer_stack <- (timer-1)::rest;
-                (* Jump *)
-                let addr = read_byte v in
+        | PushCounter ->
+            let counter = read_word v in
+            v.counter_stack <- counter::v.counter_stack
+        | JumpN ->
+            begin match v.counter_stack with
+            | counter::rest when counter = 1 ->
+                (* Must dispose of bytes *)
+                let _ = read_word v in
+                v.counter_stack <- rest;
+            | counter::rest ->
+                v.counter_stack <- (counter-1)::rest;
+                (* JumpN *)
+                let addr = read_word v in
                 v.read_ptr <- addr
-            | _ -> failwith "Jump: missing timer value on stack"
+            | _ -> failwith "JumpN: missing counter value on stack"
             end
         | Reset ->
             if v.other_anim_idx + 2 = 0 then (
@@ -149,10 +150,10 @@ let interpret_step v idx =
             );
             v.delay <- v.reset_delay;
             v.total_delay <- 255;
-            v.timer_stack <- [];
+            v.counter_stack <- [];
             v.read_ptr <- v.reset_read_ptr;
         | ResetReadPtr ->
-            v.timer_stack <- [];
+            v.counter_stack <- [];
             v.read_ptr <- v.reset_read_ptr;
         | Nop ->
             (* nop never advances *)
