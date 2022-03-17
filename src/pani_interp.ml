@@ -5,55 +5,6 @@ open Containers
 
 let debug = true
 
-module Animation = struct
-
-type t = {
-  mutable used: bool;
-  mutable active: bool;
-  other_anim_idx: int;
-  x_diff: int;
-  y_diff: int;
-  x: int;
-  y: int;
-  delay_reset: int;
-  delay: int;
-  total_delay: int;
-  timer_array: int Array.t;
-  timer_idx: int;
-  data_ptr_reset: int;
-  data_ptr: int;
-  far_ptr_flag: bool;
-  data_size: int;
-  pic_idx: int;
-} 
-[@@deriving show]
-
-let empty () = {
-  used=false; active=false; other_anim_idx=0; x_diff=0; y_diff=0; x=0; y=0;
-  delay_reset=0; delay=0; total_delay=255; timer_array = Array.make 10 0; timer_idx=0;
-  data_ptr_reset=0; data_ptr=0; far_ptr_flag=false; data_size=0; pic_idx=0;
-}
-
-let create ~data_ptr ~other_anim_idx ~x_diff ~y_diff ~delay ~pic_far =
-  let a = empty () in
-  let x, y =
-    if other_anim_idx + 1 = 0 then x_diff, y_diff else 0, 0
-  in
-  {a with
-    used=true;
-    active=false;
-    data_ptr_reset=data_ptr;
-    data_ptr;
-    other_anim_idx=other_anim_idx-1;
-    x_diff; y_diff;
-    x; y;
-    delay_reset=delay;
-    delay;
-    far_ptr_flag=pic_far;
-  }
-
-end
-
 type t = {
   mutable error: bool;
   mutable timeout: bool;
@@ -62,10 +13,10 @@ type t = {
   mutable read_ptr: int;
   mutable stack: int list;
   animation_registers: int Array.t;
-  animations: Animation.t Array.t;
+  animations: Pani_anim.t Array.t;
 }
 
-let create s =
+let make s =
 {
   error=false;
   timeout=false;
@@ -74,7 +25,7 @@ let create s =
   buffer=s;
   stack=[];
   animation_registers=Array.make 52 0;
-  animations=Array.init 50 (fun _ -> Animation.empty ());
+  animations=Array.init 50 (fun _ -> Pani_anim.empty ());
 }
 
 type op =
@@ -193,10 +144,10 @@ let interpret v =
           if anim_idx > 0 && anim_idx <= 50 then begin
             let anim = 
               let pic_far = pic_far = 1 in
-              Animation.create ~pic_far ~delay ~y_diff ~x_diff ~other_anim_idx ~data_ptr
+              Pani_anim.make ~pic_far ~delay ~y_diff ~x_diff ~other_anim_idx ~data_ptr
             in
             if debug then
-              Printf.printf "Animation %d:\n%s\n" anim_idx (Animation.show anim);
+              Printf.printf "Animation %d:\n%s\n" anim_idx (Pani_anim.show anim);
             v.animations.(anim_idx) <- anim
           end;
           v.stack <- rest
@@ -314,7 +265,7 @@ let interpret v =
   ret
 
 let run str =
-  let v = create str in
+  let v = make str in
   let rec loop () =
     if v.error then ()
     else begin

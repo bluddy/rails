@@ -94,7 +94,7 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
     | _ -> failwith "Unknown value for pani_type"
   end;
   (* Support up to 250 images, lined up towards end, zeros before then *)
-  let pani_pic_ptrs = Array.create 250 0 in
+  let pani_pic_ptrs = Array.make 250 0 in
   Printf.printf "Post-Background pos: 0x%x\n" (My_gen.pos () + 1);
   for i=0 to 249 do
     let word = My_gen.get_wordi s in
