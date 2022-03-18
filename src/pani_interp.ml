@@ -33,7 +33,7 @@ type op =
   | DeleteAnimation
   | SetTimeout
   | DebugWrite
-  | ActivateAnimation
+  | DisableAnimation
   | PushSetRegister
     (* Push to stack, either from register or from animation registers *)
   | SetRegisters 
@@ -62,7 +62,7 @@ let op_of_byte = function
   | 1 -> DeleteAnimation
   | 2 -> SetTimeout
   | 3 -> DebugWrite
-  | 4 -> ActivateAnimation
+  | 4 -> DisableAnimation
   | 5 -> PushSetRegister
   | 6 -> SetRegisters
   | 7 -> Copy
@@ -184,14 +184,14 @@ let interpret v =
         | _ -> failwith "DebugWrite: missing value argument"
         end;
         true
-    | ActivateAnimation ->
+    | DisableAnimation ->
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx > 0 && anim_idx <= 50 then begin
-              v.animations.(anim_idx).active <- true
+              v.animations.(anim_idx).disabled <- true
             end;
             v.stack <- rest
-        | _ -> failwith "ActivateAnimation: missing argument"
+        | _ -> failwith "DisableAnimation: missing argument"
         end;
         true
     | PushSetRegister ->

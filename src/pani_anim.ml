@@ -7,11 +7,11 @@ let debug = true
 type t = {
   mutable read_ptr: int;  (* offset into buffer *)
   mutable used: bool;     (* not used: deleted *)
-  mutable active: bool;
   mutable pic_idx: int;   (* -1: no pic *)
   mutable x: int;
   mutable y: int;
   mutable counter_stack: int list;
+  mutable disabled: bool;
   other_anim_idx: int;
   reset_x: int;
   reset_y: int;
@@ -57,7 +57,7 @@ let op_of_byte ?(idx=0) = function
   | x -> failwith @@ Printf.sprintf "anim[%d]: Unsupported byte %d" idx x
 
 let empty () = {
-  used=false; active=false; other_anim_idx=0; reset_x=0; reset_y=0; x=0; y=0;
+  used=false; disabled=false; other_anim_idx=0; reset_x=0; reset_y=0; x=0; y=0;
   reset_delay=0; delay=0; total_delay=255; counter_stack=[];
   reset_read_ptr=0; read_ptr=0; data_size=0; pic_idx=0;
   buffer=Bytes.empty
@@ -70,7 +70,7 @@ let make ~data_ptr ~other_anim_idx ~reset_x ~reset_y ~delay ~pic_far ~buffer =
   in
   {a with
     used=true;
-    active=false;
+    disabled=false;
     reset_read_ptr=data_ptr;
     read_ptr=data_ptr;
     other_anim_idx=other_anim_idx-1;
