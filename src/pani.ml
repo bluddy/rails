@@ -56,18 +56,18 @@ WOOD2: 18sec
 *)
 
 
-let pani_of_stream (s:(int*char) Gen.t) filepath =
+let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
   let pani = Gen.take 4 s |> My_gen.to_stringi in
   if String.(pani = "PANI")
   then ()
   else failwith "Not a PANI file";
-  let pani_byte1 = My_gen.get_bytei s in
+  let _pani_byte1 = My_gen.get_bytei s in
   let pani_byte2 = My_gen.get_bytei s in
   let pani_byte3 = My_gen.get_bytei s in
   Printf.printf "byte2: 0x%x\nbyte3: 0x%x\n" pani_byte2 pani_byte3; (* debug *)
   let header_type = My_gen.get_bytei s in
   Printf.printf "header_type: 0x%x\n" header_type; (* debug *)
-  let subheader =
+  let _subheader =
     match header_type with
     | 0 -> Gen.take 17 s |> My_gen.to_stringi
     | 1 -> ""
@@ -79,7 +79,7 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
   Vector.push pani_struct (My_gen.get_wordi s);
   Vector.push pani_struct (My_gen.get_wordi s);
   Vector.push pani_struct (My_gen.get_wordi s);
-  let pani_word = My_gen.get_wordi s in
+  let _pani_word = My_gen.get_wordi s in
   (* pani_read_buffer_2 *)
   let pani_type = My_gen.get_bytei s in
   Printf.printf "pani_type: 0x%x\n" pani_type; (* debug *)
@@ -112,7 +112,9 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
         (* We can only start at word boundaries *)
         if pos land 1 = 1 then My_gen.junki s;
         Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
-        Pic.png_of_stream s ~filename:(Printf.sprintf "%s_%d.png" filepath i)
+        if dump_files then
+          Pic.png_of_stream s ~filename:(Printf.sprintf "%s_%d.png" filepath i);
+        ()
   )
   pani_pic_ptrs;
 
@@ -131,7 +133,7 @@ let pani_of_stream (s:(int*char) Gen.t) filepath =
   Pani_interp.run pani_code_s
 
 
-let main filename =
+let main filename ~dump_files =
   Printf.printf "--- PANI dump: %s\n" filename;
 
   let filepath = Filename.remove_extension filename in
@@ -141,6 +143,6 @@ let main filename =
       fun in_channel -> IO.read_all in_channel
   in
   let stream = My_gen.of_stringi str in
-  pani_of_stream stream filepath
+  pani_of_stream stream filepath ~dump_files
 
 

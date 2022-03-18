@@ -26,7 +26,7 @@ Each pixel byte represents two 16-color pixels. I'm not sure what they're doing 
 possible they're just using the "normal" 16 color palette.
 *)
 
-let debug = ref false
+let debug = ref true
 
 let str_of_stream (stream: (int * char) Gen.t) =
   let discard_bytes =
