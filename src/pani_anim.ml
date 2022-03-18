@@ -5,10 +5,10 @@ open Containers
 let debug = true
 
 type t = {
-  mutable read_ptr: int;
-  mutable used: bool;
+  mutable read_ptr: int;  (* offset into buffer *)
+  mutable used: bool;     (* not used: deleted *)
   mutable active: bool;
-  mutable pic_idx: int;
+  mutable pic_idx: int;   (* -1: no pic *)
   mutable x: int;
   mutable y: int;
   mutable counter_stack: int list;
@@ -29,9 +29,10 @@ type op =
   | SetXY
   | AddXY
   | SetDelay
+    (* Set a delay amount to add to total_delay each call *)
   | AddDelay
   | PushCounter
-    (* Set counter at the top of the counter stack *)
+    (* Push a counter at the top of the counter stack *)
   | JumpN
     (* Jump N iterations, based on top of counter stack *)
   | Reset
