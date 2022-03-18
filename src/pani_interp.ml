@@ -295,3 +295,13 @@ let run str =
   in
   loop ()
 
+let calc_anim_xy v anim_idx =
+  let anim = v.(anim_idx) in
+  let open Pani_anim in
+  match anim.other_anim_idx with
+  | -2 -> anim.x, anim.y
+  | other -> 
+      (* Assume other_anim_idx is valid or we can't use it *)
+      let anim2 = v.(other) in
+      (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
+
