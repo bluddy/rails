@@ -20,4 +20,4 @@ let () =
   else if !pani_file <> "" then
     Pani.main !pani_file
   else
-    Ui.main ()
+    Ui.main `MapDemo
