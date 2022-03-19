@@ -58,7 +58,6 @@ let main choice =
         | _ -> false
       else false
     in
-    let open Result.Infix in
     if stop then Result.return () else
 
       (* render whatever we want *)

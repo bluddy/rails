@@ -179,7 +179,7 @@ And yes, if you want a stream of 90's, you do 90 00 90 xx.
 
 let decode_rle (stream: char Gen.t) : char Gen.t =
 
-  let get_byte s : int = Char.code @@ Option.get_exn @@ Gen.get s in
+  let get_byte s : int = Char.code @@ Gen.get_exn s in
   let add_byte b = Gen.return @@ Char.chr b in
 
   let result : char Gen.t =

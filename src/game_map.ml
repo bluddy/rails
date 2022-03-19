@@ -46,7 +46,7 @@ let tile_of_int_default = function
   | x -> failwith @@ Printf.sprintf "Illegal basic map value %d" x
 
 let map_of_file filename =
-  let arr = Pic.bigarray_of_file filename in
+  let arr = Pic.ndarray_of_file filename in
   (* All maps are 256*192 *)
   let bigarr = Ndarray.get_slice [[0;191]; [0;255]] arr in
   bigarr

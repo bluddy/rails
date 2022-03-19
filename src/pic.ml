@@ -28,7 +28,9 @@ possible they're just using the "normal" 16 color palette.
 
 let debug = ref true
 
-let str_of_stream (stream: (int * char) Gen.t) =
+module Ndarray = Owl_base_dense_ndarray.Generic
+
+let ndarray_of_stream (stream: (int * char) Gen.t) =
   let discard_bytes =
     let rec loop () =
       match My_gen.get_wordi stream with
@@ -58,50 +60,25 @@ let str_of_stream (stream: (int * char) Gen.t) =
   (* Printf.printf "Length rle decompressed: %d\n" (String.length s); *)
 
   (* We read a line at a time and discard a nibble if it works out that way *)
-  let buffer = Buffer.create 10 in
+
+  let arr = Ndarray.empty Int8_unsigned [|height; width|] in
   for i=0 to height-1 do
     let num_bytes = int_of_float @@ ceil @@ (float_of_int width) /. 2. in
     let str = Gen.take num_bytes lre_stream |> Gen.to_string in
-    Buffer.add_string buffer str;
+    for j=0 to width-1 do
+      let c = Char.code str.[j/2] in
+      let nibble = if j land 1 = 0 then c land 0xf else (c lsr 4) land 0xf in
+      Ndarray.set arr [|i; j|] nibble;
+    done
   done;
-  Buffer.contents buffer, width, height
+  arr
 
-let load_to_str filename =
+let ndarray_of_file filename =
   let str =
     IO.with_in filename @@ fun in_channel -> IO.read_all in_channel
   in
   let stream = My_gen.of_stringi str in
-  str_of_stream stream
-
-module Ndarray = Owl_base_dense_ndarray.Generic
-
-let bigarray_of_str str ~w ~h =
-  let exception Done in
-  (* Convert str to bigarray of nibbles *)
-  let arr = Ndarray.empty Int8_unsigned [|h; w|] in
-  let idx = ref 0 in
-  let low = ref true in (* low then high *)
-  begin try
-    for y=0 to h-1 do
-      for x=0 to w-1 do
-        let c = Char.code str.[!idx] in
-        let nibble = if !low then c land 0xf else (c lsr 4) land 0xf in
-        Ndarray.set arr [|y;x|] nibble;
-        (* advance *)
-        match !low with
-        | true  ->
-            low := false
-        | false ->
-            begin
-              low := true;
-              incr idx;
-              if !idx >= String.length str then raise_notrace Done
-            end
-      done
-    done
-  with
-  | Done -> () end;
-  arr
+  ndarray_of_stream stream
 
 let translate_ega arr ~f ~w ~h =
   for y=0 to h-1 do
@@ -127,10 +104,6 @@ let img_write ?(a=0xFF) arr x y (r:int) (g:int) (b:int) =
 let create_rgb_img ~w ~h =
   Ndarray.empty Int8_unsigned [|h; w; 4|]
 
-let bigarray_of_file filename =
-  let str, w, h = load_to_str filename in
-  bigarray_of_str str ~w ~h
-
 let img_of_bigarray arr =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in
@@ -138,32 +111,30 @@ let img_of_bigarray arr =
   translate_ega arr ~w ~h ~f:(img_write img);
   img
 
-let ndarray_of_stream stream =
-  let str, w, h = str_of_stream stream in
-  bigarray_of_str str ~w ~h
-
-let img_of_file filename =
-  let str, w, h = load_to_str filename in
-  let arr = bigarray_of_str str ~w ~h in
+let img_of_file in_file =
+  let arr = ndarray_of_file in_file in
+  let dims = Ndarray.shape arr in
+  let w, h = dims.(1), dims.(0) in
   let img = create_rgb_img ~w ~h in
   translate_ega arr ~w ~h ~f:(img_write img);
   img
 
-let png_of_str str w h ~filename =
-  let ndarray = bigarray_of_str str ~w ~h in
+let png_of_ndarray arr ~filename =
+  let dims = Ndarray.shape arr in
+  let w, h = dims.(1), dims.(0) in
   let img = Image.create_rgb w h in
-  translate_ega ndarray ~f:(Image.write_rgb img) ~w ~h;
+  translate_ega arr ~f:(Image.write_rgb img) ~w ~h;
   let och = Png.chunk_writer_of_path filename in
   ImagePNG.write och img
 
 let png_of_stream stream ~filename =
-  let str, w, h = str_of_stream stream in
-  png_of_str str w h ~filename
+  let arr = ndarray_of_stream stream in
+  png_of_ndarray arr ~filename
 
-let png_of_file filename =
-  Printf.printf "--- Pic dump: %s\n" filename;
-  let filepath = Filename.remove_extension filename in
+let png_of_file in_file =
+  Printf.printf "--- Pic dump: %s\n" in_file;
+  let filepath = Filename.remove_extension in_file in
   let destpath = filepath ^ ".png" in
-  let str, w, h = load_to_str filename in
-  png_of_str str w h ~filename:destpath
+  let arr = ndarray_of_file in_file in
+  png_of_ndarray arr ~filename:destpath
 
