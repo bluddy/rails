@@ -279,8 +279,7 @@ let step_all_animations v =
   v.animations
 
 (* Entry point *)
-let run buf_str pani_pics =
-  let v = make buf_str pani_pics in
+let run v =
   let rec loop () =
     if v.error then failwith "Pani interpreter error";
 
