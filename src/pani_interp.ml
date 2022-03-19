@@ -3,6 +3,8 @@ open Containers
 (* Pani Interpreter: interprets the language of the PANI file *)
 (* Notes: pay attention to signed vs unsigned comparisons *)
 
+module Ndarray = Owl_base_dense_ndarray.Generic
+
 let debug = true
 
 type t = {
@@ -14,18 +16,20 @@ type t = {
   mutable stack: int list;
   animation_registers: int Array.t;
   animations: Pani_anim.t Array.t;
+  pics: (int, Bigarray.int8_unsigned_elt) Ndarray.t option Array.t;
 }
 
-let make s =
+let make buf_str pics =
 {
   error=false;
   timeout=false;
   register=0;
   read_ptr=0;
-  buffer=s;
+  buffer=buf_str;
   stack=[];
   animation_registers=Array.make 52 0;
   animations=Array.init 50 (fun _ -> Pani_anim.empty ());
+  pics;
 }
 
 type op =
@@ -274,8 +278,9 @@ let step_all_animations v =
   )
   v.animations
 
-let run str =
-  let v = make str in
+(* Entry point *)
+let run buf_str pani_pics =
+  let v = make buf_str pani_pics in
   let rec loop () =
     if v.error then failwith "Pani interpreter error";
 
