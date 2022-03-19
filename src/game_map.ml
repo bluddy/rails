@@ -52,7 +52,7 @@ let map_of_file filename =
   bigarr
 
 let pic_of_map map =
-  Pic.img_of_bigarray map
+  Pic.img_of_ndarray map
 
 
 

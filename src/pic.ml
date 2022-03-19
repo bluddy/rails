@@ -104,7 +104,13 @@ let img_write ?(a=0xFF) arr x y (r:int) (g:int) (b:int) =
 let create_rgb_img ~w ~h =
   Ndarray.empty Int8_unsigned [|h; w; 4|]
 
-let img_of_bigarray arr =
+(*
+    ndarray: ndarray with 0-15 palette values
+    img: ndarray converted to RGB uint8 values
+    png: png file
+ *)
+
+let img_of_ndarray arr =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in
   let img = create_rgb_img ~w ~h in
@@ -113,11 +119,7 @@ let img_of_bigarray arr =
 
 let img_of_file in_file =
   let arr = ndarray_of_file in_file in
-  let dims = Ndarray.shape arr in
-  let w, h = dims.(1), dims.(0) in
-  let img = create_rgb_img ~w ~h in
-  translate_ega arr ~w ~h ~f:(img_write img);
-  img
+  img_of_ndarray arr
 
 let png_of_ndarray arr ~filename =
   let dims = Ndarray.shape arr in

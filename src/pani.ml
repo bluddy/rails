@@ -103,6 +103,8 @@ let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
   done;
   let num = Array.fold (fun acc x -> if x = 0 then acc else acc + 1) 0 pani_pic_ptrs in
   Printf.printf "%d pictures expected\n" num;
+
+  let pani_pics = Array.make 250 None in
   Array.iteri (fun i x ->
     match x with
     | 0 -> ()
@@ -112,8 +114,11 @@ let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
         (* We can only start at word boundaries *)
         if pos land 1 = 1 then My_gen.junki s;
         Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
+        let ndarray = Pic.ndarray_of_stream s in
+        pani_pics.(i) <- Some(Pic.img_of_ndarray ndarray);
+        
         if dump_files then
-          Pic.png_of_stream s ~filename:(Printf.sprintf "%s_%d.png" filepath i);
+          Pic.png_of_ndarray ndarray ~filename:(Printf.sprintf "%s_%d.png" filepath i);
         ()
   )
   pani_pic_ptrs;
