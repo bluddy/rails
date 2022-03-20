@@ -31,25 +31,28 @@ let debug = ref true
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 let ndarray_of_stream (stream: (int * char) Gen.t) =
+  let format_flag = My_gen.get_wordi stream in
   let discard_bytes =
-    let rec loop () =
-      match My_gen.get_wordi stream with
-      | 0x0 -> loop ()
-      | 0xF -> 23 - 6
-      | 0x7 | 0x6 -> 7 - 6 
+      match format_flag with
+      | 0x0 -> 0
+      | 0xF -> 16
+      | 0x7 | 0x6 -> 0
       | x -> failwith @@ Printf.sprintf "Unknown format 0x%x" x
-    in
-    loop ()
   in
   let width  = My_gen.get_wordi stream in (* 2 *)
   let height = My_gen.get_wordi stream in (* 4 *)
 
   if !debug then
-    Printf.printf "0x%x: width: %d, height: %d\n" (My_gen.pos ()) width height; (* debug *)
+    Printf.printf "0x%x: format: 0x%x, width: %d, height: %d\n" (My_gen.pos ()) format_flag width height; (* debug *)
 
   for _i=0 to discard_bytes - 1 do
+    print_endline "discard";
     My_gen.junki stream
   done;
+
+  let lzw_max_byte= My_gen.get_bytei stream in
+
+  Printf.printf "Max lzw = 0x%x\n" lzw_max_byte;
 
   (* Printf.printf "offset before lzw: %d\n" (My_gen.pos ()); (* debug *) *)
 
