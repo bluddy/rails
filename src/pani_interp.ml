@@ -28,7 +28,7 @@ let make buf_str pics =
   buffer=buf_str;
   stack=[];
   animation_registers=Array.make 52 0;
-  animations=Array.init 50 (fun _ -> Pani_anim.empty ());
+  animations=Array.init 51 (fun _ -> Pani_anim.empty ());
   pics;
 }
 
@@ -313,12 +313,20 @@ let run_to_end v =
   loop ()
 
 let calc_anim_xy v anim_idx =
-  let anim = v.(anim_idx) in
+  let anim = v.animations.(anim_idx) in
   let open Pani_anim in
   match anim.other_anim_idx with
   | -2 -> anim.x, anim.y
   | other -> 
       (* Assume other_anim_idx is valid or we can't use it *)
-      let anim2 = v.(other) in
+      let anim2 = v.animations.(other) in
       (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
+
+let anim_get_pic v anim_idx =
+  let open Pani_anim in
+  let anim = v.animations.(anim_idx) in
+  match anim.used, anim.disabled, anim.pic_idx with
+  | _, _, -1 -> None
+  | true, false, i -> Some i
+  | _ -> None
 
