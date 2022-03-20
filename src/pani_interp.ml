@@ -278,10 +278,9 @@ let step_all_animations v =
   )
   v.animations
 
-(* Entry point *)
-let run v =
+let step v =
   let rec loop () =
-    if v.error then failwith "Pani interpreter error";
+    if v.error then `Error else
 
     if v.timeout then (
       v.register <- v.register - 1;
@@ -289,13 +288,27 @@ let run v =
       if v.register = 0 then (
         v.timeout <- false;
         loop ()
-      ) else (
-        (* do other stuff *)
-        step_all_animations v;
-        loop ()
-      )
-    )
-    else if interpret v then loop ()
+      ) else
+        `Timeout
+    ) 
+    else
+      (* Do all processing steps *)
+      if interpret v then loop ()
+      else `Done
+  in
+  match loop () with
+  | `Timeout ->
+      step_all_animations v;
+      `Timeout
+  | x -> x
+
+(* Entry point *)
+let run_to_end v =
+  let rec loop () =
+    match step v with
+    | `Timeout -> loop ()
+    | `Done  -> print_endline "PANI done"
+    | `Error -> print_endline "PANI error"
   in
   loop ()
 

@@ -136,7 +136,7 @@ let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
   *)
   let pani_code_s = My_gen.to_stringi s |> Bytes.of_string in
   let pani_v = Pani_interp.make pani_code_s pani_pics in
-  Pani_interp.run pani_v
+  pani_v
 
 
 let main filename ~dump_files =
@@ -149,6 +149,6 @@ let main filename ~dump_files =
       fun in_channel -> IO.read_all in_channel
   in
   let stream = My_gen.of_stringi str in
-  pani_of_stream stream filepath ~dump_files
-
+  let pani_v = pani_of_stream stream filepath ~dump_files in
+  Pani_interp.run_to_end pani_v
 
