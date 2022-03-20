@@ -8,7 +8,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 let debug = true
 
 type t = {
-  mutable error: bool;
+  mutable is_done: bool;
   mutable timeout: bool;
   mutable register: int;    (* single register. also used for timeout *)
   buffer: bytes;
@@ -21,7 +21,7 @@ type t = {
 
 let make buf_str pics =
 {
-  error=false;
+  is_done=false;
   timeout=false;
   register=0;
   read_ptr=0;
@@ -55,10 +55,10 @@ type op =
   | Div
   | JumpIfTrue
   | Jump
-  | SetError
+  | SetDone
   | CallFunc
   | Return
-  | Exit
+  | Error
   [@@deriving show]
 
 let op_of_byte = function
@@ -82,8 +82,8 @@ let op_of_byte = function
   | 17 -> Div
   | 18 -> JumpIfTrue
   | 19 -> Jump
-  | 20 -> Exit
-  | 21 -> SetError
+  | 20 -> Error
+  | 21 -> SetDone
   | 22 -> Return
   | 23 -> CallFunc
   | x  -> failwith @@ Printf.sprintf "Unknown op code %d" x
@@ -246,10 +246,10 @@ let interpret v =
         let addr = read_word v in
         v.read_ptr <- addr;
         true
-    | SetError ->
-        v.error <- true;
+    | SetDone ->
+        v.is_done <- true;
         true
-    | Exit ->
+    | Error ->
         false
     | CallFunc ->
         let jump_addr = read_word v in
@@ -280,7 +280,7 @@ let step_all_animations v =
 
 let step v =
   let rec loop () =
-    if v.error then `Error else
+    if v.is_done then `Done else
 
     if v.timeout then (
       v.register <- v.register - 1;
@@ -294,7 +294,7 @@ let step v =
     else
       (* Do all processing steps *)
       if interpret v then loop ()
-      else `Done
+      else `Error
   in
   match loop () with
   | `Timeout ->
