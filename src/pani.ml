@@ -56,7 +56,7 @@ WOOD2: 18sec
 *)
 
 
-let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
+let of_stream ?(dump_files=None) s =
   let pani = Gen.take 4 s |> My_gen.to_stringi in
   if String.(pani = "PANI")
   then ()
@@ -83,16 +83,27 @@ let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
   (* pani_read_buffer_2 *)
   let pani_type = My_gen.get_bytei s in
   Printf.printf "pani_type: 0x%x\n" pani_type; (* debug *)
-  begin
+
+  let pani_pics = Array.make 250 None in
+
+  let () =
     match pani_type with
     | 0 -> ()
     | 1 ->
         (* let byte = My_gen.get_bytei s in  (* optional *)
         Printf.printf "byte: 0x%x pos: 0x%x\n" byte (My_gen.pos ());  *)
-        Pic.png_of_stream s ~filename:(filepath^"_bgnd.png")
+
+        let ndarray = Pic.ndarray_of_stream s in
+        pani_pics.(0) <- Some(Pic.img_of_ndarray ndarray);
+
+        begin match dump_files with
+        | Some filepath ->
+          Pic.png_of_stream s ~filename:(filepath^"_bgnd.png")
+        | None -> ()
+        end
     | 2 -> ()
     | _ -> failwith "Unknown value for pani_type"
-  end;
+  in
   (* Support up to 250 images, lined up towards end, zeros before then *)
   let pani_pic_ptrs = Array.make 250 0 in
   Printf.printf "Post-Background pos: 0x%x\n" (My_gen.pos () + 1);
@@ -104,7 +115,6 @@ let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
   let num = Array.fold (fun acc x -> if x = 0 then acc else acc + 1) 0 pani_pic_ptrs in
   Printf.printf "%d pictures expected\n" num;
 
-  let pani_pics = Array.make 250 None in
   Array.iteri (fun i x ->
     match x with
     | 0 -> ()
@@ -117,9 +127,10 @@ let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
         let ndarray = Pic.ndarray_of_stream s in
         pani_pics.(i) <- Some(Pic.img_of_ndarray ndarray);
         
-        if dump_files then
-          Pic.png_of_ndarray ndarray ~filename:(Printf.sprintf "%s_%d.png" filepath i);
-        ()
+        match dump_files with
+        | Some filepath ->
+              Pic.png_of_ndarray ndarray ~filename:(Printf.sprintf "%s_%d.png" filepath i)
+        | None -> ()
   )
   pani_pic_ptrs;
 
@@ -138,17 +149,20 @@ let pani_of_stream (s:(int*char) Gen.t) filepath ~dump_files =
   let pani_v = Pani_interp.make pani_code_s pani_pics in
   pani_v
 
-
-let main filename ~dump_files =
-  Printf.printf "--- PANI dump: %s\n" filename;
-
-  let filepath = Filename.remove_extension filename in
-
+let stream_of_file filename =
   let str =
     IO.with_in filename @@
       fun in_channel -> IO.read_all in_channel
   in
   let stream = My_gen.of_stringi str in
-  let pani_v = pani_of_stream stream filepath ~dump_files in
+  stream
+
+let main filename =
+  Printf.printf "--- PANI dump: %s\n" filename;
+
+  let filepath = Filename.remove_extension filename in
+
+  let stream = stream_of_file filename in
+  let pani_v = of_stream stream ~dump_files:(Some filepath) in
   Pani_interp.run_to_end pani_v
 

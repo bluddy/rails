@@ -20,8 +20,8 @@ let () =
   else if !pic_file <> "" then
     Pic.png_of_file !pic_file
   else if !pani_file <> "" && !dump then
-    Pani.main !pani_file ~dump_files:true
+    Pani.main !pani_file
   else if !pani_file <> "" then
-    Ui.main `Pani
+    Ui.main `Pani ~filename:!pani_file
   else
-    Ui.main `MapDemo
+    Ui.main `MapDemo ~filename:""

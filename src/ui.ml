@@ -36,14 +36,22 @@ let setup_mapdemo win =
     in
     render_fn
 
+let setup_pani win ~filename =
+  let stream = Pani.stream_of_file filename in
+  let pani_v = Pani.of_stream stream in
 
-let main choice =
+  let render_fn () =
+    Result.return ()
+  in 
+  render_fn
+
+let main choice ~filename =
   let win = R.create 320 200 ~zoom:2. in
   let event = Sdl.Event.create () in
 
   let render_fn =
     match choice with
-    | `Pani -> setup_mapdemo win
+    | `Pani -> setup_pani win ~filename
     | `MapDemo -> setup_mapdemo win
   in
 
