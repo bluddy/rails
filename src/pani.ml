@@ -93,12 +93,14 @@ let of_stream ?(dump_files=None) s =
         (* let byte = My_gen.get_bytei s in  (* optional *)
         Printf.printf "byte: 0x%x pos: 0x%x\n" byte (My_gen.pos ());  *)
 
+        Printf.printf "Loading background image\n";
+
         let ndarray = Pic.ndarray_of_stream s in
         pani_pics.(0) <- Some(Pic.img_of_ndarray ndarray);
 
         begin match dump_files with
         | Some filepath ->
-          Pic.png_of_stream s ~filename:(filepath^"_bgnd.png")
+          Pic.png_of_ndarray ndarray ~filename:(Printf.sprintf "%s_bgnd.png" filepath)
         | None -> ()
         end
     | 2 -> ()
