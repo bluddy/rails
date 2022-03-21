@@ -49,12 +49,20 @@ let setup_pani win ~filename =
   in
 
   let last_state = ref `Timeout in
+  let last_time = ref @@ Sdl.get_ticks () in
+  let update_delta = 100l in
 
   let update_fn () =
     match !last_state with
     | `Done | `Error -> ()
     | _ ->
-        last_state := Pani_interp.step pani_v
+        let time = Sdl.get_ticks () in
+        let open Int32 in
+        if time - !last_time > update_delta
+        then (
+          last_time := time;
+          last_state := Pani_interp.step pani_v
+        ) else ()
   in
 
   let render_fn () =
@@ -105,7 +113,7 @@ let main choice ~filename =
         | _ -> false
       else false
     in
-    let wait_time = 30l in
+    let render_wait_time = 30l in
     if stop then Result.return () else
 
       let _ = update_fn () in
@@ -113,8 +121,8 @@ let main choice ~filename =
 
       let open Int32.Infix in
       let time = Sdl.get_ticks () in
-      if time - last_time < wait_time then
-        Sdl.delay (wait_time - time + last_time);
+      if time - last_time < render_wait_time then
+        Sdl.delay (render_wait_time - time + last_time);
 
       Sdl.render_present win.renderer;
       event_loop time

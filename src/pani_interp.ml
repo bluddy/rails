@@ -299,6 +299,8 @@ let step v =
   match loop () with
   | `Timeout ->
       step_all_animations v;
+      step_all_animations v;
+      step_all_animations v;
       `Timeout
   | x -> x
 

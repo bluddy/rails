@@ -1,13 +1,13 @@
 
 let palette =
   [|
-    0x0;      (* 0, black *)
+    (* 0x0;      (* 0, black/transparent, magenta *) *)
+    0xAA00AA; (* 0, magenta *)
     0xAA;     (* 1, blue *)
     0xAA00;   (* 2, green *)
     0xAAAA;   (* 3, cyan *)
     0xAA0000; (* 4, red *)
-    (* 0x0;      (* 5, black *) *)
-    0xAA00AA; (* 5, magenta *)
+    0x0;      (* 5, black *)
     0xAA5500; (* 6, brown *)
     0xAAAAAA; (* 7, grey *)
     0x555555; (* 8, dgray *)
