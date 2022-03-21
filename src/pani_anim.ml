@@ -150,12 +150,12 @@ let interpret_step v idx =
             | _ -> failwith "JumpN: missing counter value on stack"
             end
         | Reset ->
-            if v.other_anim_idx + 2 = 0 then (
-              v.x <- 0;
-              v.y <- 0
-            ) else (
+            if v.other_anim_idx = -2 then (
               v.x <- v.reset_x;
               v.y <- v.reset_y
+            ) else (
+              v.x <- 0;
+              v.y <- 0
             );
             v.delay <- v.reset_delay;
             v.total_delay <- 255;
