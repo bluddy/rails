@@ -20,8 +20,11 @@ let palette =
     0xffffff; (* f, bwhite *)
   |]
 
+  (* returns color and opacity *)
 let get_color i =
   if i >= Array.length palette then
     failwith @@ Printf.sprintf "Ega.get_color: Color %d is invalid" i
   else
-    palette.(i)
+    match i with
+    | 0 -> palette.(i), 0x0
+    | _ -> palette.(i), 0xFF

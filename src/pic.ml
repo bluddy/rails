@@ -86,21 +86,21 @@ let translate_ega arr ~f ~w ~h =
   for y=0 to h-1 do
     for x=0 to w-1 do
       let write_color x y index =
-        let color = Ega.get_color index in
+        let color, alpha = Ega.get_color index in
         let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
         (* Printf.printf "x:%d y:%d\n" x y; *)
-        f x y r g b;
+        f ~x ~y ~r ~g ~b ~alpha;
       in
       write_color x y @@ Ndarray.get arr [|y;x|]
     done
   done;
   ()
 
-let img_write ?(a=0xFF) arr x y (r:int) (g:int) (b:int) =
+let img_write arr ~x ~y ~r ~g ~b ~alpha =
   Ndarray.set arr [|y;x;0|] r;
   Ndarray.set arr [|y;x;1|] g;
   Ndarray.set arr [|y;x;2|] b;
-  Ndarray.set arr [|y;x;3|] a;
+  Ndarray.set arr [|y;x;3|] alpha;
   ()
 
 let create_rgb_img ~w ~h =
@@ -127,7 +127,10 @@ let png_of_ndarray arr ~filename =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in
   let img = Image.create_rgb w h in
-  translate_ega arr ~f:(Image.write_rgb img) ~w ~h;
+  let f ~x ~y ~r ~g ~b ~alpha =
+    let _a = alpha in
+    Image.write_rgb img x y r g b in
+  translate_ega arr ~f ~w ~h;
   let och = Png.chunk_writer_of_path filename in
   ImagePNG.write och img
 
