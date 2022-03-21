@@ -60,6 +60,14 @@ let setup_pani win ~filename =
   let render_fn () =
     let open Result.Infix in
     let* () = Sdl.render_clear win.renderer in
+    (* Draw background *)
+    let* () =
+      match pics_tex.(0) with
+      | Some pic_tex ->
+          Renderer.render win ~x:0 ~y:0 pic_tex
+      | None -> Result.return ()
+    in
+
     Iter.fold (fun _acc i ->
       match Pani_interp.anim_get_pic pani_v i with
       | None -> Result.return ()
