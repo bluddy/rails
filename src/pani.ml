@@ -62,9 +62,9 @@ let of_stream ?(dump_files=None) s =
   then ()
   else failwith "Not a PANI file";
   let _pani_byte1 = My_gen.get_bytei s in
-  let pani_byte2 = My_gen.get_bytei s in
+  let pani_lzw_encoded = My_gen.get_bytei s in
   let pani_byte3 = My_gen.get_bytei s in
-  Printf.printf "byte2: 0x%x\nbyte3: 0x%x\n" pani_byte2 pani_byte3; (* debug *)
+  Printf.printf "lzw_encoded: 0x%x\nbyte3: 0x%x\n" pani_lzw_encoded pani_byte3; (* debug *)
   let header_type = My_gen.get_bytei s in
   Printf.printf "header_type: 0x%x\n" header_type; (* debug *)
   let _subheader =
