@@ -108,12 +108,16 @@ let of_stream ?(dump_files=None) s =
     | _ -> failwith "Unknown value for pani_type"
   in
 
+  let align_pos () =
+    let pos = My_gen.pos () + 1 in
+    if pos land 1 = 1 then (
+      print_endline "junking odd position";
+      My_gen.junki s
+    )
+  in
+
   (* HACK (not in source) to adjust if we're not word aligned *)
-  let pos = My_gen.pos () + 1 in
-  if pos land 1 = 1 then (
-    print_endline "junking odd position";
-    My_gen.junki s
-  );
+  align_pos ();
 
   (* Support up to 250 images, lined up towards end, zeros before then *)
   let pani_pic_ptrs = Array.make 250 0 in
@@ -134,10 +138,7 @@ let of_stream ?(dump_files=None) s =
         let pos = My_gen.pos () + 1 in
         Printf.printf "pos: 0x%x\n" pos;
         (* We can only start at word boundaries *)
-        if pos land 1 = 1 then (
-          print_endline "junking odd position";
-          My_gen.junki s
-        );
+        align_pos ();
         Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
         let ndarray = Pic.ndarray_of_stream s in
         pani_pics.(i) <- Some(Pic.img_of_ndarray ndarray);
@@ -150,6 +151,7 @@ let of_stream ?(dump_files=None) s =
   pani_pic_ptrs;
 
   (* Animation interpreter code *)
+  align_pos ();
   let pos = My_gen.pos () + 1 in
   let size_ending = My_gen.get_wordi s in
   Printf.printf "0x%x: %d 16-byte entries\n" pos size_ending;
