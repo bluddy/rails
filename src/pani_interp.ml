@@ -323,7 +323,7 @@ let calc_anim_xy v anim_idx =
   | -2 -> anim.x, anim.y
   | other -> 
       (* Assume other_anim_idx is valid or we can't use it *)
-      let anim2 = v.animations.(other) in
+      let anim2 = v.animations.(other + 1) in
       (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
 
 let anim_get_pic v anim_idx =
