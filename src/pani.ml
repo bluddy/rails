@@ -149,6 +149,7 @@ let of_stream ?(dump_files=None) s =
   )
   pani_pic_ptrs;
 
+  (* Animation interpreter code *)
   let pos = My_gen.pos () + 1 in
   let size_ending = My_gen.get_wordi s in
   Printf.printf "0x%x: %d 16-byte entries\n" pos size_ending;
@@ -161,6 +162,16 @@ let of_stream ?(dump_files=None) s =
   done
   *)
   let pani_code_s = My_gen.to_stringi s |> Bytes.of_string in
+
+  begin match dump_files with
+  | Some filepath ->
+      let out_file = Printf.sprintf "%s_code.txt" filepath in
+      let f = open_out out_file in
+      output_bytes f pani_code_s;
+      close_out f
+  | None -> ()
+  end;
+
   let pani_v = Pani_interp.make pani_code_s pani_pics in
   pani_v
 

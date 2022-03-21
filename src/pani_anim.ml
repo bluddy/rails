@@ -4,8 +4,10 @@ open Containers
 
 let debug = true
 
+let print_hex fmt = Format.fprintf fmt "0x%x"
+
 type t = {
-  mutable read_ptr: int;  (* offset into buffer *)
+  mutable read_ptr: int   [@printer print_hex];  (* offset into buffer *)
   mutable used: bool;     (* not used: deleted *)
   mutable pic_idx: int;   (* -1: no pic *)
   mutable x: int;
@@ -18,7 +20,7 @@ type t = {
   reset_delay: int;
   mutable delay: int;
   mutable total_delay: int;
-  reset_read_ptr: int;
+  reset_read_ptr: int    [@printer print_hex];
   data_size: int;
   buffer: bytes; [@opaque]
 } 

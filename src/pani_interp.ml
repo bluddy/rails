@@ -156,7 +156,7 @@ let interpret v =
             v.animations.(anim_idx) <- anim
           end;
           v.stack <- rest
-        | _ -> failwith "Invalid stack for animation creation"
+        | _ -> print_endline "Invalid stack for animation creation"
         end;
         true
     | DeleteAnimation ->
@@ -166,7 +166,7 @@ let interpret v =
               v.animations.(anim_idx).used <- false
             end;
             v.stack <- rest
-        | _ -> failwith "DeleteAnimation: missing anim_idx on stack"
+        | _ -> print_endline "DeleteAnimation: missing anim_idx on stack"
         end;
         true
     | SetTimeout ->
