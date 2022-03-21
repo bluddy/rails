@@ -280,6 +280,17 @@ let step_all_animations v =
   )
   v.animations
 
+let enable_all_animations v =
+  if debug then
+    print_endline "\n--- Enable all animations ---\n";
+
+  let open Pani_anim in
+  Array.iter (fun anim ->
+    if anim.used then
+      anim.disabled <- false;
+  )
+  v.animations
+
 let step v =
   let rec loop () =
     if v.is_done then `Done else
@@ -303,6 +314,7 @@ let step v =
       step_all_animations v;
       step_all_animations v;
       step_all_animations v;
+      enable_all_animations v;
       `Timeout
   | x -> x
 
