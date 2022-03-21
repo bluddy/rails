@@ -86,9 +86,9 @@ let of_stream ?(dump_files=None) s =
 
   let pani_pics = Array.make 250 None in
 
-  let () =
+  let pic_bgnd =
     match pani_type with
-    | 0 -> ()
+    | 0 -> None
     | 1 ->
         (* let byte = My_gen.get_bytei s in  (* optional *)
         Printf.printf "byte: 0x%x pos: 0x%x\n" byte (My_gen.pos ());  *)
@@ -96,15 +96,15 @@ let of_stream ?(dump_files=None) s =
         Printf.printf "Loading background image\n";
 
         let ndarray = Pic.ndarray_of_stream s in
-        pani_pics.(0) <- Some(Pic.img_of_ndarray ndarray);
+        let pic_bgnd = Some(Pic.img_of_ndarray ndarray) in
 
         begin match dump_files with
         | Some filepath ->
           Pic.png_of_ndarray ndarray ~filename:(Printf.sprintf "%s_bgnd.png" filepath)
         | None -> ()
         end;
-        Printf.printf "Background image loaded\n";
-    | 2 -> ()
+        pic_bgnd
+    | 2 -> None
     | _ -> failwith "Unknown value for pani_type"
   in
 
@@ -174,7 +174,7 @@ let of_stream ?(dump_files=None) s =
   | None -> ()
   end;
 
-  let pani_v = Pani_interp.make pani_code_s pani_pics in
+  let pani_v = Pani_interp.make pani_code_s pic_bgnd pani_pics in
   pani_v
 
 let stream_of_file filename =

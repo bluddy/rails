@@ -47,6 +47,10 @@ let setup_pani win ~filename =
       | None -> None
       | Some ndarray -> Some (R.Texture.make win ndarray))
   in
+  let pic_bgnd_tex = match pani_v.pic_bgnd with
+      | None -> None
+      | Some ndarray -> Some (R.Texture.make win ndarray)
+  in
 
   let last_state = ref `Timeout in
   let last_time = ref @@ Sdl.get_ticks () in
@@ -70,7 +74,7 @@ let setup_pani win ~filename =
     let* () = Sdl.render_clear win.renderer in
     (* Draw background *)
     let* () =
-      match pics_tex.(0) with
+      match pic_bgnd_tex with
       | Some pic_tex ->
           Renderer.render win ~x:0 ~y:0 pic_tex
       | None -> Result.return ()

@@ -17,9 +17,10 @@ type t = {
   animation_registers: int Array.t;
   animations: Pani_anim.t Array.t;
   pics: (int, Bigarray.int8_unsigned_elt) Ndarray.t option Array.t;
+  pic_bgnd: (int, Bigarray.int8_unsigned_elt) Ndarray.t option;
 }
 
-let make buf_str pics =
+let make buf_str pic_bgnd pics =
 {
   is_done=false;
   timeout=false;
@@ -30,6 +31,7 @@ let make buf_str pics =
   animation_registers=Array.make 52 0;
   animations=Array.init 51 (fun _ -> Pani_anim.empty ());
   pics;
+  pic_bgnd;
 }
 
 type op =
