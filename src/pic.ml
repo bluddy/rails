@@ -33,11 +33,9 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 let ndarray_of_stream (stream: (int * char) Gen.t) =
   let format_flag = My_gen.get_wordi stream in
   let discard_bytes =
-      match format_flag with
-      | 0x0 -> 0
-      | 0xF -> 16
-      | 0x7 | 0x6 -> 0
-      | x -> failwith @@ Printf.sprintf "Unknown format 0x%x" x
+    if format_flag land 0x8 = 0x8 then 16
+    else if format_flag land 0x10 = 0x10 then 128
+    else 0
   in
   let width  = My_gen.get_wordi stream in (* 2 *)
   let height = My_gen.get_wordi stream in (* 4 *)
