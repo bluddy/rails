@@ -102,16 +102,26 @@ let of_stream ?(dump_files=None) s =
         | Some filepath ->
           Pic.png_of_ndarray ndarray ~filename:(Printf.sprintf "%s_bgnd.png" filepath)
         | None -> ()
-        end
+        end;
+        Printf.printf "Background image loaded\n";
     | 2 -> ()
     | _ -> failwith "Unknown value for pani_type"
   in
+
+  (* HACK (not in source) to adjust if we're not word aligned *)
+  let pos = My_gen.pos () + 1 in
+  if pos land 1 = 1 then (
+    print_endline "junking odd position";
+    My_gen.junki s
+  );
+
   (* Support up to 250 images, lined up towards end, zeros before then *)
   let pani_pic_ptrs = Array.make 250 0 in
   Printf.printf "Post-Background pos: 0x%x\n" (My_gen.pos () + 1);
+
   for i=0 to 249 do
     let word = My_gen.get_wordi s in
-    (* Printf.printf "0x%x " word; *)
+    (* Printf.printf "%d: 0x%x\n" i word; *)
     pani_pic_ptrs.(i) <- word
   done;
   let num = Array.fold (fun acc x -> if x = 0 then acc else acc + 1) 0 pani_pic_ptrs in
@@ -124,7 +134,10 @@ let of_stream ?(dump_files=None) s =
         let pos = My_gen.pos () + 1 in
         Printf.printf "pos: 0x%x\n" pos;
         (* We can only start at word boundaries *)
-        if pos land 1 = 1 then My_gen.junki s;
+        if pos land 1 = 1 then (
+          print_endline "junking odd position";
+          My_gen.junki s
+        );
         Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
         let ndarray = Pic.ndarray_of_stream s in
         pani_pics.(i) <- Some(Pic.img_of_ndarray ndarray);

@@ -32,6 +32,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 
 let ndarray_of_stream (stream: (int * char) Gen.t) =
   let format_flag = My_gen.get_wordi stream in
+  let bytes_not_word_flag = format_flag land 0x1 in
   let discard_bytes =
     if format_flag land 0x8 = 0x8 then 16
     else if format_flag land 0x10 = 0x10 then 128
@@ -41,7 +42,7 @@ let ndarray_of_stream (stream: (int * char) Gen.t) =
   let height = My_gen.get_wordi stream in (* 4 *)
 
   if !debug then
-    Printf.printf "0x%x: format: 0x%x, width: %d, height: %d\n" (My_gen.pos ()) format_flag width height; (* debug *)
+    Printf.printf "0x%x: format: 0x%x, width: %d, height: %d, bytes_not_word:%d\n" (My_gen.pos ()) format_flag width height bytes_not_word_flag; (* debug *)
 
   for _i=0 to discard_bytes - 1 do
     print_endline "discard";
