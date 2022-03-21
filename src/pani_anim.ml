@@ -66,16 +66,22 @@ let empty () = {
 }
 
 let make ~data_ptr ~other_anim_idx ~reset_x ~reset_y ~delay ~pic_far ~buffer =
+  let _f = pic_far in
   let a = empty () in
+  let other_anim_idx = other_anim_idx - 1 in
   let x, y =
-    if other_anim_idx + 1 = 0 then reset_x, reset_y else 0, 0
+    (* Independent animations reset to the reset values. 
+       Dependent animations reset to 0 *)
+    if other_anim_idx = -2
+    then reset_x, reset_y
+    else 0, 0
   in
   {a with
     used=true;
     disabled=false;
     reset_read_ptr=data_ptr;
     read_ptr=data_ptr;
-    other_anim_idx=other_anim_idx-1;
+    other_anim_idx;
     reset_x; reset_y;
     x; y;
     reset_delay=delay;
