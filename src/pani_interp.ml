@@ -61,7 +61,7 @@ type op =
   | CallFunc
   | Return
   | Error
-  [@@deriving show]
+  [@@deriving show {with_path=false}]
 
 let op_of_byte = function
   | 0 -> CreateAnimation
@@ -109,7 +109,7 @@ let interpret v =
   let byte = read_byte v in
   let op = op_of_byte byte in
   if debug then
-    Printf.printf "0x%x: %s(0x%x)\n" v.read_ptr (show_op op) byte;
+    Printf.printf "0x%x: %s(0x%x) " v.read_ptr (show_op op) byte;
 
   let ret =
     match op with
@@ -133,6 +133,8 @@ let interpret v =
           match v.stack with
           | x::y::z ->
               let result = f y x in
+              if debug then
+                Printf.printf "%d %d = %d " y x result;
               result::z
           | _ -> failwith "Cannot add. Stack has < 2 elements"
         in
@@ -143,7 +145,8 @@ let interpret v =
         | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
           let anim_idx =
             if anim_idx = -1 then (
-              Printf.printf "Create animation -1: find unused anim\n";
+              if debug then
+                Printf.printf "-1: find unused anim. ";
               begin match Array.find_idx (fun anim -> not anim.Pani_anim.used) v.animations with
               | Some(i,_) -> i
               | None -> 50 
@@ -157,7 +160,7 @@ let interpret v =
               Pani_anim.make ~pic_far ~delay ~reset_x ~reset_y ~other_anim_idx ~data_ptr ~buffer
             in
             if debug then
-              Printf.printf "Animation %d:\n%s\n" anim_idx (Pani_anim.show anim);
+              Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_anim.show anim);
             v.animations.(anim_idx) <- anim
           end;
           v.stack <- rest
@@ -168,6 +171,8 @@ let interpret v =
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx > 0 && anim_idx <= 50 then begin
+              if debug then
+                Printf.printf "%d " anim_idx;
               v.animations.(anim_idx).used <- false
             end;
             v.stack <- rest
@@ -178,7 +183,7 @@ let interpret v =
         begin match v.stack with
         | timeout :: rest ->
             if debug then
-              Printf.printf "setting timeout of %d\n" timeout;
+              Printf.printf "%d " timeout;
             v.timeout <- true;
             v.register <- timeout;
             v.stack <- rest
@@ -187,8 +192,9 @@ let interpret v =
         true
     | DebugWrite ->
         begin match v.stack with
-        | _::rest ->
-            Printf.printf "do debug_write";
+        | x::rest ->
+            if debug then
+              Printf.printf "%d " x;
             v.stack <- rest
         | _ -> failwith "DebugWrite: missing value argument"
         end;
@@ -197,6 +203,8 @@ let interpret v =
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx > 0 && anim_idx <= 50 then begin
+              if debug then
+                Printf.printf "%d " anim_idx;
               v.animations.(anim_idx).disabled <- true
             end;
             v.stack <- rest
@@ -208,11 +216,11 @@ let interpret v =
         let value = read_word v in
         if is_true test then begin
           if debug then
-            Printf.printf "Push %d from animation_registers[%d]\n" v.animation_registers.(value) value;
+            Printf.printf "%d from animation_register [%d] " v.animation_registers.(value) value;
           v.register <- v.animation_registers.(value)
         end else begin
           if debug then
-            Printf.printf "Push %d\n" value;
+            Printf.printf "%d " value;
           v.register <- value
         end;
         v.stack <- v.register::v.stack;
@@ -221,8 +229,12 @@ let interpret v =
         begin match v.stack with
         | newval::rest ->
           let value = read_word v in
+          if debug then
+            Printf.printf "reg = %d " value;
           v.register <- value;
           if value > 0 && value <= 50 then begin
+            if debug then
+              Printf.printf ", %d in animation_reg[%d] " newval value;
             v.animation_registers.(value) <- newval
           end;
           v.stack <- rest
@@ -232,6 +244,8 @@ let interpret v =
     | Copy ->
         begin match v.stack with
         | x::rest ->
+          if debug then
+            Printf.printf "%d " x;
           v.stack <- x::x::rest
         | _ -> failwith "Copy: missing argument"
         end;
@@ -240,15 +254,22 @@ let interpret v =
         begin match v.stack with
         | do_jump::rest ->
             let addr = read_word v in
-            if is_true do_jump then begin
+            if is_true do_jump then (
+              if debug then
+                Printf.printf "true, jump to 0x%x " addr;
               v.read_ptr <- addr
-            end;
+            ) else (
+              if debug then
+                Printf.printf "no jump to 0x%x " addr;
+            );
             v.stack <- rest
         | _ -> failwith "JumpIfTrue: missing argument"
         end;
         true
     | Jump ->
         let addr = read_word v in
+        if debug then
+          Printf.printf "to 0x%x " addr;
         v.read_ptr <- addr;
         true
     | SetDone ->
@@ -260,22 +281,26 @@ let interpret v =
         let jump_addr = read_word v in
         v.stack <- v.read_ptr :: v.stack;
         v.read_ptr <- jump_addr;
+        if debug then
+          Printf.printf "addr 0x%x " jump_addr;
         true
     | Return ->
         begin match v.stack with
         | ret_addr::rest ->
           v.read_ptr <- ret_addr;
-          v.stack <- rest
+          v.stack <- rest;
+          if debug then
+            Printf.printf "to 0x%x "ret_addr;
         | _ -> failwith "Return: missing return address"
         end;
         true
   in
   if debug then
-    Printf.printf "reg: %d stack: %s\n" (v.register) (str_of_stack v);
+    Printf.printf "\t\treg: %d stack: %s\n" (v.register) (str_of_stack v);
   ret
 
 let step_all_animations v =
-  if debug then
+  if Pani_anim.debug then
     print_endline "\n--- Step through all animations ---\n";
 
   Array.iteri (fun i anim ->
@@ -284,7 +309,7 @@ let step_all_animations v =
   v.animations
 
 let enable_all_animations v =
-  if debug then
+  if Pani_anim.debug then
     print_endline "\n--- Enable all animations ---\n";
 
   let open Pani_anim in

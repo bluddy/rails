@@ -2,7 +2,7 @@ open Containers
 
 (* Pani animations: interpret the code of the individual animations *)
 
-let debug = true
+let debug = false
 
 let print_hex fmt = Format.fprintf fmt "0x%x"
 
