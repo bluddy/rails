@@ -38,8 +38,8 @@ type op =
   | CreateAnimation
   | DeleteAnimation
   | SetTimeout
-  | DebugWrite
-  | DisableAnimation
+  | AudioOutput
+  | SetToBackground
   | PushSetRegister
     (* Push to stack, either from register or from animation registers *)
   | SetRegisters 
@@ -67,8 +67,8 @@ let op_of_byte = function
   | 0 -> CreateAnimation
   | 1 -> DeleteAnimation
   | 2 -> SetTimeout
-  | 3 -> DebugWrite
-  | 4 -> DisableAnimation
+  | 3 -> AudioOutput
+  | 4 -> SetToBackground
   | 5 -> PushSetRegister
   | 6 -> SetRegisters
   | 7 -> Copy
@@ -190,25 +190,25 @@ let interpret v =
         | _ -> failwith "SetTimeout: missing timeout argument"
         end;
         true
-    | DebugWrite ->
+    | AudioOutput ->
         begin match v.stack with
         | x::rest ->
             if debug then
-              Printf.printf "%d " x;
+              Printf.printf "audio: %d\n" x;
             v.stack <- rest
-        | _ -> failwith "DebugWrite: missing value argument"
+        | _ -> failwith "AudioOutput: missing value argument"
         end;
         true
-    | DisableAnimation ->
+    | SetToBackground ->
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx > 0 && anim_idx <= 50 then begin
               if debug then
                 Printf.printf "%d " anim_idx;
-              v.animations.(anim_idx).disabled <- true
+              v.animations.(anim_idx).background <- true
             end;
             v.stack <- rest
-        | _ -> failwith "DisableAnimation: missing argument"
+        | _ -> failwith "SetToBackground: missing argument"
         end;
         true
     | PushSetRegister ->
@@ -310,12 +310,12 @@ let step_all_animations v =
 
 let enable_all_animations v =
   if Pani_anim.debug then
-    print_endline "\n--- Enable all animations ---\n";
+    print_endline "\n--- Bring all animations to foreground ---\n";
 
   let open Pani_anim in
   Array.iter (fun anim ->
     if anim.used then
-      anim.disabled <- false;
+      anim.background <- false;
   )
   v.animations
 
@@ -369,7 +369,7 @@ let calc_anim_xy v anim_idx =
 let anim_get_pic v anim_idx =
   let open Pani_anim in
   let anim = v.animations.(anim_idx) in
-  match anim.used, anim.disabled, anim.pic_idx with
+  match anim.used, anim.background, anim.pic_idx with
   | _, _, -1 -> None
   | true, false, i -> Some i
   | _ -> None
