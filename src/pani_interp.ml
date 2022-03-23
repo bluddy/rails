@@ -175,7 +175,7 @@ let interpret v =
               end
             ) else anim_idx
           in
-          if anim_idx > 0 && anim_idx <= 50 then begin
+          if anim_idx >= 0 && anim_idx <= 50 then begin
             let anim = 
               let pic_far = pic_far = 1 in
               let buffer = v.buffer in
@@ -192,7 +192,7 @@ let interpret v =
     | DeleteAnimation ->
         begin match v.stack with
         | anim_idx::rest ->
-            if anim_idx > 0 && anim_idx <= 50 then begin
+            if anim_idx >= 0 && anim_idx <= 50 then begin
               if debug then
                 Printf.printf "%d " anim_idx;
               v.animations.(anim_idx).used <- false
@@ -224,16 +224,20 @@ let interpret v =
     | SetToBackground ->
         begin match v.stack with
         | anim_idx::rest ->
-            if anim_idx > 0 && anim_idx <= 50 then (
+            if anim_idx >= 0 && anim_idx <= 50 then (
               if debug then
                 Printf.printf "%d " anim_idx;
               let anim = v.animations.(anim_idx) in
               anim.background <- true;
-              let x, y = calc_anim_xy v anim_idx in
-              let new_bgnd = {x; y; pic_idx=anim.pic_idx} in
-              v.backgrounds <- new_bgnd :: v.backgrounds;
-              );
-            v.stack <- rest
+
+              let update_background () =
+                let x, y = calc_anim_xy v anim_idx in
+                let new_bgnd = {x; y; pic_idx=anim.pic_idx} in
+                v.backgrounds <- new_bgnd :: v.backgrounds
+              in
+              v.stack <- rest;
+              anim.update_fn <- Some update_background;
+            )
         | _ -> failwith "SetToBackground: missing argument"
         end;
         true
@@ -258,7 +262,7 @@ let interpret v =
           if debug then
             Printf.printf "reg = %d " value;
           v.register <- value;
-          if value > 0 && value <= 50 then begin
+          if value >= 0 && value <= 50 then begin
             if debug then
               Printf.printf ", %d in animation_reg[%d] " newval value;
             v.animation_registers.(value) <- newval
@@ -365,9 +369,9 @@ let step v =
   in
   match loop () with
   | `Timeout ->
-      step_all_animations v;
-      step_all_animations v;
-      step_all_animations v;
+      for _i = 0 to 2 do
+        step_all_animations v
+      done;
       enable_all_animations v;
       `Timeout
   | x -> x
