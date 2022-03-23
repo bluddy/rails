@@ -142,10 +142,13 @@ let interpret v =
         begin match v.stack with
         | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
           let anim_idx =
-            if anim_idx = 0xFFFF then begin
-              Printf.printf "call find_unused_anim\n";
-              0
-            end else anim_idx
+            if anim_idx = -1 then (
+              Printf.printf "Create animation -1: find unused anim\n";
+              begin match Array.find_idx (fun anim -> not anim.Pani_anim.used) v.animations with
+              | Some(i,_) -> i
+              | None -> 50 
+              end
+            ) else anim_idx
           in
           if anim_idx > 0 && anim_idx <= 50 then begin
             let anim = 
