@@ -53,6 +53,9 @@ module Texture = struct
     let h' = zoom win h in
     let dst = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
     { w; h; texture; dst; dirty_rect=true}
+
+  let destroy tex =
+    Sdl.destroy_texture tex.texture
 end
 
 let render ?(x=0) ?(y=0) win tex =

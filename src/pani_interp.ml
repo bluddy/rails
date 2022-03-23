@@ -5,7 +5,16 @@ open Containers
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
-let debug = true
+let debug = false
+
+type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
+
+(* background pic type *)
+type bg = {
+  x: int;
+  y: int;
+  pic_idx: int;
+}
 
 type t = {
   mutable is_done: bool;
@@ -16,11 +25,13 @@ type t = {
   mutable stack: int list;
   animation_registers: int Array.t;
   animations: Pani_anim.t Array.t;
-  pics: (int, Bigarray.int8_unsigned_elt) Ndarray.t option Array.t;
-  pic_bgnd: (int, Bigarray.int8_unsigned_elt) Ndarray.t option;
+  pics: ndarray option Array.t;
+  mutable backgrounds: bg list; (* reversed *)
 }
 
-let make buf_str pic_bgnd pics =
+let make buf_str (background: ndarray option) pics =
+  assert (Array.length pics = 251);
+  pics.(250) <- background;
 {
   is_done=false;
   timeout=false;
@@ -30,8 +41,8 @@ let make buf_str pic_bgnd pics =
   stack=[];
   animation_registers=Array.make 52 0;
   animations=Array.init 51 (fun _ -> Pani_anim.empty ());
-  pics;
-  pic_bgnd;
+  pics; (* size 251 *)
+  backgrounds = (match background with None -> [] | Some _ -> [{x=0; y=0; pic_idx=250}]);
 }
 
 type op =
@@ -104,6 +115,17 @@ let read_word v =
   Bytes.get_int16_le v.buffer ptr
 
 let is_true x = x <> 0
+
+let calc_anim_xy v anim_idx =
+  let anim = v.animations.(anim_idx) in
+  let open Pani_anim in
+  match anim.other_anim_idx with
+  | -2 -> anim.x, anim.y
+  | other -> 
+      (* Assume other_anim_idx is valid or we can't use it *)
+      let anim2 = v.animations.(other + 1) in
+      (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
+
 
 let interpret v =
   let byte = read_byte v in
@@ -202,11 +224,15 @@ let interpret v =
     | SetToBackground ->
         begin match v.stack with
         | anim_idx::rest ->
-            if anim_idx > 0 && anim_idx <= 50 then begin
+            if anim_idx > 0 && anim_idx <= 50 then (
               if debug then
                 Printf.printf "%d " anim_idx;
-              v.animations.(anim_idx).background <- true
-            end;
+              let anim = v.animations.(anim_idx) in
+              anim.background <- true;
+              let x, y = calc_anim_xy v anim_idx in
+              let new_bgnd = {x; y; pic_idx=anim.pic_idx} in
+              v.backgrounds <- new_bgnd :: v.backgrounds;
+              );
             v.stack <- rest
         | _ -> failwith "SetToBackground: missing argument"
         end;
@@ -355,16 +381,6 @@ let run_to_end v =
     | `Error -> print_endline "PANI error"
   in
   loop ()
-
-let calc_anim_xy v anim_idx =
-  let anim = v.animations.(anim_idx) in
-  let open Pani_anim in
-  match anim.other_anim_idx with
-  | -2 -> anim.x, anim.y
-  | other -> 
-      (* Assume other_anim_idx is valid or we can't use it *)
-      let anim2 = v.animations.(other + 1) in
-      (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
 
 let anim_get_pic v anim_idx =
   let open Pani_anim in

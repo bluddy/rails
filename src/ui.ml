@@ -47,14 +47,10 @@ let setup_pani win ~filename =
       | None -> None
       | Some ndarray -> Some (R.Texture.make win ndarray))
   in
-  let pic_bgnd_tex = match pani_v.pic_bgnd with
-      | None -> None
-      | Some ndarray -> Some (R.Texture.make win ndarray)
-  in
 
   let last_state = ref `Timeout in
   let last_time = ref @@ Sdl.get_ticks () in
-  let update_delta = 100l in
+  let update_delta = 10l in
 
   let update_fn () =
     match !last_state with
@@ -72,12 +68,17 @@ let setup_pani win ~filename =
   let render_fn () =
     let open Result.Infix in
     let* () = Sdl.render_clear win.renderer in
-    (* Draw background *)
+
+    (* Draw backgrounds *)
     let* () =
-      match pic_bgnd_tex with
-      | Some pic_tex ->
-          Renderer.render win ~x:0 ~y:0 pic_tex
-      | None -> Result.return ()
+      List.fold_right (fun Pani_interp.{x;y;pic_idx} _ ->
+        match pics_tex.(pic_idx) with
+        | None -> failwith @@ Printf.sprintf "No texture %d" pic_idx
+        | Some tex ->
+            Renderer.render win ~x ~y tex
+      )
+      pani_v.backgrounds
+      (Result.return ())
     in
 
     Iter.fold (fun _acc i ->

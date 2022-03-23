@@ -84,7 +84,7 @@ let of_stream ?(dump_files=None) s =
   let pani_type = My_gen.get_bytei s in
   Printf.printf "pani_type: 0x%x\n" pani_type; (* debug *)
 
-  let pani_pics = Array.make 250 None in
+  let pani_pics = Array.make 251 None in
 
   let pic_bgnd =
     match pani_type with
