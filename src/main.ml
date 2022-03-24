@@ -4,6 +4,7 @@ let font_file = ref ""
 let pic_file = ref ""
 let pani_file = ref ""
 let dump = ref false
+let demo = ref false
 
 let arglist =
   [
@@ -11,6 +12,7 @@ let arglist =
     "--pic", Set_string pic_file, "Run the pic";
     "--pani", Set_string pani_file, "Run the pani";
     "--dump", Set dump, "Dump the file";
+    "--demo", Set demo, "Run map demp";
   ]
 
 let () =
@@ -23,5 +25,7 @@ let () =
     Pani.main !pani_file
   else if !pani_file <> "" then
     Ui.main `Pani ~filename:!pani_file
-  else
+  else if !demo then
     Ui.main `MapDemo ~filename:""
+  else
+    ()
