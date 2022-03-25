@@ -1,8 +1,9 @@
 
+let magenta = 0xAA00AA
+
 let palette =
   [|
-    (* 0x0;      (* 0, black/transparent, magenta *) *)
-    0xAA00AA; (* 0, magenta *)
+    0x0;      (* 0, black/transparent, magenta *)
     0xAA;     (* 1, blue *)
     0xAA00;   (* 2, green *)
     0xAAAA;   (* 3, cyan *)
@@ -20,11 +21,13 @@ let palette =
     0xffffff; (* f, bwhite *)
   |]
 
-  (* returns color and opacity *)
-let get_color i =
+  (* returns color and opacity
+     debug: view transparency as magenta
+   *)
+let get_color ?(debug=false) i =
   if i >= Array.length palette then
     failwith @@ Printf.sprintf "Ega.get_color: Color %d is invalid" i
   else
     match i with
-    | 0 -> palette.(i), 0x0
+    | 0 -> (if debug then magenta else palette.(i)), 0x0
     | _ -> palette.(i), 0xFF

@@ -27,6 +27,7 @@ possible they're just using the "normal" 16 color palette.
 *)
 
 let debug = ref true
+let debug_images = ref false
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
@@ -45,9 +46,13 @@ let ndarray_of_stream (stream: (int * char) Gen.t) =
     Printf.printf "0x%x: format: 0x%x, width: %d, height: %d, bytes_not_word:%d\n" (My_gen.pos ()) format_flag width height bytes_not_word_flag; (* debug *)
 
   for _i=0 to discard_bytes - 1 do
-    print_endline "discard";
-    My_gen.junki stream
+    (* print_endline "discard"; *)
+    let byte = My_gen.get_bytei stream in
+    if !debug then
+      Printf.printf "%d " byte;
   done;
+
+  if !debug then print_newline ();
 
   let lzw_max_byte= My_gen.get_bytei stream in
 
@@ -86,7 +91,7 @@ let translate_ega arr ~f ~w ~h =
   for y=0 to h-1 do
     for x=0 to w-1 do
       let write_color x y index =
-        let color, alpha = Ega.get_color index in
+        let color, alpha = Ega.get_color index ~debug:!debug_images in
         let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
         (* Printf.printf "x:%d y:%d\n" x y; *)
         f ~x ~y ~r ~g ~b ~alpha;
