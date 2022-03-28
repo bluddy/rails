@@ -1,5 +1,11 @@
 module Ndarray = Owl_base_dense_ndarray.Generic
 
+type area =
+  | EastUS
+  | WestUS
+  | England
+  | Europe
+
 type tile =
   | Clear
   | Woods
@@ -103,7 +109,8 @@ let tile_of_pixel_default = function
 let map_height = 192
 let map_width = 256
 
-let get_tile map x y = map.(y * map_width + x)
+let offset x y = y * map_width + x
+let get_tile map x y = map.(offset x y)
 
 (* random_seed: 15 bits from time *)
 let tile_of_pixel ~x ~y ~pixel ~random_seed =
@@ -204,6 +211,109 @@ let to_img map =
   let ndarray = to_ndarray map in
   Pic.img_of_ndarray ndarray
 
+let add_all_mountains area =
+  let mountains = ref [] in
+  let add x y = mountains := (x,y)::!mountains in
+  let exception Break in
+  let y = ref 0 in
+  let x = ref 0 in
+  for _j = 0 to 384 - 1 do
+    x := Random.int 250 + 1; (* 1 - 250 *)
+    y := Random.int 186 + 6; (* 6 - 191 *)
+    let max_i = Random.int 4 + 2 in (* 2 - 6 *)
+    try
+      for i = 0 to max_i - 1 do
+        add (!x-1) !y;
+        add !x !y;
+        if i > 1 && i <= max_i - 2 then (* after 2 rounds *)
+          add (!x+1) !y;
+        y := !y - 1;
+        if !y < 0 then raise_notrace Break;
+        if Random.int 4 = 0 then incr x; (* 25% *)
+      done
+    with Break -> ()
+  done;
+  match area with
+  | WestUS | EastUS ->
+      (* Extra Mountains *)
+      for j=0 to 128 - 1 do
+        y := Random.int 133 + 35; (* 35 - 167 *)
+        if !y > 150 then
+          y:= !y + Random.int 20;
+        let formula = 
+          match area with
+          | EastUS ->
+              157 - !y/3
+          | WestUS ->
+              if !y mod 4 > 0 || !y > 144 || !y < 50 then
+                !y / 5 + 96
+              else
+                !y / 5 + 36
+          | _ -> assert false
+        in
+        x := Random.int 200 - 100; (* -100 to 99 *)
+        if !x >= 0 then
+          x := !x - Random.int 100
+        else
+          x := !x + Random.int 100;
+
+        let a, b = match area with
+          | EastUS ->
+              !x * 200, 400 - !y
+          | WestUS ->
+              !x * 32, 200 - formula
+          | _ -> assert false
+        in
+        x := a / b + formula;
+
+        if !y < 80 then (
+          y := !y - Random.int 35;
+          x := !x +
+            (match area with
+            | WestUS -> 0
+            | EastUS -> 47 - 2 * !y / 3
+            | _ -> assert false
+            );
+        );
+
+        let create_ranges () = 
+          let max_i = Random.int 16 + 3 in
+          for i=0 to max_i - 1 do
+            add (!x-1) !y;
+            add !x !y;
+            if i > 1 && i <= max_i -2 then (
+              add (!x+1) !y;
+              if j mod 2 = 1 then
+                add !x !y;
+            );
+            decr y;
+            if !y >= 0 then (
+              let max = if !y <= 60 then 3 else 6 in
+              if Random.int max = 0 then (
+                match area with
+                | EastUS -> incr x
+                | WestUS -> decr x
+                | _ -> assert false
+              );
+            )
+          done
+        in
+        match area with
+        | EastUS ->
+            y := !y + 38;
+            if !y <= 191 then
+              create_ranges ()
+        | WestUS -> create_ranges ()
+        | _ -> assert false
+      done
+
+  | _ -> ()
+
+
+
+
+
+    
 
 
 
