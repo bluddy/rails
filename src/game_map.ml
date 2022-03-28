@@ -211,9 +211,10 @@ let to_img map =
   let ndarray = to_ndarray map in
   Pic.img_of_ndarray ndarray
 
+  (* Create a list of random mountains to add to the map, based on area *)
 let add_all_mountains area =
   (* Standard mountains *)
-  let rec rand_loop j acc =
+  let rec standard_range_loop j acc =
     if j >= 384 then acc
     else
       let x = Random.int 250 + 1 in (* 1 - 250 *)
@@ -224,116 +225,121 @@ let add_all_mountains area =
       let rec place_mountain i x y acc =
         if i >= n then acc
         else
+          (* add current and left *)
           let acc = (x, y)::(x-1,y)::acc in
           let acc = 
+            (* for mid-range also add to the right *)
             if i > 1 && i <= n - 2 then (x+1, y)::acc
             else acc
           in
+          (* move up for next round *)
           let y = y - 1 in
-          if y < 0 then acc
+          if y < 0 then (* break if we went negative *)
+            acc
           else
             let x = 
+              (* randomly move right *)
               if Random.int 4 = 0 then x + 1 else x
             in
             place_mountain (i+1) x y acc
       in
       let acc = place_mountain 0 x y acc in
-      rand_loop (j+1) acc
+      standard_range_loop (j+1) acc
   in
-  let mountains = rand_loop 0 [] in
+  let mountains = standard_range_loop 0 [] in
 
   (* Extra ranges for US *)
   match area with
   | WestUS | EastUS ->
       (* Extra Mountains *)
-      let rec rand_loop j acc =
-        if j >= 128 then acc
-        else
-          let y = Random.int 133 + 35 in (* 35 - 167 *)
-          let y =
-            if y > 150 then y + Random.int 20 else y
-          in
-          let formula = 
-            match area with
-            | EastUS -> 157 - y/3
-            | WestUS ->
-                if y mod 4 <> 0 || y > 144 || y < 50 then
-                  y / 5 + 96
+      let rec extra_range_loop j acc =
+        if j >= 128 then acc else
+        let y = Random.int 133 + 35 in (* 35 - 167 *)
+        let y =
+          if y > 150 then y + Random.int 20 else y
+        in
+        let formula = 
+          match area with
+          | EastUS -> 157 - y/3
+          | WestUS ->
+              if y mod 4 <> 0 || y > 144 || y < 50 then
+                y / 5 + 96
+              else
+                y / 5 + 36
+          | _ -> assert false
+        in
+        let x = Random.int 200 - 100 in (* -100 to 99 *)
+        let x = (* Bring closer to 0 *)
+          if x >= 0 then (* check eq *)
+            x - Random.int 100
+          else
+            x + Random.int 100;
+        in
+        let a, b = match area with
+          | EastUS -> (x * 200, 400 - y)
+          | WestUS -> (x * 32, 200 - formula)
+          | _ -> assert false
+        in
+        let x = a / b + formula in
+        let x, y =
+          if y < 80 then
+            let y = y - Random.int 35 in
+            let x = 
+              match area with
+              | WestUS -> x (* check *)
+              | EastUS -> x + 47 - 2 * y / 3
+              | _ -> assert false
+            in x, y
+          else
+            x, y
+        in
+        (* Create a large range at this location *)
+        let create_range x y acc = 
+          let n = Random.int 16 + 3 in
+          let rec add_mountain i x y acc =
+            if i >= n then acc else
+            let acc = (x, y)::(x-1, y)::acc in (* current, left *)
+            let acc =
+              if i > 1 && i <= n-2 then
+                if j mod 2 = 1 then
+                  (x, y)::(x+1, y)::acc  (* current, right *)
                 else
-                  y / 5 + 36
-            | _ -> assert false
-          in
-          let x = Random.int 200 - 100 in (* -100 to 99 *)
-          let x = (* Bring closer to 0 *)
-            if x >= 0 then (* check eq *)
-              x - Random.int 100
+                  (x+1, y)::acc (* just right *)
+              else
+                acc
+            in
+            let y = y - 1 in (* go up *)
+            if y < 0 then acc (* break if neg *)
             else
-              x + Random.int 100;
-          in
-          let a, b = match area with
-            | EastUS -> (x * 200, 400 - y)
-            | WestUS -> (x * 32, 200 - formula)
-            | _ -> assert false
-          in
-          let x = a / b + formula in
-          let x, y =
-            if y < 80 then
-              let y = y - Random.int 35 in
               let x = 
-                match area with
-                | WestUS -> x (* check *)
-                | EastUS -> x + 47 - 2 * y / 3
-                | _ -> assert false
-              in x, y
-            else
-              x, y
-          in
-          (* Create a range at this location *)
-          let create_range x y acc = 
-            let n = Random.int 16 + 3 in
-            let rec add_mountain i x y acc =
-              if i >= n then acc else
-              let acc = (x, y)::(x-1, y)::acc in
-              let acc =
-                if i > 1 && i <= n-2 then
-                  if j mod 2 = 1 then
-                    (x, y)::(x+1, y)::acc
-                  else
-                    (x+1, y)::acc
-                else
-                  acc
-              in
-              let y = y - 1 in
-              let x = 
-                if y >= 0 then
-                  let max = if y <= 60 then 3 else 6 in
-                  if Random.int max = 0 then
-                    match area with
-                    | EastUS -> x + 1
-                    | WestUS -> x - 1
-                    | _ -> assert false
-                  else x
-                else x
+                (* chances of moving left and right *)
+                let max = if y <= 60 then 3 else 6 in
+                if Random.int max = 0 then
+                  match area with
+                  | EastUS -> x + 1   (* to the right *)
+                  | WestUS -> x - 1   (* to the left *)
+                  | _ -> assert false
+                else x                (* stay where we are *)
               in
               add_mountain (i+1) x y acc
-            in
-            add_mountain 0 x y acc
           in
-          let acc =
-            match area with
-            | EastUS ->
-                let y = y + 38 in
-                if y <= 191 then
-                  create_range x y mountains
-                else
-                  mountains
-            | WestUS ->
+          add_mountain 0 x y acc
+        in
+        let acc =
+          match area with
+          | EastUS ->
+              let y = y + 38 in
+              if y <= 191 then
                 create_range x y mountains
-            | _ -> assert false
-          in
-          rand_loop (j+1) acc
+              else
+                mountains
+          | WestUS ->
+              create_range x y mountains
+          | _ -> assert false
+        in
+        extra_range_loop (j+1) acc
       in
-      rand_loop 0 mountains
+      extra_range_loop 0 mountains
 
   | _ -> mountains
 
