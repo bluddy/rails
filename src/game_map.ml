@@ -254,6 +254,7 @@ let add_all_mountains area =
       (* Extra Mountains *)
       let rec extra_range_loop j acc =
         if j >= 128 then acc else
+
         let y = Random.int 133 + 35 in (* 35 - 167 *)
         let y =
           if y > 150 then y + Random.int 20 else y
@@ -269,12 +270,9 @@ let add_all_mountains area =
           | _ -> assert false
         in
         let x = Random.int 200 - 100 in (* -100 to 99 *)
-        let x = (* Bring closer to 0 *)
-          if x >= 0 then (* check eq *)
-            x - Random.int 100
-          else
-            x + Random.int 100;
-        in
+        let delta_x = Random.int 100 in
+        (* Bring closer to 0 *)
+        let x = if x >= 0 then x - delta_x else x + delta_x in
         let a, b = match area with
           | EastUS -> (x * 200, 400 - y)
           | WestUS -> (x * 32, 200 - formula)
@@ -283,7 +281,7 @@ let add_all_mountains area =
         let x = a / b + formula in
         let x, y =
           if y < 80 then
-            let y = y - Random.int 35 in
+            let y = y - Random.int 35 in (* move up *)
             let x = 
               match area with
               | WestUS -> x (* check *)
@@ -328,7 +326,7 @@ let add_all_mountains area =
         let acc =
           match area with
           | EastUS ->
-              let y = y + 38 in
+              let y = y + 38 in (* move down *)
               if y <= 191 then
                 create_range x y mountains
               else
