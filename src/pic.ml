@@ -81,9 +81,7 @@ let ndarray_of_stream (stream: (int * char) Gen.t) =
   arr
 
 let ndarray_of_file filename =
-  let str =
-    IO.with_in filename @@ fun in_channel -> IO.read_all in_channel
-  in
+  let str = IO.with_in filename IO.read_all in
   let stream = My_gen.of_stringi str in
   ndarray_of_stream stream
 

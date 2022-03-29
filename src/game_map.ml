@@ -5,58 +5,67 @@ type area =
   | WestUS
   | England
   | Europe
+  [@@deriving enum]
 
 type tile =
-  | Clear
+  | Clear (* 0 *)
   | Woods
   | Swamp
   | Foothills
   | Hills
-  | Mountains
+  | Mountains (* 5 *)
   | City
   | Village
   | Farm
   | Slums
-  | FoodProc
+  | FoodProc (* 10 *)
   | Ranch
   | Stockyard
   | Factory
   | GrainElev
-  | PaperMill
+  | PaperMill (* 15 *)
   | Landing
   | LumberMill
   | CoalMine
   | SteelMill
-  | PowerPlant
+  | PowerPlant (* 20 *)
   | OilWell
-  | SaltMine
   | Refinery
   | EnemyRR
   | River
-  | Ocean
+  | Ocean      (* 25 *)
   | Harbor
 
+  (* Alternative *)
   | Desert
+  | SaltMine
 
 type t = tile array
 
+type city = {
+    name: string;
+    x: int;
+    y: int;
+  }
+  [@@deriving show]
+
 type pixel =
-  | Slum_pixel
+  | Slum_pixel     (* 0 *)
   | Ocean_pixel
   | Clear_pixel
   | Woods_pixel
   | Harbor_pixel
-  | CoalMine_pixel
+  | CoalMine_pixel (* 5 *)
   | Desert_pixel
   | Foothills_pixel
   | OilWell_pixel
   | River_pixel
-  | Farm_pixel
+  | Farm_pixel     (* 10 *)
   | Hills_pixel
   | Village_pixel
   | EnemyRR_pixel
   | City_pixel
-  | Mountain_pixel
+  | Mountain_pixel (* 15 *)
   [@@deriving enum]
 
 let pixel_of_tile = function
@@ -109,8 +118,8 @@ let tile_of_pixel_default = function
 let map_height = 192
 let map_width = 256
 
-let offset x y = y * map_width + x
-let get_tile map x y = map.(offset x y)
+let calc_offset x y = y * map_width + x
+let read_map map x y = map.(calc_offset x y)
 
 (* random_seed: 15 bits from time *)
 let tile_of_pixel ~x ~y ~pixel ~random_seed =
@@ -211,8 +220,18 @@ let to_img map =
   let ndarray = to_ndarray map in
   Pic.img_of_ndarray ndarray
 
+module MapGen = struct
+
+let add_mountain_pixel = function
+  | Foothills_pixel -> Hills_pixel
+  | Hills_pixel -> Mountain_pixel
+  | Ocean_pixel
+  | River_pixel
+  | Harbor_pixel as x -> x
+  | _ -> Hills_pixel
+
   (* Create a list of random mountains to add to the map, based on area *)
-let add_all_mountains area =
+let add_mountains_list area =
   (* Standard mountains *)
   let rec standard_range_loop j acc =
     if j >= 384 then acc
@@ -341,3 +360,112 @@ let add_all_mountains area =
 
   | _ -> mountains
 
+  (* We loop until we manage to add the given resource
+     This particular function needs to access the map, and since resources can only 
+     be in certain areas, it may fail and need to try again and again.
+   *)
+let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed =
+  let rec loop () =
+    let x = Random.int 256 in
+    let y = Random.int 192 in
+    let x = match area with
+      | EastUS -> x + Random.int (319 - x)
+      | WestUS when x >= 120 -> x + Random.int (255 - x)
+      | WestUS -> x - Random.int x
+      | England -> x + Random.int (160 - x)
+      | Europe -> x
+    in
+    let rec attempt i x y =
+      if i >= 2 then () else
+      let offset = calc_offset x y in
+      let tile = map.(offset) in
+      let possible_tile = tile_of_pixel ~x ~y ~random_seed ~pixel:resource_pixel in
+      if tile = land_type && possible_tile = wanted_tile then (
+        map.(offset) <- possible_tile;
+        ()
+      ) else
+        let x = if y mod 2 = 1 then x + 1 else x - 1 in
+        attempt (i + 1) x (y + 1)
+    in
+    attempt 0 x y
+  in
+  loop ()
+
+  (* A general list of resources to add *)
+let add_resources_list area =
+  match area with
+  | EastUS
+  | WestUS ->
+      [ (Foothills_pixel, CoalMine_pixel, CoalMine, 50);
+        (Foothills_pixel, CoalMine_pixel, LumberMill, 100);
+        (Clear_pixel,     OilWell_pixel,  OilWell, 10);
+      ]
+  | England
+  | Europe ->
+      let count = if area = England then 150 else 50 in
+      [ (Foothills_pixel, CoalMine_pixel, CoalMine, count);
+        (* NOTE: should be saltmine (Europe) or even farm somehow? *) 
+        (Clear_pixel, OilWell_pixel, OilWell, count);
+      ]
+      
+let upgrade_city_pixel = function
+  | Clear_pixel
+  | Woods_pixel
+  | Farm_pixel -> Village_pixel
+  | Village_pixel -> City_pixel
+  | Desert_pixel -> Farm_pixel
+  | x -> x
+
+let add_city_list area city_list : (int * int) list =
+  let add_city (factor, acc) (x,y) =
+    (* add all cities as villages *)
+    let acc = (x,y)::acc in
+
+    (* Determine how many to add *)
+    let x_y_func = match area with
+      | EastUS ->
+          x - (abs(68 - y) / 4) + 128
+      | WestUS when x <= 120 ->
+          (120 - x) * 16
+      | WestUS ->
+          x * 8 - 1120
+      | England ->
+          ((x + y) * 3) / 4 + 32
+      | Europe ->
+          700 - (x + y) / 3
+    in
+    let x_y_func = Utils.clip x_y_func 0 767 in
+    let max_val = x_y_func / 16 + factor / 4 in
+    let n = Random.int max_val |> Utils.clip 0 24 in
+    let factor = factor + (x_y_func / 32) - n in
+
+    (* Add extra population around towns *)
+    let rec add_population acc _i =
+      let offset = Random.int 48 in              (* Use swirl of offsets *)
+      let offset = offset - Random.int offset in (* Closer to middle *)
+      let x = x + Utils.x_offset.(offset) in
+      let y = y + Utils.y_offset.(offset) in
+      (x, y)::acc
+    in
+    let acc = Iter.fold add_population acc Iter.(0 -- (n-1)) in
+    (factor, acc)
+  in
+  List.fold_left add_city (0, []) city_list |> snd
+
+let load_city_list () =
+  let filename = "./data/CITIES0.DTA" in
+  let str = CCIO.with_in filename CCIO.read_all in
+  let stream = Gen.of_string str in
+  let rec parse acc _ =
+    let x = My_gen.get_word stream in
+    let y = My_gen.get_word stream in
+    let name = Gen.take 16 stream |> Gen.to_string in
+    (* Name is followed by zeros *)
+    let name = String.split_on_char (Char.chr 0) name |> List.hd in
+    {name; x; y}::acc
+  in
+  let cities = Iter.fold parse [] Iter.(0 -- 99) |> List.rev in
+  List.iter (fun c -> print_endline @@ show_city c) cities
+
+
+end
