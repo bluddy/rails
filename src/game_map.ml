@@ -452,7 +452,7 @@ let add_city_list area city_list : (int * int) list =
   in
   List.fold_left add_city (0, []) city_list |> snd
 
-let load_city_list () =
+let load_city_list file =
   let filename = "./data/CITIES0.DTA" in
   let str = CCIO.with_in filename CCIO.read_all in
   let stream = Gen.of_string str in
