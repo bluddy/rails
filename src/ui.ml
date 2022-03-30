@@ -12,8 +12,8 @@ let setup_mapdemo win ~filename =
     let _file = filename in
     let bg_tex = Pic.img_of_file "./WESTUS.PIC" |> R.Texture.make win in
     (* Map area: 256 * 192 *)
-    let map = Game_map.of_file "./WESTUS.PIC" in
-    let map_tex = Game_map.to_img map |> R.Texture.make win in
+    let map = Gmap.of_file "./WESTUS.PIC" in
+    let map_tex = Gmap.to_img map |> R.Texture.make win in
     let fonts = Font.load_all () in
 
     (* Draw fonts *)

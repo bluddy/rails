@@ -1,9 +1,9 @@
 open Arg
 
-type actions = [ `Font | `Pic | `Pani | `City | `MapDemo ]
+type actions = [ `Font | `Pic | `Pani | `City | `MapDemo | `Game]
 
 let file = ref ""
-let mode : actions ref = ref `MapDemo
+let mode : actions ref = ref `Game
 let dump = ref false
 
 let set v f =
@@ -27,5 +27,6 @@ let () =
   | `Pic  -> Pic.png_of_file !file
   | `Pani when !dump -> Pani.main !file
   | `Pani -> Ui.main `Pani ~filename:!file
-  | `City -> Game_map.MapGen.load_city_list !file
+  | `City -> Mapgen.load_city_list !file
   | `MapDemo -> Ui.main `MapDemo ~filename:!file
+  | `Game -> Game.run ()

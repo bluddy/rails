@@ -8,7 +8,7 @@ open Iter.Infix
   4: standard
 *)
 
-type font =
+type t =
   {
     ascii_first: char;
     ascii_last: char;

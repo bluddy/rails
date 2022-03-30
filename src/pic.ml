@@ -31,7 +31,9 @@ let debug_images = ref false
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
-let ndarray_of_stream (stream: (int * char) Gen.t) =
+type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
+
+let ndarray_of_stream (stream: (int * char) Gen.t) : ndarray =
   let format_flag = My_gen.get_wordi stream in
   let bytes_not_word_flag = format_flag land 0x1 in
   let discard_bytes =
@@ -80,7 +82,7 @@ let ndarray_of_stream (stream: (int * char) Gen.t) =
   done;
   arr
 
-let ndarray_of_file filename =
+let ndarray_of_file filename : ndarray =
   let str = IO.with_in filename IO.read_all in
   let stream = My_gen.of_stringi str in
   ndarray_of_stream stream
@@ -106,7 +108,7 @@ let img_write arr ~x ~y ~r ~g ~b ~alpha =
   Ndarray.set arr [|y;x;3|] alpha;
   ()
 
-let create_rgb_img ~w ~h =
+let create_rgb_img ~w ~h : ndarray =
   Ndarray.empty Int8_unsigned [|h; w; 4|]
 
 (*
@@ -115,7 +117,7 @@ let create_rgb_img ~w ~h =
     png: png file
  *)
 
-let img_of_ndarray arr =
+let img_of_ndarray (arr:ndarray) =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in
   let img = create_rgb_img ~w ~h in
@@ -126,7 +128,7 @@ let img_of_file in_file =
   let arr = ndarray_of_file in_file in
   img_of_ndarray arr
 
-let png_of_ndarray arr ~filename =
+let png_of_ndarray (arr:ndarray) ~filename =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in
   let img = Image.create_rgb w h in
