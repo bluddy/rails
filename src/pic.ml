@@ -26,7 +26,7 @@ Each pixel byte represents two 16-color pixels. I'm not sure what they're doing 
 possible they're just using the "normal" 16 color palette.
 *)
 
-let debug = ref true
+let debug = ref false
 let debug_images = ref false
 
 module Ndarray = Owl_base_dense_ndarray.Generic
@@ -58,7 +58,8 @@ let ndarray_of_stream (stream: (int * char) Gen.t) : ndarray =
 
   let lzw_max_byte= My_gen.get_bytei stream in
 
-  Printf.printf "Max lzw = 0x%x\n" lzw_max_byte;
+  if !debug then
+    Printf.printf "Max lzw = 0x%x\n" lzw_max_byte;
 
   (* Printf.printf "offset before lzw: %d\n" (My_gen.pos ()); (* debug *) *)
 

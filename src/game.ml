@@ -15,11 +15,13 @@ let load_pics () =
   let load_ndarray s = Pic.ndarray_of_file @@ data_dir ^ s ^ ".PIC" in
   let images = Hashtbl.create 20 in
   let filenames = [
-    "SPRITES"; "TRACKS"; "STATION"; "FACES"; "LOCOS"; "LOCOSM"; "TITLE";
+    "SPRITES"; "TRACKS"; "STATION"; "FACES";
+    "TITLE";
     "LOGO"; "LABS"; "CREDITS2"; "ADVERT";
     "DIFFS"; "DIFFSP"; "COUNCIL";
     "PAGE0"; "PAGE1"; "PAGE2"; "PAGE3"; "PAGE4"; "PAGE5"; "PAGE6"; "PAGE7"; "PAGE8"; "PAGE9";
-    "ELOC0"; "ELOC1"; "ELOC2"; "ELOC3"; "LOCOS0"; "LOCOS1"; "LOCOS2"
+    "ELOCOS"; "ELOCOS0"; "ELOCOS1"; "ELOCOS2"; "ELOCOS3"; "ELOCOSM";
+    "LOCOS"; "LOCOS0"; "LOCOS1"; "LOCOS2"; "LOCOSM";
   ]
   in
   List.iter (fun s ->
@@ -60,6 +62,8 @@ let run ?(view=Screen.MapGen) ?(area=Gmap.WestUS) () =
 
   let state = {game=v; screen; resources} in
   Printf.printf "done.\n"
+
+
 
 
 

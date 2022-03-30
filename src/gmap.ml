@@ -101,6 +101,7 @@ let pixel_of_tile = function
   | EnemyRR -> EnemyRR_pixel
 
 let tile_of_pixel_default = function
+  | Slum_pixel -> Slums
   | Ocean_pixel -> Ocean
   | Clear_pixel-> Clear
   | Woods_pixel-> Woods
