@@ -26,7 +26,7 @@ let () =
   | `Font -> Font.main !file
   | `Pic  -> Pic.png_of_file !file
   | `Pani when !dump -> Pani.main !file
-  | `Pani -> Ui.main `Pani ~filename:!file
+  | `Pani -> Graphics.main `Pani ~filename:!file
   | `City -> Mapgen.load_city_list !file
-  | `MapDemo -> Ui.main `MapDemo ~filename:!file
+  | `MapDemo -> Graphics.main `MapDemo ~filename:!file
   | `Game -> Game.run ()
