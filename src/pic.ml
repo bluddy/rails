@@ -109,7 +109,7 @@ let img_write arr ~x ~y ~r ~g ~b ~alpha =
   Ndarray.set arr [|y;x;3|] alpha;
   ()
 
-let create_rgb_img ~w ~h : ndarray =
+let create_rgb_img (w, h) : ndarray =
   Ndarray.empty Int8_unsigned [|h; w; 4|]
 
 (*
@@ -121,7 +121,7 @@ let create_rgb_img ~w ~h : ndarray =
 let img_of_ndarray (arr:ndarray) =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in
-  let img = create_rgb_img ~w ~h in
+  let img = create_rgb_img (w, h) in
   translate_ega arr ~w ~h ~f:(img_write img);
   img
 

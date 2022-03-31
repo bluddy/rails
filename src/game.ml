@@ -15,7 +15,7 @@ let load_pics () =
   let load_ndarray s = Pic.ndarray_of_file @@ data_dir ^ s ^ ".PIC" in
   let images = Hashtbl.create 20 in
   let filenames = [
-    "SPRITES"; "TRACKS"; "STATION"; "FACES";
+    "SPRITES"; "TRACKS"; "STATION"; "FACES"; "BRITAIN";
     "TITLE";
     "LOGO"; "LABS"; "CREDITS2"; "ADVERT";
     "DIFFS"; "DIFFSP"; "COUNCIL";
@@ -62,6 +62,8 @@ let run ?(view=Screen.MapGen) ?(area=Gmap.WestUS) () =
 
   let state = {game=v; screen; resources} in
   Printf.printf "done.\n"
+
+  Graphics.main 
 
 
 
