@@ -125,7 +125,7 @@ let () =
   | `Pic  -> Pic.png_of_file !file
   | `Pani when !dump -> Pani.main !file
   | `Pani -> Graphics.main @@ init_pani ~filename:!file
-  | `City -> Mapgen.load_city_list WestUS
+  | `City -> Mapgen.load_city_list WestUS ~debug:true |> ignore
   | `MapDemo -> Graphics.main @@ init_mapdemo ~filename:!file
   | `Game -> Game.run ()
 

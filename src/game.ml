@@ -32,6 +32,7 @@ let load_pics () =
 
 (* The actual game state *)
 type t = {
+  area: Gmap.area;
   map : Gmap.t;
 }
 
@@ -40,6 +41,7 @@ type resources = {
   maps: (Gmap.area * Gmap.t) list;
   pics: (string, Pic.ndarray) Hashtbl.t;
   fonts: Font.t array;
+  cities: Gmap.city list;
 }
 
 type state = {
@@ -51,14 +53,15 @@ type state = {
 let run ?(view=Screen.MapGen) ?(area=Gmap.WestUS) () =
   Printf.printf "Loading resources...";
   let maps = List.map (fun (x,s) -> x, "./data/" ^ s |> Gmap.of_file) map_names in
+  let cities = List.map Mapgen.load_city_list Gmap.areas |> List.flatten in
   let pics = load_pics () in
   let fonts = Font.load_all () in
-  let resources = {maps; pics; fonts} in
+  let resources = {maps; pics; fonts; cities} in
 
   let screen = Screen.make view in
 
   let map = List.assoc ~eq:(Stdlib.(=)) area maps in
-  let v = {map} in
+  let v = {map; area} in
 
   let state = {game=v; screen; resources} in
   Printf.printf "done.\n"

@@ -231,7 +231,7 @@ let add_city_list area city_list : (int * int) list =
   in
   List.fold_left add_city (0, []) city_list |> snd
 
-let load_city_list area =
+let load_city_list ?(debug=false) area  =
   let num = Gmap.area_to_enum area in
   let filename = Printf.sprintf "./data/CITIES%d.DTA" num in
   let str = CCIO.with_in filename CCIO.read_all in
@@ -245,5 +245,7 @@ let load_city_list area =
     {name; x; y}::acc
   in
   let cities = Iter.fold parse [] Iter.(0 -- 99) |> List.rev in
-  List.iter (fun c -> print_endline @@ show_city c) cities
+  if debug then
+    List.iter (fun c -> print_endline @@ show_city c) cities;
+  cities
 

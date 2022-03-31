@@ -7,6 +7,8 @@ type area =
   | Europe
   [@@deriving enum]
 
+let areas = [EastUS; WestUS; Britain; Europe]
+
 type tile =
   | Clear (* 0 *)
   | Woods
