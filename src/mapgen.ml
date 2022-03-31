@@ -1,3 +1,4 @@
+open Containers
 open Gmap
 
 let add_mountain_pixel = function
@@ -9,14 +10,14 @@ let add_mountain_pixel = function
   | _ -> Hills_pixel
 
   (* Create a list of random mountains to add to the map, based on area *)
-let add_mountains_list area =
+let add_mountains_list r area =
   (* Standard mountains *)
   let rec standard_range_loop j acc =
     if j >= 384 then acc
     else
-      let x = Random.int 250 + 1 in (* 1 - 250 *)
-      let y = Random.int 186 + 6 in (* 6 - 191 *)
-      let n = Random.int 4 + 2 in (* 2 - 5 *)
+      let x = Random.int 250 r + 1 in (* 1 - 250 *)
+      let y = Random.int 186 r + 6 in (* 6 - 191 *)
+      let n = Random.int  4 r + 2 in (* 2 - 5 *)
 
       (* Normal mountain placement *)
       let rec place_mountain i x y acc =
@@ -36,7 +37,7 @@ let add_mountains_list area =
           else
             let x = 
               (* randomly move right *)
-              if Random.int 4 = 0 then x + 1 else x
+              if Random.int 4 r = 0 then x + 1 else x
             in
             place_mountain (i+1) x y acc
       in
@@ -52,9 +53,9 @@ let add_mountains_list area =
       let rec extra_range_loop j acc =
         if j >= 128 then acc else
 
-        let y = Random.int 133 + 35 in (* 35 - 167 *)
+        let y = Random.int 133 r + 35 in (* 35 - 167 *)
         let y =
-          if y > 150 then y + Random.int 20 else y
+          if y > 150 then y + Random.int 20 r else y
         in
         let formula = 
           match area with
@@ -66,8 +67,8 @@ let add_mountains_list area =
                 y / 5 + 36
           | _ -> assert false
         in
-        let x = Random.int 200 - 100 in (* -100 to 99 *)
-        let delta_x = Random.int 100 in
+        let x = Random.int 200 r - 100 in (* -100 to 99 *)
+        let delta_x = Random.int 100 r in
         (* Bring closer to 0 *)
         let x = if x >= 0 then x - delta_x else x + delta_x in
         let a, b = match area with
@@ -78,7 +79,7 @@ let add_mountains_list area =
         let x = a / b + formula in
         let x, y =
           if y < 80 then
-            let y = y - Random.int 35 in (* move up *)
+            let y = y - Random.int 35 r in (* move up *)
             let x = 
               match area with
               | WestUS -> x (* check *)
@@ -90,7 +91,7 @@ let add_mountains_list area =
         in
         (* Create a large range at this location *)
         let create_range x y acc = 
-          let n = Random.int 16 + 3 in
+          let n = Random.int 16 r + 3 in
           let rec add_mountain i x y acc =
             if i >= n then acc else
             let acc = (x, y)::(x-1, y)::acc in (* current, left *)
@@ -109,7 +110,7 @@ let add_mountains_list area =
               let x = 
                 (* chances of moving left and right *)
                 let max = if y <= 60 then 3 else 6 in
-                if Random.int max = 0 then
+                if Random.int max r = 0 then
                   match area with
                   | EastUS -> x + 1   (* to the right *)
                   | WestUS -> x - 1   (* to the left *)
@@ -142,15 +143,15 @@ let add_mountains_list area =
      This particular function needs to access the map, and since resources can only 
      be in certain tiles, it may fail and need to try again and again.
    *)
-let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed =
+let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed ~r =
   let rec loop () =
-    let x = Random.int 256 in
-    let y = Random.int 192 in
+    let x = Random.int 256 r in
+    let y = Random.int 192 r in
     let x = match area with
-      | EastUS -> x + Random.int (319 - x)
-      | WestUS when x >= 120 -> x + Random.int (255 - x)
-      | WestUS -> x - Random.int x
-      | Britain -> x + Random.int (160 - x)
+      | EastUS -> x + Random.int (319 - x) r 
+      | WestUS when x >= 120 -> x + Random.int (255 - x) r
+      | WestUS -> x - Random.int x r
+      | Britain -> x + Random.int (160 - x) r
       | Europe -> x
     in
     let rec attempt i x y =
@@ -158,7 +159,7 @@ let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed 
       let offset = calc_offset x y in
       let tile = map.(offset) in
       let possible_tile = tile_of_pixel ~x ~y ~random_seed ~pixel:resource_pixel in
-      if tile = land_type && possible_tile = wanted_tile then (
+      if Gmap.equal_tile tile land_type && Gmap.equal_tile possible_tile wanted_tile then (
         map.(offset) <- possible_tile;
         true
       ) else
@@ -181,7 +182,7 @@ let add_resources_list area =
       ]
   | Britain
   | Europe ->
-      let count = if area = Britain then 150 else 50 in
+      let count = if Gmap.equal_area area Britain then 150 else 50 in
       [ (Foothills_pixel, CoalMine_pixel, CoalMine, count);
         (* NOTE: should be saltmine (Europe) or even farm somehow? *) 
         (Clear_pixel, OilWell_pixel, OilWell, count);
@@ -195,7 +196,7 @@ let upgrade_city_pixel = function
   | Desert_pixel -> Farm_pixel
   | x -> x
 
-let add_city_list area city_list : (int * int) list =
+let add_city_list r area city_list : (int * int) list =
   let add_city (factor, acc) (x,y) =
     (* add all cities as villages *)
     let acc = (x,y)::acc in
@@ -215,13 +216,13 @@ let add_city_list area city_list : (int * int) list =
     in
     let x_y_func = Utils.clip x_y_func 0 767 in
     let max_val = x_y_func / 16 + factor / 4 in
-    let n = Random.int max_val |> Utils.clip 0 24 in
+    let n = Random.int max_val r |> Utils.clip 0 24 in
     let factor = factor + (x_y_func / 32) - n in
 
     (* Add extra population around towns *)
     let add_population acc _i =
-      let offset = Random.int 48 in              (* Use swirl of offsets *)
-      let offset = offset - Random.int offset in (* Closer to middle *)
+      let offset = Random.int 48 r in              (* Use swirl of offsets *)
+      let offset = offset - Random.int offset r in (* Closer to middle *)
       let x = x + Utils.x_offset.(offset) in
       let y = y + Utils.y_offset.(offset) in
       (x, y)::acc

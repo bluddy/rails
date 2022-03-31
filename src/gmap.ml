@@ -5,7 +5,7 @@ type area =
   | WestUS
   | Britain
   | Europe
-  [@@deriving enum]
+  [@@deriving enum, eq]
 
 let areas = [EastUS; WestUS; Britain; Europe]
 
@@ -41,6 +41,7 @@ type tile =
   (* Alternative *)
   | Desert
   | SaltMine
+  [@@deriving eq]
 
 type t = tile array
 

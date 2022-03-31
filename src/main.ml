@@ -87,7 +87,7 @@ let init_pani win ~filename =
   in
 
   let render () =
-    let open Result.Infix in
+    (* let open Result.Infix in *)
     let () = ignore(Sdl.render_clear win.R.renderer) in
 
     (* Draw backgrounds *)
