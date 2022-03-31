@@ -140,7 +140,7 @@ let add_mountains_list area =
 
   (* We loop until we manage to add the given resource
      This particular function needs to access the map, and since resources can only 
-     be in certain areas, it may fail and need to try again and again.
+     be in certain tiles, it may fail and need to try again and again.
    *)
 let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed =
   let rec loop () =
@@ -154,18 +154,19 @@ let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed 
       | Europe -> x
     in
     let rec attempt i x y =
-      if i >= 2 then () else
+      if i >= 2 then false else
       let offset = calc_offset x y in
       let tile = map.(offset) in
       let possible_tile = tile_of_pixel ~x ~y ~random_seed ~pixel:resource_pixel in
       if tile = land_type && possible_tile = wanted_tile then (
         map.(offset) <- possible_tile;
-        ()
+        true
       ) else
         let x = if y mod 2 = 1 then x + 1 else x - 1 in
         attempt (i + 1) x (y + 1)
     in
-    attempt 0 x y
+    if attempt 0 x y then ()
+    else loop ()   (* Keep trying *)
   in
   loop ()
 
@@ -218,7 +219,7 @@ let add_city_list area city_list : (int * int) list =
     let factor = factor + (x_y_func / 32) - n in
 
     (* Add extra population around towns *)
-    let rec add_population acc _i =
+    let add_population acc _i =
       let offset = Random.int 48 in              (* Use swirl of offsets *)
       let offset = offset - Random.int offset in (* Closer to middle *)
       let x = x + Utils.x_offset.(offset) in
@@ -230,8 +231,9 @@ let add_city_list area city_list : (int * int) list =
   in
   List.fold_left add_city (0, []) city_list |> snd
 
-let load_city_list file =
-  let filename = "./data/CITIES0.DTA" in
+let load_city_list area =
+  let num = Gmap.area_to_enum area in
+  let filename = Printf.sprintf "./data/CITIES%d.DTA" num in
   let str = CCIO.with_in filename CCIO.read_all in
   let stream = Gen.of_string str in
   let parse acc _ =

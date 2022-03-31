@@ -63,9 +63,5 @@ let run ?(view=Screen.MapGen) ?(area=Gmap.WestUS) () =
   let state = {game=v; screen; resources} in
   Printf.printf "done.\n"
 
-  Graphics.main 
-
-
-
 
 

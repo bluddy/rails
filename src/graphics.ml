@@ -5,15 +5,14 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 module R = Renderer
 
 type 'a t = {
-  init: R.window -> 'a;
   update: 'a -> 'a;
-  render: R.window -> 'a -> 'a;
+  render: 'a -> 'a;
 }
 
-let main v =
+let main init_fn =
   let win = R.create 320 200 ~zoom:2. in
 
-  let data = v.init win in
+  let data, v = init_fn win in
 
   let event = Sdl.Event.create () in
   let rec event_loop data (last_time:int32) =
@@ -31,7 +30,7 @@ let main v =
     if stop then Result.return () else
 
       let data = v.update data in
-      let data = v.render win data in
+      let data = v.render data in
 
       let open Int32.Infix in
       let time = Sdl.get_ticks () in
