@@ -44,7 +44,7 @@ let init_mapdemo ~filename win =
   in
   let text_tex = R.Texture.make win pixels in
 
-  let update () = () in
+  let update () _ = () in
 
   let render () =
     let _ =
@@ -71,7 +71,7 @@ let init_pani win ~filename =
   let last_time = ref @@ Sdl.get_ticks () in
   let update_delta = 10l in
 
-  let update () =
+  let update () _ =
     match !last_state with
     | `Done | `Error -> ()
     | _ ->

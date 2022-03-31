@@ -5,31 +5,34 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 module R = Renderer
 
 type 'a t = {
-  update: 'a -> 'a;
+  update: 'a -> Sdl.event option -> 'a;
   render: 'a -> 'a;
 }
 
 let main init_fn =
   let win = R.create 320 200 ~zoom:2. in
+  let event = Sdl.Event.create () in
+  let some_event = Some event in (* For reducing allocation with SDL *)
 
   let data, v = init_fn win in
 
-  let event = Sdl.Event.create () in
   let rec event_loop data (last_time:int32) =
+    let has_event = Sdl.poll_event some_event in
     let stop =
-      if Sdl.poll_event (Some event) then
+      if has_event then
         match Sdl.Event.(enum (get event typ)) with
         | `Quit -> true
-        | `Key_down ->
+        (*| `Key_down ->
             let keycode = Sdl.Event.(get event keyboard_keycode) in
-            keycode = Sdl.K.escape
+            keycode = Sdl.K.escape *)
         | _ -> false
       else false
     in
     let render_wait_time = 30l in
     if stop then Result.return () else
 
-      let data = v.update data in
+      let pass_event = if has_event then some_event else None in
+      let data = v.update data pass_event in
       let data = v.render data in
 
       let open Int32.Infix in
