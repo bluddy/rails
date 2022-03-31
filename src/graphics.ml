@@ -5,7 +5,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 module R = Renderer
 
 type 'a t = {
-  update: 'a -> Sdl.event option -> 'a;
+  update: 'a -> Sdl.event option -> 'a * bool;
   render: 'a -> 'a;
 }
 
@@ -32,7 +32,7 @@ let main init_fn =
     if stop then Result.return () else
 
       let pass_event = if has_event then some_event else None in
-      let data = v.update data pass_event in
+      let data, stop = v.update data pass_event in
       let data = v.render data in
 
       let open Int32.Infix in
@@ -41,7 +41,10 @@ let main init_fn =
         Sdl.delay (render_wait_time - time + last_time);
 
       Sdl.render_present win.renderer;
-      event_loop data time
+      if stop then
+        Result.return ()
+      else
+        event_loop data time
   in
   ignore(event_loop data @@ Sdl.get_ticks ());
 

@@ -44,7 +44,7 @@ let init_mapdemo ~filename win =
   in
   let text_tex = R.Texture.make win pixels in
 
-  let update () _ = () in
+  let update () _ = (), false in
 
   let render () =
     let _ =
@@ -72,7 +72,7 @@ let init_pani win ~filename =
   let update_delta = 10l in
 
   let update () _ =
-    match !last_state with
+    begin match !last_state with
     | `Done | `Error -> ()
     | _ ->
         let time = Sdl.get_ticks () in
@@ -80,8 +80,10 @@ let init_pani win ~filename =
         if time - !last_time > update_delta
         then (
           last_time := time;
-          last_state := Pani_interp.step pani_v
-        ) else ()
+          last_state := Pani_interp.step pani_v;
+        )
+    end;
+    (), false
   in
 
   let render () =
@@ -99,7 +101,6 @@ let init_pani win ~filename =
       pani_v.backgrounds
       ()
     in
-
     (* Draw all pictures *)
     Iter.fold (fun _acc i ->
       match Pani_interp.anim_get_pic pani_v i with
@@ -113,6 +114,7 @@ let init_pani win ~filename =
     )
     ()
     Iter.(0 -- 50)
+
   in 
   ((), Graphics.{update; render})
 
