@@ -6,7 +6,7 @@ type view =
   | Title
   | MainMenu
   | Main
-  | MapGen
+  | MapGen of Mapgen.t option
   | Broker
   | Schedule
   | ScheduleRoute
@@ -18,6 +18,7 @@ type t = {
   menu_open: bool;
   view : view;
 }
+[@@deriving lens]
 
 let make view = {
   menu_open=false;

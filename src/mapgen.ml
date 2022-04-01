@@ -47,97 +47,99 @@ let add_mountains_list r area =
   let mountains = standard_range_loop 0 [] in
 
   (* Extra ranges for US *)
-  match area with
-  | WestUS | EastUS ->
-      (* Extra Mountains *)
-      let rec extra_range_loop j acc =
-        if j >= 128 then acc else
+  let mountains = match area with
+    | WestUS | EastUS ->
+        (* Extra Mountains *)
+        let rec extra_range_loop j acc =
+          if j >= 128 then acc else
 
-        let y = Random.int 133 r + 35 in (* 35 - 167 *)
-        let y =
-          if y > 150 then y + Random.int 20 r else y
-        in
-        let formula = 
-          match area with
-          | EastUS -> 157 - y/3
-          | WestUS ->
-              if y mod 4 <> 0 || y > 144 || y < 50 then
-                y / 5 + 96
-              else
-                y / 5 + 36
-          | _ -> assert false
-        in
-        let x = Random.int 200 r - 100 in (* -100 to 99 *)
-        let delta_x = Random.int 100 r in
-        (* Bring closer to 0 *)
-        let x = if x >= 0 then x - delta_x else x + delta_x in
-        let a, b = match area with
-          | EastUS -> (x * 200, 400 - y)
-          | WestUS -> (x * 32, 200 - formula)
-          | _ -> assert false
-        in
-        let x = a / b + formula in
-        let x, y =
-          if y < 80 then
-            let y = y - Random.int 35 r in (* move up *)
-            let x = 
-              match area with
-              | WestUS -> x (* check *)
-              | EastUS -> x + 47 - 2 * y / 3
-              | _ -> assert false
-            in x, y
-          else
-            x, y
-        in
-        (* Create a large range at this location *)
-        let create_range x y acc = 
-          let n = Random.int 16 r + 3 in
-          let rec add_mountain i x y acc =
-            if i >= n then acc else
-            let acc = (x, y)::(x-1, y)::acc in (* current, left *)
-            let acc =
-              if i > 1 && i <= n-2 then
-                if j mod 2 = 1 then
-                  (x, y)::(x+1, y)::acc  (* current, right *)
-                else
-                  (x+1, y)::acc (* just right *)
-              else
-                acc
-            in
-            let y = y - 1 in (* go up *)
-            if y < 0 then acc (* break if neg *)
-            else
-              let x = 
-                (* chances of moving left and right *)
-                let max = if y <= 60 then 3 else 6 in
-                if Random.int max r = 0 then
-                  match area with
-                  | EastUS -> x + 1   (* to the right *)
-                  | WestUS -> x - 1   (* to the left *)
-                  | _ -> assert false
-                else x                (* stay where we are *)
-              in
-              add_mountain (i+1) x y acc
+          let y = Random.int 133 r + 35 in (* 35 - 167 *)
+          let y =
+            if y > 150 then y + Random.int 20 r else y
           in
-          add_mountain 0 x y acc
-        in
-        let acc =
-          match area with
-          | EastUS ->
-              let y = y + 38 in (* move down *)
-              if y <= 191 then
-                create_range x y mountains
+          let formula = 
+            match area with
+            | EastUS -> 157 - y/3
+            | WestUS ->
+                if y mod 4 <> 0 || y > 144 || y < 50 then
+                  y / 5 + 96
+                else
+                  y / 5 + 36
+            | _ -> assert false
+          in
+          let x = Random.int 200 r - 100 in (* -100 to 99 *)
+          let delta_x = Random.int 100 r in
+          (* Bring closer to 0 *)
+          let x = if x >= 0 then x - delta_x else x + delta_x in
+          let a, b = match area with
+            | EastUS -> (x * 200, 400 - y)
+            | WestUS -> (x * 32, 200 - formula)
+            | _ -> assert false
+          in
+          let x = a / b + formula in
+          let x, y =
+            if y < 80 then
+              let y = y - Random.int 35 r in (* move up *)
+              let x = 
+                match area with
+                | WestUS -> x (* check *)
+                | EastUS -> x + 47 - 2 * y / 3
+                | _ -> assert false
+              in x, y
+            else
+              x, y
+          in
+          (* Create a large range at this location *)
+          let create_range x y acc = 
+            let n = Random.int 16 r + 3 in
+            let rec add_mountain i x y acc =
+              if i >= n then acc else
+              let acc = (x, y)::(x-1, y)::acc in (* current, left *)
+              let acc =
+                if i > 1 && i <= n-2 then
+                  if j mod 2 = 1 then
+                    (x, y)::(x+1, y)::acc  (* current, right *)
+                  else
+                    (x+1, y)::acc (* just right *)
+                else
+                  acc
+              in
+              let y = y - 1 in (* go up *)
+              if y < 0 then acc (* break if neg *)
               else
-                mountains
-          | WestUS ->
-              create_range x y mountains
-          | _ -> assert false
+                let x = 
+                  (* chances of moving left and right *)
+                  let max = if y <= 60 then 3 else 6 in
+                  if Random.int max r = 0 then
+                    match area with
+                    | EastUS -> x + 1   (* to the right *)
+                    | WestUS -> x - 1   (* to the left *)
+                    | _ -> assert false
+                  else x                (* stay where we are *)
+                in
+                add_mountain (i+1) x y acc
+            in
+            add_mountain 0 x y acc
+          in
+          let acc =
+            match area with
+            | EastUS ->
+                let y = y + 38 in (* move down *)
+                if y <= 191 then
+                  create_range x y mountains
+                else
+                  mountains
+            | WestUS ->
+                create_range x y mountains
+            | _ -> assert false
+          in
+          extra_range_loop (j+1) acc
         in
-        extra_range_loop (j+1) acc
-      in
-      extra_range_loop 0 mountains
+        extra_range_loop 0 mountains
 
-  | _ -> mountains
+    | _ -> mountains
+  in
+  mountains |> List.rev
 
   (* We loop until we manage to add the given resource
      This particular function needs to access the map, and since resources can only 
@@ -196,8 +198,8 @@ let upgrade_city_pixel = function
   | Desert_pixel -> Farm_pixel
   | x -> x
 
-let add_city_list r area city_list : (int * int) list =
-  let add_city (factor, acc) (x,y) =
+let add_city_list r area (city_list:city list) : (int * int) list =
+  let add_city (factor, acc) {x;y;_} =
     (* add all cities as villages *)
     let acc = (x,y)::acc in
 
@@ -230,7 +232,8 @@ let add_city_list r area city_list : (int * int) list =
     let acc = Iter.fold add_population acc Iter.(0 -- (n-1)) in
     (factor, acc)
   in
-  List.fold_left add_city (0, []) city_list |> snd
+  List.fold_left add_city (0, []) city_list |> snd |> List.rev
+
 
 let load_city_list ?(debug=false) area  =
   let num = Gmap.area_to_enum area in
@@ -249,4 +252,20 @@ let load_city_list ?(debug=false) area  =
   if debug then
     List.iter (fun c -> print_endline @@ show_city c) cities;
   cities
+
+type t = {
+  mountains : (int * int) list;
+  resources: (pixel * pixel * tile * int) list;
+  cities: (int * int) list;
+  current: [`Mountains | `Resources | `Cities];
+}
+
+
+let init r area cities =
+  let mountains = add_mountains_list r area in
+  let resources = add_resources_list area in
+  let cities = add_city_list r area cities in
+  let current = `Mountains in
+  {mountains; resources; cities; current}
+
 

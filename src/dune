@@ -1,7 +1,7 @@
 (executable
   (name main)
   (libraries iter containers gen imagelib tsdl owl-base)
-  (preprocess (pps ppx_deriving.show ppx_deriving.enum ppx_deriving.eq))
+  (preprocess (pps ppx_deriving.show ppx_deriving.enum ppx_deriving.eq lens.ppx_deriving))
   (modes exe))
 
 
