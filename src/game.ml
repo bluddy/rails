@@ -1,4 +1,6 @@
 open Containers
+module R = Renderer
+open Tsdl
 
 let data_dir = "./data/"
 
@@ -46,11 +48,30 @@ type resources = {
   res_cities: (Gmap.area * Gmap.city list) list;
 }
 
+module Textures = struct
+  module R = Renderer
+  type t = {
+    maps: (Gmap.area * R.Texture.t) list;
+    pics: (string, R.Texture.t) Hashtbl.t;
+  }
+
+  let make () = {maps=[]; pics=Hashtbl.create 20}
+
+  let of_resources win res =
+    let maps = List.map (fun (a, v) -> a, R.Texture.make win @@ Gmap.to_ndarray v) res.res_maps in
+    let pics = Hashtbl.to_iter res.res_pics
+      |> Iter.map (fun (s, arr) -> s, R.Texture.make win arr)
+      |> Hashtbl.of_iter
+    in
+    {maps; pics}
+end
+
 type state = {
   random: Random.State.t;
   game: game;
   screen: Screen.t;
   resources: resources;
+  textures: Textures.t;
 }
 [@@deriving lens]
 
@@ -71,10 +92,13 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let map = List.assoc ~eq:(Stdlib.(=)) area res_maps in
   let cities = List.assoc ~eq:(Stdlib.(=)) area res_cities |> Array.of_list in
   let game = {map; area; cities} in
-  let state = {game; screen; resources; random} in
+  let textures = Textures.make () in
+  let state = {game; screen; resources; random; textures} in
   Printf.printf " done.\n";
 
   let init_fn win =
+    let textures = Textures.of_resources win state.resources in
+    let state = {state with textures} in
 
     let update (s:state) _event =
       let state =
@@ -84,13 +108,24 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             let cities = List.assoc ~eq:(Gmap.equal_area) area s.resources.res_cities in
             let data = Mapgen.init s.random s.game.area cities in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
+
         | Screen.MapGen Some data -> s
         | _ -> s
       in
       state, true
     in
     let render (s:state) =
-      s
+      match s.screen.Screen.view with
+      | Screen.MapGen Some _ ->
+          let open Result.Infix in
+          let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in
+          let () = R.error_handle @@
+            let* () = R.clear_screen win in
+            let* () = R.render win bg_tex in
+            Result.return ()
+          in
+          s
+      | Screen.MapGen None -> s
     in
     state, Graphics.{update; render}
   in

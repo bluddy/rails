@@ -35,7 +35,7 @@ module Texture = struct
     mutable dirty_rect: bool;
   }
 
-  let make win arr =
+  let make win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
     let open Result.Infix in
     let res =
@@ -63,4 +63,10 @@ let render ?(x=0) ?(y=0) win tex =
   Sdl.Rect.set_x tex.dst @@ zoom win x;
   Sdl.Rect.set_y tex.dst @@ zoom win y;
   Sdl.render_copy win.renderer tex.texture ~dst:tex.dst
+
+let clear_screen win = Sdl.render_clear win.renderer
+
+let error_handle = function
+  | Ok x -> x
+  | Error(`Msg s) -> failwith s
 
