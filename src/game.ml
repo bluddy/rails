@@ -112,7 +112,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen Some data -> s
         | _ -> s
       in
-      state, true
+      state, false
     in
     let render (s:state) =
       match s.screen.Screen.view with
