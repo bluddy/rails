@@ -207,6 +207,7 @@ let of_ndarray ndarray =
 let of_file filename =
   ndarray_of_file filename |> of_ndarray
 
+  (* Make an ndarray of pixel indices. Not RGBA! *)
 let to_ndarray map =
   let ndarray = Ndarray.empty Int8_unsigned [|map_height; map_width|] in
   let idx = ref 0 in
@@ -220,6 +221,7 @@ let to_ndarray map =
   done;
   ndarray
 
+  (* Make an image RGBA ndarray *)
 let to_img map =
   let ndarray = to_ndarray map in
   Pic.img_of_ndarray ndarray

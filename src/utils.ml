@@ -1,5 +1,5 @@
 
-let clip v min max =
+let clip v ~min ~max =
   if v >= min then 
     if v <= max then
       v

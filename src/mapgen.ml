@@ -1,6 +1,8 @@
 open Containers
 open Gmap
 
+let debug = false
+
 let add_mountain_pixel = function
   | Foothills_pixel -> Hills_pixel
   | Hills_pixel -> Mountain_pixel
@@ -152,7 +154,7 @@ let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed 
     let x = match area with
       | EastUS -> x + Random.int (319 - x) r 
       | WestUS when x >= 120 -> x + Random.int (255 - x) r
-      | WestUS -> x - Random.int x r
+      | WestUS -> if x > 0 then x - Random.int x r else 0
       | Britain -> x + Random.int (160 - x) r
       | Europe -> x
     in
@@ -209,22 +211,26 @@ let add_city_list r area (city_list:city list) : (int * int) list =
           x - (abs(68 - y) / 4) + 128
       | WestUS when x <= 120 ->
           (120 - x) * 16
-      | WestUS ->
-          x * 8 - 1120
+      | WestUS -> (* x > 120 *)
+          x * 8 - 1120 (* at least 1600 - 1120 *)
       | Britain ->
           ((x + y) * 3) / 4 + 32
       | Europe ->
           700 - (x + y) / 3
     in
-    let x_y_func = Utils.clip x_y_func 0 767 in
+    let x_y_func = Utils.clip x_y_func ~min:0 ~max:767 in
     let max_val = x_y_func / 16 + factor / 4 in
-    let n = Random.int max_val r |> Utils.clip 0 24 in
+    (* n is 0 to 24 *)
+    let n = Random.int max_val r |> Utils.clip ~min:0 ~max:24 in
+    (* x_y_func is at most 767. /32 = 23 *)
     let factor = factor + (x_y_func / 32) - n in
+    if debug then
+      Printf.printf "x[%d] y[%d] x_y_func[%d] max_val[%d] n[%d] factor[%d]\n" x y x_y_func max_val n factor;
 
     (* Add extra population around towns *)
     let add_population acc _i =
       let offset = Random.int 48 r in              (* Use swirl of offsets *)
-      let offset = offset - Random.int offset r in (* Closer to middle *)
+      let offset = if offset > 0 then offset - Random.int offset r else 0 in (* Closer to middle *)
       let x = x + Utils.x_offset.(offset) in
       let y = y + Utils.y_offset.(offset) in
       (x, y)::acc

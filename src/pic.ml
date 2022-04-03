@@ -125,6 +125,7 @@ let img_of_ndarray (arr:ndarray) =
   translate_ega arr ~w ~h ~f:(img_write img);
   img
 
+  (* RGBA images *)
 let img_of_file in_file =
   let arr = ndarray_of_file in_file in
   img_of_ndarray arr

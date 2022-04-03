@@ -14,7 +14,7 @@ let map_names =
   ]
 
 let load_pics () =
-  let load_ndarray s = Pic.ndarray_of_file @@ data_dir ^ s ^ ".PIC" in
+  let load_ndarray s = Pic.img_of_file @@ data_dir ^ s ^ ".PIC" in
   let images = Hashtbl.create 20 in
   let filenames = [
     "SPRITES"; "TRACKS"; "STATION"; "FACES"; "BRITAIN";
@@ -58,7 +58,7 @@ module Textures = struct
   let make () = {maps=[]; pics=Hashtbl.create 20}
 
   let of_resources win res =
-    let maps = List.map (fun (a, v) -> a, R.Texture.make win @@ Gmap.to_ndarray v) res.res_maps in
+    let maps = List.map (fun (a, v) -> a, R.Texture.make win @@ Gmap.to_img v) res.res_maps in
     let pics = Hashtbl.to_iter res.res_pics
       |> Iter.map (fun (s, arr) -> s, R.Texture.make win arr)
       |> Hashtbl.of_iter
