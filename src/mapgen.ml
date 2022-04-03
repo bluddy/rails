@@ -266,7 +266,6 @@ type t = {
   current: [`Mountains | `Resources | `Cities];
 }
 
-
 let init r area cities =
   let mountains = add_mountains_list r area in
   let resources = add_resources_list area in

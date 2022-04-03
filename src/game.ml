@@ -53,17 +53,17 @@ module Textures = struct
   type t = {
     maps: (Gmap.area * R.Texture.t) list;
     pics: (string, R.Texture.t) Hashtbl.t;
+    map: R.Texture.t;
   }
 
-  let make () = {maps=[]; pics=Hashtbl.create 20}
-
-  let of_resources win res =
+  let of_resources win res area =
     let maps = List.map (fun (a, v) -> a, R.Texture.make win @@ Gmap.to_img v) res.res_maps in
+    let map = List.assoc ~eq:(Stdlib.(=)) area maps in
     let pics = Hashtbl.to_iter res.res_pics
       |> Iter.map (fun (s, arr) -> s, R.Texture.make win arr)
       |> Hashtbl.of_iter
     in
-    {maps; pics}
+    {maps; pics; map}
 end
 
 type state = {
@@ -79,26 +79,26 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let random = Random.get_state () in
 
   Printf.printf "Loading resources...";
-  let res_maps = List.map (fun (x,s) -> x, "./data/" ^ s |> Gmap.of_file) map_names in
-  let res_cities = List.map Mapgen.load_city_list Gmap.areas |> 
-    List.combine Gmap.areas
-  in
-  let res_pics = load_pics () in
-  let res_fonts = Font.load_all () in
-  let resources = {res_maps; res_pics; res_fonts; res_cities} in
-
-  let screen = Screen.make view in
-
-  let map = List.assoc ~eq:(Stdlib.(=)) area res_maps in
-  let cities = List.assoc ~eq:(Stdlib.(=)) area res_cities |> Array.of_list in
-  let game = {map; area; cities} in
-  let textures = Textures.make () in
-  let state = {game; screen; resources; random; textures} in
-  Printf.printf " done.\n";
 
   let init_fn win =
-    let textures = Textures.of_resources win state.resources in
-    let state = {state with textures} in
+    let res_maps = List.map (fun (x,s) -> x, "./data/" ^ s |> Gmap.of_file) map_names in
+    let res_cities = List.map Mapgen.load_city_list Gmap.areas |> 
+      List.combine Gmap.areas
+    in
+    let res_pics = load_pics () in
+    let res_fonts = Font.load_all () in
+    let resources = {res_maps; res_pics; res_fonts; res_cities} in
+
+    let screen = Screen.make view in
+
+    let map = List.assoc ~eq:(Stdlib.(=)) area res_maps in
+    let cities = List.assoc ~eq:(Stdlib.(=)) area res_cities |> Array.of_list in
+    let game = {map; area; cities} in
+
+    let textures = Textures.of_resources win resources area in
+    let state = {game; screen; resources; random; textures} in
+
+    Printf.printf " done.\n";
 
     let update (s:state) _event =
       let state =
@@ -122,6 +122,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
           let () = R.error_handle @@
             let* () = R.clear_screen win in
             let* () = R.render win bg_tex in
+            let* () = R.render win @@ List.assoc ~eq:(Gmap.equal_area) area s.textures.maps in
             Result.return ()
           in
           s
