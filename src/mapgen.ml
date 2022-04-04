@@ -3,7 +3,7 @@ open Gmap
 
 let debug = false
 
-let add_mountain_pixel = function
+let pixel_apply_mountain = function
   | Foothills_pixel -> Hills_pixel
   | Hills_pixel -> Mountain_pixel
   | Ocean_pixel
@@ -147,7 +147,7 @@ let add_mountains_list r area =
      This particular function needs to access the map, and since resources can only 
      be in certain tiles, it may fail and need to try again and again.
    *)
-let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed ~r =
+let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~random_seed ~r =
   let rec loop () =
     let x = Random.int 256 r in
     let y = Random.int 192 r in
@@ -159,21 +159,21 @@ let add_resource area ~map ~land_type ~resource_pixel ~wanted_tile ~random_seed 
       | Europe -> x
     in
     let rec attempt i x y =
-      if i >= 2 then false else
-      let offset = calc_offset x y in
-      let tile = map.(offset) in
+      if i >= 2 then None else
+      let pixel = Gmap.get_pixel ~map ~x ~y in
       let possible_tile = tile_of_pixel ~x ~y ~random_seed ~pixel:resource_pixel in
-      if Gmap.equal_tile tile land_type && Gmap.equal_tile possible_tile wanted_tile then (
-        map.(offset) <- possible_tile;
-        true
+      if Gmap.equal_pixel pixel land_pixel && Gmap.equal_tile possible_tile wanted_tile then (
+        Gmap.set_pixel ~map ~x ~y ~pixel:resource_pixel ~random_seed;
+        Some (x, y)
       ) else
         let x = if y mod 2 = 1 then x + 1 else x - 1 in
         attempt (i + 1) x (y + 1)
     in
-    if attempt 0 x y then ()
-    else loop ()   (* Keep trying *)
+    match attempt 0 x y with
+    | None -> loop ()
+    | x -> x
   in
-  loop ()
+  loop () |> Option.get_exn_or "Impossible failure reached"
 
   (* A general list of resources to add *)
 let add_resources_list area =
@@ -192,7 +192,7 @@ let add_resources_list area =
         (Clear_pixel, OilWell_pixel, OilWell, count);
       ]
       
-let upgrade_city_pixel = function
+let pixel_apply_city = function
   | Clear_pixel
   | Woods_pixel
   | Farm_pixel -> Village_pixel
@@ -260,17 +260,62 @@ let load_city_list ?(debug=false) area  =
   cities
 
 type t = {
+  area: area;
   mountains : (int * int) list;
   resources: (pixel * pixel * tile * int) list;
   cities: (int * int) list;
   current: [`Mountains | `Resources | `Cities];
+  new_pixels: (int * int * pixel) list;
+  random_seed: int;
 }
 
-let init r area cities =
+let init r area cities ~random_seed =
   let mountains = add_mountains_list r area in
   let resources = add_resources_list area in
   let cities = add_city_list r area cities in
   let current = `Mountains in
-  {mountains; resources; cities; current}
+  let new_pixels = [] in
+  {area; mountains; resources; cities; current; new_pixels; random_seed}
+
+  (* Perform a step of updating the map *)
+let update_map_step r v map =
+  let random_seed = v.random_seed in
+  let is_done = false in
+  match v.current with
+  | `Mountains -> 
+      begin match v.mountains with
+      | (x, y)::rest ->
+          let pixel = Gmap.get_pixel ~map ~x ~y in
+          let pixel = pixel_apply_mountain pixel in
+          Gmap.set_pixel ~map ~x ~y ~pixel ~random_seed;
+          let new_pixels = (x, y, pixel)::v.new_pixels in
+          {v with mountains=rest; new_pixels}, is_done
+      | _ ->
+          {v with current=`Resources}, is_done
+      end
+  | `Cities ->
+      begin match v.cities with
+      | (x, y)::rest ->
+          let pixel = Gmap.get_pixel ~map ~x ~y in
+          let pixel = pixel_apply_city pixel in
+          Gmap.set_pixel ~map ~x ~y ~pixel ~random_seed;
+          let new_pixels = (x, y, pixel)::v.new_pixels in
+          {v with cities=rest; new_pixels}, is_done
+      | _ -> v, true
+      end
+  | `Resources ->
+      begin match v.resources with
+      | (_, _, _, 0)::rest ->
+          {v with resources=rest}, is_done
+      | (land_pixel, resource_pixel, wanted_tile, num)::rest ->
+          let x, y =
+            add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~random_seed ~r
+          in
+          let new_pixels = (x, y, resource_pixel)::v.new_pixels in
+          let resources = (land_pixel, resource_pixel, wanted_tile, num-1)::rest in
+          {v with resources; new_pixels}, is_done
+      | _ -> {v with current=`Cities}, is_done
+      end
+
 
 

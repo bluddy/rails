@@ -68,6 +68,7 @@ end
 
 type state = {
   random: Random.State.t;
+  random_seed: int;
   game: game;
   screen: Screen.t;
   resources: resources;
@@ -77,6 +78,8 @@ type state = {
 
 let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let random = Random.get_state () in
+  (* Used by different elements *)
+  let random_seed = Random.int 0x7FFF random in
 
   Printf.printf "Loading resources...";
 
@@ -96,7 +99,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     let game = {map; area; cities} in
 
     let textures = Textures.of_resources win resources area in
-    let state = {game; screen; resources; random; textures} in
+    let state = {game; screen; resources; random; textures; random_seed} in
 
     Printf.printf " done.\n";
 
@@ -106,10 +109,11 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
             let cities = List.assoc ~eq:(Gmap.equal_area) area s.resources.res_cities in
-            let data = Mapgen.init s.random s.game.area cities in
+            let data = Mapgen.init s.random s.game.area cities ~random_seed in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | Screen.MapGen Some data -> s
+
         | _ -> s
       in
       state, false
@@ -126,6 +130,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             Result.return ()
           in
           s
+
       | Screen.MapGen None -> s
     in
     state, Graphics.{update; render}

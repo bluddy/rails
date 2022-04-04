@@ -69,7 +69,7 @@ type pixel =
   | EnemyRR_pixel
   | City_pixel
   | Mountain_pixel (* 15 *)
-  [@@deriving enum]
+  [@@deriving enum, eq]
 
 let pixel_of_tile = function
   | Slums -> Slum_pixel
@@ -122,13 +122,10 @@ let tile_of_pixel_default = function
 let map_height = 192
 let map_width = 256
 
-let calc_offset x y = y * map_width + x
-let read_map map x y = map.(calc_offset x y)
-
 (* random_seed: 15 bits from time *)
 let tile_of_pixel ~x ~y ~pixel ~random_seed =
   let xy_random = x * 9 + y * 13 + random_seed in
-  let pixel = Option.get @@ pixel_of_enum pixel in
+  (* let pixel = Option.get @@ pixel_of_enum pixel in *)
   let simple_mapping = function
     | Slum_pixel -> Slums
     | Ocean_pixel -> Ocean
@@ -225,4 +222,16 @@ let to_ndarray map =
 let to_img map =
   let ndarray = to_ndarray map in
   Pic.img_of_ndarray ndarray
+
+let calc_offset x y = y * map_width + x
+
+let get_tile map x y = map.(calc_offset x y)
+
+let get_pixel ~map ~x ~y = get_tile map x y |> pixel_of_tile
+
+let set_pixel ~map ~x ~y ~pixel ~random_seed =
+  let tile = tile_of_pixel ~x ~y ~pixel ~random_seed in
+  map.(calc_offset x y) <- tile
+
+
 
