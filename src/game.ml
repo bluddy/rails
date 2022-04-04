@@ -84,7 +84,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   Printf.printf "Loading resources...";
 
   let init_fn win =
-    let res_maps = List.map (fun (x,s) -> x, "./data/" ^ s |> Gmap.of_file) map_names in
+    let res_maps = List.map (fun (x,s) -> x, "./data/" ^ s |> Gmap.of_file ~random_seed) map_names in
     let res_cities = List.map Mapgen.load_city_list Gmap.areas |> 
       List.combine Gmap.areas
     in
@@ -109,7 +109,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
             let cities = List.assoc ~eq:(Gmap.equal_area) area s.resources.res_cities in
-            let data = Mapgen.init s.random s.game.area cities ~random_seed in
+            let data = Mapgen.init s.random s.game.area cities in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | Screen.MapGen Some data -> s

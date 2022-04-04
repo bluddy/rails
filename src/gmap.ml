@@ -1,4 +1,5 @@
 module Ndarray = Owl_base_dense_ndarray.Generic
+open Containers
 
 type area =
   | EastUS
@@ -43,7 +44,10 @@ type tile =
   | SaltMine
   [@@deriving eq]
 
-type t = tile array
+type t = {
+  random_seed: int; (* 15 bit value *)
+  data: tile array
+}
 
 type city = {
     name: string;
@@ -123,7 +127,8 @@ let map_height = 192
 let map_width = 256
 
 (* random_seed: 15 bits from time *)
-let tile_of_pixel ~x ~y ~pixel ~random_seed =
+let tile_of_pixel ~x ~y ~pixel ~map =
+  let random_seed = map.random_seed in
   let xy_random = x * 9 + y * 13 + random_seed in
   (* let pixel = Option.get @@ pixel_of_enum pixel in *)
   let simple_mapping = function
@@ -187,13 +192,13 @@ let ndarray_of_file filename =
   let ndarray = Ndarray.get_slice [[0;map_height-1]; [0;map_width-1]] arr in
   ndarray
 
-let of_ndarray ndarray =
+let data_of_ndarray ndarray =
   let map = Array.make (map_height * map_width) Ocean in
   let idx = ref 0 in
   for i=0 to map_height-1 do
     for j=0 to map_width-1 do
       let v = Ndarray.get ndarray [|i; j|] in
-      let v = Option.get @@ pixel_of_enum v in
+      let v = Option.get_exn_or "bad enum" @@ pixel_of_enum v in
       let map_v = tile_of_pixel_default v in
       map.(!idx) <- map_v;
       incr idx;
@@ -201,16 +206,17 @@ let of_ndarray ndarray =
   done;
   map
 
-let of_file filename =
-  ndarray_of_file filename |> of_ndarray
+let of_file ~random_seed filename =
+  let data = ndarray_of_file filename |> data_of_ndarray in
+  {data; random_seed}
 
   (* Make an ndarray of pixel indices. Not RGBA! *)
-let to_ndarray map =
+let to_ndarray mapdata =
   let ndarray = Ndarray.empty Int8_unsigned [|map_height; map_width|] in
   let idx = ref 0 in
   for i=0 to map_height-1 do
     for j=0 to map_width-1 do
-      let v = map.(!idx) in
+      let v = mapdata.(!idx) in
       let v = pixel_to_enum @@ pixel_of_tile v in
       Ndarray.set ndarray [|i; j|] v;
       incr idx;
@@ -219,19 +225,21 @@ let to_ndarray map =
   ndarray
 
   (* Make an image RGBA ndarray *)
-let to_img map =
-  let ndarray = to_ndarray map in
+let to_img (map:t) =
+  let ndarray = to_ndarray map.data in
   Pic.img_of_ndarray ndarray
 
 let calc_offset x y = y * map_width + x
 
-let get_tile map x y = map.(calc_offset x y)
+let get_tile map x y =
+  map.data.(calc_offset x y)
 
-let get_pixel ~map ~x ~y = get_tile map x y |> pixel_of_tile
+let get_pixel ~map ~x ~y =
+  get_tile map x y |> pixel_of_tile
 
-let set_pixel ~map ~x ~y ~pixel ~random_seed =
-  let tile = tile_of_pixel ~x ~y ~pixel ~random_seed in
-  map.(calc_offset x y) <- tile
+let set_pixel ~map ~x ~y ~pixel =
+  let tile = tile_of_pixel ~x ~y ~pixel ~map in
+  map.data.(calc_offset x y) <- tile
 
 
 

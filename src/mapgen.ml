@@ -147,7 +147,7 @@ let add_mountains_list r area =
      This particular function needs to access the map, and since resources can only 
      be in certain tiles, it may fail and need to try again and again.
    *)
-let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~random_seed ~r =
+let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
   let rec loop () =
     let x = Random.int 256 r in
     let y = Random.int 192 r in
@@ -161,9 +161,9 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~random_seed
     let rec attempt i x y =
       if i >= 2 then None else
       let pixel = Gmap.get_pixel ~map ~x ~y in
-      let possible_tile = tile_of_pixel ~x ~y ~random_seed ~pixel:resource_pixel in
+      let possible_tile = tile_of_pixel ~x ~y ~pixel:resource_pixel ~map in
       if Gmap.equal_pixel pixel land_pixel && Gmap.equal_tile possible_tile wanted_tile then (
-        Gmap.set_pixel ~map ~x ~y ~pixel:resource_pixel ~random_seed;
+        Gmap.set_pixel ~map ~x ~y ~pixel:resource_pixel;
         Some (x, y)
       ) else
         let x = if y mod 2 = 1 then x + 1 else x - 1 in
@@ -266,20 +266,18 @@ type t = {
   cities: (int * int) list;
   current: [`Mountains | `Resources | `Cities];
   new_pixels: (int * int * pixel) list;
-  random_seed: int;
 }
 
-let init r area cities ~random_seed =
+let init r area cities =
   let mountains = add_mountains_list r area in
   let resources = add_resources_list area in
   let cities = add_city_list r area cities in
   let current = `Mountains in
   let new_pixels = [] in
-  {area; mountains; resources; cities; current; new_pixels; random_seed}
+  {area; mountains; resources; cities; current; new_pixels}
 
   (* Perform a step of updating the map *)
-let update_map_step r v map =
-  let random_seed = v.random_seed in
+let update_map_step r v (map:Gmap.t) =
   let is_done = false in
   match v.current with
   | `Mountains -> 
@@ -287,7 +285,7 @@ let update_map_step r v map =
       | (x, y)::rest ->
           let pixel = Gmap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_mountain pixel in
-          Gmap.set_pixel ~map ~x ~y ~pixel ~random_seed;
+          Gmap.set_pixel ~map ~x ~y ~pixel;
           let new_pixels = (x, y, pixel)::v.new_pixels in
           {v with mountains=rest; new_pixels}, is_done
       | _ ->
@@ -298,7 +296,7 @@ let update_map_step r v map =
       | (x, y)::rest ->
           let pixel = Gmap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_city pixel in
-          Gmap.set_pixel ~map ~x ~y ~pixel ~random_seed;
+          Gmap.set_pixel ~map ~x ~y ~pixel;
           let new_pixels = (x, y, pixel)::v.new_pixels in
           {v with cities=rest; new_pixels}, is_done
       | _ -> v, true
@@ -309,7 +307,7 @@ let update_map_step r v map =
           {v with resources=rest}, is_done
       | (land_pixel, resource_pixel, wanted_tile, num)::rest ->
           let x, y =
-            add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~random_seed ~r
+            add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
           in
           let new_pixels = (x, y, resource_pixel)::v.new_pixels in
           let resources = (land_pixel, resource_pixel, wanted_tile, num-1)::rest in
