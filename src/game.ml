@@ -1,6 +1,7 @@
 open Containers
 module R = Renderer
-open Tsdl
+(* open Tsdl *)
+module Ndarray = Owl_base_dense_ndarray.Generic
 
 let data_dir = "./data/"
 
@@ -54,6 +55,7 @@ module Textures = struct
     maps: (Gmap.area * R.Texture.t) list;
     pics: (string, R.Texture.t) Hashtbl.t;
     map: R.Texture.t;
+    pixel: R.Texture.t;
   }
 
   let of_resources win res area =
@@ -63,7 +65,8 @@ module Textures = struct
       |> Iter.map (fun (s, arr) -> s, R.Texture.make win arr)
       |> Hashtbl.of_iter
     in
-    {maps; pics; map}
+    let pixel = R.Texture.make win Pic.white_pixel in
+    {maps; pics; map; pixel}
 end
 
 type state = {
@@ -112,7 +115,9 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             let data = Mapgen.init s.random s.game.area cities in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
-        | Screen.MapGen Some data -> s
+        | Screen.MapGen Some data ->
+            let data = Mapgen.update_map_step random data map in
+            Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | _ -> s
       in
@@ -120,13 +125,14 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     in
     let render (s:state) =
       match s.screen.Screen.view with
-      | Screen.MapGen Some _ ->
+      | Screen.MapGen Some data ->
           let open Result.Infix in
-          let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in
+          let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
           let () = R.error_handle @@
             let* () = R.clear_screen win in
             let* () = R.render win bg_tex in
             let* () = R.render win @@ List.assoc ~eq:(Gmap.equal_area) area s.textures.maps in
+            let* () = Mapgen.render_new_pixels win data s.textures.pixel in
             Result.return ()
           in
           s

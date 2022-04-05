@@ -31,3 +31,12 @@ let get_color ?(debug=false) i =
     match i with
     | 0 -> (if debug then magenta else palette.(i)), 0x0
     | _ -> palette.(i), 0xFF
+
+let get_rgba ?debug i =
+  let color, a = get_color ?debug i in
+  (color lsr 16, (color lsr 8) land 0xFF, color land 0xFF, a)
+
+let get_rgb ?debug i =
+  let color, _ = get_color ?debug i in
+  (color lsr 16, (color lsr 8) land 0xFF, color land 0xFF)
+

@@ -58,10 +58,16 @@ module Texture = struct
     Sdl.destroy_texture tex.texture
 end
 
-let render ?(x=0) ?(y=0) win tex =
+open Result.Infix
+
+let render ?(x=0) ?(y=0) ?color win tex =
   let open Texture in
   Sdl.Rect.set_x tex.dst @@ zoom win x;
   Sdl.Rect.set_y tex.dst @@ zoom win y;
+  let* () = match color with
+    | Some (r,g,b) -> Sdl.set_texture_color_mod tex.texture r g b
+    | _ -> Result.return ()
+  in
   Sdl.render_copy win.renderer tex.texture ~dst:tex.dst
 
 let clear_screen win = Sdl.render_clear win.renderer

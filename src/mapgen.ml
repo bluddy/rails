@@ -264,7 +264,7 @@ type t = {
   mountains : (int * int) list;
   resources: (pixel * pixel * tile * int) list;
   cities: (int * int) list;
-  current: [`Mountains | `Resources | `Cities];
+  state: [`Mountains | `Resources | `Cities | `Done];
   new_pixels: (int * int * pixel) list;
 }
 
@@ -272,14 +272,14 @@ let init r area cities =
   let mountains = add_mountains_list r area in
   let resources = add_resources_list area in
   let cities = add_city_list r area cities in
-  let current = `Mountains in
+  let state = `Mountains in
   let new_pixels = [] in
-  {area; mountains; resources; cities; current; new_pixels}
+  {area; mountains; resources; cities; state; new_pixels}
 
   (* Perform a step of updating the map *)
 let update_map_step r v (map:Gmap.t) =
   let is_done = false in
-  match v.current with
+  match v.state with
   | `Mountains -> 
       begin match v.mountains with
       | (x, y)::rest ->
@@ -287,9 +287,9 @@ let update_map_step r v (map:Gmap.t) =
           let pixel = pixel_apply_mountain pixel in
           Gmap.set_pixel ~map ~x ~y ~pixel;
           let new_pixels = (x, y, pixel)::v.new_pixels in
-          {v with mountains=rest; new_pixels}, is_done
+          {v with mountains=rest; new_pixels}
       | _ ->
-          {v with current=`Resources}, is_done
+          {v with state=`Resources}
       end
   | `Cities ->
       begin match v.cities with
@@ -298,22 +298,31 @@ let update_map_step r v (map:Gmap.t) =
           let pixel = pixel_apply_city pixel in
           Gmap.set_pixel ~map ~x ~y ~pixel;
           let new_pixels = (x, y, pixel)::v.new_pixels in
-          {v with cities=rest; new_pixels}, is_done
-      | _ -> v, true
+          {v with cities=rest; new_pixels}
+      | _ ->
+          {v with state = `Done}
       end
   | `Resources ->
       begin match v.resources with
       | (_, _, _, 0)::rest ->
-          {v with resources=rest}, is_done
+          {v with resources=rest}
       | (land_pixel, resource_pixel, wanted_tile, num)::rest ->
           let x, y =
             add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
           in
           let new_pixels = (x, y, resource_pixel)::v.new_pixels in
           let resources = (land_pixel, resource_pixel, wanted_tile, num-1)::rest in
-          {v with resources; new_pixels}, is_done
-      | _ -> {v with current=`Cities}, is_done
+          {v with resources; new_pixels}
+      | _ -> {v with state=`Cities}
       end
+  | `Done -> v
 
+module R = Renderer
 
+let render_new_pixels win v pixel_tex =
+  let render _acc (x, y, pixel) =
+    let color = Gmap.pixel_to_enum pixel |> Ega.get_rgb in
+    R.render win ~x ~y ~color pixel_tex
+  in
+  List.fold_left render (Result.return ()) v.new_pixels
 

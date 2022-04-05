@@ -1,6 +1,5 @@
 open Containers
 open Tsdl
-module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Renderer
 

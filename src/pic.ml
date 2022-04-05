@@ -109,8 +109,14 @@ let img_write arr ~x ~y ~r ~g ~b ~alpha =
   Ndarray.set arr [|y;x;3|] alpha;
   ()
 
+
 let create_rgb_img (w, h) : ndarray =
   Ndarray.empty Int8_unsigned [|h; w; 4|]
+
+let white_pixel =
+  let p = create_rgb_img (1, 1) in
+  img_write p ~x:0 ~y:0 ~r:255 ~g:255 ~b:255 ~alpha:255;
+  p
 
 (*
     ndarray: ndarray with 0-15 palette values
