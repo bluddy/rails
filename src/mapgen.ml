@@ -159,7 +159,9 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
       | Europe -> x
     in
     let rec attempt i x y =
-      if i >= 2 then None else
+      (* In the game, we just intrude into the black border and nothing happens.
+         Here we have to test *)
+      if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
       let pixel = Gmap.get_pixel ~map ~x ~y in
       let possible_tile = tile_of_pixel ~x ~y ~pixel:resource_pixel ~map in
       if Gmap.equal_pixel pixel land_pixel && Gmap.equal_tile possible_tile wanted_tile then (
