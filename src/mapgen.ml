@@ -9,7 +9,7 @@ let pixel_apply_mountain = function
   | Ocean_pixel
   | River_pixel
   | Harbor_pixel as x -> x
-  | _ -> Hills_pixel
+  | _ -> Foothills_pixel
 
   (* Create a list of random mountains to add to the map, based on area *)
 let add_mountains_list r area =
