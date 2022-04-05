@@ -1,4 +1,4 @@
-
+open Containers
 let clip v ~min ~max =
   if v >= min then 
     if v <= max then
@@ -43,4 +43,6 @@ let y_offset =
       3;  3; -3; -3;
   |]
 
+let random_int maxval r =
+  if maxval = 0 then 0 else Random.int maxval r
   

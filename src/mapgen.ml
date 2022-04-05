@@ -153,7 +153,7 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
     let y = Random.int 192 r in
     let x = match area with
       | EastUS -> x + Random.int (319 - x) r 
-      | WestUS when x >= 120 -> x + Random.int (255 - x) r
+      | WestUS when x >= 120 -> x + Utils.random_int (255 - x) r
       | WestUS -> if x > 0 then x - Random.int x r else 0
       | Britain -> x + Random.int (160 - x) r
       | Europe -> x
@@ -235,7 +235,11 @@ let add_city_list r area (city_list:city list) : (int * int) list =
       let offset = if offset > 0 then offset - Random.int offset r else 0 in (* Closer to middle *)
       let x = x + Utils.x_offset.(offset) in
       let y = y + Utils.y_offset.(offset) in
-      (x, y)::acc
+      (* Here too, the game relies on borders and we need bounds checking *)
+      if x >= 0 && y >= 0 && x < Gmap.map_width && y < Gmap.map_height then
+        (x, y)::acc
+      else
+        acc
     in
     let acc = Iter.fold add_population acc Iter.(0 -- (n-1)) in
     (factor, acc)
@@ -293,17 +297,6 @@ let update_map_step r v (map:Gmap.t) =
       | _ ->
           {v with state=`Resources}
       end
-  | `Cities ->
-      begin match v.cities with
-      | (x, y)::rest ->
-          let pixel = Gmap.get_pixel ~map ~x ~y in
-          let pixel = pixel_apply_city pixel in
-          Gmap.set_pixel ~map ~x ~y ~pixel;
-          let new_pixels = (x, y, pixel)::v.new_pixels in
-          {v with cities=rest; new_pixels}
-      | _ ->
-          {v with state = `Done}
-      end
   | `Resources ->
       begin match v.resources with
       | (_, _, _, 0)::rest ->
@@ -316,6 +309,17 @@ let update_map_step r v (map:Gmap.t) =
           let resources = (land_pixel, resource_pixel, wanted_tile, num-1)::rest in
           {v with resources; new_pixels}
       | _ -> {v with state=`Cities}
+      end
+  | `Cities ->
+      begin match v.cities with
+      | (x, y)::rest ->
+          let pixel = Gmap.get_pixel ~map ~x ~y in
+          let pixel = pixel_apply_city pixel in
+          Gmap.set_pixel ~map ~x ~y ~pixel;
+          let new_pixels = (x, y, pixel)::v.new_pixels in
+          {v with cities=rest; new_pixels}
+      | _ ->
+          {v with state = `Done}
       end
   | `Done -> v
 
