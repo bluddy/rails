@@ -63,7 +63,7 @@ let add_mountains_list r area =
             match area with
             | EastUS -> 157 - y/3
             | WestUS ->
-                if y mod 4 = 0 && y <= 144 && y <= 50 then
+                if y mod 4 = 0 && y <= 144 && y >= 50 then
                   y / 5 + 36
                 else
                   y / 5 + 96
@@ -73,12 +73,13 @@ let add_mountains_list r area =
           let delta_x = Random.int 100 r in
           (* Bring closer to 0 *)
           let x = if x >= 0 then x - delta_x else x + delta_x in
-          let a, b = match area with
-            | EastUS -> (x * 200, 400 - y)
-            | WestUS -> (x * 32, 200 - formula)
+          let x = match area with
+            | EastUS ->
+               (200 * x) / (400 - y) + formula
+            | WestUS -> 
+               (32 * x) / (200 - formula) + formula
             | _ -> assert false
           in
-          let x = a / b + formula in
           let x, y =
             if y < 80 then
               let y = y - Random.int 35 r in (* move up *)
