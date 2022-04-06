@@ -205,7 +205,12 @@ let pixel_apply_city = function
 let add_city_list r area (city_list:city list) : (int * int) list =
   let add_city (factor, acc) {x;y;_} =
     (* add all cities as villages *)
-    let acc = (x,y)::acc in
+    let acc =
+      (* Amazingly, some cities seem to be out of bounds and they let the population expand into the map *)
+      if x >= 0 && y >= 0 && x < Gmap.map_width && y < Gmap.map_height then
+        (x,y)::acc
+      else acc
+    in
 
     (* Determine how many to add *)
     let x_y_func = match area with
@@ -265,13 +270,15 @@ let load_city_list ?(debug=false) area  =
     List.iter (fun c -> print_endline @@ show_city c) cities;
   cities
 
+module IntIntMap = Map.Make(struct type t = int * int let compare = Stdlib.compare end)
+
 type t = {
   area: area;
   mountains : (int * int) list;
   resources: (pixel * pixel * tile * int) list;
   cities: (int * int) list;
   state: [`Mountains | `Resources | `Cities | `Done];
-  new_pixels: (int * int * pixel) list;
+  new_pixels: pixel IntIntMap.t;
 }
 
 let init r area cities =
@@ -279,12 +286,11 @@ let init r area cities =
   let resources = add_resources_list area in
   let cities = add_city_list r area cities in
   let state = `Mountains in
-  let new_pixels = [] in
+  let new_pixels = IntIntMap.empty in
   {area; mountains; resources; cities; state; new_pixels}
 
   (* Perform a step of updating the map *)
 let update_map_step r v (map:Gmap.t) =
-  let is_done = false in
   match v.state with
   | `Mountains -> 
       begin match v.mountains with
@@ -292,7 +298,7 @@ let update_map_step r v (map:Gmap.t) =
           let pixel = Gmap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_mountain pixel in
           Gmap.set_pixel ~map ~x ~y ~pixel;
-          let new_pixels = (x, y, pixel)::v.new_pixels in
+          let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with mountains=rest; new_pixels}
       | _ ->
           {v with state=`Resources}
@@ -305,7 +311,7 @@ let update_map_step r v (map:Gmap.t) =
           let x, y =
             add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
           in
-          let new_pixels = (x, y, resource_pixel)::v.new_pixels in
+          let new_pixels = IntIntMap.add (x, y) resource_pixel v.new_pixels in
           let resources = (land_pixel, resource_pixel, wanted_tile, num-1)::rest in
           {v with resources; new_pixels}
       | _ -> {v with state=`Cities}
@@ -313,10 +319,11 @@ let update_map_step r v (map:Gmap.t) =
   | `Cities ->
       begin match v.cities with
       | (x, y)::rest ->
+          Printf.printf "x[%d] y[%d]\n" x y;
           let pixel = Gmap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_city pixel in
           Gmap.set_pixel ~map ~x ~y ~pixel;
-          let new_pixels = (x, y, pixel)::v.new_pixels in
+          let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with cities=rest; new_pixels}
       | _ ->
           {v with state = `Done}
@@ -326,9 +333,9 @@ let update_map_step r v (map:Gmap.t) =
 module R = Renderer
 
 let render_new_pixels win v pixel_tex =
-  let render _acc (x, y, pixel) =
+  let render (x, y) pixel _acc =
     let color = Gmap.pixel_to_enum pixel |> Ega.get_rgb in
     R.render win ~x ~y ~color pixel_tex
   in
-  List.fold_left render (Result.return ()) v.new_pixels
+  IntIntMap.fold render v.new_pixels (Result.return ())
 
