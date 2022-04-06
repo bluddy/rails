@@ -63,10 +63,10 @@ let add_mountains_list r area =
             match area with
             | EastUS -> 157 - y/3
             | WestUS ->
-                if y mod 4 <> 0 || y > 144 || y < 50 then
-                  y / 5 + 96
-                else
+                if y mod 4 = 0 && y <= 144 && y <= 50 then
                   y / 5 + 36
+                else
+                  y / 5 + 96
             | _ -> assert false
           in
           let x = Random.int 200 r - 100 in (* -100 to 99 *)
@@ -85,7 +85,7 @@ let add_mountains_list r area =
               let x = 
                 match area with
                 | WestUS -> x (* check *)
-                | EastUS -> x + 47 - 2 * y / 3
+                | EastUS -> x + 47 - (2 * y) / 3
                 | _ -> assert false
               in x, y
             else
@@ -128,11 +128,11 @@ let add_mountains_list r area =
             | EastUS ->
                 let y = y + 38 in (* move down *)
                 if y <= 191 then
-                  create_range x y mountains
+                  create_range x y acc
                 else
-                  mountains
+                  acc
             | WestUS ->
-                create_range x y mountains
+                create_range x y acc
             | _ -> assert false
           in
           extra_range_loop (j+1) acc
