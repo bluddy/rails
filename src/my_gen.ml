@@ -33,14 +33,14 @@ let get_wordi s : int =
   word lor ((get_bytei s) lsl 8)
 
 let junki s =
-  let i, _ = Option.get_exn @@ Gen.get s in
+  let i, _ = Option.get_exn_or "error" @@ Gen.get s in
   last_i := i;
   ()
 
 let pos () = !last_i
 
 let get_byte s : int =
-  Char.code @@ Option.get_exn @@ Gen.get s
+  Char.code @@ Option.get_exn_or "error" @@ Gen.get s
 
 let get_word s : int =
   let word = get_byte s in

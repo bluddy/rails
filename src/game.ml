@@ -45,7 +45,7 @@ type game = {
 type resources = {
   res_maps: (Gmap.area * Gmap.t) list;
   res_pics: (string, Pic.ndarray) Hashtbl.t;
-  res_fonts: Font.t array;
+  res_fonts: Fonts.t;
   res_cities: (Gmap.area * Gmap.city list) list;
 }
 
@@ -92,7 +92,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
       List.combine Gmap.areas
     in
     let res_pics = load_pics () in
-    let res_fonts = Font.load_all () in
+    let res_fonts = Fonts.load () in
     let resources = {res_maps; res_pics; res_fonts; res_cities} in
 
     let screen = Screen.make view in

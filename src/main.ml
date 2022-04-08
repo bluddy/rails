@@ -31,17 +31,17 @@ let init_mapdemo ~filename win =
   (* Map area: 256 * 192 *)
   let map = Gmap.of_file ~random_seed:0 "./WESTUS.PIC" in
   let map_tex = Gmap.to_img map |> R.Texture.make win in
-  let fonts = Font.load_all () in
+  (* let fonts = Fonts.load () in *)
 
   (* Draw fonts *)
   (* let pixels = create_pixels (320-256,192) in *)
   let pixels = Pic.create_rgb_img (320,192) in
-  let _ =
-    Array.foldi (fun (x, y) i font ->
-      Font.write ~font (Printf.sprintf "Font%d\n" i) ~pixels ~x ~y)
-    (0, 0)
-    fonts
-  in
+  (* let _ = *)
+  (*   Array.foldi (fun (x, y) i font -> *)
+  (*     Font.write ~font (Printf.sprintf "Font%d\n" i) ~pixels ~x ~y) *)
+  (*   (0, 0) *)
+  (*   fonts *)
+  (* in *)
   let text_tex = R.Texture.make win pixels in
 
   let update () _ = (), false in
@@ -121,7 +121,7 @@ let init_pani win ~filename =
 let () =
   parse arglist (fun _ -> ()) "Usage";
   match !mode with
-  | `Font -> Font.main !file
+  | `Font -> Fonts.main !file
   | `Pic  -> Pic.png_of_file !file
   | `Pani when !dump -> Pani.main !file
   | `Pani -> Graphics.main @@ init_pani ~filename:!file
