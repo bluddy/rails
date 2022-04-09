@@ -279,6 +279,7 @@ type t = {
   resources: (pixel * pixel * tile * int) list;
   cities: (int * int) list;
   state: [`Mountains | `Resources | `Cities | `Done];
+  text: Fonts.Render.t list;
   new_pixels: pixel IntIntMap.t;
 }
 
@@ -288,10 +289,10 @@ let init r area cities =
   let cities = add_city_list r area cities in
   let state = `Mountains in
   let new_pixels = IntIntMap.empty in
-  {area; mountains; resources; cities; state; new_pixels}
+  {area; mountains; resources; cities; state; new_pixels; text=[]}
 
   (* Perform a step of updating the map *)
-let update_map_step r v (map:Gmap.t) =
+let update_map_step r v ~map ~fonts =
   match v.state with
   | `Mountains -> 
       begin match v.mountains with
@@ -300,7 +301,10 @@ let update_map_step r v (map:Gmap.t) =
           let pixel = pixel_apply_mountain pixel in
           Gmap.set_pixel ~map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
-          {v with mountains=rest; new_pixels}
+          let newtext =
+            Fonts.write_str ~x:258 ~y:8 ~fonts 0 "Adding\nMountains" in
+          let text = newtext::v.text in
+          {v with mountains=rest; new_pixels; text}
       | _ ->
           {v with state=`Resources}
       end
@@ -338,5 +342,6 @@ let render_new_pixels win v pixel_tex =
     let color = Gmap.pixel_to_enum pixel |> Ega.get_rgb in
     R.render win ~x ~y ~color pixel_tex
   in
-  IntIntMap.fold render v.new_pixels (Result.return ())
+  IntIntMap.fold render v.new_pixels (Result.return ());
+
 

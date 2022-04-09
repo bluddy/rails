@@ -45,7 +45,6 @@ type game = {
 type resources = {
   res_maps: (Gmap.area * Gmap.t) list;
   res_pics: (string, Pic.ndarray) Hashtbl.t;
-  res_fonts: Fonts.t;
   res_cities: (Gmap.area * Gmap.city list) list;
 }
 
@@ -56,6 +55,7 @@ module Textures = struct
     pics: (string, R.Texture.t) Hashtbl.t;
     map: R.Texture.t;
     pixel: R.Texture.t;
+    fonts: Fonts.t;
   }
 
   let of_resources win res area =
@@ -66,7 +66,8 @@ module Textures = struct
       |> Hashtbl.of_iter
     in
     let pixel = R.Texture.make win Pic.white_pixel in
-    {maps; pics; map; pixel}
+    let fonts = Fonts.load win in
+    {maps; pics; map; pixel; fonts}
 end
 
 type state = {
@@ -92,8 +93,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
       List.combine Gmap.areas
     in
     let res_pics = load_pics () in
-    let res_fonts = Fonts.load () in
-    let resources = {res_maps; res_pics; res_fonts; res_cities} in
+    let resources = {res_maps; res_pics; res_cities} in
 
     let screen = Screen.make view in
 
@@ -116,7 +116,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | Screen.MapGen Some data ->
-            let data = Mapgen.update_map_step random data map in
+            let data =
+              Mapgen.update_map_step random data ~map ~fonts:s.textures.fonts in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | _ -> s
@@ -132,6 +133,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             let* () = R.clear_screen win in
             let* () = R.render win bg_tex in
             let* () = R.render win @@ List.assoc ~eq:(Gmap.equal_area) area s.textures.maps in
+            let* () = Fonts.Render.render s.textures.fonts ~win ~to_render:data.text in
             let* () = Mapgen.render_new_pixels win data s.textures.pixel in
             Result.return ()
           in

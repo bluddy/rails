@@ -86,7 +86,7 @@ let write ?(x=0) ?(y=0) ~font str ~pixels =
 
   module R = Renderer
 
-  let create_textures v win =
+  let create_textures win v =
     Hashtbl.keys v.characters (fun c ->
       let ndarray = get_letter v c in
       let tex = R.Texture.make win ndarray in
@@ -168,8 +168,9 @@ let main filename =
   let fonts = of_file filename in
   Printf.printf "Num fonts: %d\n" (Array.length fonts)
 
-let load () =
+let load win =
   let fonts = of_file "./data/FONTS.RR" in
+  Array.iter (Font.create_textures win) fonts;
   fonts
 
 module Render = struct
@@ -190,27 +191,11 @@ module Render = struct
       chars: render_char list;
     }
 
-    (* Create a list of locations of chars to render *)
-  let write_str fonts ~font_idx ~x ~y ~str =
-    let font = fonts.(font_idx) in
-    let _, _, acc =
-      String.fold (fun (x,y, acc) c ->
-        if Char.equal c '\n' then
-          (x, y + font.Font.height + font.space_y, acc)
-        else
-          let acc = (x, y, x)::acc in
-          let w = Font.get_letter_width font c in
-          (x + w + font.space_x, y, acc))
-      (x, y, [])
-      str
-    in
-    acc
-
   (* module OptionT = List.Traverse(Option) *)
 
-  let fonts font_data ~render ~win =
+  let render fonts ~to_render ~win =
     List.fold_left (fun acc {font_idx; chars} ->
-      let font = font_data.(font_idx) in
+      let font = fonts.(font_idx) in
       List.fold_left (fun _acc {c; x; y; ega_color} ->
         let char_tex = Hashtbl.find font.Font.textures c in
         R.render ~x ~y ~color:(Ega.get_rgb ega_color) win char_tex
@@ -219,6 +204,24 @@ module Render = struct
       chars
     )
     (Result.return ())
-    render 
+    to_render 
 
 end
+
+  (* Create a list of locations of chars to render *)
+let write_str ?(color=15) idx str ~fonts ~x ~y : Render.t =
+  let font = fonts.(idx) in
+  let _, _, acc =
+    String.fold (fun (x, y, acc) c ->
+      if Char.equal c '\n' then
+        (x, y + font.Font.height + font.space_y, acc)
+      else
+        let add = {Render.x; y; c; ega_color=color} in
+        let acc = add::acc in
+        let w = Font.get_letter_width font c in
+        (x + w + font.space_x, y, acc))
+    (x, y, [])
+    str
+  in
+  {font_idx=idx; chars=acc}
+
