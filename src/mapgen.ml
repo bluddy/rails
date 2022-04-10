@@ -302,7 +302,7 @@ let update_map_step r v ~map ~fonts =
           Gmap.set_pixel ~map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           let newtext =
-            Fonts.write_str ~x:258 ~y:8 ~fonts 0 "Adding\nMountains" in
+            Fonts.write_str ~x:258 ~y:8 ~fonts 4 "Adding\nMountains" in
           let text = newtext::v.text in
           {v with mountains=rest; new_pixels; text}
       | _ ->

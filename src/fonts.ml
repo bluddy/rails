@@ -3,6 +3,13 @@ open Iter.Infix
 
 module Font = struct
 
+(* fonts:
+  0: fancy olde style
+  1: all-caps
+  2: large
+  4: standard
+*)
+
 type t =
   {
     char_byte_length: int;
@@ -52,7 +59,8 @@ let write_letter ?(x=0) ?(y=0) font ~pixels c =
   done
 
 let get_letter font c =
-  let width = Hashtbl.find font.char_widths c in
+  let width = get_width font c in
+  Printf.printf "char[%c] width[%d]\n" c width;
   let pixels = Ndarray.empty Int8_unsigned [|font.height; width; 4|] in
   ignore @@ write_letter font ~pixels c;
   pixels
@@ -88,19 +96,15 @@ let write ?(x=0) ?(y=0) ~font str ~pixels =
 
   let create_textures win v =
     Hashtbl.keys v.characters (fun c ->
-      let ndarray = get_letter v c in
-      let tex = R.Texture.make win ndarray in
-      Hashtbl.replace v.textures c tex
+      let width = get_width v c in
+      if width > 0 then (
+        let ndarray = get_letter v c in
+        let tex = R.Texture.make win ndarray in
+        Hashtbl.replace v.textures c tex
+      )
     )
 
 end
-
-(* fonts:
-  0: fancy olde style
-  1: all-caps
-  2: large
-  4: standard
-*)
 
 type t = Font.t array
 
