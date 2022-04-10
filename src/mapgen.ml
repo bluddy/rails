@@ -313,11 +313,13 @@ let init r area cities =
 
   (* Perform a step of updating the map *)
 let update_map_step r v ~map ~fonts =
+  let write ~y ~str ~text =
+    let newtext = Fonts.write_str ~x:258 ~y ~fonts 4 str in
+    newtext::text
+  in
   match v.state with
   | `Start ->
-          let newtext =
-            Fonts.write_str ~x:258 ~y:8 ~fonts 4 "Adding\nMountains" in
-          let text = newtext::v.text in
+          let text = write ~y:8 ~text:v.text ~str:"Adding\nMountains" in
           {v with state=`Mountains; text}
   | `Mountains -> 
       begin match v.mountains with
@@ -330,6 +332,18 @@ let update_map_step r v ~map ~fonts =
       | _ ->
           {v with state=`Resources}
       end
+  | `Cities ->
+      begin match v.cities with
+      | (x, y)::rest ->
+          let pixel = Gmap.get_pixel ~map ~x ~y in
+          let pixel = pixel_apply_city pixel in
+          Gmap.set_pixel ~map ~x ~y ~pixel;
+          let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
+          {v with cities=rest; new_pixels}
+      | _ ->
+          let text = write ~y:128 ~text:v.text ~str:"World\nComplete\n(Press Key)" in
+          {v with state = `Done; text}
+      end
   | `Resources ->
       begin match v.resources with
       | {num=0; _}::rest ->
@@ -341,34 +355,16 @@ let update_map_step r v ~map ~fonts =
           let new_pixels = IntIntMap.add (x, y) resource_pixel v.new_pixels in
           let text, start =
             if res.start then
-              let newtext = Fonts.write_str ~x:258 ~y:res.text_y ~fonts 4 @@ "Adding\n"^res.name
-              in
-              newtext::v.text, false
+              let text = write ~y:res.text_y ~text:v.text ~str:("Adding\n"^res.name) in
+              (text, false)
             else
-              v.text, res.start
+              (v.text, res.start)
           in
           let resources = {res with num=res.num-1; start}::rest in
           {v with resources; new_pixels; text}
       | _ ->
-          let newtext =
-            Fonts.write_str ~x:258 ~y:104 ~fonts 4 "Adding\nCities" in
-          let text = newtext::v.text in
+          let text = write ~y:104 ~text:v.text ~str:"Adding\nCities" in
           {v with state=`Cities; text}
-      end
-  | `Cities ->
-      begin match v.cities with
-      | (x, y)::rest ->
-          Printf.printf "x[%d] y[%d]\n" x y;
-          let pixel = Gmap.get_pixel ~map ~x ~y in
-          let pixel = pixel_apply_city pixel in
-          Gmap.set_pixel ~map ~x ~y ~pixel;
-          let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
-          {v with cities=rest; new_pixels}
-      | _ ->
-          let newtext =
-            Fonts.write_str ~x:258 ~y:128 ~fonts 4 "World\nComplete\n(Press Key)" in
-          let text = newtext::v.text in
-          {v with state = `Done; text}
       end
   | `Done ->
            v
