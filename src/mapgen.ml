@@ -184,11 +184,12 @@ type res_data = {
   wanted_tile: tile;
   num: int;
   name: string;
-  y: int;
+  text_y: int; (* y coordinate of text *)
+  start: bool; (* flag to know we've started *)
 }
 
-let make land_pixel resource_pixel wanted_tile num name y =
-  {land_pixel; resource_pixel; wanted_tile; num; name; y}
+let make land_pixel resource_pixel wanted_tile num name text_y =
+  {land_pixel; resource_pixel; wanted_tile; num; name; text_y; start=true}
 
   (* A general list of resources to add *)
 let add_resources_list area =
@@ -306,7 +307,7 @@ let init r area cities =
   let mountains = add_mountains_list r area in
   let resources = add_resources_list area in
   let cities = add_city_list r area cities in
-  let state = `Mountains in
+  let state = `Start in
   let new_pixels = IntIntMap.empty in
   {area; mountains; resources; cities; state; new_pixels; text=[]}
 
@@ -333,13 +334,21 @@ let update_map_step r v ~map ~fonts =
       begin match v.resources with
       | {num=0; _}::rest ->
           {v with resources=rest}
-      | ({land_pixel; resource_pixel; wanted_tile; num;_} as res)::rest ->
+      | ({land_pixel; resource_pixel; wanted_tile;_} as res)::rest ->
           let x, y =
             add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
           in
           let new_pixels = IntIntMap.add (x, y) resource_pixel v.new_pixels in
-          let resources = {res with num=num-1}::rest in
-          {v with resources; new_pixels}
+          let text, start =
+            if res.start then
+              let newtext = Fonts.write_str ~x:258 ~y:res.text_y ~fonts 4 @@ "Adding\n"^res.name
+              in
+              newtext::v.text, false
+            else
+              v.text, res.start
+          in
+          let resources = {res with num=res.num-1; start}::rest in
+          {v with resources; new_pixels; text}
       | _ ->
           let newtext =
             Fonts.write_str ~x:258 ~y:104 ~fonts 4 "Adding\nCities" in
