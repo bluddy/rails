@@ -114,10 +114,13 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             let cities = List.assoc ~eq:(Gmap.equal_area) area s.resources.res_cities in
             let data = Mapgen.init s.random s.game.area cities in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
-
         | Screen.MapGen Some data ->
             let data =
-              Mapgen.update_map_step random data ~map ~fonts:s.textures.fonts in
+              Iter.(0 -- 6)
+              |> Iter.fold (fun acc _ ->
+              Mapgen.update_map_step random acc ~map ~fonts:s.textures.fonts)
+              data
+            in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | _ -> s
