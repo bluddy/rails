@@ -178,21 +178,40 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
   in
   loop () |> Option.get_exn_or "Impossible failure reached"
 
+type res_data = {
+  land_pixel: pixel;
+  resource_pixel: pixel;
+  wanted_tile: tile;
+  num: int;
+  name: string;
+  y: int;
+}
+
+let make land_pixel resource_pixel wanted_tile num name y =
+  {land_pixel; resource_pixel; wanted_tile; num; name; y}
+
   (* A general list of resources to add *)
 let add_resources_list area =
   match area with
   | EastUS
   | WestUS ->
-      [ (Foothills_pixel, CoalMine_pixel, CoalMine, 50);
-        (Foothills_pixel, CoalMine_pixel, LumberMill, 100);
-        (Clear_pixel,     OilWell_pixel,  OilWell, 10);
+      [ make Foothills_pixel CoalMine_pixel CoalMine 50 "Coal Mines" 32; 
+        make Foothills_pixel CoalMine_pixel LumberMill 100 "Lumber" 56; 
+        make Clear_pixel OilWell_pixel OilWell 10 "Oil Wells" 80; 
       ]
-  | Britain
+  | Britain ->
+      let count = 50 in
+      [ 
+        make Foothills_pixel CoalMine_pixel CoalMine count "Coal Mines" 32; 
+        (* NOTE: should be saltmine *)
+        make Clear_pixel OilWell_pixel OilWell count "Salt Mines" 64; 
+      ]
   | Europe ->
-      let count = if Gmap.equal_area area Britain then 150 else 50 in
-      [ (Foothills_pixel, CoalMine_pixel, CoalMine, count);
-        (* NOTE: should be saltmine (Europe) or even farm somehow? *) 
-        (Clear_pixel, OilWell_pixel, OilWell, count);
+      let count = 150 in
+      [
+        make Foothills_pixel CoalMine_pixel CoalMine count "Coal Mines" 32; 
+        (* NOTE: should be farm somehow? *) 
+        make Clear_pixel OilWell_pixel OilWell count "Famrs" 64; 
       ]
       
 let pixel_apply_city = function
@@ -276,9 +295,9 @@ module IntIntMap = Map.Make(struct type t = int * int let compare = Stdlib.compa
 type t = {
   area: area;
   mountains : (int * int) list;
-  resources: (pixel * pixel * tile * int) list;
+  resources: res_data list;
   cities: (int * int) list;
-  state: [`Mountains | `Resources | `Cities | `Done];
+  state: [`Start | `Mountains | `Resources | `Cities | `Done];
   text: Fonts.Render.t list;
   new_pixels: pixel IntIntMap.t;
 }
@@ -294,6 +313,11 @@ let init r area cities =
   (* Perform a step of updating the map *)
 let update_map_step r v ~map ~fonts =
   match v.state with
+  | `Start ->
+          let newtext =
+            Fonts.write_str ~x:258 ~y:8 ~fonts 4 "Adding\nMountains" in
+          let text = newtext::v.text in
+          {v with state=`Mountains; text}
   | `Mountains -> 
       begin match v.mountains with
       | (x, y)::rest ->
@@ -301,25 +325,26 @@ let update_map_step r v ~map ~fonts =
           let pixel = pixel_apply_mountain pixel in
           Gmap.set_pixel ~map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
-          let newtext =
-            Fonts.write_str ~x:258 ~y:8 ~fonts 4 "Adding\nMountains" in
-          let text = newtext::v.text in
-          {v with mountains=rest; new_pixels; text}
+          {v with mountains=rest; new_pixels}
       | _ ->
           {v with state=`Resources}
       end
   | `Resources ->
       begin match v.resources with
-      | (_, _, _, 0)::rest ->
+      | {num=0; _}::rest ->
           {v with resources=rest}
-      | (land_pixel, resource_pixel, wanted_tile, num)::rest ->
+      | ({land_pixel; resource_pixel; wanted_tile; num;_} as res)::rest ->
           let x, y =
             add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
           in
           let new_pixels = IntIntMap.add (x, y) resource_pixel v.new_pixels in
-          let resources = (land_pixel, resource_pixel, wanted_tile, num-1)::rest in
+          let resources = {res with num=num-1}::rest in
           {v with resources; new_pixels}
-      | _ -> {v with state=`Cities}
+      | _ ->
+          let newtext =
+            Fonts.write_str ~x:258 ~y:104 ~fonts 4 "Adding\nCities" in
+          let text = newtext::v.text in
+          {v with state=`Cities; text}
       end
   | `Cities ->
       begin match v.cities with
@@ -331,9 +356,13 @@ let update_map_step r v ~map ~fonts =
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with cities=rest; new_pixels}
       | _ ->
-          {v with state = `Done}
+          let newtext =
+            Fonts.write_str ~x:258 ~y:128 ~fonts 4 "World\nComplete\n(Press Key)" in
+          let text = newtext::v.text in
+          {v with state = `Done; text}
       end
-  | `Done -> v
+  | `Done ->
+           v
 
 module R = Renderer
 

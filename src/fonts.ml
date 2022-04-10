@@ -216,9 +216,10 @@ end
 let write_str ?(color=15) idx str ~fonts ~x ~y : Render.t =
   let font = fonts.(idx) in
   let _, _, acc =
+    let x_first = x in
     String.fold (fun (x, y, acc) c ->
       if Char.equal c '\n' then
-        (x, y + font.Font.height + font.space_y, acc)
+        (x_first, y + font.Font.height + font.space_y, acc)
       else
         let add = {Render.x; y; c; ega_color=color} in
         let acc = add::acc in
