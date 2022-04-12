@@ -22,18 +22,18 @@ type tile =
   | Farm
   | Slums
   | FoodProc (* 10 *)
-  | Ranch
-  | Stockyard
+  | Ranch (* US *)
+  | Stockyard (* US *)
   | Factory
-  | GrainElev
-  | PaperMill (* 15 *)
-  | Landing
-  | LumberMill
+  | GrainElev (* US, Eng *)
+  | PaperMill (* 15, US *)
+  | Landing (* Light blue river *)
+  | LumberMill (* US *)
   | CoalMine
   | SteelMill
-  | PowerPlant (* 20 *)
-  | OilWell
-  | Refinery
+  | PowerPlant (* 20 US, Europe *)
+  | OilWell (* US *)
+  | Refinery (* US *)
   | EnemyRR
   | River
   | Ocean      (* 25 *)
@@ -41,7 +41,15 @@ type tile =
 
   (* Alternative *)
   | Desert
-  | SaltMine
+  | SaltMine (* Eng *)
+  | TextileMill (* Eng, Eur *)
+  | ChemicalPlant (* Eng, Eur *)
+  | Brewery (* Eng *)
+  | Vinyard (* Eur *)
+  | Winery (* Eur *)
+  | Fort (* Eur *)
+  | GlassWorks (* Eng *)
+  | SheepFarm (* Eng, Eur *)
   [@@deriving eq]
 
 type t = {
@@ -90,19 +98,23 @@ let pixel_of_tile = function
   | SaltMine -> OilWell_pixel
   | Landing
   | River -> River_pixel
-  | Ranch
-  | GrainElev
+  | Ranch | Fort
+  | SheepFarm (* for EU, village and oilwell pixel *)
+  | GrainElev | Vinyard
   | Farm -> Farm_pixel
   | Hills -> Hills_pixel
   | Village
-  | FoodProc
+  | FoodProc | Brewery | Winery
   | PaperMill
-  | Factory
+  | TextileMill
+  (* | Factory (duplicate) *)
+  | GlassWorks
   | Stockyard -> Village_pixel
   | SteelMill
   | Refinery
+  | ChemicalPlant
   | PowerPlant
-  (* | Factory (duplicate) *)
+  | Factory
   | City -> City_pixel
   | Mountains -> Mountain_pixel
   | EnemyRR -> EnemyRR_pixel
@@ -127,7 +139,7 @@ let map_height = 192
 let map_width = 256
 
 (* random_seed: 15 bits from time *)
-let tile_of_pixel ~x ~y ~pixel ~map =
+let tile_of_pixel ~area ~x ~y ~pixel ~map =
   let random_seed = map.random_seed in
   let xy_random = x * 9 + y * 13 + random_seed in
   (* let pixel = Option.get @@ pixel_of_enum pixel in *)
@@ -140,7 +152,7 @@ let tile_of_pixel ~x ~y ~pixel ~map =
     | CoalMine_pixel -> CoalMine
     | Desert_pixel -> Swamp
     | Foothills_pixel -> Foothills
-    | OilWell_pixel -> Factory
+    | OilWell_pixel -> Factory (* TODO check *)
     | River_pixel -> River
     | Farm_pixel -> Farm
     | Hills_pixel -> Hills
@@ -150,41 +162,73 @@ let tile_of_pixel ~x ~y ~pixel ~map =
     | Mountain_pixel -> Mountains
   in
   let complex_mapping pixel xy_random = match (pixel, xy_random) with
-  | River_pixel, (0 | 2) -> Landing
-  | River_pixel, _ -> River
-  | Farm_pixel, 0 -> GrainElev
-  | Farm_pixel, 3 -> Ranch
-  | Farm_pixel, _ -> Farm
-  | Village_pixel, 0 -> Stockyard
-  | Village_pixel, 1 -> Factory
-  | Village_pixel, 2 -> FoodProc
-  | Village_pixel, 3 -> PaperMill
-  | City_pixel, 0 -> SteelMill
-  | City_pixel, 1 -> Factory
-  | City_pixel, 2 -> Refinery
-  | City_pixel, 3 -> PowerPlant
-  | _ -> simple_mapping pixel
+    | River_pixel, (0 | 2) -> Landing
+    | River_pixel, _ -> River
+    | Farm_pixel, 0 -> GrainElev
+    | Farm_pixel, 3 -> Ranch
+    | Farm_pixel, _ -> Farm
+    | Village_pixel, 0 -> Stockyard
+    | Village_pixel, 1 -> Factory
+    | Village_pixel, 2 -> FoodProc
+    | Village_pixel, 3 -> PaperMill
+    | City_pixel, 0 -> SteelMill
+    | City_pixel, 1 -> Factory
+    | City_pixel, 2 -> Refinery
+    | City_pixel, 3 -> PowerPlant
+    | _ -> simple_mapping pixel
   in
   let upper_3bits = (xy_random lsr 5) land 7 in
   let mid_2bits = (xy_random lsr 3) land 3 in
   let low_3bits = xy_random land 7 in
-  match pixel with
-  | CoalMine_pixel | OilWell_pixel ->
-      let low_2bits = random_seed land 3 in
-      let x = x + low_2bits in
-      let next_2bits = (random_seed lsr 4) land 3 in
-      let y = y / 2 + next_2bits in
-      if x land 2 = y land 3 then OilWell else
-      if x land 3 = y land 3 then LumberMill else
-      CoalMine
-  | Farm_pixel | Clear_pixel when upper_3bits = mid_2bits && low_3bits = 0 ->
-        complex_mapping pixel mid_2bits
-  | Farm_pixel | Clear_pixel ->
-        simple_mapping pixel
-  | _ when low_3bits = 0 ->
-        complex_mapping pixel mid_2bits
-  | _ ->
-        simple_mapping pixel
+  let us_tile = 
+    match pixel with
+    | CoalMine_pixel | OilWell_pixel ->
+        let low_2bits = random_seed land 3 in
+        let x = x + low_2bits in
+        let next_2bits = (random_seed lsr 4) land 3 in
+        let y = y / 2 + next_2bits in
+        if x land 2 = y land 3 then OilWell
+        else if x land 3 = y land 3 then LumberMill
+        else CoalMine
+    | Farm_pixel | Clear_pixel when upper_3bits = mid_2bits && low_3bits = 0 ->
+          complex_mapping pixel mid_2bits
+    | Farm_pixel | Clear_pixel ->
+          simple_mapping pixel
+    | _ when low_3bits = 0 ->
+          complex_mapping pixel mid_2bits
+    | _ ->
+          simple_mapping pixel
+  in
+  let alternative_tile area tile = match area with
+    | Britain ->
+        begin match tile with
+        | FoodProc -> Brewery
+        | Ranch -> SheepFarm
+        | Stockyard -> GlassWorks
+        | PaperMill -> TextileMill
+        | OilWell -> SaltMine
+        | Refinery -> ChemicalPlant (* same image *)
+        | x -> x
+        end
+    | Europe ->
+        begin match tile with
+        | FoodProc -> Winery
+        | Ranch -> Fort
+        | Stockyard -> SheepFarm
+        | GrainElev -> Vinyard
+        | PaperMill -> TextileMill
+        | OilWell -> SheepFarm
+        | Refinery -> ChemicalPlant (* same image *)
+        | x -> x
+        end
+    | WestUS ->
+        begin match tile with
+        | Swamp -> Desert
+        | x -> x
+        end
+    | _ -> tile
+  in
+  alternative_tile area us_tile
 
 let ndarray_of_file filename =
   let arr = Pic.ndarray_of_file filename in
@@ -237,9 +281,7 @@ let get_tile map x y =
 let get_pixel ~map ~x ~y =
   get_tile map x y |> pixel_of_tile
 
-let set_pixel ~map ~x ~y ~pixel =
-  let tile = tile_of_pixel ~x ~y ~pixel ~map in
+let set_pixel ~area ~map ~x ~y ~pixel =
+  let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
   map.data.(calc_offset x y) <- tile
-
-
 

@@ -164,9 +164,9 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
          Here we have to test *)
       if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
       let pixel = Gmap.get_pixel ~map ~x ~y in
-      let possible_tile = tile_of_pixel ~x ~y ~pixel:resource_pixel ~map in
+      let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel ~map in
       if Gmap.equal_pixel pixel land_pixel && Gmap.equal_tile possible_tile wanted_tile then (
-        Gmap.set_pixel ~map ~x ~y ~pixel:resource_pixel;
+        Gmap.set_pixel ~area ~map ~x ~y ~pixel:resource_pixel;
         Some (x, y)
       ) else
         let x = if y mod 2 = 1 then x + 1 else x - 1 in
@@ -204,15 +204,13 @@ let add_resources_list area =
       let count = 50 in
       [ 
         make Foothills_pixel CoalMine_pixel CoalMine count "Coal Mines" 32; 
-        (* NOTE: should be saltmine *)
-        make Clear_pixel OilWell_pixel OilWell count "Salt Mines" 64; 
+        make Clear_pixel OilWell_pixel SaltMine count "Salt Mines" 64; 
       ]
   | Europe ->
       let count = 150 in
       [
         make Foothills_pixel CoalMine_pixel CoalMine count "Coal Mines" 32; 
-        (* NOTE: should be farm somehow? *) 
-        make Clear_pixel OilWell_pixel OilWell count "Famrs" 64; 
+        make Clear_pixel OilWell_pixel SheepFarm count "Farms" 64; 
       ]
       
 let pixel_apply_city = function
@@ -326,7 +324,7 @@ let update_map_step r v ~map ~fonts =
       | (x, y)::rest ->
           let pixel = Gmap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_mountain pixel in
-          Gmap.set_pixel ~map ~x ~y ~pixel;
+          Gmap.set_pixel ~area:v.area ~map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with mountains=rest; new_pixels}
       | _ ->
@@ -337,7 +335,7 @@ let update_map_step r v ~map ~fonts =
       | (x, y)::rest ->
           let pixel = Gmap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_city pixel in
-          Gmap.set_pixel ~map ~x ~y ~pixel;
+          Gmap.set_pixel ~area:v.area ~map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with cities=rest; new_pixels}
       | _ ->
