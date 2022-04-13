@@ -12,32 +12,6 @@ type game = {
 }
 [@@deriving lens]
 
-
-module Textures = struct
-  module R = Renderer
-  type t = {
-    maps: (Gmap.area * R.Texture.t) list;
-    pics: (string, R.Texture.t) Hashtbl.t;
-    map: R.Texture.t;
-    pixel: R.Texture.t;
-    fonts: Fonts.t;
-  }
-
-  let of_resources win res area =
-    let maps = List.map (fun (a, v) ->
-        a, R.Texture.make win @@ Gmap.to_img v)
-      res.Resources.res_maps
-    in
-    let map = List.assoc ~eq:(Stdlib.(=)) area maps in
-    let pics = Hashtbl.to_iter res.res_pics
-      |> Iter.map (fun (s, arr) -> s, R.Texture.make win arr)
-      |> Hashtbl.of_iter
-    in
-    let pixel = R.Texture.make win Pic.white_pixel in
-    let fonts = Fonts.load win in
-    {maps; pics; map; pixel; fonts}
-end
-
 type state = {
   random: Random.State.t;
   seed: int;
