@@ -40,10 +40,10 @@ type t = {
   res_cities: (Gmap.area * Gmap.city list) list;
 }
 
-let load_all ~random_seed =
+let load_all ~seed =
   let res_maps =
-    List.map (fun (x,s) -> x, dir ^ s
-      |> Gmap.of_file ~random_seed) map_names
+    List.map (fun (area,s) -> area, dir ^ s
+      |> Gmap.of_file ~area ~seed) map_names
   in
   let res_cities = List.map Mapgen.load_city_list Gmap.areas |> 
     List.combine Gmap.areas

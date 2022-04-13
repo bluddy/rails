@@ -27,7 +27,7 @@ type tile =
   | Factory
   | GrainElev (* US, Eng *)
   | PaperMill (* 15, US *)
-  | Landing (* Light blue river *)
+  | Landing of Dir.Set.t (* Light blue river *)
   | LumberMill (* US *)
   | CoalMine
   | SteelMill
@@ -35,8 +35,8 @@ type tile =
   | OilWell (* US *)
   | Refinery (* US *)
   | EnemyRR
-  | River
-  | Ocean      (* 25 *)
+  | River of Dir.Set.t (* directions of river *)
+  | Ocean of Dir.Set.t (* 25 *) (* dirs are directions of land *)
   | Harbor
 
   (* Alternative *)
@@ -52,9 +52,10 @@ type tile =
   | SheepFarm (* Eng, Eur *)
   [@@deriving eq]
 
+(* Map data type. Starts at top left *)
 type t = {
-  random_seed: int; (* 15 bit value *)
-  data: tile array
+  seed: int; (* 15 bit value *)
+  map: tile array
 }
 
 type city = {
@@ -85,7 +86,7 @@ type pixel =
 
 let pixel_of_tile = function
   | Slums -> Slum_pixel
-  | Ocean -> Ocean_pixel
+  | Ocean _ -> Ocean_pixel
   | Clear -> Clear_pixel
   | Woods -> Woods_pixel
   | Harbor -> Harbor_pixel
@@ -96,8 +97,8 @@ let pixel_of_tile = function
   | Foothills -> Foothills_pixel
   | OilWell
   | SaltMine -> OilWell_pixel
-  | Landing
-  | River -> River_pixel
+  | Landing _
+  | River _ -> River_pixel
   | Ranch | Fort
   | SheepFarm (* for EU, village and oilwell pixel *)
   | GrainElev | Vinyard
@@ -119,33 +120,39 @@ let pixel_of_tile = function
   | Mountains -> Mountain_pixel
   | EnemyRR -> EnemyRR_pixel
 
-let tile_of_pixel_default = function
-  | Slum_pixel -> Slums
-  | Ocean_pixel -> Ocean
-  | Clear_pixel-> Clear
-  | Woods_pixel-> Woods
-  | Harbor_pixel -> Harbor
-  | Desert_pixel -> Desert
-  | Foothills_pixel -> Hills
-  | River_pixel -> River
-  | Farm_pixel -> Farm
-  | Hills_pixel -> Hills
-  | Village_pixel -> Village
-  | City_pixel -> City
-  | Mountain_pixel -> Mountains
-  | x -> failwith @@ Printf.sprintf "Illegal basic map value %d" (pixel_to_enum x)
-
 let map_height = 192
 let map_width = 256
 
-(* random_seed: 15 bits from time *)
-let tile_of_pixel ~area ~x ~y ~pixel ~map =
-  let random_seed = map.random_seed in
-  let xy_random = x * 9 + y * 13 + random_seed in
+let calc_offset x y = y * map_width + x
+
+let get_tile map x y = map.map.(calc_offset x y)
+
+let set_tile map x y tile = map.map.(calc_offset x y) <- tile
+
+  (* Get mask around a certain point based on a function
+     edge: behavior along edges of map
+     diag: use diagonals
+    *)
+let get_mask ?(n=8) ?(diag=false) ~edge ~map ~f ~x ~y =
+  Iter.map (fun i ->
+    (* check for diagonal *)
+    if not diag && i land 1 = 1 then false else
+    let x_off = x + Dir.x_offset.(i) in
+    let y_off = y + Dir.y_offset.(i) in
+    if x_off < 0 || x_off >= map_width || y_off < 0 || y_off >= map_height then
+      edge
+    else
+      f (get_tile map x y)
+  )
+  Iter.(0--(n-1))
+
+
+(* seed: 15 bits from time *)
+let tile_of_pixel ~area ~x ~y ~pixel ~seed =
+  let xy_random = x * 9 + y * 13 + seed in
   (* let pixel = Option.get @@ pixel_of_enum pixel in *)
   let simple_mapping = function
     | Slum_pixel -> Slums
-    | Ocean_pixel -> Ocean
     | Clear_pixel -> Clear
     | Woods_pixel -> Woods
     | Harbor_pixel -> Harbor
@@ -153,17 +160,18 @@ let tile_of_pixel ~area ~x ~y ~pixel ~map =
     | Desert_pixel -> Swamp
     | Foothills_pixel -> Foothills
     | OilWell_pixel -> Factory (* TODO check *)
-    | River_pixel -> River
+    | River_pixel -> River(Dir.Set.empty)
     | Farm_pixel -> Farm
     | Hills_pixel -> Hills
     | Village_pixel -> Village
     | EnemyRR_pixel -> EnemyRR
     | City_pixel -> City
     | Mountain_pixel -> Mountains
+    | Ocean_pixel -> Ocean(Dir.Set.empty)
   in
   let complex_mapping pixel xy_random = match (pixel, xy_random) with
-    | River_pixel, (0 | 2) -> Landing
-    | River_pixel, _ -> River
+    | River_pixel, (0 | 2) -> Landing(Dir.Set.empty)
+    | River_pixel, _ -> River(Dir.Set.empty)
     | Farm_pixel, 0 -> GrainElev
     | Farm_pixel, 3 -> Ranch
     | Farm_pixel, _ -> Farm
@@ -183,9 +191,9 @@ let tile_of_pixel ~area ~x ~y ~pixel ~map =
   let us_tile = 
     match pixel with
     | CoalMine_pixel | OilWell_pixel ->
-        let low_2bits = random_seed land 3 in
+        let low_2bits = seed land 3 in
         let x = x + low_2bits in
-        let next_2bits = (random_seed lsr 4) land 3 in
+        let next_2bits = (seed lsr 4) land 3 in
         let y = y / 2 + next_2bits in
         if x land 2 = y land 3 then OilWell
         else if x land 3 = y land 3 then LumberMill
@@ -236,23 +244,56 @@ let ndarray_of_file filename =
   let ndarray = Ndarray.get_slice [[0;map_height-1]; [0;map_width-1]] arr in
   ndarray
 
-let data_of_ndarray ndarray =
-  let map = Array.make (map_height * map_width) Ocean in
-  let idx = ref 0 in
-  for i=0 to map_height-1 do
-    for j=0 to map_width-1 do
-      let v = Ndarray.get ndarray [|i; j|] in
-      let v = Option.get_exn_or "bad enum" @@ pixel_of_enum v in
-      let map_v = tile_of_pixel_default v in
-      map.(!idx) <- map_v;
-      incr idx;
+let of_ndarray ~area ~seed ndarray =
+  (* First pass: don't set directions for ocean and river *)
+  let map = Array.make (map_height * map_width) @@ Ocean(Dir.Set.empty) in
+  let map = {map; seed} in
+  for y=0 to map_height-1 do
+    for x=0 to map_width-1 do
+      let v = Ndarray.get ndarray [|y; x|] in
+      let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum v in
+      let tile = tile_of_pixel ~area ~x ~y ~pixel ~seed in
+      set_tile map x y tile
+    done
+  done;
+
+  (* Second pass: resolve ocean and river directions *)
+  let resolve_dirs ~edge ~f ~x ~y =
+    let mask = get_mask ~map ~edge ~f ~x ~y in
+    Dir.Set.of_mask mask
+  in
+  let river_func = function
+    | River _
+    | Landing _
+    | Harbor
+    | Ocean _ -> true
+    | _ -> false
+  in
+  for y=0 to map_height-1 do
+    for x=0 to map_width-1 do
+      let tile =
+        match get_tile map x y with
+        | Ocean _ ->
+            let dirs =
+              resolve_dirs ~f:(function Ocean _ -> false | _ -> true)
+                ~x ~y ~edge:false
+            in
+            Ocean dirs
+        | River _ ->
+            let dirs = resolve_dirs ~f:river_func ~x ~y ~edge:true in
+            River dirs
+        | Landing _ ->
+            let dirs = resolve_dirs ~f:river_func ~x ~y ~edge:true in
+            River dirs
+        | x -> x
+      in
+      set_tile map x y tile
     done
   done;
   map
 
-let of_file ~random_seed filename =
-  let data = ndarray_of_file filename |> data_of_ndarray in
-  {data; random_seed}
+let of_file ~area ~seed filename =
+  ndarray_of_file filename |> of_ndarray ~area ~seed
 
   (* Make an ndarray of pixel indices. Not RGBA! *)
 let to_ndarray mapdata =
@@ -270,18 +311,13 @@ let to_ndarray mapdata =
 
   (* Make an image RGBA ndarray *)
 let to_img (map:t) =
-  let ndarray = to_ndarray map.data in
+  let ndarray = to_ndarray map.map in
   Pic.img_of_ndarray ndarray
-
-let calc_offset x y = y * map_width + x
-
-let get_tile map x y =
-  map.data.(calc_offset x y)
 
 let get_pixel ~map ~x ~y =
   get_tile map x y |> pixel_of_tile
 
 let set_pixel ~area ~map ~x ~y ~pixel =
-  let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
-  map.data.(calc_offset x y) <- tile
+  let tile = tile_of_pixel ~area ~x ~y ~pixel ~seed:map.seed in
+  map.map.(calc_offset x y) <- tile
 

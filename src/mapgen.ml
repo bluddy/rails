@@ -164,7 +164,7 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
          Here we have to test *)
       if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
       let pixel = Gmap.get_pixel ~map ~x ~y in
-      let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel ~map in
+      let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel ~seed:map.seed in
       if Gmap.equal_pixel pixel land_pixel && Gmap.equal_tile possible_tile wanted_tile then (
         Gmap.set_pixel ~area ~map ~x ~y ~pixel:resource_pixel;
         Some (x, y)
@@ -257,8 +257,8 @@ let add_city_list r area (city_list:city list) : (int * int) list =
     let add_population acc _i =
       let offset = Random.int 48 r in              (* Use swirl of offsets *)
       let offset = if offset > 0 then offset - Random.int offset r else 0 in (* Closer to middle *)
-      let x = x + Utils.x_offset.(offset) in
-      let y = y + Utils.y_offset.(offset) in
+      let x = x + Dir.x_offset.(offset) in
+      let y = y + Dir.y_offset.(offset) in
       (* Here too, the game relies on borders and we need bounds checking *)
       if x >= 0 && y >= 0 && x < Gmap.map_width && y < Gmap.map_height then
         (x, y)::acc
@@ -317,6 +317,7 @@ let update_map_step r v ~map ~fonts =
   in
   match v.state with
   | `Start ->
+          
           let text = write ~y:8 ~text:v.text ~str:"Adding\nMountains" in
           {v with state=`Mountains; text}
   | `Mountains -> 
