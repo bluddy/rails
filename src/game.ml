@@ -40,7 +40,7 @@ end
 
 type state = {
   random: Random.State.t;
-  random_seed: int;
+  seed: int;
   game: game;
   screen: Screen.t;
   resources: Resources.t;
@@ -51,12 +51,12 @@ type state = {
 let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let random = Random.get_state () in
   (* Used by different elements *)
-  let random_seed = Random.int 0x7FFF random in
+  let seed = Random.int 0x7FFF random in
 
   Printf.printf "Loading resources...";
 
   let init_fn win =
-    let resources = Resources.load_all ~random_seed in
+    let resources = Resources.load_all ~seed in
 
     let screen = Screen.make view in
 
@@ -66,7 +66,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     let game = {map; area; cities} in
 
     let textures = Textures.of_resources win resources area in
-    let state = {game; screen; resources; random; textures; random_seed} in
+    let state = {game; screen; resources; random; textures; seed} in
 
     Printf.printf " done.\n";
 

@@ -53,6 +53,8 @@ let load_all ~seed =
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
+type size = Small | Large
+
 type 'a tile_pics =
   | Single of 'a
   | Pair of 'a * 'a 
@@ -64,33 +66,32 @@ let slice_tiles res =
   let tiles = Hashtbl.create 40 in
   let small_tiles = Hashtbl.create 40 in
 
-  let pair_part ndarray y mult i =
-  let pair_part ~ndarray ~y ~mult ~i =
+  let pair_part ~ndarray ~y ~mult i =
     let x1, x2 = i * mult, (i+1) * mult in
     let p1 = Ndarray.get_slice [[x1; x2]; [y; y + mult]] ndarray in
+    let p2 = Ndarray.get_slice [[x1; x2]; [y + mult; y + 2 * mult]] ndarray in
     Pair(p1, p2)
   in
-  let pair_fn tiles ndarray y mult key i =
-    let p = pair_part ndarray y mult i in
+  let pair_fn ~tiles ~ndarray ~y ~mult key i =
+    let p = pair_part ~ndarray ~y ~mult i in
     Hashtbl.replace tiles key p
   in
-  let single_fn tiles ndarray y mult key i =
+  let single_fn ~tiles ~ndarray ~y ~mult key i =
     let x1, x2 = i * mult, (i+1) * mult in
     let p1 = Ndarray.get_slice [[x1; x2]; [y; y + mult]] ndarray in
     Hashtbl.replace tiles key @@ Single p1
-  in
   in
 
   let us_ndarray = Hashtbl.find res.res_pics "SPRITES" in
   let en_ndarray = Hashtbl.find res.res_pics "ESPRITES" in
   let eu_ndarray = Hashtbl.find res.res_pics "CSPRITES" in
 
-  single_fn tiles us_ndarray 40 16 Harbor 17;
+  single_fn ~tiles ~ndarray:us_ndarray ~y:40 ~mult:16 Harbor 17;
 
-  let load_us_tiles tiles (y:int) (mult:int) =
-    let pair = pair_fn tiles us_ndarray y mult in
-    let top = single_fn tiles us_ndarray y mult in
-    let bottom = single_fn tiles us_ndarray (y+mult) mult in
+  let load_us_tiles ~tiles ~y ~mult =
+    let pair = pair_fn ~tiles ~ndarray:us_ndarray ~y ~mult in
+    let top = single_fn ~tiles ~ndarray:us_ndarray ~y ~mult in
+    let bottom = single_fn ~tiles ~ndarray:us_ndarray ~y:(y+mult) ~mult in
     pair Clear 0;
     pair Woods 1;
     pair Swamp 2;
@@ -116,49 +117,46 @@ let slice_tiles res =
     bottom EnemyRR 13;
     bottom TextileMill 14;
   in
-  load_us_tiles tiles 0 16;
-  load_us_tiles small_tiles 32 8;
+  load_us_tiles ~tiles ~y:0 ~mult:16;
+  load_us_tiles ~tiles:small_tiles ~y:32 ~mult:8;
 
-  let load_en_tiles tiles y mult =
-    let top = single_fn tiles en_ndarray y mult in
-    let bottom = single_fn tiles en_ndarray (y+mult) mult in
+  let load_en_tiles ~tiles ~y ~mult =
+    let top = single_fn ~tiles ~ndarray:en_ndarray ~y ~mult in
+    let bottom = single_fn ~tiles ~ndarray:en_ndarray ~y:(y+mult) ~mult in
     top Brewery 10;
     top SheepFarm 11;
     top GlassWorks 12;
     bottom SaltMine 11;
   in
-  load_en_tiles tiles 0 16;
-  load_en_tiles small_tiles 32 8;
+  load_en_tiles ~tiles ~y:0 ~mult:16;
+  load_en_tiles ~tiles:small_tiles ~y:32 ~mult:8;
 
-  let load_eu_tiles tiles y mult =
-    let top = single_fn tiles eu_ndarray y mult in
+  let load_eu_tiles ~tiles ~y ~mult =
+    let top = single_fn ~tiles ~ndarray:eu_ndarray ~y ~mult in
     top Winery 10;
     top Fort 11;
     top Vinyard 13;
   in
-  load_eu_tiles tiles 0 16;
-  load_eu_tiles small_tiles 32 8;
+  load_eu_tiles ~tiles ~y:0 ~mult:16;
+  load_eu_tiles ~tiles:small_tiles ~y:32 ~mult:8;
 
   (* Load cities and villages, which are slightly different per area *)
-  let load_localized tiles key y mult i =
-    let us = pair_part us_ndarray y mult i in
-    let england = pair_part en_ndarray y mult i in
-    let europe = pair_part eu_ndarray y mult i in
+  let load_localized ~tiles ~y ~mult key i =
+    let us = pair_part ~ndarray:us_ndarray ~y ~mult i in
+    let england = pair_part ~ndarray:en_ndarray ~y ~mult i in
+    let europe = pair_part ~ndarray:eu_ndarray ~y ~mult i in
     Hashtbl.replace tiles key @@ Localized{us;england;europe}
   in
-  load_localized tiles City 0 16 6;
-  load_localized tiles Village 0 16 7;
-  load_localized small_tiles City 32 8 6;
-  load_localized small_tiles Village 32 8 7;
-
-  let dir_tiles = Hashtbl.create 20 in
-  let small_dir_tiles = Hashtbl.create 20 in
+  load_localized ~tiles ~y:0 ~mult:16 City 6;
+  load_localized ~tiles ~y:0 ~mult:16 Village 7;
+  load_localized ~tiles:small_tiles ~y:32 ~mult:8 City 6;
+  load_localized ~tiles:small_tiles ~y:32 ~mult:8 Village 7;
 
   let load_dir_tiles ~tiles ~key ~y ~x ~mult =
-    let img i l =
+    let img i dirs =
       let x1, x2 = x + i * mult, x + (i+1) * mult in
       let slice = Ndarray.get_slice [[x1; x2]; [y; y + mult]] us_ndarray in
-      Hashtbl.replace tiles (key, Dir.Set.of_list l) slice
+      Hashtbl.replace tiles (key @@ Dir.Set.of_list dirs) @@ Single slice
     in
     let open Dir in
     img 0 [];
@@ -178,10 +176,16 @@ let slice_tiles res =
     img 14 [Left; Down; Right];
     img 15 [Up; Right; Left; Down]
   in
-  load_dir_tiles ~tiles:dir_tiles ~key:Ocean ~y:48 ~x:0 ~mult:16;
-  load_dir_tiles ~tiles:dir_tiles ~key:River ~y:64 ~x:0 ~mult:16;
-  load_dir_tiles ~tiles:small_dir_tiles ~key:Ocean ~y:32 ~x:160 ~mult:8;
-  load_dir_tiles ~tiles:small_dir_tiles ~key:River ~y:40 ~x:160 ~mult:8;
+  let ocean x = Ocean x in
+  let river x = River x in
+  let landing x = Landing x in
+  load_dir_tiles ~tiles ~key:ocean ~y:48 ~x:0 ~mult:16;
+  load_dir_tiles ~tiles ~key:river ~y:64 ~x:0 ~mult:16;
+  (* TODO: make it bright *)
+  load_dir_tiles ~tiles ~key:landing ~y:64 ~x:0 ~mult:16;
+  load_dir_tiles ~tiles:small_tiles ~key:ocean ~y:32 ~x:160 ~mult:8;
+  load_dir_tiles ~tiles:small_tiles ~key:river ~y:40 ~x:160 ~mult:8;
+  load_dir_tiles ~tiles:small_tiles ~key:landing ~y:40 ~x:160 ~mult:8;
   
-  (tiles, small_tiles, dir_tiles, small_dir_tiles)
+  (tiles, small_tiles)
 
