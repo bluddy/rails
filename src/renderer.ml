@@ -56,6 +56,13 @@ module Texture = struct
 
   let destroy tex =
     Sdl.destroy_texture tex.texture
+
+    (* slowish *)
+  let update (tex:t) (ndarray:Pic.ndarray) =
+    let h, w = Ndarray.nth_dim ndarray 0, Ndarray.nth_dim ndarray 1 in
+    let ndarray = (Bigarray.reshape_1 ndarray (w*h*4)) in
+    Sdl.update_texture tex.texture None ndarray (tex.w * 4)
+
 end
 
 open Result.Infix

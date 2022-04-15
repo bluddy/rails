@@ -53,13 +53,19 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             let data = Mapgen.init s.random s.game.area cities in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
         | Screen.MapGen Some data ->
+            let done_fn () =
+              (* Final update of map *)
+              let _ = Textures.update_map s.textures s.game.map in
+              ()
+            in
             let data =
               Iter.(0 -- 6)
               |> Iter.fold (fun acc _ ->
-              Mapgen.update_map_step random acc ~map ~fonts:s.textures.fonts)
+              Mapgen.update_map_step random acc ~done_fn ~map ~fonts:s.textures.fonts)
               data
             in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
+
 
         | _ -> s
       in

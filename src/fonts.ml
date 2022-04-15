@@ -60,7 +60,7 @@ let write_letter ?(x=0) ?(y=0) font ~pixels c =
 
 let get_letter font c =
   let width = get_width font c in
-  Printf.printf "char[%c] width[%d]\n" c width;
+  (* Printf.printf "char[%c] width[%d]\n" c width; *)
   let pixels = Ndarray.empty Int8_unsigned [|font.height; width; 4|] in
   ignore @@ write_letter font ~pixels c;
   pixels

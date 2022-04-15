@@ -310,14 +310,13 @@ let init r area cities =
   {area; mountains; resources; cities; state; new_pixels; text=[]}
 
   (* Perform a step of updating the map *)
-let update_map_step r v ~map ~fonts =
+let update_map_step r v ~map ~fonts ~done_fn =
   let write ~y ~str ~text =
     let newtext = Fonts.write_str ~x:258 ~y ~fonts 4 str in
     newtext::text
   in
   match v.state with
   | `Start ->
-          
           let text = write ~y:8 ~text:v.text ~str:"Adding\nMountains" in
           {v with state=`Mountains; text}
   | `Mountains -> 
@@ -341,6 +340,8 @@ let update_map_step r v ~map ~fonts =
           {v with cities=rest; new_pixels}
       | _ ->
           let text = write ~y:128 ~text:v.text ~str:"World\nComplete\n(Press Key)" in
+          (* We're done now *)
+          done_fn ();
           {v with state = `Done; text}
       end
   | `Resources ->

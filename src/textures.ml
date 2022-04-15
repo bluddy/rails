@@ -17,9 +17,11 @@ module Tile = struct
     let small_tiles = Hashtbl.create 40 in
 
     let pair_part ~ndarray ~y ~mult i =
-      let x1, x2 = i * mult, (i+1) * mult in
-      let p1 = Ndarray.get_slice [[x1; x2]; [y; y + mult]] ndarray in
-      let p2 = Ndarray.get_slice [[x1; x2]; [y + mult; y + 2 * mult]] ndarray in
+      let x1, x2 = i * mult, (i+1) * mult - 1 in
+      let y1, y2 = y, y + mult - 1 in
+      let p1 = Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray in
+      let y1, y2 = y + mult, y + 2 * mult - 1 in
+      let p2 = Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray in
       Pair(R.Texture.make win p1, R.Texture.make win p2)
     in
     let pair_fn ~tiles ~ndarray ~y ~mult key i =
@@ -27,9 +29,11 @@ module Tile = struct
       Hashtbl.replace tiles key p
     in
     let single_fn ~tiles ~ndarray ~y ~mult key i =
-      let x1, x2 = i * mult, (i+1) * mult in
+      let x1, x2 = i * mult, (i+1) * mult - 1 in
+      let y1, y2 = y, y + mult - 1 in
+      (* Printf.printf "x[%d-%d] y[%d-%d]\n" x1 x2 y (y + mult); *)
       let p1 =
-        Ndarray.get_slice [[x1; x2]; [y; y + mult]] ndarray |> R.Texture.make win
+        Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray |> R.Texture.make win
       in
       Hashtbl.replace tiles key @@ Single p1
     in
@@ -106,9 +110,10 @@ module Tile = struct
 
     let load_dir_tiles ~tiles ~key ~y ~x ~mult =
       let img i dirs =
-        let x1, x2 = x + i * mult, x + (i+1) * mult in
+        let x1, x2 = x + i * mult, x + (i+1) * mult - 1 in
+        let y1, y2 = y, y + mult - 1 in
         let slice =
-          Ndarray.get_slice [[x1; x2]; [y; y + mult]] us_ndarray
+          Ndarray.get_slice [[y1; y2]; [x1; x2]] us_ndarray
           |> R.Texture.make win
         in
         Hashtbl.replace tiles (key @@ Dir.Set.of_list dirs) @@ Single slice
@@ -183,4 +188,7 @@ let of_resources win res area =
   let fonts = Fonts.load win in
   let tiles, small_tiles = Tile.slice_tiles win res in
   {maps; pics; map; pixel; fonts; tiles; small_tiles}
+
+let update_map v map =
+  R.Texture.update v.map @@ Gmap.to_img map
 
