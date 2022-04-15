@@ -293,7 +293,8 @@ let of_ndarray ~area ~seed ndarray =
   map
 
 let of_file ~area ~seed filename =
-  ndarray_of_file filename |> of_ndarray ~area ~seed
+  ndarray_of_file filename
+  |> of_ndarray ~area ~seed
 
   (* Make an ndarray of pixel indices. Not RGBA! *)
 let to_ndarray mapdata =

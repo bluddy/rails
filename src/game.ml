@@ -55,7 +55,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen Some data ->
             let done_fn () =
               (* Final update of map *)
-              let _ = Textures.update_map s.textures s.game.map in
+              let _ = Textures.update_map win s.textures s.game.map in
               ()
             in
             let data =

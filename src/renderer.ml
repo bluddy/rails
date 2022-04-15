@@ -2,29 +2,34 @@ open Containers
 open Tsdl
 module Ndarray = Owl_base_dense_ndarray.Generic
 
-  type window = {
-    zoom: float;
-    inner_w: int;
-    inner_h: int;
-    renderer: Sdl.renderer;
-    window: Sdl.window;
-  }
+type window = {
+  zoom: float;
+  inner_w: int;
+  inner_h: int;
+  renderer: Sdl.renderer;
+  window: Sdl.window;
+}
 
-  let create w h ~zoom =
-    let out_w = Int.of_float @@ zoom *. Float.of_int w in
-    let out_h = Int.of_float @@ zoom *. Float.of_int h in
-    let window, renderer =
-      match Sdl.init Sdl.Init.video with
-      | Error(`Msg e) -> Sdl.log "Init error: %s" e; exit 1
-      | Ok () ->
-        match Sdl.create_window_and_renderer ~w:out_w ~h:out_h Sdl.Window.opengl with
-        | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
-        | Ok (w,r) -> w,r
-    in
-    { inner_w=w; inner_h=h; renderer; window; zoom }
+let create w h ~zoom =
+  let out_w = Int.of_float @@ zoom *. Float.of_int w in
+  let out_h = Int.of_float @@ zoom *. Float.of_int h in
+  let window, renderer =
+    match Sdl.init Sdl.Init.video with
+    | Error(`Msg e) -> Sdl.log "Init error: %s" e; exit 1
+    | Ok () ->
+      match Sdl.create_window_and_renderer ~w:out_w ~h:out_h Sdl.Window.opengl with
+      | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
+      | Ok (w,r) -> w,r
+  in
+  { inner_w=w; inner_h=h; renderer; window; zoom }
 
-  let zoom win x =
-    win.zoom *. Float.of_int x |> Int.of_float
+let zoom win x =
+  win.zoom *. Float.of_int x |> Int.of_float
+
+let get_exn = function
+  | Ok x -> x
+  | Error(`Msg s) -> failwith s
+
 
 module Texture = struct
   type t = {
@@ -61,8 +66,8 @@ module Texture = struct
   let update (tex:t) (ndarray:Pic.ndarray) =
     let h, w = Ndarray.nth_dim ndarray 0, Ndarray.nth_dim ndarray 1 in
     let ndarray = (Bigarray.reshape_1 ndarray (w*h*4)) in
-    Sdl.update_texture tex.texture None ndarray (tex.w * 4)
-
+    let res = Sdl.update_texture tex.texture None ndarray (tex.w * 4) in
+    get_exn res
 end
 
 open Result.Infix
@@ -78,8 +83,4 @@ let render ?(x=0) ?(y=0) ?color win tex =
   Sdl.render_copy win.renderer tex.texture ~dst:tex.dst
 
 let clear_screen win = Sdl.render_clear win.renderer
-
-let error_handle = function
-  | Ok x -> x
-  | Error(`Msg s) -> failwith s
 

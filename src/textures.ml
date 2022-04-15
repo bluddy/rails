@@ -167,7 +167,7 @@ end
 type t = {
   maps: (Gmap.area * R.Texture.t) list;
   pics: (string, R.Texture.t) Hashtbl.t;
-  map: R.Texture.t;   (* current map *)
+  mutable map: R.Texture.t;   (* current map *)
   pixel: R.Texture.t; (* white pixel *)
   fonts: Fonts.t;
   tiles: (Gmap.tile, Tile.t) Hashtbl.t;
@@ -189,6 +189,9 @@ let of_resources win res area =
   let tiles, small_tiles = Tile.slice_tiles win res in
   {maps; pics; map; pixel; fonts; tiles; small_tiles}
 
-let update_map v map =
+let update_map win v map =
+  (* R.Texture.destroy v.map; *)
+  (* let tex = R.Texture.make win @@ Gmap.to_img map in *)
+  (* v.map <- tex *)
   R.Texture.update v.map @@ Gmap.to_img map
 
