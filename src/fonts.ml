@@ -207,7 +207,7 @@ module Render = struct
       acc
       chars
     )
-    (Result.return ())
+    ()
     to_render 
 
 end

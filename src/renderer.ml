@@ -49,11 +49,7 @@ module Texture = struct
       >>= fun surf ->
       Sdl.create_texture_from_surface win.renderer surf
     in
-    let texture =
-      match res with
-      | Error(`Msg e) -> Sdl.log "Couldn't create texture from surface: %s" e; exit 1
-      | Ok t -> t
-    in
+    let texture = get_exn res in
     let w' = zoom win w in
     let h' = zoom win h in
     let dst = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
@@ -66,8 +62,9 @@ module Texture = struct
   let update (tex:t) (ndarray:Pic.ndarray) =
     let h, w = Ndarray.nth_dim ndarray 0, Ndarray.nth_dim ndarray 1 in
     let ndarray = (Bigarray.reshape_1 ndarray (w*h*4)) in
-    let res = Sdl.update_texture tex.texture None ndarray (tex.w * 4) in
-    get_exn res
+    Sdl.update_texture tex.texture None ndarray (tex.w * 4)
+      |> get_exn
+
 end
 
 open Result.Infix
@@ -76,11 +73,14 @@ let render ?(x=0) ?(y=0) ?color win tex =
   let open Texture in
   Sdl.Rect.set_x tex.dst @@ zoom win x;
   Sdl.Rect.set_y tex.dst @@ zoom win y;
-  let* () = match color with
-    | Some (r,g,b) -> Sdl.set_texture_color_mod tex.texture r g b
-    | _ -> Result.return ()
+  let () = match color with
+    | Some (r,g,b) ->
+        Sdl.set_texture_color_mod tex.texture r g b |> get_exn
+    | _ -> ()
   in
   Sdl.render_copy win.renderer tex.texture ~dst:tex.dst
+  |> get_exn
 
-let clear_screen win = Sdl.render_clear win.renderer
+let clear_screen win =
+  Sdl.render_clear win.renderer |> get_exn
 

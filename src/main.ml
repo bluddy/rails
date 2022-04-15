@@ -48,11 +48,10 @@ let init_mapdemo ~filename win =
 
   let render () =
     let _ =
-      let open Result.Infix in
-      let* () = Sdl.render_clear win.R.renderer in
-      let* () = Renderer.render win bg_tex in
-      let* () = Renderer.render win map_tex in
-      let* () = Renderer.render win ~x:257 text_tex in
+      Renderer.clear_screen win;
+      Renderer.render win bg_tex;
+      Renderer.render win map_tex;
+      Renderer.render win ~x:257 text_tex;
       Result.return ()
     in ()
   in

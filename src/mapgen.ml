@@ -376,6 +376,6 @@ let render_new_pixels win v pixel_tex =
     let color = Gmap.pixel_to_enum pixel |> Ega.get_rgb in
     R.render win ~x ~y ~color pixel_tex
   in
-  IntIntMap.fold render v.new_pixels (Result.return ());
+  IntIntMap.fold render v.new_pixels ();
 
 

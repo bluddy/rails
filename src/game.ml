@@ -74,16 +74,12 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     let render (s:state) =
       match s.screen.Screen.view with
       | Screen.MapGen Some data ->
-          let open Result.Infix in
           let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
-          let () = R.error_handle @@
-            let* () = R.clear_screen win in
-            let* () = R.render win bg_tex in
-            let* () = R.render win @@ List.assoc ~eq:(Gmap.equal_area) area s.textures.maps in
-            let* () = Fonts.Render.render s.textures.fonts ~win ~to_render:data.text in
-            let* () = Mapgen.render_new_pixels win data s.textures.pixel in
-            Result.return ()
-          in
+          R.clear_screen win;
+          R.render win bg_tex;
+          R.render win @@ List.assoc ~eq:(Gmap.equal_area) area s.textures.maps;
+          Fonts.Render.render s.textures.fonts ~win ~to_render:data.text;
+          Mapgen.render_new_pixels win data s.textures.pixel;
           s
 
       | Screen.MapGen None -> s
