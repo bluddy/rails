@@ -20,4 +20,6 @@ type t =
 
 let default = {zoom=F4}
 
+let update = ()
+
 

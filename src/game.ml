@@ -4,25 +4,6 @@ module R = Renderer
 module Ndarray = Owl_base_dense_ndarray.Generic
 open Tsdl
 
-
-(* The actual game (server) state *)
-type game = {
-  area: Gmap.area;
-  map : Gmap.t;
-  cities: Gmap.city array;
-}
-[@@deriving lens]
-
-type state = {
-  random: Random.State.t;
-  seed: int;
-  game: game;
-  screen: Screen.t;
-  resources: Resources.t;
-  textures: Textures.t;
-}
-[@@deriving lens]
-
 let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let random = Random.get_state () in
   (* Used by different elements *)
@@ -38,28 +19,28 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     let map = List.assoc ~eq:(Stdlib.(=)) area resources.res_maps in
     let cities = List.assoc ~eq:(Stdlib.(=)) area resources.res_cities
       |> Array.of_list in
-    let game = {map; area; cities} in
+    let game = {State.map; area; cities} in
 
     let textures = Textures.of_resources win resources area in
-    let state = {game; screen; resources; random; textures; seed} in
+    let state = {State.game; screen; resources; random; textures; seed} in
 
     Printf.printf " done.\n";
 
-    let update (s:state) (event:Sdl.event option) =
+    let update (s:State.t) (event:Sdl.event option) =
       let state =
         match s.screen.Screen.view with
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
             let cities = List.assoc ~eq:(Gmap.equal_area) area s.resources.res_cities in
             let data = Mapgen.init s.random s.game.area cities in
-            Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) s
+            Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) s
 
         | Screen.MapGen Some {state=`Done; _} ->
             begin match event with
             | Some event ->
                 begin match Sdl.Event.(enum (get event typ)) with
                 | `Key_down ->
-                  Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
+                  Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
                 | _ -> s
                 end
             | _ -> s
@@ -77,13 +58,13 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
               Mapgen.update_map_step random acc ~done_fn ~map ~fonts:s.textures.fonts)
               data
             in
-            Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
+            Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | _ -> s
       in
       state, false
     in
-    let render (s:state) =
+    let render (s:State.t) =
       match s.screen.Screen.view with
       | Screen.MapGen Some data ->
           let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
