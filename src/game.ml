@@ -40,7 +40,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             | Some event ->
                 begin match Sdl.Event.(enum (get event typ)) with
                 | `Key_down ->
-                  Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
+                    Printf.printf "Mapview\n";
+                    Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
                 | _ -> s
                 end
             | _ -> s
@@ -49,8 +50,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen Some data ->
             let done_fn () =
               (* Final update of map *)
-              let _ = Textures.update_map win s.textures s.game.map in
-              ()
+              Textures.update_map win s.textures s.game.map
             in
             let data =
               Iter.(0 -- 6)
@@ -59,6 +59,9 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
               data
             in
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
+
+        | Screen.MapView data ->
+            Mapview.update s data event
 
         | _ -> s
       in
@@ -74,8 +77,10 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
           Fonts.Render.render s.textures.fonts ~win ~to_render:data.text;
           Mapgen.View.render_new_pixels win data s.textures.pixel;
           s
+      | MapGen None -> s
 
-      | Screen.MapGen None -> s
+      | MapView data ->
+          Mapview.render win s data
     in
     state, Mainloop.{update; render}
   in
