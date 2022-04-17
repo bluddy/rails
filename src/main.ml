@@ -55,7 +55,7 @@ let init_mapdemo ~filename win =
       Result.return ()
     in ()
   in
-  (), Graphics.{update; render}
+  (), Mainloop.{update; render}
 
 let init_pani win ~filename =
   let stream = Pani.stream_of_file filename in
@@ -115,7 +115,7 @@ let init_pani win ~filename =
     Iter.(0 -- 50)
 
   in 
-  ((), Graphics.{update; render})
+  ((), Mainloop.{update; render})
 
 let () =
   parse arglist (fun _ -> ()) "Usage";
@@ -123,8 +123,8 @@ let () =
   | `Font -> Fonts.main !file
   | `Pic  -> Pic.png_of_file !file
   | `Pani when !dump -> Pani.main !file
-  | `Pani -> Graphics.main @@ init_pani ~filename:!file
+  | `Pani -> Mainloop.main @@ init_pani ~filename:!file
   | `City -> Mapgen.load_city_list WestUS ~debug:true |> ignore
-  | `MapDemo -> Graphics.main @@ init_mapdemo ~filename:!file
+  | `MapDemo -> Mainloop.main @@ init_mapdemo ~filename:!file
   | `Game -> Game.run ()
 

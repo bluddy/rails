@@ -96,9 +96,9 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
       | Screen.MapGen None -> s
     in
-    state, Graphics.{update; render}
+    state, Mainloop.{update; render}
   in
-  Graphics.main init_fn
+  Mainloop.main init_fn
 
 
 
