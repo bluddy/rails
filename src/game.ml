@@ -2,6 +2,7 @@ open Containers
 module R = Renderer
 (* open Tsdl *)
 module Ndarray = Owl_base_dense_ndarray.Generic
+open Tsdl
 
 
 (* The actual game (server) state *)
@@ -44,14 +45,26 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     Printf.printf " done.\n";
 
-    let update (s:state) _event =
+    let update (s:state) (event:Sdl.event option) =
       let state =
         match s.screen.Screen.view with
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
             let cities = List.assoc ~eq:(Gmap.equal_area) area s.resources.res_cities in
             let data = Mapgen.init s.random s.game.area cities in
-            Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
+            Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) s
+
+        | Screen.MapGen Some {state=`Done; _} ->
+            begin match event with
+            | Some event ->
+                begin match Sdl.Event.(enum (get event typ)) with
+                | `Key_down ->
+                  Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
+                | _ -> s
+                end
+            | _ -> s
+            end
+
         | Screen.MapGen Some data ->
             let done_fn () =
               (* Final update of map *)
@@ -66,7 +79,6 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             in
             Lens.Infix.((state_screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
-
         | _ -> s
       in
       state, false
@@ -77,9 +89,9 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
           let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
           R.clear_screen win;
           R.render win bg_tex;
-          R.render win @@ List.assoc ~eq:(Gmap.equal_area) area s.textures.maps;
+          R.render win s.textures.map;
           Fonts.Render.render s.textures.fonts ~win ~to_render:data.text;
-          Mapgen.render_new_pixels win data s.textures.pixel;
+          Mapgen.View.render_new_pixels win data s.textures.pixel;
           s
 
       | Screen.MapGen None -> s

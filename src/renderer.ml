@@ -36,24 +36,27 @@ module Texture = struct
     h: int;
     w: int;
     texture: Sdl.texture;
+    surface: Sdl.surface;
+    mutable ndarray: (int, Bigarray.int8_unsigned_elt) Sdl.bigarray;
     dst: Sdl.rect;
     mutable dirty_rect: bool;
   }
 
   let make win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
-    let open Result.Infix in
-    let res =
-      Sdl.create_rgb_surface_with_format_from (Bigarray.reshape_1 arr (w*h*4))
+    let ndarray = Bigarray.reshape_1 arr (w*h*4) in
+    let surface =
+      Sdl.create_rgb_surface_with_format_from ndarray
         ~w ~h ~depth:32 ~pitch:(w*4) Sdl.Pixel.format_abgr8888
-      >>= fun surf ->
-      Sdl.create_texture_from_surface win.renderer surf
+      |> get_exn
     in
-    let texture = get_exn res in
+    let texture = Sdl.create_texture_from_surface win.renderer surface
+      |> get_exn
+    in
     let w' = zoom win w in
     let h' = zoom win h in
     let dst = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
-    { w; h; texture; dst; dirty_rect=true}
+    { w; h; ndarray; texture; surface; dst; dirty_rect=true}
 
   let destroy tex =
     Sdl.destroy_texture tex.texture
@@ -78,8 +81,7 @@ let render ?(x=0) ?(y=0) ?color win tex =
         Sdl.set_texture_color_mod tex.texture r g b |> get_exn
     | _ -> ()
   in
-  Sdl.render_copy win.renderer tex.texture ~dst:tex.dst
-  |> get_exn
+  Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn

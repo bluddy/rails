@@ -369,6 +369,8 @@ let update_map_step r v ~map ~fonts ~done_fn =
   | `Done ->
            v
 
+module View = struct
+
 module R = Renderer
 
 let render_new_pixels win v pixel_tex =
@@ -378,4 +380,4 @@ let render_new_pixels win v pixel_tex =
   in
   IntIntMap.fold render v.new_pixels ();
 
-
+end
