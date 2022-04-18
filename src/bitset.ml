@@ -35,6 +35,8 @@ module type S = sig
 
   val to_list: t -> elt list
 
+  val pp: Format.formatter -> t -> unit
+
 end
 
 module Make(E: Elem) = struct
@@ -89,5 +91,8 @@ module Make(E: Elem) = struct
 
   let to_list v =
     fold (fun acc x -> x::acc) [] v
+
+  let pp fmt v =
+    Format.fprintf fmt "%d" v
 
 end

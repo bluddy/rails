@@ -35,6 +35,8 @@ module type S = sig
 
   val to_list: t -> elt list
 
+  val pp: Format.formatter -> t -> unit
+
 end
 
 module Make (E : Elem) : S with type elt = E.t

@@ -14,6 +14,9 @@ let update (s:State.t) (v:t) (event:Event.t) =
   | Key {down=true; key=F2; _} -> v.zoom <- Zoom2
   | Key {down=true; key=F3; _} -> v.zoom <- Zoom3
   | Key {down=true; key=F4; _} -> v.zoom <- Zoom4
+  | MouseButton {down=true; x; y} ->
+      v.center_x <- x;
+      v.center_y <- y
   | _ -> ()
   end;
   s

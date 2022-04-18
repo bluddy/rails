@@ -150,7 +150,12 @@ module Tile = struct
     (tiles, small_tiles)
 
     let find hash tile ~area ~alt =
-      let v = Hashtbl.find hash tile in
+      let v = 
+        try
+          Hashtbl.find hash tile
+        with Not_found ->
+          failwith @@ Printf.sprintf "Tile %s not found" (Gmap.show_tile tile)
+      in
       let rec find = function
         | Single x -> x
         | Pair(_, x) when alt -> x

@@ -50,7 +50,7 @@ type tile =
   | Fort (* Eur *)
   | GlassWorks (* Eng *)
   | SheepFarm (* Eng, Eur *)
-  [@@deriving eq]
+  [@@deriving eq, show]
 
 (* Map data type. Starts at top left *)
 type t = {

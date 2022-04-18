@@ -7,7 +7,7 @@ type zoom =
 
 type t =
   {
-    center_x: int;
-    center_y: int;
+    mutable center_x: int;
+    mutable center_y: int;
     mutable zoom: zoom;
   }
