@@ -32,12 +32,17 @@ let ccw = function
   | UpLeft -> Left
 
 module Set = struct
-  include Set.Make(struct type nonrec t=t let compare = compare end)
+  include Bitset.Make(struct
+    type nonrec t=t
+    let to_enum = to_enum
+    let of_enum = of_enum
+    let last = UpLeft
+  end)
 
   (* Convert bool mask to dir set *)
   let of_mask mask =
     Iter.foldi (fun acc i v ->
-      if v then add (of_enum i |> Option.get_exn_or "Dir") acc
+      if v then add acc (of_enum i |> Option.get_exn_or "dir")
       else acc)
     empty
     mask
