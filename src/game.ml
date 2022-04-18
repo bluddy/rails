@@ -2,7 +2,6 @@ open Containers
 module R = Renderer
 (* open Tsdl *)
 module Ndarray = Owl_base_dense_ndarray.Generic
-open Tsdl
 
 let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let random = Random.get_state () in
@@ -26,7 +25,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     Printf.printf " done.\n";
 
-    let update (s:State.t) (event:Sdl.event option) =
+    let update (s:State.t) (event:Event.t) =
       let state =
         match s.screen.Screen.view with
         | Screen.MapGen None ->
@@ -37,13 +36,9 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
         | Screen.MapGen Some {state=`Done; _} ->
             begin match event with
-            | Some event ->
-                begin match Sdl.Event.(enum (get event typ)) with
-                | `Key_down ->
+            | Key {down=true; _} ->
                     Printf.printf "Mapview\n";
                     Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
-                | _ -> s
-                end
             | _ -> s
             end
 

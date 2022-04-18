@@ -1,9 +1,9 @@
 
 type zoom =
-  | F1
-  | F2
-  | F3
-  | F4
+  | Zoom1
+  | Zoom2
+  | Zoom3
+  | Zoom4
 
 type t =
   {
