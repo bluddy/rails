@@ -21,7 +21,6 @@ type t = {
 [@@deriving lens]
 
 let make view = {
-  menu_open=false;
-  view=view;
+  menu_open=false; view; 
 }
 

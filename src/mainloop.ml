@@ -9,7 +9,8 @@ type 'a t = {
 }
 
 let main init_fn =
-  let win = R.create 320 200 ~zoom:2. in
+  let zoom = 2. in
+  let win = R.create 320 200 ~zoom in
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)
 
@@ -18,7 +19,7 @@ let main init_fn =
   let rec event_loop data (last_time:int32) =
     let has_event = Sdl.poll_event some_event in
     let event =
-      if has_event then Event.of_sdl event else Event.NoEvent
+      if has_event then Event.of_sdl event ~zoom else Event.NoEvent
     in
     let render_wait_time = 30l in
     match event with

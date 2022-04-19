@@ -1,6 +1,4 @@
 open Containers
-open Tsdl
-
 open Mapview_d
 
 let default = {center_x=0; center_y=0; zoom=Zoom4; width=256; height=192}

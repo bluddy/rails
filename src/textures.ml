@@ -51,6 +51,7 @@ module Tile = struct
       pair Clear 0;
       pair Woods 1;
       pair Swamp 2;
+      pair Desert 2; (* Needs to be yellow *)
       pair Foothills 3;
       pair Hills 4;
       pair Mountains 5;

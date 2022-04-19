@@ -118,10 +118,13 @@ let key event (event_typ:Sdl.Event.enum) =
   with
   | UnhandledKey -> NoEvent
 
-let mouse_motion event =
+let handle_zoom x ~zoom =
+  (float_of_int x) /. zoom |> int_of_float
+
+let mouse_motion event ~zoom =
   let open Sdl.Event in
-  let x = get event mouse_motion_x in
-  let y = get event mouse_motion_y in
+  let x = get event mouse_motion_x |> handle_zoom ~zoom in
+  let y = get event mouse_motion_y |> handle_zoom ~zoom in
   let state = get event mouse_motion_state in
   let state =
     let mod_set test v set =
@@ -136,10 +139,10 @@ let mouse_motion event =
   in
   MouseMotion{x; y; state}
 
-let mouse_button event (event_typ:Sdl.Event.enum) =
+let mouse_button event (event_typ:Sdl.Event.enum) ~zoom =
   let open Sdl.Event in
-  let x = get event mouse_button_x in
-  let y = get event mouse_button_y in
+  let x = get event mouse_button_x |> handle_zoom ~zoom in
+  let y = get event mouse_button_y |> handle_zoom ~zoom in
   let clicks = get event mouse_button_clicks in
   (* let state = get event mouse_button_state in *)
   let button = get event mouse_button_button in
@@ -168,13 +171,13 @@ let mouse_wheel event =
   in
   MouseWheel {x; y}
 
-let of_sdl event =
+let of_sdl event ~zoom =
   let t = Sdl.Event.(enum (get event typ)) in
   match t with
   | `Mouse_button_up | `Mouse_button_down ->
-      mouse_button event t
+      mouse_button event t ~zoom
   | `Mouse_motion ->
-      mouse_motion event
+      mouse_motion event ~zoom
   | `Mouse_wheel ->
       mouse_wheel event
   | `Key_down | `Key_up ->
