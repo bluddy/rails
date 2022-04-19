@@ -3,10 +3,24 @@ open Tsdl
 
 open Mapview_d
 
-let width = 256
-let height = 192
+let default = {center_x=0; center_y=0; zoom=Zoom4; width=256; height=192}
 
-let default = {center_x=0; center_y=0; zoom=Zoom4}
+let tile_size_of_zoom = function
+  | Zoom1 -> 1, 1
+  | Zoom2 | Zoom3 -> 8, 8
+  | Zoom4 -> 16, 16
+
+let tile_textures_of_zoom s = function
+  | Zoom3 | Zoom2 -> s.State.textures.small_tiles
+  | Zoom4 -> s.textures.tiles
+  | Zoom1 -> failwith "tile_textures_of_zoom"
+
+let calc_start v tile_w tile_h =
+  let start_x = v.center_x - v.width/(tile_w*2) in
+  let start_x = if start_x < 0 then 0 else start_x in
+  let start_y = v.center_y - v.height/(tile_h*2) in
+  let start_y = if start_y < 0 then 0 else start_y in
+  start_x, start_y
 
 let update (s:State.t) (v:t) (event:Event.t) =
   begin match event with
@@ -14,9 +28,14 @@ let update (s:State.t) (v:t) (event:Event.t) =
   | Key {down=true; key=F2; _} -> v.zoom <- Zoom2
   | Key {down=true; key=F3; _} -> v.zoom <- Zoom3
   | Key {down=true; key=F4; _} -> v.zoom <- Zoom4
-  | MouseButton {down=true; x; y} ->
+  | MouseButton {down=true; x; y; _} ->
+      Printf.printf "Mouse x[%d] y[%d]\n" x y;
+      let tile_w, tile_h = tile_size_of_zoom v.zoom in
+      let start_x, start_y = calc_start v tile_w tile_h in
+      let x = start_x + x/tile_w in
+      let y = start_y + y/tile_h in
       v.center_x <- x;
-      v.center_y <- y
+      v.center_y <- y;
   | _ -> ()
   end;
   s
@@ -27,10 +46,7 @@ module R = Renderer
 (* TODO: alt tiles *)
 let render win (s:State.t) (v:t) =
   let do_render tile_w tile_h tiles =
-    let start_x = v.center_x - width/(tile_w*2) in
-    let start_x = if start_x < 0 then 0 else start_x in
-    let start_y = v.center_y - height/(tile_h*2) in
-    let start_y = if start_y < 0 then 0 else start_y in
+    let start_x, start_y = calc_start v tile_w tile_h in
 
     let open Iter in
     iter (fun i ->
@@ -40,18 +56,17 @@ let render win (s:State.t) (v:t) =
         let x, y = j * tile_w, i * tile_h in
         R.render win tex ~x ~y;
       )
-      (0--(width/tile_w - 1)))
-    (0--(height/tile_h - 1))
+      (0--(v.width/tile_w - 1)))
+    (0--(v.height/tile_h - 1))
   in
-  match v.zoom with
+  R.clear_screen win;
+  begin match v.zoom with
   | Zoom1 ->
-    R.clear_screen win;
-    R.render win s.textures.map;
-    s
-  | Zoom4 ->
-      do_render 16 16 s.textures.tiles;
-      s
-  | Zoom2 | Zoom3 ->
-      do_render 8 8 s.textures.small_tiles;
-      s
+      R.render win s.textures.map;
+  | _ ->
+      let tile_w, tile_h = tile_size_of_zoom v.zoom in
+      let tiles = tile_textures_of_zoom s v.zoom in
+      do_render tile_w tile_h tiles;
+  end;
+  s
 

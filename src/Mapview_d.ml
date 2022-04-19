@@ -7,7 +7,9 @@ type zoom =
 
 type t =
   {
-    mutable center_x: int;
-    mutable center_y: int;
+    mutable center_x: int; (* in map coordinates *)
+    mutable center_y: int; (* in map coordinates *)
     mutable zoom: zoom;
+    width: int;
+    height: int;
   }
