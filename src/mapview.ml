@@ -52,8 +52,10 @@ let render win (s:State.t) (v:t) =
     let open Iter in
     iter (fun i ->
       iter (fun j ->
+        let map_x, map_y = start_x + j, start_y + i in
+        let alt = ((map_x + map_y) land 1) > 0 in
         let tile = Gmap.get_tile s.game.map (start_x+j) (start_y+i) in
-        let tex = Textures.Tile.find tiles ~area:s.game.area ~alt:false tile in
+        let tex = Textures.Tile.find tiles ~area:s.game.area ~alt tile in
         let x, y = j * tile_w, i * tile_h in
         R.render win tex ~x ~y;
       )

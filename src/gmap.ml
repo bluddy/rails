@@ -123,11 +123,20 @@ let pixel_of_tile = function
 let map_height = 192
 let map_width = 256
 
+
 let calc_offset x y = y * map_width + x
 
 let get_tile map x y = map.map.(calc_offset x y)
 
 let set_tile map x y tile = map.map.(calc_offset x y) <- tile
+
+let iter f map =
+  for y=0 to map_height - 1 do
+    for x=0 to map_width - 1 do
+      let tile = get_tile map x y in
+      f x y tile
+    done
+  done
 
   (* Get mask around a certain point based on a function
      edge: behavior along edges of map
@@ -142,7 +151,7 @@ let get_mask ?(n=8) ?(diag=false) ~edge ~map ~f ~x ~y =
     if x_off < 0 || x_off >= map_width || y_off < 0 || y_off >= map_height then
       edge
     else
-      f (get_tile map x y)
+      f (get_tile map x_off y_off)
   )
   Iter.(0--(n-1))
 
@@ -169,7 +178,11 @@ let tile_of_pixel ~area ~x ~y ~pixel ~seed =
     | Mountain_pixel -> Mountains
     | Ocean_pixel -> Ocean(Dir.Set.empty)
   in
-  let complex_mapping pixel xy_random = match (pixel, xy_random) with
+  (* NOTE: Does some area change the mappings?
+      Otherwise why would clear pixels get complex mapping when they can't have anything? *)
+  let complex_mapping pixel xy_random =
+    (* xy_random is 0-3 *)
+    match (pixel, xy_random) with
     | River_pixel, (0 | 2) -> Landing(Dir.Set.empty)
     | River_pixel, _ -> River(Dir.Set.empty)
     | Farm_pixel, 0 -> GrainElev
@@ -262,35 +275,32 @@ let of_ndarray ~area ~seed ndarray =
     let mask = get_mask ~map ~edge ~f ~x ~y in
     Dir.Set.of_mask mask
   in
-  let river_func = function
+  let is_water = function
     | River _
     | Landing _
     | Harbor
     | Ocean _ -> true
     | _ -> false
   in
-  for y=0 to map_height-1 do
-    for x=0 to map_width-1 do
-      let tile =
-        match get_tile map x y with
+  iter (fun x y tile ->
+      let tile = match tile with
         | Ocean _ ->
             let dirs =
-              resolve_dirs ~f:(function Ocean _ -> false | _ -> true)
-                ~x ~y ~edge:false
+              resolve_dirs ~f:(fun x -> not (is_water x)) ~x ~y ~edge:false
             in
             Ocean dirs
         | River _ ->
-            let dirs = resolve_dirs ~f:river_func ~x ~y ~edge:true in
+            let dirs = resolve_dirs ~f:is_water ~x ~y ~edge:true in
             River dirs
         | Landing _ ->
-            let dirs = resolve_dirs ~f:river_func ~x ~y ~edge:true in
+            let dirs = resolve_dirs ~f:is_water ~x ~y ~edge:true in
             River dirs
         | x -> x
       in
-      set_tile map x y tile
-    done
-  done;
+      set_tile map x y tile)
+  map;
   map
+
 
 let of_file ~area ~seed filename =
   ndarray_of_file filename
