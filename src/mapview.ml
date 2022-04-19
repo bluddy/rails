@@ -22,12 +22,15 @@ let calc_start v tile_w tile_h =
 
 let update (s:State.t) (v:t) (event:Event.t) =
   begin match event with
-  | Key {down=true; key=F1; _} -> v.zoom <- Zoom1
-  | Key {down=true; key=F2; _} -> v.zoom <- Zoom2
-  | Key {down=true; key=F3; _} -> v.zoom <- Zoom3
-  | Key {down=true; key=F4; _} -> v.zoom <- Zoom4
+  | Key {down=true; key=F1; _} ->
+      v.zoom <- Zoom1
+  | Key {down=true; key=F2; _} ->
+      v.zoom <- Zoom2
+  | Key {down=true; key=F3; _} ->
+      v.zoom <- Zoom3
+  | Key {down=true; key=F4; _} ->
+      v.zoom <- Zoom4
   | MouseButton {down=true; x; y; _} ->
-      Printf.printf "Mouse x[%d] y[%d]\n" x y;
       let tile_w, tile_h = tile_size_of_zoom v.zoom in
       let start_x, start_y = calc_start v tile_w tile_h in
       let x = start_x + x/tile_w in

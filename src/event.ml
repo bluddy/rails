@@ -3,7 +3,7 @@ open Tsdl
 
 type mouse_button =
   [ `Left | `Right | `Middle | `X1 | `X2 ]
-  [@@deriving enum]
+  [@@deriving enum, show]
 
 module ButtonBitset = Bitset.Make(struct
   type t = mouse_button
@@ -17,6 +17,7 @@ type key =
   | Q | R | S | T | U | V | W | X | Y | Z
   | F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | F10 | F11 | F12 | Enter | Space
   | Left | Right | Up | Down
+  [@@deriving show]
 
 type modifier =
   [`Shift | `Ctrl | `Alt | `Lshift | `Rshift | `Lctrl | `Rctrl | `Lalt | `Ralt | `Caps]
@@ -37,8 +38,9 @@ type t =
   | Key of {repeat: int; key: key; modifiers: ModifierBitset.t; down:bool}
   | Quit
   | NoEvent
+  [@@deriving show]
 
-let key event (event_typ:Sdl.Event.enum) =
+let handle_key event (event_typ:Sdl.Event.enum) =
   let open Sdl.Event in
   let open Sdl.Kmod in
   let repeat = get event keyboard_repeat in
@@ -64,7 +66,7 @@ let key event (event_typ:Sdl.Event.enum) =
     | _ -> failwith "key"
   in
   let exception UnhandledKey in
-  let key = Sdl.Scancode.enum (get event keyboard_keycode) in
+  let key = Sdl.Scancode.enum (get event keyboard_scancode) in
   try
     let key =
       match key with
@@ -181,7 +183,7 @@ let of_sdl event ~zoom =
   | `Mouse_wheel ->
       mouse_wheel event
   | `Key_down | `Key_up ->
-      key event t
+      handle_key event t
   | `Quit -> Quit
   | _ -> NoEvent
 
