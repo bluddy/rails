@@ -43,12 +43,18 @@ let update (s:State.t) (v:t) (event:Event.t) =
   | Key {down=true; key=F4; _} ->
       v.zoom <- Zoom4
   | MouseButton {down=true; x; y; _} ->
-      let tile_w, tile_h = tile_size_of_zoom v.zoom in
-      let start_x, start_y = calc_start v tile_w tile_h in
-      let x = start_x + x/tile_w in
-      let y = start_y + y/tile_h in
-      v.center_x <- x;
-      v.center_y <- y;
+      begin match v.zoom with
+      | Zoom1 ->
+          v.center_x <- x;
+          v.center_y <- y
+      | _ ->
+        let tile_w, tile_h = tile_size_of_zoom v.zoom in
+        let start_x, start_y = calc_start v tile_w tile_h in
+        let x = start_x + x/tile_w in
+        let y = start_y + y/tile_h in
+        v.center_x <- x;
+        v.center_y <- y;
+      end
   | _ -> ()
   end;
   s

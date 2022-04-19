@@ -155,9 +155,21 @@ let get_mask ?(n=8) ?(diag=false) ~edge ~map ~f ~x ~y =
   )
   Iter.(0--(n-1))
 
-
 (* seed: 15 bits from time *)
-let tile_of_pixel ~area ~x ~y ~pixel ~seed =
+let tile_of_pixel ~area ~x ~y ~pixel ~map =
+  let seed = map.seed in
+  let water_dirs ~edge ~f =
+    let mask = get_mask ~edge ~f ~x ~y ~map in
+    Dir.Set.of_mask mask
+  in
+  let is_water = function
+    | River _
+    | Landing _
+    | Harbor
+    | Ocean _ -> true
+    | _ -> false
+  in
+  let not_water x = not (is_water x) in
   let xy_random = x * 9 + y * 13 + seed in
   (* let pixel = Option.get @@ pixel_of_enum pixel in *)
   let simple_mapping = function
@@ -169,22 +181,26 @@ let tile_of_pixel ~area ~x ~y ~pixel ~seed =
     | Desert_pixel -> Swamp
     | Foothills_pixel -> Foothills
     | OilWell_pixel -> Factory (* TODO check *)
-    | River_pixel -> River(Dir.Set.empty)
+    | River_pixel ->
+        River(water_dirs ~edge:false ~f:is_water)
     | Farm_pixel -> Farm
     | Hills_pixel -> Hills
     | Village_pixel -> Village
     | EnemyRR_pixel -> EnemyRR
     | City_pixel -> City
     | Mountain_pixel -> Mountains
-    | Ocean_pixel -> Ocean(Dir.Set.empty)
+    | Ocean_pixel ->
+        Ocean(water_dirs ~edge:false ~f:not_water)
   in
   (* NOTE: Does some area change the mappings?
       Otherwise why would clear pixels get complex mapping when they can't have anything? *)
   let complex_mapping pixel xy_random =
     (* xy_random is 0-3 *)
     match (pixel, xy_random) with
-    | River_pixel, (0 | 2) -> Landing(Dir.Set.empty)
-    | River_pixel, _ -> River(Dir.Set.empty)
+    | River_pixel, (0 | 2) ->
+        Landing(water_dirs ~edge:false ~f:is_water)
+    | River_pixel, _ ->
+        River(water_dirs ~edge:false ~f:is_water)
     | Farm_pixel, 0 -> GrainElev
     | Farm_pixel, 3 -> Ranch
     | Farm_pixel, _ -> Farm
@@ -265,40 +281,20 @@ let of_ndarray ~area ~seed ndarray =
     for x=0 to map_width-1 do
       let v = Ndarray.get ndarray [|y; x|] in
       let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum v in
-      let tile = tile_of_pixel ~area ~x ~y ~pixel ~seed in
+      let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
       set_tile map x y tile
     done
   done;
 
-  (* Second pass: resolve ocean and river directions *)
-  let resolve_dirs ~edge ~f ~x ~y =
-    let mask = get_mask ~map ~edge ~f ~x ~y in
-    Dir.Set.of_mask mask
-  in
-  let is_water = function
-    | River _
-    | Landing _
-    | Harbor
-    | Ocean _ -> true
-    | _ -> false
-  in
-  iter (fun x y tile ->
-      let tile = match tile with
-        | Ocean _ ->
-            let dirs =
-              resolve_dirs ~f:(fun x -> not (is_water x)) ~x ~y ~edge:false
-            in
-            Ocean dirs
-        | River _ ->
-            let dirs = resolve_dirs ~f:is_water ~x ~y ~edge:true in
-            River dirs
-        | Landing _ ->
-            let dirs = resolve_dirs ~f:is_water ~x ~y ~edge:true in
-            Landing dirs
-        | x -> x
-      in
-      set_tile map x y tile)
-  map;
+  (* Second pass: fix up ocean and river directions *)
+  for y=0 to map_height-1 do
+    for x=0 to map_width-1 do
+      let v = Ndarray.get ndarray [|y; x|] in
+      let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum v in
+      let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
+      set_tile map x y tile
+    done
+  done;
   map
 
 
@@ -329,6 +325,6 @@ let get_pixel ~map ~x ~y =
   get_tile map x y |> pixel_of_tile
 
 let set_pixel ~area ~map ~x ~y ~pixel =
-  let tile = tile_of_pixel ~area ~x ~y ~pixel ~seed:map.seed in
+  let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
   map.map.(calc_offset x y) <- tile
 

@@ -164,7 +164,7 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
          Here we have to test *)
       if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
       let pixel = Gmap.get_pixel ~map ~x ~y in
-      let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel ~seed:map.seed in
+      let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel ~map in
       if Gmap.equal_pixel pixel land_pixel && Gmap.equal_tile possible_tile wanted_tile then (
         Gmap.set_pixel ~area ~map ~x ~y ~pixel:resource_pixel;
         Some (x, y)
