@@ -13,11 +13,23 @@ let tile_textures_of_zoom s = function
   | Zoom4 -> s.textures.tiles
   | Zoom1 -> failwith "tile_textures_of_zoom"
 
+let calc_start_bounds_check v tile_w tile_h =
+  (* Pay attention to end as well *)
+  let x_delta = v.width/(tile_w*2) in
+  let y_delta = v.height/(tile_h*2) in
+  (* Adjust end *)
+  let end_x = v.center_x + x_delta |> min (Gmap.map_width - 1) in
+  let end_y = v.center_y + y_delta |> min (Gmap.map_height - 1) in
+  (* Use that to compute start *)
+  let start_x = end_x - 2 * x_delta |> max 0 in
+  let start_y = end_y - 2 * y_delta |> max 0 in
+  start_x, start_y
+
 let calc_start v tile_w tile_h =
-  let start_x = v.center_x - v.width/(tile_w*2) in
-  let start_x = if start_x < 0 then 0 else start_x in
-  let start_y = v.center_y - v.height/(tile_h*2) in
-  let start_y = if start_y < 0 then 0 else start_y in
+  let x_delta = v.width/(tile_w*2) in
+  let y_delta = v.height/(tile_h*2) in
+  let start_x = v.center_x - x_delta |> max 0 in
+  let start_y = v.center_y - y_delta |> max 0 in
   start_x, start_y
 
 let update (s:State.t) (v:t) (event:Event.t) =
@@ -47,7 +59,7 @@ module R = Renderer
 (* TODO: alt tiles *)
 let render win (s:State.t) (v:t) =
   let do_render tile_w tile_h tiles =
-    let start_x, start_y = calc_start v tile_w tile_h in
+    let start_x, start_y = calc_start_bounds_check v tile_w tile_h in
 
     let open Iter in
     iter (fun i ->

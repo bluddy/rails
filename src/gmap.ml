@@ -294,7 +294,7 @@ let of_ndarray ~area ~seed ndarray =
             River dirs
         | Landing _ ->
             let dirs = resolve_dirs ~f:is_water ~x ~y ~edge:true in
-            River dirs
+            Landing dirs
         | x -> x
       in
       set_tile map x y tile)
