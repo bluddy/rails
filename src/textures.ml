@@ -41,8 +41,7 @@ module Tile = struct
     let us_ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
     let en_ndarray = Hashtbl.find res.res_pics "ESPRITES" in
     let eu_ndarray = Hashtbl.find res.res_pics "CSPRITES" in
-
-    single_fn ~tiles ~ndarray:us_ndarray ~y:40 ~mult:16 Harbor 17;
+    let extra_ndarray = Hashtbl.find res.res_pics "SPRITES_extra" in 
 
     let load_us_tiles ~tiles ~y ~mult =
       let pair = pair_fn ~tiles ~ndarray:us_ndarray ~y ~mult in
@@ -97,6 +96,14 @@ module Tile = struct
     load_eu_tiles ~tiles ~y:0 ~mult:16;
     load_eu_tiles ~tiles:small_tiles ~y:32 ~mult:8;
 
+    (* We added these *)
+    let load_extra_tiles ~tiles ~y ~mult =
+      let pair = pair_fn ~tiles ~ndarray:extra_ndarray ~y ~mult in
+      pair Desert 2;
+    in
+    load_extra_tiles ~tiles ~y:0 ~mult:16;
+    load_extra_tiles ~tiles:small_tiles ~y:32 ~mult:8;
+
     (* Load cities and villages, which are slightly different per area *)
     let load_localized ~tiles ~y ~mult key i =
       let us = pair_part ~ndarray:us_ndarray ~y ~mult i in
@@ -109,12 +116,12 @@ module Tile = struct
     load_localized ~tiles:small_tiles ~y:32 ~mult:8 City 6;
     load_localized ~tiles:small_tiles ~y:32 ~mult:8 Village 7;
 
-    let load_dir_tiles ~tiles ~key ~y ~x ~mult =
+    let load_dir_tiles ~tiles ~key ~y ~x ~mult ~ndarray =
       let img i dirs =
         let x1, x2 = x + i * mult, x + (i+1) * mult - 1 in
         let y1, y2 = y, y + mult - 1 in
         let slice =
-          Ndarray.get_slice [[y1; y2]; [x1; x2]] us_ndarray
+          Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray
           |> R.Texture.make win
         in
         Hashtbl.replace tiles (key @@ Dir.Set.of_list dirs) @@ Single slice
@@ -138,15 +145,17 @@ module Tile = struct
       img 15 [Up; Right; Left; Down]
     in
     let ocean x = Ocean x in
+    let harbor x = Harbor x in
     let river x = River x in
     let landing x = Landing x in
-    load_dir_tiles ~tiles ~key:ocean ~y:48 ~x:0 ~mult:16;
-    load_dir_tiles ~tiles ~key:river ~y:64 ~x:0 ~mult:16;
-    (* TODO: make it bright *)
-    load_dir_tiles ~tiles ~key:landing ~y:64 ~x:0 ~mult:16;
-    load_dir_tiles ~tiles:small_tiles ~key:ocean ~y:32 ~x:160 ~mult:8;
-    load_dir_tiles ~tiles:small_tiles ~key:river ~y:40 ~x:160 ~mult:8;
-    load_dir_tiles ~tiles:small_tiles ~key:landing ~y:40 ~x:160 ~mult:8;
+    load_dir_tiles ~tiles ~key:ocean ~y:48 ~x:0 ~mult:16 ~ndarray:us_ndarray;
+    load_dir_tiles ~tiles ~key:harbor ~y:48 ~x:0 ~mult:16 ~ndarray:extra_ndarray;
+    load_dir_tiles ~tiles ~key:river ~y:64 ~x:0 ~mult:16 ~ndarray:us_ndarray;
+    load_dir_tiles ~tiles ~key:landing ~y:64 ~x:0 ~mult:16 ~ndarray:extra_ndarray;
+    load_dir_tiles ~tiles:small_tiles ~key:ocean ~y:32 ~x:160 ~mult:8 ~ndarray:us_ndarray;
+    load_dir_tiles ~tiles:small_tiles ~key:ocean ~y:32 ~x:160 ~mult:8 ~ndarray:extra_ndarray;
+    load_dir_tiles ~tiles:small_tiles ~key:river ~y:40 ~x:160 ~mult:8 ~ndarray:us_ndarray;
+    load_dir_tiles ~tiles:small_tiles ~key:landing ~y:40 ~x:160 ~mult:8 ~ndarray:extra_ndarray;
     
     (tiles, small_tiles)
 

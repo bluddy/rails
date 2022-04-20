@@ -12,24 +12,25 @@ let map_names =
   ]
 
 let load_pics () =
-  let load_ndarray s = Pic.img_of_file @@ dir ^ s ^ ".PIC" in
+  let load_ndarray s = Pic.img_of_file @@ dir ^ s in
   let images = Hashtbl.create 20 in
   let filenames = [
     (* E and C versions are for England and Europe *)
-    "SPRITES"; "CSPRITES"; "ESPRITES";
-    "TRACKS"; "STATION"; "FACES"; "BRITAIN";
-    "TITLE";
-    "LOGO"; "LABS"; "CREDITS2"; "ADVERT";
-    "DIFFS"; "DIFFSP"; "COUNCIL";
-    "PAGE0"; "PAGE1"; "PAGE2"; "PAGE3"; "PAGE4"; "PAGE5"; "PAGE6"; "PAGE7"; "PAGE8"; "PAGE9";
-    "LOCOS"; "CLOCOS"; "ELOCOS";
-    "ELOCOS0"; "ELOCOS1"; "ELOCOS2"; "ELOCOS3"; "ELOCOSM";
-    "LOCOS0"; "LOCOS1"; "LOCOS2"; "LOCOSM";
+    "SPRITES.PIC"; "CSPRITES.PIC"; "ESPRITES.PIC"; "SPRITES_extra.png";
+    "TRACKS.PIC"; "STATION.PIC"; "FACES.PIC"; "BRITAIN.PIC";
+    "TITLE.PIC";
+    "LOGO.PIC"; "LABS.PIC"; "CREDITS2.PIC"; "ADVERT.PIC";
+    "DIFFS.PIC"; "DIFFSP.PIC"; "COUNCIL.PIC";
+    "PAGE0.PIC"; "PAGE1.PIC"; "PAGE2.PIC"; "PAGE3.PIC"; "PAGE4.PIC";
+    "PAGE5.PIC"; "PAGE6.PIC"; "PAGE7.PIC"; "PAGE8.PIC"; "PAGE9.PIC";
+    "LOCOS.PIC"; "CLOCOS.PIC"; "ELOCOS.PIC";
+    "ELOCOS0.PIC"; "ELOCOS1.PIC"; "ELOCOS2.PIC"; "ELOCOS3.PIC"; "ELOCOSM.PIC";
+    "LOCOS0.PIC"; "LOCOS1.PIC"; "LOCOS2.PIC"; "LOCOSM.PIC";
   ]
   in
   List.iter (fun s ->
     let ndarray = load_ndarray s in
-    Hashtbl.replace images s ndarray)
+    Hashtbl.replace images (Filename.chop_extension s) ndarray)
   filenames;
   images
 

@@ -133,8 +133,35 @@ let img_of_ndarray (arr:ndarray) =
 
   (* RGBA images *)
 let img_of_file in_file =
-  let arr = ndarray_of_file in_file in
-  img_of_ndarray arr
+  let ext = Filename.extension in_file |> String.lowercase_ascii in
+  match ext with
+  | ".pic" -> let arr = ndarray_of_file in_file in
+              img_of_ndarray arr
+  | ".png" ->
+      let img = ImageLib_unix.openfile in_file in
+      let extract = function
+        | Image.Pixmap.Pix8 p -> Bigarray.genarray_of_array2 p
+        | Pix16 _ -> failwith "16-bit unsupported"
+      in
+      let ndarray = create_rgb_img (img.width, img.height) in
+      begin match img.pixels with
+      | RGBA(r, g, b, a) ->
+          let open Ndarray in
+          Ndarray.set_slice [[];[];[0]] ndarray (extract r);
+          Ndarray.set_slice [[];[];[1]] ndarray (extract g);
+          Ndarray.set_slice [[];[];[2]] ndarray (extract b);
+          Ndarray.set_slice [[];[];[3]] ndarray (extract a);
+      | RGB(r, g, b) ->
+          let open Ndarray in
+          fill ndarray 0xFF;
+          Ndarray.set_slice [[];[];[0]] ndarray (extract r);
+          Ndarray.set_slice [[];[];[1]] ndarray (extract g);
+          Ndarray.set_slice [[];[];[2]] ndarray (extract b);
+      | _ ->
+          failwith "Unsupported PNG type"
+      end;
+      ndarray
+  | s -> failwith @@ "Unsupported file type "^s
 
 let png_of_ndarray (arr:ndarray) ~filename =
   let dims = Ndarray.shape arr in

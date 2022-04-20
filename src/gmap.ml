@@ -37,7 +37,7 @@ type tile =
   | EnemyRR
   | River of Dir.Set.t (* directions of river *)
   | Ocean of Dir.Set.t (* 25 *) (* dirs are directions of land *)
-  | Harbor
+  | Harbor of Dir.Set.t (* same as ocean *)
 
   (* Alternative *)
   | Desert
@@ -89,7 +89,7 @@ let pixel_of_tile = function
   | Ocean _ -> Ocean_pixel
   | Clear -> Clear_pixel
   | Woods -> Woods_pixel
-  | Harbor -> Harbor_pixel
+  | Harbor _ -> Harbor_pixel
   | CoalMine
   | LumberMill -> CoalMine_pixel
   | Desert
@@ -165,7 +165,7 @@ let tile_of_pixel ~area ~x ~y ~pixel ~map =
   let is_water = function
     | River _
     | Landing _
-    | Harbor
+    | Harbor _
     | Ocean _ -> true
     | _ -> false
   in
@@ -176,7 +176,8 @@ let tile_of_pixel ~area ~x ~y ~pixel ~map =
     | Slum_pixel -> Slums
     | Clear_pixel -> Clear
     | Woods_pixel -> Woods
-    | Harbor_pixel -> Harbor
+    | Harbor_pixel ->
+        Harbor(water_dirs ~edge:false ~f:not_water)
     | CoalMine_pixel -> CoalMine
     | Desert_pixel -> Swamp
     | Foothills_pixel -> Foothills
