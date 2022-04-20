@@ -139,27 +139,15 @@ let img_of_file in_file =
               img_of_ndarray arr
   | ".png" ->
       let img = ImageLib_unix.openfile in_file in
-      let extract = function
-        | Image.Pixmap.Pix8 p -> Bigarray.genarray_of_array2 p
-        | Pix16 _ -> failwith "16-bit unsupported"
-      in
       let ndarray = create_rgb_img (img.width, img.height) in
-      begin match img.pixels with
-      | RGBA(r, g, b, a) ->
-          let open Ndarray in
-          Ndarray.set_slice [[];[];[0]] ndarray (extract r);
-          Ndarray.set_slice [[];[];[1]] ndarray (extract g);
-          Ndarray.set_slice [[];[];[2]] ndarray (extract b);
-          Ndarray.set_slice [[];[];[3]] ndarray (extract a);
-      | RGB(r, g, b) ->
-          let open Ndarray in
-          fill ndarray 0xFF;
-          Ndarray.set_slice [[];[];[0]] ndarray (extract r);
-          Ndarray.set_slice [[];[];[1]] ndarray (extract g);
-          Ndarray.set_slice [[];[];[2]] ndarray (extract b);
-      | _ ->
-          failwith "Unsupported PNG type"
-      end;
+      for y=0 to img.height - 1 do
+        for x=0 to img.width - 1 do
+          let r, g, b =
+            Image.read_rgb img x y (fun r g b -> (r, g, b))
+          in
+          img_write ndarray ~x ~y ~r ~g ~b ~alpha:255
+        done
+      done;
       ndarray
   | s -> failwith @@ "Unsupported file type "^s
 
