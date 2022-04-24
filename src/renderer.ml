@@ -12,6 +12,10 @@ type window = {
   opt_rect: Sdl.rect option; (* reduce allocation *)
 }
 
+let get_exn = function
+  | Ok x -> x
+  | Error(`Msg s) -> failwith s
+
 let create w h ~zoom =
   let out_w = Int.of_float @@ zoom *. Float.of_int w in
   let out_h = Int.of_float @@ zoom *. Float.of_int h in
@@ -23,15 +27,12 @@ let create w h ~zoom =
       | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
       | Ok (w,r) -> w,r
   in
+  Sdl.render_set_scale renderer zoom zoom |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
-  { inner_w=w; inner_h=h; renderer; window; zoom; rect; opt_rect=Some rect; }
+  { inner_w=w; inner_h=h; renderer; window; zoom=1.; rect; opt_rect=Some rect; }
 
-let zoom win x =
-  win.zoom *. Float.of_int x |> Int.of_float
-
-let get_exn = function
-  | Ok x -> x
-  | Error(`Msg s) -> failwith s
+let zoom _win x = x
+  (* win.zoom *. Float.of_int x |> Int.of_float *)
 
 let height window = window.inner_h
 let width window = window.inner_w
@@ -96,6 +97,7 @@ let draw_rect win ~x ~y ~w ~h ~color ~fill =
     Sdl.render_fill_rect win.renderer win.opt_rect |> get_exn
   else
     Sdl.render_draw_rect win.renderer win.opt_rect |> get_exn
+
 
 (* module Rect = struct *)
 (*   type t = { *)

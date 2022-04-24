@@ -1,7 +1,7 @@
 open Containers
 open Mapview_d
 
-let default = {center_x=0; center_y=0; zoom=Zoom4; width=256; height=192}
+let default = {center_x=0; center_y=0; zoom=Zoom4; width=Gmap.map_width; height=Gmap.map_height}
 
 let tile_size_of_zoom = function
   | Zoom1 -> 1, 1
