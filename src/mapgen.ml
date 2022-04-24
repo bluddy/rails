@@ -376,7 +376,7 @@ module R = Renderer
 let render_new_pixels win v pixel_tex =
   let render (x, y) pixel _acc =
     let color = Gmap.pixel_to_enum pixel |> Ega.get_rgb in
-    R.render win ~x ~y ~color pixel_tex
+    R.Texture.render win ~x ~y ~color pixel_tex
   in
   IntIntMap.fold render v.new_pixels ();
 

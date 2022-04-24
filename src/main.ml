@@ -48,10 +48,10 @@ let init_mapdemo ~filename win =
 
   let render () =
     let _ =
-      Renderer.clear_screen win;
-      Renderer.render win bg_tex;
-      Renderer.render win map_tex;
-      Renderer.render win ~x:257 text_tex;
+      R.clear_screen win;
+      R.Texture.render win bg_tex;
+      R.Texture.render win map_tex;
+      R.Texture.render win ~x:257 text_tex;
       Result.return ()
     in ()
   in
@@ -95,7 +95,7 @@ let init_pani win ~filename =
         match pics_tex.(pic_idx) with
         | None -> failwith @@ Printf.sprintf "No texture %d" pic_idx
         | Some tex ->
-            ignore(Renderer.render win ~x ~y tex)
+            ignore(R.Texture.render win ~x ~y tex)
       )
       pani_v.backgrounds
       ()
@@ -109,7 +109,7 @@ let init_pani win ~filename =
           | None -> failwith @@ Printf.sprintf "No pic_idx %d" pic_idx
           | Some pic_tex ->
             let x, y = Pani_interp.calc_anim_xy pani_v i in
-            ignore(Renderer.render win ~x ~y pic_tex)
+            ignore(R.Texture.render win ~x ~y pic_tex)
     )
     ()
     Iter.(0 -- 50)

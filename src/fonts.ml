@@ -202,7 +202,7 @@ module Render = struct
       let font = fonts.(font_idx) in
       List.fold_left (fun _acc {c; x; y; ega_color} ->
         let char_tex = Hashtbl.find font.Font.textures c in
-        R.render ~x ~y ~color:(Ega.get_rgb ega_color) win char_tex
+        R.Texture.render ~x ~y ~color:(Ega.get_rgb ega_color) win char_tex
       )
       acc
       chars

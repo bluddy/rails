@@ -62,8 +62,9 @@ let update (s:State.t) (v:t) (event:Event.t) =
 
 module R = Renderer
 
-(* TODO: alt tiles *)
 let render win (s:State.t) (v:t) =
+  let y_off = Ui.mapview_start s.ui in
+
   let do_render tile_w tile_h tiles =
     let start_x, start_y = calc_start_bounds_check v tile_w tile_h in
 
@@ -74,8 +75,8 @@ let render win (s:State.t) (v:t) =
         let alt = ((map_x + map_y) land 1) > 0 in
         let tile = Gmap.get_tile s.game.map (start_x+j) (start_y+i) in
         let tex = Textures.Tile.find tiles ~area:s.game.area ~alt tile in
-        let x, y = j * tile_w, i * tile_h in
-        R.render win tex ~x ~y;
+        let x, y = j * tile_w, y_off + i * tile_h in
+        R.Texture.render win tex ~x ~y;
       )
       (0--(v.width/tile_w - 1)))
     (0--(v.height/tile_h - 1))
@@ -83,11 +84,12 @@ let render win (s:State.t) (v:t) =
   R.clear_screen win;
   begin match v.zoom with
   | Zoom1 ->
-      R.render win s.textures.map;
+      R.Texture.render win s.textures.map ~y:y_off;
   | _ ->
       let tile_w, tile_h = tile_size_of_zoom v.zoom in
       let tiles = tile_textures_of_zoom s v.zoom in
       do_render tile_w tile_h tiles;
   end;
+  Ui.render win s.ui;
   s
 

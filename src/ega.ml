@@ -17,8 +17,8 @@ let palette =
     0x55ffff; (* b, bcyan *)
     0xff5555; (* c, bred *)
     0xff55ff; (* d, bmagenta *)
-    0xffff55; (* e, byellow *)
-    0xffffff; (* f, bwhite *)
+    0xffff55; (* e, yellow *)
+    0xffffff; (* f, white *)
   |]
 
   (* returns color and opacity
@@ -39,4 +39,23 @@ let get_rgba ?debug i =
 let get_rgb ?debug i =
   let color, _ = get_color ?debug i in
   (color lsr 16, (color lsr 8) land 0xFF, color land 0xFF)
+
+let magenta = get_rgba 0
+let blue = get_rgba 1
+let green = get_rgba 2
+let cyan = get_rgba 3
+let red = get_rgba 4
+let black = get_rgba 5
+let brown = get_rgba 6
+let grey = get_rgba 7
+let dgray = get_rgba 8
+let bblue = get_rgba 9
+let bgreen = get_rgba 10
+let bcyan = get_rgba 11
+let bred = get_rgba 12
+let bmagenta = get_rgba 13
+let yellow = get_rgba 14
+let white = get_rgba 15
+
+
 

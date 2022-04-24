@@ -8,6 +8,8 @@ type window = {
   inner_h: int;
   renderer: Sdl.renderer;
   window: Sdl.window;
+  rect: Sdl.rect; (* For drawing rectangles *)
+  opt_rect: Sdl.rect option; (* reduce allocation *)
 }
 
 let create w h ~zoom =
@@ -21,7 +23,8 @@ let create w h ~zoom =
       | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
       | Ok (w,r) -> w,r
   in
-  { inner_w=w; inner_h=h; renderer; window; zoom }
+  let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
+  { inner_w=w; inner_h=h; renderer; window; zoom; rect; opt_rect=Some rect; }
 
 let zoom win x =
   win.zoom *. Float.of_int x |> Int.of_float
@@ -30,6 +33,8 @@ let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
 
+let height window = window.inner_h
+let width window = window.inner_w
 
 module Texture = struct
   type t = {
@@ -68,20 +73,55 @@ module Texture = struct
     Sdl.update_texture tex.texture None ndarray (tex.w * 4)
       |> get_exn
 
+  let render ?(x=0) ?(y=0) ?color win tex =
+    Sdl.Rect.set_x tex.dst @@ zoom win x;
+    Sdl.Rect.set_y tex.dst @@ zoom win y;
+    let () = match color with
+      | Some (r,g,b) ->
+          Sdl.set_texture_color_mod tex.texture r g b |> get_exn
+      | _ -> ()
+    in
+    Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn
+
 end
 
-open Result.Infix
+let draw_rect win ~x ~y ~w ~h ~color ~fill =
+  Sdl.Rect.set_x win.rect @@ zoom win x;
+  Sdl.Rect.set_y win.rect @@ zoom win y;
+  Sdl.Rect.set_w win.rect @@ zoom win w;
+  Sdl.Rect.set_h win.rect @@ zoom win h;
+  let (r,g,b,a) = color in
+  Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
+  if fill then
+    Sdl.render_fill_rect win.renderer win.opt_rect |> get_exn
+  else
+    Sdl.render_draw_rect win.renderer win.opt_rect |> get_exn
 
-let render ?(x=0) ?(y=0) ?color win tex =
-  let open Texture in
-  Sdl.Rect.set_x tex.dst @@ zoom win x;
-  Sdl.Rect.set_y tex.dst @@ zoom win y;
-  let () = match color with
-    | Some (r,g,b) ->
-        Sdl.set_texture_color_mod tex.texture r g b |> get_exn
-    | _ -> ()
-  in
-  Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn
+(* module Rect = struct *)
+(*   type t = { *)
+(*     rect: Sdl.rect; *)
+(*     fill: bool; *)
+(*   } *)
+(*  *)
+(*   let make win ~w ~h ~fill = *)
+(*     let w = zoom win w in *)
+(*     let h = zoom win h in *)
+(*     let rect = Sdl.Rect.create ~x:0 ~y:0 ~w ~h in *)
+(*     { *)
+(*       rect; *)
+(*       fill; *)
+(*     } *)
+(*  *)
+(*   let render ?(x=0) ?(y=0) ?color win tex = *)
+(*     Sdl.Rect.set_x tex.dst @@ zoom win x; *)
+(*     Sdl.Rect.set_y tex.dst @@ zoom win y; *)
+(*     let () = match color with *)
+(*       | Some (r,g,b) -> *)
+(*           Sdl.set_texture_color_mod tex.texture r g b |> get_exn *)
+(*       | _ -> () *)
+(*     in *)
+(*     Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn *)
+(* end *)
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn

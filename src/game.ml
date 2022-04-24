@@ -21,7 +21,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     let game = {State.map; area; cities} in
 
     let textures = Textures.of_resources win resources area in
-    let state = {State.game; screen; resources; random; textures; seed} in
+    let ui = Ui.default win in
+    let state = {State.game; screen; resources; random; textures; seed; ui} in
 
     Printf.printf " done.\n";
 
@@ -48,7 +49,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
               Textures.update_map win s.textures s.game.map
             in
             let data =
-              Iter.(0 -- 6)
+              Iter.(0 -- 10)
               |> Iter.fold (fun acc _ ->
               Mapgen.update_map_step random acc ~done_fn ~map ~fonts:s.textures.fonts)
               data
@@ -67,8 +68,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
       | Screen.MapGen Some data ->
           let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
           R.clear_screen win;
-          R.render win bg_tex;
-          R.render win s.textures.map;
+          R.Texture.render win bg_tex;
+          R.Texture.render win s.textures.map;
           Fonts.Render.render s.textures.fonts ~win ~to_render:data.text;
           Mapgen.View.render_new_pixels win data s.textures.pixel;
           s
