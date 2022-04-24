@@ -35,10 +35,8 @@ let render (win:R.window) (s:State.t) (v:t) ~(draw_logo:bool) : unit =
   (* Border of UI *)
   R.draw_rect win ~x ~y ~h ~w:(dims.ui_w+1) ~color:Ega.white ~fill:false;
 
-  if draw_logo then
-    R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo
-  else
-    ();
+  if draw_logo then 
+    R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo;
 
   (* Info bar *)
   let y = y + dims.minimap_h in

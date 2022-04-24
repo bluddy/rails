@@ -5,7 +5,7 @@
 type view =
   | Title
   | MainMenu
-  | MapView of Mapview_d.t
+  | MapView
   | MapGen of Mapgen.t option
   | Broker
   | Schedule

@@ -23,7 +23,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     let textures = Textures.of_resources win resources area in
     let ui = Ui.default win in
-    let state = {State.game; screen; resources; random; textures; seed; ui} in
+    let view = Mapview.default in
+    let state = {State.game; screen; resources; random; textures; seed; ui; view} in
 
     Printf.printf " done.\n";
 
@@ -40,7 +41,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             begin match event with
             | Key {down=true; _} ->
                     (* Printf.printf "Mapview\n"; *)
-                    Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
+                    Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView) s
             | _ -> s
             end
 
@@ -57,8 +58,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             in
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
-        | Screen.MapView data ->
-            Mapview.update s data event
+        | Screen.MapView ->
+            Mapview.update s s.view event
 
         | _ -> s
       in
@@ -76,8 +77,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
           s
       | MapGen None -> s
 
-      | MapView data ->
-          Mapview.render win s data
+      | MapView ->
+          Mapview.render win s s.view
     in
     state, Mainloop.{update; render}
   in

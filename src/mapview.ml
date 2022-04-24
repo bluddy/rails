@@ -102,6 +102,13 @@ let render win (s:State.t) (v:t) =
     s.game.cities
   in
 
+  let draw_minimap () =
+    let mini_x, mini_y = s.ui.dims.ui_start_x + s.ui.dims.ui_w/2, s.ui.dims.menu_h + s.ui.dims.minimap_h/2 in
+    let center_x, center_y = s.view.center_x, s.view.center_y in
+    let x, y = mini_x - center_x, mini_y - center_y in
+    R.Texture.render win s.textures.map ~x ~y;
+  in
+
   R.clear_screen win;
 
   begin match v.zoom with
@@ -109,9 +116,11 @@ let render win (s:State.t) (v:t) =
       R.Texture.render win s.textures.map ~x:0 ~y:y_ui;
       Ui.render win s s.ui ~draw_logo:true;
   | Zoom2 | Zoom3 ->
+      draw_minimap ();
       tile_render ();
       Ui.render win s s.ui ~draw_logo:false;
   | Zoom4 ->
+      draw_minimap ();
       tile_render ();
       draw_city_names ();
       Ui.render win s s.ui ~draw_logo:false;
