@@ -271,7 +271,7 @@ let add_city_list r area (city_list:city list) : (int * int) list =
   List.fold_left add_city (0, []) city_list |> snd |> List.rev
 
 
-let load_city_list ?(debug=false) area  =
+let load_city_list area  =
   let num = Gmap.area_to_enum area in
   let filename = Printf.sprintf "./data/CITIES%d.DTA" num in
   let str = CCIO.with_in filename CCIO.read_all in
@@ -282,11 +282,9 @@ let load_city_list ?(debug=false) area  =
     let name = Gen.take 16 stream |> Gen.to_string in
     (* Name is followed by zeros *)
     let name = String.split_on_char (Char.chr 0) name |> List.hd in
-    {name; x; y}::acc
+    (name, x, y)::acc
   in
   let cities = Iter.fold parse [] Iter.(0 -- 99) |> List.rev in
-  if debug then
-    List.iter (fun c -> print_endline @@ show_city c) cities;
   cities
 
 module IntIntMap = Map.Make(struct type t = int * int let compare = Stdlib.compare end)

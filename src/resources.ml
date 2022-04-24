@@ -38,7 +38,7 @@ let load_pics () =
 type t = {
   res_maps: (Gmap.area * Gmap.t) list;
   res_pics: (string, Pic.ndarray) Hashtbl.t;
-  res_cities: (Gmap.area * Gmap.city list) list;
+  res_cities: (Gmap.area * (string * int * int) list) list;
 }
 
 let load_all ~seed =

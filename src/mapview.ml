@@ -13,6 +13,7 @@ let tile_textures_of_zoom s = function
   | Zoom4 -> s.textures.tiles
   | Zoom1 -> failwith "tile_textures_of_zoom"
 
+  (* For drawing code. Make sure we don't exceed map limits *)
 let calc_start_bounds_check v tile_w tile_h =
   (* Pay attention to end as well *)
   let x_delta = v.width/(tile_w*2) in
@@ -23,8 +24,11 @@ let calc_start_bounds_check v tile_w tile_h =
   (* Use that to compute start *)
   let start_x = end_x - 2 * x_delta |> max 0 in
   let start_y = end_y - 2 * y_delta |> max 0 in
-  start_x, start_y
+  let end_x = start_x + 2 * x_delta in
+  let end_y = start_y + 2 * y_delta in
+  start_x, start_y, end_x, end_y
 
+  (* Only care about start position. For mouse *)
 let calc_start v tile_w tile_h =
   let x_delta = v.width/(tile_w*2) in
   let y_delta = v.height/(tile_h*2) in
@@ -62,34 +66,54 @@ let update (s:State.t) (v:t) (event:Event.t) =
 
 module R = Renderer
 
+let city_names win (s:State.t) (v:t) = ()
+
 let render win (s:State.t) (v:t) =
-  let y_off = Ui.mapview_start s.ui in
+  let y_ui = Ui.mapview_start s.ui in
 
-  let do_render tile_w tile_h tiles =
-    let start_x, start_y = calc_start_bounds_check v tile_w tile_h in
+  let tile_w, tile_h = tile_size_of_zoom v.zoom in
+  let start_x, start_y, end_x, end_y = calc_start_bounds_check v tile_w tile_h in
 
-    let open Iter in
-    iter (fun i ->
-      iter (fun j ->
+  let tile_render () =
+    let tiles = tile_textures_of_zoom s v.zoom in
+
+    Iter.iter (fun i ->
+      Iter.iter (fun j ->
         let map_x, map_y = start_x + j, start_y + i in
         let alt = ((map_x + map_y) land 1) > 0 in
         let tile = Gmap.get_tile s.game.map (start_x+j) (start_y+i) in
         let tex = Textures.Tile.find tiles ~area:s.game.area ~alt tile in
-        let x, y = j * tile_w, y_off + i * tile_h in
+        let x, y = j * tile_w, y_ui + i * tile_h in
         R.Texture.render win tex ~x ~y;
       )
-      (0--(v.width/tile_w - 1)))
-    (0--(v.height/tile_h - 1))
+      Iter.(0--(v.width/tile_w - 1)))
+    Iter.(0--(v.height/tile_h - 1))
   in
+
+  let draw_city_names () =
+    Array.iter (fun {Gmap.name; x; y} ->
+      if (x >= start_x && y >= start_y) || (x <= end_x && y <= end_y) then (
+        let x = (x - start_x) * tile_w in
+        let y = (y - start_y) * tile_h + y_ui in
+        Fonts.Render.write win s.textures.fonts name ~idx:1 ~x ~y
+      )
+    )
+    s.game.cities
+  in
+
   R.clear_screen win;
+
   begin match v.zoom with
   | Zoom1 ->
-      R.Texture.render win s.textures.map ~y:y_off;
-  | _ ->
-      let tile_w, tile_h = tile_size_of_zoom v.zoom in
-      let tiles = tile_textures_of_zoom s v.zoom in
-      do_render tile_w tile_h tiles;
+      R.Texture.render win s.textures.map ~y:y_ui
+  | Zoom2 | Zoom3 ->
+      tile_render ();
+  | Zoom4 ->
+      tile_render ();
+      draw_city_names ();
   end;
+
   Ui.render win s.ui;
+
   s
 

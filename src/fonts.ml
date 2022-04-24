@@ -197,18 +197,41 @@ module Render = struct
 
   (* module OptionT = List.Traverse(Option) *)
 
-  let render fonts ~to_render ~win =
+  (* Render the list of t that memoizes font rendering *)
+  let render ?(x=0) ?(y=0) ?color fonts ~to_render ~win =
+    let x_off, y_off = x, y in
     List.fold_left (fun acc {font_idx; chars} ->
       let font = fonts.(font_idx) in
       List.fold_left (fun _acc {c; x; y; ega_color} ->
         let char_tex = Hashtbl.find font.Font.textures c in
-        R.Texture.render ~x ~y ~color:(Ega.get_rgb ega_color) win char_tex
+        let x, y = x + x_off, y + y_off in
+        let color = match color with
+          | None -> Ega.get_rgb ega_color
+          | Some c -> c
+        in
+        R.Texture.render ~x ~y ~color win char_tex
       )
       acc
       chars
     )
     ()
     to_render 
+
+let write win fonts ?(color=15) ~idx str ~x ~y =
+  let font = fonts.(idx) in
+  let color = Ega.get_rgb color in
+  let x_first = x in (* keep starting column *)
+  String.fold (fun (x, y) c ->
+    if Char.equal c '\n' then
+      (x_first, y + font.Font.height + font.space_y)
+    else
+      let char_tex = Hashtbl.find font.Font.textures c in
+      R.Texture.render ~x ~y ~color win char_tex;
+      let w = Font.get_letter_width font c in
+      (x + w + font.space_x, y))
+  (x, y)
+  str
+  |> ignore
 
 end
 
@@ -229,4 +252,5 @@ let write_str ?(color=15) idx str ~fonts ~x ~y : Render.t =
     str
   in
   {font_idx=idx; chars=acc}
+
 

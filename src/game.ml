@@ -17,6 +17,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     let map = List.assoc ~eq:(Stdlib.(=)) area resources.res_maps in
     let cities = List.assoc ~eq:(Stdlib.(=)) area resources.res_cities
+      |> List.map (fun (name,x,y) -> {Gmap.name;x;y})
       |> Array.of_list in
     let game = {State.map; area; cities} in
 
@@ -31,7 +32,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         match s.screen.Screen.view with
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
-            let cities = List.assoc ~eq:(Gmap.equal_area) area s.resources.res_cities in
+            let cities = Array.to_list s.game.cities in
             let data = Mapgen.init s.random s.game.area cities in
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) s
 
@@ -49,7 +50,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
               Textures.update_map win s.textures s.game.map
             in
             let data =
-              Iter.(0 -- 10)
+              Iter.(0 -- 20)
               |> Iter.fold (fun acc _ ->
               Mapgen.update_map_step random acc ~done_fn ~map ~fonts:s.textures.fonts)
               data
