@@ -49,9 +49,9 @@ let init_mapdemo ~filename win =
   let render () =
     let _ =
       R.clear_screen win;
-      R.Texture.render win bg_tex;
-      R.Texture.render win map_tex;
-      R.Texture.render win ~x:257 text_tex;
+      R.Texture.render win ~x:0 ~y:0 bg_tex;
+      R.Texture.render win ~x:0 ~y:0 map_tex;
+      R.Texture.render win ~x:257 ~y:0 text_tex;
       Result.return ()
     in ()
   in

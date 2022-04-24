@@ -74,7 +74,7 @@ module Texture = struct
     Sdl.update_texture tex.texture None ndarray (tex.w * 4)
       |> get_exn
 
-  let render ?(x=0) ?(y=0) ?color win tex =
+  let render ?color ~x ~y win tex =
     Sdl.Rect.set_x tex.dst @@ zoom win x;
     Sdl.Rect.set_y tex.dst @@ zoom win y;
     let () = match color with

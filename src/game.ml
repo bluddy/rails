@@ -69,8 +69,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
       | Screen.MapGen Some data ->
           let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
           R.clear_screen win;
-          R.Texture.render win bg_tex;
-          R.Texture.render win s.textures.map;
+          R.Texture.render win ~x:0 ~y:0 bg_tex;
+          R.Texture.render win ~x:0 ~y:0 s.textures.map;
           Fonts.Render.render s.textures.fonts ~win ~to_render:data.text;
           Mapgen.View.render_new_pixels win data s.textures.pixel;
           s

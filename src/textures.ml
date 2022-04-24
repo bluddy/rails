@@ -179,12 +179,18 @@ module Tile = struct
       find v
 end
 
+let slice_logo win res =
+  let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
+  Ndarray.get_slice [[63; 118]; [256; 319]] ndarray
+  |> R.Texture.make win
+
 type t = {
   maps: (Gmap.area * R.Texture.t) list;
   pics: (string, R.Texture.t) Hashtbl.t;
   mutable map: R.Texture.t;   (* current map *)
   pixel: R.Texture.t; (* white pixel *)
   fonts: Fonts.t;
+  logo: R.Texture.t;
   tiles: (Gmap.tile, Tile.t) Hashtbl.t;
   small_tiles: (Gmap.tile, Tile.t) Hashtbl.t;
 }
@@ -202,7 +208,8 @@ let of_resources win res area =
   let pixel = R.Texture.make win Pic.white_pixel in
   let fonts = Fonts.load win in
   let tiles, small_tiles = Tile.slice_tiles win res in
-  {maps; pics; map; pixel; fonts; tiles; small_tiles}
+  let logo = slice_logo win res in
+  {maps; pics; map; pixel; fonts; tiles; small_tiles; logo}
 
 let update_map win v map =
   (* R.Texture.destroy v.map; *)

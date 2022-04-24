@@ -106,15 +106,16 @@ let render win (s:State.t) (v:t) =
 
   begin match v.zoom with
   | Zoom1 ->
-      R.Texture.render win s.textures.map ~y:y_ui
+      R.Texture.render win s.textures.map ~x:0 ~y:y_ui;
+      Ui.render win s s.ui ~draw_logo:true;
   | Zoom2 | Zoom3 ->
       tile_render ();
+      Ui.render win s s.ui ~draw_logo:false;
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
+      Ui.render win s s.ui ~draw_logo:false;
   end;
-
-  Ui.render win s.ui;
 
   s
 
