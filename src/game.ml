@@ -39,7 +39,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen Some {state=`Done; _} ->
             begin match event with
             | Key {down=true; _} ->
-                    Printf.printf "Mapview\n";
+                    (* Printf.printf "Mapview\n"; *)
                     Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView (Mapview.default)) s
             | _ -> s
             end

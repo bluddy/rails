@@ -66,8 +66,6 @@ let update (s:State.t) (v:t) (event:Event.t) =
 
 module R = Renderer
 
-let city_names win (s:State.t) (v:t) = ()
-
 let render win (s:State.t) (v:t) =
   let y_ui = Ui.mapview_start s.ui in
 
@@ -95,7 +93,10 @@ let render win (s:State.t) (v:t) =
       if (x >= start_x && y >= start_y) || (x <= end_x && y <= end_y) then (
         let x = (x - start_x) * tile_w in
         let y = (y - start_y) * tile_h + y_ui in
-        Fonts.Render.write win s.textures.fonts name ~idx:1 ~x ~y
+        let x, y = x + 11, y - 15 in
+        Fonts.Render.write win s.textures.fonts name ~x ~y ~color:Ega.black;
+        let x, y = x + 1, y - 1 in
+        Fonts.Render.write win s.textures.fonts name ~x ~y ~color:Ega.bcyan;
       )
     )
     s.game.cities

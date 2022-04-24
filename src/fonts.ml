@@ -7,6 +7,7 @@ module Font = struct
   0: fancy olde style
   1: all-caps
   2: large
+  3: missing
   4: standard
 *)
 
@@ -206,7 +207,7 @@ module Render = struct
         let char_tex = Hashtbl.find font.Font.textures c in
         let x, y = x + x_off, y + y_off in
         let color = match color with
-          | None -> Ega.get_rgb ega_color
+          | None -> Ega.get_rgba ega_color
           | Some c -> c
         in
         R.Texture.render ~x ~y ~color win char_tex
@@ -217,9 +218,8 @@ module Render = struct
     ()
     to_render 
 
-let write win fonts ?(color=15) ~idx str ~x ~y =
+let write win fonts ?(color=Ega.white) ?(idx=4) str ~x ~y =
   let font = fonts.(idx) in
-  let color = Ega.get_rgb color in
   let x_first = x in (* keep starting column *)
   String.fold (fun (x, y) c ->
     if Char.equal c '\n' then

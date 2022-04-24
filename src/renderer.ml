@@ -77,7 +77,7 @@ module Texture = struct
     Sdl.Rect.set_x tex.dst @@ zoom win x;
     Sdl.Rect.set_y tex.dst @@ zoom win y;
     let () = match color with
-      | Some (r,g,b) ->
+      | Some (r,g,b,_) ->
           Sdl.set_texture_color_mod tex.texture r g b |> get_exn
       | _ -> ()
     in
