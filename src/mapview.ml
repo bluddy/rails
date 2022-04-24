@@ -103,9 +103,10 @@ let render win (s:State.t) (v:t) =
   in
 
   let draw_minimap () =
-    let mini_x, mini_y = s.ui.dims.ui_start_x + s.ui.dims.ui_w/2, s.ui.dims.menu_h + s.ui.dims.minimap_h/2 in
-    let center_x, center_y = s.view.center_x, s.view.center_y in
-    let x, y = mini_x - center_x, mini_y - center_y in
+    let mini_midx = s.ui.dims.ui_start_x + s.ui.dims.ui_w/2 in
+    let mini_midy = s.ui.dims.menu_h + s.ui.dims.minimap_h/2 in
+    let x = Utils.clip (mini_midx - v.center_x) ~min:(R.width win - Gmap.map_width) ~max:s.ui.dims.ui_start_x in
+    let y = Utils.clip (mini_midy - v.center_y) ~max:y_ui ~min:(y_ui + s.ui.dims.minimap_h - Gmap.map_height) in
     R.Texture.render win s.textures.map ~x ~y;
   in
 
