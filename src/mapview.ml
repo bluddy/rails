@@ -14,22 +14,21 @@ let tile_textures_of_zoom s = function
   | Zoom1 -> failwith "tile_textures_of_zoom"
 
   (* For drawing code. Make sure we don't exceed map limits *)
-let calc_start_bounds_check v tile_w tile_h =
+let mapview_bounds v tile_w tile_h =
   (* Pay attention to end as well *)
   let x_delta = v.width/(tile_w*2) in
   let y_delta = v.height/(tile_h*2) in
-  let start_x = Utils.clip (v.center_x - x_delta) 0 (Gmap.map_width - 2 * x_delta) in
-  let start_y = Utils.clip (v.center_y - y_delta) 0 (Gmap.map_height - 2 * y_delta) in
+  let start_x = Utils.clip (v.center_x - x_delta) ~min:0 ~max:(Gmap.map_width - 2 * x_delta) in
+  let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(Gmap.map_height - 2 * y_delta) in
   let end_x = start_x + 2 * x_delta in
   let end_y = start_y + 2 * y_delta in
   start_x, start_y, end_x, end_y
 
-  (* Only care about start position. For mouse *)
-let calc_start v tile_w tile_h =
-  let x_delta = v.width/(tile_w*2) in
-  let y_delta = v.height/(tile_h*2) in
-  let start_x = v.center_x - x_delta |> max 0 in
-  let start_y = v.center_y - y_delta |> max 0 in
+let minimap_bounds v s =
+  let h = s.State.ui.dims.minimap_h in
+  let w = s.ui.dims.ui_w in
+  let start_x = Utils.clip (v.center_x - w/2) ~min:0 ~max:(v.width - w) in
+  let start_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(v.height - h) in
   start_x, start_y
 
 let update (s:State.t) (v:t) (event:Event.t) =
@@ -49,9 +48,9 @@ let update (s:State.t) (v:t) (event:Event.t) =
           v.center_y <- y
       | _ ->
         let tile_w, tile_h = tile_size_of_zoom v.zoom in
-        let start_x, start_y = calc_start v tile_w tile_h in
-        let x = start_x + x/tile_w in
-        let y = start_y + y/tile_h in
+        let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
+        let x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
+        let y = start_y + y/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
         v.center_x <- x;
         v.center_y <- y;
       end
@@ -66,7 +65,7 @@ let render win (s:State.t) (v:t) =
   let y_ui = Ui.mapview_start s.ui in
 
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
-  let start_x, start_y, end_x, end_y = calc_start_bounds_check v tile_w tile_h in
+  let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
 
   let tile_render () =
     let tiles = tile_textures_of_zoom s v.zoom in
@@ -103,13 +102,20 @@ let render win (s:State.t) (v:t) =
     let y = s.ui.dims.menu_h in
     let h = s.ui.dims.minimap_h in
     let w = s.ui.dims.ui_w in
-    let from_x = Utils.clip (v.center_x - w/2) ~min:0 ~max:(Gmap.map_width - w) in
-    let from_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(Gmap.map_height - h) in
+    let from_x, from_y = minimap_bounds v s in
     R.Texture.render_subtex win s.textures.map ~x ~y ~from_x ~from_y ~w ~h;
+
+    (* minimap rectangle *)
     let x = s.ui.dims.ui_start_x + start_x - from_x in
     let y = s.ui.dims.menu_h + start_y - from_y in
     R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
       ~fill:false;
+  in
+
+  let draw_cursor () =
+    let x = (v.center_x - start_x) * tile_w in
+    let y = (v.center_y - start_y) * tile_h + y_ui in
+    R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color:Ega.white ~fill:false
   in
 
   R.clear_screen win;
@@ -127,6 +133,7 @@ let render win (s:State.t) (v:t) =
       draw_city_names ();
       draw_minimap ();
       Ui.render win s s.ui ~draw_logo:false;
+      draw_cursor ();
   end;
 
   s
