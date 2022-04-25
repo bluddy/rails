@@ -18,12 +18,8 @@ let calc_start_bounds_check v tile_w tile_h =
   (* Pay attention to end as well *)
   let x_delta = v.width/(tile_w*2) in
   let y_delta = v.height/(tile_h*2) in
-  (* Adjust end *)
-  let end_x = v.center_x + x_delta |> min (Gmap.map_width - 1) in
-  let end_y = v.center_y + y_delta |> min (Gmap.map_height - 1) in
-  (* Use that to compute start *)
-  let start_x = end_x - 2 * x_delta |> max 0 in
-  let start_y = end_y - 2 * y_delta |> max 0 in
+  let start_x = Utils.clip (v.center_x - x_delta) 0 (Gmap.map_width - 2 * x_delta) in
+  let start_y = Utils.clip (v.center_y - y_delta) 0 (Gmap.map_height - 2 * y_delta) in
   let end_x = start_x + 2 * x_delta in
   let end_y = start_y + 2 * y_delta in
   start_x, start_y, end_x, end_y
@@ -110,6 +106,10 @@ let render win (s:State.t) (v:t) =
     let from_x = Utils.clip (v.center_x - w/2) ~min:0 ~max:(Gmap.map_width - w) in
     let from_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(Gmap.map_height - h) in
     R.Texture.render_subtex win s.textures.map ~x ~y ~from_x ~from_y ~w ~h;
+    let x = s.ui.dims.ui_start_x + start_x - from_x in
+    let y = s.ui.dims.menu_h + start_y - from_y in
+    R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
+      ~fill:false;
   in
 
   R.clear_screen win;
