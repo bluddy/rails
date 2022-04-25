@@ -9,6 +9,7 @@ type window = {
   renderer: Sdl.renderer;
   window: Sdl.window;
   rect: Sdl.rect; (* For drawing rectangles *)
+  rect2: Sdl.rect;
   opt_rect: Sdl.rect option; (* reduce allocation *)
 }
 
@@ -29,7 +30,8 @@ let create w h ~zoom =
   in
   Sdl.render_set_scale renderer zoom zoom |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
-  { inner_w=w; inner_h=h; renderer; window; zoom=1.; rect; opt_rect=Some rect; }
+  let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
+  { inner_w=w; inner_h=h; renderer; window; zoom=1.; rect; rect2; opt_rect=Some rect; }
 
 let zoom _win x = x
   (* win.zoom *. Float.of_int x |> Int.of_float *)
@@ -83,6 +85,20 @@ module Texture = struct
       | _ -> ()
     in
     Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn
+
+    (* Render only a part of the texture *)
+  let render_subtex win tex ~x ~y ~from_x ~from_y ~w ~h =
+    Sdl.Rect.set_x win.rect @@ zoom win from_x;
+    Sdl.Rect.set_y win.rect @@ zoom win from_y;
+    Sdl.Rect.set_w win.rect @@ zoom win w;
+    Sdl.Rect.set_h win.rect @@ zoom win h;
+
+    Sdl.Rect.set_x win.rect2 @@ zoom win x;
+    Sdl.Rect.set_y win.rect2 @@ zoom win y;
+    (* w and h must be the same *)
+    Sdl.Rect.set_h win.rect2 @@ zoom win h;
+    Sdl.Rect.set_w win.rect2 @@ zoom win w;
+    Sdl.render_copy win.renderer tex.texture ~src:win.rect ~dst:win.rect2 |> get_exn
 
 end
 

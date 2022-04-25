@@ -103,11 +103,13 @@ let render win (s:State.t) (v:t) =
   in
 
   let draw_minimap () =
-    let mini_midx = s.ui.dims.ui_start_x + s.ui.dims.ui_w/2 in
-    let mini_midy = s.ui.dims.menu_h + s.ui.dims.minimap_h/2 in
-    let x = Utils.clip (mini_midx - v.center_x) ~min:(R.width win - Gmap.map_width) ~max:s.ui.dims.ui_start_x in
-    let y = Utils.clip (mini_midy - v.center_y) ~max:y_ui ~min:(y_ui + s.ui.dims.minimap_h - Gmap.map_height) in
-    R.Texture.render win s.textures.map ~x ~y;
+    let x = s.ui.dims.ui_start_x in
+    let y = s.ui.dims.menu_h in
+    let h = s.ui.dims.minimap_h in
+    let w = s.ui.dims.ui_w in
+    let from_x = Utils.clip (v.center_x - w/2) ~min:0 ~max:(Gmap.map_width - w) in
+    let from_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(Gmap.map_height - h) in
+    R.Texture.render_subtex win s.textures.map ~x ~y ~from_x ~from_y ~w ~h;
   in
 
   R.clear_screen win;
@@ -117,13 +119,13 @@ let render win (s:State.t) (v:t) =
       R.Texture.render win s.textures.map ~x:0 ~y:y_ui;
       Ui.render win s s.ui ~draw_logo:true;
   | Zoom2 | Zoom3 ->
-      draw_minimap ();
       tile_render ();
+      draw_minimap ();
       Ui.render win s s.ui ~draw_logo:false;
   | Zoom4 ->
-      draw_minimap ();
       tile_render ();
       draw_city_names ();
+      draw_minimap ();
       Ui.render win s s.ui ~draw_logo:false;
   end;
 
