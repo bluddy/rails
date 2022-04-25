@@ -47,12 +47,20 @@ let update (s:State.t) (v:t) (event:Event.t) =
           v.center_x <- x;
           v.center_y <- y
       | _ ->
-        let tile_w, tile_h = tile_size_of_zoom v.zoom in
-        let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
-        let x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
-        let y = start_y + y/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
-        v.center_x <- x;
-        v.center_y <- y;
+          if x > s.ui.dims.ui_start_x && y > s.ui.dims.menu_h && y < s.ui.dims.minimap_h + s.ui.dims.menu_h then (
+            let start_x, start_y = minimap_bounds v s in
+            let x = x - s.ui.dims.ui_start_x + start_x in
+            let y = y - s.ui.dims.menu_h + start_y in
+            v.center_x <- x;
+            v.center_y <- y;
+          ) else (
+            let tile_w, tile_h = tile_size_of_zoom v.zoom in
+            let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
+            let x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
+            let y = start_y + y/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
+            v.center_x <- x;
+            v.center_y <- y;
+          )
       end
   | _ -> ()
   end;
