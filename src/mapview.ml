@@ -24,14 +24,13 @@ let mapview_bounds v tile_w tile_h =
   let end_y = start_y + 2 * y_delta in
   start_x, start_y, end_x, end_y
 
-let minimap_bounds v s =
-  let h = s.State.ui.dims.minimap_h in
-  let w = s.ui.dims.ui_w in
+let minimap_bounds v w h =
   let start_x = Utils.clip (v.center_x - w/2) ~min:0 ~max:(v.width - w) in
   let start_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(v.height - h) in
   start_x, start_y
 
-let update (s:State.t) (v:t) (event:Event.t) =
+
+let update (s:State.t) (v:t) (event:Event.t) ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
   begin match event with
   | Key {down=true; key=F1; _} ->
       v.zoom <- Zoom1
@@ -47,10 +46,10 @@ let update (s:State.t) (v:t) (event:Event.t) =
           v.center_x <- x;
           v.center_y <- y
       | _ ->
-          if x > s.ui.dims.ui_start_x && y > s.ui.dims.menu_h && y < s.ui.dims.minimap_h + s.ui.dims.menu_h then (
-            let start_x, start_y = minimap_bounds v s in
-            let x = x - s.ui.dims.ui_start_x + start_x in
-            let y = y - s.ui.dims.menu_h + start_y in
+          if x > minimap_x && y > minimap_y && y < minimap_y + minimap_h then (
+            let start_x, start_y = minimap_bounds v minimap_w minimap_h in
+            let x = x - minimap_x + start_x in
+            let y = y - minimap_y + start_y in
             v.center_x <- x;
             v.center_y <- y;
           ) else (
@@ -69,7 +68,7 @@ let update (s:State.t) (v:t) (event:Event.t) =
 
 module R = Renderer
 
-let render win (s:State.t) (v:t) ~y =
+let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w =
   let y_ui = y in
 
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
@@ -105,19 +104,15 @@ let render win (s:State.t) (v:t) ~y =
     s.game.cities
   in
 
-  let draw_minimap () =
-    let x = s.ui.dims.ui_start_x in
-    let y = s.ui.dims.menu_h in
-    let h = s.ui.dims.minimap_h in
-    let w = s.ui.dims.ui_w in
-    let from_x, from_y = minimap_bounds v s in
+  let draw_minimap x y w h =
+    let from_x, from_y = minimap_bounds v w h in
     R.Texture.render_subtex win s.textures.map ~x ~y ~from_x ~from_y ~w ~h;
 
     (* minimap rectangle *)
-    let x = s.ui.dims.ui_start_x + start_x - from_x in
-    let y = s.ui.dims.menu_h + start_y - from_y in
+    let x = x + start_x - from_x in
+    let y = y + start_y - from_y in
     R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
-      ~fill:false;
+      ~fill:false
   in
 
   let draw_cursor () =
@@ -133,11 +128,11 @@ let render win (s:State.t) (v:t) ~y =
       R.Texture.render win s.textures.map ~x:0 ~y:y_ui;
   | Zoom2 | Zoom3 ->
       tile_render ();
-      draw_minimap ();
+      draw_minimap minimap_x minimap_y minimap_w minimap_h;
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
-      draw_minimap ();
+      draw_minimap minimap_x minimap_y minimap_w minimap_h;
       draw_cursor ();
   end;
 

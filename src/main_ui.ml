@@ -19,13 +19,22 @@ let default win =
   {dims}
 
 let update (s:State.t) (v:t) (event:Event.t) =
-  Mapview.update s s.view event
+  let dims = v.dims in
+  let minimap_x = dims.ui_start_x in
+  let minimap_y = dims.menu_h in
+  let minimap_h = dims.minimap_h in
+  let minimap_w = dims.ui_w in
+  Mapview.update s s.view event ~minimap_x ~minimap_y ~minimap_w ~minimap_h
 
 let render (win:R.window) (s:State.t) (v:t) =
-  (* Render main view *)
-  let s = Mapview.render win s s.view ~y:v.dims.menu_h in
-
   let dims = v.dims in
+  (* Render main view *)
+  let minimap_x = dims.ui_start_x in
+  let minimap_y = dims.menu_h in
+  let minimap_h = dims.minimap_h in
+  let minimap_w = dims.ui_w in
+  let s = Mapview.render win s s.view ~y:v.dims.menu_h ~minimap_x ~minimap_y ~minimap_w ~minimap_h in
+
   (* Menu bar *)
   R.draw_rect win ~x:0 ~y:0 ~w:dims.width ~h:dims.menu_h ~color:Ega.cyan ~fill:true;
   let h = dims.height - dims.menu_h in
@@ -42,7 +51,8 @@ let render (win:R.window) (s:State.t) (v:t) =
   begin match Mapview.get_zoom s.view with
   | Zoom1 ->
       R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo;
-  | _ -> ()
+  | _ ->
+      ()
   end;
 
   (* Info bar *)
