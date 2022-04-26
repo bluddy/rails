@@ -16,3 +16,4 @@ type t =
     width: int;
     height: int;
   }
+  [@@deriving lens]

@@ -179,6 +179,9 @@ module Tile = struct
       find v
 end
 
+module Track = struct
+end
+
 let slice_logo win res =
   let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
   Ndarray.get_slice [[63; 118]; [256; 319]] ndarray

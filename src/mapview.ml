@@ -39,9 +39,11 @@ let minimap_bounds v w h =
 
 let update (s:State.t) (v:t) (event:Event.t) ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
   let check_recenter () =
-    (* recenter if past threshold *)
-    if abs(v.cursor_x - v.center_x) > recenter_threshold ||
-        abs(v.cursor_y - v.center_y) > recenter_threshold then (
+    (* recenter in zoom4 if past screen *)
+    let tile_w, tile_h = tile_size_of_zoom Zoom4 in
+    let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
+    if v.cursor_x < start_x || v.cursor_x > end_x ||
+       v.cursor_y < start_y || v.cursor_y > end_y then (
       v.center_x <- v.cursor_x;
       v.center_y <- v.cursor_y;
     )
@@ -112,7 +114,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~minimap_x ~minimap_y ~minimap_w ~m
       let y = Utils.clip y ~min:0 ~max:v.height in
       v.cursor_x <- x;
       v.cursor_y <- y;
-      check_recenter ()
+      check_recenter ();
   | _ -> ()
   end;
   s

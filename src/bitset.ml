@@ -35,6 +35,8 @@ module type S = sig
 
   val to_list: t -> elt list
 
+  val to_int: t -> int
+
   val pp: Format.formatter -> t -> unit
 
 end
@@ -43,6 +45,8 @@ module Make(E: Elem) = struct
 
   type elt = E.t
   type t = int
+
+  let to_int v = v
 
   let empty = 0
 

@@ -35,6 +35,8 @@ module type S = sig
 
   val to_list: t -> elt list
 
+  val to_int: t -> int
+
   val pp: Format.formatter -> t -> unit
 
 end
