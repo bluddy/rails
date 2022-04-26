@@ -1,7 +1,14 @@
 open Containers
 open Mapview_d
 
-let default = {center_x=0; center_y=0; zoom=Zoom4; width=Gmap.map_width; height=Gmap.map_height}
+let default = 
+  {cursor_x=0; cursor_y=0;
+  center_x=0; center_y=0;
+  zoom=Zoom4;
+  width=Gmap.map_width;
+  height=Gmap.map_height}
+
+let recenter_threshold = 5
 
 let tile_size_of_zoom = function
   | Zoom1 -> 1, 1
@@ -18,8 +25,8 @@ let mapview_bounds v tile_w tile_h =
   (* Pay attention to end as well *)
   let x_delta = v.width/(tile_w*2) in
   let y_delta = v.height/(tile_h*2) in
-  let start_x = Utils.clip (v.center_x - x_delta) ~min:0 ~max:(Gmap.map_width - 2 * x_delta) in
-  let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(Gmap.map_height - 2 * y_delta) in
+  let start_x = Utils.clip (v.center_x - x_delta) ~min:0 ~max:(v.width - 2 * x_delta) in
+  let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(v.height - 2 * y_delta) in
   let end_x = start_x + 2 * x_delta in
   let end_y = start_y + 2 * y_delta in
   start_x, start_y, end_x, end_y
@@ -31,6 +38,51 @@ let minimap_bounds v w h =
 
 
 let update (s:State.t) (v:t) (event:Event.t) ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
+  let check_recenter () =
+    (* recenter if past threshold *)
+    if abs(v.cursor_x - v.center_x) > recenter_threshold ||
+        abs(v.cursor_y - v.center_y) > recenter_threshold then (
+      v.center_x <- v.cursor_x;
+      v.center_y <- v.cursor_y;
+    )
+  in
+
+  let handle_mouse_button x y =
+      begin match v.zoom with
+      | Zoom1 ->
+          v.center_x <- x;
+          v.center_y <- y;
+          v.cursor_x <- x;
+          v.cursor_y <- y;
+          v.zoom <- Zoom4;
+      | _ ->
+          (* minimap *)
+          if x > minimap_x && y > minimap_y && y < minimap_y + minimap_h then (
+            let start_x, start_y = minimap_bounds v minimap_w minimap_h in
+            let x = x - minimap_x + start_x in
+            let y = y - minimap_y + start_y in
+            v.center_x <- x;
+            v.center_y <- y;
+          ) else (
+            (* Mapview *)
+            let tile_w, tile_h = tile_size_of_zoom v.zoom in
+            let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
+            let x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
+            let y = start_y + y/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
+            begin match v.zoom with
+            | Zoom4 ->
+              v.cursor_x <- x;
+              v.cursor_y <- y;
+              check_recenter ()
+            | _ ->
+              v.center_x <- x;
+              v.center_y <- y;
+              v.cursor_x <- x;
+              v.cursor_y <- y;
+            end
+          )
+      end
+  in
   begin match event with
   | Key {down=true; key=F1; _} ->
       v.zoom <- Zoom1
@@ -41,30 +93,29 @@ let update (s:State.t) (v:t) (event:Event.t) ~minimap_x ~minimap_y ~minimap_w ~m
   | Key {down=true; key=F4; _} ->
       v.zoom <- Zoom4
   | MouseButton {down=true; x; y; _} ->
-      begin match v.zoom with
-      | Zoom1 ->
-          v.center_x <- x;
-          v.center_y <- y
-      | _ ->
-          if x > minimap_x && y > minimap_y && y < minimap_y + minimap_h then (
-            let start_x, start_y = minimap_bounds v minimap_w minimap_h in
-            let x = x - minimap_x + start_x in
-            let y = y - minimap_y + start_y in
-            v.center_x <- x;
-            v.center_y <- y;
-          ) else (
-            let tile_w, tile_h = tile_size_of_zoom v.zoom in
-            let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
-            let x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
-            let y = start_y + y/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
-            v.center_x <- x;
-            v.center_y <- y;
-          )
-      end
+      handle_mouse_button x y
+  | Key {down=true; key; _} when equal_zoom v.zoom Zoom4 ->
+      let x, y = v.cursor_x, v.cursor_y in
+      let x, y =
+        match key with
+        | Q -> x-1, y-1
+        | W | Up -> x, y-1
+        | E -> x+1, y-1
+        | A | Left -> x-1, y
+        | D | Right -> x+1, y
+        | Z -> x-1, y+1
+        | S | Down -> x, y+1
+        | C -> x+1, y+1
+        | _ -> x, y
+      in
+      let x = Utils.clip x ~min:0 ~max:v.width in
+      let y = Utils.clip y ~min:0 ~max:v.height in
+      v.cursor_x <- x;
+      v.cursor_y <- y;
+      check_recenter ()
   | _ -> ()
   end;
   s
-
 
 module R = Renderer
 
@@ -116,8 +167,8 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
   in
 
   let draw_cursor () =
-    let x = (v.center_x - start_x) * tile_w in
-    let y = (v.center_y - start_y) * tile_h + y_ui in
+    let x = (v.cursor_x - start_x) * tile_w in
+    let y = (v.cursor_y - start_y) * tile_h + y_ui in
     R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color:Ega.white ~fill:false
   in
 
