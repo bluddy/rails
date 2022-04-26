@@ -14,7 +14,7 @@ type t = {
   seed: int;
   game: game;
   screen: Screen.t;
-  ui: Ui_d.t;
+  ui: Main_ui_d.t;
   view: Mapview_d.t;
   resources: Resources.t;
   textures: Textures.t;

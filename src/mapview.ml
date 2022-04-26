@@ -69,8 +69,8 @@ let update (s:State.t) (v:t) (event:Event.t) =
 
 module R = Renderer
 
-let render win (s:State.t) (v:t) =
-  let y_ui = Ui.mapview_start s.ui in
+let render win (s:State.t) (v:t) ~y =
+  let y_ui = y in
 
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
@@ -131,18 +131,16 @@ let render win (s:State.t) (v:t) =
   begin match v.zoom with
   | Zoom1 ->
       R.Texture.render win s.textures.map ~x:0 ~y:y_ui;
-      Ui.render win s s.ui ~draw_logo:true;
   | Zoom2 | Zoom3 ->
       tile_render ();
       draw_minimap ();
-      Ui.render win s s.ui ~draw_logo:false;
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
       draw_minimap ();
-      Ui.render win s s.ui ~draw_logo:false;
       draw_cursor ();
   end;
 
   s
 
+let get_zoom v = v.zoom
