@@ -1,6 +1,7 @@
 open Containers
 open Mapview_d
 
+(* The mapview changes fairly slowly and can thefore be mutated functionally *)
 let default = 
   {cursor_x=0; cursor_y=0;
   center_x=0; center_y=0;
@@ -38,37 +39,31 @@ let minimap_bounds v w h =
 
 let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
 
-  let check_recenter () =
+  let check_recenter cursor_x cursor_y =
     (* recenter in zoom4 if past screen, but only in given direction *)
     let tile_w, tile_h = tile_size_of_zoom Zoom4 in
     let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-    let recenter () =
-      v.center_x <- v.cursor_x;
-      v.center_y <- v.cursor_y;
-    in
     if (v.cursor_y > 0 && v.cursor_y < start_y + 1)
        || (v.cursor_y < v.height - 1 && v.cursor_y >= end_y - 1)
        || (v.cursor_x > 0 && v.cursor_x < start_x + 1)
        || (v.cursor_x < v.width - 1 && v.cursor_x >= end_x - 1) then
-         recenter ()
+         cursor_x, cursor_y
+    else
+         v.center_x, v.center_y
   in
 
   let handle_mouse_button x y =
       begin match v.zoom with
       | Zoom1 ->
-          v.center_x <- x;
-          v.center_y <- y - y_top;
-          v.cursor_x <- x;
-          v.cursor_y <- y - y_top;
-          v.zoom <- Zoom4;
+          let y = y - y_top in
+          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}
       | _ ->
           (* minimap *)
           if x > minimap_x && y > minimap_y && y < minimap_y + minimap_h then (
             let start_x, start_y = minimap_bounds v minimap_w minimap_h in
             let x = x - minimap_x + start_x in
             let y = y - minimap_y + start_y in
-            v.center_x <- x;
-            v.center_y <- y;
+            {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
           ) else (
             (* Mapview *)
             let tile_w, tile_h = tile_size_of_zoom v.zoom in
@@ -77,50 +72,47 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
             let y = start_y + (y-y_top)/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
             begin match v.zoom with
             | Zoom4 ->
-              v.cursor_x <- x;
-              v.cursor_y <- y;
-              check_recenter ()
+              let cursor_x, cursor_y = check_recenter x y in
+              {v with cursor_x; cursor_y}
             | _ ->
-              v.center_x <- x;
-              v.center_y <- y;
-              v.cursor_x <- x;
-              v.cursor_y <- y;
+              {v with cursor_x=x; cursor_y=y; center_x=x; center_y=y}
             end
           )
       end
   in
-  begin match event with
-  | Key {down=true; key=F1; _} ->
-      v.zoom <- Zoom1
-  | Key {down=true; key=F2; _} ->
-      v.zoom <- Zoom2
-  | Key {down=true; key=F3; _} ->
-      v.zoom <- Zoom3
-  | Key {down=true; key=F4; _} ->
-      v.zoom <- Zoom4
-  | MouseButton {down=true; x; y; _} ->
-      handle_mouse_button x y
-  | Key {down=true; key; _} when equal_zoom v.zoom Zoom4 ->
-      let x, y = v.cursor_x, v.cursor_y in
-      let x, y =
-        match key with
-        | Q -> x-1, y-1
-        | W | Up -> x, y-1
-        | E -> x+1, y-1
-        | A | Left -> x-1, y
-        | D | Right -> x+1, y
-        | Z -> x-1, y+1
-        | S | Down -> x, y+1
-        | C -> x+1, y+1
-        | _ -> x, y
-      in
-      let x = Utils.clip x ~min:0 ~max:v.width in
-      let y = Utils.clip y ~min:0 ~max:v.height in
-      v.cursor_x <- x;
-      v.cursor_y <- y;
-      check_recenter ();
-  | _ -> ()
-  end;
+  let v =
+    match event with
+    | Key {down=true; key=F1; _} ->
+        {v with zoom = Zoom1}
+    | Key {down=true; key=F2; _} ->
+        {v with zoom = Zoom2}
+    | Key {down=true; key=F3; _} ->
+        {v with zoom = Zoom3}
+    | Key {down=true; key=F4; _} ->
+        {v with zoom = Zoom4}
+    | MouseButton {down=true; x; y; _} ->
+        handle_mouse_button x y
+    | Key {down=true; key; _} when equal_zoom v.zoom Zoom4 ->
+        let x, y =
+          let x, y = v.cursor_x, v.cursor_y in
+          match key with
+          | Q -> x-1, y-1
+          | W | Up -> x, y-1
+          | E -> x+1, y-1
+          | A | Left -> x-1, y
+          | D | Right -> x+1, y
+          | Z -> x-1, y+1
+          | S | Down -> x, y+1
+          | C -> x+1, y+1
+          | _ -> x, y
+        in
+        let x = Utils.clip x ~min:0 ~max:v.width-1 in
+        let y = Utils.clip y ~min:0 ~max:v.height-1 in
+        let cursor_x, cursor_y = check_recenter x y in
+        {v with cursor_x; cursor_y}
+    | _ -> v
+  in
+  s.view <- v;
   s
 
 module R = Renderer
