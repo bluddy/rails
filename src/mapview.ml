@@ -36,26 +36,30 @@ let minimap_bounds v w h =
   let start_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(v.height - h) in
   start_x, start_y
 
+let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
 
-let update (s:State.t) (v:t) (event:Event.t) ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
   let check_recenter () =
-    (* recenter in zoom4 if past screen *)
+    (* recenter in zoom4 if past screen, but only in given direction *)
     let tile_w, tile_h = tile_size_of_zoom Zoom4 in
     let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-    if v.cursor_x < start_x || v.cursor_x > end_x ||
-       v.cursor_y < start_y || v.cursor_y > end_y then (
+    let recenter () =
       v.center_x <- v.cursor_x;
       v.center_y <- v.cursor_y;
-    )
+    in
+    if (v.cursor_y > 0 && v.cursor_y < start_y + 1)
+       || (v.cursor_y < v.height - 1 && v.cursor_y >= end_y - 1)
+       || (v.cursor_x > 0 && v.cursor_x < start_x + 1)
+       || (v.cursor_x < v.width - 1 && v.cursor_x >= end_x - 1) then
+         recenter ()
   in
 
   let handle_mouse_button x y =
       begin match v.zoom with
       | Zoom1 ->
           v.center_x <- x;
-          v.center_y <- y;
+          v.center_y <- y - y_top;
           v.cursor_x <- x;
-          v.cursor_y <- y;
+          v.cursor_y <- y - y_top;
           v.zoom <- Zoom4;
       | _ ->
           (* minimap *)
@@ -70,7 +74,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~minimap_x ~minimap_y ~minimap_w ~m
             let tile_w, tile_h = tile_size_of_zoom v.zoom in
             let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
             let x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
-            let y = start_y + y/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
+            let y = start_y + (y-y_top)/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
             begin match v.zoom with
             | Zoom4 ->
               v.cursor_x <- x;

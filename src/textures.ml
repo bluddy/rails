@@ -201,7 +201,7 @@ module Tracks = struct
         let track = Track.make dirs kind ~player:0 in
         Track.Htbl.replace track_dict track tex;
         if j >= num_j - 1 then
-          (i + 1, j)
+          (i + 1, 0)
         else
           (i, j + 1)
       )
