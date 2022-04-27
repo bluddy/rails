@@ -1,28 +1,32 @@
 open Containers
 
-type special =
-  {dir: Dir.t; player: int}
+type kind =
+  | Track
+  | Tunnel
+  | SignalTower
+  | Depot
+  | Station
+  | Terminal
+  | WoodBridge
+  | MetalBridge
+  | StoneBridge
 
 type elt =
-  | NoTrack
-  | Track of {dirs: Dir.Set.t; player: int}
-  | Tunnel of special
-  | SignalTower of special
-  | Depot of special
-  | Station of special
-  | Terminal of special
-  | WoodBridge of special
-  | IronBridge of special
-  | StoneBridge of special
+  {
+    dirs: Dir.Set.t;
+    kind: kind;
+    ixn: bool;
+    player: int;
+  }
 
 type t = {
-  map: elt array;
+  map: elt option array;
   w: int;
   h: int;
 }
 
 let empty w h =
-  let map = Array.make (w * h) NoTrack in
+  let map = Array.make (w * h) None in
   {map; w; h}
 
 let calc_offset v x y = y * v.w + x
@@ -54,14 +58,15 @@ let legal_tracks =
 
 let build_track v ~x ~y ~dir ~player =
   match get v x y with
-  | NoTrack ->
+  | None ->
       let dirs = Dir.Set.singleton dir in
-      set v x y @@ Track {dirs; player};
+      set v x y @@ Some {dirs; player; ixn=false; kind=Track};
       true
-  | Track t when t.player = player ->
+  | Some({kind=Track;_} as t) when t.player = player ->
       let dirs = Dir.Set.add t.dirs dir in
       if TrackSet.mem legal_tracks dirs then (
-        set v x y @@ Track {dirs; player};
+        let ixn = Dir.Set.count dirs > 2 in
+        set v x y @@ Some {t with dirs; ixn};
         true
       ) else
         false

@@ -180,6 +180,18 @@ module Tile = struct
 end
 
 module Track = struct
+
+  let load win res =
+    let hash = Hashtbl.create 100 in
+    let all_tracks = Resources.(track_dirs @ illegal_track @ track_turns) in 
+    List.fold (fun (x,y) li ->
+      let dirs = Dir.Set.of_list li in
+      let slice = Ndarray.get_slice [[y; y+16]; [x; x+16]] in
+
+      (Track, dirs)
+
+    let p1 = Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray in
+
 end
 
 let slice_logo win res =

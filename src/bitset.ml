@@ -79,6 +79,15 @@ module Make(E: Elem) = struct
     done;
     !acc
 
+  let count v =
+    let count = ref 0 in
+    let pat = ref 1 in
+    for i=0 to (E.to_enum E.last) do
+      if (!pat land v) <> 0 then incr count;
+      pat := !pat lsl 1;
+    done;
+    !count
+
   let iter f v =
     for i=0 to (E.to_enum E.last) do
       if ((1 lsl i) land v) <> 0 then

@@ -94,23 +94,5 @@ let x_offset =
       3;  3; -3; -3;
   |]
 
-let track_dirs =
-  [[Up]; [UpRight]; [Right]; [DownRight]; [Down]; [DownLeft]; [Left]; [UpLeft];
-  [Up; DownRight]; [Up; Down]; [Up; DownLeft]; [Down; UpRight]; [UpRight; DownLeft]; [Left; UpRight];
-    [Right; DownLeft]; [Left; Right];
-  [Right; UpLeft]; [Left; DownRight]; [UpLeft; DownRight]; [Down; UpLeft]; [Up; Down; DownRight];
-    [Up; Down; DownLeft]; [Up; Down; UpRight]; [Up; Down; UpLeft]; [Left; Right; UpRight];
-    [Left; Right; DownRight]; [Left; Right; UpLeft]; [Left; Right; DownLeft]; [Down; DownLeft; UpRight];
-    [Left; DownLeft; UpRight]; [Up; UpLeft; DownRight]; [Left; UpLeft; DownRight];
-  [Down; UpLeft; DownRight]; [Right; UpLeft; DownRight]; [Up; DownLeft; UpRight]; [Right; UpRight; DownLeft]]
-
-  (* Only the computer can make these *)
-let illegal_track =
-  [[Up; Down; Left; Right]; [UpRight; DownRight; DownLeft; UpLeft]]
-
-let track_turns =
-  [[Up; Right]; [Down; Right]; [Down; Left]; [Up; Left]; [UpRight; DownRight]; [DownLeft; DownRight];
-    [UpLeft; DownLeft]; [UpLeft; UpRight]]
-
 
 
