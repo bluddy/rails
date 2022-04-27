@@ -179,7 +179,7 @@ module Tile = struct
       find v
 end
 
-module Track = struct
+module Tracks = struct
   let tile_w, tile_h = 20, 20
 
   let load win res =
@@ -187,21 +187,45 @@ module Track = struct
     let w = (Ndarray.shape ndarray).(1) in
     let num_j = w / tile_w in
     let track_dict = Track.Htbl.create 100 in
-    let all_tracks = Resources.(track_dirs @ illegal_track @ track_turns) in 
-    List.fold_left (fun (i,j) li ->
+
+    let get_tex i j =
       let x, y = j * tile_w, i * tile_h in
       let slice = Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarray in
       let tex = R.Texture.make win slice in
-      let dirs = Dir.Set.of_list li in
-      let track = Track.make dirs Track.Track ~player:0 in
-      Track.Htbl.replace track_dict track tex;
-      if j >= num_j - 1 then
-        (i + 1, j)
-      else
-        (i, j + 1)
-    )
-    (0,0)
-    all_tracks
+      tex
+    in
+    let load_textures start_i start_j kind dirslist =
+      List.fold_left (fun (i,j) li ->
+        let tex = get_tex i j in
+        let dirs = Dir.Set.of_list li in
+        let track = Track.make dirs kind ~player:0 in
+        Track.Htbl.replace track_dict track tex;
+        if j >= num_j - 1 then
+          (i + 1, j)
+        else
+          (i, j + 1)
+      )
+      (start_i, start_j)
+      dirslist
+      |> ignore
+    in
+
+    (* load regular tracks *)
+    let all_tracks = Resources.(track_dirs @ illegal_track @ track_turns) in 
+    load_textures 0 0 Track.Track all_tracks;
+
+    let special_dirs =
+      [[Dir.Up;Down]; [UpRight; DownLeft]; [Left;Right]; [UpLeft; DownRight]]
+    in
+    load_textures 3 0 Track.Tunnel special_dirs;
+    load_textures 3 4 Track.MetalBridge special_dirs;
+    load_textures 3 8 Track.WoodBridge special_dirs;
+    load_textures 4 0 Track.SignalTower special_dirs;
+    load_textures 4 0 Track.Depot special_dirs;
+    load_textures 4 4 Track.Station special_dirs;
+    load_textures 4 8 Track.Terminal special_dirs;
+
+    track_dict
 
 end
 
@@ -219,6 +243,7 @@ type t = {
   logo: R.Texture.t;
   tiles: (Gmap.tile, Tile.t) Hashtbl.t;
   small_tiles: (Gmap.tile, Tile.t) Hashtbl.t;
+  tracks: R.Texture.t Track.Htbl.t;
 }
 
 let of_resources win res area =
@@ -235,11 +260,19 @@ let of_resources win res area =
   let fonts = Fonts.load win in
   let tiles, small_tiles = Tile.slice_tiles win res in
   let logo = slice_logo win res in
-  {maps; pics; map; pixel; fonts; tiles; small_tiles; logo}
+  let tracks = Tracks.load win res in
+  {
+    maps;
+    pics;
+    map;
+    pixel;
+    fonts;
+    tiles;
+    small_tiles;
+    logo;
+    tracks;
+  }
 
 let update_map win v map =
-  (* R.Texture.destroy v.map; *)
-  (* let tex = R.Texture.make win @@ Gmap.to_img map in *)
-  (* v.map <- tex *)
   R.Texture.update v.map @@ Gmap.to_img map
 
