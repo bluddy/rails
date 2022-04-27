@@ -31,6 +31,8 @@ module type S = sig
 
   val iter: (elt -> unit) -> t -> unit
 
+  val cardinal: t -> int
+
   val of_list: elt list -> t
 
   val to_list: t -> elt list

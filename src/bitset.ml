@@ -31,6 +31,8 @@ module type S = sig
 
   val iter: (elt -> unit) -> t -> unit
 
+  val cardinal: t -> int
+
   val of_list: elt list -> t
 
   val to_list: t -> elt list
@@ -79,12 +81,10 @@ module Make(E: Elem) = struct
     done;
     !acc
 
-  let count v =
+  let cardinal v =
     let count = ref 0 in
-    let pat = ref 1 in
     for i=0 to (E.to_enum E.last) do
-      if (!pat land v) <> 0 then incr count;
-      pat := !pat lsl 1;
+      if ((1 lsl i) land v) <> 0 then incr count;
     done;
     !count
 

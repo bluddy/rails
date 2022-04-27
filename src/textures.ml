@@ -180,17 +180,28 @@ module Tile = struct
 end
 
 module Track = struct
+  let tile_w, tile_h = 20, 20
 
   let load win res =
-    let hash = Hashtbl.create 100 in
+    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS" in
+    let w = (Ndarray.shape ndarray).(1) in
+    let num_j = w / tile_w in
+    let track_dict = Track.Htbl.create 100 in
     let all_tracks = Resources.(track_dirs @ illegal_track @ track_turns) in 
-    List.fold (fun (x,y) li ->
+    List.fold_left (fun (i,j) li ->
+      let x, y = j * tile_w, i * tile_h in
+      let slice = Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarray in
+      let tex = R.Texture.make win slice in
       let dirs = Dir.Set.of_list li in
-      let slice = Ndarray.get_slice [[y; y+16]; [x; x+16]] in
-
-      (Track, dirs)
-
-    let p1 = Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray in
+      let track = Track.make dirs Track.Track ~player:0 in
+      Track.Htbl.replace track_dict track tex;
+      if j >= num_j - 1 then
+        (i + 1, j)
+      else
+        (i, j + 1)
+    )
+    (0,0)
+    all_tracks
 
 end
 
