@@ -8,12 +8,11 @@ type zoom =
 
 type t =
   {
-    mutable center_x: int; (* in map coordinates *)
-    mutable center_y: int;
-    mutable cursor_x: int;
-    mutable cursor_y: int;
-    mutable zoom: zoom;
+    center_x: int; (* in map coordinates *)
+    center_y: int;
+    cursor_x: int;
+    cursor_y: int;
+    zoom: zoom;
     width: int;
     height: int;
   }
-  [@@deriving lens]

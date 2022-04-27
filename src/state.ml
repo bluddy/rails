@@ -4,6 +4,7 @@ open Containers
 type game = {
   area: Gmap.area;
   map : Gmap.t;
+  track: Trackmap.t;
   cities: Gmap.city array;
 }
 [@@deriving lens]

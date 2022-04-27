@@ -19,12 +19,22 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     let cities = List.assoc ~eq:(Stdlib.(=)) area resources.res_cities
       |> List.map (fun (name,x,y) -> {Gmap.name;x;y})
       |> Array.of_list in
-    let game = {State.map; area; cities} in
+    let track = Trackmap.empty Gmap.map_width Gmap.map_height in
+    let game = {State.map; area; cities; track} in
 
     let textures = Textures.of_resources win resources area in
     let ui = Main_ui.default win in
     let view = Mapview.default in
-    let state = {State.game; screen; resources; random; textures; seed; ui; view} in
+    let state = {
+      State.game;
+      screen;
+      resources;
+      random;
+      textures;
+      seed;
+      ui;
+      view;
+    } in
 
     Printf.printf " done.\n";
 

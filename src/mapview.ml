@@ -1,7 +1,11 @@
 open Containers
 open Mapview_d
 
-(* The mapview changes fairly slowly and can thefore be mutated functionally *)
+(* Mapview:
+  The mapview changes fairly slowly and can thefore be mutated functionally
+  Also, it should not change any game logic: it only handles viewing a window into the world
+ *)
+
 let default = 
   {cursor_x=0; cursor_y=0;
   center_x=0; center_y=0;
@@ -39,47 +43,65 @@ let minimap_bounds v w h =
 
 let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
 
-  let check_recenter cursor_x cursor_y =
+  let check_recenter_zoom4 v cursor_x cursor_y =
     (* recenter in zoom4 if past screen, but only in given direction *)
     let tile_w, tile_h = tile_size_of_zoom Zoom4 in
     let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-    if (v.cursor_y > 0 && v.cursor_y < start_y + 1)
-       || (v.cursor_y < v.height - 1 && v.cursor_y >= end_y - 1)
-       || (v.cursor_x > 0 && v.cursor_x < start_x + 1)
-       || (v.cursor_x < v.width - 1 && v.cursor_x >= end_x - 1) then
+    if (cursor_y > 0 && cursor_y < start_y + 1)
+       || (cursor_y < v.height - 1 && cursor_y >= end_y - 1)
+       || (cursor_x > 0 && cursor_x < start_x + 1)
+       || (cursor_x < v.width - 1 && cursor_x >= end_x - 1) then
          cursor_x, cursor_y
     else
          v.center_x, v.center_y
   in
 
-  let handle_mouse_button x y =
-      begin match v.zoom with
+  let handle_mouse_button v x y = match v.zoom with
       | Zoom1 ->
           let y = y - y_top in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}
+      | _ when x > minimap_x && y > minimap_y && y < minimap_y + minimap_h ->
+          (* click on minimap *)
+          let start_x, start_y = minimap_bounds v minimap_w minimap_h in
+          let x = x - minimap_x + start_x in
+          let y = y - minimap_y + start_y in
+          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
       | _ ->
-          (* minimap *)
-          if x > minimap_x && y > minimap_y && y < minimap_y + minimap_h then (
-            let start_x, start_y = minimap_bounds v minimap_w minimap_h in
-            let x = x - minimap_x + start_x in
-            let y = y - minimap_y + start_y in
-            {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
-          ) else (
-            (* Mapview *)
-            let tile_w, tile_h = tile_size_of_zoom v.zoom in
-            let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
-            let x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
-            let y = start_y + (y-y_top)/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
-            begin match v.zoom with
+          (* click in mapview *)
+          let tile_w, tile_h = tile_size_of_zoom v.zoom in
+          let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
+          let cursor_x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
+          let cursor_y = start_y + (y-y_top)/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
+          let center_x, center_y =
+            match v.zoom with
             | Zoom4 ->
-              let cursor_x, cursor_y = check_recenter x y in
-              {v with cursor_x; cursor_y}
+                check_recenter_zoom4 v cursor_x cursor_y
             | _ ->
-              {v with cursor_x=x; cursor_y=y; center_x=x; center_y=y}
-            end
-          )
-      end
+                v.center_x, v.center_y
+          in
+          {v with center_x; center_y; cursor_x; cursor_y}
   in
+
+  let handle_key_zoom4 v key =
+    let x, y = v.cursor_x, v.cursor_y in
+    let x, y =
+      match key with
+      | Event.Q -> x-1, y-1
+      | W | Up -> x, y-1
+      | E -> x+1, y-1
+      | A | Left -> x-1, y
+      | D | Right -> x+1, y
+      | Z -> x-1, y+1
+      | S | Down -> x, y+1
+      | C -> x+1, y+1
+      | _ -> x, y
+    in
+    let cursor_x = Utils.clip x ~min:0 ~max:(v.width-1) in
+    let cursor_y = Utils.clip y ~min:0 ~max:(v.height-1) in
+    let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
+    {v with center_x; center_y; cursor_x; cursor_y}
+  in
+
   let v =
     match event with
     | Key {down=true; key=F1; _} ->
@@ -91,25 +113,9 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
     | Key {down=true; key=F4; _} ->
         {v with zoom = Zoom4}
     | MouseButton {down=true; x; y; _} ->
-        handle_mouse_button x y
+        handle_mouse_button v x y
     | Key {down=true; key; _} when equal_zoom v.zoom Zoom4 ->
-        let x, y =
-          let x, y = v.cursor_x, v.cursor_y in
-          match key with
-          | Q -> x-1, y-1
-          | W | Up -> x, y-1
-          | E -> x+1, y-1
-          | A | Left -> x-1, y
-          | D | Right -> x+1, y
-          | Z -> x-1, y+1
-          | S | Down -> x, y+1
-          | C -> x+1, y+1
-          | _ -> x, y
-        in
-        let x = Utils.clip x ~min:0 ~max:v.width-1 in
-        let y = Utils.clip y ~min:0 ~max:v.height-1 in
-        let cursor_x, cursor_y = check_recenter x y in
-        {v with cursor_x; cursor_y}
+        handle_key_zoom4 v key
     | _ -> v
   in
   s.view <- v;
@@ -188,3 +194,4 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
   s
 
 let get_zoom v = v.zoom
+

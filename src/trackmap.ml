@@ -1,7 +1,7 @@
 open Containers
 
 type t = {
-  map: t option array;
+  map: Track.t option array;
   w: int;
   h: int;
 }
@@ -21,13 +21,13 @@ let build_track v ~x ~y ~dir ~player : bool =
   match get v x y with
   | None ->
       let dirs = Dir.Set.singleton dir in
-      let track = make dirs Track player in
+      let track = Track.make dirs Track.Track ~player in
       set v x y (Some track);
       true
-  | Some({kind=Track;_} as t) when t.player = player ->
+  | Some({kind=Track.Track;_} as t) when t.player = player ->
       let dirs = Dir.Set.add t.dirs dir in
-      if TrackSet.mem legal_tracks dirs then (
-        let ixn = Dir.Set.count dirs > 2 in
+      if Track.TrackSet.mem Track.legal_tracks dirs then (
+        let ixn = Dir.Set.cardinal dirs > 2 in
         set v x y @@ Some {t with dirs; ixn};
         true
       ) else
