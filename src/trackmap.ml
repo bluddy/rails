@@ -21,7 +21,8 @@ let set v x y tile =
 
 let pre_build_track v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
-  let x2, y2 = x + dx, y + dy in
+  let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.w - 1) in
+  let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.h - 1) in
   let track1 = get v x y in
   let track2 = get v x2 y2 in
   let track1 = Track.add_dir track1 dir in
@@ -30,8 +31,10 @@ let pre_build_track v ~x ~y ~dir ~player =
 
   (* check before building *)
 let check_build_track v ~x ~y ~dir ~player =
-  let track1, track2, _, _ = pre_build_track v ~x ~y ~dir ~player in
-  if Track.is_legal track1 && Track.is_legal track2 then
+  let track1, track2, x2, y2 = pre_build_track v ~x ~y ~dir ~player in
+  (* Check for out of bounds: x and y didn't change *)
+  if (x <> x2 || y <> y2) &&
+     Track.is_legal track1 && Track.is_legal track2 then
     `Ok
   else
     `Illegal
