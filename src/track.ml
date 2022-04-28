@@ -33,7 +33,7 @@ module Htbl = Hashtbl.Make(struct
     Dir.Set.to_int x.dirs lxor kind_to_enum x.kind
 end)
 
-  (* Hash-based set *)
+  (* Hash-based set for quick checking of legal tracks *)
 module TrackSet = CCHashSet.Make(struct
   type t = Dir.Set.t
   let equal = Dir.Set.equal
@@ -53,3 +53,4 @@ let legal_tracks =
   add_to_set Resources.track_dirs;
   add_to_set Resources.track_turns;
   h
+

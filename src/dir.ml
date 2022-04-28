@@ -94,5 +94,8 @@ let x_offset =
       3;  3; -3; -3;
   |]
 
+let to_offsets dir =
+  let i = to_enum dir in
+  x_offset.(i), y_offset.(i)
 
 

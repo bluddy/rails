@@ -5,7 +5,7 @@ type mouse_button =
   [ `Left | `Right | `Middle | `X1 | `X2 ]
   [@@deriving enum, show]
 
-module ButtonBitset = Bitset.Make(struct
+module Buttons = Bitset.Make(struct
   type t = mouse_button
   let of_enum = mouse_button_of_enum
   let to_enum = mouse_button_to_enum
@@ -23,7 +23,7 @@ type modifier =
   [`Shift | `Ctrl | `Alt | `Lshift | `Rshift | `Lctrl | `Rctrl | `Lalt | `Ralt | `Caps]
   [@@deriving enum]
 
-module ModifierBitset = Bitset.Make(struct
+module Modifiers = Bitset.Make(struct
   type t = modifier
   let of_enum = modifier_of_enum
   let to_enum = modifier_to_enum
@@ -31,11 +31,11 @@ module ModifierBitset = Bitset.Make(struct
 end)
 
 type t =
-  | MouseMotion of {x: int; y: int; state: ButtonBitset.t}
+  | MouseMotion of {x: int; y: int; state: Buttons.t}
   | MouseButton of
       {x: int; y: int; clicks: int; button: mouse_button; down: bool}
   | MouseWheel of {x: int; y: int}
-  | Key of {repeat: int; key: key; modifiers: ModifierBitset.t; down:bool}
+  | Key of {repeat: int; key: key; modifiers: Modifiers.t; down:bool}
   | Quit
   | NoEvent
   [@@deriving show]
@@ -46,10 +46,10 @@ let handle_key event (event_typ:Sdl.Event.enum) =
   let repeat = get event keyboard_repeat in
   let keymod = get event keyboard_keymod in
   let mod_set test v set =
-    if ((test land keymod) <> 0) then ModifierBitset.add set v else set
+    if ((test land keymod) <> 0) then Modifiers.add set v else set
   in
   let modifiers =
-    ModifierBitset.empty
+    Modifiers.empty
     |> mod_set lshift `Lshift
     |> mod_set rshift `Rshift
     |> mod_set lalt `Lalt
@@ -130,9 +130,9 @@ let mouse_motion event ~zoom =
   let state = get event mouse_motion_state in
   let state =
     let mod_set test v set =
-      if Int32.((test land state) <> 0l) then ButtonBitset.add set v else set
+      if Int32.((test land state) <> 0l) then Buttons.add set v else set
     in
-    ButtonBitset.empty
+    Buttons.empty
     |> mod_set Sdl.Button.lmask `Left
     |> mod_set Sdl.Button.mmask `Middle
     |> mod_set Sdl.Button.rmask `Right

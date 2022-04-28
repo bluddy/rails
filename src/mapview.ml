@@ -83,43 +83,58 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
           {v with center_x; center_y; cursor_x; cursor_y}
   in
 
-  let handle_key_zoom4 v key =
+  let key_to_dir = function
+    | Event.Q -> Some Dir.UpLeft
+    | W | Up -> Some Up
+    | E -> Some UpRight
+    | A | Left -> Some Left
+    | D | Right -> Some Right
+    | Z -> Some DownLeft
+    | S | Down -> Some Down
+    | C -> Some DownRight
+    | _ -> None
+  in
+
+  let handle_key_zoom4 v backend key ~build =
     let x, y = v.cursor_x, v.cursor_y in
-    let x, y =
-      match key with
-      | Event.Q -> x-1, y-1
-      | W | Up -> x, y-1
-      | E -> x+1, y-1
-      | A | Left -> x-1, y
-      | D | Right -> x+1, y
-      | Z -> x-1, y+1
-      | S | Down -> x, y+1
-      | C -> x+1, y+1
-      | _ -> x, y
+    let dir = key_to_dir key in
+    let x_delta, y_delta =
+      match dir with
+      | Some dir -> Dir.to_offsets dir
+      | None -> 0, 0
     in
+    let x, y = x + x_delta, y + y_delta in
     let cursor_x = Utils.clip x ~min:0 ~max:(v.width-1) in
     let cursor_y = Utils.clip y ~min:0 ~max:(v.height-1) in
     let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
-    {v with center_x; center_y; cursor_x; cursor_y}
+    let backend, _success = (* TODO handle failure *)
+      match dir, build with
+      | Some dir, true ->
+          B.build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0
+      | _ -> backend, true
+    in
+    {v with center_x; center_y; cursor_x; cursor_y}, backend
   in
 
-  let v =
+  let v, backend =
     match event with
     | Key {down=true; key=F1; _} ->
-        {v with zoom = Zoom1}
+        {v with zoom = Zoom1}, s.backend
     | Key {down=true; key=F2; _} ->
-        {v with zoom = Zoom2}
+        {v with zoom = Zoom2}, s.backend
     | Key {down=true; key=F3; _} ->
-        {v with zoom = Zoom3}
+        {v with zoom = Zoom3}, s.backend
     | Key {down=true; key=F4; _} ->
-        {v with zoom = Zoom4}
+        {v with zoom = Zoom4}, s.backend
     | MouseButton {down=true; x; y; _} ->
-        handle_mouse_button v x y
-    | Key {down=true; key; _} when equal_zoom v.zoom Zoom4 ->
-        handle_key_zoom4 v key
-    | _ -> v
+        handle_mouse_button v x y, s.backend
+    | Key {down=true; key; modifiers; _} when equal_zoom v.zoom Zoom4 ->
+        let build = Event.Modifiers.mem modifiers `Shift in
+        handle_key_zoom4 v s.backend key ~build
+    | _ -> v, s.backend
   in
   s.view <- v;
+  s.backend <- backend;
   s
 
 module R = Renderer

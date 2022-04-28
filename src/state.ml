@@ -4,7 +4,7 @@ open Containers
 type t = {
   random: Random.State.t;
   seed: int;
-  backend: Backend.t;
+  mutable backend: Backend.t;
   screen: Screen.t;
   ui: Main_ui_d.t;
   mutable view: Mapview_d.t;
