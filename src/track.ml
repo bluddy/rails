@@ -54,3 +54,7 @@ let legal_tracks =
   add_to_set Resources.track_turns;
   h
 
+let is_legal dirs = TrackSet.mem legal_tracks dirs
+
+let is_ixn dirs = Dir.Set.cardinal dirs > 2
+

@@ -26,9 +26,8 @@ let build_track v ~x ~y ~dir ~player : bool =
       true
   | Some({kind=Track.Track;_} as t) when t.player = player ->
       let dirs = Dir.Set.add t.dirs dir in
-      if Track.TrackSet.mem Track.legal_tracks dirs then (
-        let ixn = Dir.Set.cardinal dirs > 2 in
-        set v x y @@ Some {t with dirs; ixn};
+      if Track.is_legal dirs then (
+        set v x y @@ Some {t with dirs; ixn=Track.is_ixn dirs};
         true
       ) else
         false
