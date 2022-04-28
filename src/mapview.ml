@@ -1,5 +1,6 @@
 open Containers
 open Mapview_d
+module B = Backend
 
 (* Mapview:
   The mapview changes fairly slowly and can thefore be mutated functionally
@@ -10,8 +11,8 @@ let default =
   {cursor_x=0; cursor_y=0;
   center_x=0; center_y=0;
   zoom=Zoom4;
-  width=Gmap.map_width;
-  height=Gmap.map_height}
+  width=B.map_width;
+  height=B.map_height}
 
 let recenter_threshold = 5
 
@@ -136,8 +137,8 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
       Iter.iter (fun j ->
         let map_x, map_y = start_x + j, start_y + i in
         let alt = ((map_x + map_y) land 1) > 0 in
-        let tile = Gmap.get_tile s.game.map (start_x+j) (start_y+i) in
-        let tex = Textures.Tile.find tiles ~area:s.game.area ~alt tile in
+        let tile = B.get_tile s.backend (start_x+j) (start_y+i) in
+        let tex = Textures.Tile.find tiles ~area:(B.get_area s.backend) ~alt tile in
         let x, y = j * tile_w, y_ui + i * tile_h in
         R.Texture.render win tex ~x ~y;
       )
@@ -146,7 +147,7 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
   in
 
   let draw_city_names () =
-    Array.iter (fun {Gmap.name; x; y} ->
+    B.iter_cities (fun name x y ->
       if (x >= start_x && y >= start_y) || (x <= end_x && y <= end_y) then (
         let x = (x - start_x) * tile_w in
         let y = (y - start_y) * tile_h + y_ui in
@@ -156,7 +157,7 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
         Fonts.Render.write win s.textures.fonts name ~x ~y ~color:Ega.bcyan;
       )
     )
-    s.game.cities
+    s.backend
   in
 
   let draw_minimap x y w h =

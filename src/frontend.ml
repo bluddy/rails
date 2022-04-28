@@ -1,7 +1,8 @@
 open Containers
-module R = Renderer
-(* open Tsdl *)
 module Ndarray = Owl_base_dense_ndarray.Generic
+
+module R = Renderer
+module B = Backend
 
 let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let random = Random.get_state () in
@@ -15,19 +16,14 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     let screen = Screen.make view in
 
-    let map = List.assoc ~eq:(Stdlib.(=)) area resources.res_maps in
-    let cities = List.assoc ~eq:(Stdlib.(=)) area resources.res_cities
-      |> List.map (fun (name,x,y) -> {Gmap.name;x;y})
-      |> Array.of_list in
-    let track = Trackmap.empty Gmap.map_width Gmap.map_height in
-    let game = {State.map; area; cities; track} in
+    let backend = B.default area resources in
 
     let textures = Textures.of_resources win resources area in
     let ui = Main_ui.default win in
     let view = Mapview.default in
     let state = {
-      State.game;
-      screen;
+      State.screen;
+      backend;
       resources;
       random;
       textures;
@@ -43,8 +39,8 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         match s.screen.Screen.view with
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
-            let cities = Array.to_list s.game.cities in
-            let data = Mapgen.init s.random s.game.area cities in
+            let cities = Array.to_list @@ B.get_cities s.backend in
+            let data = Mapgen.init s.random (B.get_area s.backend) cities in
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) s
 
         | Screen.MapGen Some {state=`Done; _} ->
@@ -58,12 +54,13 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen Some data ->
             let done_fn () =
               (* Final update of map *)
-              Textures.update_map win s.textures s.game.map
+              Textures.update_map win s.textures @@ B.get_map s.backend
             in
             let data =
               Iter.(0 -- 20)
               |> Iter.fold (fun acc _ ->
-              Mapgen.update_map_step random acc ~done_fn ~map ~fonts:s.textures.fonts)
+                  let map = B.get_map s.backend in
+                  Mapgen.update_map_step random acc ~done_fn ~map ~fonts:s.textures.fonts)
               data
             in
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state

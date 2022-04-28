@@ -3,6 +3,8 @@ open Gmap
 
 let debug = false
 
+(* MapGen is both in the backend and the frontend. Probably needs better splitting *)
+
 let pixel_apply_mountain = function
   | Foothills_pixel -> Hills_pixel
   | Hills_pixel -> Mountain_pixel
