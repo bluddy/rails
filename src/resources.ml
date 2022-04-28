@@ -71,3 +71,7 @@ let track_turns =
   [[Up; Right]; [Down; Right]; [Down; Left]; [Up; Left]; [UpRight; DownRight]; [DownLeft; DownRight];
     [UpLeft; DownLeft]; [UpLeft; UpRight]]
 
+  (* Dirs for non-track stuff *)
+let special_dirs =
+  [[Dir.Up;Down]; [UpRight; DownLeft]; [Left;Right]; [UpLeft; DownRight]]
+

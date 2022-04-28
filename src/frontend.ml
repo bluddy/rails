@@ -66,7 +66,14 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | Screen.MapView ->
-            Main_ui.update s s.ui event
+            let ui, view, actions = Main_ui.update s s.ui event in
+            s.view <- view;
+            s.ui <- ui;
+            let backend = 
+              Backend.Action.run_many s.backend actions
+            in
+            s.backend <- backend;
+            s
 
         | _ -> s
       in

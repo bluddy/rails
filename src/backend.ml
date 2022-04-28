@@ -36,9 +36,24 @@ let get_map v = v.map
 let iter_cities f v = 
   Array.iter (fun city -> f city.Gmap.name city.x city.y) v.cities
 
-let build_track v ~x ~y ~dir ~player =
-  let success = Trackmap.build_track v.track ~x ~y ~dir ~player in
-  v, success
+let check_build_track v ~x ~y ~dir ~player =
+  Trackmap.check_build_track v.track ~x ~y ~dir ~player
 
+let build_track v ~x ~y ~dir ~player =
+  Trackmap.build_track v.track ~x ~y ~dir ~player;
+  v
+
+module Action = struct
+  type t =
+    | Build of {x: int; y: int; dir: Dir.t; player: int}
+
+  let run_one v = function
+    | Build {x; y; dir; player} ->
+        build_track v ~x ~y ~dir ~player
+
+  let run_many v li =
+    List.fold_left (fun acc x -> run_one acc x) v li
+
+end
 
 

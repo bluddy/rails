@@ -23,12 +23,16 @@ type modifier =
   [`Shift | `Ctrl | `Alt | `Lshift | `Rshift | `Lctrl | `Rctrl | `Lalt | `Ralt | `Caps]
   [@@deriving enum]
 
-module Modifiers = Bitset.Make(struct
-  type t = modifier
-  let of_enum = modifier_of_enum
-  let to_enum = modifier_to_enum
-  let last = `Caps
-end)
+module Modifiers = struct
+  include Bitset.Make(struct
+    type t = modifier
+    let of_enum = modifier_of_enum
+    let to_enum = modifier_to_enum
+    let last = `Caps
+  end)
+
+  let shift v = mem v `Shift
+end
 
 type t =
   | MouseMotion of {x: int; y: int; state: Buttons.t}

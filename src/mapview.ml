@@ -95,47 +95,47 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
     | _ -> None
   in
 
-  let handle_key_zoom4 v backend key ~build =
+  let handle_key_zoom4 v key ~build =
     let x, y = v.cursor_x, v.cursor_y in
     let dir = key_to_dir key in
-    let x_delta, y_delta =
-      match dir with
-      | Some dir -> Dir.to_offsets dir
-      | None -> 0, 0
-    in
-    let x, y = x + x_delta, y + y_delta in
-    let cursor_x = Utils.clip x ~min:0 ~max:(v.width-1) in
-    let cursor_y = Utils.clip y ~min:0 ~max:(v.height-1) in
-    let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
-    let backend, _success = (* TODO handle failure *)
-      match dir, build with
-      | Some dir, true ->
-          B.build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0
-      | _ -> backend, true
-    in
-    {v with center_x; center_y; cursor_x; cursor_y}, backend
+    match dir with
+    | None -> v, []
+    | Some dir ->
+      let dx, dy = Dir.to_offsets dir in
+      let x, y = x + dx, y + dy in
+      let cursor_x = Utils.clip x ~min:0 ~max:(v.width-1) in
+      let cursor_y = Utils.clip y ~min:0 ~max:(v.height-1) in
+      let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
+      let actions =
+        if build then
+          let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
+          match check with
+          | `Ok -> [B.Action.Build {x=v.cursor_x; y=v.cursor_y; dir; player=0}]
+          | `Illegal -> []
+        else
+          []
+      in
+      {v with center_x; center_y; cursor_x; cursor_y}, actions
   in
 
-  let v, backend =
+  let v, actions =
     match event with
     | Key {down=true; key=F1; _} ->
-        {v with zoom = Zoom1}, s.backend
+        {v with zoom = Zoom1}, []
     | Key {down=true; key=F2; _} ->
-        {v with zoom = Zoom2}, s.backend
+        {v with zoom = Zoom2}, []
     | Key {down=true; key=F3; _} ->
-        {v with zoom = Zoom3}, s.backend
+        {v with zoom = Zoom3}, []
     | Key {down=true; key=F4; _} ->
-        {v with zoom = Zoom4}, s.backend
+        {v with zoom = Zoom4}, []
     | MouseButton {down=true; x; y; _} ->
-        handle_mouse_button v x y, s.backend
+        handle_mouse_button v x y, []
     | Key {down=true; key; modifiers; _} when equal_zoom v.zoom Zoom4 ->
-        let build = Event.Modifiers.mem modifiers `Shift in
-        handle_key_zoom4 v s.backend key ~build
-    | _ -> v, s.backend
+        let build = Event.Modifiers.shift modifiers in
+        handle_key_zoom4 v key ~build
+    | _ -> v, []
   in
-  s.view <- v;
-  s.backend <- backend;
-  s
+  v, actions
 
 module R = Renderer
 
@@ -198,12 +198,14 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
     Iter.iter (fun i ->
       Iter.iter (fun j ->
         let map_x, map_y = start_x + j, start_y + i in
-        match B.get_track s.backend map_x map_y with
-        | Some track ->
+        let track = B.get_track s.backend map_x map_y in
+        if Track.is_empty track then
+          ()
+        else (
           let tex = Textures.Tracks.find track_h track in
           let x, y = j * tile_w, y_ui + i * tile_h in
           R.Texture.render win tex ~x ~y;
-        | _ -> ()
+        )
       )
       Iter.(0--(v.width/tile_w - 1)))
     Iter.(0--(v.height/tile_h - 1))
@@ -224,7 +226,6 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
       draw_cursor_zoom4 ();
       draw_track_zoom4 ();
   end;
-
   s
 
 let get_zoom v = v.zoom

@@ -24,7 +24,11 @@ let update (s:State.t) (v:t) (event:Event.t) =
   let minimap_y = dims.menu_h in
   let minimap_h = dims.minimap_h in
   let minimap_w = dims.ui_w in
-  Mapview.update s s.view event ~y_top:dims.menu_h ~minimap_x ~minimap_y ~minimap_w ~minimap_h
+  let view, actions =
+    Mapview.update s s.view event ~y_top:dims.menu_h ~minimap_x ~minimap_y ~minimap_w ~minimap_h
+  in
+  v, view, actions
+  
 
 let render (win:R.window) (s:State.t) (v:t) =
   let dims = v.dims in

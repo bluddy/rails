@@ -39,7 +39,7 @@ let opposite = function
   | Down -> Up
   | DownLeft -> UpRight
   | Left -> Right
-  | UpLeft -> DownLeft
+  | UpLeft -> DownRight
 
 module Set = struct
   include Bitset.Make(struct
