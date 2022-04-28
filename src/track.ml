@@ -24,7 +24,7 @@ let make dirs kind ~player =
   let ixn = Dir.Set.cardinal dirs > 2 in
   {dirs; kind; ixn; player}
 
-  (* Make hashtabl that only uses dirs and kind *)
+  (* Make hashtabl that only uses track dirs and kind *)
 module Htbl = Hashtbl.Make(struct
   type nonrec t = t
   let equal x y =

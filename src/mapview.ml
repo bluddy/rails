@@ -152,7 +152,7 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
       Iter.iter (fun j ->
         let map_x, map_y = start_x + j, start_y + i in
         let alt = ((map_x + map_y) land 1) > 0 in
-        let tile = B.get_tile s.backend (start_x+j) (start_y+i) in
+        let tile = B.get_tile s.backend map_x map_y in
         let tex = Textures.Tile.find tiles ~area:(B.get_area s.backend) ~alt tile in
         let x, y = j * tile_w, y_ui + i * tile_h in
         R.Texture.render win tex ~x ~y;
@@ -186,10 +186,27 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
       ~fill:false
   in
 
-  let draw_cursor () =
+  let draw_cursor_zoom4 () =
     let x = (v.cursor_x - start_x) * tile_w in
     let y = (v.cursor_y - start_y) * tile_h + y_ui in
     R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color:Ega.white ~fill:false
+  in
+
+  let draw_track_zoom4 () =
+    let track_h = s.State.textures.tracks in
+
+    Iter.iter (fun i ->
+      Iter.iter (fun j ->
+        let map_x, map_y = start_x + j, start_y + i in
+        match B.get_track s.backend map_x map_y with
+        | Some track ->
+          let tex = Textures.Tracks.find track_h track in
+          let x, y = j * tile_w, y_ui + i * tile_h in
+          R.Texture.render win tex ~x ~y;
+        | _ -> ()
+      )
+      Iter.(0--(v.width/tile_w - 1)))
+    Iter.(0--(v.height/tile_h - 1))
   in
 
   R.clear_screen win;
@@ -204,7 +221,8 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
       tile_render ();
       draw_city_names ();
       draw_minimap minimap_x minimap_y minimap_w minimap_h;
-      draw_cursor ();
+      draw_cursor_zoom4 ();
+      draw_track_zoom4 ();
   end;
 
   s

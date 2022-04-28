@@ -25,6 +25,8 @@ let map_width = Gmap.map_width
 
 let get_tile v x y = Gmap.get_tile v.map x y
 
+let get_track v x y = Trackmap.get v.track x y
+
 let get_area v = v.area
 
 let get_cities v = v.cities

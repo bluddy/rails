@@ -224,8 +224,10 @@ module Tracks = struct
     load_textures 4 0 Track.Depot special_dirs;
     load_textures 4 4 Track.Station special_dirs;
     load_textures 4 8 Track.Terminal special_dirs;
-
     track_dict
+
+  let find track_h track =
+    Track.Htbl.find track_h track
 
 end
 
