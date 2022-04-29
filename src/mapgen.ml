@@ -284,7 +284,8 @@ let load_city_list area  =
     let name = Gen.take 16 stream |> Gen.to_string in
     (* Name is followed by zeros *)
     let name = String.split_on_char (Char.chr 0) name |> List.hd in
-    (name, x, y)::acc
+    (* Original y value is +8 for menu. Remove it *)
+    (name, x, y-8)::acc
   in
   let cities = Iter.fold parse [] Iter.(0 -- 99) |> List.rev in
   cities
