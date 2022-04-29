@@ -20,11 +20,12 @@ type t =
     player: int;
   }
 
-let empty = {
-  dirs=Dir.Set.empty; kind=Track; ixn=false; player=0
+let empty player = {
+  dirs=Dir.Set.empty;
+  kind=Track;
+  ixn=false;
+  player
 }
-
-let is_empty v = Dir.Set.is_empty v.dirs
 
 let is_ixn dirs = Dir.Set.cardinal dirs > 2
 

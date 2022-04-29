@@ -114,6 +114,15 @@ let draw_rect win ~x ~y ~w ~h ~color ~fill =
   else
     Sdl.render_draw_rect win.renderer win.opt_rect |> get_exn
 
+let draw_point win ~x ~y ~color =
+  let (r,g,b,a) = color in
+  Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
+  Sdl.render_draw_point win.renderer x y |> get_exn
+
+let draw_line win ~x1 ~y1 ~x2 ~y2 ~color = 
+  let (r,g,b,a) = color in
+  Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
+  Sdl.render_draw_line win.renderer x1 y1 x2 y2 |> get_exn
 
 (* module Rect = struct *)
 (*   type t = { *)

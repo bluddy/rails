@@ -40,7 +40,9 @@ let mapview_bounds v tile_w tile_h =
 let minimap_bounds v w h =
   let start_x = Utils.clip (v.center_x - w/2) ~min:0 ~max:(v.width - w) in
   let start_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(v.height - h) in
-  start_x, start_y
+  let end_x = start_x + w in
+  let end_y = start_y + h in
+  start_x, start_y, end_x, end_y
 
 let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
 
@@ -63,7 +65,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}
       | _ when x > minimap_x && y > minimap_y && y < minimap_y + minimap_h ->
           (* click on minimap *)
-          let start_x, start_y = minimap_bounds v minimap_w minimap_h in
+          let start_x, start_y, _, _ = minimap_bounds v minimap_w minimap_h in
           let x = x - minimap_x + start_x in
           let y = y - minimap_y + start_y in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
@@ -175,15 +177,31 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
     s.backend
   in
 
-  let draw_minimap x y w h =
-    let from_x, from_y = minimap_bounds v w h in
-    R.Texture.render_subtex win s.textures.map ~x ~y ~from_x ~from_y ~w ~h;
+  let draw_track_zoom1 () =
+    B.trackmap_iter s.backend (fun x y _ ->
+      R.draw_point win ~x ~y:(y + y_ui) ~color:Ega.black
+    )
+  in
+
+  let draw_minimap minimap_x minimap_y minimap_w minimap_h =
+    let from_x, from_y, from_end_x, from_end_y = minimap_bounds v minimap_w minimap_h in
+    R.Texture.render_subtex win s.textures.map ~x:minimap_x ~y:minimap_y
+      ~from_x ~from_y ~w:minimap_w ~h:minimap_h;
+
+    (* draw track *)
+    B.trackmap_iter s.backend (fun x y _ ->
+      if x >= from_x && x <= from_end_x && y >= from_y && y <= from_end_y then (
+        let x = minimap_x + x - from_x in
+        let y = minimap_y + y - from_y in
+        R.draw_point win ~x ~y:(y + y_ui) ~color:Ega.black
+      )
+    );
 
     (* minimap rectangle *)
-    let x = x + start_x - from_x in
-    let y = y + start_y - from_y in
+    let x = minimap_x + start_x - from_x in
+    let y = minimap_y + start_y - from_y in
     R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
-      ~fill:false
+      ~fill:false;
   in
 
   let draw_cursor_zoom4 () =
@@ -198,14 +216,12 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
     Iter.iter (fun i ->
       Iter.iter (fun j ->
         let map_x, map_y = start_x + j, start_y + i in
-        let track = B.get_track s.backend map_x map_y in
-        if Track.is_empty track then
-          ()
-        else (
+        match B.get_track s.backend map_x map_y with
+        | Some track ->
           let tex = Textures.Tracks.find track_h track in
           let x, y = j * tile_w, y_ui + i * tile_h in
-          R.Texture.render win tex ~x ~y;
-        )
+          R.Texture.render win tex ~x ~y
+        | _ -> ()
       )
       Iter.(0--(v.width/tile_w - 1)))
     Iter.(0--(v.height/tile_h - 1))
@@ -216,6 +232,7 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
   begin match v.zoom with
   | Zoom1 ->
       R.Texture.render win s.textures.map ~x:0 ~y:y_ui;
+      draw_track_zoom1 ()
   | Zoom2 | Zoom3 ->
       tile_render ();
       draw_minimap minimap_x minimap_y minimap_w minimap_h;

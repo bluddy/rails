@@ -40,19 +40,24 @@ let check_build_track v ~x ~y ~dir ~player =
   Trackmap.check_build_track v.track ~x ~y ~dir ~player
 
 let build_track v ~x ~y ~dir ~player =
-  Trackmap.build_track v.track ~x ~y ~dir ~player;
-  v
+  Trackmap.build_track v.track ~x ~y ~dir ~player
+
+let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct
   type t =
     | Build of {x: int; y: int; dir: Dir.t; player: int}
 
-  let run_one v = function
+  let run_one backend = function
     | Build {x; y; dir; player} ->
-        build_track v ~x ~y ~dir ~player
+        let track = build_track backend ~x ~y ~dir ~player in
+        {backend with track}
 
-  let run_many v li =
-    List.fold_left (fun acc x -> run_one acc x) v li
+  let run_many backend (li:t list) =
+    List.fold_left (fun acc x ->
+      run_one acc x)
+    backend
+    li
 
 end
 
