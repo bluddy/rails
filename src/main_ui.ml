@@ -3,43 +3,22 @@ open Main_ui_d
 
 module R = Renderer
 
-let main_menu =
-  let open Menu in
+let main_menu fonts =
   let main =
     [
-      {
-        x=8; y=1;
-        name="&Game";
-        dropdown=dropdown_empty;
-      };
-      {
-        x=64; y=1;
-        name="&Displays";
-        dropdown=dropdown_empty;
-      };
-      {
-        x=120; y=1;
-        name="&Reports";
-        dropdown=dropdown_empty;
-      };
-      {
-        x=176; y=1;
-        name="&Build";
-        dropdown=dropdown_empty;
-      };
-      {
-        x=242; y=1;
-        name="&Actions";
-        dropdown=dropdown_empty;
-      };
+      Menu.make_single ~fonts ~name:"&Game" ~x:8 ~y:1 ~dropdown:None;
+      Menu.make_single ~fonts ~name:"&Displays" ~x:64 ~y:1 ~dropdown:None;
+      Menu.make_single ~fonts ~name:"&Reports" ~x:120 ~y:1 ~dropdown:None;
+      Menu.make_single ~fonts ~name:"&Build" ~x:176 ~y:1 ~dropdown:None;
+      Menu.make_single ~fonts ~name:"&Actions" ~x:242 ~y:1 ~dropdown:None;
     ]
   in
   { 
-    menu_open=None;
-    menus=main
+    Menu.menu_open=None;
+    menus=main;
   }
 
-let default win =
+let default win fonts =
   let dims =
     {
       menu_h=8;
@@ -54,7 +33,7 @@ let default win =
   in
   {
     dims;
-    menu=main_menu;
+    menu=main_menu fonts;
   }
 
 let update (s:State.t) (v:t) (event:Event.t) =
@@ -110,9 +89,4 @@ let render (win:R.window) (s:State.t) (v:t) =
   Menu.render win s.textures.fonts v.menu;
 
   s
-
-
-
-
-
 

@@ -69,6 +69,16 @@ let get_letter font c =
 let get_letter_width font c =
   Hashtbl.find font.char_widths c
 
+let get_str_w_h font str =
+  let x = 
+    String.fold (fun x c ->
+      let w = get_letter_width font c in
+      x + w + font.space_x)
+    0
+    str
+  in
+  x, font.height
+
   (* write to RGBA ndarray *)
 let write ?(x=0) ?(y=0) ~font str ~pixels =
   let x_off, y_off = x, y in
@@ -218,6 +228,13 @@ module Render = struct
     ()
     to_render 
 
+let write_char win fonts ?(color=Ega.white) ?(idx=4) c ~x ~y =
+  let font = fonts.(idx) in
+  let char_tex = Hashtbl.find font.Font.textures c in
+  R.Texture.render ~x ~y ~color win char_tex;
+  let w = Font.get_letter_width font c in
+  (x + w + font.space_x, y)
+
 let write win fonts ?(color=Ega.white) ?(idx=4) str ~x ~y =
   let font = fonts.(idx) in
   let x_first = x in (* keep starting column *)
@@ -225,10 +242,7 @@ let write win fonts ?(color=Ega.white) ?(idx=4) str ~x ~y =
     if Char.equal c '\n' then
       (x_first, y + font.Font.height + font.space_y)
     else
-      let char_tex = Hashtbl.find font.Font.textures c in
-      R.Texture.render ~x ~y ~color win char_tex;
-      let w = Font.get_letter_width font c in
-      (x + w + font.space_x, y))
+      write_char win fonts ~color ~idx c ~x ~y)
   (x, y)
   str
   |> ignore
@@ -253,4 +267,5 @@ let write_str ?(color=15) idx str ~fonts ~x ~y : Render.t =
   in
   {font_idx=idx; chars=acc}
 
+let get_str_w_h ~fonts ~idx str = Font.get_str_w_h fonts.(idx) str
 

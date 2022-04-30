@@ -19,8 +19,11 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     let backend = B.default area resources in
 
     let textures = Textures.of_resources win resources area in
-    let ui = Main_ui.default win in
+
+    let ui = Main_ui.default win textures.fonts in
+
     let view = Mapview.default in
+
     let state = {
       State.screen;
       backend;
