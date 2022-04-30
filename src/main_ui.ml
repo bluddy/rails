@@ -3,6 +3,42 @@ open Main_ui_d
 
 module R = Renderer
 
+let main_menu =
+  let open Menu in
+  let main =
+    [
+      {
+        x=8; y=1;
+        name="&Game";
+        dropdown=dropdown_empty;
+      };
+      {
+        x=64; y=1;
+        name="&Displays";
+        dropdown=dropdown_empty;
+      };
+      {
+        x=120; y=1;
+        name="&Reports";
+        dropdown=dropdown_empty;
+      };
+      {
+        x=176; y=1;
+        name="&Build";
+        dropdown=dropdown_empty;
+      };
+      {
+        x=242; y=1;
+        name="&Actions";
+        dropdown=dropdown_empty;
+      };
+    ]
+  in
+  { 
+    menu_open=None;
+    menus=main
+  }
+
 let default win =
   let dims =
     {
@@ -16,7 +52,10 @@ let default win =
       train_area_h=115;
     }
   in
-  {dims}
+  {
+    dims;
+    menu=main_menu;
+  }
 
 let update (s:State.t) (v:t) (event:Event.t) =
   let dims = v.dims in
@@ -66,5 +105,14 @@ let render (win:R.window) (s:State.t) (v:t) =
   (* Train area *)
   let y = y + dims.infobar_h in
   R.draw_rect win ~x:(x+1) ~y:(y+1) ~h:dims.train_area_h ~w:(dims.ui_w-1) ~color:Ega.bblue ~fill:true;
+
+  (* Menu bar *)
+  Menu.render win s.textures.fonts v.menu;
+
   s
+
+
+
+
+
 
