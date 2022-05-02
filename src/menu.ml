@@ -30,14 +30,13 @@ module MsgBox = struct
       w: int; h: int;
       entries: 'a entry list;
       selected: int option;
-      exclusive: int option;
+      exclusive: (int * int list) option;
     }
 
   let get_entry_w_h fonts v =
     Fonts.get_str_w_h ~fonts ~idx:menu_font v.name
 
-  let make_entry ~fonts name fire =
-    let _, h = Fonts.get_str_w_h ~fonts ~idx:menu_font name in
+  let make_entry name fire =
     let fire =
       match fire with
       | `MsgBox m -> MsgBox(false, m)
@@ -46,15 +45,15 @@ module MsgBox = struct
     in
     {
       y=0;
-      h;
+      h=0;
       name;
       fire;
     }
 
-  let render_entry ?(exclusive=false) win fonts v ~x =
+  let render_entry win fonts v ~x =
     Fonts.Render.write win fonts ~color:Ega.white ~idx:menu_font v.name ~x ~y:v.y
 
-  let make ~fonts ~x ~y ~exclusive entries =
+  let make ?(exclusive=None) ~fonts ~x ~y entries =
     let (w, h), entries =
       List.fold_map (fun (max_h, max_w) entry ->
         let w, h = get_entry_w_h fonts entry in
@@ -65,11 +64,16 @@ module MsgBox = struct
       (0, 0)
       entries
     in
+    let exclusive = match exclusive with
+      | None -> None
+      | Some [] -> Some (0, [])
+      | Some li -> Some (List.hd li, li)
+    in
     {
       x; y; w; h;
       entries;
       selected=None;
-      exclusive=if exclusive then Some 0 else None;
+      exclusive;
     }
 
   let rec is_entry_clicked v ~x ~y ~recurse =
@@ -156,7 +160,7 @@ module Title = struct
     msgbox: 'a MsgBox.t;
   }
 
-  let make ~fonts ~name ~x ~y msgbox =
+  let make ~fonts ~x ~y name msgbox =
     let w, h = Fonts.get_str_w_h ~fonts ~idx:1 name in
     {
       x; y;
