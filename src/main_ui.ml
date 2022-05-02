@@ -144,7 +144,7 @@ let default win fonts =
 
 let update (s:State.t) (v:t) (event:Event.t) =
   let dims = v.dims in
-  let view, action =
+  let v, action =
     (* only update view if we have a change *)
     match Menu.Global.update v.menu event with
     | _, Menu.NoAction -> v, Menu.NoAction

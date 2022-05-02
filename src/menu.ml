@@ -143,7 +143,7 @@ module MsgBox = struct
     {v with entries}, action
 
 
-  let render win fonts menu =
+  let render win ~fonts menu =
     Renderer.draw_rect win ~x:menu.x ~y:menu.y ~w:menu.w ~h:menu.h ~color:Ega.dgray ~fill:true;
     List.iter (render_entry win fonts ~x:menu.x) menu.entries
 
@@ -155,7 +155,7 @@ module Title = struct
   type 'a t = {
     x: int;
     y: int;
-    w: int;
+    w: int; (* for clicking only *)
     h: int;
     name: string;
     msgbox: 'a MsgBox.t;
@@ -180,6 +180,21 @@ module Title = struct
     else
       v, NoAction
 
+  let render win ~fonts v =
+    String.fold (fun (x, y, key) c ->
+      if Char.Infix.(c = '&') then
+        (x, y, true)
+      else
+        let color = if key then Ega.white else Ega.bcyan in
+        let (x, y) = Fonts.Render.write_char win fonts c ~idx:menu_font ~x ~y ~color in
+        (x, y, false))
+    (v.x, v.y, false)
+    v.name
+    |> ignore
+
+  let render_msgbox win ~fonts v =
+    MsgBox.render win ~fonts v.msgbox
+
 end
 
 module Global = struct
@@ -203,25 +218,28 @@ module Global = struct
   let handle_click v ~x ~y =
     (* Check for closed menu *)
     if is_not_clicked v ~x ~y then (v, NoAction)
-    else
+    else (
       (* Handle a top menu click first *)
       let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) v.menus in
       match clicked_top_menu, v.open_menu with
       | Some (i, _), Some mopen when i = mopen ->
-          {v with open_menu = None}, NoAction
+          Printf.printf "1. i[%d]\n%!" i;
+          {v with open_menu = None}, Internal
       | Some (i, _), _ ->
-          {v with open_menu = Some i}, NoAction
+          Printf.printf "2. i[%d]\n%!" i;
+          {v with open_menu = Some i}, Internal
       | None, None ->
+          Printf.printf "3.\n%!";
           (* no menu open *)
           v, NoAction
       | None, Some open_menu ->
+          Printf.printf "3. open[%d]\n%!" open_menu;
           (* Handle other clicks *)
           let menus, action = 
-            Utils.List.modify_make_at_idx open_menu (fun menu ->
-              Title.handle_click menu ~x ~y)
-              v.menus
+            Utils.List.modify_make_at_idx open_menu (Title.handle_click ~x ~y) v.menus
           in
-          {v with menus}, action |> Option.get_exn_or "error"
+          ({v with menus}, action |> Option.get_exn_or "error")
+    )
 
   let update v (event:Event.t) =
     match event with
@@ -231,19 +249,11 @@ module Global = struct
 
   let render win fonts v =
     (* Render menu titles *)
-    List.iter (fun menu ->
-      String.fold (fun (x, y, key) c ->
-        if Char.Infix.(c = '&') then
-          (x, y, true)
-        else
-          let color = if key then Ega.white else Ega.bcyan in
-          let (x, y) = Fonts.Render.write_char win fonts c ~idx:menu_font ~x ~y ~color in
-          (x, y, false))
-      (menu.Title.x, menu.y, false)
-      menu.name
-      |> ignore
-    )
-    v.menus
+    List.iter (Title.render win ~fonts) v.menus;
+    match v.open_menu with
+    | None -> ()
+    | Some i ->
+        Title.render_msgbox win ~fonts (List.nth v.menus i)
 
 end
 
