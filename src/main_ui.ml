@@ -44,7 +44,7 @@ let main_menu fonts menu_h =
   in
   let game_menu =
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts ~x:4 ~y:8
     [
       make_entry "Game Speed" @@ `MsgBox game_speed;
       make_entry "Train Messages" @@ `MsgBox train_messages;
@@ -56,7 +56,7 @@ let main_menu fonts menu_h =
   in
   let reports_menu =
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts ~x:112 ~y:8
     [
       make_entry "Balance Sheet" @@ `Action `Balance_sheet;
       make_entry "Income Statement (F5)" @@ `Action `Income_statement;
@@ -69,7 +69,7 @@ let main_menu fonts menu_h =
   in
   let displays_menu =
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts ~x:56 ~y:8
     [
       make_entry "Regional Display (F1)" @@ `Action `Display_regional;
       make_entry "Area Display (F2)" @@ `Action `Display_area;
@@ -103,7 +103,7 @@ let main_menu fonts menu_h =
   in
   let actions_menu =
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts ~x:202 ~y:8
     [
       make_entry "Call Broker (F9)" @@ `Action `Action_call_broker;
       make_entry "Survey (F10)" @@ `Action `Action_survey;
