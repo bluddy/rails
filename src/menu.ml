@@ -9,100 +9,134 @@ module MsgBox = struct
     | Off of 'a
     | NoAction
 
-  type 'a entry = {
-    y: int;
-    h: int;
-    name: string;
-    fire: [ `Action of 'a
-          | `Checkbox of bool * 'a (* checked *)
-          | `MsgBox of bool * 'a t (* open *)
-          ]
-  }
+  let no_action = function
+    | NoAction -> true
+    | _ -> false
 
-  and 'a exc_entry = {
+  type 'a fire =
+    | Action of 'a
+    | Checkbox of bool * 'a (* checked *)
+    | MsgBox of bool * 'a t (* open *)
+
+  and 'a entry = {
     y: int;
     h: int;
     name: string;
-    check: bool;
-    action: 'a;
+    fire: 'a fire
   }
 
   and 'a t =
-    | ExclusiveBox of
-      { x: int; y: int; w: int; h: int;
-        entries: 'a exc_entry list;
-        selected: int;
-      }
-    | MsgBox of
-      { x: int; y: int; w: int; h: int;
-        entries: 'a entry list;
-        selected: int option;
-      }
+    { x: int; y: int;
+      w: int; h: int;
+      entries: 'a entry list;
+      selected: int option;
+      exclusive: int option;
+    }
 
   let get_entry_w_h fonts v =
     Fonts.get_str_w_h ~fonts ~idx:menu_font v.name
 
-  let make_entry ?(check=None) ~fonts name fire =
+  let make_entry ~fonts name fire =
     let _, h = Fonts.get_str_w_h ~fonts ~idx:menu_font name in
+    let fire =
+      match fire with
+      | `MsgBox m -> MsgBox(false, m)
+      | `Action a -> Action a
+      | `Checkbox b -> Checkbox(false, b)
+    in
     {
       y=0;
       h;
-      check;
       name;
       fire;
     }
 
-  let is_entry_clicked v ~x ~y =
-    (* We already checked the >= condition *)
-    let entry_click = y < v.y + v.h in
-    match v.fire with
-    | 
-
-  let render_entry win fonts v ~x =
+  let render_entry ?(exclusive=false) win fonts v ~x =
     Fonts.Render.write win fonts ~color:Ega.white ~idx:menu_font v.name ~x ~y:v.y
 
   let make ~fonts ~x ~y ~exclusive entries =
-    let w, h =
-      List.fold_left (fun (max_h, max_w) entry ->
+    let (w, h), entries =
+      List.fold_map (fun (max_h, max_w) entry ->
         let w, h = get_entry_w_h fonts entry in
         let max_w = max max_w w in
         let max_h = max_h + h in
-        (max_h, max_w))
+        let entry = {entry with y=y+max_h; h} in
+        (max_h, max_w), entry)
       (0, 0)
       entries
     in
-    {x; y; w; h; entries; selected=None; exclusive}
+    {
+      x; y; w; h;
+      entries;
+      selected=None;
+      exclusive=if exclusive then Some 0 else None;
+    }
 
-  let is_clicked v ~x ~y =
-    x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
-
-  let rec handle_entry_click v ~x ~y =
-    match v.fire with
-    | `MsgBox msgbox ->
-        let msgbox, action = handle_click msgbox ~x ~y in
-        {v with fire=`MsgBox msgbox}, action
-    | `Action action ->
-      let check, action =
-        match v.check with
-        | None -> None, On(action)
-        | Some true -> Some false, Off(action)
-        | Some false -> Some true, On(action)
-      in
-      {v with check}, action
-
-  and handle_click v ~x ~y =
-    let idx = List.find_idx (is_entry_clicked ~x ~y) v.entries in
-    let entries, action =
-      match idx with
-      | Some (idx, _) ->
-          let a, b =
-            Utils.List.modify_make_at_idx idx (handle_entry_click ~x ~y) v.entries
-          in
-          a, b |> Option.get_exn_or "bad state"
+  let rec is_entry_clicked v ~x ~y ~recurse =
+    (* We already checked the >= condition *)
+    let self_click = y < v.y + v.h in
+    let deep =
+      match v.fire with
+      | MsgBox(true, mbox) when recurse ->
+          is_clicked mbox ~x ~y ~recurse
       | _ ->
-          failwith "Should never get here"
+          false
+    in
+    deep || self_click
+
+  and is_clicked v ~x ~y ~recurse =
+    let self_click = x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h in
+    let deep =
+      (* Only recurse for msgboxes, not for exclusive boxes *)
+      if Option.is_some v.exclusive then false
+      else
+        match v.selected with
+        | Some i when recurse ->
+            is_entry_clicked (List.nth v.entries i) ~x ~y ~recurse
+        | _ -> 
+            false
+    in
+    deep || self_click
+
+  let find_clicked_entry_shallow v ~x ~y =
+    List.find_idx (is_entry_clicked ~x ~y ~recurse:false) v.entries
+
+  let rec handle_entry_click (v:'a entry) ~x ~y =
+    match v.fire with
+    | MsgBox (visible, box) ->
+        let box, action = handle_click box ~x ~y in
+        {v with fire=MsgBox(visible, box)}, action
+    | Action action ->
+        v, On(action)
+    | Checkbox(false, action) ->
+        {v with fire=Checkbox(true, action)}, On(action)
+    | Checkbox(true, action) ->
+        {v with fire=Checkbox(false, action)}, Off(action)
+
+  and handle_click (v:'a t) ~x ~y =
+    (* We assume something has been clicked *)
+    let entries, action =
+      match v.selected with
+      | Some idx ->
+          (* deep search first *)
+          Utils.List.modify_make_at_idx idx (handle_entry_click ~x ~y) v.entries
+      | None ->
+          v.entries, None
+    in
+    let entries, action =
+      if Option.is_none action then
+        (* Didn't find in deep search *)
+        let idx, _ = find_clicked_entry_shallow v ~x ~y |> Option.get_exn_or "error" in
+        let entries, action =
+          Utils.List.modify_make_at_idx idx (handle_entry_click ~x ~y) v.entries
+        in
+        entries, (action |> Option.get_exn_or "bad state")
+
+      else
+        entries, NoAction
     in
     {v with entries}, action
+
 
   let render win fonts menu =
     Renderer.draw_rect win ~x:menu.x ~y:menu.y ~w:menu.w ~h:menu.h ~color:Ega.dgray ~fill:true;
@@ -135,11 +169,11 @@ module Title = struct
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
   let handle_click v ~x ~y =
-    if MsgBox.is_clicked v.msgbox ~x ~y then
+    if MsgBox.is_clicked v.msgbox ~x ~y ~recurse:true then
       let msgbox, event = MsgBox.handle_click v.msgbox ~x ~y in
       {v with msgbox}, event
     else
-      v, None
+      v, NoAction
 
 end
 
