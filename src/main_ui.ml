@@ -3,20 +3,37 @@ open Main_ui_d
 
 module R = Renderer
 
-let main_menu fonts =
-  let main =
+let main_menu fonts menu_h =
+  let open Menu in
+  let dummy_msgbox =
+    Menu.MsgBox.make ~fonts ~x:0 ~y:0 []
+  in
+  let game_speed =
+    MsgBox.make ~fonts ~x:0 ~y:0
     [
-      Menu.make_single ~fonts ~name:"&Game" ~x:8 ~y:1 ~dropdown:None;
-      Menu.make_single ~fonts ~name:"&Displays" ~x:64 ~y:1 ~dropdown:None;
-      Menu.make_single ~fonts ~name:"&Reports" ~x:120 ~y:1 ~dropdown:None;
-      Menu.make_single ~fonts ~name:"&Build" ~x:176 ~y:1 ~dropdown:None;
-      Menu.make_single ~fonts ~name:"&Actions" ~x:242 ~y:1 ~dropdown:None;
+      MsgBox.make_entry "Frozen" `Speed_frozen;
+      MsgBox.make_entry "Slow" `Speed_slow;
+      MsgBox.make_entry "Moderate" `Speed_moderate;
+      MsgBox.make_entry "Fast" `Speed_fast;
+      MsgBox.make_entry "Turbo" `Speed_turbo;
     ]
   in
-  { 
-    Menu.menu_open=None;
-    menus=main;
-  }
+  let game_menu =
+    MsgBox.make ~fonts ~x:0 ~y:0
+    [
+      MsgBox.make_entry "Game Speed" ~submenu:game_speed;
+    ]
+  in
+  let singles =
+    [
+      Menu.Single.make ~fonts ~name:"&Game" ~x:8 ~y:1 game_menu;
+      Menu.Single.make ~fonts ~name:"&Displays" ~x:64 ~y:1 dummy_msgbox;
+      Menu.Single.make ~fonts ~name:"&Reports" ~x:120 ~y:1 dummy_msgbox;
+      Menu.Single.make ~fonts ~name:"&Build" ~x:176 ~y:1 dummy_msgbox;
+      Menu.Single.make ~fonts ~name:"&Actions" ~x:242 ~y:1 dummy_msgbox;
+    ]
+  in
+  Menu.Global.make ~menu_h singles
 
 let default win fonts =
   let dims =
@@ -33,7 +50,7 @@ let default win fonts =
   in
   {
     dims;
-    menu=main_menu fonts;
+    menu=main_menu fonts dims.menu_h;
   }
 
 let update (s:State.t) (v:t) (event:Event.t) =
@@ -86,7 +103,7 @@ let render (win:R.window) (s:State.t) (v:t) =
   R.draw_rect win ~x:(x+1) ~y:(y+1) ~h:dims.train_area_h ~w:(dims.ui_w-1) ~color:Ega.bblue ~fill:true;
 
   (* Menu bar *)
-  Menu.render win s.textures.fonts v.menu;
+  Menu.Global.render win s.textures.fonts v.menu;
 
   s
 

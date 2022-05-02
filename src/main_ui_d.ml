@@ -12,5 +12,5 @@ type dims = {
 
 type t = {
   dims: dims;
-  menu: int Menu.global;
+  menu: int Menu.Global.t;
 }
