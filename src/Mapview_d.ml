@@ -12,6 +12,7 @@ type t =
     center_y: int;
     cursor_x: int;
     cursor_y: int;
+    cursor_track: [`NoTrack | `Track | `Station | `WoodBridge];
     zoom: zoom;
     width: int;
     height: int;

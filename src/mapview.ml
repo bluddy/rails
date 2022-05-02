@@ -8,13 +8,20 @@ module B = Backend
  *)
 
 let default = 
-  {cursor_x=0; cursor_y=0;
-  center_x=0; center_y=0;
-  zoom=Zoom4;
-  width=B.map_width;
-  height=B.map_height}
+  {
+    cursor_x=0; cursor_y=0;
+    center_x=0; center_y=0;
+    zoom=Zoom4;
+    width=B.map_width;
+    height=B.map_height;
+    cursor_track=`NoTrack;
+  }
 
 let recenter_threshold = 5
+
+let is_zoom4 v = match v.zoom with
+  | Zoom4 -> true
+  | _ -> false
 
 let tile_size_of_zoom = function
   | Zoom1 -> 1, 1
@@ -249,4 +256,15 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
   s
 
 let get_zoom v = v.zoom
+
+let cursor_track_type (s:State.t) =
+  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
+  | Some track when track.player = 0 ->
+      begin match track.kind with
+      | Track -> `Track
+      | SignalTower | Depot | Station | Terminal -> `Station
+      | WoodBridge -> `WoodBridge
+      | _ -> `NoTrack
+      end
+  | _ -> `NoTrack
 

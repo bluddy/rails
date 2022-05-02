@@ -79,17 +79,24 @@ let main_menu fonts menu_h =
       make_entry "Find City" @@ `Action `Find_city;
     ]
   in
+  let is_zoom4 = Some (fun (s:State.t) -> Mapview.is_zoom4 s.view) in
+  let is_station4 = Some (fun (s:State.t) ->
+          Mapview.is_zoom4 s.view && match Mapview.cursor_track_type s with `Station -> true | _ -> false)
+  in
+  let is_woodbridge4 = Some (fun (s:State.t) ->
+          Mapview.is_zoom4 s.view && match Mapview.cursor_track_type s with `WoodBridge -> true | _ -> false)
+  in
   let build_menu =
     let open MsgBox in
     make ~fonts ~x:168 ~y:8 ~exclusive:(Some [3;4])
     [
       make_entry "New Train (F7)" @@ `Action `Build_train;
-      make_entry "Build Station (F8)" @@ `Action `Build_station;
-      make_entry "Build Industry" @@ `Action `Build_industry;
-      make_entry "Build Track" @@ `Checkbox `Build_track;
-      make_entry "Remove Track" @@ `Checkbox `Remove_track;
-      make_entry "Improve Station" @@ `Action `Improve_station;
-      make_entry "Upgrade Bridge" @@ `Action `Upgrade_bridge;
+      make_entry "Build Station (F8)" ~visibility:is_zoom4 @@ `Action `Build_station;
+      make_entry "Build Industry" ~visibility:is_zoom4 @@ `Action `Build_industry;
+      make_entry "Build Track" ~visibility:is_zoom4 @@ `Checkbox `Build_track;
+      make_entry "Remove Track" ~visibility:is_zoom4 @@ `Checkbox `Remove_track;
+      make_entry "Improve Station" ~visibility:is_station4 @@ `Action `Improve_station;
+      make_entry "Upgrade Bridge" ~visibility:is_woodbridge4 @@ `Action `Upgrade_bridge;
     ]
   in
   let reality_levels =
@@ -146,7 +153,7 @@ let update (s:State.t) (v:t) (event:Event.t) =
   let dims = v.dims in
   let v, action =
     (* only update view if we have a change *)
-    match Menu.Global.update v.menu event with
+    match Menu.Global.update s.view v.menu event with
     | _, Menu.NoAction -> v, Menu.NoAction
     | menu, a -> {v with menu}, a
   in

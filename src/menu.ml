@@ -23,7 +23,9 @@ module MsgBox = struct
     y: int;
     h: int;
     name: string;
-    fire: 'a fire
+    fire: 'a fire;
+    visibility: (State.t -> bool) option;
+    visible: bool;
   }
 
   and 'a t =
@@ -38,7 +40,7 @@ module MsgBox = struct
   let get_entry_w_h font v =
     Fonts.Font.get_str_w_h font v.name
 
-  let make_entry name fire =
+  let make_entry ?(visibility=None) name fire =
     let fire =
       match fire with
       | `MsgBox m -> MsgBox(false, m)
@@ -50,10 +52,13 @@ module MsgBox = struct
       h=0;
       name;
       fire;
+      visible=true;
+      visibility;
     }
 
   let render_entry win font v ~x =
-    Fonts.Font.write win font ~color:Ega.white v.name ~x ~y:v.y
+    if v.visible then
+      Fonts.Font.write win font ~color:Ega.white v.name ~x ~y:v.y
 
   let make ?(exclusive=None) ~fonts ~x ~y entries =
     let exclusive = match exclusive with
@@ -70,20 +75,31 @@ module MsgBox = struct
     }
 
     (* Compute menu size dynamically *)
-  let open_menu (v:'a t) =
+  let open_menu (s:State.t) (v:'a t) =
     let (w, h), entries =
       List.fold_map (fun (max_h, max_w) entry ->
+        let visible =
+          match entry.visibility with
+          | Some f -> f s
+          | None -> true
+        in
         let w, h = get_entry_w_h v.font entry in
-        let max_w = max max_w w in
-        let max_h = max_h + h in
-        let entry = {entry with y=v.y+max_h; h} in
+        let max_w, max_h =
+          if visible then
+            (max max_w w, max_h + h)
+          else
+            max_h, max_w
+        in
+        let y = v.y + max_h in
+        let entry = {entry with y; h; visible} in
         (max_h, max_w), entry)
       (0, 0)
       v.entries
     in
-    { v with entries; w; h}
+    {v with entries; w; h}
 
   let rec is_entry_clicked v ~x ~y ~recurse =
+    if not v.visible then false else
     (* We already checked the >= condition *)
     let self_click = y < v.y + v.h in
     let deep =
@@ -201,8 +217,8 @@ module Title = struct
   let render_msgbox win v =
     MsgBox.render win v.msgbox
 
-  let open_menu v =
-    let msgbox = MsgBox.open_menu v.msgbox in
+  let open_menu s v =
+    let msgbox = MsgBox.open_menu s v.msgbox in
     {v with msgbox}
 
 end
@@ -225,7 +241,7 @@ module Global = struct
     let _x = x in
     y > v.menu_h && Option.is_none v.open_menu
 
-  let handle_click v ~x ~y =
+  let handle_click s v ~x ~y =
     (* Check for closed menu *)
     if is_not_clicked v ~x ~y then (v, NoAction)
     else (
@@ -233,11 +249,13 @@ module Global = struct
       let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) v.menus in
       match clicked_top_menu, v.open_menu with
       | Some (i, _), Some mopen when i = mopen ->
+          (* close menu *)
           Printf.printf "1. i[%d]\n%!" i;
           {v with open_menu = None}, Internal
       | Some (i, _), _ ->
           Printf.printf "2. i[%d]\n%!" i;
-          let menus = Utils.List.modify_at_idx i Title.open_menu v.menus in
+          (* open menu *)
+          let menus = Utils.List.modify_at_idx i (Title.open_menu s) v.menus in
           {v with menus; open_menu = Some i}, Internal
       | None, None ->
           Printf.printf "3.\n%!";
@@ -252,10 +270,10 @@ module Global = struct
           ({v with menus}, action |> Option.get_exn_or "error")
     )
 
-  let update v (event:Event.t) =
+  let update s v (event:Event.t) =
     match event with
     | MouseButton {down=true; x; y; _} ->
-        handle_click v ~x ~y
+        handle_click s v ~x ~y
     | _ -> v, NoAction
 
   let render win fonts v =
