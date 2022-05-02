@@ -2,16 +2,17 @@ open Containers
 
 let menu_font = 1
 
-module MsgBox = struct
-
   type 'a action =
     | On of 'a
     | Off of 'a
+    | Internal
     | NoAction
 
-  let no_action = function
-    | NoAction -> true
-    | _ -> false
+  let is_action = function
+    | NoAction -> false
+    | _ -> true
+
+module MsgBox = struct
 
   type 'a fire =
     | Action of 'a
@@ -201,32 +202,32 @@ module Global = struct
 
   let handle_click v ~x ~y =
     (* Check for closed menu *)
-    if is_not_clicked v ~x ~y then (v, None) else
-
-    (* Handle a top menu click first *)
-    let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) v.menus in
-    match clicked_top_menu, v.open_menu with
-    | Some (i, _), Some mopen when i = mopen ->
-        {v with open_menu = None}, None
-    | Some (i, _), _ ->
-        {v with open_menu = Some i}, None
-    | None, None ->
-        (* no menu open *)
-        v, None
-    | None, Some open_menu ->
-        (* Handle other clicks *)
-        let menus, event = 
-          Utils.List.modify_make_at_idx open_menu (fun menu ->
-            Title.handle_click menu ~x ~y)
-            v.menus
-        in
-        {v with menus}, event
+    if is_not_clicked v ~x ~y then (v, NoAction)
+    else
+      (* Handle a top menu click first *)
+      let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) v.menus in
+      match clicked_top_menu, v.open_menu with
+      | Some (i, _), Some mopen when i = mopen ->
+          {v with open_menu = None}, NoAction
+      | Some (i, _), _ ->
+          {v with open_menu = Some i}, NoAction
+      | None, None ->
+          (* no menu open *)
+          v, NoAction
+      | None, Some open_menu ->
+          (* Handle other clicks *)
+          let menus, action = 
+            Utils.List.modify_make_at_idx open_menu (fun menu ->
+              Title.handle_click menu ~x ~y)
+              v.menus
+          in
+          {v with menus}, action |> Option.get_exn_or "error"
 
   let update v (event:Event.t) =
     match event with
     | MouseButton {down=true; x; y; _} ->
         handle_click v ~x ~y
-    | _ -> v, None
+    | _ -> v, NoAction
 
   let render win fonts v =
     (* Render menu titles *)

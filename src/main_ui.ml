@@ -144,6 +144,12 @@ let default win fonts =
 
 let update (s:State.t) (v:t) (event:Event.t) =
   let dims = v.dims in
+  let view, action =
+    (* only update view if we have a change *)
+    match Menu.Global.update v.menu event with
+    | _, Menu.NoAction -> v, Menu.NoAction
+    | menu, a -> {v with menu}, a
+  in
   let minimap_x = dims.ui_start_x in
   let minimap_y = dims.menu_h in
   let minimap_h = dims.minimap_h in

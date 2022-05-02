@@ -59,7 +59,9 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
          v.center_x, v.center_y
   in
 
-  let handle_mouse_button v x y = match v.zoom with
+  let handle_mouse_button v x y =
+
+    match v.zoom with
       | Zoom1 ->
           let y = y - y_top in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}
@@ -69,7 +71,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
           let x = x - minimap_x + start_x in
           let y = y - minimap_y + start_y in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
-      | _ ->
+      | _ when x < minimap_x && y > y_top ->
           (* click in mapview *)
           let tile_w, tile_h = tile_size_of_zoom v.zoom in
           let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
@@ -83,6 +85,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
                 v.center_x, v.center_y
           in
           {v with center_x; center_y; cursor_x; cursor_y}
+       | _ -> v
   in
 
   let key_to_dir = function
