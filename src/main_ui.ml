@@ -79,12 +79,12 @@ let main_menu fonts menu_h =
       make_entry "Find City" @@ `Action `Find_city;
     ]
   in
-  let is_zoom4 = Some (fun (s:State.t) -> Mapview.is_zoom4 s.view) in
-  let is_station4 = Some (fun (s:State.t) ->
-          Mapview.is_zoom4 s.view && match Mapview.cursor_track_type s with `Station -> true | _ -> false)
+  let is_zoom4 = Some (fun s -> Mapview.is_zoom4 (snd s)) in
+  let is_station4 = Some (fun s ->
+          Mapview.is_zoom4 (snd s) && match Mapview.cursor_track_type s with `Station -> true | _ -> false)
   in
-  let is_woodbridge4 = Some (fun (s:State.t) ->
-          Mapview.is_zoom4 s.view && match Mapview.cursor_track_type s with `WoodBridge -> true | _ -> false)
+  let is_woodbridge4 = Some (fun s ->
+          Mapview.is_zoom4 (snd s) && match Mapview.cursor_track_type s with `WoodBridge -> true | _ -> false)
   in
   let build_menu =
     let open MsgBox in
@@ -153,7 +153,7 @@ let update (s:State.t) (v:t) (event:Event.t) =
   let dims = v.dims in
   let v, action =
     (* only update view if we have a change *)
-    match Menu.Global.update s.view v.menu event with
+    match Menu.Global.update (s.backend, s.view) v.menu event with
     | _, Menu.NoAction -> v, Menu.NoAction
     | menu, a -> {v with menu}, a
   in

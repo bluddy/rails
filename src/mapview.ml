@@ -257,8 +257,8 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
 
 let get_zoom v = v.zoom
 
-let cursor_track_type (s:State.t) =
-  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
+let cursor_track_type (backend, view) =
+  match B.get_track backend view.cursor_x view.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
       | Track -> `Track

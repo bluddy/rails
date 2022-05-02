@@ -24,7 +24,7 @@ module MsgBox = struct
     h: int;
     name: string;
     fire: 'a fire;
-    visibility: (State.t -> bool) option;
+    visibility: ((Backend.t * Mapview_d.t) -> bool) option;
     visible: bool;
   }
 
@@ -75,7 +75,7 @@ module MsgBox = struct
     }
 
     (* Compute menu size dynamically *)
-  let open_menu (s:State.t) (v:'a t) =
+  let open_menu s (v:'a t) =
     let (w, h), entries =
       List.fold_map (fun (max_h, max_w) entry ->
         let visible =
