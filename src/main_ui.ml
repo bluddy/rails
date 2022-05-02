@@ -81,7 +81,7 @@ let main_menu fonts menu_h =
   in
   let build_menu =
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0 ~exclusive:(Some [3;4])
+    make ~fonts ~x:168 ~y:8 ~exclusive:(Some [3;4])
     [
       make_entry "New Train (F7)" @@ `Action `Build_train;
       make_entry "Build Station (F8)" @@ `Action `Build_station;

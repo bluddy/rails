@@ -32,10 +32,11 @@ module MsgBox = struct
       entries: 'a entry list;
       selected: int option;
       exclusive: (int * int list) option;
+      font: Fonts.Font.t;
     }
 
-  let get_entry_w_h fonts v =
-    Fonts.get_str_w_h ~fonts ~idx:menu_font v.name
+  let get_entry_w_h font v =
+    Fonts.Font.get_str_w_h font v.name
 
   let make_entry name fire =
     let fire =
@@ -51,31 +52,36 @@ module MsgBox = struct
       fire;
     }
 
-  let render_entry win fonts v ~x =
-    Fonts.Render.write win fonts ~color:Ega.white ~idx:menu_font v.name ~x ~y:v.y
+  let render_entry win font v ~x =
+    Fonts.Font.write win font ~color:Ega.white v.name ~x ~y:v.y
 
   let make ?(exclusive=None) ~fonts ~x ~y entries =
-    let (w, h), entries =
-      List.fold_map (fun (max_h, max_w) entry ->
-        let w, h = get_entry_w_h fonts entry in
-        let max_w = max max_w w in
-        let max_h = max_h + h in
-        let entry = {entry with y=y+max_h; h} in
-        (max_h, max_w), entry)
-      (0, 0)
-      entries
-    in
     let exclusive = match exclusive with
       | None -> None
       | Some [] -> Some (0, [])
       | Some li -> Some (List.hd li, li)
     in
     {
-      x; y; w; h;
+      x; y; w=0; h=0;
       entries;
       selected=None;
       exclusive;
+      font=fonts.(menu_font);
     }
+
+    (* Compute menu size dynamically *)
+  let open_menu (v:'a t) =
+    let (w, h), entries =
+      List.fold_map (fun (max_h, max_w) entry ->
+        let w, h = get_entry_w_h v.font entry in
+        let max_w = max max_w w in
+        let max_h = max_h + h in
+        let entry = {entry with y=v.y+max_h; h} in
+        (max_h, max_w), entry)
+      (0, 0)
+      v.entries
+    in
+    { v with entries; w; h}
 
   let rec is_entry_clicked v ~x ~y ~recurse =
     (* We already checked the >= condition *)
@@ -143,9 +149,9 @@ module MsgBox = struct
     {v with entries}, action
 
 
-  let render win ~fonts menu =
-    Renderer.draw_rect win ~x:menu.x ~y:menu.y ~w:menu.w ~h:menu.h ~color:Ega.dgray ~fill:true;
-    List.iter (render_entry win fonts ~x:menu.x) menu.entries
+  let render win v =
+    Renderer.draw_rect win ~x:v.x ~y:v.y ~w:v.w ~h:v.h ~color:Ega.dgray ~fill:true;
+    List.iter (render_entry win v.font ~x:v.x) v.entries
 
 end
 
@@ -192,8 +198,12 @@ module Title = struct
     v.name
     |> ignore
 
-  let render_msgbox win ~fonts v =
-    MsgBox.render win ~fonts v.msgbox
+  let render_msgbox win v =
+    MsgBox.render win v.msgbox
+
+  let open_menu v =
+    let msgbox = MsgBox.open_menu v.msgbox in
+    {v with msgbox}
 
 end
 
@@ -227,7 +237,8 @@ module Global = struct
           {v with open_menu = None}, Internal
       | Some (i, _), _ ->
           Printf.printf "2. i[%d]\n%!" i;
-          {v with open_menu = Some i}, Internal
+          let menus = Utils.List.modify_at_idx i Title.open_menu v.menus in
+          {v with menus; open_menu = Some i}, Internal
       | None, None ->
           Printf.printf "3.\n%!";
           (* no menu open *)
@@ -253,7 +264,7 @@ module Global = struct
     match v.open_menu with
     | None -> ()
     | Some i ->
-        Title.render_msgbox win ~fonts (List.nth v.menus i)
+        Title.render_msgbox win (List.nth v.menus i)
 
 end
 

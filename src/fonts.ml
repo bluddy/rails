@@ -115,6 +115,24 @@ let write ?(x=0) ?(y=0) ~font str ~pixels =
       )
     )
 
+  let write_char win font ?(color=Ega.white) c ~x ~y =
+    let char_tex = Hashtbl.find font.textures c in
+    R.Texture.render ~x ~y ~color win char_tex;
+    let w = get_letter_width font c in
+    (x + w + font.space_x, y)
+
+  let write win font ?(color=Ega.white) str ~x ~y =
+    let x_first = x in (* keep starting column *)
+    String.fold (fun (x, y) c ->
+      if Char.equal c '\n' then
+        (x_first, y + font.height + font.space_y)
+      else
+        write_char win font ~color c ~x ~y)
+    (x, y)
+    str
+    |> ignore
+
+
 end
 
 type t = Font.t array
@@ -229,23 +247,10 @@ module Render = struct
     to_render 
 
 let write_char win fonts ?(color=Ega.white) ?(idx=4) c ~x ~y =
-  let font = fonts.(idx) in
-  let char_tex = Hashtbl.find font.Font.textures c in
-  R.Texture.render ~x ~y ~color win char_tex;
-  let w = Font.get_letter_width font c in
-  (x + w + font.space_x, y)
+  Font.write_char win ~color fonts.(idx) c ~x ~y
 
 let write win fonts ?(color=Ega.white) ?(idx=4) str ~x ~y =
-  let font = fonts.(idx) in
-  let x_first = x in (* keep starting column *)
-  String.fold (fun (x, y) c ->
-    if Char.equal c '\n' then
-      (x_first, y + font.Font.height + font.space_y)
-    else
-      write_char win fonts ~color ~idx c ~x ~y)
-  (x, y)
-  str
-  |> ignore
+  Font.write win fonts.(idx) ~color str ~x ~y
 
 end
 
