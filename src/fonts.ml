@@ -77,7 +77,7 @@ let get_str_w_h font str =
     0
     str
   in
-  x, font.height
+  (x, font.height + font.space_y)
 
   (* write to RGBA ndarray *)
 let write ?(x=0) ?(y=0) ~font str ~pixels =

@@ -83,7 +83,7 @@ module MsgBox = struct
     (* Compute menu size dynamically *)
   let do_open_menu s (v:'a t) =
     let (w, h), entries =
-      List.fold_map (fun (max_h, max_w) entry ->
+      List.fold_map (fun (max_w, max_h) entry ->
         let visible =
           match entry.visibility with
           | Some f -> f s
@@ -94,11 +94,11 @@ module MsgBox = struct
           if visible then
             (max max_w w, max_h + h)
           else
-            max_h, max_w
+            max_w, max_h
         in
         let y = v.y + max_h in
         let entry = {entry with y; h; visible} in
-        (max_h, max_w), entry)
+        (max_w, max_h), entry)
       (0, 0)
       v.entries
     in
@@ -261,7 +261,7 @@ module Global = struct
       | Some (i, _), _ ->
           Printf.printf "2. i[%d]\n%!" i;
           (* open menu *)
-          let menus = Utils.List.modify_at_idx i (Title.open_menu s) v.menus in
+          let menus = Utils.List.modify_at_idx i (Title.do_open_menu s) v.menus in
           {v with menus; open_menu = Some i}, Handled
       | None, (Some open_menu as sopen) ->
           Printf.printf "3. open[%d]\n%!" open_menu;
