@@ -37,6 +37,7 @@ module MsgBox = struct
   and 'a t =
     { x: int; y: int;
       w: int; h: int;
+      border_x: int; border_y: int;
       entries: 'a entry list;
       selected: int option;
       exclusive: (int * int list) option;
@@ -73,6 +74,7 @@ module MsgBox = struct
       | Some li -> Some (List.hd li, li)
     in
     {
+      border_x=8; border_y=6;
       x; y; w=0; h=0;
       entries;
       selected=None;
@@ -99,9 +101,10 @@ module MsgBox = struct
             max_w, max_h
         in
         (max_w, max_h), entry)
-      (0, 0)
+      (v.border_x, v.border_y)
       v.entries
     in
+    let w, h = w + v.border_x, h + v.border_y in
     {v with entries; w; h}
 
   let rec is_entry_clicked v ~x ~y ~recurse =
@@ -176,7 +179,7 @@ module MsgBox = struct
     Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
     Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
     Renderer.draw_rect win ~x:(v.x) ~y:(v.y) ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
-    List.iter (render_entry win v.font ~x:v.x) v.entries
+    List.iter (render_entry win v.font ~x:(v.x + v.border_x)) v.entries
 
 end
 
