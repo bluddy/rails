@@ -44,6 +44,7 @@ type menu_action =
     | `Action_name_rr
     | `Action_retire
     ]
+    [@@deriving show]
 
 type dims = {
   menu_h: int;

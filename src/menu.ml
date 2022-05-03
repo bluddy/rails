@@ -5,8 +5,14 @@ let menu_font = 1
   type 'a action =
     | On of 'a
     | Off of 'a
-    | Internal
+    | Handled
     | NoAction
+
+  let show_action = function
+    | On _ -> "On"
+    | Off _ -> "Off"
+    | Handled -> "Handled"
+    | NoAction -> "NoAction"
 
   let is_action = function
     | NoAction -> false
@@ -75,7 +81,7 @@ module MsgBox = struct
     }
 
     (* Compute menu size dynamically *)
-  let open_menu s (v:'a t) =
+  let do_open_menu s (v:'a t) =
     let (w, h), entries =
       List.fold_map (fun (max_h, max_w) entry ->
         let visible =
@@ -217,8 +223,8 @@ module Title = struct
   let render_msgbox win v =
     MsgBox.render win v.msgbox
 
-  let open_menu s v =
-    let msgbox = MsgBox.open_menu s v.msgbox in
+  let do_open_menu s v =
+    let msgbox = MsgBox.do_open_menu s v.msgbox in
     {v with msgbox}
 
 end
@@ -243,7 +249,7 @@ module Global = struct
 
   let handle_click s v ~x ~y =
     (* Check for closed menu *)
-    if is_not_clicked v ~x ~y then (v, NoAction)
+    if is_not_clicked v ~x ~y && Option.is_none v.open_menu then (v, NoAction)
     else (
       (* Handle a top menu click first *)
       let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) v.menus in
@@ -251,23 +257,31 @@ module Global = struct
       | Some (i, _), Some mopen when i = mopen ->
           (* close menu *)
           Printf.printf "1. i[%d]\n%!" i;
-          {v with open_menu = None}, Internal
+          {v with open_menu = None}, Handled
       | Some (i, _), _ ->
           Printf.printf "2. i[%d]\n%!" i;
           (* open menu *)
           let menus = Utils.List.modify_at_idx i (Title.open_menu s) v.menus in
-          {v with menus; open_menu = Some i}, Internal
-      | None, None ->
-          Printf.printf "3.\n%!";
-          (* no menu open *)
-          v, NoAction
-      | None, Some open_menu ->
+          {v with menus; open_menu = Some i}, Handled
+      | None, (Some open_menu as sopen) ->
           Printf.printf "3. open[%d]\n%!" open_menu;
-          (* Handle other clicks *)
+          (* Open menu, check for other clicks *)
           let menus, action = 
             Utils.List.modify_make_at_idx open_menu (Title.handle_click ~x ~y) v.menus
           in
-          ({v with menus}, action |> Option.get_exn_or "error")
+          let action = action |> Option.get_exn_or "error" in
+          Printf.printf "%s\n%!" (show_action action);
+          let open_menu =
+            (* Close the menu if it's a random click *)
+            match action with
+            | NoAction -> None
+            | _ -> sopen
+          in
+          ({v with menus; open_menu}, action)
+      | None, None ->
+          Printf.printf "4. NoAction\n%!";
+          (* no menu open *)
+          v, NoAction
     )
 
   let update s v (event:Event.t) =
