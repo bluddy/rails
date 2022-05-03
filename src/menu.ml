@@ -90,14 +90,14 @@ module MsgBox = struct
           | None -> true
         in
         let w, h = get_entry_w_h v.font entry in
+        let y = v.y + max_h in
+        let entry = {entry with y; h; visible} in
         let max_w, max_h =
           if visible then
             (max max_w w, max_h + h)
           else
             max_w, max_h
         in
-        let y = v.y + max_h in
-        let entry = {entry with y; h; visible} in
         (max_w, max_h), entry)
       (0, 0)
       v.entries
