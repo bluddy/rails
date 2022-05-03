@@ -172,7 +172,10 @@ module MsgBox = struct
 
 
   let render win v =
-    Renderer.draw_rect win ~x:v.x ~y:v.y ~w:v.w ~h:v.h ~color:Ega.dgray ~fill:true;
+    (* draw background *)
+    Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
+    Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
+    Renderer.draw_rect win ~x:(v.x) ~y:(v.y) ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
     List.iter (render_entry win v.font ~x:v.x) v.entries
 
 end
