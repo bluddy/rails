@@ -66,9 +66,11 @@ module MsgBox = struct
       visibility;
     }
 
-  let render_entry win font v ~x =
+  let render_entry win font v ~selected ~x ~w ~border_x =
     if v.visible then
-      Fonts.Font.write win font ~color:Ega.white v.name ~x ~y:v.y
+      if selected then
+        Renderer.draw_rect win ~x:(x+3) ~y:(v.y-2) ~w:(w-3) ~h:v.h ~fill:true ~color:Ega.bcyan;
+      Fonts.Font.write win font ~color:Ega.black v.name ~x:(x+border_x) ~y:v.y
 
   let make ?(exclusive=None) ~fonts ~x ~y entries =
     let exclusive = match exclusive with
@@ -182,7 +184,10 @@ module MsgBox = struct
     Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
     Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
     Renderer.draw_rect win ~x:(v.x) ~y:(v.y) ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
-    List.iter (render_entry win v.font ~x:(v.x + v.border_x)) v.entries
+    let selected = Option.get_or v.selected ~default:(-1) in
+    List.iteri (fun i entry ->
+      render_entry win v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x ~w:v.w entry)
+    v.entries
 
 end
 
