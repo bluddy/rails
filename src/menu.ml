@@ -48,6 +48,7 @@ module MsgBox = struct
     Fonts.Font.get_str_w_h font v.name
 
   let make_entry ?(visibility=None) name fire =
+    let name = " "^name in
     let fire =
       match fire with
       | `MsgBox m -> MsgBox(false, m)
