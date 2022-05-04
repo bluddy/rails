@@ -98,8 +98,8 @@ module MsgBox = struct
           | Some f -> f s
           | None -> true
         in
-        let w, h = get_entry_w_h v.font entry in
         let y = v.y + max_h in
+        let w, h = get_entry_w_h v.font entry in
         let entry = {entry with y; h; visible} in
         let max_w, max_h =
           if visible then
@@ -111,7 +111,7 @@ module MsgBox = struct
       (v.border_x, v.border_y)
       v.entries
     in
-    let w, h = w + v.border_x, h + v.border_y in
+    let w = w + v.border_x in
     {v with entries; w; h}
 
   let is_entry_clicked_shallow v ~y =
@@ -209,9 +209,10 @@ module MsgBox = struct
 
     let rec render win v =
       (* draw background *)
-      Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
-      Renderer.draw_rect win ~x:(v.x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
-      Renderer.draw_rect win ~x:(v.x) ~y:(v.y) ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
+      let x = v.x in
+      Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
+      Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
+      Renderer.draw_rect win ~x:(x) ~y:(v.y) ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
       let selected = Option.get_or v.selected ~default:(-1) in
       List.iteri (fun i entry ->
         render_entry win v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x ~w:v.w entry)
