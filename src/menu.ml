@@ -8,6 +8,9 @@ let menu_font = 1
     | Handled
     | OpenMsgBox
     | CloseMsgBox
+    | ClickInMsgBox (* a click but no action *)
+    | OpenMenu
+    | CloseMenu
     | NoAction
 
   let show_action = function
@@ -16,6 +19,9 @@ let menu_font = 1
     | Handled -> "Handled"
     | OpenMsgBox -> "OpenMsgBox"
     | CloseMsgBox -> "CloseMsgBox"
+    | ClickInMsgBox -> "ClickInMsgBox"
+    | OpenMenu -> "OpenMenu"
+    | CloseMenu -> "CloseMenu"
     | NoAction -> "NoAction"
 
   let is_action = function
@@ -112,31 +118,6 @@ module MsgBox = struct
     if not v.visible then false else
     y < v.y + v.h
 
-  let rec is_entry_clicked v ~x ~y ~recurse =
-    if not v.visible then false else
-    (* We already checked the >= condition *)
-    let self_click = y < v.y + v.h in
-    let deep =
-      match v.fire with
-      | MsgBox(true, mbox) when recurse ->
-          is_clicked mbox ~x ~y ~recurse
-      | _ -> false
-    in
-    deep || self_click
-
-  and is_clicked v ~x ~y ~recurse =
-    let self_click = x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h in
-    let deep =
-      (* Only recurse for msgboxes, not for exclusive boxes *)
-      if Option.is_some v.exclusive then false
-      else
-        match v.selected with
-        | Some i when recurse ->
-            is_entry_clicked (List.nth v.entries i) ~x ~y ~recurse
-        | _ -> false
-    in
-    deep || self_click
-
   let find_clicked_entry_shallow v ~y =
     List.find_idx (is_entry_clicked_shallow ~y) v.entries
 
@@ -195,8 +176,8 @@ module MsgBox = struct
           (* Didn't find in deep search, do shallow search in this msgbox *)
           begin match find_clicked_entry_shallow v ~y, v.selected with
           | None, None ->
-              (* possibly clicked msgbox decoration *)
-              entries, action, v.selected
+              (* clicked in msgbox but not an option *)
+              entries, ClickInMsgBox, v.selected
           | None, Some entry_idx ->
               (* clear selection *)
               let entries =
@@ -323,25 +304,26 @@ module Global = struct
       | Some (i, _), Some mopen when i = mopen ->
           (* clicked top menu, same menu is open *)
           Printf.printf "1. i[%d]\n%!" i;
-          {v with open_menu = None}, Handled
+          {v with open_menu = None}, CloseMenu
       | Some (i, _), _ ->
           Printf.printf "2. i[%d]\n%!" i;
           (* clicked top menu, some other or none are open *)
           let menus = Utils.List.modify_at_idx i (Title.do_open_menu s) v.menus in
-          {v with menus; open_menu = Some i}, Handled
+          {v with menus; open_menu = Some i}, OpenMenu
       | None, (Some open_menu as sopen) ->
           Printf.printf "3. open[%d]\n%!" open_menu;
-          (* clicked elsewhere, open top menu *)
+          (* clicked elsewhere with open top menu *)
           let menus, action = 
+            (* check menu itself *)
             Utils.List.modify_make_at_idx open_menu (Title.handle_click s ~x ~y) v.menus
           in
           let action = action |> Option.get_exn_or "error" in
           Printf.printf "%s\n%!" (show_action action);
-          let open_menu =
-            (* Close the menu if it's a random click *)
+          (* Close the menu if it's a random click *)
+          let open_menu, action =
             match action with
-            | NoAction -> None
-            | _ -> sopen
+            | NoAction -> None, CloseMenu
+            | _ -> sopen, action
           in
           ({v with menus; open_menu}, action)
       | None, None ->
