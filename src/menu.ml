@@ -108,6 +108,10 @@ module MsgBox = struct
     let w, h = w + v.border_x, h + v.border_y in
     {v with entries; w; h}
 
+  let is_entry_clicked_shallow v ~y =
+    if not v.visible then false else
+    y < v.y + v.h
+
   let rec is_entry_clicked v ~x ~y ~recurse =
     if not v.visible then false else
     (* We already checked the >= condition *)
@@ -133,8 +137,11 @@ module MsgBox = struct
     in
     deep || self_click
 
-  let find_clicked_entry_shallow v ~x ~y =
-    List.find_idx (is_entry_clicked ~x ~y ~recurse:false) v.entries
+  let find_clicked_entry_shallow v ~y =
+    List.find_idx (is_entry_clicked_shallow ~y) v.entries
+
+  let is_clicked_shallow v ~x ~y =
+    x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Do not recurse deeply *)
   let handle_entry_click_shallow s (v:'a entry) =
@@ -184,9 +191,9 @@ module MsgBox = struct
     in
     let entries, action, selected =
       match action with
-      | NoAction ->
+      | NoAction when is_clicked_shallow v ~x ~y ->
           (* Didn't find in deep search, do shallow search in this msgbox *)
-          begin match find_clicked_entry_shallow v ~x ~y, v.selected with
+          begin match find_clicked_entry_shallow v ~y, v.selected with
           | None, None ->
               (* possibly clicked msgbox decoration *)
               entries, action, v.selected
@@ -204,7 +211,7 @@ module MsgBox = struct
             entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
           end
 
-      | action ->
+      | _ ->
           (* Got an action, pass it on *)
           entries, action, v.selected
     in
