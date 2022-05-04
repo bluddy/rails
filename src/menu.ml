@@ -58,7 +58,7 @@ module MsgBox = struct
     Fonts.Font.get_str_w_h font v.name
 
   let make_entry ?(visibility=None) name fire =
-    let name = " "^name in
+    let name = name in
     let fire =
       match fire with
       | `MsgBox m -> MsgBox(false, m)
@@ -111,7 +111,7 @@ module MsgBox = struct
       (v.border_x, v.border_y)
       v.entries
     in
-    let w = w + v.border_x in
+    let w = w + 2 * v.border_x in
     {v with entries; w; h}
 
   let is_entry_clicked_shallow v ~y =
@@ -204,7 +204,12 @@ module MsgBox = struct
         if selected then
           Renderer.draw_rect win ~x:(x+3) ~y:(v.y-2) ~w:(w-3) ~h:v.h ~fill:true ~color:Ega.bcyan;
 
-        Fonts.Font.write win font ~color:Ega.black v.name ~x:(x+border_x) ~y:v.y;
+        let prefix =
+          match v.fire with
+          | Checkbox(true, _) -> "^"
+          | _ -> " "
+        in
+        Fonts.Font.write win font ~color:Ega.black (prefix^v.name) ~x:(x+border_x) ~y:v.y;
       )
 
     let rec render win v =
