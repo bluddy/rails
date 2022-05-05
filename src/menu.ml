@@ -1,5 +1,9 @@
 open Containers
 
+(* Menu is specialized to 2 type parameters:
+  1. The type of the messages it sends
+  2. The type of the data it reads into its checkbox and visibility lambdas
+*)
 let menu_font = 1
 
   type 'a action =
@@ -30,25 +34,25 @@ let menu_font = 1
 
 module MsgBox = struct
 
-  type 'a fire =
+  type ('a, 'b) fire =
     | Action of 'a
-    | Checkbox of 'a * (Backend.t * Mapview_d.t -> bool) (* checked *)
-    | MsgBox of bool * 'a t (* open *)
+    | Checkbox of 'a * ('b -> bool)
+    | MsgBox of bool * ('a, 'b) t (* open *)
 
-  and 'a entry = {
+  and ('a, 'b) entry = {
     y: int;
     h: int;
     name: string;
-    fire: 'a fire;
-    visibility: (Backend.t * Mapview_d.t -> bool) option;
+    fire: ('a, 'b) fire;
+    visibility: ('b -> bool) option;
     visible: bool;
   }
 
-  and 'a t =
+  and ('a, 'b) t =
     { x: int; y: int;
       w: int; h: int;
       border_x: int; border_y: int;
-      entries: 'a entry list;
+      entries: ('a, 'b) entry list;
       selected: int option;
       font: Fonts.Font.t;
     }
@@ -83,7 +87,7 @@ module MsgBox = struct
     }
 
     (* Compute menu size dynamically *)
-  let do_open_menu s (v:'a t) =
+  let do_open_menu s (v: ('a, 'b) t) =
     let (w, h), entries =
       List.fold_map (fun (max_w, max_h) entry ->
         let visible =
@@ -118,7 +122,7 @@ module MsgBox = struct
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Do not recurse deeply *)
-  let handle_entry_click_shallow s (v:'a entry) =
+  let handle_entry_click_shallow s v =
     (* Assume we were clicked. Only handle shallow events *)
     match v.fire with
     | MsgBox(false, box) ->
@@ -140,7 +144,7 @@ module MsgBox = struct
     | _ -> v
 
     (* Only search depth-first *)
-  let rec handle_entry_click_deep s (v:'a entry) ~x ~y =
+  let rec handle_entry_click_deep s (v:('a, 'b) entry) ~x ~y =
     match v.fire with
     | MsgBox(true, box) ->
         (* open msgbox -> recurse *)
@@ -150,7 +154,7 @@ module MsgBox = struct
     | _ ->
         v, NoAction
 
-  and handle_click s (v:'a t) ~x ~y =
+  and handle_click s (v:('a, 'b) t) ~x ~y =
     let entries, action =
       match v.selected with
       | Some idx ->
@@ -229,13 +233,13 @@ end
 module Title = struct
 
   (* menu in the upper bar *)
-  type 'a t = {
+  type ('a, 'b) t = {
     x: int;
     y: int;
     w: int; (* for clicking only *)
     h: int;
     name: string;
-    msgbox: 'a MsgBox.t;
+    msgbox: ('a, 'b) MsgBox.t;
   }
 
   let make ~fonts ~x ~y name msgbox =
@@ -277,10 +281,10 @@ end
 
 module Global = struct
 
-  type 'a t = {
+  type ('a, 'b) t = {
     menu_h: int;
     open_menu: int option;
-    menus: 'a Title.t list;
+    menus: ('a, 'b) Title.t list;
   }
 
   let make ~menu_h menus = {

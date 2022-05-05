@@ -4,11 +4,12 @@ open Main_ui_d
 module R = Renderer
 module B = Backend
 
+(* Create menu *)
 let main_menu fonts menu_h =
   let open Menu in
   let game_speed =
+    let check_speed speed (s:State.t) = B.equal_speed s.backend.options.speed speed in
     let open MsgBox in
-    let check_speed speed ((b:B.t),_) = B.equal_speed b.options.speed speed in
     make ~fonts ~x:0 ~y:0
     [
       make_entry "Frozen" @@ `Checkbox(`Speed `Frozen, check_speed `Frozen);
@@ -19,29 +20,36 @@ let main_menu fonts menu_h =
     ]
   in
   let train_messages =
+    let check_message message (s:State.t) = Main_ui_d.equal_message_speed s.ui.options.messages message in
     let open MsgBox in
     make ~fonts ~x:0 ~y:0
     [
-      make_entry "Off" @@ `Checkbox `Message_off;
-      make_entry "Fast" @@ `Checkbox `Message_fast;
-      make_entry "Slow" @@ `Checkbox `Message_slow;
+      make_entry "Off" @@ `Checkbox(`Message `Off, check_message `Off);
+      make_entry "Fast" @@ `Checkbox(`Message `Fast, check_message `Fast);
+      make_entry "Slow" @@ `Checkbox(`Message `Slow, check_message `Slow);
     ]
   in
   let news_reports =
+    let check_news news_type (s:State.t) =
+      Main_ui_d.NewsTypes.mem s.ui.options.news news_type
+    in
     let open MsgBox in
     make ~fonts ~x:0 ~y:0
     [
-      make_entry "Financial News" @@ `Checkbox `News_financial;
-      make_entry "Railroad News" @@ `Checkbox `News_railroad;
-      make_entry "Local News" @@ `Checkbox `News_local;
+      make_entry "Financial News" @@ `Checkbox(`News `Financial, check_news `Financial);
+      make_entry "Railroad News" @@ `Checkbox(`News `Railroad, check_news `Railroad);
+      make_entry "Local News" @@ `Checkbox(`News `Local, check_news `Local);
     ]
   in
   let features =
+    let check_feature feature (s:State.t) =
+      Main_ui_d.Features.mem s.ui.options.features feature
+    in
     let open MsgBox in
     make ~fonts ~x:0 ~y:0
     [
-      make_entry "Animations" @@ `Checkbox `Features_animations;
-      make_entry "Sound Effects" @@ `Checkbox `Features_sounds;
+      make_entry "Animations" @@ `Checkbox(`Features `Animations, check_feature `Animations);
+      make_entry "Sound Effects" @@ `Checkbox(`Features `Sounds, check_feature `Sounds);
     ]
   in
   let game_menu =
@@ -73,41 +81,47 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts ~x:56 ~y:8
     [
-      make_entry "Regional Display (F1)" @@ `Action `Display_regional;
-      make_entry "Area Display (F2)" @@ `Action `Display_area;
-      make_entry "Local Display (F3)" @@ `Action `Display_local;
-      make_entry "Detail Display (F4)" @@ `Action `Display_detail;
+      make_entry "Regional Display (F1)" @@ `Action(`Display(Mapview_d.Zoom1));
+      make_entry "Area Display (F2)" @@ `Action(`Display(Mapview_d.Zoom2));
+      make_entry "Local Display (F3)" @@ `Action(`Display(Mapview_d.Zoom3));
+      make_entry "Detail Display (F4)" @@ `Action(`Display(Mapview_d.Zoom4));
       make_entry "Options" @@ `Action `Options;
       make_entry "Find City" @@ `Action `Find_city;
     ]
   in
-  let is_zoom4 = Some (fun s -> Mapview.is_zoom4 (snd s)) in
-  let is_station4 = Some (fun s ->
-          Mapview.is_zoom4 (snd s) && match Mapview.cursor_track_type s with `Station -> true | _ -> false)
+  let is_zoom4 = Some (fun (s:State.t) -> Mapview.is_zoom4 s.view) in
+  let is_station4 =
+    (fun (s:State.t) -> Mapview.is_zoom4 s.view && Mapview.cursor_on_station s)
+    |> Option.return
   in
-  let is_woodbridge4 = Some (fun s ->
-          Mapview.is_zoom4 (snd s) && match Mapview.cursor_track_type s with `WoodBridge -> true | _ -> false)
+  let is_woodbridge4 =
+    (fun (s:State.t) -> Mapview.is_zoom4 s.view && Mapview.cursor_on_woodbridge s)
+    |> Option.return
   in
   let build_menu =
+    let check_trackbuild build (s:State.t) = Mapview_d.equal_build_mode s.view.build_mode build in
     let open MsgBox in
     make ~fonts ~x:168 ~y:8
     [
       make_entry "New Train (F7)" @@ `Action `Build_train;
       make_entry "Build Station (F8)" ~visibility:is_zoom4 @@ `Action `Build_station;
       make_entry "Build Industry" ~visibility:is_zoom4 @@ `Action `Build_industry;
-      make_entry "Build Track" ~visibility:is_zoom4 @@ `Checkbox `Build_track;
-      make_entry "Remove Track" ~visibility:is_zoom4 @@ `Checkbox `Remove_track;
+      make_entry "Build Track" ~visibility:is_zoom4 @@ `Checkbox(`Track `Build, check_trackbuild `Build);
+      make_entry "Remove Track" ~visibility:is_zoom4 @@ `Checkbox(`Track `Remove, check_trackbuild `Remove);
       make_entry "Improve Station" ~visibility:is_station4 @@ `Action `Improve_station;
       make_entry "Upgrade Bridge" ~visibility:is_woodbridge4 @@ `Action `Upgrade_bridge;
     ]
   in
   let reality_levels =
+    let check_reality level (s:State.t) =
+      Backend.RealityLevels.mem s.backend.options.reality_levels level
+    in
     let open MsgBox in
     make ~fonts ~x:0 ~y:0
     [
-      make_entry "Dispatcher Operations" @@ `Checkbox `Option_dispatcher_ops;
-      make_entry "Complex Economy" @@ `Checkbox `Option_complex_economy;
-      make_entry "Cut-Throat Competition" @@ `Checkbox `Option_cutthroat;
+      make_entry "Dispatcher Operations" @@ `Checkbox(`Reality_level `Dispatcher_ops, check_reality `Dispatcher_ops);
+      make_entry "Complex Economy" @@ `Checkbox(`Reality_level `Complex_economy, check_reality `Complex_economy);
+      make_entry "Cut-Throat Competition" @@ `Checkbox(`Reality_level `Cutthroat_competition, check_reality `Cutthroat_competition);
     ]
   in
   let actions_menu =
@@ -146,16 +160,24 @@ let default win fonts =
       train_area_h=115;
     }
   in
+  let options =
+    {
+      messages=`Slow;
+      news=NewsTypes.of_list [`Financial; `Railroad; `Local];
+      features=Features.of_list [`Animations; `Sounds];
+    }
+  in
   {
     dims;
     menu=main_menu fonts dims.menu_h;
+    options;
   }
 
-let update (s:State.t) (v:t) (event:Event.t) =
+let update (s:State.t) v (event:Event.t) =
   let dims = v.dims in
   let v, action, event =
     (* only update view if we have a change *)
-    match Menu.Global.update (s.backend, s.view) v.menu event with
+    match Menu.Global.update s v.menu event with
     | _, Menu.NoAction -> v, Menu.NoAction, event
     | menu, a -> {v with menu}, a, NoEvent
   in
@@ -169,7 +191,7 @@ let update (s:State.t) (v:t) (event:Event.t) =
   v, view, actions
   
 
-let render (win:R.window) (s:State.t) (v:t) =
+let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
   (* Render main view *)
   let minimap_x = dims.ui_start_x in
@@ -178,7 +200,7 @@ let render (win:R.window) (s:State.t) (v:t) =
   let minimap_w = dims.ui_w in
   let s = Mapview.render win s s.view ~y:v.dims.menu_h ~minimap_x ~minimap_y ~minimap_w ~minimap_h in
 
-  (* Menu bar *)
+  (* Menu bar background *)
   R.draw_rect win ~x:0 ~y:0 ~w:dims.width ~h:dims.menu_h ~color:Ega.cyan ~fill:true;
   let h = dims.height - dims.menu_h in
   let y = dims.menu_h in
@@ -207,7 +229,7 @@ let render (win:R.window) (s:State.t) (v:t) =
   R.draw_rect win ~x:(x+1) ~y:(y+1) ~h:dims.train_area_h ~w:(dims.ui_w-1) ~color:Ega.bblue ~fill:true;
 
   (* Menu bar *)
-  Menu.Global.render win s.textures.fonts v.menu;
+  Menu.Global.render win s s.textures.fonts v.menu;
 
   s
 

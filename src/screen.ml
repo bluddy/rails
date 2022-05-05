@@ -15,12 +15,11 @@ type view =
   | Animation
 
 type t = {
-  menu_open: bool;
   view : view;
 }
 [@@deriving lens]
 
 let make view = {
-  menu_open=false; view; 
+  view; 
 }
 

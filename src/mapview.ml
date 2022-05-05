@@ -259,16 +259,23 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
 let get_zoom v = v.zoom
 
   (* Used by menu *)
-let cursor_track_type (backend, view) =
-  match B.get_track backend view.cursor_x view.cursor_y with
+let cursor_on_woodbridge (s:State.t) =
+  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
-      | Track -> `Track
-      | SignalTower | Depot | Station | Terminal -> `Station
-      | WoodBridge -> `WoodBridge
-      | _ -> `NoTrack
+      | WoodBridge -> true
+      | _ -> false
       end
-  | _ -> `NoTrack
+  | _ -> false
+
+let cursor_on_station (s:State.t) =
+  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
+  | Some track when track.player = 0 ->
+      begin match track.kind with
+      | Depot | Station | Terminal -> true
+      | _ -> false
+      end
+  | _ -> false
 
 let set_build_mode v mode =
   {v with build_mode = mode}

@@ -74,9 +74,10 @@ type menu_action =
     ]
     [@@deriving show]
 
-type t = {
+type 'a t = {
   dims: dims;
-  menu: menu_action Menu.Global.t;
+  options: options;
+  menu: (menu_action, 'a) Menu.Global.t;
 }
 
 
