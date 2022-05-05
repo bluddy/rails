@@ -32,7 +32,7 @@ module MsgBox = struct
 
   type 'a fire =
     | Action of 'a
-    | Checkbox of bool * 'a (* checked *)
+    | Checkbox of 'a * (Backend.t * Mapview_d.t -> bool) (* checked *)
     | MsgBox of bool * 'a t (* open *)
 
   and 'a entry = {
@@ -40,7 +40,7 @@ module MsgBox = struct
     h: int;
     name: string;
     fire: 'a fire;
-    visibility: ((Backend.t * Mapview_d.t) -> bool) option;
+    visibility: (Backend.t * Mapview_d.t -> bool) option;
     visible: bool;
   }
 
@@ -50,7 +50,6 @@ module MsgBox = struct
       border_x: int; border_y: int;
       entries: 'a entry list;
       selected: int option;
-      exclusive: (int * int list) option;
       font: Fonts.Font.t;
     }
 
@@ -63,7 +62,7 @@ module MsgBox = struct
       match fire with
       | `MsgBox m -> MsgBox(false, m)
       | `Action a -> Action a
-      | `Checkbox b -> Checkbox(false, b)
+      | `Checkbox (b, fn) -> Checkbox(b, fn)
     in
     {
       y=0;
@@ -74,18 +73,12 @@ module MsgBox = struct
       visibility;
     }
 
-  let make ?(exclusive=None) ~fonts ~x ~y entries =
-    let exclusive = match exclusive with
-      | None -> None
-      | Some [] -> Some (0, [])
-      | Some li -> Some (List.hd li, li)
-    in
+  let make ~fonts ~x ~y entries =
     {
       border_x=8; border_y=6;
       x; y; w=0; h=0;
       entries;
       selected=None;
-      exclusive;
       font=fonts.(menu_font);
     }
 
@@ -135,10 +128,10 @@ module MsgBox = struct
         {v with fire=MsgBox(false, box)}, CloseMsgBox
     | Action action ->
         v, On(action)
-    | Checkbox(false, action) ->
-        {v with fire=Checkbox(true, action)}, On(action)
-    | Checkbox(true, action) ->
-        {v with fire=Checkbox(false, action)}, Off(action)
+    | Checkbox(action, fn) when fn s ->
+        v, On(action)
+    | Checkbox(action, _) ->
+        v, Off(action)
 
   let entry_close_msgbox v =
     match v.fire with
@@ -199,20 +192,20 @@ module MsgBox = struct
     {v with entries; selected}, action
 
 
-    let render_entry win font v ~selected ~x ~w ~border_x =
+    let render_entry win s font v ~selected ~x ~w ~border_x =
       if v.visible then (
         if selected then
           Renderer.draw_rect win ~x:(x+3) ~y:(v.y-2) ~w:(w-3) ~h:v.h ~fill:true ~color:Ega.bcyan;
 
         let prefix =
           match v.fire with
-          | Checkbox(true, _) -> "^"
+          | Checkbox(_, fn) when fn s -> "^"
           | _ -> " "
         in
         Fonts.Font.write win font ~color:Ega.black (prefix^v.name) ~x:(x+border_x) ~y:v.y;
       )
 
-    let rec render win v =
+    let rec render win s v =
       (* draw background *)
       let x = v.x in
       Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
@@ -220,13 +213,13 @@ module MsgBox = struct
       Renderer.draw_rect win ~x:(x) ~y:(v.y) ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
       let selected = Option.get_or v.selected ~default:(-1) in
       List.iteri (fun i entry ->
-        render_entry win v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x ~w:v.w entry)
+        render_entry win s v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x ~w:v.w entry)
         v.entries;
       match v.selected with
       | Some selected ->
           let entry = List.nth v.entries selected in
           begin match entry.fire with
-          | MsgBox(true, box) -> render win box
+          | MsgBox(true, box) -> render win s box
           | _ -> ()
           end
       | _ -> ();
@@ -273,8 +266,8 @@ module Title = struct
     v.name
     |> ignore
 
-  let render_msgbox win v =
-    MsgBox.render win v.msgbox
+  let render_msgbox win s v =
+    MsgBox.render win s v.msgbox
 
   let do_open_menu s v =
     let msgbox = MsgBox.do_open_menu s v.msgbox in
@@ -344,13 +337,13 @@ module Global = struct
         handle_click s v ~x ~y
     | _ -> v, NoAction
 
-  let render win fonts v =
+  let render win s fonts v =
     (* Render menu titles *)
     List.iter (Title.render win ~fonts) v.menus;
     match v.open_menu with
     | None -> ()
     | Some i ->
-        Title.render_msgbox win (List.nth v.menus i)
+        Title.render_msgbox win s (List.nth v.menus i)
 
 end
 

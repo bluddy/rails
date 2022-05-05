@@ -3,11 +3,33 @@ open Containers
 (* This is the backend. All game-modifying functions go through here *)
 
 (* The actual game (server) state *)
+
+type speed =
+  [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
+  [@@deriving enum, eq, show]
+
+type reality_level =
+  [`Dispatcher_ops | `Complex_economy | `Cutthroat_competition]
+  [@@deriving enum, eq, show]
+
+module RealityLevels = Bitset.Make( struct
+  type t = reality_level
+  let to_enum = reality_level_to_enum
+  let of_enum = reality_level_of_enum
+  let last = `Cutthroat_competition
+end)
+
+type options = {
+  speed: speed;
+  reality_levels: RealityLevels.t;
+}
+
 type t = {
   area: Gmap.area;
   map : Gmap.t;
   track: Trackmap.t;
   cities: Gmap.city array;
+  options : options;
 }
 [@@deriving lens]
 
@@ -17,7 +39,10 @@ let default area resources =
     |> List.map (fun (name,x,y) -> {Gmap.name;x;y})
     |> Array.of_list in
   let track = Trackmap.empty Gmap.map_width Gmap.map_height in
-  {map; area; cities; track}
+  let speed = `Moderate in
+  let reality_levels = RealityLevels.empty in
+  let options = {speed; reality_levels} in
+  {map; area; cities; track; options}
 
 let map_height = Gmap.map_height
 

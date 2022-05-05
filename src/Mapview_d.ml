@@ -4,7 +4,11 @@ type zoom =
   | Zoom2
   | Zoom3
   | Zoom4
-  [@@deriving eq]
+  [@@deriving eq, show]
+
+type build_mode =
+  [ `Build | `Remove ]
+  [@@deriving eq, show]
 
 type t =
   {
@@ -12,8 +16,8 @@ type t =
     center_y: int;
     cursor_x: int;
     cursor_y: int;
-    cursor_track: [`NoTrack | `Track | `Station | `WoodBridge];
     zoom: zoom;
     width: int;
     height: int;
+    build_mode: build_mode;
   }

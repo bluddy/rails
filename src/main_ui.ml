@@ -2,23 +2,25 @@ open Containers
 open Main_ui_d
 
 module R = Renderer
+module B = Backend
 
 let main_menu fonts menu_h =
   let open Menu in
   let game_speed =
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0 ~exclusive:(Some [])
+    let check_speed speed ((b:B.t),_) = B.equal_speed b.options.speed speed in
+    make ~fonts ~x:0 ~y:0
     [
-      make_entry "Frozen" @@ `Checkbox `Speed_frozen;
-      make_entry "Slow" @@ `Checkbox `Speed_slow;
-      make_entry "Moderate" @@ `Checkbox `Speed_moderate;
-      make_entry "Fast" @@ `Checkbox `Speed_fast;
-      make_entry "Turbo" @@ `Checkbox `Speed_turbo;
+      make_entry "Frozen" @@ `Checkbox(`Speed `Frozen, check_speed `Frozen);
+      make_entry "Slow" @@ `Checkbox(`Speed `Slow, check_speed `Slow);
+      make_entry "Moderate" @@ `Checkbox(`Speed `Moderate, check_speed `Moderate);
+      make_entry "Fast" @@ `Checkbox(`Speed `Fast, check_speed `Fast);
+      make_entry "Turbo" @@ `Checkbox(`Speed `Turbo, check_speed `Turbo);
     ]
   in
   let train_messages =
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0 ~exclusive:(Some [])
+    make ~fonts ~x:0 ~y:0
     [
       make_entry "Off" @@ `Checkbox `Message_off;
       make_entry "Fast" @@ `Checkbox `Message_fast;
@@ -88,7 +90,7 @@ let main_menu fonts menu_h =
   in
   let build_menu =
     let open MsgBox in
-    make ~fonts ~x:168 ~y:8 ~exclusive:(Some [3;4])
+    make ~fonts ~x:168 ~y:8
     [
       make_entry "New Train (F7)" @@ `Action `Build_train;
       make_entry "Build Station (F8)" ~visibility:is_zoom4 @@ `Action `Build_station;

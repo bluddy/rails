@@ -14,7 +14,7 @@ let default =
     zoom=Zoom4;
     width=B.map_width;
     height=B.map_height;
-    cursor_track=`NoTrack;
+    build_mode=`Build;
   }
 
 let recenter_threshold = 5
@@ -119,6 +119,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
       let cursor_y = Utils.clip y ~min:0 ~max:(v.height-1) in
       let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
       let actions =
+        (* TODO: handle track removal *)
         if build then
           let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
           match check with
@@ -257,6 +258,7 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
 
 let get_zoom v = v.zoom
 
+  (* Used by menu *)
 let cursor_track_type (backend, view) =
   match B.get_track backend view.cursor_x view.cursor_y with
   | Some track when track.player = 0 ->
@@ -267,4 +269,9 @@ let cursor_track_type (backend, view) =
       | _ -> `NoTrack
       end
   | _ -> `NoTrack
+
+let set_build_mode v mode =
+  {v with build_mode = mode}
+
+let get_build_mode v = v.build_mode
 
