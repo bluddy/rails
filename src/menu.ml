@@ -137,11 +137,19 @@ module MsgBox = struct
     | Checkbox(action, _) ->
         v, Off(action)
 
-  let entry_close_msgbox v =
+  let rec close_entry v =
     match v.fire with
     | MsgBox(true, box) ->
+        let box = close box in
         {v with fire=MsgBox(false, box)}
     | _ -> v
+
+  and close v =
+    match v.selected with
+    | Some i ->
+        let entries = Utils.List.modify_at_idx i close_entry v.entries in
+        {v with entries; selected=None}
+    | None -> v
 
     (* Only search depth-first *)
   let rec handle_entry_click_deep s (v:('a, 'b) entry) ~x ~y =
@@ -178,7 +186,7 @@ module MsgBox = struct
           | None, Some entry_idx ->
               (* clear selection *)
               let entries =
-                Utils.List.modify_at_idx entry_idx (entry_close_msgbox) v.entries
+                Utils.List.modify_at_idx entry_idx (close_entry) v.entries
               in
               entries, action, None
           | Some (entry_idx, _), _ ->
@@ -194,7 +202,6 @@ module MsgBox = struct
           entries, action, v.selected
     in
     {v with entries; selected}, action
-
 
     let render_entry win s font v ~selected ~x ~w ~border_x =
       if v.visible then (
@@ -258,6 +265,7 @@ module Title = struct
     let msgbox, event = MsgBox.handle_click s v.msgbox ~x ~y in
     {v with msgbox}, event
 
+    (* Draw titles only *)
   let render win ~fonts v =
     String.fold (fun (x, y, key) c ->
       if Char.Infix.(c = '&') then
@@ -269,6 +277,10 @@ module Title = struct
     (v.x, v.y, false)
     v.name
     |> ignore
+
+  let close_menu v =
+    let msgbox = MsgBox.close v.msgbox in
+    {v with msgbox}
 
   let render_msgbox win s v =
     MsgBox.render win s v.msgbox
@@ -297,40 +309,50 @@ module Global = struct
     let _x = x in
     y > v.menu_h && Option.is_none v.open_menu
 
+  let is_menu_open v = Option.is_none v.open_menu
+
   let handle_click s v ~x ~y =
     (* Check for closed menu *)
-    if is_not_clicked v ~x ~y && Option.is_none v.open_menu then (v, NoAction)
+    if is_not_clicked v ~x ~y && not @@ is_menu_open v then
+      (v, NoAction)
     else (
       (* Handle a top menu click first *)
-      let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) v.menus in
+      let menus = v.menus in
+      let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) menus in
       match clicked_top_menu, v.open_menu with
       | Some (i, _), Some mopen when i = mopen ->
           (* clicked top menu, same menu is open *)
-          Printf.printf "1. i[%d]\n%!" i;
-          {v with open_menu = None}, CloseMenu
-      | Some (i, _), _ ->
-          Printf.printf "2. i[%d]\n%!" i;
-          (* clicked top menu, some other or none are open *)
-          let menus = Utils.List.modify_at_idx i (Title.do_open_menu s) v.menus in
+          let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
+          {v with menus; open_menu = None}, CloseMenu
+      | Some (i, _), Some mopen ->
+          (* clicked top menu, some other is open *)
+          let menus =
+            Utils.List.modify_at_idx mopen Title.close_menu menus
+            |> Utils.List.modify_at_idx i (Title.do_open_menu s)
+          in
           {v with menus; open_menu = Some i}, OpenMenu
-      | None, (Some open_menu as sopen) ->
-          Printf.printf "3. open[%d]\n%!" open_menu;
+      | Some (i, _), None ->
+          (* clicked top menu, none are open *)
+          let menus = Utils.List.modify_at_idx i (Title.do_open_menu s) menus in
+          {v with menus; open_menu = Some i}, OpenMenu
+      | None, (Some mopen as sopen) ->
           (* clicked elsewhere with open top menu *)
           let menus, action = 
             (* check menu itself *)
-            Utils.List.modify_make_at_idx open_menu (Title.handle_click s ~x ~y) v.menus
+            Utils.List.modify_make_at_idx mopen (Title.handle_click s ~x ~y) menus
           in
           let action = action |> Option.get_exn_or "error" in
-          Printf.printf "%s\n%!" (show_action action);
           (* Close the menu if it's a random click *)
-          let open_menu, action =
+          let open_menu, action, menus =
             match action with
-            | NoAction -> None, CloseMenu
-            | _ -> sopen, action
+            | NoAction ->
+                let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
+                None, CloseMenu, menus
+            | _ ->
+                sopen, action, menus
           in
           ({v with menus; open_menu}, action)
       | None, None ->
-          Printf.printf "4. NoAction\n%!";
           (* no menu open *)
           v, NoAction
     )
