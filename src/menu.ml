@@ -361,6 +361,7 @@ module Global = struct
     match event with
     | MouseButton {down=true; x; y; _} ->
         handle_click s v ~x ~y
+      (* TODO: handle keybord *)
     | _ -> v, NoAction
 
   let render win s fonts v =
