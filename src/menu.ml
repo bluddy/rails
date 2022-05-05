@@ -5,6 +5,7 @@ open Containers
   2. The type of the data it reads into its checkbox and visibility lambdas
 *)
 let menu_font = 1
+let max_width = 320
 
   type 'a action =
     | On of 'a
@@ -58,7 +59,7 @@ module MsgBox = struct
     }
 
   let get_entry_w_h font v =
-    Fonts.Font.get_str_w_h font v.name
+    Fonts.Font.get_str_w_h font @@ " "^v.name
 
   let make_entry ?(visibility=None) name fire =
     let name = name in
@@ -77,39 +78,69 @@ module MsgBox = struct
       visibility;
     }
 
+  let get_width s v =
+    List.fold_left (fun max_w entry ->
+      let visible =
+        match entry.visibility with
+        | Some f-> f s
+        | None -> true
+      in
+      if visible then
+        let w, _ = get_entry_w_h v.font entry in
+        max max_w w
+      else
+        max_w)
+    0
+    v.entries
+
+    (* Compute menu size dynamically *)
+  let do_open_menu ?(x=0) ?(y=0) s (v: ('a, 'b) t) =
+    let w = get_width s v + 2 * v.border_x in
+    let x, y =
+      (* check for arguments *)
+      if x <> 0 || y <> 0 then
+        let offset_y = 15 in
+        let offset_x = 30 in
+        let x =
+          if x + w + offset_x > max_width then
+            max_width - w - offset_x
+          else x + offset_x
+        in
+        x, y + offset_y
+      else
+        v.x, v.y
+    in
+    let h, entries =
+      List.fold_map (fun max_h entry ->
+        let visible =
+          match entry.visibility with
+          | Some f-> f s
+          | None -> true
+        in
+        let y = y + max_h in
+        let _, h = get_entry_w_h v.font entry in
+        let entry = {entry with y; h; visible} in
+        let max_h =
+          if visible then
+            max_h + h
+          else
+            max_h
+        in
+        max_h, entry)
+      v.border_y
+      v.entries
+    in
+    {v with entries; w; h; x; y}
+
   let make ~fonts ~x ~y entries =
+    let font=fonts.(menu_font) in
     {
       border_x=8; border_y=6;
       x; y; w=0; h=0;
       entries;
       selected=None;
-      font=fonts.(menu_font);
+      font;
     }
-
-    (* Compute menu size dynamically *)
-  let do_open_menu s (v: ('a, 'b) t) =
-    let (w, h), entries =
-      List.fold_map (fun (max_w, max_h) entry ->
-        let visible =
-          match entry.visibility with
-          | Some f -> f s
-          | None -> true
-        in
-        let y = v.y + max_h in
-        let w, h = get_entry_w_h v.font entry in
-        let entry = {entry with y; h; visible} in
-        let max_w, max_h =
-          if visible then
-            (max max_w w, max_h + h)
-          else
-            max_w, max_h
-        in
-        (max_w, max_h), entry)
-      (v.border_x, v.border_y)
-      v.entries
-    in
-    let w = w + 2 * v.border_x in
-    {v with entries; w; h}
 
   let is_entry_clicked_shallow v ~y =
     if not v.visible then false else
@@ -122,11 +153,11 @@ module MsgBox = struct
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Do not recurse deeply *)
-  let handle_entry_click_shallow s v =
+  let handle_entry_click_shallow s ~x v =
     (* Assume we were clicked. Only handle shallow events *)
     match v.fire with
     | MsgBox(false, box) ->
-        let box = do_open_menu s box in
+        let box = do_open_menu s ~x ~y:(v.y) box in
         {v with fire=MsgBox(true, box)}, OpenMsgBox
     | MsgBox(true, box) ->
         {v with fire=MsgBox(false, box)}, CloseMsgBox
@@ -192,7 +223,7 @@ module MsgBox = struct
           | Some (entry_idx, _), _ ->
               (* clicked an entry, handle and switch selection *)
             let entries, action =
-              Utils.List.modify_make_at_idx entry_idx (handle_entry_click_shallow s) v.entries
+              Utils.List.modify_make_at_idx entry_idx (handle_entry_click_shallow ~x:v.x s) v.entries
             in
             entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
           end
