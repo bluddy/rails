@@ -124,32 +124,6 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
   Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
   Sdl.render_draw_line win.renderer x1 y1 x2 y2 |> get_exn
 
-(* module Rect = struct *)
-(*   type t = { *)
-(*     rect: Sdl.rect; *)
-(*     fill: bool; *)
-(*   } *)
-(*  *)
-(*   let make win ~w ~h ~fill = *)
-(*     let w = zoom win w in *)
-(*     let h = zoom win h in *)
-(*     let rect = Sdl.Rect.create ~x:0 ~y:0 ~w ~h in *)
-(*     { *)
-(*       rect; *)
-(*       fill; *)
-(*     } *)
-(*  *)
-(*   let render ?(x=0) ?(y=0) ?color win tex = *)
-(*     Sdl.Rect.set_x tex.dst @@ zoom win x; *)
-(*     Sdl.Rect.set_y tex.dst @@ zoom win y; *)
-(*     let () = match color with *)
-(*       | Some (r,g,b) -> *)
-(*           Sdl.set_texture_color_mod tex.texture r g b |> get_exn *)
-(*       | _ -> () *)
-(*     in *)
-(*     Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn *)
-(* end *)
-
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
 
