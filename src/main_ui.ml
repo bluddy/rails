@@ -157,7 +157,7 @@ let default win fonts =
       ui_w=64;
       ui_start_x=Gmap.map_width-1;
       infobar_h=19;
-      train_area_h=115;
+      train_area_h=117;
     }
   in
   let options =
@@ -213,11 +213,11 @@ let render (win:R.window) (s:State.t) v =
   (* Border of UI *)
   R.draw_rect win ~x ~y ~h ~w:(dims.ui_w+1) ~color:Ega.white ~fill:false;
 
+  (* Draw logo *)
   begin match Mapview.get_zoom s.view with
   | Zoom1 ->
       R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo;
-  | _ ->
-      ()
+  | _ -> ()
   end;
 
   (* Info bar *)
@@ -226,7 +226,7 @@ let render (win:R.window) (s:State.t) v =
 
   (* Train area *)
   let y = y + dims.infobar_h in
-  R.draw_rect win ~x:(x+1) ~y:(y+1) ~h:dims.train_area_h ~w:(dims.ui_w-1) ~color:Ega.bblue ~fill:true;
+  R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_area_h ~w:(dims.ui_w-1) ~color:Ega.bblue ~fill:true;
 
   (* Menu bar *)
   Menu.Global.render win s s.textures.fonts v.menu;
