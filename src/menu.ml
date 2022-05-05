@@ -117,7 +117,7 @@ module MsgBox = struct
           | Some f-> f s
           | None -> true
         in
-        let y = y + max_h in
+        let y = max_h in
         let _, h = get_entry_w_h v.font entry in
         let entry = {entry with y; h; visible} in
         let max_h =
@@ -210,7 +210,7 @@ module MsgBox = struct
       match action with
       | NoAction when is_clicked_shallow v ~x ~y ->
           (* Didn't find in deep search, do shallow search in this msgbox *)
-          begin match find_clicked_entry_shallow v ~y, v.selected with
+          begin match find_clicked_entry_shallow v ~y:(y-v.y), v.selected with
           | None, None ->
               (* clicked in msgbox but not an option *)
               entries, ClickInMsgBox, v.selected
@@ -234,17 +234,17 @@ module MsgBox = struct
     in
     {v with entries; selected}, action
 
-    let render_entry win s font v ~selected ~x ~w ~border_x =
+    let render_entry win s font v ~selected ~x ~border_x ~y ~w =
       if v.visible then (
         if selected then
-          Renderer.draw_rect win ~x:(x+3) ~y:(v.y-2) ~w:(w-3) ~h:v.h ~fill:true ~color:Ega.bcyan;
+          Renderer.draw_rect win ~x:(x+3) ~y:(v.y + y - 2) ~w:(w-4) ~h:v.h ~fill:true ~color:Ega.bcyan;
 
         let prefix =
           match v.fire with
           | Checkbox(_, fn) when fn s -> "^"
           | _ -> " "
         in
-        Fonts.Font.write win font ~color:Ega.black (prefix^v.name) ~x:(x+border_x) ~y:v.y;
+        Fonts.Font.write win font ~color:Ega.black (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y);
       )
 
     let rec render win s v =
@@ -252,10 +252,11 @@ module MsgBox = struct
       let x = v.x in
       Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
       Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
-      Renderer.draw_rect win ~x:(x) ~y:(v.y) ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
+      Renderer.draw_rect win ~x:x ~y:v.y ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
       let selected = Option.get_or v.selected ~default:(-1) in
       List.iteri (fun i entry ->
-        render_entry win s v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x ~w:v.w entry)
+        render_entry win s v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x
+          ~y:(v.y) ~w:v.w entry)
         v.entries;
       match v.selected with
       | Some selected ->
