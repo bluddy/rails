@@ -50,9 +50,11 @@ module MsgBox = struct
   }
 
   and ('a, 'b) t =
-    { x: int; y: int;
+    { 
+      x: int; y: int;
       w: int; h: int;
       border_x: int; border_y: int;
+      heading: string option;
       entries: ('a, 'b) entry list;
       selected: int option;
       font: Fonts.Font.t;
@@ -95,9 +97,39 @@ module MsgBox = struct
 
     (* Compute menu size dynamically *)
   let do_open_menu ?(x=0) ?(y=0) s (v: ('a, 'b) t) =
-    let w = get_width s v + 2 * v.border_x in
+    (* start calculating internal y *)
+    let max_h = v.border_y in
+    (* entry coordinates are internal to the msgbox *)
+    let max_w, max_h = match v.heading with
+      | Some str ->
+          let w, h = Fonts.Font.get_str_w_h v.font str in
+          w, h + max_h
+      | None ->
+          0, max_h
+    in
+    let (w, h), entries =
+      List.fold_map (fun (max_w, max_h) entry ->
+        let visible =
+          match entry.visibility with
+          | Some f-> f s
+          | None -> true
+        in
+        let w, h = get_entry_w_h v.font entry in
+        let entry = {entry with y=max_h; h; visible} in
+        let max_w, max_h =
+          if visible then
+            max max_w w, max_h + h
+          else
+            max_w, max_h
+        in
+        (max_w, max_h), entry)
+      (max_w, max_h)
+      v.entries
+    in
+    (* w never included the border_x *)
+    let w, h = w + 2 * v.border_x, h + v.border_y in
     let x, y =
-      (* check for arguments *)
+      (* check for offset from previous menu *)
       if x <> 0 || y <> 0 then
         let offset_y = 15 in
         let offset_x = 30 in
@@ -110,29 +142,9 @@ module MsgBox = struct
       else
         v.x, v.y
     in
-    let h, entries =
-      List.fold_map (fun max_h entry ->
-        let visible =
-          match entry.visibility with
-          | Some f-> f s
-          | None -> true
-        in
-        let y = max_h in
-        let _, h = get_entry_w_h v.font entry in
-        let entry = {entry with y; h; visible} in
-        let max_h =
-          if visible then
-            max_h + h
-          else
-            max_h
-        in
-        max_h, entry)
-      v.border_y
-      v.entries
-    in
     {v with entries; w; h; x; y}
 
-  let make ~fonts ~x ~y entries =
+  let make ?heading ~fonts ~x ~y entries =
     let font=fonts.(menu_font) in
     {
       border_x=8; border_y=6;
@@ -140,6 +152,7 @@ module MsgBox = struct
       entries;
       selected=None;
       font;
+      heading;
     }
 
   let is_entry_clicked_shallow v ~y =
@@ -237,7 +250,7 @@ module MsgBox = struct
     let render_entry win s font v ~selected ~x ~border_x ~y ~w =
       if v.visible then (
         if selected then
-          Renderer.draw_rect win ~x:(x+3) ~y:(v.y + y - 2) ~w:(w-4) ~h:v.h ~fill:true ~color:Ega.bcyan;
+          Renderer.draw_rect win ~x:(x+3) ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:Ega.bcyan;
 
         let prefix =
           match v.fire with
@@ -253,11 +266,22 @@ module MsgBox = struct
       Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
       Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
       Renderer.draw_rect win ~x:x ~y:v.y ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
+
+      (* draw heading *)
+      begin match v.heading with
+      | Some str ->
+          Fonts.Font.write win v.font ~color:Ega.white str ~x:(v.x + v.border_x) ~y:(v.y + v.border_y)
+      | None -> ()
+      end;
+
+      (* draw entries and selection *)
       let selected = Option.get_or v.selected ~default:(-1) in
       List.iteri (fun i entry ->
         render_entry win s v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x
           ~y:(v.y) ~w:v.w entry)
         v.entries;
+
+      (* recurse to sub-msgbox *)
       match v.selected with
       | Some selected ->
           let entry = List.nth v.entries selected in
