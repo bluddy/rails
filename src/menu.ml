@@ -144,7 +144,7 @@ module MsgBox = struct
     in
     {v with entries; w; h; x; y}
 
-  let make ?heading ~fonts ~x ~y entries =
+  let make ?heading ?(x=0) ?(y=0) ~fonts entries =
     let font=fonts.(menu_font) in
     {
       border_x=8; border_y=6;

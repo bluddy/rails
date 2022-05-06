@@ -10,7 +10,7 @@ let main_menu fonts menu_h =
   let game_speed =
     let check_speed speed (s:State.t) = B.equal_speed s.backend.options.speed speed in
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts
     [
       make_entry "Frozen" @@ `Checkbox(`Speed `Frozen, check_speed `Frozen);
       make_entry "Slow" @@ `Checkbox(`Speed `Slow, check_speed `Slow);
@@ -22,7 +22,7 @@ let main_menu fonts menu_h =
   let train_messages =
     let check_message message (s:State.t) = Main_ui_d.equal_message_speed s.ui.options.messages message in
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts
     [
       make_entry "Off" @@ `Checkbox(`Message `Off, check_message `Off);
       make_entry "Fast" @@ `Checkbox(`Message `Fast, check_message `Fast);
@@ -34,7 +34,7 @@ let main_menu fonts menu_h =
       Main_ui_d.NewsTypes.mem s.ui.options.news news_type
     in
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts
     [
       make_entry "Financial News" @@ `Checkbox(`News `Financial, check_news `Financial);
       make_entry "Railroad News" @@ `Checkbox(`News `Railroad, check_news `Railroad);
@@ -46,7 +46,7 @@ let main_menu fonts menu_h =
       Main_ui_d.Features.mem s.ui.options.features feature
     in
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts
     [
       make_entry "Animations" @@ `Checkbox(`Features `Animations, check_feature `Animations);
       make_entry "Sound Effects" @@ `Checkbox(`Features `Sounds, check_feature `Sounds);
@@ -82,7 +82,7 @@ let main_menu fonts menu_h =
       Mapview_d.Options.mem s.view.options opt
     in
     let open MsgBox in
-    make ~fonts ~x:0 ~y:0
+    make ~fonts
     [
       make_entry "Station Boxes" @@ `Checkbox(`Options `StationBoxes, check_option `StationBoxes);
       make_entry "Resources" @@ `Checkbox(`Options `Resources, check_option `Resources);
@@ -182,22 +182,34 @@ let default win fonts =
     dims;
     menu=main_menu fonts dims.menu_h;
     options;
+    mode=Normal;
   }
 
+let build_station_menu fonts =
+  let open Menu in
+  let open MsgBox in
+  make ~fonts ~heading:"Type of facility?" ~x:202 ~y:16
+  [
+    make_entry "Signal Tower ($25,000)" @@ `Action(`BuildStation Track.SignalTower);
+    make_entry "Depot ($50,000)" @@ `Action(`BuildStation Track.Depot);
+    make_entry "Station ($100,000)" @@ `Action(`BuildStation Track.Station);
+    make_entry "Terminal ($200,000)" @@ `Action(`BuildStation Track.Terminal);
+  ]
+
 let update (s:State.t) v (event:Event.t) =
-  let dims = v.dims in
   let v, action, event =
-    (* only update view if we have a change *)
     match Menu.Global.update s v.menu event with
-    | _, Menu.NoAction -> v, Menu.NoAction, event
-    | menu, a -> {v with menu}, a, NoEvent
+    | _, Menu.NoAction ->
+        (* Only update view if we have a change *)
+        v, Menu.NoAction, event
+    | menu, a ->
+        (* Cancel out events we handled *)
+        {v with menu}, a, NoEvent 
   in
-  let minimap_x = dims.ui_start_x in
-  let minimap_y = dims.menu_h in
-  let minimap_h = dims.minimap_h in
-  let minimap_w = dims.ui_w in
   let view, actions =
-    Mapview.update s s.view event ~y_top:dims.menu_h ~minimap_x ~minimap_y ~minimap_w ~minimap_h
+    let dims = v.dims in
+    Mapview.update s s.view event ~y_top:dims.menu_h
+      ~minimap_x:dims.ui_start_x ~minimap_y:dims.menu_h ~minimap_w:dims.ui_w ~minimap_h:dims.minimap_h
   in
   v, view, actions
   

@@ -74,10 +74,21 @@ type menu_action =
     ]
     [@@deriving show]
 
+type build_station_action =
+  [
+    | `BuildStation of Track.kind
+  ]
+
+type 'a mode =
+  | Normal
+  | BuildStation of (build_station_action, 'a) Menu.MsgBox.t
+  | BuildIndustry
+
 type 'a t = {
   dims: dims;
   options: options;
   menu: (menu_action, 'a) Menu.Global.t;
+  mode: 'a mode; (* determines mode of operation *)
 }
 
 
