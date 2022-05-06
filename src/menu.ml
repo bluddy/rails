@@ -127,7 +127,7 @@ module MsgBox = struct
       v.entries
     in
     (* w never included the border_x *)
-    let w, h = w + 2 * v.border_x, h + v.border_y in
+    let w, h = w + v.border_x, h in
     let x, y =
       (* check for offset from previous menu *)
       if x <> 0 || y <> 0 then
