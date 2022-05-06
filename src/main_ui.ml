@@ -77,6 +77,17 @@ let main_menu fonts menu_h =
       make_entry "History" @@ `Action `History;
     ]
   in
+  let options =
+    let check_option opt (s:State.t) =
+      Mapview_d.Options.mem s.view.options opt
+    in
+    let open MsgBox in
+    make ~fonts ~x:0 ~y:0
+    [
+      make_entry "Station Boxes" @@ `Checkbox(`Options `StationBoxes, check_option `StationBoxes);
+      make_entry "Resources" @@ `Checkbox(`Options `Resources, check_option `Resources);
+    ]
+  in
   let displays_menu =
     let open MsgBox in
     make ~fonts ~x:56 ~y:8
@@ -85,7 +96,7 @@ let main_menu fonts menu_h =
       make_entry "Area Display (F2)" @@ `Action(`Display(Mapview_d.Zoom2));
       make_entry "Local Display (F3)" @@ `Action(`Display(Mapview_d.Zoom3));
       make_entry "Detail Display (F4)" @@ `Action(`Display(Mapview_d.Zoom4));
-      make_entry "Options" @@ `Action `Options;
+      make_entry "Options" @@ `MsgBox options;
       make_entry "Find City" @@ `Action `Find_city;
     ]
   in

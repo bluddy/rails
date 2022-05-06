@@ -57,7 +57,7 @@ type menu_action =
     | `Efficiency
     | `History
     | `Display of Mapview_d.zoom
-    | `Options
+    | `Options of Mapview_d.options
     | `Find_city
     | `Build_train
     | `Build_station

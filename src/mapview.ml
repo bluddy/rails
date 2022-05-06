@@ -15,6 +15,7 @@ let default =
     width=B.map_width;
     height=B.map_height;
     build_mode=`Build;
+    options=Options.of_list [`StationBoxes];
   }
 
 let recenter_threshold = 5
