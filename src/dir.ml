@@ -58,7 +58,6 @@ module Set = struct
     mask
 end
 
-
 (* A swirl of offsets going clockwise starting from closest point
     going outwards: 3x3, 5x5 up to 7x7.
     The corners are skipped and are at the end.
@@ -97,5 +96,6 @@ let x_offset =
 let to_offsets dir =
   let i = to_enum dir in
   x_offset.(i), y_offset.(i)
+
 
 

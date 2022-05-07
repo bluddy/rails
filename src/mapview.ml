@@ -18,7 +18,7 @@ let default =
     options=Options.of_list [`StationBoxes];
   }
 
-let recenter_threshold = 5
+let get_cursor_pos v = (v.cursor_x, v.cursor_y)
 
 let is_zoom4 v = match v.zoom with
   | Zoom4 -> true

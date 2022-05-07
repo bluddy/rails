@@ -21,6 +21,10 @@ let x_y_of_offset v offset =
 
 let get v x y = Hashtbl.find_opt v.map (calc_offset v x y)
 
+let get_track v x y ~player =
+  get v x y
+  |> Option.get_lazy (fun () -> Track.empty player)
+
 let set v x y tile = Hashtbl.replace v.map (calc_offset v x y) tile
 
 let iter v f =
@@ -33,10 +37,8 @@ let pre_build_track v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
   let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.w - 1) in
   let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.h - 1) in
-  let track1 = get v x y
-    |> Option.get_lazy (fun () -> Track.empty player) in
-  let track2 = get v x2 y2
-    |> Option.get_lazy (fun () -> Track.empty player) in
+  let track1 = get_track v x y ~player in
+  let track2 = get_track v x2 y2 ~player in
   let track1 = Track.add_dir track1 dir in
   let track2 = Track.add_dir track2 @@ Dir.opposite dir in
   track1, track2, x2, y2
@@ -60,5 +62,15 @@ let build_track v ~x ~y ~dir ~player =
     { v with count = v.count + 1}
   )
   else v
+
+let check_build_station v ~x ~y ~player kind =
+  match get v x y with
+  | None -> `NoTrack
+  | Some ({kind=Track} as t) when t.player = player && Track.is_straight t ->
+      `Ok
+
+  
+
+
 
 

@@ -55,7 +55,9 @@ type tile =
 (* Map data type. Starts at top left *)
 type t = {
   seed: int; (* 15 bit value *)
-  map: tile array
+  map: tile array;
+  width: int;
+  height: int;
 }
 
 type city = {
@@ -123,17 +125,17 @@ let pixel_of_tile = function
 let map_height = 192
 let map_width = 256
 
+let calc_offset v x y = y * v.width + x
 
-let calc_offset x y = y * map_width + x
+let get_tile v x y = v.map.(calc_offset v x y)
 
-let get_tile map x y = map.map.(calc_offset x y)
+let set_tile v x y tile =
+  v.map.(calc_offset v x y) <- tile
 
-let set_tile map x y tile = map.map.(calc_offset x y) <- tile
-
-let iter f map =
-  for y=0 to map_height - 1 do
-    for x=0 to map_width - 1 do
-      let tile = get_tile map x y in
+let iter f v =
+  for y=0 to v.height - 1 do
+    for x=0 to v.width - 1 do
+      let tile = get_tile v x y in
       f x y tile
     done
   done
@@ -142,24 +144,24 @@ let iter f map =
      edge: behavior along edges of map
      diag: use diagonals
     *)
-let get_mask ?(n=8) ?(diag=false) ~edge ~map ~f ~x ~y =
+let get_mask ?(n=8) ?(diag=false) ~edge v ~f ~x ~y =
   Iter.map (fun i ->
     (* check for diagonal *)
     if not diag && i land 1 = 1 then false else
     let x_off = x + Dir.x_offset.(i) in
     let y_off = y + Dir.y_offset.(i) in
-    if x_off < 0 || x_off >= map_width || y_off < 0 || y_off >= map_height then
+    if x_off < 0 || x_off >= v.width || y_off < 0 || y_off >= v.height then
       edge
     else
-      f (get_tile map x_off y_off)
+      f (get_tile v x_off y_off)
   )
   Iter.(0--(n-1))
 
 (* seed: 15 bits from time *)
-let tile_of_pixel ~area ~x ~y ~pixel ~map =
-  let seed = map.seed in
+let tile_of_pixel ~area ~x ~y ~pixel v =
+  let seed = v.seed in
   let water_dirs ~edge ~f =
-    let mask = get_mask ~edge ~f ~x ~y ~map in
+    let mask = get_mask ~edge ~f ~x ~y v in
     Dir.Set.of_mask mask
   in
   let is_water = function
@@ -276,27 +278,29 @@ let ndarray_of_file filename =
 
 let of_ndarray ~area ~seed ndarray =
   (* First pass: don't set directions for ocean and river *)
-  let map = Array.make (map_height * map_width) @@ Ocean(Dir.Set.empty) in
-  let map = {map; seed} in
-  for y=0 to map_height-1 do
-    for x=0 to map_width-1 do
-      let v = Ndarray.get ndarray [|y; x|] in
-      let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum v in
-      let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
-      set_tile map x y tile
+  let width = 256 in
+  let height = 192 in
+  let map = Array.make (width * height) @@ Ocean(Dir.Set.empty) in
+  let v = {map; seed; width; height} in
+  for y=0 to v.height-1 do
+    for x=0 to v.width-1 do
+      let value = Ndarray.get ndarray [|y; x|] in
+      let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum value in
+      let tile = tile_of_pixel ~area ~x ~y ~pixel v in
+      set_tile v x y tile
     done
   done;
 
   (* Second pass: fix up ocean and river directions *)
-  for y=0 to map_height-1 do
-    for x=0 to map_width-1 do
-      let v = Ndarray.get ndarray [|y; x|] in
-      let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum v in
-      let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
-      set_tile map x y tile
+  for y=0 to v.height-1 do
+    for x=0 to v.width-1 do
+      let value = Ndarray.get ndarray [|y; x|] in
+      let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum value in
+      let tile = tile_of_pixel ~area ~x ~y ~pixel v in
+      set_tile v x y tile
     done
   done;
-  map
+  v
 
 
 let of_file ~area ~seed filename =
@@ -325,7 +329,7 @@ let to_img (map:t) =
 let get_pixel ~map ~x ~y =
   get_tile map x y |> pixel_of_tile
 
-let set_pixel ~area ~map ~x ~y ~pixel =
-  let tile = tile_of_pixel ~area ~x ~y ~pixel ~map in
-  map.map.(calc_offset x y) <- tile
+let set_pixel ~area v ~x ~y ~pixel =
+  let tile = tile_of_pixel ~area ~x ~y ~pixel v in
+  v.map.(calc_offset v x y) <- tile
 

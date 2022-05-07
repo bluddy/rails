@@ -67,6 +67,9 @@ let check_build_track v ~x ~y ~dir ~player =
 let build_track v ~x ~y ~dir ~player =
   Trackmap.build_track v.track ~x ~y ~dir ~player
 
+let check_build_station v ~x ~y ~player =
+  Trackmap.check_build_station v.track ~x ~y ~player
+
 let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct

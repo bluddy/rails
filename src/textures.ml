@@ -272,6 +272,6 @@ let of_resources win res area =
     tracks;
   }
 
-let update_map win v map =
+let update_map _win v map =
   R.Texture.update v.map @@ Gmap.to_img map
 

@@ -197,21 +197,38 @@ let build_station_menu fonts =
   ]
 
 let update (s:State.t) v (event:Event.t) =
-  let v, action, event =
-    match Menu.Global.update s v.menu event with
-    | _, Menu.NoAction ->
-        (* Only update view if we have a change *)
-        v, Menu.NoAction, event
-    | menu, a ->
-        (* Cancel out events we handled *)
-        {v with menu}, a, NoEvent 
-  in
-  let view, actions =
-    let dims = v.dims in
-    Mapview.update s s.view event ~y_top:dims.menu_h
-      ~minimap_x:dims.ui_start_x ~minimap_y:dims.menu_h ~minimap_w:dims.ui_w ~minimap_h:dims.minimap_h
-  in
-  v, view, actions
+  match v.mode with
+  | Normal ->
+    let v, menu_action, event =
+      match Menu.Global.update s v.menu event with
+      | _, Menu.NoAction ->
+          (* Only update view if we have a change *)
+          v, Menu.NoAction, event
+      | menu, a ->
+          (* Cancel out events we handled *)
+          {v with menu}, a, NoEvent 
+    in
+    let view, backend_actions =
+      let dims = v.dims in
+      Mapview.update s s.view event ~y_top:dims.menu_h
+        ~minimap_x:dims.ui_start_x ~minimap_y:dims.menu_h ~minimap_w:dims.ui_w ~minimap_h:dims.minimap_h
+    in
+    v, view, backend_actions
+
+    (*
+  | BuildStation build_menu ->
+      match Menu.MsgBox.update s build_menu event with
+      | Menu.NoAction ->
+          (* Exit build station mode *)
+          {v with mode=Normal}
+      | Menu.Action station
+          let x, y = Mapview.get_cursor_pos s.view in
+          v
+          *)
+
+
+
+
   
 
 let render (win:R.window) (s:State.t) v =

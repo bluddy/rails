@@ -81,5 +81,9 @@ let is_legal v =
   | Track -> TrackSet.mem legal_tracks v.dirs
   | _ -> TrackSet.mem special_dirs v.dirs
 
+let is_straight v =
+  (* Check for straight track of all sorts *)
+  TrackSet.mem special_dirs v.dirs || (Dir.Set.cardinal v.dirs = 1)
+
 
 

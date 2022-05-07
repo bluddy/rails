@@ -79,30 +79,6 @@ let get_str_w_h font str =
   in
   (x, font.height + font.space_y)
 
-  (* write to RGBA ndarray *)
-let write ?(x=0) ?(y=0) ~font str ~pixels =
-  let x_off, y_off = x, y in
-  let x, y =
-    String.fold (fun (x,y) c ->
-      let y_down = y + font.height + font.space_y in
-      if Char.equal c '\n' then
-        (x_off, y_down)
-      else
-        let w = get_letter_width font c in
-        let x, y =
-          (* check if we fit on the line *)
-          if x + w >= Ndarray.nth_dim pixels 1 then
-            (x_off, y_down)
-          else
-            (x, y)
-        in
-        write_letter font ~pixels c ~x ~y;
-        (x + w + font.space_x, y))
-    (x_off, y_off)
-    str
-  in
-  x, y
-
   module R = Renderer
 
   let create_textures win v =
