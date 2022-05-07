@@ -36,7 +36,7 @@ module List = struct
     loop i [] l0
 end
 
-let scan_area ~range get_fn ~x ~y ~max_x ~max_y match_fn =
+let scan ~range get_fn ~x ~y ~max_x ~max_y match_fn =
   let min_x = max 0 (x-range) in
   let max_x = min max_x (x+range) in
   let min_y = max 0 (y-range) in

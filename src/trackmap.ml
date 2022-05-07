@@ -63,11 +63,13 @@ let build_track v ~x ~y ~dir ~player =
   )
   else v
 
-let check_build_station v ~x ~y ~player kind =
-  match get v x y with
-  | None -> `NoTrack
-  | Some ({kind=Track} as t) when t.player = player && Track.is_straight t ->
-      `Ok
+
+(* let check_build_station v ~x ~y ~player kind = *)
+(*   match get v x y with *)
+(*   | None -> `NoTrack *)
+(*   | Some ({kind=Track} as t) when t.player = player && Track.is_straight t -> *)
+
+
 
   
 

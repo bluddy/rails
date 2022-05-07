@@ -3,14 +3,11 @@ open Containers
 type kind =
   | Track
   | Tunnel
-  | SignalTower
-  | Depot
-  | Station
-  | Terminal
+  | Station of Station.t
   | WoodBridge
   | MetalBridge
   | StoneBridge
-  [@@deriving eq, enum]
+  [@@deriving eq, hash]
 
 type t =
   {
@@ -44,7 +41,7 @@ module Htbl = Hashtbl.Make(struct
   let equal x y =
     Dir.Set.equal x.dirs y.dirs && equal_kind x.kind y.kind
   let hash x =
-    Dir.Set.to_int x.dirs lxor kind_to_enum x.kind
+    Dir.Set.to_int x.dirs lxor hash_kind x.kind
 end)
 
   (* Hash-based set for quick checking of legal dirs for Track *)
