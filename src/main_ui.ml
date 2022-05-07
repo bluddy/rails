@@ -190,10 +190,10 @@ let build_station_menu fonts =
   let open MsgBox in
   make ~fonts ~heading:"Type of facility?" ~x:202 ~y:16
   [
-    make_entry "Signal Tower ($25,000)" @@ `Action(`BuildStation Track.SignalTower);
-    make_entry "Depot ($50,000)" @@ `Action(`BuildStation Track.Depot);
-    make_entry "Station ($100,000)" @@ `Action(`BuildStation Track.Station);
-    make_entry "Terminal ($200,000)" @@ `Action(`BuildStation Track.Terminal);
+    make_entry "Signal Tower ($25,000)" @@ `Action(`BuildStation(Track.Station(SignalTower)));
+    make_entry "Depot ($50,000)" @@ `Action(`BuildStation(Track.Station(Depot)));
+    make_entry "Station ($100,000)" @@ `Action(`BuildStation(Track.Station(Station)));
+    make_entry "Terminal ($200,000)" @@ `Action(`BuildStation(Track.Station(Terminal)));
   ]
 
 let update (s:State.t) v (event:Event.t) =

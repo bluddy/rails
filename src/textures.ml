@@ -212,15 +212,16 @@ module Tracks = struct
 
     (* load regular tracks *)
     let all_tracks = Resources.(track_dirs @ illegal_track @ track_turns) in 
-    load_textures 0 0 Track.Track all_tracks;
+    let open Track in
+    load_textures 0 0 Track all_tracks;
 
-    load_textures 3 0 Track.Tunnel Resources.special_dirs;
-    load_textures 3 4 Track.MetalBridge Resources.special_dirs;
-    load_textures 3 8 Track.WoodBridge Resources.special_dirs;
-    load_textures 4 0 Track.SignalTower Resources.special_dirs;
-    load_textures 4 0 Track.Depot Resources.special_dirs;
-    load_textures 4 4 Track.Station Resources.special_dirs;
-    load_textures 4 8 Track.Terminal Resources.special_dirs;
+    load_textures 3 0 Tunnel Resources.special_dirs;
+    load_textures 3 4 MetalBridge Resources.special_dirs;
+    load_textures 3 8 WoodBridge Resources.special_dirs;
+    load_textures 4 0 (Station(Station.SignalTower)) Resources.special_dirs;
+    load_textures 4 0 (Station(Station.Depot)) Resources.special_dirs;
+    load_textures 4 4 (Station(Station.Station)) Resources.special_dirs;
+    load_textures 4 8 (Station(Station.Terminal)) Resources.special_dirs;
     track_dict
 
   let find track_h track =

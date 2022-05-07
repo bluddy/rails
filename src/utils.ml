@@ -36,7 +36,7 @@ module List = struct
     loop i [] l0
 end
 
-let scan ~range get_fn ~x ~y ~max_x ~max_y match_fn =
+let scan ~range ~x ~y ~max_x ~max_y ~f =
   let min_x = max 0 (x-range) in
   let max_x = min max_x (x+range) in
   let min_y = max 0 (y-range) in
@@ -45,8 +45,7 @@ let scan ~range get_fn ~x ~y ~max_x ~max_y match_fn =
   try
     for i=min_y to max_y do
       for j=min_x to max_x do
-        let value = get_fn j i in
-        if match_fn value then
+        if f j i then
           raise_notrace Found
       done
     done;

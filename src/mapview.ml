@@ -273,7 +273,7 @@ let cursor_on_station (s:State.t) =
   match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
-      | Depot | Station | Terminal -> true
+      | Station (Depot | Station | Terminal) -> true
       | _ -> false
       end
   | _ -> false

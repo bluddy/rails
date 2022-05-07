@@ -3,20 +3,20 @@ open Containers
 type t = {
   map: (int, Track.t) Hashtbl.t;
   count: int;
-  w: int;
-  h: int;
+  width: int;
+  height: int;
 }
 
-let empty w h =
+let empty width height =
   let map = Hashtbl.create 100 in
   let count = 0 in
-  {map; w; h; count}
+  {map; width; height; count}
 
-let calc_offset v x y = y * v.w + x
+let calc_offset v x y = y * v.width + x
 
 let x_y_of_offset v offset =
-  let y = offset / v.w in
-  let x = offset mod v.w in
+  let y = offset / v.width in
+  let x = offset mod v.width in
   x, y
 
 let get v x y = Hashtbl.find_opt v.map (calc_offset v x y)
@@ -35,8 +35,8 @@ let iter v f =
 
 let pre_build_track v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
-  let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.w - 1) in
-  let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.h - 1) in
+  let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.width - 1) in
+  let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.height - 1) in
   let track1 = get_track v x y ~player in
   let track2 = get_track v x2 y2 ~player in
   let track1 = Track.add_dir track1 dir in
@@ -63,11 +63,27 @@ let build_track v ~x ~y ~dir ~player =
   )
   else v
 
+ let check_build_station v ~x ~y ~player station_type =
+   match get v x y with
+   | None -> `NoTrack
+   | Some ({kind=Track;_} as t) when t.player = player && Track.is_straight t ->
+         let range = Station.range_of station_type in
+         let match_fn j i =
+           match get v j i with
+           | Some {kind=Station(st);_} ->
+               let range2 = Station.range_of st in
+               let range = range + range2 in
+               abs (j - x) < range && abs (i - y) < range
+           | _ -> false
+         in
+         let station_test =
+           Utils.scan ~range ~x ~y ~max_x:(v.width - 1) ~max_y:(v.height-1) ~f:match_fn
+         in
+         if station_test then `TooClose
+         else `Ok
 
-(* let check_build_station v ~x ~y ~player kind = *)
-(*   match get v x y with *)
-(*   | None -> `NoTrack *)
-(*   | Some ({kind=Track} as t) when t.player = player && Track.is_straight t -> *)
+   | _ -> `Illegal
+   
 
 
 
