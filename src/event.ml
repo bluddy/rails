@@ -16,8 +16,42 @@ type key =
   | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P
   | Q | R | S | T | U | V | W | X | Y | Z
   | F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | F10 | F11 | F12 | Enter | Space
-  | Left | Right | Up | Down
-  [@@deriving show]
+  | Left | Right | Up | Down | Escape
+  [@@deriving show, eq]
+
+let char_of_key = function
+  | A -> 'A'
+  | B -> 'B'
+  | C -> 'C'
+  | D -> 'D'
+  | E -> 'E'
+  | F -> 'F'
+  | G -> 'G'
+  | H -> 'H'
+  | I -> 'I'
+  | J -> 'J'
+  | K -> 'K'
+  | L -> 'L'
+  | M -> 'M'
+  | N -> 'N'
+  | O -> 'O'
+  | P -> 'P'
+  | Q -> 'Q'
+  | R -> 'R'
+  | S -> 'S'
+  | T -> 'T'
+  | U -> 'U'
+  | V -> 'V'
+  | W -> 'W'
+  | X -> 'X'
+  | Y -> 'Y'
+  | Z -> 'Z'
+  | _ -> failwith "Not a letter"
+
+let is_letter = function
+  | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P
+  | Q | R | S | T | U | V | W | X | Y | Z -> true
+  | _ -> false
 
 type modifier =
   [`Shift | `Ctrl | `Alt | `Lshift | `Rshift | `Lctrl | `Rctrl | `Lalt | `Ralt | `Caps]
@@ -118,6 +152,7 @@ let handle_key event (event_typ:Sdl.Event.enum) =
       | `Right -> Right
       | `Up -> Up
       | `Down -> Down
+      | `Escape -> Escape
       | _ -> raise_notrace UnhandledKey
     in
     Key {repeat; down; modifiers; key}

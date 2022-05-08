@@ -14,6 +14,7 @@ let max_width = 320
     | OpenMsgBox
     | CloseMsgBox
     | ClickInMsgBox (* a click but no action *)
+    | KeyInMsgBox (* Not a selection, but noop *)
     | OpenMenu
     | CloseMenu
     | NoAction
@@ -25,6 +26,7 @@ let max_width = 320
     | OpenMsgBox -> "OpenMsgBox"
     | CloseMsgBox -> "CloseMsgBox"
     | ClickInMsgBox -> "ClickInMsgBox"
+    | KeyInMsgBox -> "KeyInMsgBox"
     | OpenMenu -> "OpenMenu"
     | CloseMenu -> "CloseMenu"
     | NoAction -> "NoAction"
@@ -72,7 +74,7 @@ module MsgBox = struct
       entries: ('a, 'b) entry list;
       selected: int option;
       font: Fonts.Font.t;
-      indexes: int CharMap.t;
+      index: int CharMap.t;
     }
 
   let get_entry_w_h font v =
@@ -148,7 +150,7 @@ module MsgBox = struct
 
   let make ?heading ?(x=0) ?(y=0) ~fonts entries =
     let font=fonts.(menu_font) in
-    let indexes =
+    let index =
       List.foldi (fun acc i entry ->
         match get_active_char entry.name with
         | Some c -> CharMap.add c i acc
@@ -163,7 +165,7 @@ module MsgBox = struct
       selected=None;
       font;
       heading;
-      indexes;
+      index;
     }
 
   let is_entry_clicked_shallow v ~y =
@@ -177,7 +179,7 @@ module MsgBox = struct
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Do not recurse deeply *)
-  let handle_entry_click_shallow s ~x v =
+  let handle_entry_activate s ~x v =
     (* Assume we were clicked. Only handle shallow events *)
     match v.fire with
     | MsgBox(false, box) ->
@@ -207,7 +209,7 @@ module MsgBox = struct
     | None -> v
 
     (* Only search depth-first *)
-  let rec handle_entry_click_deep s (v:('a, 'b) entry) ~x ~y =
+  let rec handle_entry_click_deep s v ~x ~y =
     match v.fire with
     | MsgBox(true, box) ->
         (* open msgbox -> recurse *)
@@ -247,7 +249,7 @@ module MsgBox = struct
           | Some (entry_idx, _), _ ->
               (* clicked an entry, handle and switch selection *)
             let entries, action =
-              Utils.List.modify_make_at_idx entry_idx (handle_entry_click_shallow ~x:v.x s) v.entries
+              Utils.List.modify_make_at_idx entry_idx (handle_entry_activate ~x:v.x s) v.entries
             in
             entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
           end
@@ -258,7 +260,55 @@ module MsgBox = struct
     in
     {v with entries; selected}, action
 
-    let handle_key s v key = v, NoAction
+    let rec handle_entry_key_deep s v ~key =
+      match v.fire with
+      | MsgBox(true, box) ->
+          (* open msgbox -> recurse *)
+          let box, action = handle_key s box key in
+          (* TODO: handle different action cases, like if an action was chosen *)
+          {v with fire=MsgBox(true, box)}, action
+      | _ ->
+          v, NoAction
+
+    and handle_key s v ~key =
+      let entries, action =
+        match v.selected with
+        | Some idx ->
+          (* deep search first *)
+          let a, b =
+            Utils.List.modify_make_at_idx idx (handle_entry_key_deep s ~key) v.entries
+          in
+          a, b |> Option.get_exn_or "error"
+        | None ->
+            (* Nothing selected, we're done *)
+            v.entries, NoAction
+      in
+      let entries, action, selected =
+        match action with
+        | NoAction ->
+            let menu_choice =
+              if Event.is_letter key then
+                CharMap.find_opt (Event.char_of_key key) v.index
+              else
+                None
+            in
+            begin match menu_choice, v.selected with
+            | None, _ ->
+                (* nothing matches *)
+                entries, KeyInMsgBox, v.selected
+            | Some choice as ch, Some entry_idx ->
+                (* something matches *)
+                let entries, action =
+                  Utils.List.modify_at_idx entry_idx close_entry entries
+                  |> Utils.List.modify_make_at_idx choice (handle_entry_activate s ~x:v.x)
+                in
+                let action = action |> Option.get_exn_or "error" in
+                entries, action, ch
+            end
+        | _ ->
+            entries, action, v.selected
+      in
+      {v with entries; selected}, action
 
     let update s v (event:Event.t) =
       match event with
@@ -338,8 +388,12 @@ module Title = struct
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
   let handle_click s v ~x ~y =
-    let msgbox, event = MsgBox.handle_click s v.msgbox ~x ~y in
-    {v with msgbox}, event
+    let msgbox, action = MsgBox.handle_click s v.msgbox ~x ~y in
+    {v with msgbox}, action
+
+  let handle_key s v ~key =
+    let msgbox, action = MsgBox.handle_key s v.msgbox ~key in
+    {v with msgbox}, action
 
     (* Draw titles only *)
   let render win ~fonts v =
@@ -373,21 +427,21 @@ module Global = struct
     menu_h: int;
     open_menu: int option;
     menus: ('a, 'b) Title.t list;
-    indexes: (char, int) Hashtbl.t; (* for speed of search *)
+    index: (char, int) Hashtbl.t; (* for speed of search *)
   }
 
   let make ~menu_h menus =
-    let indexes = Hashtbl.create 10 in
+    let index = Hashtbl.create 10 in
     List.iteri (fun i title ->
       match get_active_char title.Title.name with
-      | Some c -> Hashtbl.replace indexes c i
-      | None -> Hashtbl.replace indexes title.name.[0] i)
+      | Some c -> Hashtbl.replace index c i
+      | None -> Hashtbl.replace index title.name.[0] i)
     menus;
   {
     menu_h;
     open_menu=None;
     menus;
-    indexes;
+    index;
   }
 
   let is_not_clicked v ~x ~y =
@@ -442,7 +496,25 @@ module Global = struct
             v, NoAction
       )
 
-  let handle_key s v key = v, NoAction
+  let handle_key s v key =
+      let menu_choice =
+        if Event.is_letter key then
+          Hashtbl.find_opt v.index (Event.char_of_key key)
+        else None
+      in
+      match v.open_menu, menu_choice with
+      | None, None -> (* Closed menu, no choice *)
+          v, NoAction
+      | None, Some choice ->
+          {v with open_menu=Some choice}, OpenMenu
+      | Some _, None when Event.equal_key key Event.Escape ->
+          {v with open_menu=None}, CloseMenu
+      | Some menu_idx, _ -> (* Open menu -> send it on *)
+          let menus, action =
+            Utils.List.modify_make_at_idx menu_idx (Title.handle_key s ~key) v.menus
+          in
+          let action = action |> Option.get_exn_or "error" in
+          {v with menus}, action
 
   let update s v (event:Event.t) =
     match event with
@@ -461,7 +533,4 @@ module Global = struct
         Title.render_msgbox win s (List.nth v.menus i)
 
 end
-
-
-
 
