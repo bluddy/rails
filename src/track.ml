@@ -66,7 +66,7 @@ let legal_tracks =
   h
 
   (* Set of all sets of non-track things *)
-let special_dirs =
+let straight_dirs =
   let h = TrackSet.create 10 in
   _add_to_set h Resources.special_dirs;
   h
@@ -76,11 +76,24 @@ let is_legal_dirs dirs = TrackSet.mem legal_tracks dirs
 let is_legal v =
   match v.kind with
   | Track -> TrackSet.mem legal_tracks v.dirs
-  | _ -> TrackSet.mem special_dirs v.dirs
+  | _ -> TrackSet.mem straight_dirs v.dirs
 
 let is_straight v =
   (* Check for straight track of all sorts *)
-  TrackSet.mem special_dirs v.dirs || (Dir.Set.cardinal v.dirs = 1)
+  TrackSet.mem straight_dirs v.dirs || (Dir.Set.cardinal v.dirs = 1)
+
+  (* Convert a single dir to a straight track *)
+let straighten v =
+  if Dir.Set.cardinal v.dirs = 1 then
+    let dir = Dir.Set.find v.dirs (fun _ -> true) in
+    let opposite = Dir.opposite dir in
+    let dirs = Dir.Set.add v.dirs opposite in
+    {v with dirs}
+  else
+    if TrackSet.mem straight_dirs v.dirs then v
+    else
+      failwith "Unexpected non-straight track"
+
 
 
 

@@ -2,15 +2,13 @@ open Containers
 
 type t = {
   map: (int, Track.t) Hashtbl.t;
-  count: int;
   width: int;
   height: int;
 }
 
 let empty width height =
   let map = Hashtbl.create 100 in
-  let count = 0 in
-  {map; width; height; count}
+  {map; width; height}
 
 let calc_offset v x y = y * v.width + x
 
@@ -56,15 +54,13 @@ let check_build_track v ~x ~y ~dir ~player =
     (* do build *)
 let build_track v ~x ~y ~dir ~player =
   let track1, track2, x2, y2 = pre_build_track v ~x ~y ~dir ~player in
-  if Track.is_legal track1 && Track.is_legal track2 then (
-    set v x y track1;
-    set v x2 y2 track2;
-    { v with count = v.count + 1}
-  )
-  else v
+  set v x y track1;
+  set v x2 y2 track2;
+  v
 
  let check_build_station v ~x ~y ~player station_type =
-   match get v x y with
+   if x < 0 || x >= v.width || y < 0 || y >= v.width then `Illegal
+   else match get v x y with
    | None -> `NoTrack
    | Some ({kind=Track;_} as t) when t.player = player && Track.is_straight t ->
          let range = Station.range_of station_type in
@@ -84,6 +80,15 @@ let build_track v ~x ~y ~dir ~player =
 
    | _ -> `Illegal
    
+let build_station v ~x ~y station_type =
+  match get v x y with
+  | Some ({kind=Track;_} as t) ->
+      let track = Track.straighten t in
+      let station = {track with kind=Station(station_type)} in
+      set v x y station;
+      v
+  | _ -> failwith "Illegal backend state"
+
 
 
 

@@ -75,6 +75,10 @@ let check_build_station v ~x ~y ~player station_type =
   | `Ok -> Gmap.check_build_station v.map ~x ~y
   | x -> x
 
+let build_station v ~x ~y station_type =
+  (* TODO: create actual station data structure *)
+  Trackmap.build_station v.track ~x ~y station_type
+
 let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct

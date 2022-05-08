@@ -215,21 +215,22 @@ let update (s:State.t) v (event:Event.t) =
     in
     v, view, backend_actions
 
-    (*
   | BuildStation build_menu ->
+      (* Build Station mode *)
       match Menu.MsgBox.update s build_menu event with
       | Menu.NoAction ->
           (* Exit build station mode *)
           {v with mode=Normal}
-      | Menu.Action station
+      | Menu.Action(`Buildstation station) ->
           let x, y = Mapview.get_cursor_pos s.view in
-          v
-          *)
-
-
-
-
-  
+          let test =
+            Backend.check_build_station s.backend ~x ~y ~player:0 station
+          in
+          match test with
+          | `Ok -> 
+              Backend.build_station s.backend ~x ~y ~player:0 station
+          | _ ->
+              {v with mode=Normal}, view, NoAction
 
 let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
