@@ -496,7 +496,7 @@ module Global = struct
             v, NoAction
       )
 
-  let handle_key s v key =
+  let handle_key s v ~key =
       let menu_choice =
         if Event.is_letter key then
           Hashtbl.find_opt v.index (Event.char_of_key key)
@@ -505,11 +505,15 @@ module Global = struct
       match v.open_menu, menu_choice with
       | None, None -> (* Closed menu, no choice *)
           v, NoAction
-      | None, Some choice ->
-          {v with open_menu=Some choice}, OpenMenu
-      | Some _, None when Event.equal_key key Event.Escape ->
-          {v with open_menu=None}, CloseMenu
-      | Some menu_idx, _ -> (* Open menu -> send it on *)
+      | None, (Some idx as sidx) ->
+          let menus = Utils.List.modify_at_idx idx (Title.do_open_menu s) v.menus in
+          {v with open_menu=sidx; menus}, OpenMenu
+      | Some idx, None when Event.equal_key key Event.Escape ->
+          (* close menu *)
+          let menus = Utils.List.modify_at_idx idx Title.close_menu v.menus in
+          {v with open_menu=None; menus}, CloseMenu
+      | Some menu_idx, _ ->
+          (* Open menu -> send it on *)
           let menus, action =
             Utils.List.modify_make_at_idx menu_idx (Title.handle_key s ~key) v.menus
           in
@@ -520,8 +524,8 @@ module Global = struct
     match event with
     | MouseButton {down=true; x; y; _} ->
         handle_click s v ~x ~y
-    | Key {down=true; key } ->
-        handle_key s v key (* TODO *)
+    | Key {down=true; key; _ } ->
+        handle_key s v ~key
     | _ -> v, NoAction
 
   let render win s fonts v =
