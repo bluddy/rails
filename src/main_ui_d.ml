@@ -76,7 +76,7 @@ type menu_action =
 
 type 'a mode =
   | Normal
-  | BuildStation of (Track.kind, 'a) Menu.MsgBox.t
+  | BuildStation of (Station.t, 'a) Menu.MsgBox.t
 
 type 'a t = {
   dims: dims;

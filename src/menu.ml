@@ -33,6 +33,20 @@ let max_width = 320
     | NoAction -> false
     | _ -> true
 
+    (* Get the active char for the menu item *)
+let get_active_char str =
+  String.fold (fun (amp, letter) c ->
+    match c with
+    | '&' -> (true, letter)
+    | c when amp -> (false, Some c)
+    | _ -> (amp, letter)
+  )
+  (false, None)
+  str
+  |> snd
+
+module CharMap = Utils.CharMap
+
 module MsgBox = struct
 
   type ('a, 'b) fire =
@@ -45,8 +59,8 @@ module MsgBox = struct
     h: int;
     name: string;
     fire: ('a, 'b) fire;
-    visibility: ('b -> bool) option;
-    visible: bool;
+    test_enabled: ('b -> bool) option;
+    enabled: bool;
   }
 
   and ('a, 'b) t =
@@ -58,12 +72,13 @@ module MsgBox = struct
       entries: ('a, 'b) entry list;
       selected: int option;
       font: Fonts.Font.t;
+      indexes: int CharMap.t;
     }
 
   let get_entry_w_h font v =
     Fonts.Font.get_str_w_h font @@ " "^v.name
 
-  let make_entry ?(visibility=None) name fire =
+  let make_entry ?(test_enabled=None) name fire =
     let name = name in
     let fire =
       match fire with
@@ -76,22 +91,14 @@ module MsgBox = struct
       h=0;
       name;
       fire;
-      visible=true;
-      visibility;
+      enabled=true;
+      test_enabled;
     }
 
   let get_width s v =
     List.fold_left (fun max_w entry ->
-      let visible =
-        match entry.visibility with
-        | Some f-> f s
-        | None -> true
-      in
-      if visible then
-        let w, _ = get_entry_w_h v.font entry in
-        max max_w w
-      else
-        max_w)
+      let w, _ = get_entry_w_h v.font entry in
+      max max_w w)
     0
     v.entries
 
@@ -109,19 +116,14 @@ module MsgBox = struct
     in
     let (w, h), entries =
       List.fold_map (fun (max_w, max_h) entry ->
-        let visible =
-          match entry.visibility with
-          | Some f-> f s
+        let enabled =
+          match entry.test_enabled with
+          | Some f -> f s
           | None -> true
         in
         let w, h = get_entry_w_h v.font entry in
-        let entry = {entry with y=max_h; h; visible} in
-        let max_w, max_h =
-          if visible then
-            max max_w w, max_h + h
-          else
-            max_w, max_h
-        in
+        let entry = {entry with y=max_h; h; enabled} in
+        let max_w, max_h = max max_w w, max_h + h in
         (max_w, max_h), entry)
       (max_w, max_h)
       v.entries
@@ -146,6 +148,14 @@ module MsgBox = struct
 
   let make ?heading ?(x=0) ?(y=0) ~fonts entries =
     let font=fonts.(menu_font) in
+    let indexes =
+      List.foldi (fun acc i entry ->
+        match get_active_char entry.name with
+        | Some c -> CharMap.add c i acc
+        | None -> CharMap.add entry.name.[0] i acc)
+      CharMap.empty
+      entries
+    in
     {
       border_x=8; border_y=6;
       x; y; w=0; h=0;
@@ -153,10 +163,11 @@ module MsgBox = struct
       selected=None;
       font;
       heading;
+      indexes;
     }
 
   let is_entry_clicked_shallow v ~y =
-    if not v.visible then false else
+    if not v.enabled then false else
     y < v.y + v.h
 
   let find_clicked_entry_shallow v ~y =
@@ -247,18 +258,27 @@ module MsgBox = struct
     in
     {v with entries; selected}, action
 
-    let render_entry win s font v ~selected ~x ~border_x ~y ~w =
-      if v.visible then (
-        if selected then
-          Renderer.draw_rect win ~x:(x+3) ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:Ega.bcyan;
+    let handle_key s v key = v, NoAction
 
-        let prefix =
-          match v.fire with
-          | Checkbox(_, fn) when fn s -> "^"
-          | _ -> " "
-        in
-        Fonts.Font.write win font ~color:Ega.black (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y);
-      )
+    let update s v (event:Event.t) =
+      match event with
+      | MouseButton {down=true; x; y; _} ->
+          handle_click s v ~x ~y
+      | Key {down=true; key } ->
+          handle_key s v key (* TODO *)
+      | _ -> v, NoAction
+
+    let render_entry win s font v ~selected ~x ~border_x ~y ~w =
+      if selected then
+        Renderer.draw_rect win ~x:(x+3) ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:Ega.bcyan;
+
+      let prefix =
+        match v.fire with
+        | Checkbox(_, fn) when fn s -> "^"
+        | _ -> " "
+      in
+      let color = if v.enabled then Ega.black else Ega.dgray in
+      Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y)
 
     let rec render win s v =
       (* draw background *)
@@ -289,7 +309,7 @@ module MsgBox = struct
           | MsgBox(true, box) -> render win s box
           | _ -> ()
           end
-      | _ -> ();
+      | _ -> ()
 
 end
 
@@ -353,12 +373,21 @@ module Global = struct
     menu_h: int;
     open_menu: int option;
     menus: ('a, 'b) Title.t list;
+    indexes: (char, int) Hashtbl.t; (* for speed of search *)
   }
 
-  let make ~menu_h menus = {
+  let make ~menu_h menus =
+    let indexes = Hashtbl.create 10 in
+    List.iteri (fun i title ->
+      match get_active_char title.Title.name with
+      | Some c -> Hashtbl.replace indexes c i
+      | None -> Hashtbl.replace indexes title.name.[0] i)
+    menus;
+  {
     menu_h;
     open_menu=None;
     menus;
+    indexes;
   }
 
   let is_not_clicked v ~x ~y =
@@ -367,57 +396,60 @@ module Global = struct
 
   let is_menu_open v = Option.is_none v.open_menu
 
-  let handle_click s v ~x ~y =
+  let handle_click s v ~x ~y = 
     (* Check for closed menu *)
-    if is_not_clicked v ~x ~y && not @@ is_menu_open v then
-      (v, NoAction)
-    else (
-      (* Handle a top menu click first *)
-      let menus = v.menus in
-      let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) menus in
-      match clicked_top_menu, v.open_menu with
-      | Some (i, _), Some mopen when i = mopen ->
-          (* clicked top menu, same menu is open *)
-          let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
-          {v with menus; open_menu = None}, CloseMenu
-      | Some (i, _), Some mopen ->
-          (* clicked top menu, some other is open *)
-          let menus =
-            Utils.List.modify_at_idx mopen Title.close_menu menus
-            |> Utils.List.modify_at_idx i (Title.do_open_menu s)
-          in
-          {v with menus; open_menu = Some i}, OpenMenu
-      | Some (i, _), None ->
-          (* clicked top menu, none are open *)
-          let menus = Utils.List.modify_at_idx i (Title.do_open_menu s) menus in
-          {v with menus; open_menu = Some i}, OpenMenu
-      | None, (Some mopen as sopen) ->
-          (* clicked elsewhere with open top menu *)
-          let menus, action = 
-            (* check menu itself *)
-            Utils.List.modify_make_at_idx mopen (Title.handle_click s ~x ~y) menus
-          in
-          let action = action |> Option.get_exn_or "error" in
-          (* Close the menu if it's a random click *)
-          let open_menu, action, menus =
-            match action with
-            | NoAction ->
-                let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
-                None, CloseMenu, menus
-            | _ ->
-                sopen, action, menus
-          in
-          ({v with menus; open_menu}, action)
-      | None, None ->
-          (* no menu open *)
-          v, NoAction
-    )
+      if is_not_clicked v ~x ~y && not @@ is_menu_open v then
+        (v, NoAction)
+      else (
+        (* Handle a top menu click first *)
+        let menus = v.menus in
+        let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) menus in
+        match clicked_top_menu, v.open_menu with
+        | Some (i, _), Some mopen when i = mopen ->
+            (* clicked top menu, same menu is open *)
+            let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
+            {v with menus; open_menu = None}, CloseMenu
+        | Some (i, _), Some mopen ->
+            (* clicked top menu, some other is open *)
+            let menus =
+              Utils.List.modify_at_idx mopen Title.close_menu menus
+              |> Utils.List.modify_at_idx i (Title.do_open_menu s)
+            in
+            {v with menus; open_menu = Some i}, OpenMenu
+        | Some (i, _), None ->
+            (* clicked top menu, none are open *)
+            let menus = Utils.List.modify_at_idx i (Title.do_open_menu s) menus in
+            {v with menus; open_menu = Some i}, OpenMenu
+        | None, (Some mopen as sopen) ->
+            (* clicked elsewhere with open top menu *)
+            let menus, action = 
+              (* check menu itself *)
+              Utils.List.modify_make_at_idx mopen (Title.handle_click s ~x ~y) menus
+            in
+            let action = action |> Option.get_exn_or "error" in
+            (* Close the menu if it's a random click *)
+            let open_menu, action, menus =
+              match action with
+              | NoAction ->
+                  let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
+                  None, CloseMenu, menus
+              | _ ->
+                  sopen, action, menus
+            in
+            ({v with menus; open_menu}, action)
+        | None, None ->
+            (* no menu open *)
+            v, NoAction
+      )
+
+  let handle_key s v key = v, NoAction
 
   let update s v (event:Event.t) =
     match event with
     | MouseButton {down=true; x; y; _} ->
         handle_click s v ~x ~y
-      (* TODO: handle keybord *)
+    | Key {down=true; key } ->
+        handle_key s v key (* TODO *)
     | _ -> v, NoAction
 
   let render win s fonts v =

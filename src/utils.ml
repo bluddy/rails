@@ -1,5 +1,7 @@
 open Containers
 
+module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
+
 let clip v ~min ~max =
   if v >= min then 
     if v <= max then

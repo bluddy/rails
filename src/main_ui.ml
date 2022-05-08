@@ -115,12 +115,12 @@ let main_menu fonts menu_h =
     make ~fonts ~x:168 ~y:8
     [
       make_entry "New Train (F7)" @@ `Action `Build_train;
-      make_entry "Build Station (F8)" ~visibility:is_zoom4 @@ `Action `Build_station;
-      make_entry "Build Industry" ~visibility:is_zoom4 @@ `Action `Build_industry;
-      make_entry "Build Track" ~visibility:is_zoom4 @@ `Checkbox(`Track `Build, check_trackbuild `Build);
-      make_entry "Remove Track" ~visibility:is_zoom4 @@ `Checkbox(`Track `Remove, check_trackbuild `Remove);
-      make_entry "Improve Station" ~visibility:is_station4 @@ `Action `Improve_station;
-      make_entry "Upgrade Bridge" ~visibility:is_woodbridge4 @@ `Action `Upgrade_bridge;
+      make_entry "Build Station (F8)" ~test_enabled:is_zoom4 @@ `Action `Build_station;
+      make_entry "Build Industry" ~test_enabled:is_zoom4 @@ `Action `Build_industry;
+      make_entry "Build Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Build, check_trackbuild `Build);
+      make_entry "Remove Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Remove, check_trackbuild `Remove);
+      make_entry "Improve Station" ~test_enabled:is_station4 @@ `Action `Improve_station;
+      make_entry "Upgrade Bridge" ~test_enabled:is_woodbridge4 @@ `Action `Upgrade_bridge;
     ]
   in
   let reality_levels =
@@ -217,20 +217,23 @@ let update (s:State.t) v (event:Event.t) =
 
   | BuildStation build_menu ->
       (* Build Station mode *)
-      match Menu.MsgBox.update s build_menu event with
+      let build_menu, action = Menu.MsgBox.update s build_menu event in
+      match action with
       | Menu.NoAction ->
           (* Exit build station mode *)
-          {v with mode=Normal}
-      | Menu.Action(`Buildstation station) ->
+          {v with mode=Normal}, s.view, []
+      | Menu.On(station_kind) ->
           let x, y = Mapview.get_cursor_pos s.view in
-          let test =
-            Backend.check_build_station s.backend ~x ~y ~player:0 station
-          in
-          match test with
+          begin match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
           | `Ok -> 
-              Backend.build_station s.backend ~x ~y ~player:0 station
+              let backend_action = [B.Action.BuildStation{x; y; kind=station_kind}] in
+              {v with mode=Normal}, s.view, backend_action
+              (* TODO: handle other cases *)
           | _ ->
-              {v with mode=Normal}, view, NoAction
+              {v with mode=Normal}, s.view, []
+          end
+      | _ -> failwith "unexpected"
+
 
 let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
