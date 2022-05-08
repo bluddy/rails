@@ -304,6 +304,12 @@ module MsgBox = struct
                 in
                 let action = action |> Option.get_exn_or "error" in
                 entries, action, ch
+            | Some choice as ch, None ->
+                let entries, action =
+                  Utils.List.modify_make_at_idx choice (handle_entry_activate s ~x:v.x) entries
+                in
+                let action = action |> Option.get_exn_or "error" in
+                entries, action, ch
             end
         | _ ->
             entries, action, v.selected
@@ -314,8 +320,8 @@ module MsgBox = struct
       match event with
       | MouseButton {down=true; x; y; _} ->
           handle_click s v ~x ~y
-      | Key {down=true; key } ->
-          handle_key s v key (* TODO *)
+      | Key {down=true; key; _ } ->
+          handle_key s v ~key
       | _ -> v, NoAction
 
     let render_entry win s font v ~selected ~x ~border_x ~y ~w =
