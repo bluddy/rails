@@ -62,9 +62,15 @@ let iter_cities f v =
   Array.iter (fun city -> f city.Gmap.name city.x city.y) v.cities
 
 let check_build_track v ~x ~y ~dir ~player =
-  match Trackmap.check_build_track v.track ~x ~y ~dir ~player with
+  match Gmap.check_build_track v.map ~x ~y ~dir with
+  | `Bridge ->
+      begin match Trackmap.check_build_bridge v.track ~x ~y ~dir ~player with
+      | `Ok -> `Bridge
+      | _ -> `Illegal
+      end
   | `Ok ->
-      Gmap.check_build_track v.map ~x ~y ~dir
+      Trackmap.check_build_track v.track ~x ~y ~dir ~player
+  (* TODO: Ferry, tunnel *)
   | x -> x
 
 let build_track v ~x ~y ~dir ~player =
@@ -79,15 +85,26 @@ let build_station v ~x ~y station_type =
   (* TODO: create actual station data structure *)
   Trackmap.build_station v.track ~x ~y station_type
 
+let build_bridge v ~x ~y ~dir ~player ~kind =
+  Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind
+
 let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct
   type t =
-    | Build of {x: int; y: int; dir: Dir.t; player: int}
+    | BuildTrack of {x: int; y: int; dir: Dir.t; player: int}
+    | BuildStation of {x: int; y: int; kind: Station.t}
+    | BuildBridge of {x: int; y: int; dir: Dir.t; kind: [`Wood | `Metal | `Stone]; player: int}
 
   let run_one backend = function
-    | Build {x; y; dir; player} ->
+    | BuildTrack {x; y; dir; player} ->
         let track = build_track backend ~x ~y ~dir ~player in
+        {backend with track}
+    | BuildStation {x; y; kind} ->
+        let track = build_station backend ~x ~y kind in
+        {backend with track}
+    | BuildBridge {x; y; kind; dir; player} ->
+        let track = build_bridge backend ~x ~y ~dir ~kind ~player in
         {backend with track}
 
   let run_many backend (li:t list) =

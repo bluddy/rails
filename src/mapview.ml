@@ -120,11 +120,11 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
       let cursor_y = Utils.clip y ~min:0 ~max:(v.height-1) in
       let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
       let actions =
-        (* TODO: handle track removal *)
+        (* TODO: handle track removal, bridge, tunnel etc *)
         if build then
           let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
           match check with
-          | `Ok -> [B.Action.Build {x=v.cursor_x; y=v.cursor_y; dir; player=0}]
+          | `Ok -> [B.Action.BuildTrack {x=v.cursor_x; y=v.cursor_y; dir; player=0}]
           | `Illegal -> []
         else
           []

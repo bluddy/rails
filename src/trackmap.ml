@@ -51,7 +51,7 @@ let check_build_track v ~x ~y ~dir ~player =
   else
     `Illegal
 
-    (* do build *)
+  (* do build. Assumes we already checked *)
 let build_track v ~x ~y ~dir ~player =
   let track1, track2, x2, y2 = pre_build_track v ~x ~y ~dir ~player in
   set v x y track1;
@@ -87,13 +87,56 @@ let build_station v ~x ~y station_type =
       let station = {track with kind=Station(station_type)} in
       set v x y station;
       v
-  | _ -> failwith "Illegal backend state"
+  | _ -> v
 
+let check_build_bridge v ~x ~y ~dir ~player =
+  let dx, dy = Dir.to_offsets dir in
+  let x2, y2 = x + dx, y + dy in
+  let x3, y3 = x2 + dx, y2 + dy in
+  if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
+    x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then
+      `Illegal
+  else
+    (* Must have some track *)
+    match get v x y, get v x2 y2, get_track v x3 y3 player with
+    | _, Some track2, _ -> `Illegal (* Bridge already exists *)
+    | Some track1, None, ({kind=Track; _} as track3) ->
+        let track1 = Track.add_dir track1 dir in
+        let track3 = Track.add_dir track3 ~dir:(Dir.opposite dir) in
+        if Track.is_legal track1 && Track.is_legal track3 then `Ok
+        else `Illegal
+    | _ -> `Illegal
 
-
-
-  
-
+let build_bridge v ~x ~y ~dir ~player ~kind =
+  let kind = match kind with
+    `Wood -> Track.WoodBridge | `Stone -> Track.StoneBridge | `Metal -> Track.MetalBridge
+  in
+  let dx, dy = Dir.to_offsets dir in
+  let x2, y2 = x + dx, y + dy in
+  let x3, y3 = x2 + dx, y2 + dy in
+  if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
+    x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then v
+  else
+    begin match get v x y with
+    | Some track1 ->
+        let track1 = Track.add_dir track1 ~dir in
+        let track2 =
+          Track.empty player
+          |> Track.add_dir ~dir
+          |> Track.add_dir ~dir:(Dir.opposite dir)
+          |> Track.change_kind ~kind
+        in
+        let track3 =
+          Track.empty player
+          |> Track.add_dir ~dir:(Dir.opposite dir)
+        in
+        set v x y track1;
+        set v x2 y2 track2;
+        set v x3 y3 track3;
+        v
+    | None -> v (* error *)
+    end
+   
 
 
 

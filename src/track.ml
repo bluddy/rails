@@ -30,10 +30,12 @@ let make dirs kind ~player =
   let ixn = is_ixn dirs in
   {dirs; kind; ixn; player}
 
-let add_dir v dir =
+let add_dir v ~dir =
   let dirs = Dir.Set.add v.dirs dir in
   let ixn = is_ixn dirs in
   {v with dirs; ixn}
+
+let change_kind v ~kind = {v with kind}
 
   (* Make hashtabl that only uses track dirs and kind for quick texture lookup *)
 module Htbl = Hashtbl.Make(struct
