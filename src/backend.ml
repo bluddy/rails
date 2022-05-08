@@ -62,13 +62,18 @@ let iter_cities f v =
   Array.iter (fun city -> f city.Gmap.name city.x city.y) v.cities
 
 let check_build_track v ~x ~y ~dir ~player =
-  Trackmap.check_build_track v.track ~x ~y ~dir ~player
+  match Trackmap.check_build_track v.track ~x ~y ~dir ~player with
+  | `Ok ->
+      Gmap.check_build_track v.map ~x ~y ~dir
+  | x -> x
 
 let build_track v ~x ~y ~dir ~player =
   Trackmap.build_track v.track ~x ~y ~dir ~player
 
-let check_build_station v ~x ~y ~player =
-  Trackmap.check_build_station v.track ~x ~y ~player
+let check_build_station v ~x ~y ~player station_type =
+  match Trackmap.check_build_station v.track ~x ~y ~player station_type with
+  | `Ok -> Gmap.check_build_station v.map ~x ~y
+  | x -> x
 
 let trackmap_iter v f = Trackmap.iter v.track f
 

@@ -120,7 +120,10 @@ let pixel_of_tile = function
   | Factory
   | City -> City_pixel
   | Mountains -> Mountain_pixel
-  | EnemyRR -> EnemyRR_pixel
+
+let is_ground = function
+  | River _ | Ocean _ | Harbor _ | Landing _ -> false
+  | _ -> true
 
 let map_height = 192
 let map_width = 256
@@ -189,7 +192,6 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
     | Farm_pixel -> Farm
     | Hills_pixel -> Hills
     | Village_pixel -> Village
-    | EnemyRR_pixel -> EnemyRR
     | City_pixel -> City
     | Mountain_pixel -> Mountains
     | Ocean_pixel ->
@@ -332,4 +334,36 @@ let get_pixel ~map ~x ~y =
 let set_pixel ~area v ~x ~y ~pixel =
   let tile = tile_of_pixel ~area ~x ~y ~pixel v in
   v.map.(calc_offset v x y) <- tile
+
+let check_build_track v ~x ~y ~dir =
+   (* TODO: grade and tunnel check *)
+   let tile1 = get_tile v x y in
+   let dx, dy = Dir.to_offsets dir in
+   let x2, y2 = x + dx, y + dy in
+   if x2 < 0 || x2 >= v.width || y2 < 0 || y2 >= v.height then `Illegal
+   else
+    let tile2 = get_tile v x2 y2 in
+    match tile1, tile2 with
+    (* Cannot build over river, or ocean to river *)
+    | t1, t2 when is_ground t1 && is_ground t2 -> `Ok
+    | River _, _
+    | Ocean _, River _ -> `Illegal
+    | t, River _ when is_ground t && Dir.is_cardinal dir ->
+        let x3, y3 = x2 + dx, y2 + dy in
+        if x3 < 0 || x3 >= v.width || y3 < 0 || y3 >= v.height then `Illegal
+        else
+          let tile3 = get_tile v x3 y3 in
+          if is_ground tile3 then `Bridge
+          else `Illegal
+    | t, Ocean _ when is_ground t -> `Ferry
+    | Ocean _, Ocean _ -> `Ferry
+    | _, _ -> `Illegal
+
+let check_build_station v ~x ~y =
+  let tile = get_tile v x y in
+  if is_ground tile then `Ok
+  else `Illegal
+
+
+
 

@@ -41,6 +41,14 @@ let opposite = function
   | Left -> Right
   | UpLeft -> DownRight
 
+let is_cardinal = function
+  | Up
+  | Right
+  | Left
+  | Down -> true
+  | _ -> false
+
+
 module Set = struct
   include Bitset.Make(struct
     type nonrec t=t

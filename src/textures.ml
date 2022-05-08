@@ -70,7 +70,7 @@ module Tile = struct
       bottom PowerPlant 10;
       bottom OilWell 11;
       bottom Refinery 12;
-      bottom EnemyRR 13;
+      (* bottom EnemyRR 13; *)
       bottom TextileMill 14;
     in
     load_us_tiles ~tiles ~y:0 ~mult:16;
