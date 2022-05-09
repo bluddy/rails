@@ -167,6 +167,10 @@ module MsgBox = struct
     if not v.enabled then false else
     y < v.y + v.h
 
+  let is_entry_open = function
+    | {fire=MsgBox(true, _);_} -> true
+    | _ -> false
+
   let find_clicked_entry_shallow v ~y =
     List.find_idx (is_entry_clicked_shallow ~y) v.entries
 
@@ -285,14 +289,8 @@ module MsgBox = struct
               else
                 None
             in
-            begin match menu_choice, v.selected with
-            | None, _ when Event.is_letter key ->
-                (* nothing matches but letter: don't leak back to previous menu *)
-                entries, KeyInMsgBox, v.selected
-            | None, _ ->
-                (* nothing matches: leak other things *)
-                entries, NoAction, v.selected
-            | Some choice as ch, Some entry_idx ->
+            begin match menu_choice, v.selected, key with
+            | Some choice as ch, Some entry_idx, _ ->
                 (* something matches *)
                 let entries, action =
                   Utils.List.modify_at_idx entry_idx close_entry entries
@@ -300,12 +298,41 @@ module MsgBox = struct
                   |> Utils.snd_option
                 in
                 entries, action, ch
-            | Some choice as ch, None ->
+            | Some choice as ch, None, _ ->
                 let entries, action =
                   Utils.List.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x) entries
                   |> Utils.snd_option
                 in
                 entries, action, ch
+            | None, (Some idx as sidx), Enter ->
+                let entries, action =
+                  Utils.List.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
+                  |> Utils.snd_option
+                in
+                entries, action, sidx
+            | None, None, Down ->
+                entries, KeyInMsgBox, Some 0
+            | None, Some idx, Down when idx < List.length entries - 1 ->
+                let entries =
+                  Utils.List.modify_at_idx idx close_entry entries
+                in
+                entries, KeyInMsgBox, Some (idx+1)
+            | None, Some idx, Up when idx > 0 ->
+                let entries =
+                  Utils.List.modify_at_idx idx close_entry entries
+                in
+                entries, KeyInMsgBox, Some (idx-1)
+            | None, Some idx, Escape when is_entry_open (List.nth entries idx) ->
+                let entries =
+                  Utils.List.modify_at_idx idx close_entry entries
+                in
+                entries, KeyInMsgBox, Some idx
+            | None, _, _ when Event.is_letter key ->
+                (* nothing matches but still a letter: don't leak back to previous menu *)
+                entries, KeyInMsgBox, v.selected
+            | None, _, _ ->
+                (* nothing matches: leak other things *)
+                entries, NoAction, v.selected
             end
         | _ ->
             entries, action, v.selected
