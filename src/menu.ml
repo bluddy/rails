@@ -5,6 +5,7 @@ open Containers
   2. The type of the data it reads into its checkbox and visibility lambdas
 *)
 let menu_font = 1
+let num_menus = 5
 let max_width = 320
 
   type 'a action =
@@ -173,7 +174,7 @@ module MsgBox = struct
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Do not recurse deeply *)
-  let handle_entry_activate s ~x v =
+  let handle_entry_activate_shallow s ~x v =
     (* Assume we were clicked. Only handle shallow events *)
     match v.fire with
     | MsgBox(false, box) ->
@@ -243,7 +244,7 @@ module MsgBox = struct
           | Some (entry_idx, _), _ ->
               (* clicked an entry, handle and switch selection *)
             let entries, action =
-              Utils.List.modify_make_at_idx entry_idx (handle_entry_activate ~x:v.x s) v.entries
+              Utils.List.modify_make_at_idx entry_idx (handle_entry_activate_shallow ~x:v.x s) v.entries
             in
             entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
           end
@@ -269,17 +270,15 @@ module MsgBox = struct
         match v.selected with
         | Some idx ->
           (* deep search first *)
-          let a, b =
-            Utils.List.modify_make_at_idx idx (handle_entry_key_deep s ~key) v.entries
-          in
-          a, b |> Option.get_exn_or "error"
+          Utils.List.modify_make_at_idx idx (handle_entry_key_deep s ~key) v.entries
+          |> Utils.snd_option
         | None ->
             (* Nothing selected, we're done *)
             v.entries, NoAction
       in
       let entries, action, selected =
         match action with
-        | NoAction ->
+        | NoAction -> (* nothing from deep *)
             let menu_choice =
               if Event.is_letter key then
                 CharMap.find_opt (Event.char_of_key key) v.index
@@ -287,22 +286,25 @@ module MsgBox = struct
                 None
             in
             begin match menu_choice, v.selected with
-            | None, _ ->
-                (* nothing matches *)
+            | None, _ when Event.is_letter key ->
+                (* nothing matches but letter: don't leak back to previous menu *)
                 entries, KeyInMsgBox, v.selected
+            | None, _ ->
+                (* nothing matches: leak other things *)
+                entries, NoAction, v.selected
             | Some choice as ch, Some entry_idx ->
                 (* something matches *)
                 let entries, action =
                   Utils.List.modify_at_idx entry_idx close_entry entries
-                  |> Utils.List.modify_make_at_idx choice (handle_entry_activate s ~x:v.x)
+                  |> Utils.List.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x)
+                  |> Utils.snd_option
                 in
-                let action = action |> Option.get_exn_or "error" in
                 entries, action, ch
             | Some choice as ch, None ->
                 let entries, action =
-                  Utils.List.modify_make_at_idx choice (handle_entry_activate s ~x:v.x) entries
+                  Utils.List.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x) entries
+                  |> Utils.snd_option
                 in
-                let action = action |> Option.get_exn_or "error" in
                 entries, action, ch
             end
         | _ ->
@@ -490,28 +492,46 @@ module Global = struct
       )
 
   let handle_key s v ~key =
-      let menu_choice =
+      let get_char () =
         if Event.is_letter key then
           Hashtbl.find_opt v.index (Event.char_of_key key)
         else None
       in
-      match v.open_menu, menu_choice with
-      | None, None -> (* Closed menu, no choice *)
-          v, NoAction
-      | None, (Some idx as sidx) ->
-          let menus = Utils.List.modify_at_idx idx (Title.do_open_menu s) v.menus in
-          {v with open_menu=sidx; menus}, OpenMenu
-      | Some idx, None when Event.equal_key key Event.Escape ->
-          (* close menu *)
-          let menus = Utils.List.modify_at_idx idx Title.close_menu v.menus in
-          {v with open_menu=None; menus}, CloseMenu
-      | Some menu_idx, _ ->
+      match v.open_menu with
+      | None ->
+          begin match get_char () with
+          | None -> v, NoAction
+          | Some idx as sidx ->
+            let menus = Utils.List.modify_at_idx idx (Title.do_open_menu s) v.menus in
+            {v with open_menu=sidx; menus}, OpenMenu
+          end
+      | (Some open_menu as some_menu) ->
           (* Open menu -> send it on *)
           let menus, action =
-            Utils.List.modify_make_at_idx menu_idx (Title.handle_key s ~key) v.menus
+            Utils.List.modify_make_at_idx open_menu (Title.handle_key s ~key) v.menus
+            |> Utils.snd_option
           in
-          let action = action |> Option.get_exn_or "error" in
-          {v with menus}, action
+          let menus, open_menu, action =
+            match action, key with
+            | NoAction, Event.Escape ->
+                menus, None, KeyInMsgBox
+            | NoAction, Event.Left when open_menu > 0 ->
+                let menus =
+                  Utils.List.modify_at_idx open_menu Title.close_menu menus
+                  |> Utils.List.modify_at_idx (open_menu - 1) (Title.do_open_menu s)
+                in
+                menus, Some(open_menu - 1), KeyInMsgBox
+            | NoAction, Event.Right when open_menu < (num_menus - 1) ->
+                let menus =
+                  Utils.List.modify_at_idx open_menu Title.close_menu menus
+                  |> Utils.List.modify_at_idx (open_menu + 1) (Title.do_open_menu s)
+                in
+                menus, Some(open_menu + 1), KeyInMsgBox
+            (* Avoid events leaking out when menu is open *)
+            | NoAction, _ -> menus, some_menu, KeyInMsgBox
+            | _ -> menus, some_menu, action
+          in
+          {v with menus; open_menu}, action
 
   let update s v (event:Event.t) =
     match event with

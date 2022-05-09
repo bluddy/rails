@@ -55,4 +55,6 @@ let scan ~range ~x ~y ~max_x ~max_y ~f =
   with
   | Found -> true
 
+let snd_option (x,y) =
+  x, (y |> Option.get_exn_or "error")
 
