@@ -97,12 +97,6 @@ module MsgBox = struct
       test_enabled;
     }
 
-  let get_width s v =
-    List.fold_left (fun max_w entry ->
-      let w, _ = get_entry_w_h v.font entry in
-      max max_w w)
-    0
-    v.entries
 
     (* Compute menu size dynamically *)
   let do_open_menu ?(x=0) ?(y=0) s (v: ('a, 'b) t) =
@@ -264,7 +258,7 @@ module MsgBox = struct
       match v.fire with
       | MsgBox(true, box) ->
           (* open msgbox -> recurse *)
-          let box, action = handle_key s box key in
+          let box, action = handle_key s box ~key in
           (* TODO: handle different action cases, like if an action was chosen *)
           {v with fire=MsgBox(true, box)}, action
       | _ ->
@@ -333,8 +327,10 @@ module MsgBox = struct
         | Checkbox(_, fn) when fn s -> "^"
         | _ -> " "
       in
-      let color = if v.enabled then Ega.black else Ega.dgray in
-      Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y)
+      let color, active_color =
+        if v.enabled then Ega.black, Ega.blue else Ega.dgray, Ega.dgray
+      in
+      Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y) ~active_color
 
     let rec render win s v =
       (* draw background *)
@@ -403,16 +399,7 @@ module Title = struct
 
     (* Draw titles only *)
   let render win ~fonts v =
-    String.fold (fun (x, y, key) c ->
-      if Char.Infix.(c = '&') then
-        (x, y, true)
-      else
-        let color = if key then Ega.white else Ega.bcyan in
-        let (x, y) = Fonts.Render.write_char win fonts c ~idx:menu_font ~x ~y ~color in
-        (x, y, false))
-    (v.x, v.y, false)
-    v.name
-    |> ignore
+    Fonts.Render.write win fonts v.name ~idx:menu_font ~x:v.x ~y:v.y ~color:Ega.bcyan ~active_color:Ega.white
 
   let close_menu v =
     let msgbox = MsgBox.close v.msgbox in

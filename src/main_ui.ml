@@ -12,11 +12,11 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts
     [
-      make_entry "Frozen" @@ `Checkbox(`Speed `Frozen, check_speed `Frozen);
-      make_entry "Slow" @@ `Checkbox(`Speed `Slow, check_speed `Slow);
-      make_entry "Moderate" @@ `Checkbox(`Speed `Moderate, check_speed `Moderate);
-      make_entry "Fast" @@ `Checkbox(`Speed `Fast, check_speed `Fast);
-      make_entry "Turbo" @@ `Checkbox(`Speed `Turbo, check_speed `Turbo);
+      make_entry "&Frozen" @@ `Checkbox(`Speed `Frozen, check_speed `Frozen);
+      make_entry "&Slow" @@ `Checkbox(`Speed `Slow, check_speed `Slow);
+      make_entry "&Moderate" @@ `Checkbox(`Speed `Moderate, check_speed `Moderate);
+      make_entry "Fas&t" @@ `Checkbox(`Speed `Fast, check_speed `Fast);
+      make_entry "T&urbo" @@ `Checkbox(`Speed `Turbo, check_speed `Turbo);
     ]
   in
   let train_messages =
@@ -24,9 +24,9 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts
     [
-      make_entry "Off" @@ `Checkbox(`Message `Off, check_message `Off);
-      make_entry "Fast" @@ `Checkbox(`Message `Fast, check_message `Fast);
-      make_entry "Slow" @@ `Checkbox(`Message `Slow, check_message `Slow);
+      make_entry "&Off" @@ `Checkbox(`Message `Off, check_message `Off);
+      make_entry "&Fast" @@ `Checkbox(`Message `Fast, check_message `Fast);
+      make_entry "&Slow" @@ `Checkbox(`Message `Slow, check_message `Slow);
     ]
   in
   let news_reports =
@@ -36,9 +36,9 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts
     [
-      make_entry "Financial News" @@ `Checkbox(`News `Financial, check_news `Financial);
-      make_entry "Railroad News" @@ `Checkbox(`News `Railroad, check_news `Railroad);
-      make_entry "Local News" @@ `Checkbox(`News `Local, check_news `Local);
+      make_entry "&Financial News" @@ `Checkbox(`News `Financial, check_news `Financial);
+      make_entry "&Railroad News" @@ `Checkbox(`News `Railroad, check_news `Railroad);
+      make_entry "&Local News" @@ `Checkbox(`News `Local, check_news `Local);
     ]
   in
   let features =
@@ -48,33 +48,33 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts
     [
-      make_entry "Animations" @@ `Checkbox(`Features `Animations, check_feature `Animations);
-      make_entry "Sound Effects" @@ `Checkbox(`Features `Sounds, check_feature `Sounds);
+      make_entry "&Animations" @@ `Checkbox(`Features `Animations, check_feature `Animations);
+      make_entry "&Sound Effects" @@ `Checkbox(`Features `Sounds, check_feature `Sounds);
     ]
   in
   let game_menu =
     let open MsgBox in
     make ~fonts ~x:4 ~y:8
     [
-      make_entry "Game Speed" @@ `MsgBox game_speed;
-      make_entry "Train Messages" @@ `MsgBox train_messages;
-      make_entry "News Reports" @@ `MsgBox news_reports;
-      make_entry "Features" @@ `MsgBox features;
-      make_entry "Repeat Message" @@ `Action `Repeat_message;
-      make_entry "Save Game" @@ `Action `Save_game;
+      make_entry "&Game Speed" @@ `MsgBox game_speed;
+      make_entry "&Train Messages" @@ `MsgBox train_messages;
+      make_entry "&News Reports" @@ `MsgBox news_reports;
+      make_entry "&Features" @@ `MsgBox features;
+      make_entry "&Repeat Message" @@ `Action `Repeat_message;
+      make_entry "&Save Game" @@ `Action `Save_game;
     ]
   in
   let reports_menu =
     let open MsgBox in
     make ~fonts ~x:112 ~y:8
     [
-      make_entry "Balance Sheet" @@ `Action `Balance_sheet;
-      make_entry "Income Statement (F5)" @@ `Action `Income_statement;
-      make_entry "Train Income (F6)" @@ `Action `Train_income;
-      make_entry "Stocks" @@ `Action `Stocks;
-      make_entry "Accomplishments" @@ `Action `Accomplishments;
-      make_entry "Efficiency" @@ `Action `Efficiency;
-      make_entry "History" @@ `Action `History;
+      make_entry "&Balance Sheet" @@ `Action `Balance_sheet;
+      make_entry "&Income Statement (F5)" @@ `Action `Income_statement;
+      make_entry "&Train Income (F6)" @@ `Action `Train_income;
+      make_entry "&Stocks" @@ `Action `Stocks;
+      make_entry "&Accomplishments" @@ `Action `Accomplishments;
+      make_entry "&Efficiency" @@ `Action `Efficiency;
+      make_entry "&History" @@ `Action `History;
     ]
   in
   let options =
@@ -84,20 +84,20 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts
     [
-      make_entry "Station Boxes" @@ `Checkbox(`Options `StationBoxes, check_option `StationBoxes);
-      make_entry "Resources" @@ `Checkbox(`Options `Resources, check_option `Resources);
+      make_entry "&Station Boxes" @@ `Checkbox(`Options `StationBoxes, check_option `StationBoxes);
+      make_entry "&Resources" @@ `Checkbox(`Options `Resources, check_option `Resources);
     ]
   in
   let displays_menu =
     let open MsgBox in
     make ~fonts ~x:56 ~y:8
     [
-      make_entry "Regional Display (F1)" @@ `Action(`Display(Mapview_d.Zoom1));
-      make_entry "Area Display (F2)" @@ `Action(`Display(Mapview_d.Zoom2));
-      make_entry "Local Display (F3)" @@ `Action(`Display(Mapview_d.Zoom3));
-      make_entry "Detail Display (F4)" @@ `Action(`Display(Mapview_d.Zoom4));
-      make_entry "Options" @@ `MsgBox options;
-      make_entry "Find City" @@ `Action `Find_city;
+      make_entry "&Regional Display (F1)" @@ `Action(`Display(Mapview_d.Zoom1));
+      make_entry "&Area Display (F2)" @@ `Action(`Display(Mapview_d.Zoom2));
+      make_entry "&Local Display (F3)" @@ `Action(`Display(Mapview_d.Zoom3));
+      make_entry "&Detail Display (F4)" @@ `Action(`Display(Mapview_d.Zoom4));
+      make_entry "&Options" @@ `MsgBox options;
+      make_entry "&Find City" @@ `Action `Find_city;
     ]
   in
   let is_zoom4 = Some (fun (s:State.t) -> Mapview.is_zoom4 s.view) in
@@ -114,13 +114,13 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts ~x:168 ~y:8
     [
-      make_entry "New Train (F7)" @@ `Action `Build_train;
-      make_entry "Build Station (F8)" ~test_enabled:is_zoom4 @@ `Action `Build_station;
-      make_entry "Build Industry" ~test_enabled:is_zoom4 @@ `Action `Build_industry;
-      make_entry "Build Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Build, check_trackbuild `Build);
-      make_entry "Remove Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Remove, check_trackbuild `Remove);
-      make_entry "Improve Station" ~test_enabled:is_station4 @@ `Action `Improve_station;
-      make_entry "Upgrade Bridge" ~test_enabled:is_woodbridge4 @@ `Action `Upgrade_bridge;
+      make_entry "New &Train (F7)" @@ `Action `Build_train;
+      make_entry "Build &Station (F8)" ~test_enabled:is_zoom4 @@ `Action `Build_station;
+      make_entry "Build &Industry" ~test_enabled:is_zoom4 @@ `Action `Build_industry;
+      make_entry "&Build Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Build, check_trackbuild `Build);
+      make_entry "&Remove Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Remove, check_trackbuild `Remove);
+      make_entry "Im&prove Station" ~test_enabled:is_station4 @@ `Action `Improve_station;
+      make_entry "Up&grade Bridge" ~test_enabled:is_woodbridge4 @@ `Action `Upgrade_bridge;
     ]
   in
   let reality_levels =
@@ -130,27 +130,27 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts ~x:0 ~y:0
     [
-      make_entry "Dispatcher Operations" @@ `Checkbox(`Reality_level `Dispatcher_ops, check_reality `Dispatcher_ops);
-      make_entry "Complex Economy" @@ `Checkbox(`Reality_level `Complex_economy, check_reality `Complex_economy);
-      make_entry "Cut-Throat Competition" @@ `Checkbox(`Reality_level `Cutthroat_competition, check_reality `Cutthroat_competition);
+      make_entry "&Dispatcher Operations" @@ `Checkbox(`Reality_level `Dispatcher_ops, check_reality `Dispatcher_ops);
+      make_entry "Complex &Economy" @@ `Checkbox(`Reality_level `Complex_economy, check_reality `Complex_economy);
+      make_entry "&Cut-Throat Competition" @@ `Checkbox(`Reality_level `Cutthroat_competition, check_reality `Cutthroat_competition);
     ]
   in
   let actions_menu =
     let open MsgBox in
     make ~fonts ~x:202 ~y:8
     [
-      make_entry "Call Broker (F9)" @@ `Action `Action_call_broker;
-      make_entry "Survey (F10)" @@ `Action `Action_survey;
-      make_entry "Name RR" @@ `Action `Action_name_rr;
-      make_entry "Reality Levels" @@ `MsgBox reality_levels;
-      make_entry "Retire" @@ `Action `Action_retire;
+      make_entry "Call &Broker (F9)" @@ `Action `Action_call_broker;
+      make_entry "&Survey (F10)" @@ `Action `Action_survey;
+      make_entry "&Name RR" @@ `Action `Action_name_rr;
+      make_entry "&Reality Levels" @@ `MsgBox reality_levels;
+      make_entry "Re&tire" @@ `Action `Action_retire;
     ]
   in
   let titles =
     let open Menu.Title in
     [
       make ~fonts ~x:8 ~y:1 "&Game" game_menu;
-      make ~fonts ~x:64 ~y:1 "&Displays" displays_menu;
+      make ~fonts ~x:64 ~y:1 "D&isplays" displays_menu;
       make ~fonts ~x:120 ~y:1 "&Reports" reports_menu;
       make ~fonts ~x:176 ~y:1 "&Build" build_menu;
       make ~fonts ~x:242 ~y:1 "&Actions" actions_menu;

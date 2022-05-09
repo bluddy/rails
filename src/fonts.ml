@@ -100,17 +100,27 @@ let get_str_w_h ?(skip_amp=false) font str =
     let w = get_letter_width font c in
     (x + w + font.space_x, y)
 
-  let write win font ?(color=Ega.white) str ~x ~y =
+    (* Write a string.
+       active_color: active letter color
+    *)
+  let write ?active_color win font ~color str ~x ~y =
     let x_first = x in (* keep starting column *)
-    String.fold (fun (x, y) c ->
-      if Char.equal c '\n' then
-        (x_first, y + font.height + font.space_y)
-      else
-        write_char win font ~color c ~x ~y)
-    (x, y)
+    String.fold (fun (active, x, y) c ->
+      match c, active_color with
+      | '&', Some _ ->
+          (true, x, y)
+      | '\n', _ ->
+          (false, x_first, y + font.height + font.space_y)
+      | _, Some active_color when active ->
+          let x, y = write_char win font ~color:active_color c ~x ~y in
+          false, x, y
+      | _ ->
+          let x, y = write_char win font ~color c ~x ~y in
+          false, x, y
+    )
+    (false, x, y)
     str
     |> ignore
-
 
 end
 
@@ -225,11 +235,11 @@ module Render = struct
     ()
     to_render 
 
-let write_char win fonts ?(color=Ega.white) ?(idx=4) c ~x ~y =
+let write_char win fonts ~color ~idx c ~x ~y =
   Font.write_char win ~color fonts.(idx) c ~x ~y
 
-let write win fonts ?(color=Ega.white) ?(idx=4) str ~x ~y =
-  Font.write win fonts.(idx) ~color str ~x ~y
+let write win fonts ?active_color ~color ~idx str ~x ~y =
+  Font.write ?active_color win fonts.(idx) ~color str ~x ~y
 
 end
 
