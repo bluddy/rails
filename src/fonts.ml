@@ -69,11 +69,14 @@ let get_letter font c =
 let get_letter_width font c =
   Hashtbl.find font.char_widths c
 
-let get_str_w_h font str =
+let get_str_w_h ?(skip_amp=false) font str =
   let x = 
     String.fold (fun x c ->
-      let w = get_letter_width font c in
-      x + w + font.space_x)
+      match c with
+      | '&' when skip_amp -> x
+      | _ ->
+        let w = get_letter_width font c in
+        x + w + font.space_x)
     0
     str
   in
@@ -248,5 +251,6 @@ let write_str ?(color=15) idx str ~fonts ~x ~y : Render.t =
   in
   {font_idx=idx; chars=acc}
 
-let get_str_w_h ~fonts ~idx str = Font.get_str_w_h fonts.(idx) str
+let get_str_w_h ?skip_amp ~fonts ~idx str =
+  Font.get_str_w_h ?skip_amp fonts.(idx) str
 

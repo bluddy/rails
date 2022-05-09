@@ -78,7 +78,7 @@ module MsgBox = struct
     }
 
   let get_entry_w_h font v =
-    Fonts.Font.get_str_w_h font @@ " "^v.name
+    Fonts.Font.get_str_w_h ~skip_amp:true font @@ " "^v.name
 
   let make_entry ?(test_enabled=None) name fire =
     let name = name in
@@ -382,7 +382,7 @@ module Title = struct
   }
 
   let make ~fonts ~x ~y name msgbox =
-    let w, h = Fonts.get_str_w_h ~fonts ~idx:1 name in
+    let w, h = Fonts.get_str_w_h ~skip_amp:true ~fonts ~idx:1 name in
     {
       x; y;
       w; h;
