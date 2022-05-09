@@ -4,6 +4,10 @@ open Containers
   1. The type of the messages it sends
   2. The type of the data it reads into its checkbox and visibility lambdas
 *)
+
+module L = Utils.List
+module CharMap = Utils.CharMap
+
 let menu_font = 1
 let num_menus = 5
 let max_width = 320
@@ -47,8 +51,6 @@ let get_active_char str =
   (false, None)
   str
   |> snd
-
-module CharMap = Utils.CharMap
 
 module MsgBox = struct
 
@@ -203,7 +205,7 @@ module MsgBox = struct
   and close v =
     match v.selected with
     | Some i ->
-        let entries = Utils.List.modify_at_idx i close_entry v.entries in
+        let entries = L.modify_at_idx i close_entry v.entries in
         {v with entries; selected=None}
     | None -> v
 
@@ -224,7 +226,7 @@ module MsgBox = struct
       | Some idx ->
           (* deep search first *)
           let a, b =
-            Utils.List.modify_make_at_idx idx (handle_entry_click_deep s ~x ~y) v.entries
+            L.modify_make_at_idx idx (handle_entry_click_deep s ~x ~y) v.entries
           in
           a, b |> Option.get_exn_or "error"
       | None ->
@@ -242,13 +244,13 @@ module MsgBox = struct
           | None, Some entry_idx ->
               (* clear selection *)
               let entries =
-                Utils.List.modify_at_idx entry_idx (close_entry) v.entries
+                L.modify_at_idx entry_idx (close_entry) v.entries
               in
               entries, action, None
           | Some (entry_idx, _), _ ->
               (* clicked an entry, handle and switch selection *)
             let entries, action =
-              Utils.List.modify_make_at_idx entry_idx (handle_entry_activate_shallow ~x:v.x s) v.entries
+              L.modify_make_at_idx entry_idx (handle_entry_activate_shallow ~x:v.x s) v.entries
             in
             entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
           end
@@ -274,7 +276,7 @@ module MsgBox = struct
         match v.selected with
         | Some idx ->
           (* deep search first *)
-          Utils.List.modify_make_at_idx idx (handle_entry_key_deep s ~key) v.entries
+          L.modify_make_at_idx idx (handle_entry_key_deep s ~key) v.entries
           |> Utils.snd_option
         | None ->
             (* Nothing selected, we're done *)
@@ -293,20 +295,20 @@ module MsgBox = struct
             | Some choice as ch, Some entry_idx, _ ->
                 (* something matches *)
                 let entries, action =
-                  Utils.List.modify_at_idx entry_idx close_entry entries
-                  |> Utils.List.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x)
+                  L.modify_at_idx entry_idx close_entry entries
+                  |> L.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x)
                   |> Utils.snd_option
                 in
                 entries, action, ch
             | Some choice as ch, None, _ ->
                 let entries, action =
-                  Utils.List.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x) entries
+                  L.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x) entries
                   |> Utils.snd_option
                 in
                 entries, action, ch
             | None, (Some idx as sidx), Enter ->
                 let entries, action =
-                  Utils.List.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
+                  L.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
                   |> Utils.snd_option
                 in
                 entries, action, sidx
@@ -314,17 +316,17 @@ module MsgBox = struct
                 entries, KeyInMsgBox, Some 0
             | None, Some idx, Down when idx < List.length entries - 1 ->
                 let entries =
-                  Utils.List.modify_at_idx idx close_entry entries
+                  L.modify_at_idx idx close_entry entries
                 in
                 entries, KeyInMsgBox, Some (idx+1)
             | None, Some idx, Up when idx > 0 ->
                 let entries =
-                  Utils.List.modify_at_idx idx close_entry entries
+                  L.modify_at_idx idx close_entry entries
                 in
                 entries, KeyInMsgBox, Some (idx-1)
             | None, Some idx, Escape when is_entry_open (List.nth entries idx) ->
                 let entries =
-                  Utils.List.modify_at_idx idx close_entry entries
+                  L.modify_at_idx idx close_entry entries
                 in
                 entries, KeyInMsgBox, Some idx
             | None, _, _ when Event.is_letter key ->
@@ -340,12 +342,19 @@ module MsgBox = struct
       {v with entries; selected}, action
 
     let update s v (event:Event.t) =
-      match event with
-      | MouseButton {down=true; x; y; _} ->
-          handle_click s v ~x ~y
-      | Key {down=true; key; _ } ->
-          handle_key s v ~key
-      | _ -> v, NoAction
+      let v, action =
+        match event with
+        | MouseButton {down=true; x; y; _} ->
+            handle_click s v ~x ~y
+        | Key {down=true; key; _ } ->
+            handle_key s v ~key
+        | _ -> v, NoAction
+      in
+      let v = match action with
+        | On _ | Off _ -> close v
+        | _ -> v
+      in
+      v, action
 
     let render_entry win s font v ~selected ~x ~border_x ~y ~w =
       if selected then
@@ -470,11 +479,19 @@ module Global = struct
     let _x = x in
     y > v.menu_h && Option.is_none v.open_menu
 
-  let is_menu_open v = Option.is_none v.open_menu
+  let is_open v = Option.is_none v.open_menu
+
+  let close v =
+    let menus =
+      match v.open_menu with
+      | Some idx -> L.modify_at_idx idx Title.close_menu v.menus
+      | None -> v.menus
+    in
+    {v with menus; open_menu=None}
 
   let handle_click s v ~x ~y = 
     (* Check for closed menu *)
-      if is_not_clicked v ~x ~y && not @@ is_menu_open v then
+      if is_not_clicked v ~x ~y && not @@ is_open v then
         (v, NoAction)
       else (
         (* Handle a top menu click first *)
@@ -483,31 +500,31 @@ module Global = struct
         match clicked_top_menu, v.open_menu with
         | Some (i, _), Some mopen when i = mopen ->
             (* clicked top menu, same menu is open *)
-            let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
+            let menus = L.modify_at_idx mopen Title.close_menu menus in
             {v with menus; open_menu = None}, CloseMenu
         | Some (i, _), Some mopen ->
             (* clicked top menu, some other is open *)
             let menus =
-              Utils.List.modify_at_idx mopen Title.close_menu menus
-              |> Utils.List.modify_at_idx i (Title.do_open_menu s)
+              L.modify_at_idx mopen Title.close_menu menus
+              |> L.modify_at_idx i (Title.do_open_menu s)
             in
             {v with menus; open_menu = Some i}, OpenMenu
         | Some (i, _), None ->
             (* clicked top menu, none are open *)
-            let menus = Utils.List.modify_at_idx i (Title.do_open_menu s) menus in
+            let menus = L.modify_at_idx i (Title.do_open_menu s) menus in
             {v with menus; open_menu = Some i}, OpenMenu
         | None, (Some mopen as sopen) ->
             (* clicked elsewhere with open top menu *)
             let menus, action = 
               (* check menu itself *)
-              Utils.List.modify_make_at_idx mopen (Title.handle_click s ~x ~y) menus
+              L.modify_make_at_idx mopen (Title.handle_click s ~x ~y) menus
             in
             let action = action |> Option.get_exn_or "error" in
             (* Close the menu if it's a random click *)
             let open_menu, action, menus =
               match action with
               | NoAction ->
-                  let menus = Utils.List.modify_at_idx mopen Title.close_menu menus in
+                  let menus = L.modify_at_idx mopen Title.close_menu menus in
                   None, CloseMenu, menus
               | _ ->
                   sopen, action, menus
@@ -529,13 +546,13 @@ module Global = struct
           begin match get_char () with
           | None -> v, NoAction
           | Some idx as sidx ->
-            let menus = Utils.List.modify_at_idx idx (Title.do_open_menu s) v.menus in
+            let menus = L.modify_at_idx idx (Title.do_open_menu s) v.menus in
             {v with open_menu=sidx; menus}, OpenMenu
           end
       | (Some open_menu as some_menu) ->
           (* Open menu -> send it on *)
           let menus, action =
-            Utils.List.modify_make_at_idx open_menu (Title.handle_key s ~key) v.menus
+            L.modify_make_at_idx open_menu (Title.handle_key s ~key) v.menus
             |> Utils.snd_option
           in
           let menus, open_menu, action =
@@ -544,14 +561,14 @@ module Global = struct
                 menus, None, KeyInMsgBox
             | NoAction, Event.Left when open_menu > 0 ->
                 let menus =
-                  Utils.List.modify_at_idx open_menu Title.close_menu menus
-                  |> Utils.List.modify_at_idx (open_menu - 1) (Title.do_open_menu s)
+                  L.modify_at_idx open_menu Title.close_menu menus
+                  |> L.modify_at_idx (open_menu - 1) (Title.do_open_menu s)
                 in
                 menus, Some(open_menu - 1), KeyInMsgBox
             | NoAction, Event.Right when open_menu < (num_menus - 1) ->
                 let menus =
-                  Utils.List.modify_at_idx open_menu Title.close_menu menus
-                  |> Utils.List.modify_at_idx (open_menu + 1) (Title.do_open_menu s)
+                  L.modify_at_idx open_menu Title.close_menu menus
+                  |> L.modify_at_idx (open_menu + 1) (Title.do_open_menu s)
                 in
                 menus, Some(open_menu + 1), KeyInMsgBox
             (* Avoid events leaking out when menu is open *)
@@ -561,12 +578,20 @@ module Global = struct
           {v with menus; open_menu}, action
 
   let update s v (event:Event.t) =
-    match event with
-    | MouseButton {down=true; x; y; _} ->
-        handle_click s v ~x ~y
-    | Key {down=true; key; _ } ->
-        handle_key s v ~key
-    | _ -> v, NoAction
+    let v, action =
+      match event with
+      | MouseButton {down=true; x; y; _} ->
+          handle_click s v ~x ~y
+      | Key {down=true; key; _ } ->
+          handle_key s v ~key
+      | _ -> v, NoAction
+    in
+    (* TODO: add activation animation, blue and white *)
+    let v = match action with
+      | On _ | Off _ -> close v
+      | _ -> v
+    in
+    v, action
 
   let render win s fonts v =
     (* Render menu titles *)
