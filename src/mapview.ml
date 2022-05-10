@@ -20,6 +20,8 @@ let default =
 
 let get_cursor_pos v = (v.cursor_x, v.cursor_y)
 
+let get_zoom v = v.zoom
+
 let is_zoom4 v = match v.zoom with
   | Zoom4 -> true
   | _ -> false
@@ -45,14 +47,38 @@ let mapview_bounds v tile_w tile_h =
   let end_y = start_y + 2 * y_delta in
   start_x, start_y, end_x, end_y
 
-let minimap_bounds v w h =
-  let start_x = Utils.clip (v.center_x - w/2) ~min:0 ~max:(v.width - w) in
-  let start_y = Utils.clip (v.center_y - h/2) ~min:0 ~max:(v.height - h) in
-  let end_x = start_x + w in
-  let end_y = start_y + h in
+let minimap_bounds v ~(minimap:Utils.rect) =
+  let start_x = Utils.clip (v.center_x - minimap.w/2) ~min:0 ~max:(v.width - minimap.w) in
+  let start_y = Utils.clip (v.center_y - minimap.h/2) ~min:0 ~max:(v.height - minimap.h) in
+  let end_x = start_x + minimap.w in
+  let end_y = start_y + minimap.h in
   start_x, start_y, end_x, end_y
 
-let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minimap_w ~minimap_h =
+  (* Used by menu *)
+let cursor_on_woodbridge (s:State.t) =
+  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
+  | Some track when track.player = 0 ->
+      begin match track.kind with
+      | WoodBridge -> true
+      | _ -> false
+      end
+  | _ -> false
+
+let cursor_on_station (s:State.t) =
+  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
+  | Some track when track.player = 0 ->
+      begin match track.kind with
+      | Station (Depot | Station | Terminal) -> true
+      | _ -> false
+      end
+  | _ -> false
+
+let set_build_mode v mode =
+  {v with build_mode = mode}
+
+let get_build_mode v = v.build_mode
+
+let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
 
   let check_recenter_zoom4 v cursor_x cursor_y =
     (* recenter in zoom4 if past screen, but only in given direction *)
@@ -73,13 +99,13 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
       | Zoom1 ->
           let y = y - y_top in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}
-      | _ when x > minimap_x && y > minimap_y && y < minimap_y + minimap_h ->
+      | _ when x > minimap.x && y > minimap.y && y < minimap.y + minimap.h ->
           (* click on minimap *)
-          let start_x, start_y, _, _ = minimap_bounds v minimap_w minimap_h in
-          let x = x - minimap_x + start_x in
-          let y = y - minimap_y + start_y in
+          let start_x, start_y, _, _ = minimap_bounds v ~minimap in
+          let x = x - minimap.x + start_x in
+          let y = y - minimap.y + start_y in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
-      | _ when x < minimap_x && y > y_top ->
+      | _ when x < minimap.x && y > y_top ->
           (* click in mapview *)
           let tile_w, tile_h = tile_size_of_zoom v.zoom in
           let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
@@ -153,7 +179,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~minimap_x ~minimap_y ~minim
 
 module R = Renderer
 
-let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w =
+let render win (s:State.t) (v:t) ~y ~minimap =
   let y_ui = y in
 
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
@@ -195,23 +221,23 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
     )
   in
 
-  let draw_minimap minimap_x minimap_y minimap_w minimap_h =
-    let from_x, from_y, from_end_x, from_end_y = minimap_bounds v minimap_w minimap_h in
-    R.Texture.render_subtex win s.textures.map ~x:minimap_x ~y:minimap_y
-      ~from_x ~from_y ~w:minimap_w ~h:minimap_h;
+  let draw_minimap ~(minimap:Utils.rect) =
+    let from_x, from_y, from_end_x, from_end_y = minimap_bounds v ~minimap in
+    R.Texture.render_subtex win s.textures.map ~x:minimap.x ~y:minimap.y
+      ~from_x ~from_y ~w:minimap.w ~h:minimap.h;
 
     (* draw track *)
     B.trackmap_iter s.backend (fun x y _ ->
       if x >= from_x && x <= from_end_x && y >= from_y && y <= from_end_y then (
-        let x = minimap_x + x - from_x in
-        let y = minimap_y + y - from_y in
+        let x = minimap.x + x - from_x in
+        let y = minimap.y + y - from_y in
         R.draw_point win ~x ~y:(y + y_ui) ~color:Ega.black
       )
     );
 
     (* minimap rectangle *)
-    let x = minimap_x + start_x - from_x in
-    let y = minimap_y + start_y - from_y in
+    let x = minimap.x + start_x - from_x in
+    let y = minimap.y + start_y - from_y in
     R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
       ~fill:false;
   in
@@ -247,39 +273,16 @@ let render win (s:State.t) (v:t) ~y ~minimap_x ~minimap_y ~minimap_h ~minimap_w 
       draw_track_zoom1 ()
   | Zoom2 | Zoom3 ->
       tile_render ();
-      draw_minimap minimap_x minimap_y minimap_w minimap_h;
+      draw_minimap ~minimap;
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
-      draw_minimap minimap_x minimap_y minimap_w minimap_h;
+      draw_minimap ~minimap;
       draw_cursor_zoom4 ();
       draw_track_zoom4 ();
   end;
   s
 
-let get_zoom v = v.zoom
-
-  (* Used by menu *)
-let cursor_on_woodbridge (s:State.t) =
-  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
-  | Some track when track.player = 0 ->
-      begin match track.kind with
-      | WoodBridge -> true
-      | _ -> false
-      end
-  | _ -> false
-
-let cursor_on_station (s:State.t) =
-  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
-  | Some track when track.player = 0 ->
-      begin match track.kind with
-      | Station (Depot | Station | Terminal) -> true
-      | _ -> false
-      end
-  | _ -> false
-
-let set_build_mode v mode =
-  {v with build_mode = mode}
-
-let get_build_mode v = v.build_mode
+  (* render the Build Station display *)
+(* let render_buildstation win fonts v ~y = *)
 

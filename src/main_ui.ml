@@ -159,16 +159,56 @@ let main_menu fonts menu_h =
   Menu.Global.make ~menu_h titles
 
 let default win fonts =
+  let screen = Utils.{
+    w = R.width win;
+    h = R.height win;
+    x = 0;
+    y = 0;
+  }
+  in
+  let menu = Utils.{
+    w = screen.w;
+    h = 8;
+    x = screen.x;
+    y = screen.y;
+  }
+  in
+  let ui = Utils.{
+    x = Gmap.map_width - 1;
+    y = menu.h + menu.y;
+    w = 64;
+    h = screen.h - menu.h;
+  }
+  in
+  let minimap = Utils.{
+    x=ui.x;
+    y=ui.y;
+    w=ui.w;
+    h=55;
+  }
+  in
+  let infobar = Utils.{
+    x = ui.x;
+    y = minimap.y + minimap.h;
+    h = 19;
+    w = ui.w;
+  }
+  in
+  let train_ui = Utils.{
+    x = ui.x;
+    y = infobar.y + infobar.h;
+    h = 117;
+    w = ui.w;
+  }
+  in
   let dims =
     {
-      menu_h=8;
-      minimap_h=55;
-      width=R.width win;
-      height=R.height win;
-      ui_w=64;
-      ui_start_x=Gmap.map_width-1;
-      infobar_h=19;
-      train_area_h=117;
+      screen;
+      menu;
+      ui;
+      minimap;
+      infobar;
+      train_ui;
     }
   in
   let options =
@@ -180,7 +220,7 @@ let default win fonts =
   in
   {
     dims;
-    menu=main_menu fonts dims.menu_h;
+    menu=main_menu fonts dims.menu.h;
     options;
     mode=Normal;
   }
@@ -210,8 +250,7 @@ let update (s:State.t) v (event:Event.t) =
     in
     let view, backend_actions =
       let dims = v.dims in
-      Mapview.update s s.view event ~y_top:dims.menu_h
-        ~minimap_x:dims.ui_start_x ~minimap_y:dims.menu_h ~minimap_w:dims.ui_w ~minimap_h:dims.minimap_h
+      Mapview.update s s.view event ~y_top:dims.menu.h ~minimap:dims.minimap
     in
     v, view, backend_actions
 
@@ -238,24 +277,20 @@ let update (s:State.t) v (event:Event.t) =
 let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
   (* Render main view *)
-  let minimap_x = dims.ui_start_x in
-  let minimap_y = dims.menu_h in
-  let minimap_h = dims.minimap_h in
-  let minimap_w = dims.ui_w in
-  let s = Mapview.render win s s.view ~y:v.dims.menu_h ~minimap_x ~minimap_y ~minimap_w ~minimap_h in
+  let s = Mapview.render win s s.view ~y:v.dims.menu.h ~minimap:dims.minimap in
 
   (* Menu bar background *)
-  R.draw_rect win ~x:0 ~y:0 ~w:dims.width ~h:dims.menu_h ~color:Ega.cyan ~fill:true;
-  let h = dims.height - dims.menu_h in
-  let y = dims.menu_h in
+  R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;
+  let h = dims.screen.h - dims.menu.h in
+  let y = dims.menu.h in
 
   (* Screen White border *)
-  R.draw_rect win ~x:0 ~y ~w:dims.width ~h ~color:Ega.white ~fill:false;
+  R.draw_rect win ~x:0 ~y ~w:dims.screen.w ~h ~color:Ega.white ~fill:false;
 
-  let x = dims.ui_start_x in
+  let x = dims.ui.x in
 
   (* Border of UI *)
-  R.draw_rect win ~x ~y ~h ~w:(dims.ui_w+1) ~color:Ega.white ~fill:false;
+  R.draw_rect win ~x ~y ~h ~w:(dims.ui.w+1) ~color:Ega.white ~fill:false;
 
   (* Draw logo *)
   begin match Mapview.get_zoom s.view with
@@ -265,12 +300,12 @@ let render (win:R.window) (s:State.t) v =
   end;
 
   (* Info bar *)
-  let y = y + dims.minimap_h in
-  R.draw_rect win ~x ~y ~h:dims.infobar_h ~w:dims.ui_w ~color:Ega.white ~fill:true;
+  let y = y + dims.minimap.h in
+  R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
 
   (* Train area *)
-  let y = y + dims.infobar_h in
-  R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_area_h ~w:(dims.ui_w-1) ~color:Ega.bblue ~fill:true;
+  let y = y + dims.infobar.h in
+  R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
 
   (* Menu bar *)
   Menu.Global.render win s s.textures.fonts v.menu;

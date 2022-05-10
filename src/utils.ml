@@ -2,6 +2,18 @@ open Containers
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 
+type rect = {
+  x: int;
+  y: int;
+  w: int;
+  h: int;
+}
+
+type point = {
+  x: int;
+  y: int;
+}
+
 let clip v ~min ~max =
   if v >= min then 
     if v <= max then
