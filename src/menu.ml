@@ -44,8 +44,8 @@ let max_width = 320
 let get_active_char str =
   String.fold (fun (amp, letter) c ->
     match c with
-    | '&' -> (true, letter)
-    | c when amp -> (false, Some c)
+    | '&' -> (true, None)
+    | c when amp -> (false, Some (Char.uppercase_ascii c))
     | _ -> (amp, letter)
   )
   (false, None)
@@ -173,6 +173,10 @@ module MsgBox = struct
     | {fire=MsgBox(true, _);_} -> true
     | _ -> false
 
+  let is_entry_msgbox = function
+    | {fire=MsgBox(_); _} -> true
+    | _ -> false
+
   let find_clicked_entry_shallow v ~y =
     List.find_idx (is_entry_clicked_shallow ~y) v.entries
 
@@ -292,20 +296,14 @@ module MsgBox = struct
                 None
             in
             begin match menu_choice, v.selected, key with
-            | Some choice as ch, Some entry_idx, _ ->
+            | Some _ as ch, Some entry_idx, _ ->
                 (* something matches *)
-                let entries, action =
+                let entries =
                   L.modify_at_idx entry_idx close_entry entries
-                  |> L.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x)
-                  |> Utils.snd_option
                 in
-                entries, action, ch
-            | Some choice as ch, None, _ ->
-                let entries, action =
-                  L.modify_make_at_idx choice (handle_entry_activate_shallow s ~x:v.x) entries
-                  |> Utils.snd_option
-                in
-                entries, action, ch
+                entries, KeyInMsgBox, ch
+            | Some _ as ch, None, _ ->
+                entries, KeyInMsgBox, ch
             | None, (Some idx as sidx), Enter ->
                 let entries, action =
                   L.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
@@ -466,7 +464,7 @@ module Global = struct
     List.iteri (fun i title ->
       match get_active_char title.Title.name with
       | Some c -> Hashtbl.replace index c i
-      | None -> Hashtbl.replace index title.name.[0] i)
+      | None -> ()) (* Hashtbl.replace index title.name.[0] i) *)
     menus;
   {
     menu_h;

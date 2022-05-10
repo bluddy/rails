@@ -153,7 +153,7 @@ let main_menu fonts menu_h =
       make ~fonts ~x:64 ~y:1 "D&isplays" displays_menu;
       make ~fonts ~x:120 ~y:1 "&Reports" reports_menu;
       make ~fonts ~x:176 ~y:1 "&Build" build_menu;
-      make ~fonts ~x:242 ~y:1 "&Actions" actions_menu;
+      make ~fonts ~x:242 ~y:1 "Ac&tions" actions_menu;
     ]
   in
   Menu.Global.make ~menu_h titles
