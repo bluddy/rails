@@ -77,7 +77,7 @@ let set_build_mode v mode =
 
 let get_build_mode v = v.build_mode
 
-let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
+let update (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
   let check_recenter_zoom4 v cursor_x cursor_y =
     (* recenter in zoom4 if past screen, but only in given direction *)
@@ -96,7 +96,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
 
     match v.zoom with
       | Zoom1 ->
-          let y = y - y_top in
+          let y = y - v.dims.y in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}
       | _ when x > minimap.x && y > minimap.y && y < minimap.y + minimap.h ->
           (* click on minimap *)
@@ -104,12 +104,12 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
           let x = x - minimap.x + start_x in
           let y = y - minimap.y + start_y in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
-      | _ when x < minimap.x && y > y_top ->
+      | _ when x < minimap.x && y > v.dims.y ->
           (* click in mapview *)
           let tile_w, tile_h = tile_size_of_zoom v.zoom in
           let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
           let cursor_x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
-          let cursor_y = start_y + (y-y_top)/tile_h |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
+          let cursor_y = start_y + (y-v.dims.y)/tile_h |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
           let center_x, center_y =
             match v.zoom with
             | Zoom4 ->
@@ -178,9 +178,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
 
 module R = Renderer
 
-let render win (s:State.t) (v:t) ~y ~minimap =
-  let y_ui = y in
-
+let render win (s:State.t) (v:t) ~minimap =
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
 
@@ -193,7 +191,7 @@ let render win (s:State.t) (v:t) ~y ~minimap =
         let alt = ((map_x + map_y) land 1) > 0 in
         let tile = B.get_tile s.backend map_x map_y in
         let tex = Textures.Tile.find tiles ~area:(B.get_area s.backend) ~alt tile in
-        let x, y = j * tile_w, y_ui + i * tile_h in
+        let x, y = j * tile_w, v.dims.y + i * tile_h in
         R.Texture.render win tex ~x ~y;
       )
       Iter.(0--(v.dims.w/tile_w - 1)))
@@ -204,7 +202,7 @@ let render win (s:State.t) (v:t) ~y ~minimap =
     B.iter_cities (fun name x y ->
       if (x >= start_x && y >= start_y) || (x <= end_x && y <= end_y) then (
         let x = (x - start_x) * tile_w in
-        let y = (y - start_y) * tile_h + y_ui in
+        let y = (y - start_y) * tile_h + v.dims.y in
         let x, y = x + 11, y - 15 in
         Fonts.Render.write win s.textures.fonts name ~idx:4 ~x ~y ~color:Ega.black;
         let x, y = x + 1, y - 1 in
@@ -216,7 +214,7 @@ let render win (s:State.t) (v:t) ~y ~minimap =
 
   let draw_track_zoom1 () =
     B.trackmap_iter s.backend (fun x y _ ->
-      R.draw_point win ~x ~y:(y + y_ui) ~color:Ega.black
+      R.draw_point win ~x ~y:(y + v.dims.y) ~color:Ega.black
     )
   in
 
@@ -230,7 +228,7 @@ let render win (s:State.t) (v:t) ~y ~minimap =
       if x >= from_x && x <= from_end_x && y >= from_y && y <= from_end_y then (
         let x = minimap.x + x - from_x in
         let y = minimap.y + y - from_y in
-        R.draw_point win ~x ~y:(y + y_ui) ~color:Ega.black
+        R.draw_point win ~x ~y:(y + v.dims.y) ~color:Ega.black
       )
     );
 
@@ -243,7 +241,7 @@ let render win (s:State.t) (v:t) ~y ~minimap =
 
   let draw_cursor_zoom4 () =
     let x = (v.cursor_x - start_x) * tile_w in
-    let y = (v.cursor_y - start_y) * tile_h + y_ui in
+    let y = (v.cursor_y - start_y) * tile_h + v.dims.y in
     R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color:Ega.white ~fill:false
   in
 
@@ -256,7 +254,7 @@ let render win (s:State.t) (v:t) ~y ~minimap =
         match B.get_track s.backend map_x map_y with
         | Some track ->
           let tex = Textures.Tracks.find track_h track in
-          let x, y = j * tile_w, y_ui + i * tile_h in
+          let x, y = j * tile_w, v.dims.y + i * tile_h in
           R.Texture.render win tex ~x ~y
         | _ -> ()
       )
@@ -268,7 +266,7 @@ let render win (s:State.t) (v:t) ~y ~minimap =
 
   begin match v.zoom with
   | Zoom1 ->
-      R.Texture.render win s.textures.map ~x:0 ~y:y_ui;
+      R.Texture.render win s.textures.map ~x:0 ~y:v.dims.y;
       draw_track_zoom1 ()
   | Zoom2 | Zoom3 ->
       tile_render ();
