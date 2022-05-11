@@ -3,6 +3,7 @@
 type dims = {
   screen: Utils.rect;
   menu: Utils.rect;
+  mapview: Utils.rect;
   ui: Utils.rect;
   minimap: Utils.rect;
   infobar: Utils.rect;
@@ -81,6 +82,7 @@ type 'a t = {
   options: options;
   menu: (menu_action, 'a) Menu.Global.t;
   mode: 'a mode; (* determines mode of operation *)
+  mutable view: Mapview_d.t;
 }
 
 

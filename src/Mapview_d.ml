@@ -23,8 +23,7 @@ type t =
     cursor_x: int;
     cursor_y: int;
     zoom: zoom;
-    width: int;
-    height: int;
+    dims: Utils.rect;
     build_mode: build_mode;
     options: Options.t;
   }

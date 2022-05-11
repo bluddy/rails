@@ -79,7 +79,7 @@ let main_menu fonts menu_h =
   in
   let options =
     let check_option opt (s:State.t) =
-      Mapview_d.Options.mem s.view.options opt
+      Mapview_d.Options.mem s.ui.view.options opt
     in
     let open MsgBox in
     make ~fonts
@@ -100,17 +100,17 @@ let main_menu fonts menu_h =
       make_entry "&Find City" @@ `Action `Find_city;
     ]
   in
-  let is_zoom4 = Some (fun (s:State.t) -> Mapview.is_zoom4 s.view) in
+  let is_zoom4 = Some (fun (s:State.t) -> Mapview.is_zoom4 s.ui.view) in
   let is_station4 =
-    (fun (s:State.t) -> Mapview.is_zoom4 s.view && Mapview.cursor_on_station s)
+    (fun (s:State.t) -> Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_station s.backend s.ui.view)
     |> Option.return
   in
   let is_woodbridge4 =
-    (fun (s:State.t) -> Mapview.is_zoom4 s.view && Mapview.cursor_on_woodbridge s)
+    (fun (s:State.t) -> Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view)
     |> Option.return
   in
   let build_menu =
-    let check_trackbuild build (s:State.t) = Mapview_d.equal_build_mode s.view.build_mode build in
+    let check_trackbuild build (s:State.t) = Mapview_d.equal_build_mode s.ui.view.build_mode build in
     let open MsgBox in
     make ~fonts ~x:168 ~y:8
     [
@@ -173,6 +173,13 @@ let default win fonts =
     y = screen.y;
   }
   in
+  let mapview = Utils.{
+    x = 0;
+    y = menu.h;
+    w = Gmap.map_width;
+    h = Gmap.map_height;
+  }
+  in
   let ui = Utils.{
     x = Gmap.map_width - 1;
     y = menu.h + menu.y;
@@ -205,6 +212,7 @@ let default win fonts =
     {
       screen;
       menu;
+      mapview;
       ui;
       minimap;
       infobar;
@@ -220,7 +228,8 @@ let default win fonts =
   in
   {
     dims;
-    menu=main_menu fonts dims.menu.h;
+    menu = main_menu fonts dims.menu.h;
+    view = Mapview.default dims.mapview;
     options;
     mode=Normal;
   }
@@ -248,28 +257,31 @@ let update (s:State.t) v (event:Event.t) =
           (* Cancel out events we handled *)
           {v with menu}, a, NoEvent 
     in
+    (* TODO: use menu_action *)
     let view, backend_actions =
       let dims = v.dims in
-      Mapview.update s s.view event ~y_top:dims.menu.h ~minimap:dims.minimap
+      Mapview.update s v.view event ~y_top:dims.menu.h ~minimap:dims.minimap
     in
-    v, view, backend_actions
+    v.view <- view;
+    v, backend_actions
 
   | BuildStation build_menu ->
       (* Build Station mode *)
       let build_menu, action = Menu.MsgBox.update s build_menu event in
+      (* TODO: build_menu *)
       match action with
       | Menu.NoAction ->
           (* Exit build station mode *)
-          {v with mode=Normal}, s.view, []
+          {v with mode=Normal}, []
       | Menu.On(station_kind) ->
-          let x, y = Mapview.get_cursor_pos s.view in
+          let x, y = Mapview.get_cursor_pos v.view in
           begin match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
           | `Ok -> 
               let backend_action = [B.Action.BuildStation{x; y; kind=station_kind}] in
-              {v with mode=Normal}, s.view, backend_action
+              {v with mode=Normal}, backend_action
               (* TODO: handle other cases *)
           | _ ->
-              {v with mode=Normal}, s.view, []
+              {v with mode=Normal}, []
           end
       | _ -> failwith "unexpected"
 
@@ -277,7 +289,7 @@ let update (s:State.t) v (event:Event.t) =
 let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
   (* Render main view *)
-  let s = Mapview.render win s s.view ~y:v.dims.menu.h ~minimap:dims.minimap in
+  let s = Mapview.render win s v.view ~y:v.dims.menu.h ~minimap:dims.minimap in
 
   (* Menu bar background *)
   R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;
@@ -293,7 +305,7 @@ let render (win:R.window) (s:State.t) v =
   R.draw_rect win ~x ~y ~h ~w:(dims.ui.w+1) ~color:Ega.white ~fill:false;
 
   (* Draw logo *)
-  begin match Mapview.get_zoom s.view with
+  begin match Mapview.get_zoom v.view with
   | Zoom1 ->
       R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo;
   | _ -> ()

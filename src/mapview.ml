@@ -7,13 +7,12 @@ module B = Backend
   Also, it should not change any game logic: it only handles viewing a window into the world
  *)
 
-let default = 
+let default dims = 
   {
     cursor_x=0; cursor_y=0;
     center_x=0; center_y=0;
     zoom=Zoom4;
-    width=B.map_width;
-    height=B.map_height;
+    dims;
     build_mode=`Build;
     options=Options.of_list [`StationBoxes];
   }
@@ -39,24 +38,24 @@ let tile_textures_of_zoom s = function
   (* For drawing code. Make sure we don't exceed map limits *)
 let mapview_bounds v tile_w tile_h =
   (* Pay attention to end as well *)
-  let x_delta = v.width/(tile_w*2) in
-  let y_delta = v.height/(tile_h*2) in
-  let start_x = Utils.clip (v.center_x - x_delta) ~min:0 ~max:(v.width - 2 * x_delta) in
-  let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(v.height - 2 * y_delta) in
+  let x_delta = v.dims.w/(tile_w*2) in
+  let y_delta = v.dims.h/(tile_h*2) in
+  let start_x = Utils.clip (v.center_x - x_delta) ~min:0 ~max:(v.dims.w - 2 * x_delta) in
+  let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(v.dims.w - 2 * y_delta) in
   let end_x = start_x + 2 * x_delta in
   let end_y = start_y + 2 * y_delta in
   start_x, start_y, end_x, end_y
 
 let minimap_bounds v ~(minimap:Utils.rect) =
-  let start_x = Utils.clip (v.center_x - minimap.w/2) ~min:0 ~max:(v.width - minimap.w) in
-  let start_y = Utils.clip (v.center_y - minimap.h/2) ~min:0 ~max:(v.height - minimap.h) in
+  let start_x = Utils.clip (v.center_x - minimap.w/2) ~min:0 ~max:(v.dims.w - minimap.w) in
+  let start_y = Utils.clip (v.center_y - minimap.h/2) ~min:0 ~max:(v.dims.h - minimap.h) in
   let end_x = start_x + minimap.w in
   let end_y = start_y + minimap.h in
   start_x, start_y, end_x, end_y
 
   (* Used by menu *)
-let cursor_on_woodbridge (s:State.t) =
-  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
+let cursor_on_woodbridge backend v =
+  match B.get_track backend v.cursor_x v.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
       | WoodBridge -> true
@@ -64,8 +63,8 @@ let cursor_on_woodbridge (s:State.t) =
       end
   | _ -> false
 
-let cursor_on_station (s:State.t) =
-  match B.get_track s.backend s.view.cursor_x s.view.cursor_y with
+let cursor_on_station backend v =
+  match B.get_track backend v.cursor_x v.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
       | Station (Depot | Station | Terminal) -> true
@@ -85,9 +84,9 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
     let tile_w, tile_h = tile_size_of_zoom Zoom4 in
     let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
     if (cursor_y > 0 && cursor_y < start_y + 1)
-       || (cursor_y < v.height - 1 && cursor_y >= end_y - 1)
+       || (cursor_y < v.dims.h - 1 && cursor_y >= end_y - 1)
        || (cursor_x > 0 && cursor_x < start_x + 1)
-       || (cursor_x < v.width - 1 && cursor_x >= end_x - 1) then
+       || (cursor_x < v.dims.w - 1 && cursor_x >= end_x - 1) then
          cursor_x, cursor_y
     else
          v.center_x, v.center_y
@@ -109,8 +108,8 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
           (* click in mapview *)
           let tile_w, tile_h = tile_size_of_zoom v.zoom in
           let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
-          let cursor_x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.width - 1) in
-          let cursor_y = start_y + (y-y_top)/tile_h |> Utils.clip ~min:0 ~max:(v.height - 1) in
+          let cursor_x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
+          let cursor_y = start_y + (y-y_top)/tile_h |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
           let center_x, center_y =
             match v.zoom with
             | Zoom4 ->
@@ -142,8 +141,8 @@ let update (s:State.t) (v:t) (event:Event.t) ~y_top ~(minimap:Utils.rect) =
     | Some dir ->
       let dx, dy = Dir.to_offsets dir in
       let x, y = x + dx, y + dy in
-      let cursor_x = Utils.clip x ~min:0 ~max:(v.width-1) in
-      let cursor_y = Utils.clip y ~min:0 ~max:(v.height-1) in
+      let cursor_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
+      let cursor_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
       let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
       let actions =
         (* TODO: handle track removal, bridge, tunnel etc *)
@@ -197,8 +196,8 @@ let render win (s:State.t) (v:t) ~y ~minimap =
         let x, y = j * tile_w, y_ui + i * tile_h in
         R.Texture.render win tex ~x ~y;
       )
-      Iter.(0--(v.width/tile_w - 1)))
-    Iter.(0--(v.height/tile_h - 1))
+      Iter.(0--(v.dims.w/tile_w - 1)))
+    Iter.(0--(v.dims.h/tile_h - 1))
   in
 
   let draw_city_names () =
@@ -261,8 +260,8 @@ let render win (s:State.t) (v:t) ~y ~minimap =
           R.Texture.render win tex ~x ~y
         | _ -> ()
       )
-      Iter.(0--(v.width/tile_w - 1)))
-    Iter.(0--(v.height/tile_h - 1))
+      Iter.(0--(v.dims.w/tile_w - 1)))
+    Iter.(0--(v.dims.h/tile_h - 1))
   in
 
   R.clear_screen win;

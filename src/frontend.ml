@@ -22,8 +22,6 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     let ui = Main_ui.default win textures.fonts in
 
-    let view = Mapview.default in
-
     let state = {
       State.screen;
       backend;
@@ -32,7 +30,6 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
       textures;
       seed;
       ui;
-      view;
     } in
 
     Printf.printf " done.\n";
@@ -69,8 +66,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | Screen.MapView ->
-            let ui, view, actions = Main_ui.update s s.ui event in
-            s.view <- view;
+            let ui, actions = Main_ui.update s s.ui event in
             s.ui <- ui;
             let backend = 
               Backend.Action.run_many s.backend actions
