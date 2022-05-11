@@ -40,8 +40,8 @@ let mapview_bounds v tile_w tile_h =
   (* Pay attention to end as well *)
   let x_delta = v.dims.w/(tile_w*2) in
   let y_delta = v.dims.h/(tile_h*2) in
-  let start_x = Utils.clip (v.center_x - x_delta) ~min:0 ~max:(v.dims.w - 2 * x_delta) in
-  let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(v.dims.w - 2 * y_delta) in
+  let start_x = Utils.clip (v.center_x - x_delta) ~min:0 ~max:(v.dims.w - 1 - 2 * x_delta) in
+  let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(v.dims.h - 1 - 2 * y_delta) in
   let end_x = start_x + 2 * x_delta in
   let end_y = start_y + 2 * y_delta in
   start_x, start_y, end_x, end_y
