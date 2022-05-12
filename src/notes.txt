@@ -1,0 +1,3 @@
+Notes:
+- F2 view a little buggy, sometimes freezes
+- Obviously building over water etc not handled

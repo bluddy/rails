@@ -239,10 +239,10 @@ let build_station_menu fonts =
   let open MsgBox in
   make ~fonts ~heading:"Type of facility?" ~x:202 ~y:16
   [
-    make_entry "Si&gnal Tower ($25,000)" @@ `Action(`BuildStation(Track.Station(SignalTower)));
-    make_entry "&Depot ($50,000)" @@ `Action(`BuildStation(Track.Station(Depot)));
-    make_entry "&Station ($100,000)" @@ `Action(`BuildStation(Track.Station(Station)));
-    make_entry "&Terminal ($200,000)" @@ `Action(`BuildStation(Track.Station(Terminal)));
+    make_entry "Si&gnal Tower ($25,000)" @@ `Action(Station.SignalTower);
+    make_entry "&Depot ($50,000)" @@ `Action(Station.Depot);
+    make_entry "&Station ($100,000)" @@ `Action(Station.Station);
+    make_entry "&Terminal ($200,000)" @@ `Action(Station.Terminal);
   ]
 
 let update (s:State.t) v (event:Event.t) =
@@ -260,7 +260,14 @@ let update (s:State.t) v (event:Event.t) =
     (* TODO: use menu_action *)
     let view, backend_actions =
       let dims = v.dims in
-      Mapview.update s v.view event ~y_top:dims.menu.h ~minimap:dims.minimap
+      Mapview.update s v.view event ~minimap:dims.minimap
+    in
+    let v =
+      match menu_action with
+      | On `Build_station ->
+          let menu = build_station_menu s.textures.fonts in
+          {v with mode=BuildStation(menu)}
+      | _ -> v
     in
     v.view <- view;
     v, backend_actions
@@ -283,13 +290,20 @@ let update (s:State.t) v (event:Event.t) =
           | _ ->
               {v with mode=Normal}, []
           end
-      | _ -> failwith "unexpected"
+      | _ ->
+          (* Update build menu *)
+          {v with mode=BuildStation(build_menu)}, []
 
 
 let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
   (* Render main view *)
-  let s = Mapview.render win s v.view ~y:v.dims.menu.h ~minimap:dims.minimap in
+  let build_station = match v.mode with
+    | Normal -> false
+    | BuildStation _ -> true
+  in
+  
+  let s = Mapview.render win s v.view ~minimap:dims.minimap ~build_station in
 
   (* Menu bar background *)
   R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;

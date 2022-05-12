@@ -178,7 +178,7 @@ let update (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
 module R = Renderer
 
-let render win (s:State.t) (v:t) ~minimap =
+let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
 
@@ -262,6 +262,12 @@ let render win (s:State.t) (v:t) ~minimap =
     Iter.(0--(v.dims.h/tile_h - 1))
   in
 
+  let draw_buildstation_mode () =
+    let x = (v.cursor_x - start_x - 1) * tile_w in
+    let y = (v.cursor_y - start_y - 1) * tile_h + v.dims.y in
+    R.draw_rect win ~x ~y ~w:(tile_w * 3) ~h:(tile_h * 3) ~color:Ega.white ~fill:false
+  in
+
   R.clear_screen win;
 
   begin match v.zoom with
@@ -275,11 +281,10 @@ let render win (s:State.t) (v:t) ~minimap =
       tile_render ();
       draw_city_names ();
       draw_minimap ~minimap;
+      if build_station then
+        draw_buildstation_mode ();
       draw_cursor_zoom4 ();
       draw_track_zoom4 ();
   end;
   s
-
-  (* render the Build Station display *)
-(* let render_buildstation win fonts v ~y = *)
 
