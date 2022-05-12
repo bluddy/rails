@@ -237,7 +237,7 @@ let default win fonts =
 let build_station_menu fonts =
   let open Menu in
   let open MsgBox in
-  make ~fonts ~heading:"Type of facility?" ~x:202 ~y:16
+  make ~fonts ~heading:"Type of facility?" ~x:176 ~y:16
   [
     make_entry "Si&gnal Tower ($25,000)" @@ `Action(Station.SignalTower);
     make_entry "&Depot ($50,000)" @@ `Action(Station.Depot);
@@ -265,7 +265,10 @@ let update (s:State.t) v (event:Event.t) =
     let v =
       match menu_action with
       | On `Build_station ->
-          let menu = build_station_menu s.textures.fonts in
+          let menu =
+            build_station_menu s.textures.fonts
+            |> Menu.MsgBox.do_open_menu s
+          in
           {v with mode=BuildStation(menu)}
       | _ -> v
     in
@@ -275,9 +278,8 @@ let update (s:State.t) v (event:Event.t) =
   | BuildStation build_menu ->
       (* Build Station mode *)
       let build_menu, action = Menu.MsgBox.update s build_menu event in
-      (* TODO: build_menu *)
       match action with
-      | Menu.NoAction ->
+      | Menu.NoAction when Event.pressed_esc event ->
           (* Exit build station mode *)
           {v with mode=Normal}, []
       | Menu.On(station_kind) ->
@@ -335,6 +337,13 @@ let render (win:R.window) (s:State.t) v =
 
   (* Menu bar *)
   Menu.Global.render win s s.textures.fonts v.menu;
+
+  (* Build menu *)
+  begin match v.mode with
+  | Normal -> ()
+  | BuildStation menu ->
+      Menu.MsgBox.render win s menu
+  end;
 
   s
 

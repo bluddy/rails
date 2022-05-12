@@ -126,6 +126,8 @@ end
 
 type t = Font.t array
 
+let get_font v idx = v.(idx)
+
 let of_file filename : t =
   let bytes =
     IO.with_in filename @@

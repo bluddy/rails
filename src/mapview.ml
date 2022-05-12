@@ -263,9 +263,22 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
 
   let draw_buildstation_mode () =
+    let color = Ega.gray in
+    let fill = false in
+    let font = Fonts.get_font s.textures.fonts 4 in
     let x = (v.cursor_x - start_x - 1) * tile_w in
+    let font_x = x in
     let y = (v.cursor_y - start_y - 1) * tile_h + v.dims.y in
-    R.draw_rect win ~x ~y ~w:(tile_w * 3) ~h:(tile_h * 3) ~color:Ega.white ~fill:false
+    R.draw_rect win ~x ~y ~w:(tile_w * 3) ~h:(tile_h * 3) ~color ~fill;
+    Fonts.Font.write win font ~color:Ega.white "Depot" ~x:font_x ~y:(y-8);
+    let x = x - tile_w in
+    let y = y - tile_h in
+    R.draw_rect win ~x ~y ~w:(tile_w * 5) ~h:(tile_h * 5) ~color ~fill;
+    Fonts.Font.write win font ~color:Ega.white "Station" ~x:font_x ~y:(y-8);
+    let x = x - tile_w in
+    let y = y - tile_h in
+    R.draw_rect win ~x ~y ~w:(tile_w * 7) ~h:(tile_h * 7) ~color ~fill;
+    Fonts.Font.write win font ~color:Ega.white "Terminal" ~x:font_x ~y:(y-8);
   in
 
   R.clear_screen win;

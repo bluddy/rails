@@ -226,4 +226,7 @@ let of_sdl event ~zoom =
   | `Quit -> Quit
   | _ -> NoEvent
 
+let pressed_esc = function
+  | Key {down=true; key=Escape; _} -> true
+  | _ -> false
 
