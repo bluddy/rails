@@ -34,7 +34,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     Printf.printf " done.\n";
 
-    let update (s:State.t) (event:Event.t) =
+    let handle_tick (s:State.t) (time:int32) =
       let state =
         match s.screen.Screen.view with
         | Screen.MapGen None ->
@@ -42,14 +42,6 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             let cities = Array.to_list @@ B.get_cities s.backend in
             let data = Mapgen.init s.random (B.get_area s.backend) cities in
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) s
-
-        | Screen.MapGen Some {state=`Done; _} ->
-            begin match event with
-            | Key {down=true; _} ->
-                    (* Printf.printf "Mapview\n"; *)
-                    Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView) s
-            | _ -> s
-            end
 
         | Screen.MapGen Some data ->
             let done_fn () =
@@ -66,10 +58,35 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
             Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
 
         | Screen.MapView ->
-            let ui, actions = Main_ui.update s s.ui event in
+            let ui, action = Main_ui.handle_tick s s.ui time in
             s.ui <- ui;
             let backend = 
-              Backend.Action.run_many s.backend actions
+              Backend.Action.run s.backend action
+            in
+            s.backend <- backend;
+            s
+
+        | _ -> s
+      in
+      state
+
+    in
+    let handle_event (s:State.t) (event:Event.t) =
+      let state =
+        match s.screen.Screen.view with
+        | Screen.MapGen Some {state=`Done; _} ->
+            begin match event with
+            | Key {down=true; _} ->
+                    (* Printf.printf "Mapview\n"; *)
+                    Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView) s
+            | _ -> s
+            end
+
+        | Screen.MapView ->
+            let ui, action = Main_ui.handle_event s s.ui event in
+            s.ui <- ui;
+            let backend = 
+              Backend.Action.run s.backend action
             in
             s.backend <- backend;
             s
@@ -87,15 +104,15 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
           R.Texture.render win ~x:0 ~y:0 s.textures.map;
           Fonts.Render.render s.textures.fonts ~win ~to_render:data.text;
           Mapgen.View.render_new_pixels win data s.textures.pixel;
-          s
-      | MapGen None -> s
+          ()
+      | MapGen None -> ()
 
       | MapView ->
           Main_ui.render win s s.ui
 
-      | _ -> s
+      | _ -> ()
     in
-    state, Mainloop.{update; render}
+    state, Mainloop.{handle_event; handle_tick; render}
   in
   Mainloop.main init_fn
 

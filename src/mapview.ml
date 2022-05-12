@@ -77,7 +77,7 @@ let set_build_mode v mode =
 
 let get_build_mode v = v.build_mode
 
-let update (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
+let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
   let check_recenter_zoom4 v cursor_x cursor_y =
     (* recenter in zoom4 if past screen, but only in given direction *)
@@ -137,42 +137,42 @@ let update (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     let x, y = v.cursor_x, v.cursor_y in
     let dir = key_to_dir key in
     match dir with
-    | None -> v, []
+    | None -> v, B.Action.NoAction
     | Some dir ->
       let dx, dy = Dir.to_offsets dir in
       let x, y = x + dx, y + dy in
       let cursor_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
       let cursor_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
       let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
-      let actions =
+      let action =
         (* TODO: handle track removal, bridge, tunnel etc *)
         if build then
           let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
           match check with
-          | `Ok -> [B.Action.BuildTrack {x=v.cursor_x; y=v.cursor_y; dir; player=0}]
-          | `Illegal -> []
+          | `Ok -> B.Action.BuildTrack {x=v.cursor_x; y=v.cursor_y; dir; player=0}
+          | `Illegal -> B.Action.NoAction
         else
-          []
+          B.Action.NoAction
       in
-      {v with center_x; center_y; cursor_x; cursor_y}, actions
+      {v with center_x; center_y; cursor_x; cursor_y}, action
   in
 
   let v, actions =
     match event with
     | Key {down=true; key=F1; _} ->
-        {v with zoom = Zoom1}, []
+        {v with zoom = Zoom1}, B.Action.NoAction
     | Key {down=true; key=F2; _} ->
-        {v with zoom = Zoom2}, []
+        {v with zoom = Zoom2}, B.Action.NoAction
     | Key {down=true; key=F3; _} ->
-        {v with zoom = Zoom3}, []
+        {v with zoom = Zoom3}, B.Action.NoAction
     | Key {down=true; key=F4; _} ->
-        {v with zoom = Zoom4}, []
+        {v with zoom = Zoom4}, B.Action.NoAction
     | MouseButton {down=true; x; y; _} ->
-        handle_mouse_button v x y, []
+        handle_mouse_button v x y, B.Action.NoAction
     | Key {down=true; key; modifiers; _} when equal_zoom v.zoom Zoom4 ->
         let build = Event.Modifiers.shift modifiers in
         handle_key_zoom4 v key ~build
-    | _ -> v, []
+    | _ -> v, B.Action.NoAction
   in
   v, actions
 

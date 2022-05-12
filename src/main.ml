@@ -2,7 +2,7 @@ open Arg
 open Containers
 open Tsdl
 
-type actions = [ `Font | `Pic | `Pani | `City | `MapDemo | `Game]
+type actions = [ `Font | `Pic | `Pani | `City | `Game]
 
 let file = ref ""
 let mode : actions ref = ref `Game
@@ -18,44 +18,10 @@ let arglist =
     "--pic", String (set `Pic), "Convert .PIC to png";
     "--pani", String (set `Pani), "Run the PANI file";
     "--city", String (set `City), "Dump city info file";
-    "--demo", String (set `MapDemo), "Run map demo";
     "--dump", Set dump, "Dump the file";
   ]
 
 module R = Renderer
-
-let init_mapdemo ~filename win =
-  (* Draw the mapdemo *)
-  let _file = filename in
-  let bg_tex = Pic.img_of_file "./WESTUS.PIC" |> R.Texture.make win in
-  (* Map area: 256 * 192 *)
-  let map = Gmap.of_file ~area:Gmap.WestUS ~seed:0 "./WESTUS.PIC" in
-  let map_tex = Gmap.to_img map |> R.Texture.make win in
-  (* let fonts = Fonts.load () in *)
-
-  (* Draw fonts *)
-  (* let pixels = create_pixels (320-256,192) in *)
-  let pixels = Pic.create_rgb_img (320,192) in
-  (* let _ = *)
-  (*   Array.foldi (fun (x, y) i font -> *)
-  (*     Font.write ~font (Printf.sprintf "Font%d\n" i) ~pixels ~x ~y) *)
-  (*   (0, 0) *)
-  (*   fonts *)
-  (* in *)
-  let text_tex = R.Texture.make win pixels in
-
-  let update () _ = (), false in
-
-  let render () =
-    let _ =
-      R.clear_screen win;
-      R.Texture.render win ~x:0 ~y:0 bg_tex;
-      R.Texture.render win ~x:0 ~y:0 map_tex;
-      R.Texture.render win ~x:257 ~y:0 text_tex;
-      Result.return ()
-    in ()
-  in
-  (), Mainloop.{update; render}
 
 let init_pani win ~filename =
   let stream = Pani.stream_of_file filename in
@@ -70,7 +36,7 @@ let init_pani win ~filename =
   let last_time = ref @@ Sdl.get_ticks () in
   let update_delta = 10l in
 
-  let update () _ =
+  let handle_tick () _ =
     begin match !last_state with
     | `Done | `Error -> ()
     | _ ->
@@ -82,7 +48,7 @@ let init_pani win ~filename =
           last_state := Pani_interp.step pani_v;
         )
     end;
-    (), false
+    ()
   in
 
   let render () =
@@ -115,7 +81,8 @@ let init_pani win ~filename =
     Iter.(0 -- 50)
 
   in 
-  ((), Mainloop.{update; render})
+  let handle_event () _ = (), false in
+  ((), Mainloop.{handle_tick; render; handle_event})
 
 let () =
   parse arglist (fun _ -> ()) "Usage";
@@ -125,6 +92,5 @@ let () =
   | `Pani when !dump -> Pani.main !file
   | `Pani -> Mainloop.main @@ init_pani ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `MapDemo -> Mainloop.main @@ init_mapdemo ~filename:!file
   | `Game -> Frontend.run ()
 

@@ -92,11 +92,12 @@ let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct
   type t =
+    | NoAction
     | BuildTrack of {x: int; y: int; dir: Dir.t; player: int}
     | BuildStation of {x: int; y: int; kind: Station.t}
     | BuildBridge of {x: int; y: int; dir: Dir.t; kind: [`Wood | `Metal | `Stone]; player: int}
 
-  let run_one backend = function
+  let run backend = function
     | BuildTrack {x; y; dir; player} ->
         let track = build_track backend ~x ~y ~dir ~player in
         {backend with track}
@@ -106,12 +107,7 @@ module Action = struct
     | BuildBridge {x; y; kind; dir; player} ->
         let track = build_bridge backend ~x ~y ~dir ~kind ~player in
         {backend with track}
-
-  let run_many backend (li:t list) =
-    List.fold_left (fun acc x ->
-      run_one acc x)
-    backend
-    li
+    | NoAction -> backend
 
 end
 

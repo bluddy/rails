@@ -245,7 +245,7 @@ let build_station_menu fonts =
     make_entry "&Terminal ($200,000)" @@ `Action(Station.Terminal);
   ]
 
-let update (s:State.t) v (event:Event.t) =
+let handle_event (s:State.t) v (event:Event.t) =
   match v.mode with
   | Normal ->
     let v, menu_action, event =
@@ -260,7 +260,7 @@ let update (s:State.t) v (event:Event.t) =
     (* TODO: use menu_action *)
     let view, backend_actions =
       let dims = v.dims in
-      Mapview.update s v.view event ~minimap:dims.minimap
+      Mapview.handle_event s v.view event ~minimap:dims.minimap
     in
     let v =
       match menu_action with
@@ -281,21 +281,22 @@ let update (s:State.t) v (event:Event.t) =
       match action with
       | Menu.NoAction when Event.pressed_esc event ->
           (* Exit build station mode *)
-          {v with mode=Normal}, []
+          {v with mode=Normal}, B.Action.NoAction
       | Menu.On(station_kind) ->
           let x, y = Mapview.get_cursor_pos v.view in
           begin match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
           | `Ok -> 
-              let backend_action = [B.Action.BuildStation{x; y; kind=station_kind}] in
+              let backend_action = B.Action.BuildStation{x; y; kind=station_kind} in
               {v with mode=Normal}, backend_action
               (* TODO: handle other cases *)
           | _ ->
-              {v with mode=Normal}, []
+              {v with mode=Normal}, B.Action.NoAction
           end
       | _ ->
           (* Update build menu *)
-          {v with mode=BuildStation(build_menu)}, []
+          {v with mode=BuildStation(build_menu)}, B.Action.NoAction
 
+let handle_tick _s v _time = v, B.Action.NoAction
 
 let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
@@ -345,5 +346,6 @@ let render (win:R.window) (s:State.t) v =
       Menu.MsgBox.render win s menu
   end;
 
-  s
+  ()
+
 
