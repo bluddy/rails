@@ -37,8 +37,8 @@ let pre_build_track v ~x ~y ~dir ~player =
   let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.height - 1) in
   let track1 = get_track v x y ~player in
   let track2 = get_track v x2 y2 ~player in
-  let track1 = Track.add_dir track1 dir in
-  let track2 = Track.add_dir track2 @@ Dir.opposite dir in
+  let track1 = Track.add_dir track1 ~dir in
+  let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
   track1, track2, x2, y2
 
   (* check before building *)
@@ -98,19 +98,16 @@ let check_build_bridge v ~x ~y ~dir ~player =
       `Illegal
   else
     (* Must have some track *)
-    match get v x y, get v x2 y2, get_track v x3 y3 player with
-    | _, Some track2, _ -> `Illegal (* Bridge already exists *)
+    match get v x y, get v x2 y2, get_track v x3 y3 ~player with
+    | _, Some _, _ -> `Illegal (* Bridge already exists *)
     | Some track1, None, ({kind=Track; _} as track3) ->
-        let track1 = Track.add_dir track1 dir in
+        let track1 = Track.add_dir track1 ~dir in
         let track3 = Track.add_dir track3 ~dir:(Dir.opposite dir) in
         if Track.is_legal track1 && Track.is_legal track3 then `Ok
         else `Illegal
     | _ -> `Illegal
 
 let build_bridge v ~x ~y ~dir ~player ~kind =
-  let kind = match kind with
-    `Wood -> Track.WoodBridge | `Stone -> Track.StoneBridge | `Metal -> Track.MetalBridge
-  in
   let dx, dy = Dir.to_offsets dir in
   let x2, y2 = x + dx, y + dy in
   let x3, y3 = x2 + dx, y2 + dy in
@@ -124,7 +121,7 @@ let build_bridge v ~x ~y ~dir ~player ~kind =
           Track.empty player
           |> Track.add_dir ~dir
           |> Track.add_dir ~dir:(Dir.opposite dir)
-          |> Track.change_kind ~kind
+          |> Track.change_kind ~kind:(Bridge kind)
         in
         let track3 =
           Track.empty player

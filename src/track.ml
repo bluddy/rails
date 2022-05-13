@@ -4,9 +4,7 @@ type kind =
   | Track
   | Tunnel
   | Station of Station.t
-  | WoodBridge
-  | MetalBridge
-  | StoneBridge
+  | Bridge of Bridge.t
   [@@deriving eq, hash]
 
 type t =

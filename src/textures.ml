@@ -184,19 +184,21 @@ module Tracks = struct
 
   let load win res =
     let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS" in
+    let extra_ndarray = Hashtbl.find res.res_pics "TRACKS_extra" in
     let w = (Ndarray.shape ndarray).(1) in
     let num_j = w / tile_w in
     let track_dict = Track.Htbl.create 100 in
 
-    let get_tex i j =
+    let get_tex ?(extra=false) i j =
       let x, y = j * tile_w, i * tile_h in
-      let slice = Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarray in
+      let ndarr = if extra then extra_ndarray else ndarray in
+      let slice = Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarr in
       let tex = R.Texture.make win slice in
       tex
     in
-    let load_textures start_i start_j kind dirslist =
+    let load_textures ?extra start_i start_j kind dirslist =
       List.fold_left (fun (i,j) li ->
-        let tex = get_tex i j in
+        let tex = get_tex ?extra i j in
         let dirs = Dir.Set.of_list li in
         let track = Track.make dirs kind ~player:0 in
         Track.Htbl.replace track_dict track tex;
@@ -216,8 +218,9 @@ module Tracks = struct
     load_textures 0 0 Track all_tracks;
 
     load_textures 3 0 Tunnel Resources.special_dirs;
-    load_textures 3 4 MetalBridge Resources.special_dirs;
-    load_textures 3 8 WoodBridge Resources.special_dirs;
+    load_textures 3 4 (Bridge(Bridge.Metal)) Resources.special_dirs;
+    load_textures 3 8 (Bridge(Bridge.Wood)) Resources.special_dirs;
+    load_textures ~extra:true 3 8 (Bridge(Bridge.Stone)) Resources.special_dirs;
     load_textures 4 0 (Station(Station.SignalTower)) Resources.special_dirs;
     load_textures 4 0 (Station(Station.Depot)) Resources.special_dirs;
     load_textures 4 4 (Station(Station.Station)) Resources.special_dirs;

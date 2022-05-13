@@ -95,7 +95,7 @@ module Action = struct
     | NoAction
     | BuildTrack of {x: int; y: int; dir: Dir.t; player: int}
     | BuildStation of {x: int; y: int; kind: Station.t}
-    | BuildBridge of {x: int; y: int; dir: Dir.t; kind: [`Wood | `Metal | `Stone]; player: int}
+    | BuildBridge of {x: int; y: int; dir: Dir.t; kind: Bridge.t; player: int}
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->

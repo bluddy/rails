@@ -17,7 +17,7 @@ let load_pics () =
   let filenames = [
     (* E and C versions are for England and Europe *)
     "SPRITES.PIC"; "CSPRITES.PIC"; "ESPRITES.PIC"; "SPRITES_extra.png";
-    "TRACKS.PIC"; "STATION.PIC"; "FACES.PIC"; "BRITAIN.PIC";
+    "TRACKS.PIC"; "TRACKS_extra.png"; "STATION.PIC"; "FACES.PIC"; "BRITAIN.PIC";
     "TITLE.PIC";
     "LOGO.PIC"; "LABS.PIC"; "CREDITS2.PIC"; "ADVERT.PIC";
     "DIFFS.PIC"; "DIFFSP.PIC"; "COUNCIL.PIC";

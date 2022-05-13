@@ -58,7 +58,7 @@ let cursor_on_woodbridge backend v =
   match B.get_track backend v.cursor_x v.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
-      | WoodBridge -> true
+      | Bridge Wood -> true
       | _ -> false
       end
   | _ -> false
