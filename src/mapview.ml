@@ -255,7 +255,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         | Some track ->
           let tex = Textures.Tracks.find track_h track in
           let x, y = j * tile_w, v.dims.y + i * tile_h in
-          R.Texture.render win tex ~x ~y
+          R.Texture.render win tex ~x:(x-2) ~y:(y-2)
         | _ -> ()
       )
       Iter.(0--(v.dims.w/tile_w - 1)))

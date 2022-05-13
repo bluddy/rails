@@ -84,10 +84,10 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
         | Screen.MapView ->
             let ui, action = Main_ui.handle_event s s.ui event in
-            s.ui <- ui;
             let backend = 
               Backend.Action.run s.backend action
             in
+            s.ui <- ui;
             s.backend <- backend;
             s
 
