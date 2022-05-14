@@ -77,7 +77,7 @@ type 'a mode =
   | Normal
   | ModalMsgbox of (unit, 'a) Menu.MsgBox.t * 'a mode
   | BuildStation of (Station.t option, 'a) Menu.MsgBox.t
-  | BuildBridge of (Bridge.t option, 'a) Menu.MsgBox.t * Dir.t
+  | BuildBridge of (Bridge.t option, 'a) Menu.MsgBox.t * Utils.msg
 
 type 'a t = {
   dims: dims;

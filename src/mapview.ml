@@ -137,7 +137,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     let x, y = v.cursor_x, v.cursor_y in
     let dir = key_to_dir key in
     match dir with
-    | None -> v, B.Action.NoAction
+    | None -> v, `NoAction
     | Some dir ->
       let dx, dy = Dir.to_offsets dir in
       let x, y = x + dx, y + dy in
@@ -149,10 +149,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         if build then
           let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
           match check with
-          | `Ok -> B.Action.BuildTrack {x=v.cursor_x; y=v.cursor_y; dir; player=0}
-          | `Illegal -> B.Action.NoAction
+          | `Ok -> `BuildTrack Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
+          | `Bridge -> `BuildBridge Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
+          | `Illegal -> `NoAction
         else
-          B.Action.NoAction
+          `NoAction
       in
       {v with center_x; center_y; cursor_x; cursor_y}, action
   in
@@ -160,19 +161,19 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   let v, actions =
     match event with
     | Key {down=true; key=F1; _} ->
-        {v with zoom = Zoom1}, B.Action.NoAction
+        {v with zoom = Zoom1}, `NoAction
     | Key {down=true; key=F2; _} ->
-        {v with zoom = Zoom2}, B.Action.NoAction
+        {v with zoom = Zoom2}, `NoAction
     | Key {down=true; key=F3; _} ->
-        {v with zoom = Zoom3}, B.Action.NoAction
+        {v with zoom = Zoom3}, `NoAction
     | Key {down=true; key=F4; _} ->
-        {v with zoom = Zoom4}, B.Action.NoAction
+        {v with zoom = Zoom4}, `NoAction
     | MouseButton {down=true; x; y; _} ->
-        handle_mouse_button v x y, B.Action.NoAction
+        handle_mouse_button v x y, `NoAction
     | Key {down=true; key; modifiers; _} when equal_zoom v.zoom Zoom4 ->
         let build = Event.Modifiers.shift modifiers in
         handle_key_zoom4 v key ~build
-    | _ -> v, B.Action.NoAction
+    | _ -> v, `NoAction
   in
   v, actions
 

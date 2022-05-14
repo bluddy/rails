@@ -270,22 +270,30 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with menu}, a, NoEvent 
     in
     (* TODO: use menu_action *)
-    let view, backend_actions =
-      let dims = v.dims in
-      Mapview.handle_event s v.view event ~minimap:dims.minimap
+    let view, view_action =
+      Mapview.handle_event s v.view event ~minimap:v.dims.minimap
     in
-    let v =
-      match menu_action with
-      | On `Build_station ->
+    let v, backend_action =
+      match menu_action, view_action with
+      | On `Build_station, _ ->
           let menu =
             build_station_menu s.textures.fonts
             |> Menu.MsgBox.do_open_menu s
           in
-          {v with mode=BuildStation(menu)}
-      | _ -> v
+          {v with mode=BuildStation(menu)}, B.Action.NoAction
+      | _, `BuildTrack msg ->
+          v, B.Action.BuildTrack msg
+      | _, `BuildBridge msg ->
+          let menu =
+            build_bridge_menu s.textures.fonts
+            |> Menu.MsgBox.do_open_menu s
+          in
+          {v with mode=BuildBridge(menu, msg)}, B.Action.NoAction
+      | _ ->
+          v, B.Action.NoAction
     in
     v.view <- view;
-    v, backend_actions
+    v, backend_action
 
   | ModalMsgbox (msgbox, prev_mode) ->
       let _, action = Menu.MsgBox.update s msgbox event in
@@ -320,24 +328,23 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with mode=BuildStation(build_menu)}, B.Action.NoAction
       end
 
-  | BuildBridge (build_menu, dir) ->
+  | BuildBridge (build_menu, ({x; y; dir; player} as msg)) ->
       let build_menu, action = Menu.MsgBox.update s build_menu event in
       begin match action with
       | Menu.On(None)
       | Menu.NoAction when Event.pressed_esc event ->
           {v with mode=Normal}, B.Action.NoAction
       | Menu.On(Some bridge_kind) ->
-          let x, y = Mapview.get_cursor_pos v.view in
-          begin match Backend.check_build_bridge s.backend ~x ~y ~dir ~player:0 with
+          begin match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
           | `Ok -> 
-              let backend_action = B.Action.BuildBridge{x; y; dir; player=0; kind=bridge_kind} in
+              let backend_action = B.Action.BuildBridge(msg, bridge_kind) in
               {v with mode=Normal}, backend_action
           | _ ->
               {v with mode=Normal}, B.Action.NoAction
           end
       | _ ->
           (* Update build menu *)
-          {v with mode=BuildBridge(build_menu, dir)}, B.Action.NoAction
+          {v with mode=BuildBridge(build_menu, msg)}, B.Action.NoAction
       end
 
 let handle_tick _s v _time = v, B.Action.NoAction
@@ -383,16 +390,18 @@ let render (win:R.window) (s:State.t) v =
   (* Menu bar *)
   Menu.Global.render win s s.textures.fonts v.menu;
 
-  (* Build menu *)
-  begin match v.mode with
-  | Normal -> ()
-  | ModalMsgbox(box, _) ->
-      Menu.MsgBox.render win s box
-  | BuildStation menu ->
-      Menu.MsgBox.render win s menu
-  | BuildBridge (menu, _) ->
-      Menu.MsgBox.render win s menu
-  end;
+  (* Msgboxes *)
+  let rec render_mode = function
+    | Normal -> ()
+    | ModalMsgbox(box, prev_mode) ->
+        render_mode prev_mode;
+        Menu.MsgBox.render win s box
+    | BuildStation menu ->
+        Menu.MsgBox.render win s menu
+    | BuildBridge (menu, _) ->
+        Menu.MsgBox.render win s menu
+  in
+  render_mode v.mode;
 
   ()
 

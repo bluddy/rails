@@ -98,9 +98,9 @@ let trackmap_iter v f = Trackmap.iter v.track f
 module Action = struct
   type t =
     | NoAction
-    | BuildTrack of {x: int; y: int; dir: Dir.t; player: int}
+    | BuildTrack of Utils.msg
     | BuildStation of {x: int; y: int; kind: Station.t}
-    | BuildBridge of {x: int; y: int; dir: Dir.t; kind: Bridge.t; player: int}
+    | BuildBridge of Utils.msg * Bridge.t
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
@@ -109,7 +109,7 @@ module Action = struct
     | BuildStation {x; y; kind} ->
         let track = build_station backend ~x ~y kind in
         {backend with track}
-    | BuildBridge {x; y; kind; dir; player} ->
+    | BuildBridge({x; y; dir; player}, kind) ->
         let track = build_bridge backend ~x ~y ~dir ~kind ~player in
         {backend with track}
     | NoAction -> backend
