@@ -218,7 +218,7 @@ module Tracks = struct
     load_textures 0 0 Track all_tracks;
 
     load_textures 3 0 Tunnel Resources.special_dirs;
-    load_textures 3 4 (Bridge(Bridge.Metal)) Resources.special_dirs;
+    load_textures 3 4 (Bridge(Bridge.Iron)) Resources.special_dirs;
     load_textures 3 8 (Bridge(Bridge.Wood)) Resources.special_dirs;
     load_textures ~extra:true 3 8 (Bridge(Bridge.Stone)) Resources.special_dirs;
     load_textures 4 0 (Station(Station.SignalTower)) Resources.special_dirs;

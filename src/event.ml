@@ -230,3 +230,8 @@ let pressed_esc = function
   | Key {down=true; key=Escape; _} -> true
   | _ -> false
 
+let key_modal_dismiss = function
+  | Key {down=true; key=Escape|Enter|Space; _} -> true
+  | _ -> false
+
+

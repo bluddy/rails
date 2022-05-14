@@ -239,10 +239,22 @@ let build_station_menu fonts =
   let open MsgBox in
   make ~fonts ~heading:"Type of facility?" ~x:176 ~y:16
   [
-    make_entry "Si&gnal Tower ($25,000)" @@ `Action(Station.SignalTower);
-    make_entry "&Depot ($50,000)" @@ `Action(Station.Depot);
-    make_entry "&Station ($100,000)" @@ `Action(Station.Station);
-    make_entry "&Terminal ($200,000)" @@ `Action(Station.Terminal);
+    make_entry "&CANCEL" @@ `Action(None);
+    make_entry "Si&gnal Tower ($25,000)" @@ `Action(Some Station.SignalTower);
+    make_entry "&Depot ($50,000)" @@ `Action(Some Station.Depot);
+    make_entry "&Station ($100,000)" @@ `Action(Some Station.Station);
+    make_entry "&Terminal ($200,000)" @@ `Action(Some Station.Terminal);
+  ]
+
+let build_bridge_menu fonts =
+  let open Menu in
+  let open MsgBox in
+  make ~fonts ~heading:"Type of bridge?" ~x:176 ~y:16
+  [
+    make_entry "&CANCEL" @@ `Action(None);
+    make_entry "&Wooden Trestle ($50,000)" @@ `Action(Some Bridge.Wood);
+    make_entry "&Stone Masonry ($400,000)" @@ `Action(Some Bridge.Stone);
+    make_entry "&Iron Girder ($200,000)" @@ `Action(Some Bridge.Iron);
   ]
 
 let handle_event (s:State.t) v (event:Event.t) =
@@ -275,14 +287,25 @@ let handle_event (s:State.t) v (event:Event.t) =
     v.view <- view;
     v, backend_actions
 
+  | ModalMsgbox (msgbox, prev_mode) ->
+      let _, action = Menu.MsgBox.update s msgbox event in
+      begin match action with
+      | Menu.ClickInMsgBox
+      | Menu.NoAction when Event.key_modal_dismiss event ->
+          {v with mode=prev_mode}, B.Action.NoAction
+      | _ ->
+          (v, B.Action.NoAction)
+      end
+
   | BuildStation build_menu ->
       (* Build Station mode *)
       let build_menu, action = Menu.MsgBox.update s build_menu event in
-      match action with
+      begin match action with
+      | Menu.On(None)
       | Menu.NoAction when Event.pressed_esc event ->
           (* Exit build station mode *)
           {v with mode=Normal}, B.Action.NoAction
-      | Menu.On(station_kind) ->
+      | Menu.On(Some station_kind) ->
           let x, y = Mapview.get_cursor_pos v.view in
           begin match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
           | `Ok -> 
@@ -295,6 +318,27 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _ ->
           (* Update build menu *)
           {v with mode=BuildStation(build_menu)}, B.Action.NoAction
+      end
+
+  | BuildBridge (build_menu, dir) ->
+      let build_menu, action = Menu.MsgBox.update s build_menu event in
+      begin match action with
+      | Menu.On(None)
+      | Menu.NoAction when Event.pressed_esc event ->
+          {v with mode=Normal}, B.Action.NoAction
+      | Menu.On(Some bridge_kind) ->
+          let x, y = Mapview.get_cursor_pos v.view in
+          begin match Backend.check_build_bridge s.backend ~x ~y ~dir ~player:0 with
+          | `Ok -> 
+              let backend_action = B.Action.BuildBridge{x; y; dir; player=0; kind=bridge_kind} in
+              {v with mode=Normal}, backend_action
+          | _ ->
+              {v with mode=Normal}, B.Action.NoAction
+          end
+      | _ ->
+          (* Update build menu *)
+          {v with mode=BuildBridge(build_menu, dir)}, B.Action.NoAction
+      end
 
 let handle_tick _s v _time = v, B.Action.NoAction
 
@@ -302,8 +346,8 @@ let render (win:R.window) (s:State.t) v =
   let dims = v.dims in
   (* Render main view *)
   let build_station = match v.mode with
-    | Normal -> false
     | BuildStation _ -> true
+    | _ -> false
   in
   
   let s = Mapview.render win s v.view ~minimap:dims.minimap ~build_station in
@@ -342,7 +386,11 @@ let render (win:R.window) (s:State.t) v =
   (* Build menu *)
   begin match v.mode with
   | Normal -> ()
+  | ModalMsgbox(box, _) ->
+      Menu.MsgBox.render win s box
   | BuildStation menu ->
+      Menu.MsgBox.render win s menu
+  | BuildBridge (menu, _) ->
       Menu.MsgBox.render win s menu
   end;
 

@@ -85,6 +85,11 @@ let build_station v ~x ~y station_type =
   (* TODO: create actual station data structure *)
   Trackmap.build_station v.track ~x ~y station_type
 
+let check_build_bridge v ~x ~y ~dir ~player =
+  match check_build_track v ~x ~y ~dir ~player with
+  | `Bridge -> `Ok
+  | _ -> `Illegal
+
 let build_bridge v ~x ~y ~dir ~player ~kind =
   Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind
 
