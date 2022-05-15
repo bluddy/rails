@@ -338,7 +338,8 @@ let handle_event (s:State.t) v (event:Event.t) =
           begin match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
           | `Ok -> 
               let backend_action = B.Action.BuildBridge(msg, bridge_kind) in
-              {v with mode=Normal}, backend_action
+              let view = Mapview.move_cursor v.view dir in
+              {v with mode=Normal; view}, backend_action
           | _ ->
               {v with mode=Normal}, B.Action.NoAction
           end

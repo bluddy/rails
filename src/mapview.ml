@@ -53,6 +53,27 @@ let minimap_bounds v ~(minimap:Utils.rect) =
   let end_y = start_y + minimap.h in
   start_x, start_y, end_x, end_y
 
+
+let check_recenter_zoom4 v cursor_x cursor_y =
+  (* recenter in zoom4 if past screen, but only in given direction *)
+  let tile_w, tile_h = tile_size_of_zoom Zoom4 in
+  let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
+  if (cursor_y > 0 && cursor_y < start_y + 1)
+      || (cursor_y < v.dims.h - 1 && cursor_y >= end_y - 1)
+      || (cursor_x > 0 && cursor_x < start_x + 1)
+      || (cursor_x < v.dims.w - 1 && cursor_x >= end_x - 1) then
+        cursor_x, cursor_y
+  else
+        v.center_x, v.center_y
+
+let move_cursor v dir =
+  let dx, dy = Dir.to_offsets dir in
+  let x, y = v.cursor_x + dx, v.cursor_y + dy in
+  let cursor_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
+  let cursor_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
+  let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
+  {v with cursor_x; cursor_y; center_x; center_y}
+
   (* Used by menu *)
 let cursor_on_woodbridge backend v =
   match B.get_track backend v.cursor_x v.cursor_y with
@@ -78,19 +99,6 @@ let set_build_mode v mode =
 let get_build_mode v = v.build_mode
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
-
-  let check_recenter_zoom4 v cursor_x cursor_y =
-    (* recenter in zoom4 if past screen, but only in given direction *)
-    let tile_w, tile_h = tile_size_of_zoom Zoom4 in
-    let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-    if (cursor_y > 0 && cursor_y < start_y + 1)
-       || (cursor_y < v.dims.h - 1 && cursor_y >= end_y - 1)
-       || (cursor_x > 0 && cursor_x < start_x + 1)
-       || (cursor_x < v.dims.w - 1 && cursor_x >= end_x - 1) then
-         cursor_x, cursor_y
-    else
-         v.center_x, v.center_y
-  in
 
   let handle_mouse_button v x y =
 
@@ -134,28 +142,29 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   in
 
   let handle_key_zoom4 v key ~build =
-    let x, y = v.cursor_x, v.cursor_y in
     let dir = key_to_dir key in
     match dir with
     | None -> v, `NoAction
     | Some dir ->
-      let dx, dy = Dir.to_offsets dir in
-      let x, y = x + dx, y + dy in
-      let cursor_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
-      let cursor_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
-      let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
-      let action =
+        let v2 = move_cursor v dir in
         (* TODO: handle track removal, bridge, tunnel etc *)
         if build then
           let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
           match check with
-          | `Ok -> `BuildTrack Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
-          | `Bridge -> `BuildBridge Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
-          | `Illegal -> `NoAction
+          | `Ok ->
+              let action =
+                `BuildTrack Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
+              in
+              v2, action
+          | `Bridge ->
+              let action = 
+                `BuildBridge Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
+              in
+              v2, action
+          | `Illegal ->
+              v, `NoAction
         else
-          `NoAction
-      in
-      {v with center_x; center_y; cursor_x; cursor_y}, action
+          v2, `NoAction
   in
 
   let v, actions =
