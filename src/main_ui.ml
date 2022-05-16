@@ -272,8 +272,12 @@ let handle_event (s:State.t) v (event:Event.t) =
     let view = v.view in
     let view =
       match menu_action with
-      | On(`Survey) -> Mapview.set_survey view true
-      | Off(`Survey) -> Mapview.set_survey view false
+      | On(`Survey) ->
+          print_endline "set_true";
+          Mapview.set_survey view true
+      | Off(`Survey) ->
+          print_endline "set_false";
+          Mapview.set_survey view false
       | _ -> view
     in
 

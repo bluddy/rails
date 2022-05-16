@@ -195,9 +195,9 @@ module MsgBox = struct
     | Action action ->
         v, On(action)
     | Checkbox(action, fn) when fn s ->
-        v, On(action)
-    | Checkbox(action, _) ->
         v, Off(action)
+    | Checkbox(action, _) ->
+        v, On(action)
 
   let rec close_entry v =
     match v.fire with
