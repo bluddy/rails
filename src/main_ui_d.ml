@@ -66,10 +66,10 @@ type menu_action =
     | `Improve_station
     | `Upgrade_bridge
     | `Reality_level of Backend.reality_level
-    | `Action_call_broker
-    | `Action_survey
-    | `Action_name_rr
-    | `Action_retire
+    | `Call_broker
+    | `Survey
+    | `Name_rr
+    | `Retire
     ]
     [@@deriving show]
 

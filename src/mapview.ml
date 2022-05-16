@@ -197,8 +197,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
   let iter_screen f =
-    for i = 0 to v.dims.w/tile_w - 1 do
-      for j = 0 to v.dims.h/tile_h - 1 do
+    for i = 0 to v.dims.h/tile_h - 1 do
+      for j = 0 to v.dims.w/tile_w - 1 do
         f i j
       done
     done

@@ -139,11 +139,11 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts ~x:202 ~y:8
     [
-      make_entry "Call &Broker (F9)" @@ `Action `Action_call_broker;
+      make_entry "Call &Broker (F9)" @@ `Action `Call_broker;
       make_entry "&Survey (F10)" @@ `Checkbox(`Survey, fun (s:State.t) -> Mapview.get_survey s.ui.view);
-      make_entry "&Name RR" @@ `Action `Action_name_rr;
+      make_entry "&Name RR" @@ `Action `Name_rr;
       make_entry "&Reality Levels" @@ `MsgBox reality_levels;
-      make_entry "Re&tire" @@ `Action `Action_retire;
+      make_entry "Re&tire" @@ `Action `Retire;
     ]
   in
   let titles =
@@ -278,7 +278,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     in
 
     let view, view_action =
-      Mapview.handle_event s view event menu_action ~minimap:v.dims.minimap
+      Mapview.handle_event s view event ~minimap:v.dims.minimap
     in
     let v, backend_action =
       match menu_action, view_action with
