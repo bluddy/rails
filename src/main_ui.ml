@@ -140,7 +140,7 @@ let main_menu fonts menu_h =
     make ~fonts ~x:202 ~y:8
     [
       make_entry "Call &Broker (F9)" @@ `Action `Action_call_broker;
-      make_entry "&Survey (F10)" @@ `Action `Action_survey;
+      make_entry "&Survey (F10)" @@ `Checkbox(`Survey, fun (s:State.t) -> Mapview.get_survey s.ui.view);
       make_entry "&Name RR" @@ `Action `Action_name_rr;
       make_entry "&Reality Levels" @@ `MsgBox reality_levels;
       make_entry "Re&tire" @@ `Action `Action_retire;
@@ -269,9 +269,16 @@ let handle_event (s:State.t) v (event:Event.t) =
           (* Cancel out events we handled *)
           {v with menu}, a, NoEvent 
     in
-    (* TODO: use menu_action *)
+    let view = v.view in
+    let view =
+      match menu_action with
+      | On(`Survey) -> Mapview.set_survey view true
+      | Off(`Survey) -> Mapview.set_survey view false
+      | _ -> view
+    in
+
     let view, view_action =
-      Mapview.handle_event s v.view event ~minimap:v.dims.minimap
+      Mapview.handle_event s view event menu_action ~minimap:v.dims.minimap
     in
     let v, backend_action =
       match menu_action, view_action with

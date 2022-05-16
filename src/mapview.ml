@@ -14,6 +14,7 @@ let default dims =
     zoom=Zoom4;
     dims;
     build_mode=`Build;
+    survey=false;
     options=Options.of_list [`StationBoxes];
   }
 
@@ -97,6 +98,10 @@ let set_build_mode v mode =
   {v with build_mode = mode}
 
 let get_build_mode v = v.build_mode
+
+let get_survey v = v.survey
+
+let set_survey v b = {v with survey=b}
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
@@ -191,21 +196,24 @@ module R = Renderer
 let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
+  let iter_screen f =
+    for i = 0 to v.dims.w/tile_w - 1 do
+      for j = 0 to v.dims.h/tile_h - 1 do
+        f i j
+      done
+    done
+  in
 
   let tile_render () =
     let tiles = tile_textures_of_zoom s v.zoom in
-
-    Iter.iter (fun i ->
-      Iter.iter (fun j ->
-        let map_x, map_y = start_x + j, start_y + i in
-        let alt = ((map_x + map_y) land 1) > 0 in
-        let tile = B.get_tile s.backend map_x map_y in
-        let tex = Textures.Tile.find tiles ~area:(B.get_area s.backend) ~alt tile in
-        let x, y = j * tile_w, v.dims.y + i * tile_h in
-        R.Texture.render win tex ~x ~y;
-      )
-      Iter.(0--(v.dims.w/tile_w - 1)))
-    Iter.(0--(v.dims.h/tile_h - 1))
+    iter_screen (fun i j ->
+      let map_x, map_y = start_x + j, start_y + i in
+      let alt = ((map_x + map_y) land 1) > 0 in
+      let tile = B.get_tile s.backend map_x map_y in
+      let tex = Textures.Tile.find tiles ~area:(B.get_area s.backend) ~alt tile in
+      let x, y = j * tile_w, v.dims.y + i * tile_h in
+      R.Texture.render win tex ~x ~y;
+    )
   in
 
   let draw_city_names () =
@@ -257,19 +265,25 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
 
   let draw_track_zoom4 () =
     let track_h = s.State.textures.tracks in
+    iter_screen (fun i j ->
+      let map_x, map_y = start_x + j, start_y + i in
+      match B.get_track s.backend map_x map_y with
+      | Some track ->
+        let tex = Textures.Tracks.find track_h track in
+        let x, y = j * tile_w, v.dims.y + i * tile_h in
+        R.Texture.render win tex ~x:(x-2) ~y:(y-2)
+      | _ -> ()
+    )
+  in
 
-    Iter.iter (fun i ->
-      Iter.iter (fun j ->
-        let map_x, map_y = start_x + j, start_y + i in
-        match B.get_track s.backend map_x map_y with
-        | Some track ->
-          let tex = Textures.Tracks.find track_h track in
-          let x, y = j * tile_w, v.dims.y + i * tile_h in
-          R.Texture.render win tex ~x:(x-2) ~y:(y-2)
-        | _ -> ()
-      )
-      Iter.(0--(v.dims.w/tile_w - 1)))
-    Iter.(0--(v.dims.h/tile_h - 1))
+  let draw_survey_zoom4 () =
+    iter_screen (fun i j ->
+      let map_x, map_y = start_x + j, start_y + i in
+      let height = B.get_tile_height s.backend map_x map_y in
+      let x, y = j * tile_w + tile_w/2, i * tile_h + tile_h/2 in
+      Fonts.Render.write win s.textures.fonts (string_of_int height) ~idx:1 ~x ~y ~color:Ega.white
+    )
+    
   in
 
   let draw_buildstation_mode () =
@@ -304,10 +318,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       tile_render ();
       draw_city_names ();
       draw_minimap ~minimap;
-      if build_station then
-        draw_buildstation_mode ();
-      draw_cursor_zoom4 ();
+      if build_station then (
+        draw_buildstation_mode ()
+      ) else if v.survey then (
+        draw_survey_zoom4 ()
+      );
       draw_track_zoom4 ();
+      draw_cursor_zoom4 ();
   end;
   s
 

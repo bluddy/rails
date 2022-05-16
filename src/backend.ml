@@ -58,6 +58,8 @@ let get_cities v = v.cities
 
 let get_map v = v.map
 
+let get_tile_height v x y = Gmap.get_tile_height v.map x y
+
 let iter_cities f v = 
   Array.iter (fun city -> f city.Gmap.name city.x city.y) v.cities
 

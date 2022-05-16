@@ -25,5 +25,6 @@ type t =
     zoom: zoom;
     dims: Utils.rect;
     build_mode: build_mode;
+    survey: bool;
     options: Options.t;
   }

@@ -162,7 +162,7 @@ let set_tile v x y tile =
 let set_height v ~x ~y height =
   v.heightmap.(calc_offset v x y) <- height
 
-let get_height v x y = v.heightmap.(calc_offset v x y)
+let get_tile_height v x y = v.heightmap.(calc_offset v x y)
 
 let mapxy ~width f arr =
   Array.mapi (fun i value ->
