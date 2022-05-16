@@ -56,6 +56,7 @@ type tile =
 type t = {
   seed: int; (* 15 bit value *)
   map: tile array;
+  heightmap: int array;
   width: int;
   height: int;
 }
@@ -81,10 +82,28 @@ type pixel =
   | Farm_pixel     (* 10 *)
   | Hills_pixel
   | Village_pixel
-  | EnemyRR_pixel
+  | EnemyRR_pixel (* dummy *)
   | City_pixel
   | Mountain_pixel (* 15 *)
   [@@deriving enum, eq]
+
+let height_of_pixel = function
+  | Slum_pixel -> 1
+  | Ocean_pixel -> 0
+  | Clear_pixel -> 1
+  | Woods_pixel -> 1
+  | Harbor_pixel -> 0
+  | CoalMine_pixel -> 2
+  | Desert_pixel -> 1
+  | Foothills_pixel -> 2
+  | OilWell_pixel -> 1
+  | River_pixel -> 0
+  | Farm_pixel -> 1
+  | Hills_pixel -> 4
+  | Village_pixel -> 1
+  | EnemyRR_pixel -> 1
+  | City_pixel -> 1
+  | Mountain_pixel -> 8
 
 let pixel_of_tile = function
   | Slums -> Slum_pixel
@@ -130,10 +149,26 @@ let map_width = 256
 
 let calc_offset v x y = y * v.width + x
 
+let x_y_of_offset ~width offset =
+  let y = offset / width in
+  let x = offset mod width in
+  x, y
+
 let get_tile v x y = v.map.(calc_offset v x y)
 
 let set_tile v x y tile =
   v.map.(calc_offset v x y) <- tile
+
+let set_height v ~x ~y height =
+  v.heightmap.(calc_offset v x y) <- height
+
+let get_height v x y = v.heightmap.(calc_offset v x y)
+
+let mapxy ~width f arr =
+  Array.mapi (fun i value ->
+    let x, y = x_y_of_offset ~width i in
+    f x y value)
+  arr
 
 let iter f v =
   for y=0 to v.height - 1 do
@@ -142,6 +177,7 @@ let iter f v =
       f x y tile
     done
   done
+
 
   (* Get mask around a certain point based on a function
      edge: behavior along edges of map
@@ -272,6 +308,38 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
   in
   alternative_tile area us_tile
 
+let create_heightmap v =
+  (* Convolution operation *)
+  let convolve x y get_val =
+    List.foldi (fun sum i mult ->
+      let dx, dy = Dir.x_offset.(i), Dir.y_offset.(i) in
+      let x2, y2 = x + dx, y + dy in
+      if x2 < 0 || y2 < 0 || x2 >= v.width || y2 >= v.height then
+        sum
+      else
+        let value = get_val x2 y2 in
+        sum + mult * value)
+      0
+      Dir.offset_conv_map
+  in
+  (* Get plain height map *)
+  let heightmap =
+    mapxy (fun _ _ tile -> pixel_of_tile tile |> height_of_pixel)
+      ~width:v.width
+      v.map
+  in
+  (* Get convolved height map *)
+  mapxy (fun x y height ->
+    let other_h = convolve x y (fun x y -> heightmap.(calc_offset v x y)) in
+    let factor = (x * y) mod 8 in
+    height * 16 + other_h + factor)
+    ~width:v.width
+    heightmap
+
+let update_heightmap v =
+  let heightmap = create_heightmap v in
+  {v with heightmap}
+
 let ndarray_of_file filename =
   let arr = Pic.ndarray_of_file filename in
   (* All maps are 256*192 *)
@@ -283,7 +351,8 @@ let of_ndarray ~area ~seed ndarray =
   let width = 256 in
   let height = 192 in
   let map = Array.make (width * height) @@ Ocean(Dir.Set.empty) in
-  let v = {map; seed; width; height} in
+  let heightmap = Array.empty in
+  let v = {map; seed; width; height; heightmap} in
   for y=0 to v.height-1 do
     for x=0 to v.width-1 do
       let value = Ndarray.get ndarray [|y; x|] in
@@ -363,6 +432,9 @@ let check_build_station v ~x ~y =
   let tile = get_tile v x y in
   if is_ground tile then `Ok
   else `Illegal
+
+
+
 
 
 

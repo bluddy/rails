@@ -319,7 +319,7 @@ let update_map_step r v ~map ~fonts ~done_fn =
   match v.state with
   | `Start ->
           let text = write ~y:8 ~text:v.text ~str:"Adding\nMountains" in
-          {v with state=`Mountains; text}
+          {v with state=`Mountains; text}, map
   | `Mountains -> 
       begin match v.mountains with
       | (x, y)::rest ->
@@ -327,28 +327,14 @@ let update_map_step r v ~map ~fonts ~done_fn =
           let pixel = pixel_apply_mountain pixel in
           Gmap.set_pixel ~area:v.area map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
-          {v with mountains=rest; new_pixels}
+          {v with mountains=rest; new_pixels}, map
       | _ ->
-          {v with state=`Resources}
-      end
-  | `Cities ->
-      begin match v.cities with
-      | (x, y)::rest ->
-          let pixel = Gmap.get_pixel ~map ~x ~y in
-          let pixel = pixel_apply_city pixel in
-          Gmap.set_pixel ~area:v.area map ~x ~y ~pixel;
-          let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
-          {v with cities=rest; new_pixels}
-      | _ ->
-          let text = write ~y:128 ~text:v.text ~str:"World\nComplete\n(Press Key)" in
-          (* We're done now *)
-          done_fn ();
-          {v with state = `Done; text}
+          {v with state=`Resources}, map
       end
   | `Resources ->
       begin match v.resources with
       | {num=0; _}::rest ->
-          {v with resources=rest}
+          {v with resources=rest}, map
       | ({land_pixel; resource_pixel; wanted_tile;_} as res)::rest ->
           let x, y =
             add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
@@ -362,13 +348,27 @@ let update_map_step r v ~map ~fonts ~done_fn =
               (v.text, res.start)
           in
           let resources = {res with num=res.num-1; start}::rest in
-          {v with resources; new_pixels; text}
+          {v with resources; new_pixels; text}, map
       | _ ->
           let text = write ~y:104 ~text:v.text ~str:"Adding\nCities" in
-          {v with state=`Cities; text}
+          {v with state=`Cities; text}, map
+      end
+  | `Cities ->
+      begin match v.cities with
+      | (x, y)::rest ->
+          let pixel = Gmap.get_pixel ~map ~x ~y in
+          let pixel = pixel_apply_city pixel in
+          Gmap.set_pixel ~area:v.area map ~x ~y ~pixel;
+          let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
+          {v with cities=rest; new_pixels}, map
+      | _ ->
+          let text = write ~y:128 ~text:v.text ~str:"World\nComplete\n(Press Key)" in
+          (* We're done now *)
+          let map = done_fn () in
+          {v with state = `Done; text}, map
       end
   | `Done ->
-           v
+           v, map
 
 module View = struct
 

@@ -70,7 +70,15 @@ end
     going outwards: 3x3, 5x5 up to 7x7.
     The corners are skipped and are at the end.
     Length: 48.
-  *)
+
+   47 42 43 24 25 26 44
+   41 22 23 08 09 10 27
+   40 21 07 00 01 11 28
+   39 20 06 XX 02 12 29
+   38 19 05 04 03 13 30
+   37 18 17 16 15 14 31
+   46 36 35 34 33 32 45
+*)
 let y_offset = 
   [|-1;   -1;   0;   1;
      1;    1;   0;  -1;
@@ -104,6 +112,25 @@ let x_offset =
 let to_offsets dir =
   let i = to_enum dir in
   x_offset.(i), y_offset.(i)
+
+  (* 
+     Convolution operator for height 
+     1 2 3 2 1
+     2 4 6 4 2
+     3 6 X 6 3
+     2 4 6 4 2
+     1 2 3 2 1
+
+  *)
+let offset_conv_map =
+  [6; 4; 6; 4; 6; 4; 6; 4;
+   3; 2; 1;
+   2; 3; 2; 1;
+   2; 3; 2; 1;
+   2; 3; 2; 1;
+   2;
+  ]
+
 
 
 

@@ -14,7 +14,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
   let init_fn win =
     let resources = Resources.load_all ~seed in
 
-    let screen = Screen.make view in
+    let screen = view in
 
     let backend = B.default area resources in
 
@@ -36,26 +36,29 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
 
     let handle_tick (s:State.t) (time:int32) =
       let state =
-        match s.screen.Screen.view with
+        match s.screen with
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
             let cities = Array.to_list @@ B.get_cities s.backend in
             let data = Mapgen.init s.random (B.get_area s.backend) cities in
-            Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) s
+            {s with screen=Screen.MapGen(Some data)}
 
         | Screen.MapGen Some data ->
             let done_fn () =
               (* Final update of map *)
-              Textures.update_map win s.textures @@ B.get_map s.backend
+              let map = Gmap.update_heightmap @@ B.get_map s.backend in
+              Textures.update_map win s.textures map;
+              map
             in
-            let data =
+            let data, map =
               Iter.(0 -- 20)
-              |> Iter.fold (fun acc _ ->
-                  let map = B.get_map s.backend in
-                  Mapgen.update_map_step random acc ~done_fn ~map ~fonts:s.textures.fonts)
-              data
+              |> Iter.fold (fun (mapgen, map) _ ->
+                  Mapgen.update_map_step random mapgen ~done_fn ~map ~fonts:s.textures.fonts
+              )
+              (data, B.get_map s.backend)
             in
-            Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapGen(Some data)) state
+            let backend = {s.backend with map} in
+            {s with backend; screen=Screen.MapGen(Some data)}
 
         | Screen.MapView ->
             let ui, action = Main_ui.handle_tick s s.ui time in
@@ -73,12 +76,12 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
     in
     let handle_event (s:State.t) (event:Event.t) =
       let state =
-        match s.screen.Screen.view with
+        match s.screen with
         | Screen.MapGen Some {state=`Done; _} ->
             begin match event with
             | Key {down=true; _} ->
                     (* Printf.printf "Mapview\n"; *)
-                    Lens.Infix.((State.screen |-- Screen.view) ^= Screen.MapView) s
+                    {s with screen = Screen.MapView}
             | _ -> s
             end
 
@@ -96,7 +99,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
       state, false
     in
     let render (s:State.t) =
-      match s.screen.Screen.view with
+      match s.screen with
       | Screen.MapGen Some data ->
           let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
           R.clear_screen win;

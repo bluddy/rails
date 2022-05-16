@@ -2,7 +2,7 @@
 
 (* Everything related to the screen *)
 
-type view =
+type t =
   | Title
   | MainMenu
   | MapView
@@ -14,12 +14,4 @@ type view =
   | BuildStation
   | Animation
 
-type t = {
-  view : view;
-}
-[@@deriving lens]
-
-let make view = {
-  view; 
-}
 
