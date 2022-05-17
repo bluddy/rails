@@ -190,7 +190,13 @@ let of_file filename : t =
 let main filename =
   Printf.printf "--- Font dump: %s\n" filename;
   let fonts = of_file filename in
-  Printf.printf "Num fonts: %d\n" (Array.length fonts)
+  Printf.printf "Num fonts: %d\n" (Array.length fonts);
+  Array.iteri (fun i font ->
+    Printf.printf "Font %d:\n" i;
+    print_endline @@ Font.show font;
+  )
+  fonts
+
 
 let load win =
   let fonts = of_file "./data/FONTS.RR" in

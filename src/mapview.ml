@@ -280,8 +280,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     iter_screen (fun i j ->
       let map_x, map_y = start_x + j, start_y + i in
       let height = B.get_tile_height s.backend map_x map_y |> string_of_int in
-      let x, y = j * tile_w + tile_w/2, i * tile_h + tile_h/2 in
-      Fonts.Render.write win s.textures.fonts height ~idx:2 ~x ~y ~color:Ega.white
+      let x, y = j * tile_w + 4, i * tile_h + 4 + v.dims.y in
+      Fonts.Render.write win s.textures.fonts height ~idx:1 ~x ~y ~color:Ega.white
     )
     
   in
@@ -317,12 +317,11 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
+      if v.survey && not build_station then
+        draw_survey_zoom4 ();
       draw_minimap ~minimap;
-      if build_station then (
-        draw_buildstation_mode ()
-      ) else if v.survey then (
-        draw_survey_zoom4 ()
-      );
+      if build_station then
+        draw_buildstation_mode ();
       draw_track_zoom4 ();
       draw_cursor_zoom4 ();
   end;
