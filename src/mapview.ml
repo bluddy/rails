@@ -279,11 +279,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_survey_zoom4 () =
     iter_screen (fun i j ->
       let map_x, map_y = start_x + j, start_y + i in
-      let height = B.get_tile_height s.backend map_x map_y |> string_of_int in
-      let x, y = j * tile_w + 4, i * tile_h + 4 + v.dims.y in
-      Fonts.Render.write win s.textures.fonts height ~idx:3 ~x ~y ~color:Ega.white
+      match B.get_tile s.backend map_x map_y with
+      | Gmap.Ocean _ -> ()
+      | _ ->
+        let height = (B.get_tile_height s.backend map_x map_y) / 2 |> string_of_int in
+        let x, y = j * tile_w + 4, i * tile_h + 4 + v.dims.y in
+        Fonts.Render.write win s.textures.fonts height ~idx:3 ~x ~y ~color:Ega.white
     )
-    
   in
 
   let draw_buildstation_mode () =
