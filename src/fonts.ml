@@ -1,7 +1,7 @@
 open Containers
 open Iter.Infix
 
-let debug = true
+let debug = false
 
 module Font = struct
 
@@ -179,7 +179,7 @@ let of_file filename : t =
         (* NOTES: small font: char_bot_row=3, char_top_row=4 (0,X) for most
            Could char_bot_row be min_width, char_top_row is min_height?
         *)
-        let b = Bytes.create @@ (1 + min_height) * char_byte_length in
+        let b = Bytes.create @@ min_height * char_byte_length in
         for row = 0 to min_height - 1 do
           for col = 0 to char_byte_length - 1 do
             let ind = row * char_byte_length + col in
