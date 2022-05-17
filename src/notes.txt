@@ -1,3 +1,5 @@
 Notes:
+- Font 2 (small) not loaded properly
+- Survey view tends to freeze after a little while
 - F2 view a little buggy, sometimes freezes
 - Obviously building over water etc not handled

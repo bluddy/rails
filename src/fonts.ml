@@ -1,13 +1,15 @@
 open Containers
 open Iter.Infix
 
+let debug = true
+
 module Font = struct
 
 (* fonts:
   0: fancy olde style
   1: all-caps
   2: large
-  3: missing
+  3: missing: tiny
   4: standard
 *)
 
@@ -95,10 +97,14 @@ let get_str_w_h ?(skip_amp=false) font str =
     )
 
   let write_char win font ?(color=Ega.white) c ~x ~y =
-    let char_tex = Hashtbl.find font.textures c in
-    R.Texture.render ~x ~y ~color win char_tex;
-    let w = get_letter_width font c in
-    (x + w + font.space_x, y)
+    try
+      let char_tex = Hashtbl.find font.textures c in
+      R.Texture.render ~x ~y ~color win char_tex;
+      let w = get_letter_width font c in
+      (x + w + font.space_x, y)
+    with
+    | Not_found ->
+        failwith @@ Printf.sprintf "char[%c] not found." c
 
     (* Write a string.
        active_color: active letter color
@@ -144,23 +150,37 @@ let of_file filename : t =
     []
     indices
   in
-  let create_font bytes offset =
+  let create_font i bytes offset =
     let ascii_first = Bytes.get_uint8 bytes @@ offset - 8 in
     let ascii_last = Bytes.get_uint8 bytes @@ offset - 7 in
     let char_byte_length = Bytes.get_uint8 bytes @@ offset - 6 in
-    let char_top_row = Bytes.get_uint8 bytes @@ offset - 5 in
-    let char_bot_row = Bytes.get_uint8 bytes @@ offset - 4 in
+    let min_width = Bytes.get_uint8 bytes @@ offset - 5 in
+    let min_height = Bytes.get_uint8 bytes @@ offset - 4 in
     let space_x = Bytes.get_uint8 bytes @@ offset - 3 in
     let space_y = Bytes.get_uint8 bytes @@ offset - 2 in
     let char_count = ascii_last - ascii_first + 1 in
     let characters = Hashtbl.create 50 in
     let char_widths = Hashtbl.create 50 in
+    if debug then (
+      Printf.printf "font[%d] offset[0x%x]\n" i offset;
+      Printf.printf "ascii_first[%d]\n" ascii_first;
+      Printf.printf "ascii_last[%d]\n" ascii_last;
+      Printf.printf "char_byte_length[%d]\n" char_byte_length;
+      Printf.printf "min_width[%d]\n" min_width;
+      Printf.printf "min_height[%d]\n" min_height;
+      Printf.printf "space_x[%d]\n" space_x;
+      Printf.printf "space_y[%d]\n" space_y;
+    );
+
     let _ =
       Iter.foldi (fun index i c ->
         let c = char_of_int c in
         let i = i+1 in
-        let b = Bytes.create @@ (1 + char_bot_row - char_top_row) * char_byte_length in
-        for row = 0 to char_bot_row - char_top_row do
+        (* NOTES: small font: char_bot_row=3, char_top_row=4 (0,X) for most
+           Could char_bot_row be min_width, char_top_row is min_height?
+        *)
+        let b = Bytes.create @@ (1 + min_height) * char_byte_length in
+        for row = 0 to min_height - 1 do
           for col = 0 to char_byte_length - 1 do
             let ind = row * char_byte_length + col in
             let bin = index + col + row * char_byte_length * char_count in
@@ -169,6 +189,7 @@ let of_file filename : t =
         done;
         Hashtbl.replace characters c (Bytes.to_string b);
         let char_width = Bytes.get_uint8 bytes (offset - 9 - char_count + i) in
+        let char_width = char_width + min_width in
         if char_width > char_byte_length * 8 then
             failwith "Over-wide char";
         Hashtbl.replace char_widths c char_width;
@@ -179,12 +200,14 @@ let of_file filename : t =
     in
     Font.{
       char_byte_length;
-      space_x; space_y; characters; char_widths;
-      height=1+char_bot_row - char_top_row;
+      space_x; space_y;
+      characters;
+      char_widths;
+      height=min_height;
       textures=Hashtbl.create 50;
     }
   in
-  let fonts = List.map (fun offset -> create_font bytes offset) font_offsets |> Array.of_list in
+  let fonts = List.mapi (fun i offset -> create_font i bytes offset) font_offsets |> Array.of_list in
   fonts
 
 let main filename =
