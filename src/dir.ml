@@ -48,6 +48,13 @@ let is_cardinal = function
   | Down -> true
   | _ -> false
 
+let is_diagonal = function
+  | UpRight
+  | UpLeft
+  | DownRight
+  | DownLeft -> true
+  | _ -> false
+
 
 module Set = struct
   include Bitset.Make(struct

@@ -404,6 +404,16 @@ let set_pixel ~area v ~x ~y ~pixel =
   let tile = tile_of_pixel ~area ~x ~y ~pixel v in
   v.map.(calc_offset v x y) <- tile
 
+let get_grade v ~dir ~x ~y =
+  let dx, dy = Dir.to_offsets dir in
+  let x2, y2 = x + dx, y + dy in
+  let height1 = get_tile_height v x y in
+  let height2 = get_tile_height v x2 y2 in
+  let grade = abs(height1 - height2) in
+  if not (Dir.is_diagonal dir) then
+    (grade * 3) / 2
+  else grade
+
 let check_build_track v ~x ~y ~dir =
    (* TODO: grade and tunnel check *)
    let tile1 = get_tile v x y in
@@ -414,7 +424,12 @@ let check_build_track v ~x ~y ~dir =
     let tile2 = get_tile v x2 y2 in
     match tile1, tile2 with
     (* Cannot build over river, or ocean to river *)
-    | t1, t2 when is_ground t1 && is_ground t2 -> `Ok
+    | t1, t2 when is_ground t1 && is_ground t2 ->
+        let grade = get_grade v ~x ~y ~dir in
+        if grade > 12 then
+          `Tunnel
+        else
+          `Ok
     | River _, _
     | Ocean _, River _ -> `Illegal
     | t, River _ when is_ground t && Dir.is_cardinal dir ->
