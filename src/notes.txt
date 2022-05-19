@@ -1,4 +1,10 @@
 Notes:
 - Survey view tends to freeze after a little while
 - F2 view a little buggy, sometimes freezes
-- Obviously building over water etc not handled
+- Building over water not handled
+- Tunnel goes very long
+- Cursor movement with tunnel and bridge is flaky
+- Disable building over built track - including high grade message
+- Modal Menus: open and highlight first option
+- Modal Menus: standardize so most behavior doesn't need special handling
+
