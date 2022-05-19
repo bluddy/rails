@@ -65,18 +65,19 @@ let iter_cities f v =
 
 let check_build_track v ~x ~y ~dir ~player =
   match Gmap.check_build_track v.map ~x ~y ~dir with
-  | `Bridge ->
-      begin match Trackmap.check_build_bridge v.track ~x ~y ~dir ~player with
-      | `Ok -> `Bridge
-      | _ -> `Illegal
-      end
-  | `Ok ->
-      Trackmap.check_build_track v.track ~x ~y ~dir ~player
-  (* TODO: Ferry, tunnel *)
+  | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
+  | `Bridge -> `Illegal
+  | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
+  | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
+  | `Tunnel _ | `HighGrade _ -> `Illegal
+  | (`Ok | `Ferry) as ret when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
   | x -> x
 
 let build_track v ~x ~y ~dir ~player =
   Trackmap.build_track v.track ~x ~y ~dir ~player
+
+let build_tunnel v ~x ~y ~dir ~player ~length =
+  Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length
 
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with
@@ -95,6 +96,9 @@ let check_build_bridge v ~x ~y ~dir ~player =
 let build_bridge v ~x ~y ~dir ~player ~kind =
   Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind
 
+let build_track v ~x ~y ~dir ~player =
+  Trackmap.build_track v.track ~x ~y ~dir ~player
+
 let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct
@@ -103,6 +107,7 @@ module Action = struct
     | BuildTrack of Utils.msg
     | BuildStation of {x: int; y: int; kind: Station.t}
     | BuildBridge of Utils.msg * Bridge.t
+    | BuildTunnel of Utils.msg * int (* length *)
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
@@ -113,6 +118,9 @@ module Action = struct
         {backend with track}
     | BuildBridge({x; y; dir; player}, kind) ->
         let track = build_bridge backend ~x ~y ~dir ~kind ~player in
+        {backend with track}
+    | BuildTunnel({x; y; dir; player}, length) ->
+        let track = build_tunnel backend ~x ~y ~dir ~player ~length in
         {backend with track}
     | NoAction -> backend
 

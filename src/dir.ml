@@ -55,7 +55,6 @@ let is_diagonal = function
   | DownLeft -> true
   | _ -> false
 
-
 module Set = struct
   include Bitset.Make(struct
     type nonrec t=t
@@ -137,7 +136,4 @@ let offset_conv_map =
    2; 3; 2; 1;
    2;
   ]
-
-
-
 

@@ -67,9 +67,9 @@ let check_recenter_zoom4 v cursor_x cursor_y =
   else
         v.center_x, v.center_y
 
-let move_cursor v dir =
+let move_cursor v dir n =
   let dx, dy = Dir.to_offsets dir in
-  let x, y = v.cursor_x + dx, v.cursor_y + dy in
+  let x, y = v.cursor_x + dx * n, v.cursor_y + dy * n in
   let cursor_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
   let cursor_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
   let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
@@ -151,24 +151,18 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match dir with
     | None -> v, `NoAction
     | Some dir ->
-        let v2 = move_cursor v dir in
+        let v2 = move_cursor v dir 1 in
         (* TODO: handle track removal, bridge, tunnel etc *)
-        if build then
+        if build then (
+          let msg () = Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0} in
           let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
           match check with
-          | `Ok ->
-              let action =
-                `BuildTrack Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
-              in
-              v2, action
-          | `Bridge ->
-              let action = 
-                `BuildBridge Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0}
-              in
-              v2, action
-          | `Illegal ->
-              v, `NoAction
-        else
+          | `Ok -> v2, `BuildTrack(msg ())
+          | `HighGrade g -> v, `HighGradeTrack(msg (), g)
+          | `Bridge -> v, `BuildBridge(msg ()) 
+          | `Tunnel(len, g) -> v, `BuildTunnel(msg (), len, g)
+          | `Illegal -> v, `NoAction
+        ) else
           v2, `NoAction
   in
 

@@ -73,11 +73,15 @@ type menu_action =
     ]
     [@@deriving show]
 
+    (* Main modes of operation of the mapview.
+       Any special menu needs a mode.
+    *)
 type 'a mode =
   | Normal
   | ModalMsgbox of (unit, 'a) Menu.MsgBox.t * 'a mode
   | BuildStation of (Station.t option, 'a) Menu.MsgBox.t
   | BuildBridge of (Bridge.t option, 'a) Menu.MsgBox.t * Utils.msg
+  | BuildTunnel of ([`Cancel | `Tunnel | `Track], 'a) Menu.MsgBox.t * Utils.msg * int (* length *)
 
 type 'a t = {
   dims: dims;

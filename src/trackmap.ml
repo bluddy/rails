@@ -21,7 +21,7 @@ let get v x y = Hashtbl.find_opt v.map (calc_offset v x y)
 
 let get_track v x y ~player =
   get v x y
-  |> Option.get_lazy (fun () -> Track.empty player)
+  |> Option.get_lazy (fun () -> Track.empty player Track.Track)
 
 let set v x y tile = Hashtbl.replace v.map (calc_offset v x y) tile
 
@@ -41,15 +41,10 @@ let pre_build_track v ~x ~y ~dir ~player =
   let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
   track1, track2, x2, y2
 
-  (* check before building *)
 let check_build_track v ~x ~y ~dir ~player =
   let track1, track2, x2, y2 = pre_build_track v ~x ~y ~dir ~player in
   (* Check for out of bounds: x and y didn't change *)
-  if (x <> x2 || y <> y2) &&
-     Track.is_legal track1 && Track.is_legal track2 then
-    `Ok
-  else
-    `Illegal
+  (x <> x2 || y <> y2) && Track.is_legal track1 && Track.is_legal track2
 
   (* do build. Assumes we already checked *)
 let build_track v ~x ~y ~dir ~player =
@@ -89,51 +84,77 @@ let build_station v ~x ~y station_type =
       v
   | _ -> v
 
-let check_build_bridge v ~x ~y ~dir ~player =
+  (* Check that a stretch of track is clear: tunnel or bridge
+     No track can be in the middle, but it's ok if track is at the end
+     Length: includes middle stretch + last piece
+   *)
+let check_build_stretch v ~x ~y ~dir ~player ~length =
   let dx, dy = Dir.to_offsets dir in
-  let x2, y2 = x + dx, y + dy in
-  let x3, y3 = x2 + dx, y2 + dy in
+  let x1, y1 = x, y in
+  let x3, y3 = x + dx * length, y + dy * length in
+  (* check boundaries *)
   if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
     x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then
-      `Illegal
-  else
-    (* Must have some track *)
-    match get v x y, get v x2 y2, get_track v x3 y3 ~player with
-    | _, Some _, _ -> `Illegal (* Bridge already exists *)
-    | Some track1, None, ({kind=Track; _} as track3) ->
-        let track1 = Track.add_dir track1 ~dir in
-        let track3 = Track.add_dir track3 ~dir:(Dir.opposite dir) in
-        if Track.is_legal track1 && Track.is_legal track3 then `Ok
-        else `Illegal
-    | _ -> `Illegal
+      true
+  else (
+    (* No track in between *)
+    let rec loop x y i =
+      if i <= 0 then true
+      else
+        match get v x y with
+        | Some _ -> false
+        | None ->
+            loop (x+dx) (y+dy) (i-1)
+    in
+
+    let test_track x y dir =
+      match get v x y with
+      | Some track when track.player = player ->
+          let track = Track.add_dir track ~dir in
+          Track.is_legal track
+      | Some _ ->
+          (* wrong player *)
+          false
+      | _ ->
+          (* no track = fine *)
+          true
+    in
+    test_track x1 y1 dir &&
+    loop (x1+dx) (y1+dy) (length-1) &&
+    test_track x3 y3 (Dir.opposite dir)
+  )
+
+    (* Used by bridge and tunnel *)
+let build_stretch v ~x ~y ~dir ~player ~n ~kind =
+  let dx, dy = Dir.to_offsets dir in
+  let x1, y1 = x, y in
+  let x3, y3 = x + dx * n, y + dy * n in
+  if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
+    x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then
+      v (* error *)
+  else (
+    let track1 = get_track v x1 y1 ~player |> Track.add_dir ~dir in
+    set v x1 y1 track1;
+    let track2 = Track.empty player kind
+      |> Track.add_dir ~dir
+      |> Track.add_dir ~dir:(Dir.opposite dir)
+    in
+    let rec dig_tunnel ~x ~y i =
+      if i <= 0 then ()
+      else (
+        set v x y track2;
+        dig_tunnel ~x:(x+dx) ~y:(y+dy) (i-1)
+      )
+    in
+    dig_tunnel ~x:(x1+dx) ~y:(y1+dy) (n-1);
+    let track3 = get_track v x3 y3 ~player |> Track.add_dir ~dir:(Dir.opposite dir) in
+    set v x3 y3 track3;
+    v
+  )
 
 let build_bridge v ~x ~y ~dir ~player ~kind =
-  let dx, dy = Dir.to_offsets dir in
-  let x2, y2 = x + dx, y + dy in
-  let x3, y3 = x2 + dx, y2 + dy in
-  if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
-    x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then v
-  else
-    begin match get v x y with
-    | Some track1 ->
-        let track1 = Track.add_dir track1 ~dir in
-        let track2 =
-          Track.empty player
-          |> Track.add_dir ~dir
-          |> Track.add_dir ~dir:(Dir.opposite dir)
-          |> Track.change_kind ~kind:(Bridge kind)
-        in
-        let track3 =
-          Track.empty player
-          |> Track.add_dir ~dir:(Dir.opposite dir)
-        in
-        set v x y track1;
-        set v x2 y2 track2;
-        set v x3 y3 track3;
-        v
-    | None -> v (* error *)
-    end
+  build_stretch v ~x ~y ~dir ~player ~n:2 ~kind:(Track.Bridge kind)
+
+let build_tunnel v ~x ~y ~dir ~player ~length =
+  build_stretch v ~x ~y ~dir ~player ~n:length ~kind:Track.Tunnel
    
-
-
-

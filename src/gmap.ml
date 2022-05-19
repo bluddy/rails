@@ -410,12 +410,31 @@ let get_grade v ~dir ~x ~y =
   let height1 = get_tile_height v x y in
   let height2 = get_tile_height v x2 y2 in
   let grade = abs(height1 - height2) in
+  (* Even out grades for diagonals and non-diagonals *)
   if not (Dir.is_diagonal dir) then
     (grade * 3) / 2
-  else grade
+  else
+    grade
+
+    (* Get the length of a tunnel needed *)
+let get_tunnel_length v ~x ~y ~dir =
+   let dx, dy = Dir.to_offsets dir in
+   let rec loop x y n =
+     if x < 0 || x >= v.width || y < 0 || y >= v.height then None
+     else
+      match get_tile v x y with
+      | Ocean _ | River _ | Harbor _ -> None
+      | _ -> 
+        let height = get_tile_height v x y in
+        if height <= 80 then Some n
+        else
+          loop (x+dx) (y+dy) (n+1)
+   in
+   match loop x y 0 with
+   | Some 0 -> None
+   | x -> x
 
 let check_build_track v ~x ~y ~dir =
-   (* TODO: grade and tunnel check *)
    let tile1 = get_tile v x y in
    let dx, dy = Dir.to_offsets dir in
    let x2, y2 = x + dx, y + dy in
@@ -425,9 +444,16 @@ let check_build_track v ~x ~y ~dir =
     match tile1, tile2 with
     (* Cannot build over river, or ocean to river *)
     | t1, t2 when is_ground t1 && is_ground t2 ->
+        let height1 = get_tile_height v x y in
+        let height2 = get_tile_height v x2 y2 in
         let grade = get_grade v ~x ~y ~dir in
         if grade > 12 then
-          `Tunnel
+          if height2 > height1 && height1 > 80 then
+            match get_tunnel_length v ~x ~y ~dir with
+            | Some length -> `Tunnel(length, grade)
+            | None -> `HighGrade grade
+          else
+            `HighGrade grade
         else
           `Ok
     | River _, _

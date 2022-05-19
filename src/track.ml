@@ -15,9 +15,9 @@ type t =
     player: int;
   }
 
-let empty player = {
+let empty player kind = {
   dirs=Dir.Set.empty;
-  kind=Track;
+  kind;
   ixn=false;
   player
 }

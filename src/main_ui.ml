@@ -257,6 +257,23 @@ let build_bridge_menu fonts =
     make_entry "&Iron Girder ($200,000)" @@ `Action(Some Bridge.Iron);
   ]
 
+let build_tunnel_menu fonts ~grade ~tunnel =
+  let open Menu in
+  let open MsgBox in
+  let pct = ((grade / 2) mod 4) * 25 in
+  let heading = Printf.sprintf "WARNING: .%d%% grade" pct in
+  let entries =
+  [
+    make_entry "Build &Track" @@ `Action(`Track);
+    make_entry "&CANCEL" @@ `Action(`Cancel);
+  ]
+  in
+  let entries =
+    if tunnel then entries @ [make_entry "Build T&unnel" @@ `Action(`Tunnel)]
+    else entries
+  in
+  make ~fonts ~heading ~x:176 ~y:16 entries
+
 let handle_event (s:State.t) v (event:Event.t) =
   match v.mode with
   | Normal ->
@@ -272,12 +289,8 @@ let handle_event (s:State.t) v (event:Event.t) =
     let view = v.view in
     let view =
       match menu_action with
-      | On(`Survey) ->
-          print_endline "set_true";
-          Mapview.set_survey view true
-      | Off(`Survey) ->
-          print_endline "set_false";
-          Mapview.set_survey view false
+      | On(`Survey)  -> Mapview.set_survey view true
+      | Off(`Survey) -> Mapview.set_survey view false
       | _ -> view
     in
 
@@ -296,10 +309,19 @@ let handle_event (s:State.t) v (event:Event.t) =
           v, B.Action.BuildTrack msg
       | _, `BuildBridge msg ->
           let menu =
-            build_bridge_menu s.textures.fonts
-            |> Menu.MsgBox.do_open_menu s
+            build_bridge_menu s.textures.fonts |> Menu.MsgBox.do_open_menu s
           in
           {v with mode=BuildBridge(menu, msg)}, B.Action.NoAction
+      | _, `HighGradeTrack(msg, grade) ->
+          let menu =
+            build_tunnel_menu ~grade ~tunnel:false s.textures.fonts |> Menu.MsgBox.do_open_menu s
+          in
+          {v with mode=BuildTunnel(menu, msg, 0)}, B.Action.NoAction
+      | _, `BuildTunnel(msg, length, grade) ->
+          let menu =
+            build_tunnel_menu ~grade ~tunnel:true s.textures.fonts |> Menu.MsgBox.do_open_menu s
+          in
+          {v with mode=BuildTunnel(menu, msg, length)}, B.Action.NoAction
       | _ ->
           v, B.Action.NoAction
     in
@@ -334,29 +356,49 @@ let handle_event (s:State.t) v (event:Event.t) =
           | _ ->
               {v with mode=Normal}, B.Action.NoAction
           end
+      | Menu.NoAction -> v, B.Action.NoAction
       | _ ->
           (* Update build menu *)
           {v with mode=BuildStation(build_menu)}, B.Action.NoAction
       end
 
-  | BuildBridge (build_menu, ({x; y; dir; player} as msg)) ->
+  | BuildBridge(build_menu, ({x; y; dir; player} as msg)) ->
       let build_menu, action = Menu.MsgBox.update s build_menu event in
       begin match action with
-      | Menu.On(None)
-      | Menu.NoAction when Event.pressed_esc event ->
-          {v with mode=Normal}, B.Action.NoAction
       | Menu.On(Some bridge_kind) ->
           begin match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
           | `Ok -> 
               let backend_action = B.Action.BuildBridge(msg, bridge_kind) in
-              let view = Mapview.move_cursor v.view dir in
+              let view = Mapview.move_cursor v.view dir 1 in
               {v with mode=Normal; view}, backend_action
           | _ ->
               {v with mode=Normal}, B.Action.NoAction
           end
+      | Menu.On(None)
+      | Menu.NoAction when Event.pressed_esc event ->
+          {v with mode=Normal}, B.Action.NoAction
+      | Menu.NoAction -> v, B.Action.NoAction
       | _ ->
           (* Update build menu *)
           {v with mode=BuildBridge(build_menu, msg)}, B.Action.NoAction
+      end
+
+  | BuildTunnel(build_menu, ({dir; _} as msg), length) ->
+      let build_menu, action = Menu.MsgBox.update s build_menu event in
+      begin match action with
+      | Menu.On(`Track) ->
+          {v with mode=Normal}, B.Action.BuildTrack msg
+      | Menu.On(`Tunnel) ->
+          let view = Mapview.move_cursor v.view dir length in
+          {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)
+      | Menu.On(`Cancel)
+      | Menu.NoAction when Event.pressed_esc event ->
+          {v with mode=Normal}, B.Action.NoAction
+      | Menu.NoAction ->
+          v, B.Action.NoAction
+      | _ ->
+          (* Update build menu *)
+          {v with mode=BuildTunnel(build_menu, msg, length)}, B.Action.NoAction
       end
 
 let handle_tick _s v _time = v, B.Action.NoAction
@@ -411,6 +453,8 @@ let render (win:R.window) (s:State.t) v =
     | BuildStation menu ->
         Menu.MsgBox.render win s menu
     | BuildBridge (menu, _) ->
+        Menu.MsgBox.render win s menu
+    | BuildTunnel (menu, _, _) ->
         Menu.MsgBox.render win s menu
   in
   render_mode v.mode;
