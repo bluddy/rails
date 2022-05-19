@@ -66,12 +66,10 @@ let iter_cities f v =
 let check_build_track v ~x ~y ~dir ~player =
   match Gmap.check_build_track v.map ~x ~y ~dir with
   | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
-  | `Bridge -> `Illegal
   | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
   | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
-  | `Tunnel _ | `HighGrade _ -> `Illegal
   | (`Ok | `Ferry) as ret when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
-  | x -> x
+  | _ -> `Illegal
 
 let build_tunnel v ~x ~y ~dir ~player ~length =
   Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length

@@ -31,16 +31,6 @@ let iter v f =
     f x y track)
   v.map
 
-let pre_build_track v ~x ~y ~dir ~player =
-  let dx, dy = Dir.to_offsets dir in
-  let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.width - 1) in
-  let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.height - 1) in
-  let track1 = get_track v x y ~player in
-  let track2 = get_track v x2 y2 ~player in
-  let track1 = Track.add_dir track1 ~dir in
-  let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
-  track1, track2, x2, y2
-
 let check_build_track v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
   let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.width - 1) in
@@ -58,7 +48,13 @@ let check_build_track v ~x ~y ~dir ~player =
 
   (* do build. Assumes we already checked *)
 let build_track v ~x ~y ~dir ~player =
-  let track1, track2, x2, y2 = pre_build_track v ~x ~y ~dir ~player in
+  let dx, dy = Dir.to_offsets dir in
+  let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.width - 1) in
+  let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.height - 1) in
+  let track1 = get_track v x y ~player in
+  let track2 = get_track v x2 y2 ~player in
+  let track1 = Track.add_dir track1 ~dir in
+  let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
   set v x y track1;
   set v x2 y2 track2;
   v
