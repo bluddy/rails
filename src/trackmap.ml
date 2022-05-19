@@ -42,9 +42,19 @@ let pre_build_track v ~x ~y ~dir ~player =
   track1, track2, x2, y2
 
 let check_build_track v ~x ~y ~dir ~player =
-  let track1, track2, x2, y2 = pre_build_track v ~x ~y ~dir ~player in
-  (* Check for out of bounds: x and y didn't change *)
-  (x <> x2 || y <> y2) && Track.is_legal track1 && Track.is_legal track2
+  let dx, dy = Dir.to_offsets dir in
+  let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.width - 1) in
+  let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.height - 1) in
+  if x < 0 || x2 < 0 || y < 0 || y2 < 0
+    || x >= v.width || x2 >= v.width || y >= v.height || y2 >= v.height then false
+  else
+    let track1 = get_track v x y ~player in
+    let track2 = get_track v x2 y2 ~player in
+    let track12 = Track.add_dir track1 ~dir in
+    let track22 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
+    if Track.equal_dirs track1 track12 && Track.equal_dirs track2 track22 then false
+    else
+      Track.is_legal track12 && Track.is_legal track22
 
   (* do build. Assumes we already checked *)
 let build_track v ~x ~y ~dir ~player =

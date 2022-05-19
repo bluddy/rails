@@ -33,6 +33,12 @@ let add_dir v ~dir =
   let ixn = is_ixn dirs in
   {v with dirs; ixn}
 
+let has_dir v ~dir =
+  Dir.Set.mem v.dirs dir
+
+let equal_dirs v1 v2 =
+  Dir.Set.equal v1.dirs v2.dirs
+
 let change_kind v ~kind = {v with kind}
 
   (* Make hashtabl that only uses track dirs and kind for quick texture lookup *)
