@@ -343,11 +343,10 @@ let handle_event (s:State.t) v (event:Event.t) =
   | BuildStation build_menu ->
       (* Build Station mode *)
       let build_menu, action = Menu.MsgBox.update s build_menu event in
+      let exit_mode () = {v with mode=Normal}, B.Action.NoAction in
       begin match action with
-      | Menu.On(None)
-      | Menu.NoAction when Event.pressed_esc event ->
-          (* Exit build station mode *)
-          {v with mode=Normal}, B.Action.NoAction
+      | Menu.On(None) -> exit_mode ()
+      | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
       | Menu.On(Some station_kind) ->
           let x, y = Mapview.get_cursor_pos v.view in
           begin match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
@@ -355,8 +354,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               let backend_action = B.Action.BuildStation{x; y; kind=station_kind} in
               {v with mode=Normal}, backend_action
               (* TODO: handle other cases *)
-          | _ ->
-              {v with mode=Normal}, B.Action.NoAction
+          | _ -> exit_mode ()
           end
       | Menu.NoAction -> v, B.Action.NoAction
       | _ ->
