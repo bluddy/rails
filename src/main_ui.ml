@@ -276,16 +276,6 @@ let build_tunnel_menu fonts ~grade ~tunnel =
 
 let handle_event (s:State.t) v (event:Event.t) =
 
-  (* debug *)
-  begin match event with
-  | Key {down=true; key; _} ->
-      if Event.is_letter key then
-        Printf.printf "ping[%c]\n%!" (Event.char_of_key key)
-      else
-        Printf.printf "ping\n%!"
-  | _ -> ()
-  end;
-
   match v.mode with
   | Normal ->
     let v, menu_action, event =

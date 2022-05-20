@@ -15,9 +15,11 @@ let main init_fn =
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)
 
+  let fps = 15l in (* WSL has limited fps support *)
+  let render_wait_time = Int32.(1000l/fps) in
+  let sleep_time = 30l in
+
   let data, v = init_fn win in
-  let render_wait_time = 30l in
-  let sleep_time = 10l in
 
   let rec update_loop data (last_time:int32) =
     let rec event_loop data =
