@@ -75,6 +75,7 @@ type t =
   | MouseWheel of {x: int; y: int}
   | Key of {repeat: int; key: key; modifiers: Modifiers.t; down:bool}
   | Quit
+  | EventNotRelevant
   | NoEvent
   [@@deriving show]
 
@@ -224,7 +225,7 @@ let of_sdl event ~zoom =
   | `Key_down | `Key_up ->
       handle_key event t
   | `Quit -> Quit
-  | _ -> NoEvent
+  | _ -> EventNotRelevant
 
 let pressed_esc = function
   | Key {down=true; key=Escape; _} -> true

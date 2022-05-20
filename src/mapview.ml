@@ -170,11 +170,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   let v, actions =
     match event with
     | Key {down=true; key=F1; _} ->
-        {v with zoom = Zoom1}, `NoAction
+        {v with zoom = Zoom1; survey=false}, `NoAction
     | Key {down=true; key=F2; _} ->
-        {v with zoom = Zoom2}, `NoAction
+        {v with zoom = Zoom2; survey=false}, `NoAction
     | Key {down=true; key=F3; _} ->
-        {v with zoom = Zoom3}, `NoAction
+        {v with zoom = Zoom3; survey=false}, `NoAction
     | Key {down=true; key=F4; _} ->
         {v with zoom = Zoom4}, `NoAction
     | MouseButton {down=true; x; y; _} ->

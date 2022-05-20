@@ -29,6 +29,9 @@ let main init_fn =
       match event with
       | Quit -> data, `Quit
       | NoEvent -> data, `NoEvent
+      | EventNotRelevant ->
+          (* Get rid of events we don't care about *)
+          event_loop data
       | _ -> 
         let data, quit = v.handle_event data event in
         if quit then data, `Quit

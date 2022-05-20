@@ -275,6 +275,17 @@ let build_tunnel_menu fonts ~grade ~tunnel =
   make ~fonts ~heading ~x:176 ~y:16 entries
 
 let handle_event (s:State.t) v (event:Event.t) =
+
+  (* debug *)
+  begin match event with
+  | Key {down=true; key; _} ->
+      if Event.is_letter key then
+        Printf.printf "ping[%c]\n%!" (Event.char_of_key key)
+      else
+        Printf.printf "ping\n%!"
+  | _ -> ()
+  end;
+
   match v.mode with
   | Normal ->
     let v, menu_action, event =
@@ -297,6 +308,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     let view, view_action =
       Mapview.handle_event s view event ~minimap:v.dims.minimap
     in
+    v.view <- view;
     let v, backend_action =
       match menu_action, view_action with
       | On `Build_station, _ ->
@@ -327,7 +339,6 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _ ->
           v, B.Action.NoAction
     in
-    v.view <- view;
     v, backend_action
 
   | ModalMsgbox (msgbox, prev_mode) ->
