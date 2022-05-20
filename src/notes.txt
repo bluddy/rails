@@ -1,10 +1,10 @@
 Notes:
-- Survey view tends to freeze after a little while
 - F2 view a little buggy, sometimes freezes
-- Building over water not handled
+  - Due to fps issues over X. Connection collapses
+  - Reduce fps
+  - Standardize ticks, not same as fps
+- Building over water needs debugging
 - Tunnel goes very long
-- Cursor movement with tunnel and bridge is flaky
-- Disable building over built track - including high grade message
 - Modal Menus: open and highlight first option
 - Modal Menus: standardize so most behavior doesn't need special handling
 
