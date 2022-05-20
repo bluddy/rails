@@ -307,6 +307,8 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with mode=BuildStation(menu)}, B.Action.NoAction
       | _, `BuildTrack msg ->
           v, B.Action.BuildTrack msg
+      | _, `BuildFerry msg ->
+          v, B.Action.BuildFerry msg
       | _, `BuildBridge msg ->
           let menu =
             build_bridge_menu s.textures.fonts |> Menu.MsgBox.do_open_menu s
@@ -369,7 +371,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           begin match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
           | `Ok -> 
               let backend_action = B.Action.BuildBridge(msg, bridge_kind) in
-              let view = Mapview.move_cursor v.view dir 1 in
+              let view = Mapview.move_cursor v.view dir 2 in
               {v with mode=Normal; view}, backend_action
           | _ ->
               {v with mode=Normal}, B.Action.NoAction
@@ -387,7 +389,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       let build_menu, action = Menu.MsgBox.update s build_menu event in
       begin match action with
       | Menu.On(`Track) ->
-          {v with mode=Normal}, B.Action.BuildTrack msg
+          let view = Mapview.move_cursor v.view dir 1 in
+          {v with mode=Normal; view}, B.Action.BuildTrack msg
       | Menu.On(`Tunnel) ->
           let view = Mapview.move_cursor v.view dir length in
           {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)

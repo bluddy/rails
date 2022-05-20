@@ -94,12 +94,25 @@ let build_bridge v ~x ~y ~dir ~player ~kind =
 let build_track v ~x ~y ~dir ~player =
   Trackmap.build_track v.track ~x ~y ~dir ~player
 
+let build_ferry v ~x ~y ~dir ~player =
+  let dx, dy = Dir.to_offsets dir in
+  let tile1 = get_tile v x y in
+  let tile2 = get_tile v (x+dx) (y+dy) in
+  let kind1, kind2 = match tile1, tile2 with
+    | Gmap.Ocean _ , Ocean _ -> Track.Ferry, Track.Ferry
+    | Ocean _, _ -> Ferry, Track
+    | _, Ocean _ -> Track, Ferry
+    | _ -> assert false
+  in
+  Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2
+
 let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct
   type t =
     | NoAction
     | BuildTrack of Utils.msg
+    | BuildFerry of Utils.msg
     | BuildStation of {x: int; y: int; kind: Station.t}
     | BuildBridge of Utils.msg * Bridge.t
     | BuildTunnel of Utils.msg * int (* length *)
@@ -107,6 +120,9 @@ module Action = struct
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
         let track = build_track backend ~x ~y ~dir ~player in
+        {backend with track}
+    | BuildFerry {x; y; dir; player} ->
+        let track = build_ferry backend ~x ~y ~dir ~player in
         {backend with track}
     | BuildStation {x; y; kind} ->
         let track = build_station backend ~x ~y kind in

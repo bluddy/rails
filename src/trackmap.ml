@@ -19,9 +19,9 @@ let x_y_of_offset v offset =
 
 let get v x y = Hashtbl.find_opt v.map (calc_offset v x y)
 
-let get_track v x y ~player =
+let get_track ?(kind=Track.Track) v x y ~player =
   get v x y
-  |> Option.get_lazy (fun () -> Track.empty player Track.Track)
+  |> Option.get_lazy (fun () -> Track.empty player kind)
 
 let set v x y tile = Hashtbl.replace v.map (calc_offset v x y) tile
 
@@ -46,13 +46,16 @@ let check_build_track v ~x ~y ~dir ~player =
     else
       Track.is_legal track12 && Track.is_legal track22
 
-  (* do build. Assumes we already checked *)
-let build_track v ~x ~y ~dir ~player =
+  (* do build. Assumes we already checked
+     kind1: kind of track in from tile
+     kind2: kind of track in to tile
+   *)
+let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
   let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.width - 1) in
   let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.height - 1) in
-  let track1 = get_track v x y ~player in
-  let track2 = get_track v x2 y2 ~player in
+  let track1 = get_track ?kind:kind1 v x y ~player in
+  let track2 = get_track ?kind:kind2 v x2 y2 ~player in
   let track1 = Track.add_dir track1 ~dir in
   let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
   set v x y track1;

@@ -2,6 +2,7 @@ open Containers
 
 type kind =
   | Track
+  | Ferry
   | Tunnel
   | Station of Station.t
   | Bridge of Bridge.t

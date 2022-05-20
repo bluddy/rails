@@ -151,19 +151,20 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match dir with
     | None -> v, `NoAction
     | Some dir ->
-        let v2 = move_cursor v dir 1 in
-        (* TODO: handle track removal, ferry *)
+        (* TODO: handle track removal *)
+        let move i = move_cursor v dir i in
         if build then (
           let msg () = Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0} in
           let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
           match check with
-          | `Ok -> v2, `BuildTrack(msg ())
+          | `Ok -> move 1, `BuildTrack(msg ())
+          | `Ferry -> move 1, `BuildFerry(msg ())
           | `HighGrade g -> v, `HighGradeTrack(msg (), g)
           | `Bridge -> v, `BuildBridge(msg ()) 
           | `Tunnel(len, g) -> v, `BuildTunnel(msg (), len, g)
           | `Illegal -> v, `NoAction
         ) else
-          v2, `NoAction
+          move 1, `NoAction
   in
 
   let v, actions =
