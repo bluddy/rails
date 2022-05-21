@@ -443,6 +443,8 @@ let check_build_track v ~x ~y ~dir =
     let tile2 = get_tile v x2 y2 in
     match tile1, tile2 with
     (* Cannot build over river, or ocean to river *)
+    | Ocean _, Ocean _ -> `Ferry
+    | (Ocean _, t | t, Ocean _) when is_ground t -> `Ferry
     | t1, t2 when is_ground t1 && is_ground t2 ->
         let height1 = get_tile_height v x y in
         let height2 = get_tile_height v x2 y2 in
@@ -456,8 +458,7 @@ let check_build_track v ~x ~y ~dir =
             `HighGrade grade
         else
           `Ok
-    | River _, _
-    | Ocean _, River _ -> `Illegal
+    (* Bridge *)
     | t, River _ when is_ground t && Dir.is_cardinal dir ->
         let x3, y3 = x2 + dx, y2 + dy in
         if x3 < 0 || x3 >= v.width || y3 < 0 || y3 >= v.height then `Illegal
@@ -465,8 +466,6 @@ let check_build_track v ~x ~y ~dir =
           let tile3 = get_tile v x3 y3 in
           if is_ground tile3 then `Bridge
           else `Illegal
-    | t, Ocean _ when is_ground t -> `Ferry
-    | Ocean _, Ocean _ -> `Ferry
     | _, _ -> `Illegal
 
 let check_build_station v ~x ~y =
