@@ -142,10 +142,10 @@ let img_of_file in_file =
       let ndarray = create_rgb_img (img.width, img.height) in
       for y=0 to img.height - 1 do
         for x=0 to img.width - 1 do
-          let r, g, b =
-            Image.read_rgb img x y (fun r g b -> (r, g, b))
+          let r, g, b, a =
+            Image.read_rgba img x y (fun r g b a -> (r, g, b, a))
           in
-          img_write ndarray ~x ~y ~r ~g ~b ~alpha:255
+          img_write ndarray ~x ~y ~r ~g ~b ~alpha:a
         done
       done;
       ndarray
