@@ -3,8 +3,9 @@ Notes:
   - Due to fps issues over X. Connection collapses
   - Reduce fps
   - Standardize ticks, not same as fps
-- Building over water needs debugging
-- Modal Menus: open and highlight first option
-- Modal Menus: standardize so most behavior doesn't need special handling
-- Build track menu: handle cancel
+- TODO:
+  - remove track
+  - draw track in f2 and f3
+  - Modal Menus: standardize so most behavior doesn't need special handling
+
 
