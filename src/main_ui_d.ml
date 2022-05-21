@@ -61,8 +61,8 @@ type menu_action =
     | `Build_train
     | `Build_station
     | `Build_industry
-    | `Track of Mapview_d.build_mode
-    | `Remove_track
+    | `BuildTrack
+    | `RemoveTrack
     | `Improve_station
     | `Upgrade_bridge
     | `Reality_level of Backend.reality_level

@@ -6,10 +6,6 @@ type zoom =
   | Zoom4
   [@@deriving eq, show]
 
-type build_mode =
-  [ `Build | `Remove ]
-  [@@deriving eq, show]
-
 type options =
   [ `StationBoxes | `Resources]
   [@@ deriving enum, eq, show]
@@ -24,7 +20,7 @@ type t =
     cursor_y: int;
     zoom: zoom;
     dims: Utils.rect;
-    build_mode: build_mode;
+    build_mode: bool;
     survey: bool;
     options: Options.t;
   }

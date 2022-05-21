@@ -13,7 +13,7 @@ let default dims =
     center_x=0; center_y=0;
     zoom=Zoom4;
     dims;
-    build_mode=`Build;
+    build_mode=true;
     survey=false;
     options=Options.of_list [`StationBoxes];
   }
@@ -94,8 +94,7 @@ let cursor_on_station backend v =
       end
   | _ -> false
 
-let set_build_mode v mode =
-  {v with build_mode = mode}
+let set_build_mode v mode = {v with build_mode = mode}
 
 let get_build_mode v = v.build_mode
 
@@ -255,7 +254,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_cursor_zoom4 () =
     let x = (v.cursor_x - start_x) * tile_w in
     let y = (v.cursor_y - start_y) * tile_h + v.dims.y in
-    R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color:Ega.white ~fill:false
+    let color = if v.build_mode then Ega.white else Ega.red in
+    R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color ~fill:false
   in
 
   let draw_track_zoom4 () =

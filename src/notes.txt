@@ -7,5 +7,6 @@ Notes:
   - remove track
   - draw track in f2 and f3
   - Modal Menus: standardize so most behavior doesn't need special handling
+  - Don't allow station on curved tracks
 
 

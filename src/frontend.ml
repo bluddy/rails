@@ -51,7 +51,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
               map
             in
             let data, map =
-              Iter.(0 -- 20)
+              Iter.(0 -- 60)
               |> Iter.fold (fun (mapgen, map) _ ->
                   Mapgen.update_map_step random mapgen ~done_fn ~map ~fonts:s.textures.fonts
               )

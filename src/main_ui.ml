@@ -110,15 +110,15 @@ let main_menu fonts menu_h =
     |> Option.return
   in
   let build_menu =
-    let check_trackbuild build (s:State.t) = Mapview_d.equal_build_mode s.ui.view.build_mode build in
+    let check_trackbuild build (s:State.t) = Bool.equal s.ui.view.build_mode build in
     let open MsgBox in
     make ~fonts ~x:168 ~y:8
     [
       make_entry "New &Train (F7)" @@ `Action `Build_train;
       make_entry "Build &Station (F8)" ~test_enabled:is_zoom4 @@ `Action `Build_station;
       make_entry "Build &Industry" ~test_enabled:is_zoom4 @@ `Action `Build_industry;
-      make_entry "&Build Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Build, check_trackbuild `Build);
-      make_entry "&Remove Track" ~test_enabled:is_zoom4 @@ `Checkbox(`Track `Remove, check_trackbuild `Remove);
+      make_entry "&Build Track" ~test_enabled:is_zoom4 @@ `Checkbox(`BuildTrack, check_trackbuild true); 
+      make_entry "&Remove Track" ~test_enabled:is_zoom4 @@ `Checkbox(`RemoveTrack, check_trackbuild false);
       make_entry "Im&prove Station" ~test_enabled:is_station4 @@ `Action `Improve_station;
       make_entry "Up&grade Bridge" ~test_enabled:is_woodbridge4 @@ `Action `Upgrade_bridge;
     ]
@@ -299,6 +299,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       Mapview.handle_event s view event ~minimap:v.dims.minimap
     in
     v.view <- view;
+
+    let nobaction = B.Action.NoAction in
     let v, backend_action =
       match menu_action, view_action with
       | On `Build_station, _ ->
@@ -306,7 +308,11 @@ let handle_event (s:State.t) v (event:Event.t) =
             build_station_menu s.textures.fonts
             |> Menu.MsgBox.do_open_menu s
           in
-          {v with mode=BuildStation(menu)}, B.Action.NoAction
+          {v with mode=BuildStation(menu)}, nobaction
+      | On `BuildTrack, _ ->
+          {v with view=Mapview.set_build_mode v.view true}, nobaction 
+      | On `RemoveTrack, _ ->
+          {v with view=Mapview.set_build_mode v.view false}, nobaction 
       | _, `BuildTrack msg ->
           v, B.Action.BuildTrack msg
       | _, `BuildFerry msg ->
@@ -316,21 +322,21 @@ let handle_event (s:State.t) v (event:Event.t) =
             build_bridge_menu s.textures.fonts
             |> Menu.MsgBox.do_open_menu s
           in
-          {v with mode=BuildBridge(menu, msg)}, B.Action.NoAction
+          {v with mode=BuildBridge(menu, msg)}, nobaction
       | _, `HighGradeTrack(msg, grade) ->
           let menu =
             build_tunnel_menu ~grade ~tunnel:false s.textures.fonts
             |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
           in
-          {v with mode=BuildTunnel(menu, msg, 0)}, B.Action.NoAction
+          {v with mode=BuildTunnel(menu, msg, 0)}, nobaction
       | _, `BuildTunnel(msg, length, grade) ->
           let menu =
             build_tunnel_menu ~grade ~tunnel:true s.textures.fonts
             |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
           in
-          {v with mode=BuildTunnel(menu, msg, length)}, B.Action.NoAction
+          {v with mode=BuildTunnel(menu, msg, length)}, nobaction
       | _ ->
-          v, B.Action.NoAction
+          v, nobaction
     in
     v, backend_action
 
