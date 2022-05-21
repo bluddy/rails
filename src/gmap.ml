@@ -426,7 +426,7 @@ let get_tunnel_length v ~x ~y ~dir =
       | Ocean _ | River _ | Harbor _ -> None
       | _ -> 
         let height = get_tile_height v x y in
-        if height <= 80 then Some n
+        if height <= 100 then Some n
         else
           loop (x+dx) (y+dy) (n+1)
    in
