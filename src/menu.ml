@@ -102,7 +102,7 @@ module MsgBox = struct
 
 
     (* Compute menu size dynamically *)
-  let do_open_menu ?(x=0) ?(y=0) s (v: ('a, 'b) t) =
+  let do_open_menu ?(x=0) ?(y=0) ?(selected=None) s v =
     (* start calculating internal y *)
     let max_h = v.border_y in
     (* entry coordinates are internal to the msgbox *)
@@ -143,7 +143,7 @@ module MsgBox = struct
       else
         v.x, v.y
     in
-    {v with entries; w; h; x; y}
+    {v with entries; w; h; x; y; selected}
 
   let make ?heading ?(x=0) ?(y=0) ~fonts entries =
     let font=fonts.(menu_font) in
