@@ -260,8 +260,9 @@ let build_bridge_menu fonts =
 let build_tunnel_menu fonts ~grade ~tunnel =
   let open Menu in
   let open MsgBox in
-  let pct = ((grade / 2) mod 4) * 25 in
-  let heading = Printf.sprintf "WARNING: .%d%% grade" pct in
+  let pct1 = grade / 8 in
+  let pct2 = ((grade / 2) mod 4) * 25 in
+  let heading = Printf.sprintf "WARNING: %d.%d%% grade" pct1 pct2 in
   let entries =
   [
     make_entry "Build &Track" @@ `Action(`Track);
