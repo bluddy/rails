@@ -150,19 +150,25 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match dir with
     | None -> v, `NoAction
     | Some dir ->
-        (* TODO: handle track removal *)
         let move i = move_cursor v dir i in
+        let msg () = Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0} in
         if build then (
-          let msg () = Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0} in
-          let check = B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 in
-          match check with
-          | `Ok -> move 1, `BuildTrack(msg ())
-          | `Ferry -> move 1, `BuildFerry(msg ())
-          | `HighGrade g -> v, `HighGradeTrack(msg (), g)
-          | `Bridge -> v, `BuildBridge(msg ()) 
-          | `Tunnel(len, g) -> v, `BuildTunnel(msg (), len, g)
-          | `Illegal -> v, `NoAction
+          if v.build_mode then
+            (* Build track *)
+            match B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 with
+            | `Ok -> move 1, `BuildTrack(msg ())
+            | `Ferry -> move 1, `BuildFerry(msg ())
+            | `HighGrade g -> v, `HighGradeTrack(msg (), g)
+            | `Bridge -> v, `BuildBridge(msg ()) 
+            | `Tunnel(len, g) -> v, `BuildTunnel(msg (), len, g)
+            | `Illegal -> v, `NoAction
+          else
+            (* Remove Track *)
+            match B.check_remove_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 with
+            | true -> move 1, `RemoveTrack(msg ())
+            | false -> v, `NoAction
         ) else
+          (* Regular movement *)
           move 1, `NoAction
   in
 

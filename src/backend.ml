@@ -71,7 +71,7 @@ let check_build_track v ~x ~y ~dir ~player =
   | (`Ok | `Ferry) as ret when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
   | _ -> `Illegal
 
-let build_tunnel v ~x ~y ~dir ~player ~length =
+let _build_tunnel v ~x ~y ~dir ~player ~length =
   Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length
 
 let check_build_station v ~x ~y ~player station_type =
@@ -79,7 +79,7 @@ let check_build_station v ~x ~y ~player station_type =
   | `Ok -> Gmap.check_build_station v.map ~x ~y
   | x -> x
 
-let build_station v ~x ~y station_type =
+let _build_station v ~x ~y station_type =
   (* TODO: create actual station data structure *)
   Trackmap.build_station v.track ~x ~y station_type
 
@@ -88,13 +88,13 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | `Bridge -> `Ok
   | _ -> `Illegal
 
-let build_bridge v ~x ~y ~dir ~player ~kind =
+let _build_bridge v ~x ~y ~dir ~player ~kind =
   Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind
 
-let build_track v ~x ~y ~dir ~player =
+let _build_track v ~x ~y ~dir ~player =
   Trackmap.build_track v.track ~x ~y ~dir ~player
 
-let build_ferry v ~x ~y ~dir ~player =
+let _build_ferry v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
   let tile1 = get_tile v x y in
   let tile2 = get_tile v (x+dx) (y+dy) in
@@ -106,6 +106,12 @@ let build_ferry v ~x ~y ~dir ~player =
   in
   Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2
 
+let check_remove_track v ~x ~y ~dir ~player=
+  Trackmap.check_remove_track v.track ~x ~y ~dir ~player
+
+let _remove_track v ~x ~y ~dir ~player =
+  Trackmap.remove_track v.track ~x ~y ~dir ~player
+
 let trackmap_iter v f = Trackmap.iter v.track f
 
 module Action = struct
@@ -116,22 +122,26 @@ module Action = struct
     | BuildStation of {x: int; y: int; kind: Station.t}
     | BuildBridge of Utils.msg * Bridge.t
     | BuildTunnel of Utils.msg * int (* length *)
+    | RemoveTrack of Utils.msg
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
-        let track = build_track backend ~x ~y ~dir ~player in
+        let track = _build_track backend ~x ~y ~dir ~player in
         {backend with track}
     | BuildFerry {x; y; dir; player} ->
-        let track = build_ferry backend ~x ~y ~dir ~player in
+        let track = _build_ferry backend ~x ~y ~dir ~player in
         {backend with track}
     | BuildStation {x; y; kind} ->
-        let track = build_station backend ~x ~y kind in
+        let track = _build_station backend ~x ~y kind in
         {backend with track}
     | BuildBridge({x; y; dir; player}, kind) ->
-        let track = build_bridge backend ~x ~y ~dir ~kind ~player in
+        let track = _build_bridge backend ~x ~y ~dir ~kind ~player in
         {backend with track}
     | BuildTunnel({x; y; dir; player}, length) ->
-        let track = build_tunnel backend ~x ~y ~dir ~player ~length in
+        let track = _build_tunnel backend ~x ~y ~dir ~player ~length in
+        {backend with track}
+    | RemoveTrack {x; y; dir; player} ->
+        let track = _remove_track backend ~x ~y ~dir ~player in
         {backend with track}
     | NoAction -> backend
 

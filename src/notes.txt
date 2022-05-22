@@ -4,9 +4,13 @@ Notes:
   - Reduce fps
   - Standardize ticks, not same as fps
 - TODO:
-  - remove track
   - draw track in f2 and f3
   - Modal Menus: standardize so most behavior doesn't need special handling
   - Don't allow station on curved tracks
+  - Fixes to grade: % shows up wrong
+  - Build tunnel:
+    - Tunnel msgbox incorrect
+    - Not sure how it decides to end tunnel
+    - Shows msgbox with cost and length of tunnel to confirm
 
 

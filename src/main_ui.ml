@@ -313,10 +313,9 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with view=Mapview.set_build_mode v.view true}, nobaction 
       | On `RemoveTrack, _ ->
           {v with view=Mapview.set_build_mode v.view false}, nobaction 
-      | _, `BuildTrack msg ->
-          v, B.Action.BuildTrack msg
-      | _, `BuildFerry msg ->
-          v, B.Action.BuildFerry msg
+      | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
+      | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
+      | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
       | _, `BuildBridge msg ->
           let menu =
             build_bridge_menu s.textures.fonts

@@ -221,5 +221,6 @@ let remove_track v ~x ~y ~dir ~player =
   | _ ->
       (* All other constructs remain whole with full dirs *)
       ()
-  end
+  end;
+  v
 
