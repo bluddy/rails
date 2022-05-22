@@ -1,5 +1,5 @@
 open Containers
-open Gmap
+open Tilemap
 
 let debug = false
 
@@ -165,10 +165,10 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
       (* In the game, we just intrude into the black border and nothing happens.
          Here we have to test *)
       if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
-      let pixel = Gmap.get_pixel ~map ~x ~y in
+      let pixel = Tilemap.get_pixel ~map ~x ~y in
       let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel map in
-      if Gmap.equal_pixel pixel land_pixel && Tile.equal possible_tile wanted_tile then (
-        Gmap.set_pixel ~area map ~x ~y ~pixel:resource_pixel;
+      if Tilemap.equal_pixel pixel land_pixel && Tile.equal possible_tile wanted_tile then (
+        Tilemap.set_pixel ~area map ~x ~y ~pixel:resource_pixel;
         Some (x, y)
       ) else
         let x = if y mod 2 = 1 then x + 1 else x - 1 in
@@ -228,7 +228,7 @@ let add_city_list r area (city_list:city list) : (int * int) list =
     (* add all cities as villages *)
     let acc =
       (* Amazingly, some cities seem to be out of bounds and they let the population expand into the map *)
-      if x >= 0 && y >= 0 && x < Gmap.map_width && y < Gmap.map_height then
+      if x >= 0 && y >= 0 && x < Tilemap.map_width && y < Tilemap.map_height then
         (x,y)::acc
       else acc
     in
@@ -262,7 +262,7 @@ let add_city_list r area (city_list:city list) : (int * int) list =
       let x = x + Dir.x_offset.(offset) in
       let y = y + Dir.y_offset.(offset) in
       (* Here too, the game relies on borders and we need bounds checking *)
-      if x >= 0 && y >= 0 && x < Gmap.map_width && y < Gmap.map_height then
+      if x >= 0 && y >= 0 && x < Tilemap.map_width && y < Tilemap.map_height then
         (x, y)::acc
       else
         acc
@@ -274,7 +274,7 @@ let add_city_list r area (city_list:city list) : (int * int) list =
 
 
 let load_city_list area  =
-  let num = Gmap.area_to_enum area in
+  let num = Tilemap.area_to_enum area in
   let filename = Printf.sprintf "./data/CITIES%d.DTA" num in
   let str = CCIO.with_in filename CCIO.read_all in
   let stream = Gen.of_string str in
@@ -323,9 +323,9 @@ let update_map_step r v ~map ~fonts ~done_fn =
   | `Mountains -> 
       begin match v.mountains with
       | (x, y)::rest ->
-          let pixel = Gmap.get_pixel ~map ~x ~y in
+          let pixel = Tilemap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_mountain pixel in
-          Gmap.set_pixel ~area:v.area map ~x ~y ~pixel;
+          Tilemap.set_pixel ~area:v.area map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with mountains=rest; new_pixels}, map
       | _ ->
@@ -356,9 +356,9 @@ let update_map_step r v ~map ~fonts ~done_fn =
   | `Cities ->
       begin match v.cities with
       | (x, y)::rest ->
-          let pixel = Gmap.get_pixel ~map ~x ~y in
+          let pixel = Tilemap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_city pixel in
-          Gmap.set_pixel ~area:v.area map ~x ~y ~pixel;
+          Tilemap.set_pixel ~area:v.area map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with cities=rest; new_pixels}, map
       | _ ->
@@ -376,7 +376,7 @@ module R = Renderer
 
 let render_new_pixels win v pixel_tex =
   let render (x, y) pixel _acc =
-    let color = Gmap.pixel_to_enum pixel |> Ega.get_rgba in
+    let color = Tilemap.pixel_to_enum pixel |> Ega.get_rgba in
     R.Texture.render win ~x ~y ~color pixel_tex
   in
   IntIntMap.fold render v.new_pixels ();

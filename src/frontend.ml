@@ -4,7 +4,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 module R = Renderer
 module B = Backend
 
-let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
+let run ?(view=Screen.MapGen None) ?(area=Tilemap.WestUS) () : unit =
   let random = Random.get_state () in
   (* Used by different elements *)
   let seed = Random.int 0x7FFF random in
@@ -46,7 +46,7 @@ let run ?(view=Screen.MapGen None) ?(area=Gmap.WestUS) () : unit =
         | Screen.MapGen Some data ->
             let done_fn () =
               (* Final update of map *)
-              let map = Gmap.update_heightmap @@ B.get_map s.backend in
+              let map = Tilemap.update_heightmap @@ B.get_map s.backend in
               Textures.update_map win s.textures map;
               map
             in

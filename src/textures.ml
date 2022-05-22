@@ -12,7 +12,7 @@ module TileTex = struct
 
   (* Load and separate sprites *)
   let slice_tiles win res =
-    let open Gmap in
+    let open Tilemap in
     let tiles = Hashtbl.create 40 in
     let small_tiles = Hashtbl.create 40 in
 
@@ -172,7 +172,7 @@ module TileTex = struct
         | Pair(x, _) -> x
         | Localized x ->
             match area with
-            | Gmap.WestUS | EastUS -> find x.us
+            | Tilemap.WestUS | EastUS -> find x.us
             | Britain -> find x.england
             | Europe -> find x.europe
       in
@@ -239,7 +239,7 @@ let slice_logo win res =
   |> R.Texture.make win
 
 type t = {
-  maps: (Gmap.area * R.Texture.t) list;
+  maps: (Tilemap.area * R.Texture.t) list;
   pics: (string, R.Texture.t) Hashtbl.t;
   mutable map: R.Texture.t;   (* current map *)
   pixel: R.Texture.t; (* white pixel *)
@@ -252,7 +252,7 @@ type t = {
 
 let of_resources win res area =
   let maps = List.map (fun (a, v) ->
-      a, R.Texture.make win @@ Gmap.to_img v)
+      a, R.Texture.make win @@ Tilemap.to_img v)
     res.Resources.res_maps
   in
   let map = List.assoc ~eq:(Stdlib.(=)) area maps in
@@ -278,5 +278,5 @@ let of_resources win res area =
   }
 
 let update_map _win v map =
-  R.Texture.update v.map @@ Gmap.to_img map
+  R.Texture.update v.map @@ Tilemap.to_img map
 

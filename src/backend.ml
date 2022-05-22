@@ -25,10 +25,10 @@ type options = {
 }
 
 type t = {
-  area: Gmap.area;
-  map : Gmap.t;
+  area: Tilemap.area;
+  map : Tilemap.t;
   track: Trackmap.t;
-  cities: Gmap.city array;
+  cities: Tilemap.city array;
   options : options;
 }
 [@@deriving lens]
@@ -36,19 +36,19 @@ type t = {
 let default area resources = 
   let map = List.assoc ~eq:(Stdlib.(=)) area resources.Resources.res_maps in
   let cities = List.assoc ~eq:(Stdlib.(=)) area resources.res_cities
-    |> List.map (fun (name,x,y) -> {Gmap.name;x;y})
+    |> List.map (fun (name,x,y) -> {Tilemap.name;x;y})
     |> Array.of_list in
-  let track = Trackmap.empty Gmap.map_width Gmap.map_height in
+  let track = Trackmap.empty Tilemap.map_width Tilemap.map_height in
   let speed = `Moderate in
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
   {map; area; cities; track; options}
 
-let map_height = Gmap.map_height
+let map_height = Tilemap.map_height
 
-let map_width = Gmap.map_width
+let map_width = Tilemap.map_width
 
-let get_tile v x y = Gmap.get_tile v.map x y
+let get_tile v x y = Tilemap.get_tile v.map x y
 
 let get_track v x y = Trackmap.get v.track x y
 
@@ -58,13 +58,13 @@ let get_cities v = v.cities
 
 let get_map v = v.map
 
-let get_tile_height v x y = Gmap.get_tile_height v.map x y
+let get_tile_height v x y = Tilemap.get_tile_height v.map x y
 
 let iter_cities f v = 
-  Array.iter (fun city -> f city.Gmap.name city.x city.y) v.cities
+  Array.iter (fun city -> f city.Tilemap.name city.x city.y) v.cities
 
 let check_build_track v ~x ~y ~dir ~player =
-  match Gmap.check_build_track v.map ~x ~y ~dir with
+  match Tilemap.check_build_track v.map ~x ~y ~dir with
   | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
   | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
   | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
@@ -76,7 +76,7 @@ let _build_tunnel v ~x ~y ~dir ~player ~length =
 
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with
-  | `Ok -> Gmap.check_build_station v.map ~x ~y
+  | `Ok -> Tilemap.check_build_station v.map ~x ~y
   | x -> x
 
 let _build_station v ~x ~y station_type =

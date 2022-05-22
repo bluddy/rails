@@ -176,12 +176,12 @@ let default win fonts =
   let mapview = Utils.{
     x = 0;
     y = menu.h;
-    w = Gmap.map_width;
-    h = Gmap.map_height;
+    w = Tilemap.map_width;
+    h = Tilemap.map_height;
   }
   in
   let ui = Utils.{
-    x = Gmap.map_width - 1;
+    x = Tilemap.map_width - 1;
     y = menu.h + menu.y;
     w = 64;
     h = screen.h - menu.h;
