@@ -211,7 +211,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let map_x, map_y = start_x + j, start_y + i in
       let alt = ((map_x + map_y) land 1) > 0 in
       let tile = B.get_tile s.backend map_x map_y in
-      let tex = Textures.Tile.find tiles ~area:(B.get_area s.backend) ~alt tile in
+      let tex = Textures.TileTex.find tiles ~area:(B.get_area s.backend) ~alt tile in
       let x, y = j * tile_w, v.dims.y + i * tile_h in
       R.Texture.render win tex ~x ~y;
     )
@@ -297,7 +297,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     iter_screen (fun i j ->
       let map_x, map_y = start_x + j, start_y + i in
       match B.get_tile s.backend map_x map_y with
-      | Gmap.Ocean _ -> ()
+      | Tile.Ocean _ -> ()
       | _ ->
         let height = (B.get_tile_height s.backend map_x map_y) / 2 |> string_of_int in
         let x, y = j * tile_w + 4, i * tile_h + 4 + v.dims.y in

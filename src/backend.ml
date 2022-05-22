@@ -99,7 +99,7 @@ let _build_ferry v ~x ~y ~dir ~player =
   let tile1 = get_tile v x y in
   let tile2 = get_tile v (x+dx) (y+dy) in
   let kind1, kind2 = match tile1, tile2 with
-    | Gmap.Ocean _ , Ocean _ -> Track.Ferry, Track.Ferry
+    | Tile.Ocean _ , Ocean _ -> Track.Ferry, Track.Ferry
     | Ocean _, _ -> Ferry, Track
     | _, Ocean _ -> Track, Ferry
     | _ -> assert false

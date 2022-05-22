@@ -10,52 +10,10 @@ type area =
 
 let areas = [EastUS; WestUS; Britain; Europe]
 
-type tile =
-  | Clear (* 0 *)
-  | Woods
-  | Swamp
-  | Foothills
-  | Hills
-  | Mountains (* 5 *)
-  | City
-  | Village
-  | Farm
-  | Slums
-  | FoodProc (* 10 *)
-  | Ranch (* US *)
-  | Stockyard (* US *)
-  | Factory
-  | GrainElev (* US, Eng *)
-  | PaperMill (* 15, US *)
-  | Landing of Dir.Set.t (* Light blue river *)
-  | LumberMill (* US *)
-  | CoalMine
-  | SteelMill
-  | PowerPlant (* 20 US, Europe *)
-  | OilWell (* US *)
-  | Refinery (* US *)
-  | EnemyRR
-  | River of Dir.Set.t (* directions of river *)
-  | Ocean of Dir.Set.t (* 25 *) (* dirs are directions of land *)
-  | Harbor of Dir.Set.t (* same as ocean *)
-
-  (* Alternative *)
-  | Desert
-  | SaltMine (* Eng *)
-  | TextileMill (* Eng, Eur *)
-  | ChemicalPlant (* Eng, Eur *)
-  | Brewery (* Eng *)
-  | Vinyard (* Eur *)
-  | Winery (* Eur *)
-  | Fort (* Eur *)
-  | GlassWorks (* Eng *)
-  | SheepFarm (* Eng, Eur *)
-  [@@deriving eq, show]
-
 (* Map data type. Starts at top left *)
 type t = {
   seed: int; (* 15 bit value *)
-  map: tile array;
+  map: Tile.t array;
   heightmap: int array;
   width: int;
   height: int;
@@ -106,7 +64,7 @@ let height_of_pixel = function
   | Mountain_pixel -> 8
 
 let pixel_of_tile = function
-  | Slums -> Slum_pixel
+  | Tile.Slums -> Slum_pixel
   | Ocean _ -> Ocean_pixel
   | Clear -> Clear_pixel
   | Woods -> Woods_pixel
@@ -139,10 +97,7 @@ let pixel_of_tile = function
   | Factory
   | City -> City_pixel
   | Mountains -> Mountain_pixel
-
-let is_ground = function
-  | River _ | Ocean _ | Harbor _ | Landing _ -> false
-  | _ -> true
+  | EnemyRR -> assert false
 
 let map_height = 192
 let map_width = 256
@@ -204,7 +159,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
     Dir.Set.of_mask mask
   in
   let is_water = function
-    | River _
+    | Tile.River _
     | Landing _
     | Harbor _
     | Ocean _ -> true
@@ -214,7 +169,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
   let xy_random = x * 9 + y * 13 + seed in
   (* let pixel = Option.get @@ pixel_of_enum pixel in *)
   let simple_mapping = function
-    | Slum_pixel -> Slums
+    | Slum_pixel -> Tile.Slums
     | Clear_pixel -> Clear
     | Woods_pixel -> Woods
     | Harbor_pixel ->
@@ -232,6 +187,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
     | Mountain_pixel -> Mountains
     | Ocean_pixel ->
         Ocean(water_dirs ~edge:false ~f:not_water)
+    | EnemyRR_pixel -> assert false
   in
   (* NOTE: Does some area change the mappings?
       Otherwise why would clear pixels get complex mapping when they can't have anything? *)
@@ -239,7 +195,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
     (* xy_random is 0-3 *)
     match (pixel, xy_random) with
     | River_pixel, (0 | 2) ->
-        Landing(water_dirs ~edge:false ~f:is_water)
+        Tile.Landing(water_dirs ~edge:false ~f:is_water)
     | River_pixel, _ ->
         River(water_dirs ~edge:false ~f:is_water)
     | Farm_pixel, 0 -> GrainElev
@@ -265,7 +221,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
         let x = x + low_2bits in
         let next_2bits = (seed lsr 4) land 3 in
         let y = y / 2 + next_2bits in
-        if x land 2 = y land 3 then OilWell
+        if x land 2 = y land 3 then Tile.OilWell
         else if x land 3 = y land 3 then LumberMill
         else CoalMine
     | Farm_pixel | Clear_pixel when upper_3bits = mid_2bits && low_3bits = 0 ->
@@ -280,7 +236,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
   let alternative_tile area tile = match area with
     | Britain ->
         begin match tile with
-        | FoodProc -> Brewery
+        | Tile.FoodProc -> Tile.Brewery
         | Ranch -> SheepFarm
         | Stockyard -> GlassWorks
         | PaperMill -> TextileMill
@@ -350,7 +306,7 @@ let of_ndarray ~area ~seed ndarray =
   (* First pass: don't set directions for ocean and river *)
   let width = 256 in
   let height = 192 in
-  let map = Array.make (width * height) @@ Ocean(Dir.Set.empty) in
+  let map = Array.make (width * height) @@ Tile.Ocean(Dir.Set.empty) in
   let heightmap = Array.empty in
   let v = {map; seed; width; height; heightmap} in
   for y=0 to v.height-1 do
@@ -444,8 +400,8 @@ let check_build_track v ~x ~y ~dir =
     match tile1, tile2 with
     (* Cannot build over river, or ocean to river *)
     | Ocean _, Ocean _ -> `Ferry
-    | (Ocean _, t | t, Ocean _) when is_ground t -> `Ferry
-    | t1, t2 when is_ground t1 && is_ground t2 ->
+    | (Ocean _, t | t, Ocean _) when Tile.is_ground t -> `Ferry
+    | t1, t2 when Tile.is_ground t1 && Tile.is_ground t2 ->
         let height1 = get_tile_height v x y in
         let height2 = get_tile_height v x2 y2 in
         let grade = get_grade v ~x ~y ~dir in
@@ -459,18 +415,18 @@ let check_build_track v ~x ~y ~dir =
         else
           `Ok
     (* Bridge *)
-    | t, River _ when is_ground t && Dir.is_cardinal dir ->
+    | t, River _ when Tile.is_ground t && Dir.is_cardinal dir ->
         let x3, y3 = x2 + dx, y2 + dy in
         if x3 < 0 || x3 >= v.width || y3 < 0 || y3 >= v.height then `Illegal
         else
           let tile3 = get_tile v x3 y3 in
-          if is_ground tile3 then `Bridge
+          if Tile.is_ground tile3 then `Bridge
           else `Illegal
     | _, _ -> `Illegal
 
 let check_build_station v ~x ~y =
   let tile = get_tile v x y in
-  if is_ground tile then `Ok
+  if Tile.is_ground tile then `Ok
   else `Illegal
 
 

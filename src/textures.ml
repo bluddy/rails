@@ -3,7 +3,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Renderer
 
-module Tile = struct
+module TileTex = struct
 
   type t =
     | Single of R.Texture.t
@@ -47,7 +47,7 @@ module Tile = struct
       let pair = pair_fn ~tiles ~ndarray:us_ndarray ~y ~mult in
       let top = single_fn ~tiles ~ndarray:us_ndarray ~y ~mult in
       let bottom = single_fn ~tiles ~ndarray:us_ndarray ~y:(y+mult) ~mult in
-      pair Clear 0;
+      pair Tile.Clear 0;
       pair Woods 1;
       pair Swamp 2;
       pair Desert 2; (* Needs to be yellow *)
@@ -79,7 +79,7 @@ module Tile = struct
     let load_en_tiles ~tiles ~y ~mult =
       let top = single_fn ~tiles ~ndarray:en_ndarray ~y ~mult in
       let bottom = single_fn ~tiles ~ndarray:en_ndarray ~y:(y+mult) ~mult in
-      top Brewery 10;
+      top Tile.Brewery 10;
       top SheepFarm 11;
       top GlassWorks 12;
       bottom SaltMine 11;
@@ -89,7 +89,7 @@ module Tile = struct
 
     let load_eu_tiles ~tiles ~y ~mult =
       let top = single_fn ~tiles ~ndarray:eu_ndarray ~y ~mult in
-      top Winery 10;
+      top Tile.Winery 10;
       top Fort 11;
       top Vinyard 13;
     in
@@ -99,7 +99,7 @@ module Tile = struct
     (* We added these *)
     let load_extra_tiles ~tiles ~y ~mult =
       let pair = pair_fn ~tiles ~ndarray:extra_ndarray ~y ~mult in
-      pair Desert 2;
+      pair Tile.Desert 2;
     in
     load_extra_tiles ~tiles ~y:0 ~mult:16;
     load_extra_tiles ~tiles:small_tiles ~y:32 ~mult:8;
@@ -144,10 +144,10 @@ module Tile = struct
       img 14 [Left; Down; Right];
       img 15 [Up; Right; Left; Down]
     in
-    let ocean x = Ocean x in
-    let harbor x = Harbor x in
-    let river x = River x in
-    let landing x = Landing x in
+    let ocean x = Tile.Ocean x in
+    let harbor x = Tile.Harbor x in
+    let river x = Tile.River x in
+    let landing x = Tile.Landing x in
     load_dir_tiles ~tiles ~key:ocean ~y:48 ~x:0 ~mult:16 ~ndarray:us_ndarray;
     load_dir_tiles ~tiles ~key:harbor ~y:48 ~x:0 ~mult:16 ~ndarray:extra_ndarray;
     load_dir_tiles ~tiles ~key:river ~y:64 ~x:0 ~mult:16 ~ndarray:us_ndarray;
@@ -164,7 +164,7 @@ module Tile = struct
         try
           Hashtbl.find hash tile
         with Not_found ->
-          failwith @@ Printf.sprintf "Tile %s not found" (Gmap.show_tile tile)
+          failwith @@ Printf.sprintf "Tile %s not found" (Tile.show tile)
       in
       let rec find = function
         | Single x -> x
@@ -245,8 +245,8 @@ type t = {
   pixel: R.Texture.t; (* white pixel *)
   fonts: Fonts.t;
   logo: R.Texture.t;
-  tiles: (Gmap.tile, Tile.t) Hashtbl.t;
-  small_tiles: (Gmap.tile, Tile.t) Hashtbl.t;
+  tiles: (Tile.t, TileTex.t) Hashtbl.t;
+  small_tiles: (Tile.t, TileTex.t) Hashtbl.t;
   tracks: R.Texture.t Track.Htbl.t;
 }
 
@@ -262,7 +262,7 @@ let of_resources win res area =
   in
   let pixel = R.Texture.make win Pic.white_pixel in
   let fonts = Fonts.load win in
-  let tiles, small_tiles = Tile.slice_tiles win res in
+  let tiles, small_tiles = TileTex.slice_tiles win res in
   let logo = slice_logo win res in
   let tracks = Tracks.load win res in
   {

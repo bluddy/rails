@@ -167,7 +167,7 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
       if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
       let pixel = Gmap.get_pixel ~map ~x ~y in
       let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel map in
-      if Gmap.equal_pixel pixel land_pixel && Gmap.equal_tile possible_tile wanted_tile then (
+      if Gmap.equal_pixel pixel land_pixel && Tile.equal possible_tile wanted_tile then (
         Gmap.set_pixel ~area map ~x ~y ~pixel:resource_pixel;
         Some (x, y)
       ) else
@@ -183,7 +183,7 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
 type res_data = {
   land_pixel: pixel;
   resource_pixel: pixel;
-  wanted_tile: tile;
+  wanted_tile: Tile.t;
   num: int;
   name: string;
   text_y: int; (* y coordinate of text *)
