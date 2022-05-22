@@ -1,8 +1,4 @@
 Notes:
-- F2 view a little buggy, sometimes freezes
-  - Due to fps issues over X. Connection collapses
-  - Reduce fps
-  - Standardize ticks, not same as fps
 - TODO:
   - draw track in f2 and f3
   - Modal Menus: standardize so most behavior doesn't need special handling
@@ -12,5 +8,12 @@ Notes:
     - Tunnel msgbox incorrect
     - Not sure how it decides to end tunnel
     - Shows msgbox with cost and length of tunnel to confirm
+  - Build track:
+    - Always connect to track, unless no track exists
+  - Next: stations and intersections
 
 
+- F2 view a little buggy, sometimes freezes
+  - Due to fps issues over X. Connection collapses
+  - Reduce fps
+  - Standardize ticks, not same as fps

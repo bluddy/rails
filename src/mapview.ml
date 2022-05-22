@@ -195,6 +195,7 @@ module R = Renderer
 
 let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
+  let tile_w2, tile_h2 = tile_w/2, tile_h/2 in
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
   let iter_screen f =
     for i = 0 to v.dims.h/tile_h - 1 do
@@ -233,6 +234,21 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_track_zoom1 () =
     B.trackmap_iter s.backend (fun x y _ ->
       R.draw_point win ~x ~y:(y + v.dims.y) ~color:Ega.black
+    )
+  in
+
+  let draw_track_zoom2 () =
+    iter_screen (fun i j ->
+      let map_x, map_y = start_x + j, start_y + i in
+      match B.get_track s.backend map_x map_y with
+      | Some track ->
+        let x, y = j * tile_w + tile_w2, v.dims.y + i * tile_h + tile_h2 in
+        Dir.Set.iter (fun dir ->
+          let dx, dy = Dir.to_offsets dir in
+          R.draw_line win ~color:Ega.white ~x1:x ~y1:y ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2)
+        )
+        track.dirs
+      | _ -> ()
     )
   in
 
@@ -316,6 +332,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_track_zoom1 ()
   | Zoom2 | Zoom3 ->
       tile_render ();
+      draw_track_zoom2 ();
       draw_minimap ~minimap;
   | Zoom4 ->
       tile_render ();
