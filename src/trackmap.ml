@@ -19,11 +19,14 @@ let x_y_of_offset v offset =
 
 let get v x y = Hashtbl.find_opt v.map (calc_offset v x y)
 
+  (* get, buf if there's nothing, create a track *)
 let get_track ?(kind=Track.Track) v x y ~player =
   get v x y
   |> Option.get_lazy (fun () -> Track.empty player kind)
 
 let set v x y tile = Hashtbl.replace v.map (calc_offset v x y) tile
+
+let remove v x y = Hashtbl.remove v.map (calc_offset v x y)
 
 let iter v f =
   Hashtbl.iter (fun i track ->
@@ -33,8 +36,7 @@ let iter v f =
 
 let check_build_track v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
-  let x2 = x + dx |> Utils.clip ~min:0 ~max:(v.width - 1) in
-  let y2 = y + dy |> Utils.clip ~min:0 ~max:(v.height - 1) in
+  let x2, y2 = x + dx, y + dy in
   if x < 0 || x2 < 0 || y < 0 || y2 < 0
     || x >= v.width || x2 >= v.width || y >= v.height || y2 >= v.height then false
   else
@@ -44,7 +46,8 @@ let check_build_track v ~x ~y ~dir ~player =
     let track22 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
     if Track.equal_dirs track1 track12 && Track.equal_dirs track2 track22 then false
     else
-      Track.is_legal track12 && Track.is_legal track22
+      track1.player = player && track2.player = player
+      && Track.is_legal track12 && Track.is_legal track22
 
   (* do build. Assumes we already checked
      kind1: kind of track in from tile
@@ -104,7 +107,7 @@ let check_build_stretch v ~x ~y ~dir ~player ~length =
   (* check boundaries *)
   if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
     x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then
-      true
+      false
   else (
     (* No track in between *)
     let rec loop x y i =
@@ -167,3 +170,56 @@ let build_bridge v ~x ~y ~dir ~player ~kind =
 let build_tunnel v ~x ~y ~dir ~player ~length =
   build_stretch v ~x ~y ~dir ~player ~n:length ~kind:Track.Tunnel
    
+  (* Can work for all kinds of constructs *)
+let check_remove_track v ~x ~y ~dir ~player =
+  let dx, dy = Dir.to_offsets dir in
+  let x2, y2 = x + dx, y + dy in
+  if x < 0 || x2 < 0 || y < 0 || y2 < 0
+    || x >= v.width || x2 >= v.width || y >= v.height || y2 >= v.height then false
+  else
+    let track1 = get_track v x y ~player in
+    let track2 = get_track v x2 y2 ~player in
+    if track1.player <> player || track2.player <> player then false
+    else
+      match track1.kind, track2.kind with
+      | Bridge _, _ | _, Bridge _ -> true
+      | Tunnel, _ | _, Tunnel -> true
+      | Station _, _ | _, Station _ -> true
+      | _ ->
+          Track.has_dir track1 ~dir || Track.has_dir track2 ~dir:(Dir.opposite dir)
+
+let remove_track_dir v ~x ~y ~dir =
+  match get v x y with
+  | Some track ->
+    let track = Track.remove_dir track ~dir in
+    if Track.is_empty track then
+      remove v x y
+    else
+      set v x y track
+  | None -> ()
+
+let remove_track v ~x ~y ~dir ~player =
+  let dx, dy = Dir.to_offsets dir in
+  let x2, y2 = x + dx, y + dy in
+  let track1 = get_track v x y ~player in
+  if track1.player = player then
+    begin match track1.kind with
+    | Track | Ferry ->
+        (* TODO: handle ixn *)
+        remove_track_dir v ~x ~y ~dir;
+    | Station _ ->
+        (* TODO: handle station removal *)
+        remove v x y
+    | Bridge _ | Tunnel ->
+        remove v x y
+    end
+  else ();
+  let track2 = get_track v x2 y2 ~player in
+  begin match track2.kind with
+  | Track | Ferry when track2.player = player ->
+      remove_track_dir v ~x:x2 ~y:y2 ~dir:(Dir.opposite dir);
+  | _ ->
+      (* All other constructs remain whole with full dirs *)
+      ()
+  end
+

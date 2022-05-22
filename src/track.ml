@@ -25,12 +25,19 @@ let empty player kind = {
 
 let is_ixn dirs = Dir.Set.cardinal dirs > 2
 
+let is_empty v = Dir.Set.cardinal v.dirs = 0
+
 let make dirs kind ~player =
   let ixn = is_ixn dirs in
   {dirs; kind; ixn; player}
 
 let add_dir v ~dir =
   let dirs = Dir.Set.add v.dirs dir in
+  let ixn = is_ixn dirs in
+  {v with dirs; ixn}
+
+let remove_dir v ~dir =
+  let dirs = Dir.Set.remove v.dirs dir in
   let ixn = is_ixn dirs in
   {v with dirs; ixn}
 
@@ -72,7 +79,7 @@ let legal_tracks =
   _add_to_set h Resources.track_turns;
   h
 
-  (* Set of all sets of non-track things *)
+  (* Set of all sets of non-track things. Full straight *)
 let straight_dirs =
   let h = TrackSet.create 10 in
   _add_to_set h Resources.special_dirs;
