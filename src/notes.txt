@@ -1,5 +1,6 @@
 Notes:
 - TODO:
+  - check land prices in eu, en
   - draw track in f2 and f3
   - Modal Menus: standardize so most behavior doesn't need special handling
   - Don't allow station on curved tracks
@@ -17,3 +18,14 @@ Notes:
   - Due to fps issues over X. Connection collapses
   - Reduce fps
   - Standardize ticks, not same as fps
+
+- Enhancements:
+  - Currently all resources convert to others automatically. So a power plant converts coal to steel.
+  - Also they convert to one thing only!
+    Ideally:
+      - Power plants shouldn't create steel
+      -each tile determines what it converts to.
+      - Power plants only exist after a certain date
+      - Once they exist, they increase growth of cities/factories (large range)
+  - Add resource chains
+  - Tourism sites?
