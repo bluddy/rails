@@ -372,22 +372,24 @@ let get_grade v ~dir ~x ~y =
   else
     grade
 
-    (* Get the length of a tunnel needed *)
+    (* Get the length of a tunnel needed.
+       We stop when we reach the same height more or less *)
 let get_tunnel_length v ~x ~y ~dir =
    let dx, dy = Dir.to_offsets dir in
+   let height1div = (get_tile_height v x y) / 10 in
    let rec loop x y n =
      if x < 0 || x >= v.width || y < 0 || y >= v.height then None
      else
       match get_tile v x y with
-      | Ocean _ | River _ | Harbor _ -> None
+      | Ocean _ | River _ | Landing _ | Harbor _ -> None
       | _ -> 
         let height = get_tile_height v x y in
-        if height <= 100 then Some n
+        if height/10 <= height1div then Some n
         else
           loop (x+dx) (y+dy) (n+1)
    in
-   match loop x y 0 with
-   | Some 0 -> None
+   match loop (x+dx) (y+dy) 1 with
+   | Some x when x <= 1 -> None
    | x -> x
 
 let check_build_track v ~x ~y ~dir =
