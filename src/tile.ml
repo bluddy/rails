@@ -35,7 +35,7 @@ type t =
   | TextileMill (* Eng, Eur *)
   | ChemicalPlant (* Eng, Eur *)
   | Brewery (* Eng *)
-  | Vinyard (* Eur *)
+  | Vineyard (* Eur *)
   | Winery (* Eur *)
   | Fort (* Eur *)
   | GlassWorks (* Eng *)
@@ -130,9 +130,9 @@ module Info = struct
       SheepFarm, make "Sheep Farm" 5 ~supply:[Nitrates, 96; Wool, 96]; (* Eng, Eur *)
       TextileMill, make "Textile Mill" 10 ~demand:[Wool, 64];(* Eng, Eur *)
       ChemicalPlant, make "Chemical Plant" 15 ~demand:[Nitrates, 64]; (* Eng, Eur *)
-      Vinyard, make "Vinyard" 10 ~supply:[Grapes, 128]; (* Eur *)
-      Winery, make "Winery" 15 ~demand:[Grapes, 64]; (* Eur *)
-      Fort, make "Fort" 20 ~demand:[Armaments, 64]; (* Eur *)
+      Vineyard, make "Vineyard" 10 ~supply:[Grapes, 128]; (* Eur *)
+      Winery, make "Winery" 10 ~demand:[Grapes, 64]; (* Eur *)
+      Fort, make "Fort" 5 ~demand:[Armaments, 64]; (* Eur *)
     ]
   let eu_convert =
     [
@@ -160,8 +160,9 @@ module Info = struct
       SaltMine, make "Salt Mine" 5 ~supply:[Chemicals, 3 * 32];  (* Eng *)
       TextileMill, make "Textile Mill" 10 ~demand:[Cotton, 64];(* Eng, Eur *)
       ChemicalPlant, make "Chemical Plant" 15 ~demand:[Chemicals, 64]; (* Eng, Eur *)
+      GrainElev, make "Grain Elev." 10 ~supply:[Hops, 64];
       Brewery, make "Brewery" 10 ~demand:[Hops, 64]; (* Eng *)
-      GlassWorks, make "Glassworks" 15 ~supply:[MfgGoods, 5 * 32]; (* Eng *)
+      GlassWorks, make "Glassworks" 10 ~supply:[MfgGoods, 5 * 32]; (* Eng *)
       SheepFarm, make "Sheep Farm" 5 ~supply:[Livestock, 5 * 32]; (* Eng, Eur *)
     ]
   let en_convert =
