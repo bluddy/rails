@@ -91,7 +91,7 @@ module TileTex = struct
       let top = single_fn ~tiles ~ndarray:eu_ndarray ~y ~mult in
       top Tile.Winery 10;
       top Fort 11;
-      top Vinyard 13;
+      top Vineyard 13;
     in
     load_eu_tiles ~tiles ~y:0 ~mult:16;
     load_eu_tiles ~tiles:small_tiles ~y:32 ~mult:8;

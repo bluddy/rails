@@ -80,7 +80,7 @@ let pixel_of_tile = function
   | River _ -> River_pixel
   | Ranch | Fort
   | SheepFarm (* for EU, village and oilwell pixel *)
-  | GrainElev | Vinyard
+  | GrainElev | Vineyard
   | Farm -> Farm_pixel
   | Hills -> Hills_pixel
   | Village
@@ -249,7 +249,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
         | FoodProc -> Winery
         | Ranch -> Fort
         | Stockyard -> SheepFarm
-        | GrainElev -> Vinyard
+        | GrainElev -> Vineyard
         | PaperMill -> TextileMill
         | OilWell -> SheepFarm
         | Refinery -> ChemicalPlant (* same image *)
