@@ -73,15 +73,23 @@ type menu_action =
     ]
     [@@deriving show]
 
+    (* modalmenu type used for factoring *)
+type ('a, 'b, 'c) modalmenu =
+  {
+    menu: ('b option, 'a) Menu.MsgBox.t;
+    data: 'c;
+    last: 'a mode;
+  }
     (* Main modes of operation of the mapview.
        Any special menu needs a mode.
+       'a: used to allow recursive modules with the main State.t
     *)
-type 'a mode =
+and 'a mode =
   | Normal
   | ModalMsgbox of (unit, 'a) Menu.MsgBox.t * 'a mode
-  | BuildStation of (Station.t option, 'a) Menu.MsgBox.t
-  | BuildBridge of (Bridge.t option, 'a) Menu.MsgBox.t * Utils.msg
-  | BuildTunnel of ([`Cancel | `Tunnel | `Track], 'a) Menu.MsgBox.t * Utils.msg * int (* length *)
+  | BuildStation of ('a, Station.t, unit) modalmenu
+  | BuildBridge of ('a, Bridge.t, Utils.msg) modalmenu
+  | BuildTunnel of ('a, [`Tunnel | `Track], (Utils.msg * int)) modalmenu
 
 type 'a t = {
   dims: dims;

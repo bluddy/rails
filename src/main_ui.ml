@@ -265,17 +265,33 @@ let build_tunnel_menu fonts ~grade ~tunnel =
   let heading = Printf.sprintf "WARNING: %d.%d%% grade" pct1 pct2 in
   let entries =
   [
-    make_entry "Build &Track" @@ `Action(`Track);
-    make_entry "&CANCEL" @@ `Action(`Cancel);
+    make_entry "Build &Track" @@ `Action(Some `Track);
+    make_entry "&CANCEL" @@ `Action(None);
   ]
   in
   let entries =
-    if tunnel then entries @ [make_entry "Build T&unnel" @@ `Action(`Tunnel)]
+    if tunnel then entries @ [make_entry "Build T&unnel" @@ `Action(Some `Tunnel)]
     else entries
   in
   make ~fonts ~heading ~x:176 ~y:16 entries
 
 let handle_event (s:State.t) v (event:Event.t) =
+  (* Handle most stuff for regular menus *)
+  let handle_modal_menu_events =
+      fun (type b) (type c) (modal: (State.t, b, c) modalmenu)
+          (build_fn:(State.t, b, c) modalmenu -> State.t mode)
+          (process_fn:(State.t, b, c) modalmenu -> b -> State.t t * B.Action.t) ->
+      let menu, action = Menu.MsgBox.update s modal.menu event in
+      let exit_mode () = {v with mode=modal.last}, B.Action.NoAction in
+      begin match action with
+      | Menu.On(None) -> exit_mode ()
+      | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
+      | Menu.On(Some choice) ->
+          process_fn modal choice
+      | Menu.NoAction -> v, B.Action.NoAction
+      | _ -> {v with mode=build_fn {modal with menu}}, B.Action.NoAction
+      end
+  in
 
   match v.mode with
   | Normal ->
@@ -305,11 +321,9 @@ let handle_event (s:State.t) v (event:Event.t) =
     let v, backend_action =
       match menu_action, view_action with
       | On `Build_station, _ ->
-          let menu =
-            build_station_menu s.textures.fonts
-            |> Menu.MsgBox.do_open_menu s
-          in
-          {v with mode=BuildStation(menu)}, nobaction
+          let menu = build_station_menu s.textures.fonts |> Menu.MsgBox.do_open_menu s in
+          let modal = {menu; data=(); last=Normal} in
+          {v with mode=BuildStation modal}, nobaction
       | On `BuildTrack, _ ->
           {v with view=Mapview.set_build_mode v.view true}, nobaction 
       | On `RemoveTrack, _ ->
@@ -318,23 +332,22 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
       | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
       | _, `BuildBridge msg ->
-          let menu =
-            build_bridge_menu s.textures.fonts
-            |> Menu.MsgBox.do_open_menu s
-          in
-          {v with mode=BuildBridge(menu, msg)}, nobaction
+          let menu = build_bridge_menu s.textures.fonts |> Menu.MsgBox.do_open_menu s in
+          let modal = {menu; data=msg; last=Normal} in
+          {v with mode=BuildBridge modal}, nobaction
       | _, `HighGradeTrack(msg, grade) ->
-          let menu =
-            build_tunnel_menu ~grade ~tunnel:false s.textures.fonts
+          let menu = build_tunnel_menu ~grade ~tunnel:false s.textures.fonts
             |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
           in
-          {v with mode=BuildTunnel(menu, msg, 0)}, nobaction
+          let modal = {menu; data=(msg,0); last=Normal} in
+          {v with mode=BuildTunnel modal}, nobaction
       | _, `BuildTunnel(msg, length, grade) ->
           let menu =
             build_tunnel_menu ~grade ~tunnel:true s.textures.fonts
             |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
           in
-          {v with mode=BuildTunnel(menu, msg, length)}, nobaction
+          let modal = {menu; data=(msg,length); last=Normal} in
+          {v with mode=BuildTunnel modal}, nobaction
       | _ ->
           v, nobaction
     in
@@ -350,65 +363,43 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
 
   | BuildStation build_menu ->
-      (* Build Station mode *)
-      let build_menu, action = Menu.MsgBox.update s build_menu event in
-      let exit_mode () = {v with mode=Normal}, B.Action.NoAction in
-      begin match action with
-      | Menu.On(None) -> exit_mode ()
-      | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
-      | Menu.On(Some station_kind) ->
+      handle_modal_menu_events build_menu (fun x -> BuildStation x)
+      (fun modal station_kind ->
+          let exit_mode () = {v with mode=modal.last}, B.Action.NoAction in
           let x, y = Mapview.get_cursor_pos v.view in
-          begin match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
+          match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
           | `Ok -> 
               let backend_action = B.Action.BuildStation{x; y; kind=station_kind} in
-              {v with mode=Normal}, backend_action
+              {v with mode=modal.last}, backend_action
               (* TODO: handle other cases *)
           | _ -> exit_mode ()
-          end
-      | Menu.NoAction -> v, B.Action.NoAction
-      | _ ->
-          (* Update build menu *)
-          {v with mode=BuildStation(build_menu)}, B.Action.NoAction
-      end
+          )
 
-  | BuildBridge(build_menu, ({x; y; dir; player} as msg)) ->
-      let build_menu, action = Menu.MsgBox.update s build_menu event in
-      let exit_mode () = {v with mode=Normal}, B.Action.NoAction in
-      begin match action with
-      | Menu.On(Some bridge_kind) ->
-          begin match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
+  | BuildBridge build_menu ->
+      handle_modal_menu_events build_menu (fun x -> BuildBridge x)
+      (fun modal bridge_kind ->
+          let msg = modal.data in
+          let x, y, dir, player = msg.x, msg.y, msg.dir, msg.player in
+          match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
           | `Ok -> 
-              let backend_action = B.Action.BuildBridge(msg, bridge_kind) in
+              let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
               let view = Mapview.move_cursor v.view dir 2 in
-              {v with mode=Normal; view}, backend_action
+              {v with mode=modal.last; view}, backend_action
           | _ ->
-              {v with mode=Normal}, B.Action.NoAction
-          end
-      | Menu.On(None) -> exit_mode ()
-      | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
-      | Menu.NoAction -> v, B.Action.NoAction
-      | _ ->
-          (* Update build menu *)
-          {v with mode=BuildBridge(build_menu, msg)}, B.Action.NoAction
-      end
+              {v with mode=modal.last}, B.Action.NoAction
+          )
 
-  | BuildTunnel(build_menu, ({dir; _} as msg), length) ->
-      let build_menu, action = Menu.MsgBox.update s build_menu event in
-      let exit_mode () = {v with mode=Normal}, B.Action.NoAction in
-      begin match action with
-      | Menu.On(`Track) ->
-          let view = Mapview.move_cursor v.view dir 1 in
-          {v with mode=Normal; view}, B.Action.BuildTrack msg
-      | Menu.On(`Tunnel) ->
-          let view = Mapview.move_cursor v.view dir length in
-          {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)
-      | Menu.On(`Cancel) -> exit_mode ()
-      | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
-      | Menu.NoAction -> v, B.Action.NoAction
-      | _ ->
-          (* Update build menu *)
-          {v with mode=BuildTunnel(build_menu, msg, length)}, B.Action.NoAction
-      end
+  | BuildTunnel build_menu ->
+      handle_modal_menu_events build_menu (fun x -> BuildTunnel x)
+      (fun ({data=(msg,length);_} as modal) action ->
+        match action with
+        | `Track ->
+            let view = Mapview.move_cursor v.view msg.dir 1 in
+            {v with mode=modal.last; view}, B.Action.BuildTrack msg
+        | `Tunnel ->
+            let view = Mapview.move_cursor v.view msg.dir length in
+            {v with mode=modal.last; view}, B.Action.BuildTunnel(msg, length)
+        )
 
 let handle_tick _s v _time = v, B.Action.NoAction
 
@@ -459,9 +450,9 @@ let render (win:R.window) (s:State.t) v =
     | ModalMsgbox(box, prev_mode) ->
         render_mode prev_mode;
         Menu.MsgBox.render win s box
-    | BuildStation menu        -> Menu.MsgBox.render win s menu
-    | BuildBridge (menu, _)    -> Menu.MsgBox.render win s menu
-    | BuildTunnel (menu, _, _) -> Menu.MsgBox.render win s menu
+    | BuildStation modal -> Menu.MsgBox.render win s modal.menu
+    | BuildBridge modal -> Menu.MsgBox.render win s modal.menu
+    | BuildTunnel modal -> Menu.MsgBox.render win s modal.menu
   in
   render_mode v.mode;
 
