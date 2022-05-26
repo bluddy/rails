@@ -13,8 +13,8 @@ let pixel_apply_mountain = function
   | Harbor_pixel as x -> x
   | _ -> Foothills_pixel
 
-  (* Create a list of random mountains to add to the map, based on area *)
-let add_mountains_list r area =
+  (* Create a list of random mountains to add to the map, based on region *)
+let add_mountains_list r region =
   (* Standard mountains *)
   let rec standard_range_loop j acc =
     if j >= 384 then acc
@@ -51,8 +51,8 @@ let add_mountains_list r area =
   let mountains = standard_range_loop 0 [] in
 
   (* Extra ranges for US *)
-  let mountains = match area with
-    | WestUS | EastUS ->
+  let mountains = match region with
+    | Region.WestUS | EastUS ->
         (* Extra Mountains *)
         let rec extra_range_loop j acc =
           if j >= 128 then acc else
@@ -62,7 +62,7 @@ let add_mountains_list r area =
             if y > 150 then y + Random.int 20 r else y
           in
           let formula = 
-            match area with
+            match region with
             | EastUS -> 157 - y/3
             | WestUS ->
                 if y mod 4 = 0 && y <= 144 && y >= 50 then
@@ -75,7 +75,7 @@ let add_mountains_list r area =
           let delta_x = Random.int 100 r in
           (* Bring closer to 0 *)
           let x = if x >= 0 then x - delta_x else x + delta_x in
-          let x = match area with
+          let x = match region with
             | EastUS ->
                (200 * x) / (400 - y) + formula
             | WestUS -> 
@@ -86,7 +86,7 @@ let add_mountains_list r area =
             if y < 80 then
               let y = y - Random.int 35 r in (* move up *)
               let x = 
-                match area with
+                match region with
                 | WestUS -> x (* check *)
                 | EastUS -> x + 47 - (2 * y) / 3
                 | _ -> assert false
@@ -116,7 +116,7 @@ let add_mountains_list r area =
                   (* chances of moving left and right *)
                   let max = if y <= 60 then 3 else 6 in
                   if Random.int max r = 0 then
-                    match area with
+                    match region with
                     | EastUS -> x + 1   (* to the right *)
                     | WestUS -> x - 1   (* to the left *)
                     | _ -> assert false
@@ -127,7 +127,7 @@ let add_mountains_list r area =
             add_mountain 0 x y acc
           in
           let acc =
-            match area with
+            match region with
             | EastUS ->
                 let y = y + 38 in (* move down *)
                 if y <= 191 then
@@ -150,12 +150,12 @@ let add_mountains_list r area =
      This particular function needs to access the map, and since resources can only 
      be in certain tiles, it may fail and need to try again and again.
    *)
-let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
+let add_resource region ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
   let rec loop () =
     let x = Random.int 256 r in
     let y = Random.int 192 r in
-    let x = match area with
-      | EastUS -> x + Random.int (319 - x) r 
+    let x = match region with
+      | Region.EastUS -> x + Random.int (319 - x) r 
       | WestUS when x >= 120 -> x + Utils.random_int (255 - x) r
       | WestUS -> if x > 0 then x - Random.int x r else 0
       | Britain -> x + Random.int (160 - x) r
@@ -166,9 +166,9 @@ let add_resource area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
          Here we have to test *)
       if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
       let pixel = Tilemap.get_pixel ~map ~x ~y in
-      let possible_tile = tile_of_pixel ~area ~x ~y ~pixel:resource_pixel map in
+      let possible_tile = tile_of_pixel ~region ~x ~y ~pixel:resource_pixel map in
       if Tilemap.equal_pixel pixel land_pixel && Tile.equal possible_tile wanted_tile then (
-        Tilemap.set_pixel ~area map ~x ~y ~pixel:resource_pixel;
+        Tilemap.set_pixel ~region map ~x ~y ~pixel:resource_pixel;
         Some (x, y)
       ) else
         let x = if y mod 2 = 1 then x + 1 else x - 1 in
@@ -194,9 +194,9 @@ let make land_pixel resource_pixel wanted_tile num name text_y =
   {land_pixel; resource_pixel; wanted_tile; num; name; text_y; start=true}
 
   (* A general list of resources to add *)
-let add_resources_list area =
-  match area with
-  | EastUS
+let add_resources_list region =
+  match region with
+  | Region.EastUS
   | WestUS ->
       [ make Foothills_pixel CoalMine_pixel CoalMine 50 "Coal Mines" 32; 
         make Foothills_pixel CoalMine_pixel LumberMill 100 "Lumber" 56; 
@@ -223,7 +223,7 @@ let pixel_apply_city = function
   | Desert_pixel -> Farm_pixel
   | x -> x
 
-let add_city_list r area (city_list:city list) : (int * int) list =
+let add_city_list r region (city_list:city list) : (int * int) list =
   let add_city (factor, acc) {x;y;_} =
     (* add all cities as villages *)
     let acc =
@@ -234,8 +234,8 @@ let add_city_list r area (city_list:city list) : (int * int) list =
     in
 
     (* Determine how many to add *)
-    let x_y_func = match area with
-      | EastUS ->
+    let x_y_func = match region with
+      | Region.EastUS ->
           x - (abs(68 - y) / 4) + 128
       | WestUS when x <= 120 ->
           (120 - x) * 16
@@ -273,8 +273,8 @@ let add_city_list r area (city_list:city list) : (int * int) list =
   List.fold_left add_city (0, []) city_list |> snd |> List.rev
 
 
-let load_city_list area  =
-  let num = Tilemap.area_to_enum area in
+let load_city_list region  =
+  let num = Region.to_enum region in
   let filename = Printf.sprintf "./data/CITIES%d.DTA" num in
   let str = CCIO.with_in filename CCIO.read_all in
   let stream = Gen.of_string str in
@@ -293,7 +293,7 @@ let load_city_list area  =
 module IntIntMap = Map.Make(struct type t = int * int let compare = Stdlib.compare end)
 
 type t = {
-  area: area;
+  region: Region.t;
   mountains : (int * int) list;
   resources: res_data list;
   cities: (int * int) list;
@@ -302,13 +302,13 @@ type t = {
   new_pixels: pixel IntIntMap.t;
 }
 
-let init r area cities =
-  let mountains = add_mountains_list r area in
-  let resources = add_resources_list area in
-  let cities = add_city_list r area cities in
+let init r region cities =
+  let mountains = add_mountains_list r region in
+  let resources = add_resources_list region in
+  let cities = add_city_list r region cities in
   let state = `Start in
   let new_pixels = IntIntMap.empty in
-  {area; mountains; resources; cities; state; new_pixels; text=[]}
+  {region; mountains; resources; cities; state; new_pixels; text=[]}
 
   (* Perform a step of updating the map *)
 let update_map_step r v ~map ~fonts ~done_fn =
@@ -325,7 +325,7 @@ let update_map_step r v ~map ~fonts ~done_fn =
       | (x, y)::rest ->
           let pixel = Tilemap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_mountain pixel in
-          Tilemap.set_pixel ~area:v.area map ~x ~y ~pixel;
+          Tilemap.set_pixel ~region:v.region map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with mountains=rest; new_pixels}, map
       | _ ->
@@ -337,7 +337,7 @@ let update_map_step r v ~map ~fonts ~done_fn =
           {v with resources=rest}, map
       | ({land_pixel; resource_pixel; wanted_tile;_} as res)::rest ->
           let x, y =
-            add_resource v.area ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
+            add_resource v.region ~map ~land_pixel ~resource_pixel ~wanted_tile ~r
           in
           let new_pixels = IntIntMap.add (x, y) resource_pixel v.new_pixels in
           let text, start =
@@ -358,7 +358,7 @@ let update_map_step r v ~map ~fonts ~done_fn =
       | (x, y)::rest ->
           let pixel = Tilemap.get_pixel ~map ~x ~y in
           let pixel = pixel_apply_city pixel in
-          Tilemap.set_pixel ~area:v.area map ~x ~y ~pixel;
+          Tilemap.set_pixel ~region:v.region map ~x ~y ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with cities=rest; new_pixels}, map
       | _ ->

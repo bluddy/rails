@@ -104,33 +104,40 @@ let set_survey v b = {v with survey=b}
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
-  let handle_mouse_button v x y =
+  let handle_mouse_button v x y button =
 
     match v.zoom with
       | Zoom1 ->
           let y = y - v.dims.y in
-          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}
+          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}, `NoAction
       | _ when x > minimap.x && y > minimap.y && y < minimap.y + minimap.h ->
           (* click on minimap *)
           let start_x, start_y, _, _ = minimap_bounds v ~minimap in
           let x = x - minimap.x + start_x in
           let y = y - minimap.y + start_y in
-          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}
-      | _ when x < minimap.x && y > v.dims.y ->
+          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}, `NoAction
+      | _ when x <= v.dims.x + v.dims.w && y > v.dims.y ->
           (* click in mapview *)
           let tile_w, tile_h = tile_size_of_zoom v.zoom in
           let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
           let cursor_x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
           let cursor_y = start_y + (y-v.dims.y)/tile_h |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
-          let center_x, center_y =
-            match v.zoom with
-            | Zoom4 ->
-                check_recenter_zoom4 v cursor_x cursor_y
-            | _ ->
-                v.center_x, v.center_y
-          in
-          {v with center_x; center_y; cursor_x; cursor_y}
-       | _ -> v
+          (* Check for second click *)
+          begin match v.zoom, button with
+          | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
+              let tile = B.get_tile s.backend cursor_x cursor_y in
+              v, `ShowTileInfo tile
+          | Zoom4, `Right ->
+              let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
+              {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
+          | (Zoom3 | Zoom2), `Left ->
+              let tile = B.get_tile s.backend cursor_x cursor_y in
+              v, `ShowTileInfo tile
+          | (Zoom3 | Zoom2), `Right ->
+              {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
+          | _ -> v, `NoAction
+          end
+       | _ -> v, `NoAction
   in
 
   let key_to_dir = function
@@ -147,9 +154,12 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
   let handle_key_zoom4 v key ~build =
     let dir = key_to_dir key in
-    match dir with
-    | None -> v, `NoAction
-    | Some dir ->
+    match dir, key with
+    | None, Event.I ->
+        let tile = B.get_tile s.backend v.cursor_x v.cursor_y in
+        v, `ShowTileInfo tile
+    | None, _ -> v, `NoAction
+    | Some dir, _ ->
         let move i = move_cursor v dir i in
         let msg () = Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0} in
         if build then (
@@ -182,8 +192,8 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         {v with zoom = Zoom3; survey=false}, `NoAction
     | Key {down=true; key=F4; _} ->
         {v with zoom = Zoom4}, `NoAction
-    | MouseButton {down=true; x; y; _} ->
-        handle_mouse_button v x y, `NoAction
+    | MouseButton {down=true; x; y; button; _} ->
+        handle_mouse_button v x y button
     | Key {down=true; key; modifiers; _} when equal_zoom v.zoom Zoom4 ->
         let build = Event.Modifiers.shift modifiers in
         handle_key_zoom4 v key ~build
@@ -211,7 +221,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let map_x, map_y = start_x + j, start_y + i in
       let alt = ((map_x + map_y) land 1) > 0 in
       let tile = B.get_tile s.backend map_x map_y in
-      let tex = Textures.TileTex.find tiles ~area:(B.get_area s.backend) ~alt tile in
+      let tex = Textures.TileTex.find tiles ~region:(B.get_region s.backend) ~alt tile in
       let x, y = j * tile_w, v.dims.y + i * tile_h in
       R.Texture.render win tex ~x ~y;
     )

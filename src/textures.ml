@@ -104,7 +104,7 @@ module TileTex = struct
     load_extra_tiles ~tiles ~y:0 ~mult:16;
     load_extra_tiles ~tiles:small_tiles ~y:32 ~mult:8;
 
-    (* Load cities and villages, which are slightly different per area *)
+    (* Load cities and villages, which are slightly different per region *)
     let load_localized ~tiles ~y ~mult key i =
       let us = pair_part ~ndarray:us_ndarray ~y ~mult i in
       let england = pair_part ~ndarray:en_ndarray ~y ~mult i in
@@ -159,7 +159,7 @@ module TileTex = struct
     
     (tiles, small_tiles)
 
-    let find hash tile ~area ~alt =
+    let find hash tile ~region ~alt =
       let v = 
         try
           Hashtbl.find hash tile
@@ -171,8 +171,8 @@ module TileTex = struct
         | Pair(_, x) when alt -> x
         | Pair(x, _) -> x
         | Localized x ->
-            match area with
-            | Tilemap.WestUS | EastUS -> find x.us
+            match region with
+            | Region.WestUS | EastUS -> find x.us
             | Britain -> find x.england
             | Europe -> find x.europe
       in
@@ -239,7 +239,7 @@ let slice_logo win res =
   |> R.Texture.make win
 
 type t = {
-  maps: (Tilemap.area * R.Texture.t) list;
+  maps: (Region.t * R.Texture.t) list;
   pics: (string, R.Texture.t) Hashtbl.t;
   mutable map: R.Texture.t;   (* current map *)
   pixel: R.Texture.t; (* white pixel *)
@@ -250,12 +250,12 @@ type t = {
   tracks: R.Texture.t Track.Htbl.t;
 }
 
-let of_resources win res area =
+let of_resources win res region =
   let maps = List.map (fun (a, v) ->
       a, R.Texture.make win @@ Tilemap.to_img v)
     res.Resources.res_maps
   in
-  let map = List.assoc ~eq:(Stdlib.(=)) area maps in
+  let map = List.assoc ~eq:(Stdlib.(=)) region maps in
   let pics = Hashtbl.to_iter res.res_pics
     |> Iter.map (fun (s, arr) -> s, R.Texture.make win arr)
     |> Hashtbl.of_iter

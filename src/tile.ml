@@ -42,11 +42,59 @@ type t =
   | SheepFarm (* Eng, Eur *)
   [@@deriving eq, show]
 
+let to_enum = function
+  | Clear -> 0
+  | Woods -> 1
+  | Swamp -> 2
+  | Foothills -> 3
+  | Hills -> 4
+  | Mountains  -> 5
+  | City -> 6
+  | Village -> 7
+  | Farm -> 7
+  | Slums -> 8
+  | FoodProc -> 9
+  | Ranch  -> 10
+  | Stockyard -> 11
+  | Factory -> 12
+  | GrainElev  -> 13
+  | PaperMill  -> 14
+  | Landing _ -> 15
+  | LumberMill  -> 16
+  | CoalMine -> 17
+  | SteelMill -> 18
+  | PowerPlant  -> 19
+  | OilWell  -> 20
+  | Refinery  -> 21
+  | EnemyRR -> 22
+  | River _ -> 23
+  | Ocean _ -> 24
+  | Harbor _ -> 25
+  | Desert -> 26
+  | SaltMine -> 27
+  | TextileMill -> 28
+  | ChemicalPlant -> 29
+  | Brewery -> 30
+  | Vineyard -> 31
+  | Winery -> 32
+  | Fort -> 33
+  | GlassWorks -> 34
+  | SheepFarm -> 35
+
 let is_ground = function
   | River _ | Ocean _ | Harbor _ | Landing _ -> false
   | _ -> true
 
 module Info = struct
+
+  module TileHash = Hashtbl.Make(struct
+    (* Specialized hashtable that ignores the inner arguments of the tile *)
+    type nonrec t = t
+    let equal x y =
+      to_enum x = to_enum y
+    let hash = to_enum
+  end)
+
   type nonrec t = {
     name: string;
     cost: int;
@@ -83,7 +131,8 @@ module Info = struct
       Farm, make "Farm" 3;
       Slums, make "Slums" 4;
   ]
-  let us_tbl = [
+
+  let us_tbl = (std_tbl @ [
       City, make "City" 10
         ~supply:[Mail, 24; Passengers, 32] (* 1, 2 *)
         ~demand:[Mail, d/2; Passengers, d/2; Food, d/2; Textiles, d/2];
@@ -104,7 +153,8 @@ module Info = struct
       OilWell, make "Oil Well" 10 ~supply:[Petroleum, 96];
       Refinery, make "Refinery" 15 ~demand:[Petroleum, 64];
       Harbor empty, make "Harbor" 20 ~supply:[MfgGoods, 128] ~demand:[Grain, 64; Coal, 64];
-  ]
+  ]) |> List.to_seq |> TileHash.of_seq
+
   let us_convert = [
       Livestock, Food;
       Fertilizer, Food;
@@ -112,9 +162,9 @@ module Info = struct
       Petroleum, MfgGoods;
       Cotton, Textiles;
       Coal, Steel;
-    ]
-  let eu_tbl =
-  [
+  ] |> Hashtbl.of_list
+
+  let eu_tbl = (std_tbl @ [
       City, make "City" 10
         ~supply:[Mail, 24; Passengers, 32]
         ~demand:[Mail, 32; Passengers, 32; Wine, 32; Textiles, 32];
@@ -133,7 +183,8 @@ module Info = struct
       Vineyard, make "Vineyard" 10 ~supply:[Grapes, 128]; (* Eur *)
       Winery, make "Winery" 10 ~demand:[Grapes, 64]; (* Eur *)
       Fort, make "Fort" 5 ~demand:[Armaments, 64]; (* Eur *)
-    ]
+    ]) |> List.to_seq |> TileHash.of_seq
+
   let eu_convert =
     [
       Grapes, Wine;
@@ -141,9 +192,9 @@ module Info = struct
       Wool, Textiles;
       Nitrates, Fertilizer;
       Coal, Steel;
-    ]
-  let en_tbl =
-  [
+    ] |> Hashtbl.of_list
+
+  let en_tbl = (std_tbl @ [
       (* Note: this seems like a limitation. Livestock should not go to city except as food,
          but there's no space for the food proc plant in the economy *)
       City, make "City" 10
@@ -164,7 +215,8 @@ module Info = struct
       Brewery, make "Brewery" 10 ~demand:[Hops, 64]; (* Eng *)
       GlassWorks, make "Glassworks" 10 ~supply:[MfgGoods, 5 * 32]; (* Eng *)
       SheepFarm, make "Sheep Farm" 5 ~supply:[Livestock, 5 * 32]; (* Eng, Eur *)
-    ]
+    ]) |> List.to_seq |> TileHash.of_seq
+
   let en_convert =
     [
       Hops, Beer;
@@ -172,6 +224,8 @@ module Info = struct
       Chemicals, MfgGoods;
       Cotton, Textiles;
       Coal, Steel;
-    ]
+    ] |> Hashtbl.of_list
+
+
 
 end

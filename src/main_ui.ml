@@ -348,6 +348,8 @@ let handle_event (s:State.t) v (event:Event.t) =
           in
           let modal = {menu; data=(msg,length); last=Normal} in
           {v with mode=BuildTunnel modal}, nobaction
+      (* TODO: handle ShowTileInfo *)
+
       | _ ->
           v, nobaction
     in

@@ -3,7 +3,7 @@ open Containers
 let dir = "./data/"
 
 let map_names =
-  let open Tilemap in
+  let open Region in
   [
     EastUS, "EASTUS.PIC";
     WestUS, "WESTUS.PIC";
@@ -36,18 +36,18 @@ let load_pics () =
 
 (* All game resources *)
 type t = {
-  res_maps: (Tilemap.area * Tilemap.t) list;
+  res_maps: (Region.t * Tilemap.t) list;
   res_pics: (string, Pic.ndarray) Hashtbl.t;
-  res_cities: (Tilemap.area * (string * int * int) list) list;
+  res_cities: (Region.t * (string * int * int) list) list;
 }
 
 let load_all ~seed =
   let res_maps =
-    List.map (fun (area,s) -> area, dir ^ s
-      |> Tilemap.of_file ~area ~seed) map_names
+    List.map (fun (region,s) -> region, dir ^ s
+      |> Tilemap.of_file ~region ~seed) map_names
   in
-  let res_cities = List.map Mapgen.load_city_list Tilemap.areas |> 
-    List.combine Tilemap.areas
+  let res_cities = List.map Mapgen.load_city_list Region.regions |> 
+    List.combine Region.regions
   in
   let res_pics = load_pics () in
   {res_maps; res_pics; res_cities}

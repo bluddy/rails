@@ -4,7 +4,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 module R = Renderer
 module B = Backend
 
-let run ?(view=Screen.MapGen None) ?(area=Tilemap.WestUS) () : unit =
+let run ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
   let random = Random.get_state () in
   (* Used by different elements *)
   let seed = Random.int 0x7FFF random in
@@ -16,9 +16,9 @@ let run ?(view=Screen.MapGen None) ?(area=Tilemap.WestUS) () : unit =
 
     let screen = view in
 
-    let backend = B.default area resources in
+    let backend = B.default region resources in
 
-    let textures = Textures.of_resources win resources area in
+    let textures = Textures.of_resources win resources region in
 
     let ui = Main_ui.default win textures.fonts in
 
@@ -40,7 +40,7 @@ let run ?(view=Screen.MapGen None) ?(area=Tilemap.WestUS) () : unit =
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
             let cities = Array.to_list @@ B.get_cities s.backend in
-            let data = Mapgen.init s.random (B.get_area s.backend) cities in
+            let data = Mapgen.init s.random (B.get_region s.backend) cities in
             {s with screen=Screen.MapGen(Some data)}
 
         | Screen.MapGen Some data ->

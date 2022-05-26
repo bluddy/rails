@@ -25,7 +25,7 @@ type options = {
 }
 
 type t = {
-  area: Tilemap.area;
+  region: Region.t;
   map : Tilemap.t;
   track: Trackmap.t;
   cities: Tilemap.city array;
@@ -33,16 +33,16 @@ type t = {
 }
 [@@deriving lens]
 
-let default area resources = 
-  let map = List.assoc ~eq:(Stdlib.(=)) area resources.Resources.res_maps in
-  let cities = List.assoc ~eq:(Stdlib.(=)) area resources.res_cities
+let default region resources = 
+  let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
+  let cities = List.assoc ~eq:(Stdlib.(=)) region resources.res_cities
     |> List.map (fun (name,x,y) -> {Tilemap.name;x;y})
     |> Array.of_list in
   let track = Trackmap.empty Tilemap.map_width Tilemap.map_height in
   let speed = `Moderate in
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
-  {map; area; cities; track; options}
+  {map; region; cities; track; options}
 
 let map_height = Tilemap.map_height
 
@@ -52,7 +52,7 @@ let get_tile v x y = Tilemap.get_tile v.map x y
 
 let get_track v x y = Trackmap.get v.track x y
 
-let get_area v = v.area
+let get_region v = v.region
 
 let get_cities v = v.cities
 

@@ -1,15 +1,6 @@
 module Ndarray = Owl_base_dense_ndarray.Generic
 open Containers
 
-type area =
-  | EastUS
-  | WestUS
-  | Britain
-  | Europe
-  [@@deriving enum, eq]
-
-let areas = [EastUS; WestUS; Britain; Europe]
-
 (* Map data type. Starts at top left *)
 type t = {
   seed: int; (* 15 bit value *)
@@ -152,7 +143,7 @@ let get_mask ?(n=8) ?(diag=false) ~edge v ~f ~x ~y =
   Iter.(0--(n-1))
 
 (* seed: 15 bits from time *)
-let tile_of_pixel ~area ~x ~y ~pixel v =
+let tile_of_pixel ~region ~x ~y ~pixel v =
   let seed = v.seed in
   let water_dirs ~edge ~f =
     let mask = get_mask ~edge ~f ~x ~y v in
@@ -189,7 +180,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
         Ocean(water_dirs ~edge:false ~f:not_water)
     | EnemyRR_pixel -> assert false
   in
-  (* NOTE: Does some area change the mappings?
+  (* NOTE: Does some region change the mappings?
       Otherwise why would clear pixels get complex mapping when they can't have anything? *)
   let complex_mapping pixel xy_random =
     (* xy_random is 0-3 *)
@@ -233,8 +224,8 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
     | _ ->
           simple_mapping pixel
   in
-  let alternative_tile area tile = match area with
-    | Britain ->
+  let alternative_tile region tile = match region with
+    | Region.Britain ->
         begin match tile with
         | Tile.FoodProc -> Tile.Brewery
         | Ranch -> SheepFarm
@@ -262,7 +253,7 @@ let tile_of_pixel ~area ~x ~y ~pixel v =
         end
     | _ -> tile
   in
-  alternative_tile area us_tile
+  alternative_tile region us_tile
 
 let create_heightmap v =
   (* Convolution operation *)
@@ -302,7 +293,7 @@ let ndarray_of_file filename =
   let ndarray = Ndarray.get_slice [[0;map_height-1]; [0;map_width-1]] arr in
   ndarray
 
-let of_ndarray ~area ~seed ndarray =
+let of_ndarray ~region ~seed ndarray =
   (* First pass: don't set directions for ocean and river *)
   let width = 256 in
   let height = 192 in
@@ -313,7 +304,7 @@ let of_ndarray ~area ~seed ndarray =
     for x=0 to v.width-1 do
       let value = Ndarray.get ndarray [|y; x|] in
       let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum value in
-      let tile = tile_of_pixel ~area ~x ~y ~pixel v in
+      let tile = tile_of_pixel ~region ~x ~y ~pixel v in
       set_tile v x y tile
     done
   done;
@@ -323,16 +314,16 @@ let of_ndarray ~area ~seed ndarray =
     for x=0 to v.width-1 do
       let value = Ndarray.get ndarray [|y; x|] in
       let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum value in
-      let tile = tile_of_pixel ~area ~x ~y ~pixel v in
+      let tile = tile_of_pixel ~region ~x ~y ~pixel v in
       set_tile v x y tile
     done
   done;
   v
 
 
-let of_file ~area ~seed filename =
+let of_file ~region ~seed filename =
   ndarray_of_file filename
-  |> of_ndarray ~area ~seed
+  |> of_ndarray ~region ~seed
 
   (* Make an ndarray of pixel indices. Not RGBA! *)
 let to_ndarray mapdata =
@@ -356,8 +347,8 @@ let to_img (map:t) =
 let get_pixel ~map ~x ~y =
   get_tile map x y |> pixel_of_tile
 
-let set_pixel ~area v ~x ~y ~pixel =
-  let tile = tile_of_pixel ~area ~x ~y ~pixel v in
+let set_pixel ~region v ~x ~y ~pixel =
+  let tile = tile_of_pixel ~region ~x ~y ~pixel v in
   v.map.(calc_offset v x y) <- tile
 
 let get_grade v ~dir ~x ~y =
