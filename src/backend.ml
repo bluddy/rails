@@ -31,7 +31,6 @@ type t = {
   cities: Tilemap.city array;
   options : options;
 }
-[@@deriving lens]
 
 let default region resources = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in

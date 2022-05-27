@@ -185,15 +185,6 @@ module Info = struct
       Fort, make "Fort" 5 ~demand:[Armaments, 64]; (* Eur *)
     ]) |> List.to_seq |> TileHash.of_seq
 
-  let eu_convert =
-    [
-      Grapes, Wine;
-      Steel, Armaments;
-      Wool, Textiles;
-      Nitrates, Fertilizer;
-      Coal, Steel;
-    ] |> Hashtbl.of_list
-
   let en_tbl = (std_tbl @ [
       (* Note: this seems like a limitation. Livestock should not go to city except as food,
          but there's no space for the food proc plant in the economy *)
@@ -217,15 +208,13 @@ module Info = struct
       SheepFarm, make "Sheep Farm" 5 ~supply:[Livestock, 5 * 32]; (* Eng, Eur *)
     ]) |> List.to_seq |> TileHash.of_seq
 
-  let en_convert =
-    [
-      Hops, Beer;
-      Steel, MfgGoods;
-      Chemicals, MfgGoods;
-      Cotton, Textiles;
-      Coal, Steel;
-    ] |> Hashtbl.of_list
-
-
+  let get region tile =
+    let tbl =
+      match region with
+      | Region.WestUS | EastUS -> us_tbl
+      | Europe -> eu_tbl
+      | Britain -> en_tbl
+    in
+    TileHash.find tbl tile
 
 end

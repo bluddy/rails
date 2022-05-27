@@ -349,6 +349,9 @@ let handle_event (s:State.t) v (event:Event.t) =
           let modal = {menu; data=(msg,length); last=Normal} in
           {v with mode=BuildTunnel modal}, nobaction
       (* TODO: handle ShowTileInfo *)
+      | _, `ShowTileInfo tile ->
+          let info = Tile.Info.get (B.get_region s.backend) tile in
+          v, nobaction
 
       | _ ->
           v, nobaction

@@ -56,16 +56,24 @@ module MsgBox = struct
 
   type ('a, 'b) fire =
     | Action of 'a
-    | Checkbox of 'a * ('b -> bool)
+    | Checkbox of 'a * ('b -> bool) (* function to check checkbox status *)
     | MsgBox of bool * ('a, 'b) t (* open *)
+
+  and ('a, 'b) kind =
+    | Static of {
+      color: int * int * int * int;
+    }
+    | Interactive of {
+      fire: ('a, 'b) fire;
+      test_enabled: ('b -> bool) option;
+      enabled: bool;
+    }
 
   and ('a, 'b) entry = {
     y: int;
     h: int;
     name: string;
-    fire: ('a, 'b) fire;
-    test_enabled: ('b -> bool) option;
-    enabled: bool;
+    kind: ('a, 'b) kind;
   }
 
   and ('a, 'b) t =
@@ -77,29 +85,29 @@ module MsgBox = struct
       entries: ('a, 'b) entry list;
       selected: int option;
       font: Fonts.Font.t;
-      index: int CharMap.t;
+      index: int CharMap.t; (* for keyboard shortcuts *)
     }
 
   let get_entry_w_h font v =
     Fonts.Font.get_str_w_h ~skip_amp:true font @@ " "^v.name
 
+  let make_static_entry name color =
+    { y=0; h=0; name; kind=Static {color} }
+
   let make_entry ?(test_enabled=None) name fire =
-    let name = name in
     let fire =
       match fire with
       | `MsgBox m -> MsgBox(false, m)
       | `Action a -> Action a
       | `Checkbox (b, fn) -> Checkbox(b, fn)
     in
-    {
-      y=0;
-      h=0;
-      name;
-      fire;
-      enabled=true;
-      test_enabled;
+    { y=0; h=0; name;
+      kind=Interactive {
+        fire;
+        enabled=true;
+        test_enabled;
+      }
     }
-
 
     (* Compute menu size dynamically *)
   let do_open_menu ?(x=0) ?(y=0) ?(selected=None) s v =
@@ -115,14 +123,18 @@ module MsgBox = struct
     in
     let (w, h), entries =
       List.fold_map (fun (max_w, max_h) entry ->
-        let enabled =
-          match entry.test_enabled with
-          | Some f -> f s
-          | None -> true
-        in
         let w, h = get_entry_w_h v.font entry in
-        let entry = {entry with y=max_h; h; enabled} in
         let max_w, max_h = max max_w w, max_h + h in
+        let kind = match entry.kind with
+          | Interactive e ->
+            let enabled = match e.test_enabled with
+              | Some f -> f s
+              | None -> true
+            in
+            Interactive {e with enabled}
+          | Static _ as k -> k
+        in
+        let entry = {entry with y=max_h; h; kind} in
         (max_w, max_h), entry)
       (max_w, max_h)
       v.entries
@@ -166,15 +178,21 @@ module MsgBox = struct
     }
 
   let is_entry_clicked_shallow v ~y =
-    if not v.enabled then false else
-    y < v.y + v.h
+    match v.kind with
+    | Static _ -> false
+    | Interactive {enabled=false; _} -> false
+    | _ -> y < v.y + v.h
 
-  let is_entry_open = function
-    | {fire=MsgBox(true, _);_} -> true
+  let is_entry_open v = match v.kind with
+    | Interactive {fire=MsgBox(true, _);_} -> true
     | _ -> false
 
-  let is_entry_msgbox = function
-    | {fire=MsgBox(_); _} -> true
+  let is_entry_enabled v = match v.kind with
+    | Interactive {enabled; _} -> enabled
+    | _ -> true
+
+  let is_entry_msgbox v = match v.kind with
+    | Interactive {fire=MsgBox _; _} -> true
     | _ -> false
 
   let find_clicked_entry_shallow v ~y =
@@ -186,24 +204,29 @@ module MsgBox = struct
     (* Do not recurse deeply *)
   let handle_entry_activate_shallow s ~x v =
     (* Assume we were clicked. Only handle shallow events *)
-    match v.fire with
-    | MsgBox(false, box) ->
-        let box = do_open_menu s ~x ~y:(v.y) box in
-        {v with fire=MsgBox(true, box)}, OpenMsgBox
-    | MsgBox(true, box) ->
-        {v with fire=MsgBox(false, box)}, CloseMsgBox
-    | Action action ->
-        v, On(action)
-    | Checkbox(action, fn) when fn s ->
-        v, Off(action)
-    | Checkbox(action, _) ->
-        v, On(action)
+    match v.kind with
+    | Interactive e as e_in ->
+        let e, action = match e.fire with
+          | MsgBox(false, box) ->
+              let box = do_open_menu s ~x ~y:(v.y) box in
+              Interactive {e with fire=MsgBox(true, box)}, OpenMsgBox
+          | MsgBox(true, box) ->
+              Interactive {e with fire=MsgBox(false, box)}, CloseMsgBox
+          | Action action ->
+              e_in, On(action)
+          | Checkbox(action, fn) when fn s ->
+              e_in, Off(action)
+          | Checkbox(action, _) ->
+              e_in, On(action)
+        in
+        {v with kind=e}, action
+    | Static _ -> v, NoAction
 
   let rec close_entry v =
-    match v.fire with
-    | MsgBox(true, box) ->
+    match v.kind with
+    | Interactive ({fire=MsgBox(true, box); _} as e) ->
         let box = close box in
-        {v with fire=MsgBox(false, box)}
+        {v with kind=Interactive {e with fire=MsgBox(false, box)}}
     | _ -> v
 
   and close v =
@@ -215,12 +238,11 @@ module MsgBox = struct
 
     (* Only search depth-first *)
   let rec handle_entry_click_deep s v ~x ~y =
-    match v.fire with
-    | MsgBox(true, box) ->
+    match v.kind with
+    | Interactive ({fire=MsgBox(true, box); _} as e) ->
         (* open msgbox -> recurse *)
         let box, action = handle_click s box ~x ~y in
-        (* TODO: handle different action cases, like if an action was chosen *)
-        {v with fire=MsgBox(true, box)}, action
+        {v with kind=Interactive {e with fire=MsgBox(true, box)}}, action
     | _ ->
         v, NoAction
 
@@ -266,12 +288,11 @@ module MsgBox = struct
     {v with entries; selected}, action
 
     let rec handle_entry_key_deep s v ~key =
-      match v.fire with
-      | MsgBox(true, box) ->
+      match v.kind with
+      | Interactive ({fire=MsgBox(true, box);_} as e) ->
           (* open msgbox -> recurse *)
           let box, action = handle_key s box ~key in
-          (* TODO: handle different action cases, like if an action was chosen *)
-          {v with fire=MsgBox(true, box)}, action
+          {v with kind=Interactive {e with fire=MsgBox(true, box)}}, action
       | _ ->
           v, NoAction
 
@@ -358,13 +379,15 @@ module MsgBox = struct
       if selected then
         Renderer.draw_rect win ~x:(x+3) ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:Ega.bcyan;
 
-      let prefix =
-        match v.fire with
-        | Checkbox(_, fn) when fn s -> "^"
-        | _ -> " "
+      let prefix = match v.kind with
+        | Interactive {fire=Checkbox(_, fn);_} when fn s -> "^"
+        | Interactive _ -> " "
+        | Static _ -> ""
       in
-      let color, active_color =
-        if v.enabled then Ega.black, Ega.blue else Ega.dgray, Ega.dgray
+      let color, active_color = match v.kind with
+        | Interactive {enabled=true;_} -> Ega.black, Ega.blue
+        | Interactive _ -> Ega.dgray, Ega.dgray
+        | Static {color;_} -> color, color
       in
       Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y) ~active_color
 
@@ -393,8 +416,8 @@ module MsgBox = struct
       match v.selected with
       | Some selected ->
           let entry = List.nth v.entries selected in
-          begin match entry.fire with
-          | MsgBox(true, box) -> render win s box
+          begin match entry.kind with
+          | Interactive {fire=MsgBox(true, box);_} -> render win s box
           | _ -> ()
           end
       | _ -> ()

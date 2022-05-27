@@ -31,4 +31,44 @@ type freight =
   | SlowFreight
   | BulkFreight
 
+  (* Conversion tables:
+    Each region can only convert one good to one other good.
+    ENHANCE: we want to expand this a lot
+    *)
+let us_convert = [
+    Livestock, Food;
+    Fertilizer, Food;
+    Steel, MfgGoods;
+    Petroleum, MfgGoods;
+    Cotton, Textiles;
+    Coal, Steel;
+] |> Hashtbl.of_list
+
+let eu_convert =
+  [
+    Grapes, Wine;
+    Steel, Armaments;
+    Wool, Textiles;
+    Nitrates, Fertilizer;
+    Coal, Steel;
+  ] |> Hashtbl.of_list
+
+let en_convert =
+  [
+    Hops, Beer;
+    Steel, MfgGoods;
+    Chemicals, MfgGoods;
+    Cotton, Textiles;
+    Coal, Steel;
+  ] |> Hashtbl.of_list
+
+let convert region goods =
+  let tbl =
+    match region with
+    | Region.WestUS | EastUS -> us_convert
+    | Europe -> eu_convert
+    | Britain -> en_convert
+  in
+  Hashtbl.find_opt tbl goods
+
 
