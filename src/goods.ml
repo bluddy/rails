@@ -23,6 +23,7 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
+  [@@deriving show]
 
 type freight =
   | MailFreight

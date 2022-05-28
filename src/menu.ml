@@ -91,7 +91,7 @@ module MsgBox = struct
   let get_entry_w_h font v =
     Fonts.Font.get_str_w_h ~skip_amp:true font @@ " "^v.name
 
-  let make_static_entry name color =
+  let static_entry name ~color =
     { y=0; h=0; name; kind=Static {color} }
 
   let make_entry ?(test_enabled=None) name fire =

@@ -348,24 +348,42 @@ let handle_event (s:State.t) v (event:Event.t) =
           in
           let modal = {menu; data=(msg,length); last=Normal} in
           {v with mode=BuildTunnel modal}, nobaction
-      (* TODO: handle ShowTileInfo *)
       | _, `ShowTileInfo tile ->
           let info = Tile.Info.get (B.get_region s.backend) tile in
-          v, nobaction
+          let open Menu.MsgBox in
+          let entries =
+            let entries =
+            [
+              static_entry ~color:Ega.white info.name;
+              static_entry ~color:Ega.white "Right-of-Way costs";
+              static_entry ~color:Ega.white @@ Printf.sprintf "$%d,000 per mile" info.cost;
+            ]
+            in
+            let supply = match info.supply with
+              | [] -> []
+              | supply ->
+                  static_entry ~color:Ega.bcyan " Supplies" ::
+                  List.map (fun (good, _) ->
+                    static_entry ~color:Ega.black @@ Goods.show good)
+                    supply
+            in
+            entries @ supply
+          in
+          let menu =
+            Menu.MsgBox.make ~x:100 ~y:80 ~fonts:s.textures.fonts entries
+            |> Menu.MsgBox.do_open_menu s
+          in
+          let mode = ModalMsgbox {menu; data=(); last=Normal} in
+          {v with mode}, nobaction
 
       | _ ->
           v, nobaction
     in
     v, backend_action
 
-  | ModalMsgbox (msgbox, prev_mode) ->
-      let _, action = Menu.MsgBox.update s msgbox event in
-      let exit_mode () = {v with mode=prev_mode}, B.Action.NoAction in
-      begin match action with
-      | Menu.ClickInMsgBox -> exit_mode ()
-      | Menu.NoAction when Event.key_modal_dismiss event -> exit_mode ()
-      | _ -> (v, B.Action.NoAction)
-      end
+  | ModalMsgbox menu ->
+      handle_modal_menu_events menu (fun x -> ModalMsgbox x)
+      (fun _ () -> v, B.Action.NoAction)
 
   | BuildStation build_menu ->
       handle_modal_menu_events build_menu (fun x -> BuildStation x)
@@ -452,9 +470,9 @@ let render (win:R.window) (s:State.t) v =
   (* Msgboxes *)
   let rec render_mode = function
     | Normal -> ()
-    | ModalMsgbox(box, prev_mode) ->
-        render_mode prev_mode;
-        Menu.MsgBox.render win s box
+    | ModalMsgbox modal ->
+        render_mode modal.last;
+        Menu.MsgBox.render win s modal.menu
     | BuildStation modal -> Menu.MsgBox.render win s modal.menu
     | BuildBridge modal -> Menu.MsgBox.render win s modal.menu
     | BuildTunnel modal -> Menu.MsgBox.render win s modal.menu
