@@ -375,7 +375,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             entries @ supply
           in
           let menu =
-            Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.textures.fonts entries
+            Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.textures.fonts entries ~font_idx:4
             |> Menu.MsgBox.do_open_menu s
           in
           let mode = ModalMsgbox {menu; data=(); last=Normal} in

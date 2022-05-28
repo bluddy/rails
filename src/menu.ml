@@ -157,8 +157,8 @@ module MsgBox = struct
     in
     {v with entries; w; h; x; y; selected}
 
-  let make ?heading ?(x=0) ?(y=0) ~fonts entries =
-    let font=fonts.(menu_font) in
+  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ~fonts entries =
+    let font=fonts.(font_idx) in
     let index =
       List.foldi (fun acc i entry ->
         match get_active_char entry.name with

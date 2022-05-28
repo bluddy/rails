@@ -9,7 +9,7 @@ module Font = struct
   0: fancy olde style
   1: all-caps
   2: large
-  3: missing: tiny
+  3: tiny
   4: standard
 *)
 
