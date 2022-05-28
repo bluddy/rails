@@ -109,7 +109,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match v.zoom with
       | Zoom1 ->
           let y = y - v.dims.y in
-          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom4}, `NoAction
+          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom2}, `NoAction
       | _ when x > minimap.x && y > minimap.y && y < minimap.y + minimap.h ->
           (* click on minimap *)
           let start_x, start_y, _, _ = minimap_bounds v ~minimap in
@@ -127,9 +127,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
               let tile = B.get_tile s.backend cursor_x cursor_y in
               v, `ShowTileInfo tile
-          | Zoom4, `Right ->
+          | Zoom4, `Left ->
               let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
               {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
+          | Zoom4, `Right ->
+              {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | (Zoom3 | Zoom2), `Left ->
               let tile = B.get_tile s.backend cursor_x cursor_y in
               v, `ShowTileInfo tile

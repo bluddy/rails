@@ -278,7 +278,9 @@ let build_tunnel_menu fonts ~grade ~tunnel =
 let handle_event (s:State.t) v (event:Event.t) =
   (* Handle most stuff for regular menus *)
   let handle_modal_menu_events =
-      fun (type b) (type c) (modal: (State.t, b, c) modalmenu)
+      fun (type b) (type c)
+          ?(is_msgbox=false)
+          (modal: (State.t, b, c) modalmenu)
           (build_fn:(State.t, b, c) modalmenu -> State.t mode)
           (process_fn:(State.t, b, c) modalmenu -> b -> State.t t * B.Action.t) ->
       let menu, action = Menu.MsgBox.update s modal.menu event in
@@ -286,6 +288,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       begin match action with
       | Menu.On(None) -> exit_mode ()
       | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
+      | Menu.NoAction when is_msgbox && Event.key_modal_dismiss event -> exit_mode ()
+      | Menu.ClickInMsgBox when is_msgbox -> exit_mode ()
       | Menu.On(Some choice) ->
           process_fn modal choice
       | Menu.NoAction -> v, B.Action.NoAction
@@ -371,7 +375,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             entries @ supply
           in
           let menu =
-            Menu.MsgBox.make ~x:100 ~y:80 ~fonts:s.textures.fonts entries
+            Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.textures.fonts entries
             |> Menu.MsgBox.do_open_menu s
           in
           let mode = ModalMsgbox {menu; data=(); last=Normal} in
@@ -383,7 +387,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     v, backend_action
 
   | ModalMsgbox menu ->
-      handle_modal_menu_events menu (fun x -> ModalMsgbox x)
+      handle_modal_menu_events ~is_msgbox:true menu (fun x -> ModalMsgbox x)
       (fun _ () -> v, B.Action.NoAction)
 
   | BuildStation build_menu ->
