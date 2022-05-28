@@ -23,7 +23,30 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
-  [@@deriving show]
+
+let show = function
+  | Mail -> "Mail"
+  | Passengers -> "Passengers"
+  | Food -> "Food"
+  | Livestock -> "Livestock"
+  | MfgGoods -> "Mfg. Goods"
+  | Fertilizer -> "Fertilizer"
+  | Textiles -> "Textiles"
+  | Steel -> "Steel"
+  | Petroleum -> "Petroleum"
+  | Cotton -> "Cotton"
+  | Coal -> "Coal"
+  | Grain -> "Grain"
+  | Paper -> "Paper"
+  | Wood -> "Wood"
+  | Armaments -> "Armaments"
+  | Nitrates -> "Nitrates" 
+  | Beer -> "Beer"
+  | Hops -> "Hops"
+  | Chemicals -> "Chemicals"
+  | Wool -> "Wool"
+  | Grapes -> "Grapes"
+  | Wine -> "Wine"
 
 type freight =
   | MailFreight
@@ -31,6 +54,31 @@ type freight =
   | FastFreight
   | SlowFreight
   | BulkFreight
+
+let freight_of_goods = function
+  | Mail -> MailFreight
+  | Passengers -> PassengerFreight
+  | Food
+  | Livestock
+  | Beer
+  | Wine
+  | Grapes
+  | Armaments
+  | MfgGoods -> FastFreight
+  | Fertilizer
+  | Textiles
+  | Steel
+  | Grain
+  | Paper
+  | Hops -> SlowFreight
+  | Cotton
+  | Coal
+  | Chemicals
+  | Petroleum
+  | Wood
+  | Nitrates
+  | Wool -> BulkFreight
+
 
   (* Conversion tables:
     Each region can only convert one good to one other good.

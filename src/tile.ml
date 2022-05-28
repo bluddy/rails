@@ -40,7 +40,46 @@ type t =
   | Fort (* Eur *)
   | GlassWorks (* Eng *)
   | SheepFarm (* Eng, Eur *)
-  [@@deriving eq, show]
+  [@@deriving eq]
+
+let show = function
+  | Clear -> "Clear"
+  | Woods -> "Woods"
+  | Swamp -> "Swamp"
+  | Foothills -> "Foothills"
+  | Hills -> "Hills"
+  | Mountains -> "Mountains"
+  | City -> "City"
+  | Village -> "Village"
+  | Farm -> "Farm"
+  | Slums -> "Slums"
+  | FoodProc -> "Food Proc."
+  | Ranch -> "Ranch"
+  | Stockyard -> "Stockyard"
+  | Factory -> "Factory"
+  | GrainElev -> "Grain Elev."
+  | PaperMill -> "Paper Mill"
+  | Landing _ -> "Landing"
+  | LumberMill -> "Lumber Mill"
+  | CoalMine -> "Coal Mine"
+  | SteelMill -> "Steel Mill"
+  | PowerPlant -> "Power Plant"
+  | OilWell -> "Oil Well"
+  | Refinery -> "Refinery"
+  | EnemyRR -> "Enemy RR"
+  | River _ -> "River"
+  | Ocean _ -> "Ocean"
+  | Harbor _ -> "Harbor"
+  | Desert -> "Desert"
+  | SaltMine -> "Salt Mine"
+  | TextileMill -> "Textile Mill"
+  | ChemicalPlant -> "Chemical Plant"
+  | Brewery -> "Brewery"
+  | Vineyard -> "Vineyard"
+  | Winery -> "Winery"
+  | Fort -> "Fort"
+  | GlassWorks -> "GlassWorks"
+  | SheepFarm -> "Sheep Farm"
 
 let to_enum = function
   | Clear -> 0
@@ -96,14 +135,12 @@ module Info = struct
   end)
 
   type nonrec t = {
-    name: string;
     cost: int;
     supply: (Goods.t * int) list;
     demand: (Goods.t * int) list;
   }
 
-  let make ?(supply=[]) ?(demand=[]) name cost = {
-    name;
+  let make ?(supply=[]) ?(demand=[]) cost = {
     cost;
     supply=supply;
     demand=demand;
@@ -119,40 +156,40 @@ module Info = struct
   let d = 64
   let s = 32
   let std_tbl = [
-      Clear, make "Clear" 1;
-      Woods, make "Woods" 0;
-      Swamp, make "Swamp" 0;
-      Desert, make "Desert" 0;
-      Foothills, make "Foothills" 0;
-      Hills, make "Hills" 0;
-      Mountains, make "Mountains" 0;
-      River empty, make "River" 0;
-      Ocean empty, make "Ocean" 10;
-      Farm, make "Farm" 3;
-      Slums, make "Slums" 4;
+      Clear, make 1;
+      Woods, make 0;
+      Swamp, make 0;
+      Desert, make 0;
+      Foothills, make 0;
+      Hills, make 0;
+      Mountains, make 0;
+      River empty, make 0;
+      Ocean empty, make 10;
+      Farm, make 3;
+      Slums, make 4;
   ]
 
   let us_tbl = (std_tbl @ [
-      City, make "City" 10
+      City, make 10
         ~supply:[Mail, 24; Passengers, 32] (* 1, 2 *)
         ~demand:[Mail, d/2; Passengers, d/2; Food, d/2; Textiles, d/2];
-      Village, make "Village" 5
+      Village, make 5
         ~supply:[Mail, 4; Passengers, 12]  (* ?, 1 *)
         ~demand:[Mail, d/8; Passengers, d/4; MfgGoods, d/4];
-      FoodProc, make "Food Proc." 10 ~demand:[Fertilizer, d];
-      Ranch, make "Ranch" 5 ~supply:[Livestock, 128];
-      Stockyard, make "Stockyard" 10 ~demand:[Livestock, d];
-      Factory, make "Factory" 20 ~demand:[Steel, d];
-      GrainElev, make "Grain Elev." 10 ~supply:[Grain, 128];
-      PaperMill, make "Paper Mill" 10 ~demand:[Wood, 64];
-      Landing empty, make "Landing" 0 ~demand:[Grain, 64; Coal, 64];
-      LumberMill, make "LumberMill" 5 ~supply:[Wood, 64];
-      CoalMine, make "Coal Mine" 5 ~supply:[Coal, 64];
-      SteelMill, make "Steel Mill" 15 ~demand:[Coal, 96];
-      PowerPlant, make "Power Plant" 25 ~demand:[Petroleum, 96; Wood, 96; Coal, 96];
-      OilWell, make "Oil Well" 10 ~supply:[Petroleum, 96];
-      Refinery, make "Refinery" 15 ~demand:[Petroleum, 64];
-      Harbor empty, make "Harbor" 20 ~supply:[MfgGoods, 128] ~demand:[Grain, 64; Coal, 64];
+      FoodProc, make 10 ~demand:[Fertilizer, d];
+      Ranch, make 5 ~supply:[Livestock, 128];
+      Stockyard, make 10 ~demand:[Livestock, d];
+      Factory, make 20 ~demand:[Steel, d];
+      GrainElev, make 10 ~supply:[Grain, 128];
+      PaperMill, make 10 ~demand:[Wood, 64];
+      Landing empty, make 0 ~demand:[Grain, 64; Coal, 64];
+      LumberMill, make 5 ~supply:[Wood, 64];
+      CoalMine, make 5 ~supply:[Coal, 64];
+      SteelMill, make 15 ~demand:[Coal, 96];
+      PowerPlant, make 25 ~demand:[Petroleum, 96; Wood, 96; Coal, 96];
+      OilWell, make 10 ~supply:[Petroleum, 96];
+      Refinery, make 15 ~demand:[Petroleum, 64];
+      Harbor empty, make 20 ~supply:[MfgGoods, 128] ~demand:[Grain, 64; Coal, 64];
   ]) |> List.to_seq |> TileHash.of_seq
 
   let us_convert = [
@@ -165,47 +202,47 @@ module Info = struct
   ] |> Hashtbl.of_list
 
   let eu_tbl = (std_tbl @ [
-      City, make "City" 10
+      City, make 10
         ~supply:[Mail, 24; Passengers, 32]
         ~demand:[Mail, 32; Passengers, 32; Wine, 32; Textiles, 32];
-      Village, make "Village" 5
+      Village, make 5
         ~supply:[Mail, 4; Passengers, 12]
         ~demand:[Mail, 8; Passengers, 16; Fertilizer, 16]; (* farms I guess *)
-      Harbor empty, make "Harbor" 20 ~supply:[Wool, 192] ~demand:[Wine, 64; Armaments, 64];
-      Factory, make "Factory" 20 ~supply:[Armaments, 32] ~demand:[Steel, 64];
-      CoalMine, make "Coal Mine" 5 ~supply:[Coal, 96];
-      SteelMill, make "Steel Mill" 15 ~demand:[Coal, 64];
+      Harbor empty, make 20 ~supply:[Wool, 192] ~demand:[Wine, 64; Armaments, 64];
+      Factory, make 20 ~supply:[Armaments, 32] ~demand:[Steel, 64];
+      CoalMine, make 5 ~supply:[Coal, 96];
+      SteelMill, make 15 ~demand:[Coal, 64];
       (* TODO: power plant conversion makes no sense. Only due to simplicity of conversion system *)
-      PowerPlant, make "Power Plant" 25 ~demand:[Coal, 64; Nitrates, 64];
-      SheepFarm, make "Sheep Farm" 5 ~supply:[Nitrates, 96; Wool, 96]; (* Eng, Eur *)
-      TextileMill, make "Textile Mill" 10 ~demand:[Wool, 64];(* Eng, Eur *)
-      ChemicalPlant, make "Chemical Plant" 15 ~demand:[Nitrates, 64]; (* Eng, Eur *)
-      Vineyard, make "Vineyard" 10 ~supply:[Grapes, 128]; (* Eur *)
-      Winery, make "Winery" 10 ~demand:[Grapes, 64]; (* Eur *)
-      Fort, make "Fort" 5 ~demand:[Armaments, 64]; (* Eur *)
+      PowerPlant, make 25 ~demand:[Coal, 64; Nitrates, 64];
+      SheepFarm, make 5 ~supply:[Nitrates, 96; Wool, 96]; (* Eng, Eur *)
+      TextileMill, make 10 ~demand:[Wool, 64];(* Eng, Eur *)
+      ChemicalPlant, make 15 ~demand:[Nitrates, 64]; (* Eng, Eur *)
+      Vineyard, make 10 ~supply:[Grapes, 128]; (* Eur *)
+      Winery, make 10 ~demand:[Grapes, 64]; (* Eur *)
+      Fort, make 5 ~demand:[Armaments, 64]; (* Eur *)
     ]) |> List.to_seq |> TileHash.of_seq
 
   let en_tbl = (std_tbl @ [
       (* Note: this seems like a limitation. Livestock should not go to city except as food,
          but there's no space for the food proc plant in the economy *)
-      City, make "City" 10
+      City, make 10
         ~supply:[Mail, 24; Passengers, 32]
         ~demand:[Mail, 32; Passengers, 32; Livestock, 32; Textiles, 32];
-      Village, make "Village" 5
+      Village, make 5
         ~supply:[Mail, 4; Passengers, 12]
         ~demand:[Mail, 8; Passengers, 16; Beer, 16];
-      Landing empty, make "Landing" 0 ~demand:[MfgGoods, 64];
-      Harbor empty, make "Harbor" 20 ~supply:[Hops, 128; Cotton, 256] ~demand:[MfgGoods, 64];
-      Factory, make "Factory" 20 ~demand:[Steel, 64];
-      CoalMine, make "Coal Mine" 5 ~supply:[Coal, 3 * 32];
-      SteelMill, make "Steel Mill" 15 ~demand:[Coal, 64];
-      SaltMine, make "Salt Mine" 5 ~supply:[Chemicals, 3 * 32];  (* Eng *)
-      TextileMill, make "Textile Mill" 10 ~demand:[Cotton, 64];(* Eng, Eur *)
-      ChemicalPlant, make "Chemical Plant" 15 ~demand:[Chemicals, 64]; (* Eng, Eur *)
-      GrainElev, make "Grain Elev." 10 ~supply:[Hops, 64];
-      Brewery, make "Brewery" 10 ~demand:[Hops, 64]; (* Eng *)
-      GlassWorks, make "Glassworks" 10 ~supply:[MfgGoods, 5 * 32]; (* Eng *)
-      SheepFarm, make "Sheep Farm" 5 ~supply:[Livestock, 5 * 32]; (* Eng, Eur *)
+      Landing empty, make 0 ~demand:[MfgGoods, 64];
+      Harbor empty, make 20 ~supply:[Hops, 128; Cotton, 256] ~demand:[MfgGoods, 64];
+      Factory, make 20 ~demand:[Steel, 64];
+      CoalMine, make 5 ~supply:[Coal, 3 * 32];
+      SteelMill, make 15 ~demand:[Coal, 64];
+      SaltMine, make 5 ~supply:[Chemicals, 3 * 32];  (* Eng *)
+      TextileMill, make 10 ~demand:[Cotton, 64];(* Eng, Eur *)
+      ChemicalPlant, make 15 ~demand:[Chemicals, 64]; (* Eng, Eur *)
+      GrainElev, make 10 ~supply:[Hops, 64];
+      Brewery, make 10 ~demand:[Hops, 64]; (* Eng *)
+      GlassWorks, make 10 ~supply:[MfgGoods, 5 * 32]; (* Eng *)
+      SheepFarm, make 5 ~supply:[Livestock, 5 * 32]; (* Eng, Eur *)
     ]) |> List.to_seq |> TileHash.of_seq
 
   let get region tile =

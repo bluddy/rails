@@ -351,12 +351,13 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _, `ShowTileInfo tile ->
           let info = Tile.Info.get (B.get_region s.backend) tile in
           let open Menu.MsgBox in
+          let money_sym = Region.money_symbol s.backend.region in
           let entries =
             let entries =
             [
-              static_entry ~color:Ega.white info.name;
+              static_entry ~color:Ega.white @@ Tile.show tile;
               static_entry ~color:Ega.white "Right-of-Way costs";
-              static_entry ~color:Ega.white @@ Printf.sprintf "$%d,000 per mile" info.cost;
+              static_entry ~color:Ega.white @@ Printf.sprintf "%s%d,000 per mile" money_sym info.cost;
             ]
             in
             let supply = match info.supply with
@@ -364,7 +365,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               | supply ->
                   static_entry ~color:Ega.bcyan " Supplies" ::
                   List.map (fun (good, _) ->
-                    static_entry ~color:Ega.black @@ Goods.show good)
+                    static_entry ~color:Ega.black @@ " "^Goods.show good)
                     supply
             in
             entries @ supply
