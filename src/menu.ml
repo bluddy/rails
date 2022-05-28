@@ -124,7 +124,6 @@ module MsgBox = struct
     let (w, h), entries =
       List.fold_map (fun (max_w, max_h) entry ->
         let w, h = get_entry_w_h v.font entry in
-        let max_w, max_h = max max_w w, max_h + h in
         let kind = match entry.kind with
           | Interactive e ->
             let enabled = match e.test_enabled with
@@ -135,6 +134,7 @@ module MsgBox = struct
           | Static _ as k -> k
         in
         let entry = {entry with y=max_h; h; kind} in
+        let max_w, max_h = max max_w w, max_h + h in
         (max_w, max_h), entry)
       (max_w, max_h)
       v.entries
