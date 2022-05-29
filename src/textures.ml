@@ -233,6 +233,86 @@ module Tracks = struct
 
 end
 
+module Station = struct
+    let ndarray = Hashtbl.find res.Resources.res_pics "STATION" in
+    let tex x y x2 y2 =
+      Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray
+      |> R.Texture.make win slice
+    in
+    let bgnd = tex 0 141 320 200 in
+    let depot = tex 6 10 102 42 in
+    let station = tex 112 27 209 83 in
+    let terminal = tex 216 13 320 123 in
+    let switching_yard = tex 105 2 215 18 in
+    let engine_shop = tex 1 114 50 138 in
+    let barn = tex 2 88 39 113 in
+    let fence = tex 76 120 111 129 in
+    let goods_bottom = tex 76 108 111 116 in
+    let goods = tex 76 90 111 104 in
+    let cold = tex 76 60 111 80 in
+    let smokestacks = tex 76 49 111 56 in
+    let hotel = tex 112 87 147 140 in
+    let restaurant = tex 148 111 191 128 in
+    let rest_bottom = tex 148 132 191 140 in
+    let post_office = tex 148 94 191 107 in
+    let post_top = tex 148 87 191 90 in
+    ()
+
+end
+
+module Cars = struct
+  let tile_w, tile_h = 20, 20
+
+  let load win res =
+    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS" in
+    let width = (Ndarray.shape ndarray).(1) in
+    let car_dict = Hashtbl.create 100 in
+
+    let get_tex x y =
+      Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarray
+      |> R.Texture.make win
+    in
+    let tex x y kind =
+      List.fold_left (fun x dir ->
+        let tex = get_tex x y in
+        Hashtbl.replace car_dict (kind,dir) tex;
+        (x + tile_w) mod width
+      )
+      x
+      Dir.dirlist
+      |> ignore
+    in
+
+    tex 200 120 `BigOldEngine;
+    tex 200 140 `LittleOldEngine;
+    tex 40 120 `DieselEngine;
+    tex 40 140 `MailCar;
+    tex 200 160 `PaseengerCar;
+    tex 40 160 `FastCar;
+    tex 200 180 `SlowCar;
+    tex 40 180 `BulkCar;
+
+end
+
+module Smoke = struct
+    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS"
+    let tex x y =
+      Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray
+      |> R.Texture.make win slice
+    let smoke1 = tex 220 100
+    let smoke2 = tex 240 100
+    let smoke3 = tex 260 100
+    let smoke4 = tex 280 100
+end
+
+module Cursor = struct
+    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS"
+    let tex x y =
+      Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray
+      |> R.Texture.make win slice
+    let tex = tex 100 300
+end
+
 let slice_logo win res =
   let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
   Ndarray.get_slice [[63; 118]; [256; 319]] ndarray

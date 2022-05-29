@@ -11,6 +11,8 @@ type t =
   | UpLeft
   [@@deriving ord, enum]
 
+let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
+
 let cw = function
   | Up -> UpRight
   | UpRight -> Right
