@@ -230,7 +230,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
 
   let draw_city_names () =
-    B.iter_cities (fun name x y ->
+    B.iter_cities (fun x y name ->
       if (x >= start_x && y >= start_y) || (x <= end_x && y <= end_y) then (
         let x = (x - start_x) * tile_w in
         let y = (y - start_y) * tile_h + v.dims.y in

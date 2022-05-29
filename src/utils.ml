@@ -33,6 +33,13 @@ let clip v ~min ~max =
 let random_int maxval r =
   if maxval = 0 then 0 else Random.int maxval r
   
+let calc_offset width x y = y * width + x
+
+let x_y_of_offset width offset =
+  let y = offset / width in
+  let x = offset mod width in
+  x, y
+
 
 module List = struct
   let modify_at_idx i f l0 =

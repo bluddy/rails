@@ -10,27 +10,20 @@ let empty width height =
   let map = Hashtbl.create 100 in
   {map; width; height}
 
-let calc_offset v x y = y * v.width + x
-
-let x_y_of_offset v offset =
-  let y = offset / v.width in
-  let x = offset mod v.width in
-  x, y
-
-let get v x y = Hashtbl.find_opt v.map (calc_offset v x y)
+let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
   (* get, buf if there's nothing, create a track *)
 let get_track ?(kind=Track.Track) v x y ~player =
   get v x y
   |> Option.get_lazy (fun () -> Track.empty player kind)
 
-let set v x y tile = Hashtbl.replace v.map (calc_offset v x y) tile
+let set v x y tile = Hashtbl.replace v.map (Utils.calc_offset v.width x y) tile
 
-let remove v x y = Hashtbl.remove v.map (calc_offset v x y)
+let remove v x y = Hashtbl.remove v.map (Utils.calc_offset v.width x y)
 
 let iter v f =
   Hashtbl.iter (fun i track ->
-    let x, y = x_y_of_offset v i in
+    let x, y = Utils.x_y_of_offset v.width i in
     f x y track)
   v.map
 

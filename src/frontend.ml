@@ -39,7 +39,7 @@ let run ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
         match s.screen with
         | Screen.MapGen None ->
             (* Prepare mapgen with init *)
-            let cities = Array.to_list @@ B.get_cities s.backend in
+            let cities = B.get_cities s.backend in
             let data = Mapgen.init s.random (B.get_region s.backend) cities in
             {s with screen=Screen.MapGen(Some data)}
 

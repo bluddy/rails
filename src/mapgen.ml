@@ -223,8 +223,8 @@ let pixel_apply_city = function
   | Desert_pixel -> Farm_pixel
   | x -> x
 
-let add_city_list r region (city_list:city list) : (int * int) list =
-  let add_city (factor, acc) {x;y;_} =
+let add_city_list r region (city_list:(int * int * string) list) : (int * int) list =
+  let add_city (factor, acc) (x,y,_) =
     (* add all cities as villages *)
     let acc =
       (* Amazingly, some cities seem to be out of bounds and they let the population expand into the map *)

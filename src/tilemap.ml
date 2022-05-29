@@ -10,12 +10,8 @@ type t = {
   height: int;
 }
 
-type city = {
-    name: string;
-    x: int;
-    y: int;
-  }
-  [@@deriving show]
+let get_height v = v.height
+let get_width v = v.width
 
 type pixel =
   | Slum_pixel     (* 0 *)
@@ -93,26 +89,19 @@ let pixel_of_tile = function
 let map_height = 192
 let map_width = 256
 
-let calc_offset v x y = y * v.width + x
-
-let x_y_of_offset ~width offset =
-  let y = offset / width in
-  let x = offset mod width in
-  x, y
-
-let get_tile v x y = v.map.(calc_offset v x y)
+let get_tile v x y = v.map.(Utils.calc_offset v.width x y)
 
 let set_tile v x y tile =
-  v.map.(calc_offset v x y) <- tile
+  v.map.(Utils.calc_offset v.width x y) <- tile
 
 let set_height v ~x ~y height =
-  v.heightmap.(calc_offset v x y) <- height
+  v.heightmap.(Utils.calc_offset v.width x y) <- height
 
-let get_tile_height v x y = v.heightmap.(calc_offset v x y)
+let get_tile_height v x y = v.heightmap.(Utils.calc_offset v.width x y)
 
 let mapxy ~width f arr =
   Array.mapi (fun i value ->
-    let x, y = x_y_of_offset ~width i in
+    let x, y = Utils.x_y_of_offset width i in
     f x y value)
   arr
 
@@ -277,7 +266,7 @@ let create_heightmap v =
   in
   (* Get convolved height map *)
   mapxy (fun x y height ->
-    let other_h = convolve x y (fun x y -> heightmap.(calc_offset v x y)) in
+    let other_h = convolve x y (fun x y -> heightmap.(Utils.calc_offset v.width x y)) in
     let factor = (x * y) mod 8 in
     height * 16 + other_h + factor)
     ~width:v.width
@@ -349,7 +338,7 @@ let get_pixel ~map ~x ~y =
 
 let set_pixel ~region v ~x ~y ~pixel =
   let tile = tile_of_pixel ~region ~x ~y ~pixel v in
-  v.map.(calc_offset v x y) <- tile
+  v.map.(Utils.calc_offset v.width x y) <- tile
 
 let get_grade v ~dir ~x ~y =
   let dx, dy = Dir.to_offsets dir in

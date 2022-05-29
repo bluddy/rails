@@ -1,17 +1,24 @@
 Notes:
 - TODO:
-  - check land prices in eu, en
   - draw track in f2 and f3
-  - Modal Menus: standardize so most behavior doesn't need special handling
+    - Requires textures for diagonal track
   - Don't allow station on curved tracks
-  - Fixes to grade: % shows up wrong
   - Build tunnel:
-    - Tunnel msgbox incorrect
-    - Not sure how it decides to end tunnel
     - Shows msgbox with cost and length of tunnel to confirm
   - Build track:
     - Always connect to track, unless no track exists
+  - TileInfo:
+    - Show city name for cities/villages
+    - Show demand/convert (not sure when)
   - Next: stations and intersections
+  - Station Screen
+  - Route Screen
+  - Trains
+  - Money handling
+  - History
+  - Reports
+  - Stock Screen
+  - AI
 
 
 - F2 view a little buggy, sometimes freezes
