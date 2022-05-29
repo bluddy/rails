@@ -64,22 +64,22 @@ module List = struct
     loop i [] l0
 end
 
-let scan ~range ~x ~y ~max_x ~max_y ~f =
+let scan ~range ~x ~y ~width ~height ~f =
   let min_x = max 0 (x-range) in
-  let max_x = min max_x (x+range) in
+  let max_x = min (width-1) (x+range) in
   let min_y = max 0 (y-range) in
-  let max_y = min max_y (y+range) in
-  let exception Found in
+  let max_y = min (height-1) (y+range) in
+  let exception Found of (int * int) option in
   try
     for i=min_y to max_y do
       for j=min_x to max_x do
         if f j i then
-          raise_notrace Found
+          raise_notrace @@ Found (Some (j, i));
       done
     done;
-    false
+    None
   with
-  | Found -> true
+  | Found x -> x
 
 let snd_option (x,y) =
   x, (y |> Option.get_exn_or "error")

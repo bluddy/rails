@@ -73,10 +73,12 @@ let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
            | _ -> false
          in
          let station_test =
-           Utils.scan ~range ~x ~y ~max_x:(v.width - 1) ~max_y:(v.height-1) ~f:match_fn
+           Utils.scan ~range ~x ~y ~width:v.width ~height:v.height ~f:match_fn
          in
-         if station_test then `TooClose
-         else `Ok
+         begin match station_test with
+         | Some _ -> `TooClose
+         | None -> `Ok
+         end
 
    | _ -> `Illegal
    

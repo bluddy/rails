@@ -352,14 +352,23 @@ let handle_event (s:State.t) v (event:Event.t) =
           in
           let modal = {menu; data=(msg,length); last=Normal} in
           {v with mode=BuildTunnel modal}, nobaction
-      | _, `ShowTileInfo tile ->
+      | _, `ShowTileInfo (x, y, tile) ->
           let info = Tile.Info.get (B.get_region s.backend) tile in
           let open Menu.MsgBox in
           let money_sym = Region.money_symbol s.backend.region in
           let entries =
+            let tilename = match tile with
+            | City | Village ->
+                begin match B.find_close_city s.backend x y with
+                | Some city ->
+                    Printf.sprintf "%s (%s)" (Tile.show tile) city
+                | None -> Tile.show tile
+                end
+            | _ -> Tile.show tile
+            in
             let entries =
             [
-              static_entry ~color:Ega.white @@ Tile.show tile;
+              static_entry ~color:Ega.white tilename;
               static_entry ~color:Ega.white "Right-of-Way costs";
               static_entry ~color:Ega.white @@ Printf.sprintf "%s%d,000 per mile" money_sym info.cost;
             ]

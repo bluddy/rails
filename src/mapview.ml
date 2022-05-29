@@ -126,7 +126,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           begin match v.zoom, button with
           | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
               let tile = B.get_tile s.backend cursor_x cursor_y in
-              v, `ShowTileInfo tile
+              v, `ShowTileInfo (cursor_x, cursor_y, tile)
           | Zoom4, `Left ->
               let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
               {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
@@ -134,7 +134,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
               {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | (Zoom3 | Zoom2), `Left ->
               let tile = B.get_tile s.backend cursor_x cursor_y in
-              v, `ShowTileInfo tile
+              v, `ShowTileInfo (cursor_x, cursor_y, tile)
           | (Zoom3 | Zoom2), `Right ->
               {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | _ -> v, `NoAction
@@ -157,9 +157,9 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   let handle_key_zoom4 v key ~build =
     let dir = key_to_dir key in
     match dir, key with
-    | None, Event.I ->
+    | None, Event.Enter ->
         let tile = B.get_tile s.backend v.cursor_x v.cursor_y in
-        v, `ShowTileInfo tile
+        v, `ShowTileInfo (v.cursor_x, v.cursor_y, tile)
     | None, _ -> v, `NoAction
     | Some dir, _ ->
         let move i = move_cursor v dir i in

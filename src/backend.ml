@@ -28,9 +28,10 @@ module Cities = struct
   type t = {
     map: (int, string) Hashtbl.t;
     width: int;
+    height: int;
   }
 
-  let make map width = {map; width}
+  let make map width height = {map; width; height}
 
   let iter f v =
     Hashtbl.iter (fun offset city_s ->
@@ -44,6 +45,14 @@ module Cities = struct
     |> List.map (fun (i, city) ->
       let x, y = Utils.x_y_of_offset v.width i in
       x, y, city)
+
+  let find_close v x y =
+    let res = Utils.scan ~range:4 ~x ~y ~width:v.width ~height:v.height
+      ~f:(fun x y -> match find v x y with Some _ -> true | None -> false)
+    in
+    match res with
+    | Some (x, y) -> find v x y
+    | None -> None
 
 end
 
@@ -61,7 +70,7 @@ let default region resources =
     let h = Hashtbl.create 100 in
     List.assoc ~eq:(Stdlib.(=)) region resources.res_cities
     |> List.iter (fun (name,x,y) -> Hashtbl.replace h (y*Tilemap.map_width + x) name);
-    Cities.make h Tilemap.map_width
+    Cities.make h Tilemap.map_width Tilemap.map_height
   in
   let track = Trackmap.empty Tilemap.map_width Tilemap.map_height in
   let speed = `Moderate in
@@ -86,6 +95,8 @@ let get_map v = v.map
 let get_tile_height v x y = Tilemap.get_tile_height v.map x y
 
 let iter_cities f v = Cities.iter f v.cities
+
+let find_close_city v x y = Cities.find_close v.cities x y
 
 let check_build_track v ~x ~y ~dir ~player =
   match Tilemap.check_build_track v.map ~x ~y ~dir with
