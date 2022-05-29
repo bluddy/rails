@@ -89,7 +89,7 @@ let cursor_on_station backend v =
   match B.get_track backend v.cursor_x v.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
-      | Station (Depot | Station | Terminal) -> true
+      | Station (`Depot | `Station | `Terminal) -> true
       | _ -> false
       end
   | _ -> false
@@ -274,7 +274,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       if x >= from_x && x <= from_end_x && y >= from_y && y <= from_end_y then (
         let x = minimap.x + x - from_x in
         let y = minimap.y + y - from_y in
-        R.draw_point win ~x ~y:(y + v.dims.y) ~color:Ega.black
+        R.draw_point win ~x ~y ~color:Ega.black
       )
     );
 

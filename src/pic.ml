@@ -27,7 +27,7 @@ possible they're just using the "normal" 16 color palette.
 *)
 
 let debug = ref false
-let debug_images = ref false
+let debug_images = ref true
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 

@@ -87,7 +87,7 @@ type ('a, 'b, 'c) modalmenu =
 and 'a mode =
   | Normal
   | ModalMsgbox of ('a, unit, unit) modalmenu
-  | BuildStation of ('a, Station.t, unit) modalmenu
+  | BuildStation of ('a, Station.kind, unit) modalmenu
   | BuildBridge of ('a, Bridge.t, Utils.msg) modalmenu
   | BuildTunnel of ('a, [`Tunnel | `Track], (Utils.msg * int)) modalmenu
 

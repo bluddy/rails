@@ -154,7 +154,7 @@ module Action = struct
     | NoAction
     | BuildTrack of Utils.msg
     | BuildFerry of Utils.msg
-    | BuildStation of {x: int; y: int; kind: Station.t}
+    | BuildStation of {x: int; y: int; kind: Station.kind}
     | BuildBridge of Utils.msg * Bridge.t
     | BuildTunnel of Utils.msg * int (* length *)
     | RemoveTrack of Utils.msg

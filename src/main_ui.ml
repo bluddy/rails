@@ -240,10 +240,10 @@ let build_station_menu fonts =
   make ~fonts ~heading:"Type of facility?" ~x:176 ~y:16
   [
     make_entry "&CANCEL" @@ `Action(None);
-    make_entry "Si&gnal Tower ($25,000)" @@ `Action(Some Station.SignalTower);
-    make_entry "&Depot ($50,000)" @@ `Action(Some Station.Depot);
-    make_entry "&Station ($100,000)" @@ `Action(Some Station.Station);
-    make_entry "&Terminal ($200,000)" @@ `Action(Some Station.Terminal);
+    make_entry "Si&gnal Tower ($25,000)" @@ `Action(Some `SignalTower);
+    make_entry "&Depot ($50,000)" @@ `Action(Some `Depot);
+    make_entry "&Station ($100,000)" @@ `Action(Some `Station);
+    make_entry "&Terminal ($200,000)" @@ `Action(Some `Terminal);
   ]
 
 let build_bridge_menu fonts =

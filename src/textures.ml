@@ -222,10 +222,10 @@ module Tracks = struct
     load_textures 3 4 (Bridge(Bridge.Iron)) Resources.special_dirs;
     load_textures 3 8 (Bridge(Bridge.Wood)) Resources.special_dirs;
     load_textures ~extra:true 3 8 (Bridge(Bridge.Stone)) Resources.special_dirs;
-    load_textures 4 0 (Station(Station.SignalTower)) Resources.special_dirs;
-    load_textures 4 0 (Station(Station.Depot)) Resources.special_dirs;
-    load_textures 4 4 (Station(Station.Station)) Resources.special_dirs;
-    load_textures 4 8 (Station(Station.Terminal)) Resources.special_dirs;
+    load_textures 4 0 (Station(`SignalTower)) Resources.special_dirs;
+    load_textures 4 0 (Station(`Depot)) Resources.special_dirs;
+    load_textures 4 4 (Station(`Station)) Resources.special_dirs;
+    load_textures 4 8 (Station(`Terminal)) Resources.special_dirs;
     track_dict
 
   let find track_h track =
