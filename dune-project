@@ -9,7 +9,7 @@
 
 (authors "Yotam Barnoy")
 
-(maintainers "Yotam Barnoy")
+(maintainers "yotambarnoy@gmail.com")
 
 (license MIT)
 
