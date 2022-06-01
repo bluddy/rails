@@ -20,7 +20,7 @@
  (allow_empty)
  (synopsis "OCaml-based remake of Railroad Tycoon")
  (description "Requires original files")
- (depends ocaml dune iter containers containers-data gen imagelib imagelib.unix tsdl owl-base ppx_deriving ppx_hash lens)
+ (depends ocaml dune iter containers containers-data gen imagelib tsdl owl-base ppx_deriving ppx_hash lens)
  (tags
   (game engine remake)))
 

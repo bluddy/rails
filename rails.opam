@@ -2,7 +2,7 @@
 opam-version: "2.0"
 synopsis: "OCaml-based remake of Railroad Tycoon"
 description: "Requires original files"
-maintainer: ["Yotam Barnoy"]
+maintainer: ["yotambarnoy@gmail.com"]
 authors: ["Yotam Barnoy"]
 license: "MIT"
 tags: ["game" "engine" "remake"]
@@ -17,7 +17,6 @@ depends: [
   "containers-data"
   "gen"
   "imagelib"
-  "imagelib.unix"
   "tsdl"
   "owl-base"
   "ppx_deriving"
