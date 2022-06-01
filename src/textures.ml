@@ -234,33 +234,37 @@ module Tracks = struct
 end
 
 module Station = struct
+  let load win res =
     let ndarray = Hashtbl.find res.Resources.res_pics "STATION" in
-    let tex x y x2 y2 =
-      Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray
-      |> R.Texture.make win slice
+    let hash = Hashtbl.create 20 in
+    let tex key x y x2 y2 =
+      let tex = 
+        Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win
+      in
+      Hashtbl.replace hash key tex
     in
-    let bgnd = tex 0 141 320 200 in
-    let depot = tex 6 10 102 42 in
-    let station = tex 112 27 209 83 in
-    let terminal = tex 216 13 320 123 in
-    let switching_yard = tex 105 2 215 18 in
-    let engine_shop = tex 1 114 50 138 in
-    let barn = tex 2 88 39 113 in
-    let fence = tex 76 120 111 129 in
-    let goods_bottom = tex 76 108 111 116 in
-    let goods = tex 76 90 111 104 in
-    let cold = tex 76 60 111 80 in
-    let smokestacks = tex 76 49 111 56 in
-    let hotel = tex 112 87 147 140 in
-    let restaurant = tex 148 111 191 128 in
-    let rest_bottom = tex 148 132 191 140 in
-    let post_office = tex 148 94 191 107 in
-    let post_top = tex 148 87 191 90 in
-    ()
+    tex `Background 0 141 320 200;
+    tex `Depot 6 10 102 42;
+    tex `Station 112 27 209 83;
+    tex `Terminal 216 13 320 123;
+    tex `SwitchingYard 105 2 215 18;
+    tex `EngineShop 1 114 50 138;
+    tex `Barn 2 88 39 113;
+    tex `Fence 76 120 111 129;
+    tex `Goods_bottom 76 108 111 116;
+    tex `Goods 76 90 111 104;
+    tex `Cold 76 60 111 80;
+    tex `Smokestacks 76 49 111 56;
+    tex `Hotel 112 87 147 140;
+    tex `Restaurant 148 111 191 128;
+    tex `Rest_bottom 148 132 191 140;
+    tex `PostOffice 148 94 191 107;
+    tex `Post_top 148 87 191 90;
+    hash
 
 end
 
-module Cars = struct
+module CarsTop = struct
   let tile_w, tile_h = 20, 20
 
   let load win res =
@@ -291,26 +295,196 @@ module Cars = struct
     tex 40 160 `FastCar;
     tex 200 180 `SlowCar;
     tex 40 180 `BulkCar;
+end
+
+module CarSide = struct
+  let load win res =
+    let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
+    let hash = Hashtbl.create 10 in
+
+    let tex_full ~dx ~dy key x y =
+      let tex = Ndarray.get_slice [[y; y + dy - 1]; [x; x + dx - 1]] ndarray |> R.Texture.make win in
+      Hashtbl.replace hash key tex
+    in
+    let tex = tex_full ~dx:63 ~dy:9 in
+    tex `Engine1 63 96;  (* transparent background *)
+    tex `Engine2 63 106;
+    tex `Engine3 63 116;
+    tex `Engine4 63 126;
+    tex `Engine5 63 136;
+    tex `Engine6 63 146;
+    tex `Engine7 63 156;
+    tex `Engine8 63 166;
+    tex `Engine9 63 176;
+    tex `EngineW1 0 96;  (* white background *)
+    tex `EngineW2 0 106;
+    tex `EngineW3 0 116;
+    tex `EngineW4 0 126;
+    tex `EngineW5 0 136;
+    tex `EngineW6 0 146;
+    tex `EngineW7 0 156;
+    tex `EngineW8 0 166;
+    tex `EngineW9 0 176;
+
+    let tex = tex_full ~dx:20 ~dy:8 in
+    tex `CarMailEmpty 139 97;
+    tex `CarMail 160 97;
+    tex `CarMail2 180 97;
+    tex `Caboose 200 97;
+    tex `CarPassengerEmpty 139 107;
+    tex `CarPassenger 139 107;
+    tex `CarPassengerGreen 160 107;
+    tex `CarPassenger2 180 107;
+    tex `CarFastEmpty 139 117;
+    tex `CarFood 160 117;
+    tex `CarLivestock 180 117;
+    tex `CarGoods 200 117;
+    tex `CarSlowEmpty 139 127;
+    tex `CarGrain 160 127;
+    tex `CarPaper 180 127;
+    tex `CarSteel 200 127;
+    tex `CarBulkEmpty 139 137;
+    tex `CarPetroleum 160 137;
+    tex `CarWood 180 137;
+    tex `CarCoal 200 137;
+    let tex = tex_full ~dx:24 ~dy:8 in
+    tex `CarBigMail 160 147;
+    tex `CarBigPassenger 160 157;
+    tex `CarBigPassengerGreen 184 157;
+    tex `CarBigPassengerGreenBig 208 157;
+    tex `CarBigFood 160 167;
+    tex `CarBigLivestock 184 167;
+    tex `CarBigGoods 208 167;
+    tex `CarBigGrain 160 177;
+    tex `CarBigPaper 184 177;
+    tex `CarBigSteel 208 177;
+    tex `CarBigPetroleum 160 187;
+    tex `CarBigWood 184 187;
+    tex `CarBigCoal 208 187;
+    hash
 
 end
 
-module Smoke = struct
-    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS"
-    let tex x y =
-      Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray
-      |> R.Texture.make win slice
-    let smoke1 = tex 220 100
-    let smoke2 = tex 240 100
-    let smoke3 = tex 260 100
-    let smoke4 = tex 280 100
+module TrainAnim = struct
+
+  type engine = {
+    tex: R.Texture.t;
+    w: int;
+    h: int;
+    anim_x: int;
+    anim_y: int;
+    anim: R.Texture.t array;
+    smoke_x: int option;
+  }
+
+  let load win res =
+    let hash = Hashtbl.create 10 in
+    let ndarray = Hashtbl.find res.Resources.res_pics "LOCOS" in
+
+    let part x y x2 y2 =
+      Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win
+    in
+    let engine kind ?(anim_x=0) ?(anim_y=0) ?smoke_x ?(anim=[||]) x y x2 =
+      let y2 = y + 23 in
+      let tex = part x y x2 y2 in
+      let w, h = x2 - x, y2 - y in
+      let engine = {
+        tex; w; h; anim_x; anim_y; anim; smoke_x
+      }
+      in
+      Hashtbl.add hash kind engine
+    in
+
+    engine `Engine1 0 5 32 ~anim_x:10 ~anim_y:0
+      ~anim: [|
+        part 140 5 159 24;
+        part 140 29 159 48;
+      |];
+    engine `Engine2 0 29 49 ~anim_x:23 ~anim_y:12
+      ~anim: [|
+        part 109 177 133 184;
+        part 109 185 133 192;
+        part 135 177 159 184;
+        part 135 185 159 192;
+      |];
+    engine `Engine3 0 53 74 ~anim_x:31 ~anim_y:10
+      ~anim: [|
+        part 90 77 123 86;
+        part 90 87 123 96;
+        part 125 77 158 86;
+        part 125 87 158 96;
+      |];
+    engine `Engine4 0 76 86 ~anim_x:38 ~anim_y:13
+      ~anim: [|
+        part 34  9 73 16;
+        part 34 17 73 24;
+        part 75  9 114 16;
+        part 75 17 114 24;
+      |];
+    engine `Engine5 0 98 85 ~anim_x:44 ~anim_y:15
+      ~anim: [|
+        part 86 104 119 111;
+        part 86 113 119 120;
+        part 126 104 159 111;
+        part 126 113 159 120;
+      |];
+    engine `Engine6 0 123 89 ~anim_x:44 ~anim_y:136
+      ~anim: [|
+        part 80 55 118 63;
+        part 80 64 118 73;
+        part 120 55 158 63;
+        part 120 64 158 73;
+      |];
+    engine `Engine6 0 149 116 ~anim_x:70 ~anim_y:10
+      ~anim: [|
+        part 53 29 95 38;
+        part 53 29 95 48;
+        part 96 29 138 38;
+        part 96 29 138 48;
+      |];
+
+
 end
 
-module Cursor = struct
-    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS"
-    let tex x y =
-      Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray
-      |> R.Texture.make win slice
-    let tex = tex 100 300
+module Misc = struct
+
+  let load win res =
+    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS" in
+    let hash = Hashtbl.create 10 in
+
+    let tex key x y =
+      let tex = Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray |> R.Texture.make win in
+      Hashtbl.replace hash key tex
+    in
+
+    tex `Cursor 100 300;
+    tex (`SmokeTop 1) 220 100;
+    tex (`SmokeTop 2) 240 100;
+    tex (`SmokeTop 3) 260 100;
+    tex (`SmokeTop 4) 280 100;
+
+    let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
+    let tex key x y x2 y2 =
+      Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win
+      |> Hashtbl.replace hash key
+    in
+
+    tex `Newspaper 240 120 280 160;
+
+    tex (`SmokeSide 1) 240 162 286 169;
+    tex (`SmokeSide 2) 240 170 286 177;
+    tex (`SmokeSide 3) 240 178 286 185;
+    tex (`SmokeSide 4) 240 186 286 193;
+
+    tex `FrameTL 281 121 289 129;
+    tex `FrameTR 311 121 319 129;
+    tex `FrameBL 281 151 289 159;
+    tex `FrameBR 311 151 319 159;
+
+    tex `Escape1 287 162 309 177;
+    tex `Escape2 287 178 309 193;
+    hash
+
 end
 
 let slice_logo win res =
