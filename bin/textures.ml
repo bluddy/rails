@@ -367,7 +367,7 @@ end
 
 module TrainAnim = struct
 
-  type engine = {
+  type t = {
     tex: R.Texture.t;
     w: int;
     h: int;
@@ -381,8 +381,8 @@ module TrainAnim = struct
     let hash = Hashtbl.create 10 in
     let ndarray = Hashtbl.find res.Resources.res_pics "LOCOS" in
 
-    let part x y x2 y2 =
-      Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win
+    let part ?(arr=ndarray) x y x2 y2 =
+      Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] arr |> R.Texture.make win
     in
     let engine kind ?(anim_x=0) ?(anim_y=0) ?smoke_x ?(anim=[||]) x y x2 =
       let y2 = y + 23 in
@@ -435,15 +435,61 @@ module TrainAnim = struct
         part 120 55 158 63;
         part 120 64 158 73;
       |];
-    engine `Engine6 0 149 116 ~anim_x:70 ~anim_y:10
+    engine `Engine7 0 149 116 ~anim_x:70 ~anim_y:10
       ~anim: [|
         part 53 29 95 38;
-        part 53 29 95 48;
+        part 53 39 95 48;
         part 96 29 138 38;
-        part 96 29 138 48;
+        part 96 39 138 48;
       |];
+    engine `Engine8 0 175 106 ~anim_x:66 ~anim_y:10
+      ~anim: [|
+        part 90 129 124 136;
+        part 90 137 124 144;
+        part 125 129 159 136;
+        part 125 137 159 144;
+      |];
+    engine `Engine9 160 2 319;
+    engine `Engine10 160 27 319;
 
+    let car ?(h=19) ?(w=47) ?arr kind x y =
+      let y2 = y + h in
+      let x2 = x + w in
+      let tex = part ?arr x y x2 y2 in
+      let car = {
+        tex; w; h; anim_x=0; anim_y=0; anim=[||]; smoke_x=None;
+      }
+      in
+      Hashtbl.add hash kind car
+    in
+    car `CarMail 160 80;
+    car `CarFood 160 100;
+    car `CarGoods 160 120;
+    car `CarPaper 160 140;
+    car `CarPetroleum 160 160;
+    car `CarCoal 160 180;
+    car `CarPassenger 240 80;
+    car `CarLivestock 240 100;
+    car `CarGrain 240 120;
+    car `CarSteel 240 140;
+    car `CarWood 240 160;
 
+    let ndarray = Hashtbl.find res.Resources.res_pics "LOCOSM" in
+    let car = car ~w:60 ~arr:ndarray in
+
+    car `CarBigMail 160 80;
+    car `CarBigFood 160 100;
+    car `CarBigGoods 160 120;
+    car `CarBigPaper 160 140;
+    car `CarBigPetroleum 160 160;
+    car `CarBigCoal 160 180;
+    car `CarBigPassenger 240 80;
+    car `CarBigLivestock 240 100;
+    car `CarBigGrain 240 120;
+    car `CarBigSteel 240 140;
+    car `CarBigWood 240 160;
+
+    hash
 end
 
 module Misc = struct
@@ -483,6 +529,16 @@ module Misc = struct
 
     tex `Escape1 287 162 309 177;
     tex `Escape2 287 178 309 193;
+
+    let ndarray = Hashtbl.find res.Resources.res_pics "LOCOS" in
+    let tex key x y =
+      let tex = Ndarray.get_slice [[y; y + 15 - 1]; [x; x + 80 - 1]] ndarray |> R.Texture.make win in
+      Hashtbl.replace hash key tex
+    in
+    tex (`SmokeSideBig 1) 160 49;
+    tex (`SmokeSideBig 2) 160 65;
+    tex (`SmokeSideBig 3) 241 49;
+    tex (`SmokeSideBig 4) 241 65;
     hash
 
 end
