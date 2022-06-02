@@ -297,7 +297,7 @@ module CarsTop = struct
     tex 40 180 `BulkCar;
 end
 
-module CarSide = struct
+module RouteScreen = struct
   let load win res =
     let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
     let hash = Hashtbl.create 10 in
@@ -378,118 +378,238 @@ module TrainAnim = struct
   }
 
   let load win res =
-    let hash = Hashtbl.create 10 in
+    let hash_engine = Hashtbl.create 10 in
+
     let ndarray = Hashtbl.find res.Resources.res_pics "LOCOS" in
 
-    let part ?(arr=ndarray) x y x2 y2 =
+    let slice_full ~arr x y x2 y2 =
       Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] arr |> R.Texture.make win
     in
-    let engine kind ?(anim_x=0) ?(anim_y=0) ?smoke_x ?(anim=[||]) x y x2 =
+    let engine_full kind ?(anim_x=0) ?(anim_y=0) ?smoke_x ?(anim=[||]) ~arr x y x2 =
       let y2 = y + 23 in
-      let tex = part x y x2 y2 in
+      let tex = slice_full ~arr x y x2 y2 in
       let w, h = x2 - x, y2 - y in
       let engine = {
         tex; w; h; anim_x; anim_y; anim; smoke_x
       }
       in
-      Hashtbl.add hash kind engine
+      Hashtbl.add hash_engine kind engine
     in
+    let slice = slice_full ~arr:ndarray in
+    let engine = engine_full ~arr:ndarray in
 
-    engine `Engine1 0 5 32 ~anim_x:10 ~anim_y:0
+    (* TODO: add smoke position *)
+    engine Engine.Grasshopper 0 5 32 ~anim_x:10 ~anim_y:0 ~smoke_x:15
       ~anim: [|
-        part 140 5 159 24;
-        part 140 29 159 48;
+        slice 140 5 159 24;
+        slice 140 29 159 48;
       |];
-    engine `Engine2 0 29 49 ~anim_x:23 ~anim_y:12
+    engine Engine.Norris 0 29 49 ~anim_x:23 ~anim_y:12 ~smoke_x:41
       ~anim: [|
-        part 109 177 133 184;
-        part 109 185 133 192;
-        part 135 177 159 184;
-        part 135 185 159 192;
+        slice 109 177 133 184;
+        slice 109 185 133 192;
+        slice 135 177 159 184;
+        slice 135 185 159 192;
       |];
-    engine `Engine3 0 53 74 ~anim_x:31 ~anim_y:10
+    engine Engine.American 0 53 74 ~anim_x:31 ~anim_y:10 ~smoke_x:59
       ~anim: [|
-        part 90 77 123 86;
-        part 90 87 123 96;
-        part 125 77 158 86;
-        part 125 87 158 96;
+        slice 90 77 123 86;
+        slice 90 87 123 96;
+        slice 125 77 158 86;
+        slice 125 87 158 96;
       |];
-    engine `Engine4 0 76 86 ~anim_x:38 ~anim_y:13
+    engine Engine.Mogul 0 76 86 ~anim_x:38 ~anim_y:13 ~smoke_x:70
       ~anim: [|
-        part 34  9 73 16;
-        part 34 17 73 24;
-        part 75  9 114 16;
-        part 75 17 114 24;
+        slice 34  9 73 16;
+        slice 34 17 73 24;
+        slice 75  9 114 16;
+        slice 75 17 114 24;
       |];
-    engine `Engine5 0 98 85 ~anim_x:44 ~anim_y:15
+    engine Engine.TenWheeler 0 98 85 ~anim_x:44 ~anim_y:15 ~smoke_x:70
       ~anim: [|
-        part 86 104 119 111;
-        part 86 113 119 120;
-        part 126 104 159 111;
-        part 126 113 159 120;
+        slice 86 104 119 111;
+        slice 86 113 119 120;
+        slice 126 104 159 111;
+        slice 126 113 159 120;
       |];
-    engine `Engine6 0 123 89 ~anim_x:44 ~anim_y:136
+    engine Engine.Consolidation 0 123 89 ~anim_x:44 ~anim_y:136 ~smoke_x:73
       ~anim: [|
-        part 80 55 118 63;
-        part 80 64 118 73;
-        part 120 55 158 63;
-        part 120 64 158 73;
+        slice 80 55 118 63;
+        slice 80 64 118 73;
+        slice 120 55 158 63;
+        slice 120 64 158 73;
       |];
-    engine `Engine7 0 149 116 ~anim_x:70 ~anim_y:10
+    engine Engine.Pacific 0 149 116 ~anim_x:70 ~anim_y:10 ~smoke_x:105
       ~anim: [|
-        part 53 29 95 38;
-        part 53 39 95 48;
-        part 96 29 138 38;
-        part 96 39 138 48;
+        slice 53 29 95 38;
+        slice 53 39 95 48;
+        slice 96 29 138 38;
+        slice 96 39 138 48;
       |];
-    engine `Engine8 0 175 106 ~anim_x:66 ~anim_y:10
+    engine Engine.Mikado 0 175 106 ~anim_x:66 ~anim_y:10 ~smoke_x:94
       ~anim: [|
-        part 90 129 124 136;
-        part 90 137 124 144;
-        part 125 129 159 136;
-        part 125 137 159 144;
+        slice 90 129 124 136;
+        slice 90 137 124 144;
+        slice 125 129 159 136;
+        slice 125 137 159 144;
       |];
-    engine `Engine9 160 2 319;
-    engine `Engine10 160 27 319;
+    engine Engine.Mallet 160 2 319;
+    engine Engine.FSeriesDiesel 160 27 319;
+    (* Seems like it's the same sprite *)
+    engine Engine.GPSeriesDiesel 160 27 319;
 
-    let car ?(h=19) ?(w=47) ?arr kind x y =
-      let y2 = y + h in
-      let x2 = x + w in
-      let tex = part ?arr x y x2 y2 in
-      let car = {
-        tex; w; h; anim_x=0; anim_y=0; anim=[||]; smoke_x=None;
-      }
+    (* British/Euro engines *)
+
+    let ndarray = Hashtbl.find res.Resources.res_pics "ELOCOS" in
+    let slice = slice_full ~arr:ndarray in
+    let engine = engine_full ~arr:ndarray in
+
+    engine Engine.Planet 0 5 38 ~anim_x:2 ~anim_y:12 ~smoke_x:33
+      ~anim:[|
+        slice 90 2 121 9;
+        slice 90 10 121 17;
+        slice 122 2 153 9;
+        slice 122 10 153 17;
+      |];
+    engine Engine.Patentee 0 28 43 ~anim_x:3 ~anim_y:17 ~smoke_x:37
+      ~anim:[|
+        slice 52 2 88 5;
+        slice 52 6 88 9;
+      |];
+    engine Engine.IronDuke 0 53 62 ~anim_x:3 ~anim_y:10 ~smoke_x:54
+      ~anim:[|
+        slice 102 53 158 62;
+        slice 102 63 158 72;
+      |];
+    engine Engine.DxGoods 0 80 63 ~anim_x:3 ~anim_y:13 ~smoke_x:56
+      ~anim:[|
+        slice 47 29 102 32;
+        slice 47 33 102 36;
+        slice 103 29 158 32;
+        slice 103 33 158 36;
+      |];
+    engine Engine.Stirling 0 100 81 ~anim_x:36 ~anim_y:13 ~smoke_x:69
+      ~anim:[|
+        slice 74 74 115 81;
+        slice 74 82 115 89;
+        slice 117 74 158 81;
+        slice 117 82 158 89;
+      |];
+    engine Engine.MidlandSpinner 0 125 78 ~anim_x:35 ~anim_y:13 ~smoke_x:66
+      ~anim:[|
+        slice 47 10 88 16;
+        slice 47 17 88 23;
+      |];
+    engine Engine.WebbCompound 0 152 75 ~anim_x:29 ~anim_y:10 ~smoke_x:69
+      ~anim:[|
+        slice 78 38 118 44;
+        slice 78 45 118 51;
+        slice 119 38 159 44;
+        slice 119 45 159 51;
+      |];
+    engine Engine.ClaudHamilton 0 176 69 ~anim_x:29 ~anim_y:11 ~smoke_x:59
+      ~anim:[|
+        slice 85 90 121 95;
+        slice 85 96 121 101;
+        slice 122 90 158 95;
+        slice 122 96 158 101;
+      |];
+    engine Engine.A1Class 160 10 256 ~anim_x:52 ~anim_y:7 ~smoke_x:83
+      ~anim:[|
+        slice 70 177 114 184;
+        slice 70 185 114 192;
+        slice 115 177 159 184;
+        slice 115 185 159 192;
+      |];
+    engine Engine.A4Class 160 33 255 ~anim_x:51 ~anim_y:10 ~smoke_x:82
+      ~anim:[|
+        slice 79 165 118 170;
+        slice 79 171 118 176;
+        slice 119 165 158 170;
+        slice 119 171 158 176;
+      |];
+
+    (* European Engines *)
+
+    let ndarray = Hashtbl.find res.Resources.res_pics "CLOCOS" in
+    let slice = slice_full ~arr:ndarray in
+    let engine = engine_full ~arr:ndarray in
+
+    engine Engine.ClassCrocodile 0 103 55 ~anim_x:2 ~anim_y:12
+      ~anim:[|
+        slice 57 98 107 103;
+        slice 57 104 107 109;
+        slice 108 98 158 103;
+        slice 108 104 158 109;
+      |];
+    engine Engine.ClassE18 0 124 74;
+    engine Engine.R242A1 0 154 86 ~anim_x:44 ~anim_y:7 ~smoke_x:74
+      ~anim:[|
+        slice 82 129 120 136;
+        slice 82 137 120 144;
+        slice 121 129 159 136;
+        slice 121 137 159 144;
+      |];
+    engine Engine.V200BB 0 172 91;
+    engine Engine.BoBoBo 160 4 253 ~anim_x:8 ~anim_y:14
+      ~anim:[|
+        slice 82 114 159 120;
+        slice 82 121 159 127;
+      |];
+    engine Engine.TGV 160 30 261;
+
+    (* Cars *)
+    let hash_car = Hashtbl.create 10 in
+
+    let load_cars version suffix =
+      let ndarray = Hashtbl.find res.Resources.res_pics @@ "LOCOS"^suffix in
+      let car_full ?(h=19) ?(w=47) ~arr kind x y =
+        let y2 = y + h in
+        let x2 = x + w in
+        let tex = slice_full ~arr x y x2 y2 in
+        let car = {
+          tex; w; h; anim_x=0; anim_y=0; anim=[||]; smoke_x=None;
+        }
+        in
+        Hashtbl.add hash_car kind car
       in
-      Hashtbl.add hash kind car
+      let car = car_full ~arr:ndarray in
+      let open Goods in
+      car (Mail, version) 160 80;
+      car (Passengers, version) 240 80;
+      car (Food, version) 160 100;
+      car (Livestock, version) 240 100;
+      car (MfgGoods, version) 160 120;
+      car (Grain, version) 240 120;
+      car (Paper, version) 160 140;
+      car (Steel, version) 240 140;
+      car (Petroleum, version) 160 160;
+      car (Wood, version) 240 160;
+      car (Coal, version) 160 180;
+
+      let ndarray = Hashtbl.find res.Resources.res_pics @@ "ELOCOS"^suffix in
+      let car = car_full ~arr:ndarray in
+
+      car (Beer, version) 160 100;
+      car (Hops, version) 240 120;
+      car (Textiles, version) 160 140;
+      car (Chemicals, version) 160 160;
+      car (Cotton, version) 240 160;
+
+      let ndarray = Hashtbl.find res.Resources.res_pics @@ "CLOCOS"^suffix in
+      let car = car_full ~arr:ndarray in
+
+      car (Wine, version) 160 100;
+      car (Grapes, version) 240 100;
+      car (Armaments, version) 160 120;
+      car (Fertilizer, version) 240 120;
+      car (Nitrates, version) 160 160;
+      car (Wool, version) 240 160;
     in
-    car `CarMail 160 80;
-    car `CarFood 160 100;
-    car `CarGoods 160 120;
-    car `CarPaper 160 140;
-    car `CarPetroleum 160 160;
-    car `CarCoal 160 180;
-    car `CarPassenger 240 80;
-    car `CarLivestock 240 100;
-    car `CarGrain 240 120;
-    car `CarSteel 240 140;
-    car `CarWood 240 160;
+    load_cars `Old "";
+    load_cars `New "M";
 
-    let ndarray = Hashtbl.find res.Resources.res_pics "LOCOSM" in
-    let car = car ~w:60 ~arr:ndarray in
-
-    car `CarBigMail 160 80;
-    car `CarBigFood 160 100;
-    car `CarBigGoods 160 120;
-    car `CarBigPaper 160 140;
-    car `CarBigPetroleum 160 160;
-    car `CarBigCoal 160 180;
-    car `CarBigPassenger 240 80;
-    car `CarBigLivestock 240 100;
-    car `CarBigGrain 240 120;
-    car `CarBigSteel 240 140;
-    car `CarBigWood 240 160;
-
-    hash
+    hash_engine, hash_car
 end
 
 module Misc = struct
