@@ -430,6 +430,49 @@ module RouteScreen = struct
     engine_hash, car_hash
 end
 
+module EngineDetail = struct
+  let load win res =
+    let hash = Hashtbl.create 10 in
+
+    let tex key y name =
+      let ndarray = Hashtbl.find res.Resources.res_pics name in
+      let tex = Ndarray.get_slice [[y; y + 50 - 1]; [0; 319]] ndarray |> R.Texture.make win in
+      Hashtbl.replace hash key tex
+    in
+    let open Engine in
+    (* US *)
+    tex Grasshopper 0 "LOCOS0";
+    tex Norris 50 "LOCOS0";
+    tex American 100 "LOCOS0";
+    tex Mogul 150 "LOCOS0";
+    tex TenWheeler 0 "LOCOS1";
+    tex Consolidation 50 "LOCOS1";
+    tex Pacific 100 "LOCOS1";
+    tex Mikado 150 "LOCOS1";
+    tex Mallet 0 "LOCOS2";
+    tex FSeriesDiesel 50 "LOCOS2";
+    tex GPSeriesDiesel 100 "LOCOS2";
+
+    (* Europe *)
+    tex Planet 0 "ELOCOS0";
+    tex Patentee 50 "ELOCOS0";
+    tex IronDuke 100 "ELOCOS0";
+    tex DxGoods 150 "ELOCOS0";
+    tex Stirling 0 "ELOCOS1";
+    tex MidlandSpinner 50 "ELOCOS1";
+    tex WebbCompound 100 "ELOCOS1";
+    tex ClaudHamilton 150 "ELOCOS1";
+    tex A1Class 0 "ELOCOS2";
+    tex A4Class 50 "ELOCOS2";
+    tex ClassCrocodile 100 "ELOCOS2";
+    tex ClassE18 150 "ELOCOS2";
+    tex R242A1 0 "ELOCOS3";
+    tex V200BB 50 "ELOCOS3";
+    tex BoBoBo 100 "ELOCOS3";
+    tex TGV 150 "ELOCOS3";
+    
+end
+
 module TrainAnim = struct
 
   type t = {
