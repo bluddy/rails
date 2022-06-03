@@ -463,7 +463,6 @@ module TrainAnim = struct
     let slice = slice_full ~arr:ndarray in
     let engine = engine_full ~arr:ndarray in
 
-    (* TODO: add smoke position *)
     engine Engine.Grasshopper 0 5 32 ~anim_x:10 ~anim_y:0 ~smoke_x:15
       ~anim: [|
         slice 140 5 159 24;
@@ -679,6 +678,58 @@ module TrainAnim = struct
     hash_engine, hash_car
 end
 
+module Jobs = struct
+  let load win res =
+    let hash = Hashtbl.create 10 in
+    let tex key x y x2 y2 suffix =
+      let ndarray = Hashtbl.find res.Resources.res_pics @@ "PAGE"^suffix in
+      let tex = Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win in
+      Hashtbl.replace hash key tex
+    in
+    let open Jobs in
+    tex Surveyor 214 0 320 140 "0";
+    tex SafariLeader 92 0 214 123 "0";
+    tex ChiefOfSecretService 0 0 94 123 "0";
+    tex PolarExplorer 0 122 202 200 "0";
+    tex Hobo 0 0 218 61 "1";
+    tex NewspaperEditor 110 61 211 199 "1";
+    tex Mayor 210 62 320 200 "1";
+    tex Inventor 0 61 108 200 "1";
+    tex BankPresident 166 0 320 97 "2";
+    tex Congressman 166 102 320 199 "2";
+    tex SteamshipOwner 2 98 165 198 "2";
+    tex PresidentOfStockExchange 2 2 165 96 "2";
+    tex RiverboatGambler 176 115 320 200 "3";
+    tex ArmyCaptain 0 0 99 169 "3";
+    tex Conductor 102 115 177 200 "3";
+    tex IndianAgent 100 1 197 114 "3";
+    tex SnakeOilPeddler 199 2 320 115 "3";
+    tex CircusImpresario 0 100 156 200 "4";
+    tex BankPresident 157 101 320 200 "4";
+    tex PresidentOfTheRRTrust 157 3 320 100 "4";
+    tex StateGovernor 0 0 157 99 "4";
+    tex PresidentOfUnitedStates 0 0 131 200 "5";
+    tex GeneralOfArmies 158 0 320 100 "5";
+    tex SteamboatCaptain 158 99 320 300 "5";
+    tex StableMaster 152 102 320 200 "6";
+    tex Harbormaster 152 0 320 103 "6";
+    tex PrimeMinister 0 9 153 200 "6";
+    tex ConsultingDetective 0 0 156 105 "7";
+    tex DancingInstructor 155 0 220 168 "7";
+    tex Butler 219 0 320 143 "7";
+    tex ArmamentsMerchant 0 104 156 200 "7";
+    tex Magistrate 0 0 199 80 "8";
+    tex GameWarden 2 79 113 200 "8";
+    tex NavyCommodore 113 85 219 200 "8";
+    tex RoyalAdvisor 218 67 320 200 "8"; (* ? *)
+    tex ChimneySweep 0 0 94 131 "9";
+    tex MinisterOfFinance 178 0 320 99 "9";
+    tex ArmyInspectorGeneral 0 130 179 200 "9";
+    tex InvestmentBanker 178 98 320 200 "9";
+    tex GardenClubChairman 94 0 179 131 "9";
+    hash
+end
+
 module Misc = struct
 
   let load win res =
@@ -726,6 +777,36 @@ module Misc = struct
     tex (`SmokeSideBig 2) 160 65;
     tex (`SmokeSideBig 3) 241 49;
     tex (`SmokeSideBig 4) 241 65;
+
+    let ndarray = Hashtbl.find res.Resources.res_pics "DIFFSP" in
+    let tex key x y x2 y2 =
+      let tex = Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win in
+      Hashtbl.replace hash key tex
+    in
+    let open Region in
+    tex (`MainMenu WestUS) 1 1 92 62;
+    tex (`MainMenu EastUS) 94 1 185 62;
+    tex (`MainMenu Britain) 187 1 278 62;
+    tex (`MainMenu Europe) 1 63 92 124;
+    tex (`MainMenuMan 1) 3 129 55 199;
+    tex (`MainMenuMan 2) 94 63 146 120;
+    tex (`MainMenuMan 3) 57 129 114 189;
+    tex (`MainMenuMan 4) 115 121 176 199;
+
+    let tex key filename =
+      let ndarray = Hashtbl.find res.Resources.res_pics filename in
+      let tex = R.Texture.make win ndarray in
+      Hashtbl.replace hash key tex
+    in
+
+    tex `MainMenuBackground "DIFFS";
+    tex `LogoMPS "LABS";
+    tex `LogoMicroprose "LOGO";
+    tex `Council "COUNCIL";
+    tex `Credits "CREDITS2";
+    tex `Title "TITLE";
+    tex `Advert "ADVERT";
+
     hash
 
 end

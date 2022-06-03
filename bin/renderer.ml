@@ -50,6 +50,9 @@ module Texture = struct
     mutable dirty_rect: bool;
   }
 
+  let get_w t = t.w
+  let get_h t = t.h
+
   let make win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
     let ndarray = Bigarray.reshape_1 arr (w*h*4) in
