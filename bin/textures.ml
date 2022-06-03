@@ -678,6 +678,40 @@ module TrainAnim = struct
     hash_engine, hash_car
 end
 
+module Opponent = struct
+  let load win res =
+    let hash = Hashtbl.create 10 in
+    let ndarray = Hashtbl.find res.Resources.res_pics "FACES" in
+    let tex key x y =
+      let tex = Ndarray.get_slice [[y; y + 45 - 1]; [x; x + 40 - 1]] ndarray |> R.Texture.make win in
+      Hashtbl.replace hash key tex
+    in
+    let open Opponent in
+    tex CorneliusVanderbilt 0 0;
+    tex DanielDrew 40 0;
+    tex JimFisk 80 0;
+    tex JayGould 120 0;
+    tex ErastusCorning 160 0;
+    tex JPierpontMorgan 200 0;
+    tex JEdgarThompson 240 0;
+    tex JimHill 280 0;
+    tex JayCooke 0 50;
+    tex JohnForbes 40 50;
+    tex CzarNicholasII 80 50;
+    tex VILenin 120 50;
+    tex CharlesDeGaulle 160 50;
+    tex NapoleonIII 200 50;
+    tex OttoVonBismarck 240 50;
+    tex BenitoMussolini 280 50;
+    tex GeorgeStephenson 0 99;
+    tex RobertStephenson 40 99;
+    tex IsambardKBrunel 80 99;
+    tex GeorgeSHudson 120 99;
+    tex HelmuthVonMoltke 160 99;
+    tex BaronRothschild 200 99;
+    hash
+end
+
 module Jobs = struct
   let load win res =
     let hash = Hashtbl.create 10 in
