@@ -235,31 +235,36 @@ end
 
 module Station = struct
   let load win res =
-    let ndarray = Hashtbl.find res.Resources.res_pics "STATION" in
     let hash = Hashtbl.create 20 in
-    let tex key x y x2 y2 =
-      let tex = 
-        Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win
+
+    let station region prefix =
+      let ndarray = Hashtbl.find res.Resources.res_pics @@ prefix^"STATION" in
+      let tex key x y x2 y2 =
+        let tex = 
+          Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win
+        in
+        Hashtbl.replace hash key tex
       in
-      Hashtbl.replace hash key tex
+      tex (`Background, region) 0 141 320 200;
+      tex (`Depot, region) 6 10 102 42;
+      tex (`Station, region) 112 27 209 83;
+      tex (`Terminal, region) 216 13 320 123;
+      tex (`SwitchingYard, region) 105 2 215 18;
+      tex (`EngineShop, region) 1 114 50 137;
+      tex (`Barn, region) 2 88 39 113;
+      tex (`Fence, region) 76 120 111 129;
+      tex (`Goods_bottom, region) 76 108 111 116;
+      tex (`Goods, region) 76 90 111 104;
+      tex (`Cold, region) 76 60 111 80;
+      tex (`Smokestacks, region) 76 49 111 56;
+      tex (`Hotel, region) 112 87 147 140;
+      tex (`Restaurant, region) 148 111 191 128;
+      tex (`Rest_bottom, region) 148 132 191 140;
+      tex (`PostOffice, region) 148 94 191 107;
+      tex (`Post_top, region) 148 87 191 90;
     in
-    tex `Background 0 141 320 200;
-    tex `Depot 6 10 102 42;
-    tex `Station 112 27 209 83;
-    tex `Terminal 216 13 320 123;
-    tex `SwitchingYard 105 2 215 18;
-    tex `EngineShop 1 114 50 138;
-    tex `Barn 2 88 39 113;
-    tex `Fence 76 120 111 129;
-    tex `Goods_bottom 76 108 111 116;
-    tex `Goods 76 90 111 104;
-    tex `Cold 76 60 111 80;
-    tex `Smokestacks 76 49 111 56;
-    tex `Hotel 112 87 147 140;
-    tex `Restaurant 148 111 191 128;
-    tex `Rest_bottom 148 132 191 140;
-    tex `PostOffice 148 94 191 107;
-    tex `Post_top 148 87 191 90;
+    station `US "";
+    station `Europe "E";
     hash
 
 end
