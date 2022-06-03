@@ -20,8 +20,8 @@ type t =
   | IronDuke
   | DxGoods
   | Stirling
-  | WebbCompound
   | MidlandSpinner
+  | WebbCompound
   | ClaudHamilton
   | A1Class
   | A4Class

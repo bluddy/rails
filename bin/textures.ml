@@ -299,70 +299,130 @@ end
 
 module RouteScreen = struct
   let load win res =
-    let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
-    let hash = Hashtbl.create 10 in
+    let engine_hash = Hashtbl.create 10 in
+    let car_hash = Hashtbl.create 10 in
 
-    let tex_full ~dx ~dy key x y =
-      let tex = Ndarray.get_slice [[y; y + dy - 1]; [x; x + dx - 1]] ndarray |> R.Texture.make win in
+    let tex_full ~arr ~hash ~dx ~dy key x y =
+      let tex = Ndarray.get_slice [[y; y + dy - 1]; [x; x + dx - 1]] arr |> R.Texture.make win in
       Hashtbl.replace hash key tex
     in
-    let tex = tex_full ~dx:63 ~dy:9 in
-    tex `Engine1 63 96;  (* transparent background *)
-    tex `Engine2 63 106;
-    tex `Engine3 63 116;
-    tex `Engine4 63 126;
-    tex `Engine5 63 136;
-    tex `Engine6 63 146;
-    tex `Engine7 63 156;
-    tex `Engine8 63 166;
-    tex `Engine9 63 176;
-    tex `EngineW1 0 96;  (* white background *)
-    tex `EngineW2 0 106;
-    tex `EngineW3 0 116;
-    tex `EngineW4 0 126;
-    tex `EngineW5 0 136;
-    tex `EngineW6 0 146;
-    tex `EngineW7 0 156;
-    tex `EngineW8 0 166;
-    tex `EngineW9 0 176;
+    let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
+    let tex = tex_full ~arr:ndarray ~hash:engine_hash ~dx:63 ~dy:9 in
+    let open Engine in
+    (* US *)
+    let engines x white =
+      tex (Grasshopper, white) x 96;  (*  background *)
+      tex (Norris, white) x 106;
+      tex (American, white) x 116;
+      tex (Mogul, white) x 126;
+      tex (TenWheeler, white) x 136;
+      tex (Consolidation, white) x 146;
+      tex (Pacific, white) x 156;
+      tex (Mikado, white) x 166;
+      tex (Mallet, white) x 176;
+      tex (FSeriesDiesel, white) x 186;
+      tex (GPSeriesDiesel, white) x 186;
+    in
+    engines 0 true;
+    engines 63 false;
 
-    let tex = tex_full ~dx:20 ~dy:8 in
-    tex `CarMailEmpty 139 97;
-    tex `CarMail 160 97;
-    tex `CarMail2 180 97;
-    tex `Caboose 200 97;
-    tex `CarPassengerEmpty 139 107;
-    tex `CarPassenger 139 107;
-    tex `CarPassengerGreen 160 107;
-    tex `CarPassenger2 180 107;
-    tex `CarFastEmpty 139 117;
-    tex `CarFood 160 117;
-    tex `CarLivestock 180 117;
-    tex `CarGoods 200 117;
-    tex `CarSlowEmpty 139 127;
-    tex `CarGrain 160 127;
-    tex `CarPaper 180 127;
-    tex `CarSteel 200 127;
-    tex `CarBulkEmpty 139 137;
-    tex `CarPetroleum 160 137;
-    tex `CarWood 180 137;
-    tex `CarCoal 200 137;
-    let tex = tex_full ~dx:24 ~dy:8 in
-    tex `CarBigMail 160 147;
-    tex `CarBigPassenger 160 157;
-    tex `CarBigPassengerGreen 184 157;
-    tex `CarBigPassengerGreenBig 208 157;
-    tex `CarBigFood 160 167;
-    tex `CarBigLivestock 184 167;
-    tex `CarBigGoods 208 167;
-    tex `CarBigGrain 160 177;
-    tex `CarBigPaper 184 177;
-    tex `CarBigSteel 208 177;
-    tex `CarBigPetroleum 160 187;
-    tex `CarBigWood 184 187;
-    tex `CarBigCoal 208 187;
-    hash
+    (* Britain *)
+    let ndarray = Hashtbl.find res.Resources.res_pics "ESPRITES" in
+    let tex = tex_full ~arr:ndarray ~hash:engine_hash ~dx:63 ~dy:9 in
+    let engines x white =
+      tex (Planet, white) x 96;  (*  background *)
+      tex (Patentee, white) x 106;
+      tex (IronDuke, white) x 116;
+      tex (DxGoods, white) x 126;
+      tex (Stirling, white) x 136;
+      tex (MidlandSpinner, white) x 146;
+      tex (WebbCompound, white) x 156;
+      tex (ClaudHamilton, white) x 166;
+      tex (A1Class, white) x 176;
+      tex (A4Class, white) x 186;
+    in
+    engines 0 true;
+    engines 63 false;
 
+    (* Europe *)
+    let ndarray = Hashtbl.find res.Resources.res_pics "CSPRITES" in
+    let tex = tex_full ~arr:ndarray ~hash:engine_hash ~dx:63 ~dy:9 in
+    let engines x white =
+      tex (ClassCrocodile, white) x 136;
+      tex (ClassE18, white) x 146;
+      tex (R242A1, white) x 156;
+      tex (V200BB, white) x 166;
+      tex (BoBoBo, white) x 176;
+      tex (TGV, white) x 186;
+    in
+    engines 0 true;
+    engines 63 false;
+
+    (* Cars *)
+    let open Goods in
+    let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
+    let tex_part = tex_full ~arr:ndarray ~hash:car_hash ~dy:8 in
+    let tex = tex_part ~dx:20 in
+
+    tex (`Freight FreightMail) 139 97;
+    tex (`Freight FreightPassenger) 139 107;
+    tex (`Freight FreightFast) 139 117;
+    tex (`Freight FreightSlow) 139 127;
+    tex (`Freight FreightBulk) 139 137;
+    tex (`Car (Caboose, `Old)) 200 97;
+
+    let cars ~y ~dx age =
+      let x = 160 in
+      let tex = tex_part ~dx in
+      tex (`Car (Mail, age)) x y;
+      tex (`Car (Passengers, age)) x (y+10);
+      tex (`Car (Food, age)) x (y+20);
+      tex (`Car (Livestock, age)) (x+dx) (y+20);
+      tex (`Car (MfgGoods, age)) (x+2*dx) (y+20);
+      tex (`Car (Grain, age)) x (y+30);
+      tex (`Car (Paper, age)) (x+dx) (y+30);
+      tex (`Car (Steel, age)) (x+2*dx) (y+30);
+      tex (`Car (Petroleum, age)) x (y+40);
+      tex (`Car (Wood, age)) (x+dx) (y+40);
+      tex (`Car (Coal, age)) (x+2*dx) (y+40);
+    in
+    cars ~y:97 ~dx:20 `Old;
+    cars ~y:147 ~dx:24 `New;
+
+    (* Britain *)
+    let ndarray = Hashtbl.find res.Resources.res_pics "ESPRITES" in
+    let tex_part = tex_full ~arr:ndarray ~hash:car_hash ~dy:8 in
+
+    let cars ~y ~dx age =
+      let x = 160 in
+      let tex = tex_part ~dx in
+      tex (`Car (Beer, age)) x (y+20);
+      tex (`Car (Hops, age)) (x+dx) (y+20);
+      tex (`Car (Textiles, age)) (x+dx) (y+30);
+      tex (`Car (Chemicals, age)) x (y+40);
+      tex (`Car (Cotton, age)) (x+dx) (y+40);
+    in
+    cars ~y:97 ~dx:20 `Old;
+    cars ~y:147 ~dx:24 `New;
+
+    (* Europe *)
+    let ndarray = Hashtbl.find res.Resources.res_pics "CSPRITES" in
+    let tex_part = tex_full ~arr:ndarray ~hash:car_hash ~dy:8 in
+
+    let cars ~y ~dx age =
+      let x = 160 in
+      let tex = tex_part ~dx in
+      tex (`Car (Wine, age)) x (y+20);
+      tex (`Car (Grapes, age)) (x+dx) (y+20);
+      tex (`Car (Armaments, age)) (x+2*dx) (y+20);
+      tex (`Car (Fertilizer, age)) x (y+30);
+      tex (`Car (Nitrates, age)) x (y+40);
+      tex (`Car (Wool, age)) (x+dx) (y+40);
+    in
+    cars ~y:97 ~dx:20 `Old;
+    cars ~y:147 ~dx:24 `New;
+
+    engine_hash, car_hash
 end
 
 module TrainAnim = struct
@@ -587,6 +647,7 @@ module TrainAnim = struct
       car (Wood, version) 240 160;
       car (Coal, version) 160 180;
 
+      (* Britain *)
       let ndarray = Hashtbl.find res.Resources.res_pics @@ "ELOCOS"^suffix in
       let car = car_full ~arr:ndarray in
 
@@ -596,6 +657,7 @@ module TrainAnim = struct
       car (Chemicals, version) 160 160;
       car (Cotton, version) 240 160;
 
+      (* Europe *)
       let ndarray = Hashtbl.find res.Resources.res_pics @@ "CLOCOS"^suffix in
       let car = car_full ~arr:ndarray in
 

@@ -23,6 +23,7 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
+  | Caboose
 
 let show = function
   | Mail -> "Mail"
@@ -47,37 +48,39 @@ let show = function
   | Wool -> "Wool"
   | Grapes -> "Grapes"
   | Wine -> "Wine"
+  | Caboose -> "Caboose"
 
 type freight =
-  | MailFreight
-  | PassengerFreight
-  | FastFreight
-  | SlowFreight
-  | BulkFreight
+  | FreightMail
+  | FreightPassenger
+  | FreightFast
+  | FreightSlow
+  | FreightBulk
 
 let freight_of_goods = function
-  | Mail -> MailFreight
-  | Passengers -> PassengerFreight
+  | Caboose
+  | Mail -> FreightMail
+  | Passengers -> FreightPassenger
   | Food
   | Livestock
   | Beer
   | Wine
   | Grapes
   | Armaments
-  | MfgGoods -> FastFreight
+  | MfgGoods -> FreightFast
   | Fertilizer
   | Textiles
   | Steel
   | Grain
   | Paper
-  | Hops -> SlowFreight
+  | Hops -> FreightSlow
   | Cotton
   | Coal
   | Chemicals
   | Petroleum
   | Wood
   | Nitrates
-  | Wool -> BulkFreight
+  | Wool -> FreightBulk
 
 
   (* Conversion tables:
