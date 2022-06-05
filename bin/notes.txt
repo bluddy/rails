@@ -1,5 +1,6 @@
 Notes:
 - TODO:
+  - Need sdl_gfx
   - draw track in f2 and f3
     - Requires textures for diagonal track
   - Don't allow station on curved tracks
@@ -8,7 +9,6 @@ Notes:
   - Build track:
     - Always connect to track, unless no track exists
   - TileInfo:
-    - Show city name for cities/villages
     - Show demand/convert (not sure when)
   - Next: stations and intersections
   - Station Screen

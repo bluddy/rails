@@ -257,7 +257,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         let x, y = j * tile_w + tile_w2, v.dims.y + i * tile_h + tile_h2 in
         Dir.Set.iter (fun dir ->
           let dx, dy = Dir.to_offsets dir in
-          R.draw_line win ~color:Ega.white ~x1:x ~y1:y ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2)
+          R.draw_line win ~color:Ega.white ~x1:x ~y1:y ~x2:(x+dx*tile_w) ~y2:(y+dy*tile_h)
         )
         track.dirs
       | _ -> ()

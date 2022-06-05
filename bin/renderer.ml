@@ -122,10 +122,82 @@ let draw_point win ~x ~y ~color =
   Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
   Sdl.render_draw_point win.renderer x y |> get_exn
 
+  (* Bresenham's algorithm *)
+let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
+  let plot_line_high ~x1 ~y1 ~x2 ~y2 =
+    let dx, dy = x2 - x1, y2 - y1 in
+    let xi, dx =
+      if dx < 0 then
+        -1, -dx
+      else
+        1, dx
+    in
+    let d = 2 * dx - dy in
+    
+    let rec loop x y d =
+      if y > y2 then ()
+      else (
+        draw_point win ~x ~y ~color;
+        let x, d = 
+          if d > 0 then
+            x + xi, d + (2 * (dy - dx))
+          else
+            x, d + 2 * dx
+        in
+        loop x (y+1) d
+      )
+    in
+    loop x1 y1 d
+  in
+  let plot_line_low ~x1 ~y1 ~x2 ~y2 =
+    let dx, dy = x2 - x1, y2 - y1 in
+    let yi, dy =
+      if dy < 0 then
+        -1, -dy
+      else
+        1, dy
+    in
+    let d = 2 * dy - dx in
+    
+    let rec loop x y d =
+      if x > x2 then ()
+      else (
+        draw_point win ~x ~y ~color;
+        let y, d = 
+          if d > 0 then
+            y + yi, d + (2 * (dy - dx))
+          else
+            y, d + 2 * dy
+        in
+        loop (x+1) y d
+      )
+    in
+    loop x1 y1 d
+  in
+  if abs(y2 - y1) < abs(x2 - x1) then
+    let x1, y1, x2, y2 =
+      if x1 > x2 then
+        x2, y2, x1, y2
+      else
+        x1, y1, x2, y2
+    in
+    plot_line_low ~x1 ~y1 ~x2 ~y2
+  else
+    let x1, y1, x2, y2 =
+      if y1 > y2 then
+        x2, y2, x1, y2
+      else
+        x1, y1, x2, y2
+    in
+    plot_line_high ~x1 ~y1 ~x2 ~y2
+
+
+(*
 let draw_line win ~x1 ~y1 ~x2 ~y2 ~color = 
   let (r,g,b,a) = color in
   Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
   Sdl.render_draw_line win.renderer x1 y1 x2 y2 |> get_exn
+  *)
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
