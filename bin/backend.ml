@@ -61,6 +61,7 @@ type t = {
   map : Tilemap.t;
   track: Trackmap.t;
   cities: Cities.t;
+  stations: Station.Map.t;
   options : options;
 }
 
@@ -76,7 +77,8 @@ let default region resources =
   let speed = `Moderate in
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
-  {map; region; cities; track; options}
+  let stations = Station.Map.create Tilemap.map_width in
+  {map; region; cities; track; stations; options}
 
 let map_height v = Tilemap.get_height v.map
 

@@ -1,8 +1,5 @@
 Notes:
 - TODO:
-  - Need sdl_gfx
-  - draw track in f2 and f3
-    - Requires textures for diagonal track
   - Don't allow station on curved tracks
   - Build tunnel:
     - Shows msgbox with cost and length of tunnel to confirm

@@ -51,11 +51,23 @@ type t = {
 }
 
 module Map = struct
-  type nonrec t = (int, t) Hashtbl.t
+  type nonrec t = {
+    map: (int, t) Hashtbl.t;
+    width: int;
+  }
 
-  let iter f v = Hashtbl.iter v f
+  let create width = {
+    map= Hashtbl.create 10;
+    width;
+  }
 
-  let get v x y = Hashtbl.find_opt v (Utils.calc_offset x y)
+  let iter f v =
+    Hashtbl.iter (fun offset station ->
+      let x, y = Utils.x_y_of_offset v.width offset in
+      f x y station)
+    v.map
+
+  let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
 end
 
