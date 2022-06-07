@@ -42,6 +42,7 @@ let x_y_of_offset width offset =
 
 
 module List = struct
+  include List
   let modify_at_idx i f l0 =
     let rec loop i acc = function
       | [] -> l0
@@ -64,7 +65,7 @@ module List = struct
     loop i [] l0
 end
 
-let scan ~range ~x ~y ~width ~height ~f =
+let scan_unordered ~range ~x ~y ~width ~height ~f =
   let min_x = max 0 (x-range) in
   let max_x = min (width-1) (x+range) in
   let min_y = max 0 (y-range) in
@@ -80,6 +81,35 @@ let scan ~range ~x ~y ~width ~height ~f =
     None
   with
   | Found x -> x
+
+let scan ~range ~x ~y ~width ~height ~f =
+  let offsets =
+    [Dir.Right; Down; Left; Up] |> List.map Dir.to_offsets
+  in
+  if f x y then Some (x, y)
+  else
+    let rec loop i =
+      if i > range then None
+      else
+        let start_x, start_y = x - i, y - i in
+
+        let rec loop_inner counter x y lst = match lst with
+          | (x_offset, y_offset)::_ when counter > 0 ->
+              let x, y = x + x_offset, y + y_offset in
+              if x >= 0 && y >= 0 && x < width && y < height && f x y then Some (x, y)
+              else
+                loop_inner (counter - 1) x y lst
+          | _::rest ->
+              loop_inner (i*2) x y rest
+          | [] ->
+              None
+        in
+        match loop_inner (i*2) start_x start_y offsets with
+        | None -> loop (i+1)
+        | x -> x
+    in
+    loop 1
+
 
 let snd_option (x,y) =
   x, (y |> Option.get_exn_or "error")

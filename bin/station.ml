@@ -34,9 +34,9 @@ module Upgrades = Bitset.Make(struct
   let last = Hotel
 end)
 
-type major = {
-  demand: Goods.t list;
-  supply: Goods.t list;
+type info = {
+  demand: (Goods.t, int) Hashtbl.t;
+  supply: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
 }
@@ -46,9 +46,23 @@ type t = {
   y: int;
   year: int;
   city: string;
-  major: major option;
+  info: info option;
   player: int;
 }
+
+let make ~x ~y ~year ~city ~kind ~player =
+  let info =
+    match kind with
+    | `SignalTower -> None
+    | `Depot | `Station | `Terminal as k ->
+      {
+        demand=Hashtbl.create 10;
+        supply=Hashtbl.create 10;
+        kind=k;
+        upgrades=Upgrades.empty;
+      } |> Option.some
+  in
+  { x; y; year; city; info; player}
 
 module Map = struct
   type nonrec t = {
@@ -68,6 +82,14 @@ module Map = struct
     v.map
 
   let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
+
+  let add v x y station =
+    Hashtbl.replace v.map (Utils.calc_offset v.width x y) station;
+    v
+
+  let delete v x y =
+    Hashtbl.remove v.map (Utils.calc_offset v.width x y);
+    v
 
 end
 

@@ -359,7 +359,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           let entries =
             let tilename = match tile with
             | City | Village ->
-                begin match B.find_close_city s.backend x y with
+                begin match B.find_close_city s.backend x y ~range:4 with
                 | Some city ->
                     Printf.sprintf "%s (%s)" (Tile.show tile) city
                 | None -> Tile.show tile
@@ -406,7 +406,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           let x, y = Mapview.get_cursor_pos v.view in
           match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
           | `Ok -> 
-              let backend_action = B.Action.BuildStation{x; y; kind=station_kind} in
+              let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player=0} in
               {v with mode=modal.last}, backend_action
               (* TODO: handle other cases *)
           | _ -> exit_mode ()

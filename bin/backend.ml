@@ -46,8 +46,8 @@ module Cities = struct
       let x, y = Utils.x_y_of_offset v.width i in
       x, y, city)
 
-  let find_close v x y =
-    let res = Utils.scan ~range:4 ~x ~y ~width:v.width ~height:v.height
+  let find_close v x y ~range =
+    let res = Utils.scan ~range ~x ~y ~width:v.width ~height:v.height
       ~f:(fun x y -> match find v x y with Some _ -> true | None -> false)
     in
     match res with
@@ -57,6 +57,7 @@ module Cities = struct
 end
 
 type t = {
+  year: int;
   region: Region.t;
   map : Tilemap.t;
   track: Trackmap.t;
@@ -78,7 +79,7 @@ let default region resources =
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
   let stations = Station.Map.create Tilemap.map_width in
-  {map; region; cities; track; stations; options}
+  {year=1800; map; region; cities; track; stations; options}
 
 let map_height v = Tilemap.get_height v.map
 
@@ -98,7 +99,7 @@ let get_tile_height v x y = Tilemap.get_tile_height v.map x y
 
 let iter_cities f v = Cities.iter f v.cities
 
-let find_close_city v x y = Cities.find_close v.cities x y
+let find_close_city v x y ~range = Cities.find_close v.cities x y ~range
 
 let check_build_track v ~x ~y ~dir ~player =
   match Tilemap.check_build_track v.map ~x ~y ~dir with
@@ -116,9 +117,13 @@ let check_build_station v ~x ~y ~player station_type =
   | `Ok -> Tilemap.check_build_station v.map ~x ~y
   | x -> x
 
-let _build_station v ~x ~y station_type =
-  (* TODO: create actual station data structure *)
-  Trackmap.build_station v.track ~x ~y station_type
+let _build_station v ~x ~y station_type ~player =
+  (* TODO: graph *)
+  let track = Trackmap.build_station v.track ~x ~y station_type in
+  let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
+  let station = Station.make ~x ~y ~year:v.year ~city ~kind:station_type ~player in
+  let stations = Station.Map.add v.stations x y station in
+  track, stations
 
 let check_build_bridge v ~x ~y ~dir ~player =
   match check_build_track v ~x ~y ~dir ~player with
@@ -156,7 +161,7 @@ module Action = struct
     | NoAction
     | BuildTrack of Utils.msg
     | BuildFerry of Utils.msg
-    | BuildStation of {x: int; y: int; kind: Station.kind}
+    | BuildStation of {x: int; y: int; kind: Station.kind; player: int}
     | BuildBridge of Utils.msg * Bridge.t
     | BuildTunnel of Utils.msg * int (* length *)
     | RemoveTrack of Utils.msg
@@ -168,9 +173,9 @@ module Action = struct
     | BuildFerry {x; y; dir; player} ->
         let track = _build_ferry backend ~x ~y ~dir ~player in
         {backend with track}
-    | BuildStation {x; y; kind} ->
-        let track = _build_station backend ~x ~y kind in
-        {backend with track}
+    | BuildStation {x; y; kind; player} ->
+        let track, stations = _build_station backend ~x ~y kind ~player in
+        {backend with track; stations}
     | BuildBridge({x; y; dir; player}, kind) ->
         let track = _build_bridge backend ~x ~y ~dir ~kind ~player in
         {backend with track}
