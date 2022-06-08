@@ -105,25 +105,33 @@ module Texture = struct
 
 end
 
+let _set_color win color =
+  let (r,g,b,a) = color in
+  Sdl.set_render_draw_color win.renderer r g b a |> get_exn
+
 let draw_rect win ~x ~y ~w ~h ~color ~fill =
   Sdl.Rect.set_x win.rect @@ zoom win x;
   Sdl.Rect.set_y win.rect @@ zoom win y;
   Sdl.Rect.set_w win.rect @@ zoom win w;
   Sdl.Rect.set_h win.rect @@ zoom win h;
-  let (r,g,b,a) = color in
-  Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
+  _set_color win color;
   if fill then
     Sdl.render_fill_rect win.renderer win.opt_rect |> get_exn
   else
     Sdl.render_draw_rect win.renderer win.opt_rect |> get_exn
 
-let draw_point win ~x ~y ~color =
-  let (r,g,b,a) = color in
-  Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
+let draw_point ?color win ~x ~y =
+  begin match color with
+  | Some color ->
+      let (r,g,b,a) = color in
+      Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
+  | None -> ()
+  end;
   Sdl.render_draw_point win.renderer x y |> get_exn
 
   (* Bresenham's algorithm *)
 let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
+  _set_color win color;
   let plot_line_high ~x1 ~y1 ~x2 ~y2 =
     let dx, dy = x2 - x1, y2 - y1 in
     let xi, dx =
@@ -137,7 +145,7 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
     let rec loop x y d =
       if y > y2 then ()
       else (
-        draw_point win ~x ~y ~color;
+        draw_point win ~x ~y;
         let x, d = 
           if d > 0 then
             x + xi, d + (2 * (dy - dx))
@@ -162,7 +170,7 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
     let rec loop x y d =
       if x > x2 then ()
       else (
-        draw_point win ~x ~y ~color;
+        draw_point win ~x ~y;
         let y, d = 
           if d > 0 then
             y + yi, d + (2 * (dy - dx))

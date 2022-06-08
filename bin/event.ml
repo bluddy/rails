@@ -235,4 +235,9 @@ let key_modal_dismiss = function
   | Key {down=true; key=Escape|Enter|Space; _} -> true
   | _ -> false
 
+let is_left_click = function
+  | MouseButton {button=`Left; down=true; _} -> true
+  | _ -> false
+
+
 

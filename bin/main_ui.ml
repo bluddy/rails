@@ -438,61 +438,75 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with mode=modal.last; view}, B.Action.BuildTunnel(msg, length)
         )
 
+  | StationView _ ->
+      if Event.is_left_click event || Event.key_modal_dismiss event then
+        { v with mode=Normal }, B.Action.NoAction
+      else
+        v, B.Action.NoAction
+
+
 let handle_tick _s v _time = v, B.Action.NoAction
 
 let render (win:R.window) (s:State.t) v =
-  let dims = v.dims in
-  (* Render main view *)
-  let build_station = match v.mode with
-    | BuildStation _ -> true
-    | _ -> false
+  let render_main () =
+    let dims = v.dims in
+    (* Render main view *)
+    let build_station = match v.mode with
+      | BuildStation _ -> true
+      | _ -> false
+    in
+    
+    let s = Mapview.render win s v.view ~minimap:dims.minimap ~build_station in
+
+    (* Menu bar background *)
+    R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;
+    let h = dims.screen.h - dims.menu.h in
+    let y = dims.menu.h in
+
+    (* Screen White border *)
+    R.draw_rect win ~x:0 ~y ~w:dims.screen.w ~h ~color:Ega.white ~fill:false;
+
+    let x = dims.ui.x in
+
+    (* Border of UI *)
+    R.draw_rect win ~x ~y ~h ~w:(dims.ui.w+1) ~color:Ega.white ~fill:false;
+
+    (* Draw logo *)
+    begin match Mapview.get_zoom v.view with
+    | Zoom1 ->
+        R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo;
+    | _ -> ()
+    end;
+
+    (* Info bar *)
+    let y = y + dims.minimap.h in
+    R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
+
+    (* Train area *)
+    let y = y + dims.infobar.h in
+    R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
+
+    (* Menu bar *)
+    Menu.Global.render win s s.textures.fonts v.menu;
   in
-  
-  let s = Mapview.render win s v.view ~minimap:dims.minimap ~build_station in
-
-  (* Menu bar background *)
-  R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;
-  let h = dims.screen.h - dims.menu.h in
-  let y = dims.menu.h in
-
-  (* Screen White border *)
-  R.draw_rect win ~x:0 ~y ~w:dims.screen.w ~h ~color:Ega.white ~fill:false;
-
-  let x = dims.ui.x in
-
-  (* Border of UI *)
-  R.draw_rect win ~x ~y ~h ~w:(dims.ui.w+1) ~color:Ega.white ~fill:false;
-
-  (* Draw logo *)
-  begin match Mapview.get_zoom v.view with
-  | Zoom1 ->
-      R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo;
-  | _ -> ()
-  end;
-
-  (* Info bar *)
-  let y = y + dims.minimap.h in
-  R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
-
-  (* Train area *)
-  let y = y + dims.infobar.h in
-  R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
-
-  (* Menu bar *)
-  Menu.Global.render win s s.textures.fonts v.menu;
 
   (* Msgboxes *)
   let rec render_mode = function
-    | Normal -> ()
+    | Normal -> render_main ()
     | ModalMsgbox modal ->
         render_mode modal.last;
         Menu.MsgBox.render win s modal.menu
-    | BuildStation modal -> Menu.MsgBox.render win s modal.menu
-    | BuildBridge modal -> Menu.MsgBox.render win s modal.menu
-    | BuildTunnel modal -> Menu.MsgBox.render win s modal.menu
+    | BuildStation modal ->
+        render_main ();
+        Menu.MsgBox.render win s modal.menu
+    | BuildBridge modal ->
+        render_main ();
+        Menu.MsgBox.render win s modal.menu
+    | BuildTunnel modal ->
+        render_main ();
+        Menu.MsgBox.render win s modal.menu
+    | StationView station ->
+        Station_view.render win s station
   in
-  render_mode v.mode;
-
-  ()
-
+  render_mode v.mode
 
