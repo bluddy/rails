@@ -234,6 +234,25 @@ module Tracks = struct
 end
 
 module Station = struct
+  type hash =
+    [`Background
+    | `Barn
+    | `Cold
+    | `Depot
+    | `EngineShop
+    | `Fence
+    | `Goods
+    | `Goods_bottom
+    | `Hotel
+    | `PostOffice
+    | `Post_top
+    | `Rest_bottom
+    | `Restaurant
+    | `Smokestacks
+    | `Station
+    | `SwitchingYard
+    | `Terminal ]
+
   let load win res =
     let hash = Hashtbl.create 20 in
 
@@ -266,16 +285,25 @@ module Station = struct
     station `US "";
     station `Europe "E";
     hash
-
 end
 
 module CarsTop = struct
+  type hash =
+  [ `BigOldEngine
+  | `BulkCar
+  | `DieselEngine
+  | `FastCar
+  | `LittleOldEngine
+  | `MailCar
+  | `PaseengerCar
+  | `SlowCar ]
+
   let tile_w, tile_h = 20, 20
 
   let load win res =
     let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS" in
     let width = (Ndarray.shape ndarray).(1) in
-    let car_dict = Hashtbl.create 100 in
+    let hash = Hashtbl.create 100 in
 
     let get_tex x y =
       Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarray
@@ -284,7 +312,7 @@ module CarsTop = struct
     let tex x y kind =
       List.fold_left (fun x dir ->
         let tex = get_tex x y in
-        Hashtbl.replace car_dict (kind,dir) tex;
+        Hashtbl.replace hash (kind,dir) tex;
         (x + tile_w) mod width
       )
       x
@@ -300,6 +328,7 @@ module CarsTop = struct
     tex 40 160 `FastCar;
     tex 200 180 `SlowCar;
     tex 40 180 `BulkCar;
+    hash
 end
 
 module RouteScreen = struct
@@ -470,6 +499,7 @@ module EngineDetail = struct
     tex V200BB 50 "ELOCOS3";
     tex BoBoBo 100 "ELOCOS3";
     tex TGV 150 "ELOCOS3";
+    hash
     
 end
 
@@ -721,7 +751,7 @@ module TrainAnim = struct
     hash_engine, hash_car
 end
 
-module Opponent = struct
+module Opponents = struct
   let load win res =
     let hash = Hashtbl.create 10 in
     let ndarray = Hashtbl.find res.Resources.res_pics "FACES" in
@@ -755,7 +785,7 @@ module Opponent = struct
     hash
 end
 
-module Jobs = struct
+module Job = struct
   let load win res =
     let hash = Hashtbl.create 10 in
     let tex key x y x2 y2 suffix =
@@ -787,7 +817,7 @@ module Jobs = struct
     tex StateGovernor 0 0 157 99 "4";
     tex PresidentOfUnitedStates 0 0 131 200 "5";
     tex GeneralOfArmies 158 0 320 100 "5";
-    tex SteamboatCaptain 158 99 320 300 "5";
+    tex SteamboatCaptain 158 99 320 200 "5";
     tex StableMaster 152 102 320 200 "6";
     tex Harbormaster 152 0 320 103 "6";
     tex PrimeMinister 0 9 153 200 "6";
@@ -808,6 +838,28 @@ module Jobs = struct
 end
 
 module Misc = struct
+  type t =
+  [ `Advert
+  | `Council
+  | `Credits
+  | `Cursor
+  | `Escape1
+  | `Escape2
+  | `FrameBL
+  | `FrameBR
+  | `FrameTL
+  | `FrameTR
+  | `Logo
+  | `LogoMPS
+  | `LogoMicroprose
+  | `MainMenu of Region.t
+  | `MainMenuBackground
+  | `MainMenuMan of int
+  | `Newspaper
+  | `SmokeSide of int
+  | `SmokeSideBig of int
+  | `SmokeTop of int
+  | `Title ]
 
   let load win res =
     let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS" in
@@ -818,7 +870,7 @@ module Misc = struct
       Hashtbl.replace hash key tex
     in
 
-    tex `Cursor 100 300;
+    tex `Cursor 300 100;
     tex (`SmokeTop 1) 220 100;
     tex (`SmokeTop 2) 240 100;
     tex (`SmokeTop 3) 260 100;
@@ -845,9 +897,11 @@ module Misc = struct
     tex `Escape1 287 162 309 177;
     tex `Escape2 287 178 309 193;
 
+    tex `Logo 256 63 320 119;
+
     let ndarray = Hashtbl.find res.Resources.res_pics "LOCOS" in
     let tex key x y =
-      let tex = Ndarray.get_slice [[y; y + 15 - 1]; [x; x + 80 - 1]] ndarray |> R.Texture.make win in
+      let tex = Ndarray.get_slice [[y; y + 15 - 1]; [x; x + 79 - 1]] ndarray |> R.Texture.make win in
       Hashtbl.replace hash key tex
     in
     tex (`SmokeSideBig 1) 160 49;
@@ -888,21 +942,26 @@ module Misc = struct
 
 end
 
-let slice_logo win res =
-  let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
-  Ndarray.get_slice [[63; 118]; [256; 319]] ndarray
-  |> R.Texture.make win
-
 type t = {
   maps: (Region.t * R.Texture.t) list;
   pics: (string, R.Texture.t) Hashtbl.t;
   mutable map: R.Texture.t;   (* current map *)
   pixel: R.Texture.t; (* white pixel *)
   fonts: Fonts.t;
-  logo: R.Texture.t;
   tiles: (Tile.t, TileTex.t) Hashtbl.t;
   small_tiles: (Tile.t, TileTex.t) Hashtbl.t;
   tracks: R.Texture.t Track.Htbl.t;
+  station: (Station.hash * [`Europe | `US], R.Texture.t) Hashtbl.t;
+  cars_top: (CarsTop.hash * Dir.t, R.Texture.t) Hashtbl.t;
+  route_engine: (Engine.t * bool, R.Texture.t) Hashtbl.t;
+  route_cars: ([ `Car of Goods.t * [ `New | `Old ]
+               | `Freight of Goods.freight ], R.Texture.t) Hashtbl.t;
+  engine_detail: (Engine.t, R.Texture.t) Hashtbl.t;
+  engine_anim: (Engine.t, TrainAnim.t) Hashtbl.t;
+  car_anim: (Goods.t * [`New | `Old ], TrainAnim.t) Hashtbl.t;
+  opponents: (Opponent.t, R.Texture.t) Hashtbl.t;
+  jobs: (Jobs.t, R.Texture.t) Hashtbl.t;
+  misc: (Misc.t, R.Texture.t) Hashtbl.t;
 }
 
 let of_resources win res region =
@@ -916,20 +975,28 @@ let of_resources win res region =
     |> Hashtbl.of_iter
   in
   let pixel = R.Texture.make win Pic.white_pixel in
-  let fonts = Fonts.load win in
   let tiles, small_tiles = TileTex.slice_tiles win res in
-  let logo = slice_logo win res in
-  let tracks = Tracks.load win res in
+  let route_engine, route_cars = RouteScreen.load win res in
+  let engine_anim, car_anim = TrainAnim.load win res in
   {
     maps;
     pics;
     map;
     pixel;
-    fonts;
+    fonts = Fonts.load win;
     tiles;
     small_tiles;
-    logo;
-    tracks;
+    tracks = Tracks.load win res;
+    station = Station.load win res;
+    cars_top = CarsTop.load win res;
+    engine_detail = EngineDetail.load win res;
+    opponents = Opponents.load win res;
+    jobs = Job.load win res;
+    misc = Misc.load win res;
+    route_engine;
+    route_cars;
+    engine_anim;
+    car_anim;
   }
 
 let update_map _win v map =

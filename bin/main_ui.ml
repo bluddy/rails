@@ -474,7 +474,8 @@ let render (win:R.window) (s:State.t) v =
     (* Draw logo *)
     begin match Mapview.get_zoom v.view with
     | Zoom1 ->
-        R.Texture.render ~x:(x+1) ~y:(y+1) win s.State.textures.Textures.logo;
+        let logo = Hashtbl.find s.State.textures.misc `Logo in
+        R.Texture.render ~x:(x+1) ~y:(y+1) win logo;
     | _ -> ()
     end;
 
