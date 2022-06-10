@@ -235,7 +235,7 @@ end
 
 module Station = struct
   type hash =
-    [`Background
+    [ `Background
     | `Barn
     | `Cold
     | `Depot
@@ -254,9 +254,10 @@ module Station = struct
     | `Terminal ]
 
   let load win res =
-    let hash = Hashtbl.create 20 in
+    let hash_us = Hashtbl.create 20 in
+    let hash_en = Hashtbl.create 20 in
 
-    let station region prefix =
+    let station hash prefix =
       let ndarray = Hashtbl.find res.Resources.res_pics @@ prefix^"STATION" in
       let tex key x y x2 y2 =
         let tex = 
@@ -264,27 +265,27 @@ module Station = struct
         in
         Hashtbl.replace hash key tex
       in
-      tex (`Background, region) 0 141 320 200;
-      tex (`Depot, region) 6 10 102 42;
-      tex (`Station, region) 112 27 209 83;
-      tex (`Terminal, region) 216 13 320 123;
-      tex (`SwitchingYard, region) 105 2 215 18;
-      tex (`EngineShop, region) 1 114 50 137;
-      tex (`Barn, region) 2 88 39 113;
-      tex (`Fence, region) 76 120 111 129;
-      tex (`Goods_bottom, region) 76 108 111 116;
-      tex (`Goods, region) 76 90 111 104;
-      tex (`Cold, region) 76 60 111 80;
-      tex (`Smokestacks, region) 76 49 111 56;
-      tex (`Hotel, region) 112 87 147 140;
-      tex (`Restaurant, region) 148 111 191 128;
-      tex (`Rest_bottom, region) 148 132 191 140;
-      tex (`PostOffice, region) 148 94 191 107;
-      tex (`Post_top, region) 148 87 191 90;
+      tex `Background 0 141 320 200;
+      tex `Depot  6 10 102 42;
+      tex `Station 112 27 209 83;
+      tex `Terminal 216 13 320 123;
+      tex `SwitchingYard 105 2 215 18;
+      tex `EngineShop 1 114 50 137;
+      tex `Barn 2 88 39 113;
+      tex `Fence 76 120 111 129;
+      tex `Goods_bottom 76 108 111 116;
+      tex `Goods 76 90 111 104;
+      tex `Cold 76 60 111 80;
+      tex `Smokestacks 76 49 111 56;
+      tex `Hotel 112 87 147 140;
+      tex `Restaurant 148 111 191 128;
+      tex `Rest_bottom 148 132 191 140;
+      tex `PostOffice 148 94 191 107;
+      tex `Post_top 148 87 191 90;
     in
-    station `US "";
-    station `Europe "E";
-    hash
+    station hash_us "";
+    station hash_en "E";
+    hash_us, hash_en
 end
 
 module CarsTop = struct
@@ -951,7 +952,8 @@ type t = {
   tiles: (Tile.t, TileTex.t) Hashtbl.t;
   small_tiles: (Tile.t, TileTex.t) Hashtbl.t;
   tracks: R.Texture.t Track.Htbl.t;
-  station: (Station.hash * [`Europe | `US], R.Texture.t) Hashtbl.t;
+  station_us: (Station.hash, R.Texture.t) Hashtbl.t;
+  station_en: (Station.hash, R.Texture.t) Hashtbl.t;
   cars_top: (CarsTop.hash * Dir.t, R.Texture.t) Hashtbl.t;
   route_engine: (Engine.t * bool, R.Texture.t) Hashtbl.t;
   route_cars: ([ `Car of Goods.t * [ `New | `Old ]
@@ -978,6 +980,7 @@ let of_resources win res region =
   let tiles, small_tiles = TileTex.slice_tiles win res in
   let route_engine, route_cars = RouteScreen.load win res in
   let engine_anim, car_anim = TrainAnim.load win res in
+  let station_us, station_en = Station.load win res in
   {
     maps;
     pics;
@@ -987,10 +990,11 @@ let of_resources win res region =
     tiles;
     small_tiles;
     tracks = Tracks.load win res;
-    station = Station.load win res;
     cars_top = CarsTop.load win res;
     engine_detail = EngineDetail.load win res;
     opponents = Opponents.load win res;
+    station_us;
+    station_en;
     jobs = Job.load win res;
     misc = Misc.load win res;
     route_engine;

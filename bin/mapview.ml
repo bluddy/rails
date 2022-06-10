@@ -86,6 +86,7 @@ let cursor_on_woodbridge backend v =
   | _ -> false
 
 let cursor_on_station backend v =
+  (* check if we're clicking on a station *)
   match B.get_track backend v.cursor_x v.cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
@@ -122,19 +123,28 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
           let cursor_x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
           let cursor_y = start_y + (y-v.dims.y)/tile_h |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
-          (* Check for second click *)
           begin match v.zoom, button with
           | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
-              let tile = B.get_tile s.backend cursor_x cursor_y in
-              v, `ShowTileInfo (cursor_x, cursor_y, tile)
+              (* second click *)
+              if cursor_on_station s.backend v then
+                v, `StationView (cursor_x, cursor_y)
+              else
+                let tile = B.get_tile s.backend cursor_x cursor_y in
+                v, `ShowTileInfo (cursor_x, cursor_y, tile)
           | Zoom4, `Left ->
+              (* move cursor *)
               let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
               {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
           | Zoom4, `Right ->
+              (* recenter *)
               {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | (Zoom3 | Zoom2), `Left ->
-              let tile = B.get_tile s.backend cursor_x cursor_y in
-              v, `ShowTileInfo (cursor_x, cursor_y, tile)
+              (* tile info *)
+              if cursor_on_station s.backend v then
+                v, `StationView (cursor_x, cursor_y)
+              else
+                let tile = B.get_tile s.backend cursor_x cursor_y in
+                v, `ShowTileInfo (cursor_x, cursor_y, tile)
           | (Zoom3 | Zoom2), `Right ->
               {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | _ -> v, `NoAction

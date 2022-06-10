@@ -16,14 +16,14 @@ let range_of v = match v with
   | `Terminal -> 3
 
 type upgrade =
-  | EngineShop
-  | SwitchingYard
   | MaintenanceShop
+  | EngineShop (* higher than MaintenanceShop to hide it *)
+  | SwitchingYard
   | ColdStorage
-  | LivestockPens
   | GoodsStorage
   | PostOffice
   | Restaurant
+  | LivestockPens (* keep it higher so it's drawn last *)
   | Hotel
   [@@deriving enum]
 
@@ -49,6 +49,10 @@ type t = {
   info: info option;
   player: int;
 }
+
+let upgrades v = match v.info with
+  | Some {upgrades;_} -> upgrades
+  | None -> Upgrades.empty
 
 let make ~x ~y ~year ~city ~kind ~player =
   let info =

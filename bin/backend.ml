@@ -91,6 +91,8 @@ let get_track v x y = Trackmap.get v.track x y
 
 let get_cities v = Cities.to_list v.cities
 
+let get_station v x y = Station.Map.get v.stations x y
+
 let get_region v = v.region
 
 let get_map v = v.map

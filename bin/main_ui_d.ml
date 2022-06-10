@@ -90,7 +90,7 @@ and 'a mode =
   | BuildStation of ('a, Station.kind, unit) modalmenu
   | BuildBridge of ('a, Bridge.t, Utils.msg) modalmenu
   | BuildTunnel of ('a, [`Tunnel | `Track], (Utils.msg * int)) modalmenu
-  | StationView of Station.t
+  | StationView of int * int (* x, y *)
 
 type 'a t = {
   dims: dims;

@@ -390,6 +390,9 @@ let handle_event (s:State.t) v (event:Event.t) =
           let mode = ModalMsgbox {menu; data=(); last=Normal} in
           {v with mode}, nobaction
 
+      | _, `StationView(x, y) ->
+          {v with mode=StationView(x, y)}, nobaction
+
       | _ ->
           v, nobaction
     in
@@ -506,8 +509,8 @@ let render (win:R.window) (s:State.t) v =
     | BuildTunnel modal ->
         render_main ();
         Menu.MsgBox.render win s modal.menu
-    | StationView station ->
-        Station_view.render win s station
+    | StationView(x, y) ->
+        Station_view.render win s x y
   in
   render_mode v.mode
 
