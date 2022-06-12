@@ -35,17 +35,20 @@ let load_pics () =
   filenames;
   images
 
+module Ndarray = Owl_base_dense_ndarray.Generic
+type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
+
 (* All game resources *)
 type t = {
-  res_maps: (Region.t * Tilemap.t) list;
+  res_maps: (Region.t * ndarray) list;
   res_pics: (string, Pic.ndarray) Hashtbl.t;
   res_cities: (Region.t * (string * int * int) list) list;
 }
 
-let load_all ~seed =
+let load_all () =
   let res_maps =
     List.map (fun (region,s) -> region, dir ^ s
-      |> Tilemap.of_file ~region ~seed) map_names
+      |> Tilemap.ndarray_of_file) map_names
   in
   let res_cities = List.map Mapgen.load_city_list Region.regions |> 
     List.combine Region.regions

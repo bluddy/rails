@@ -282,7 +282,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
 
   let draw_minimap ~(minimap:Utils.rect) =
     let from_x, from_y, from_end_x, from_end_y = minimap_bounds v ~minimap in
-    R.Texture.render_subtex win s.textures.map ~x:minimap.x ~y:minimap.y
+    R.Texture.render_subtex win s.map_tex ~x:minimap.x ~y:minimap.y
       ~from_x ~from_y ~w:minimap.w ~h:minimap.h;
 
     (* draw track *)
@@ -356,7 +356,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
 
   begin match v.zoom with
   | Zoom1 ->
-      R.Texture.render win s.textures.map ~x:0 ~y:v.dims.y;
+      R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
       draw_track_zoom1 ()
   | Zoom2 | Zoom3 ->
       tile_render ();

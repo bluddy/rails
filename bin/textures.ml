@@ -944,9 +944,7 @@ module Misc = struct
 end
 
 type t = {
-  maps: (Region.t * R.Texture.t) list;
   pics: (string, R.Texture.t) Hashtbl.t;
-  mutable map: R.Texture.t;   (* current map *)
   pixel: R.Texture.t; (* white pixel *)
   tiles: (Tile.t, TileTex.t) Hashtbl.t;
   small_tiles: (Tile.t, TileTex.t) Hashtbl.t;
@@ -965,13 +963,8 @@ type t = {
   misc: (Misc.t, R.Texture.t) Hashtbl.t;
 }
 
-let of_resources win res region =
-  let maps = List.map (fun (a, v) ->
-      a, R.Texture.make win @@ Tilemap.to_img v)
-    res.Resources.res_maps
-  in
-  let map = List.assoc ~eq:(Stdlib.(=)) region maps in
-  let pics = Hashtbl.to_iter res.res_pics
+let of_resources win res =
+  let pics = Hashtbl.to_iter res.Resources.res_pics
     |> Iter.map (fun (s, arr) -> s, R.Texture.make win arr)
     |> Hashtbl.of_iter
   in
@@ -981,9 +974,7 @@ let of_resources win res region =
   let engine_anim, car_anim = TrainAnim.load win res in
   let station_us, station_en = Station.load win res in
   {
-    maps;
     pics;
-    map;
     pixel;
     tiles;
     small_tiles;
@@ -1001,6 +992,4 @@ let of_resources win res region =
     car_anim;
   }
 
-let update_map _win v map =
-  R.Texture.update v.map @@ Tilemap.to_img map
 

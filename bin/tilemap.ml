@@ -310,9 +310,8 @@ let of_ndarray ~region ~seed ndarray =
   v
 
 
-let of_file ~region ~seed filename =
-  ndarray_of_file filename
-  |> of_ndarray ~region ~seed
+let of_file ~region filename =
+  ndarray_of_file filename |> of_ndarray ~region 
 
   (* Make an ndarray of pixel indices. Not RGBA! *)
 let to_ndarray mapdata =

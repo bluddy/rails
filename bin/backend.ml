@@ -64,10 +64,13 @@ type t = {
   cities: Cities.t;
   mutable stations: Station.Map.t;
   options : options;
+  random: Random.State.t;
+  seed: int;
 }
 
-let default region resources = 
+let default region resources ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
+  let map = Tilemap.of_ndarray ~region ~seed map in
   let cities =
     let h = Hashtbl.create 100 in
     List.assoc ~eq:(Stdlib.(=)) region resources.res_cities
@@ -79,7 +82,7 @@ let default region resources =
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
   let stations = Station.Map.create Tilemap.map_width in
-  {year=1800; map; region; cities; track; stations; options}
+  {year=1800; map; region; cities; track; stations; options; random; seed}
 
 let map_height v = Tilemap.get_height v.map
 
