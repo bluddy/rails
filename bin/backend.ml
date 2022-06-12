@@ -60,9 +60,9 @@ type t = {
   year: int;
   region: Region.t;
   map : Tilemap.t;
-  track: Trackmap.t;
+  mutable track: Trackmap.t;
   cities: Cities.t;
-  stations: Station.Map.t;
+  mutable stations: Station.Map.t;
   options : options;
 }
 
@@ -112,7 +112,9 @@ let check_build_track v ~x ~y ~dir ~player =
   | _ -> `Illegal
 
 let _build_tunnel v ~x ~y ~dir ~player ~length =
-  Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length
+  let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
+  v.track <- track;
+  v
 
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with
@@ -125,7 +127,9 @@ let _build_station v ~x ~y station_type ~player =
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let station = Station.make ~x ~y ~year:v.year ~city ~kind:station_type ~player in
   let stations = Station.Map.add v.stations x y station in
-  track, stations
+  v.track <- track;
+  v.stations <- stations;
+  v
 
 let check_build_bridge v ~x ~y ~dir ~player =
   match check_build_track v ~x ~y ~dir ~player with
@@ -133,10 +137,14 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | _ -> `Illegal
 
 let _build_bridge v ~x ~y ~dir ~player ~kind =
-  Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind
+  let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
+  v.track <- track;
+  v
 
 let _build_track v ~x ~y ~dir ~player =
-  Trackmap.build_track v.track ~x ~y ~dir ~player
+  let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
+  v.track <- track;
+  v
 
 let _build_ferry v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
@@ -148,13 +156,29 @@ let _build_ferry v ~x ~y ~dir ~player =
     | _, Ocean _ -> Track, Ferry
     | _ -> assert false
   in
-  Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2
+  let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
+  v.track <- track;
+  v
 
 let check_remove_track v ~x ~y ~dir ~player=
   Trackmap.check_remove_track v.track ~x ~y ~dir ~player
 
 let _remove_track v ~x ~y ~dir ~player =
-  Trackmap.remove_track v.track ~x ~y ~dir ~player
+  let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
+  v.track <- track;
+  v
+
+let _improve_station v ~x ~y ~player ~upgrade =
+  let stations = 
+    match get_station v x y with
+    | Some station ->
+        let station = Station.add_upgrade station upgrade player in
+        Station.Map.add v.stations x y station
+    | None -> v.stations
+  in
+  v.stations <- stations;
+  v
+  
 
 let trackmap_iter v f = Trackmap.iter v.track f
 
@@ -167,26 +191,23 @@ module Action = struct
     | BuildBridge of Utils.msg * Bridge.t
     | BuildTunnel of Utils.msg * int (* length *)
     | RemoveTrack of Utils.msg
+    | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
-        let track = _build_track backend ~x ~y ~dir ~player in
-        {backend with track}
+        _build_track backend ~x ~y ~dir ~player
     | BuildFerry {x; y; dir; player} ->
-        let track = _build_ferry backend ~x ~y ~dir ~player in
-        {backend with track}
+        _build_ferry backend ~x ~y ~dir ~player
     | BuildStation {x; y; kind; player} ->
-        let track, stations = _build_station backend ~x ~y kind ~player in
-        {backend with track; stations}
+        _build_station backend ~x ~y kind ~player
     | BuildBridge({x; y; dir; player}, kind) ->
-        let track = _build_bridge backend ~x ~y ~dir ~kind ~player in
-        {backend with track}
+        _build_bridge backend ~x ~y ~dir ~kind ~player
     | BuildTunnel({x; y; dir; player}, length) ->
-        let track = _build_tunnel backend ~x ~y ~dir ~player ~length in
-        {backend with track}
+        _build_tunnel backend ~x ~y ~dir ~player ~length
     | RemoveTrack {x; y; dir; player} ->
-        let track = _remove_track backend ~x ~y ~dir ~player in
-        {backend with track}
+        _remove_track backend ~x ~y ~dir ~player
+    | ImproveStation {x; y; player; upgrade} ->
+        _improve_station backend ~x ~y ~player ~upgrade
     | NoAction -> backend
 
 end

@@ -82,6 +82,17 @@ let make ~x ~y ~year ~city ~kind ~player =
   in
   { x; y; year; city; info; player}
 
+let add_upgrade v upgrade player =
+  if v.player <> player then v else
+  let info =
+    match v.info with
+    | Some ({upgrades;_} as info) ->
+        let upgrades = Upgrades.add upgrades upgrade in
+        {info with upgrades} |> Option.some
+    | None -> None
+  in
+  {v with info}
+
 module Map = struct
   type nonrec t = {
     map: (int, t) Hashtbl.t;

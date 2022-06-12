@@ -355,6 +355,10 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with view=Mapview.set_build_mode v.view true}, nobaction 
       | On `RemoveTrack, _ ->
           {v with view=Mapview.set_build_mode v.view false}, nobaction 
+      | On `ImproveStation upgrade, _ ->
+          let x, y = Mapview.get_cursor_pos v.view in
+          {v with mode=StationView(x, y)}, ImproveStation{x; y; player=0; upgrade}
+
       | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
       | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
       | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
