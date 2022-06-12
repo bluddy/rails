@@ -27,6 +27,20 @@ type upgrade =
   | Hotel
   [@@deriving enum, show]
 
+let get_price upgrade =
+  let p = match upgrade with
+  | MaintenanceShop -> 25
+  | EngineShop -> 100 (* ? *)
+  | SwitchingYard -> 50
+  | ColdStorage -> 25
+  | GoodsStorage -> 25
+  | PostOffice -> 50
+  | Restaurant -> 25
+  | LivestockPens -> 25
+  | Hotel -> 100
+  in
+  p * 1000
+
 module Upgrades = Bitset.Make(struct
   type t = upgrade
   let to_enum = upgrade_to_enum

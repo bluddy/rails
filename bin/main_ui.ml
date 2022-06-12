@@ -100,33 +100,36 @@ let main_menu fonts menu_h =
       make_entry "&Find City" @@ `Action `Find_city;
     ]
   in
-  let is_zoom4 = Some (fun (s:State.t) -> Mapview.is_zoom4 s.ui.view) in
-  let is_station4 =
-    (fun (s:State.t) -> Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_station s.backend s.ui.view)
-    |> Option.return
-  in
-  let is_woodbridge4 =
-    (fun (s:State.t) -> Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view)
-    |> Option.return
-  in
+  let is_zoom4 (s:State.t) = Mapview.is_zoom4 s.ui.view in
+  let is_station4 (s:State.t) = Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_station s.backend s.ui.view in
+  let is_woodbridge4 (s:State.t) = Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view in
   let improve_station =
-    let check_upgrade upgrade (s:State.t) =
+    let check_upgrade ?(flip=false) upgrade (s:State.t) =
       let station = Mapview.get_station_under_cursor s.backend s.ui.view in
-      Station.Upgrades.mem (Station.get_upgrades station) upgrade
+      let is_mem = Station.Upgrades.mem (Station.get_upgrades station) upgrade in
+      if flip then not is_mem else is_mem
     in
     let open MsgBox in
     let module S = Station in
+    let entry str upgrade =
+      let price_s =
+        Station.get_price upgrade
+        |> Printf.sprintf " ($%d)"
+      in
+      make_entry (str^price_s) ~test_enabled:(check_upgrade ~flip:true upgrade)
+        (`Checkbox(`ImproveStation upgrade, check_upgrade upgrade))
+    in
     make ~fonts ~heading:"Improve Station"
     [
-      make_entry "&Engine Shop" @@ `Checkbox(`ImproveStation S.EngineShop, check_upgrade S.EngineShop);
-      make_entry "&Switching Yard" @@ `Checkbox(`ImproveStation S.SwitchingYard, check_upgrade S.SwitchingYard);
-      make_entry "&Maintenance Shop" @@ `Checkbox(`ImproveStation S.MaintenanceShop, check_upgrade S.MaintenanceShop);
-      make_entry "&Cold Storage" @@ `Checkbox(`ImproveStation S.ColdStorage, check_upgrade S.ColdStorage);
-      make_entry "&LivestockPens" @@ `Checkbox(`ImproveStation S.LivestockPens, check_upgrade S.LivestockPens);
-      make_entry "&Goods Storage" @@ `Checkbox(`ImproveStation S.GoodsStorage, check_upgrade S.GoodsStorage);
-      make_entry "&Post Office" @@ `Checkbox(`ImproveStation S.PostOffice, check_upgrade S.PostOffice);
-      make_entry "&Restaurant" @@ `Checkbox(`ImproveStation S.Restaurant,  check_upgrade S.Restaurant);
-      make_entry "&Hotel" @@ `Checkbox(`ImproveStation S.Hotel, check_upgrade S.Hotel);
+      entry "&Engine Shop" S.EngineShop;
+      entry "&Switching Yard" S.SwitchingYard;
+      entry "&Maintenance Shop" S.MaintenanceShop;
+      entry "&Cold Storage" S.ColdStorage;
+      entry "&LivestockPens" S.LivestockPens;
+      entry "&Goods Storage" S.GoodsStorage;
+      entry "&Post Office" S.PostOffice;
+      entry "&Restaurant" S.Restaurant;
+      entry "&Hotel" S.Hotel;
     ]
   in
   let build_menu =
