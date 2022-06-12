@@ -125,7 +125,7 @@ let _build_station v ~x ~y station_type ~player =
   (* TODO: graph *)
   let track = Trackmap.build_station v.track ~x ~y station_type in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
-  let station = Station.make ~x ~y ~year:v.year ~city ~kind:station_type ~player in
+  let station = Station.make ~x ~y ~year:v.year ~name:city ~kind:station_type ~player in
   let stations = Station.Map.add v.stations x y station in
   v.track <- track;
   v.stations <- stations;

@@ -9,7 +9,13 @@ type kind =
   ]
   [@@deriving eq, hash, enum]
 
-let range_of v = match v with
+let show_kind = function
+  | `SignalTower -> "Signal Tower"
+  | `Depot -> "Depot"
+  | `Station -> "Station"
+  | `Terminal -> "Terminal"
+
+let range_of = function
   | `SignalTower -> 0
   | `Depot -> 1
   | `Station -> 2
@@ -59,16 +65,21 @@ type t = {
   x: int;
   y: int;
   year: int;
-  city: string;
+  name: string;
   info: info option;
   player: int;
 }
+
+let kind_str v =
+  match v.info with
+  | None -> "Signal Tower"
+  | Some {kind;_} -> show_kind kind
 
 let get_upgrades v = match v.info with
   | Some {upgrades;_} -> upgrades
   | None -> Upgrades.empty
 
-let make ~x ~y ~year ~city ~kind ~player =
+let make ~x ~y ~year ~name ~kind ~player =
   let info =
     match kind with
     | `SignalTower -> None
@@ -80,7 +91,7 @@ let make ~x ~y ~year ~city ~kind ~player =
         upgrades=Upgrades.empty;
       } |> Option.some
   in
-  { x; y; year; city; info; player}
+  { x; y; year; name; info; player}
 
 let add_upgrade v upgrade player =
   if v.player <> player then v else
