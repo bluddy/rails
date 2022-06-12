@@ -20,7 +20,9 @@ let run ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
 
     let textures = Textures.of_resources win resources region in
 
-    let ui = Main_ui.default win textures.fonts in
+    let fonts = Fonts.load win in
+
+    let ui = Main_ui.default win fonts in
 
     let state = {
       State.screen;
@@ -29,6 +31,7 @@ let run ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
       random;
       textures;
       seed;
+      fonts;
       ui;
     } in
 
@@ -53,7 +56,7 @@ let run ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
             let data, map =
               Iter.(0 -- 60)
               |> Iter.fold (fun (mapgen, map) _ ->
-                  Mapgen.update_map_step random mapgen ~done_fn ~map ~fonts:s.textures.fonts
+                  Mapgen.update_map_step random mapgen ~done_fn ~map ~fonts:s.fonts
               )
               (data, B.get_map s.backend)
             in
@@ -105,7 +108,7 @@ let run ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
           R.clear_screen win;
           R.Texture.render win ~x:0 ~y:0 bg_tex;
           R.Texture.render win ~x:0 ~y:0 s.textures.map;
-          Fonts.Render.render s.textures.fonts ~win ~to_render:data.text;
+          Fonts.Render.render s.fonts ~win ~to_render:data.text;
           Mapgen.View.render_new_pixels win data s.textures.pixel;
           ()
       | MapGen None -> ()

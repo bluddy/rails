@@ -9,5 +9,6 @@ type t = {
   mutable ui: t Main_ui_d.t; (* get around circular modules *)
   resources: Resources.t;
   textures: Textures.t;
+  fonts: Fonts.t;
 }
 [@@deriving lens]

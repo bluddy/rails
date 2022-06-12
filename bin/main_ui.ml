@@ -348,7 +348,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     let v, backend_action =
       match menu_action, view_action with
       | On `Build_station, _ ->
-          let menu = build_station_menu s.textures.fonts |> Menu.MsgBox.do_open_menu s in
+          let menu = build_station_menu s.fonts |> Menu.MsgBox.do_open_menu s in
           let modal = {menu; data=(); last=Normal} in
           {v with mode=BuildStation modal}, nobaction
       | On `BuildTrack, _ ->
@@ -363,18 +363,18 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
       | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
       | _, `BuildBridge msg ->
-          let menu = build_bridge_menu s.textures.fonts |> Menu.MsgBox.do_open_menu s in
+          let menu = build_bridge_menu s.fonts |> Menu.MsgBox.do_open_menu s in
           let modal = {menu; data=msg; last=Normal} in
           {v with mode=BuildBridge modal}, nobaction
       | _, `HighGradeTrack(msg, grade) ->
-          let menu = build_tunnel_menu ~grade ~tunnel:false s.textures.fonts
+          let menu = build_tunnel_menu ~grade ~tunnel:false s.fonts
             |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
           in
           let modal = {menu; data=(msg,0); last=Normal} in
           {v with mode=BuildTunnel modal}, nobaction
       | _, `BuildTunnel(msg, length, grade) ->
           let menu =
-            build_tunnel_menu ~grade ~tunnel:true s.textures.fonts
+            build_tunnel_menu ~grade ~tunnel:true s.fonts
             |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
           in
           let modal = {menu; data=(msg,length); last=Normal} in
@@ -411,7 +411,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             entries @ supply
           in
           let menu =
-            Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.textures.fonts entries ~font_idx:4
+            Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:4
             |> Menu.MsgBox.do_open_menu s
           in
           let mode = ModalMsgbox {menu; data=(); last=Normal} in
@@ -518,7 +518,7 @@ let render (win:R.window) (s:State.t) v =
     R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
 
     (* Menu bar *)
-    Menu.Global.render win s s.textures.fonts v.menu;
+    Menu.Global.render win s s.fonts v.menu;
   in
 
   (* Msgboxes *)

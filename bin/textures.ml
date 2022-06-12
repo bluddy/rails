@@ -948,7 +948,6 @@ type t = {
   pics: (string, R.Texture.t) Hashtbl.t;
   mutable map: R.Texture.t;   (* current map *)
   pixel: R.Texture.t; (* white pixel *)
-  fonts: Fonts.t;
   tiles: (Tile.t, TileTex.t) Hashtbl.t;
   small_tiles: (Tile.t, TileTex.t) Hashtbl.t;
   tracks: R.Texture.t Track.Htbl.t;
@@ -986,7 +985,6 @@ let of_resources win res region =
     pics;
     map;
     pixel;
-    fonts = Fonts.load win;
     tiles;
     small_tiles;
     tracks = Tracks.load win res;

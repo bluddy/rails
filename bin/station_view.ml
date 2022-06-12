@@ -51,7 +51,7 @@ let render win (s:State.t) x y =
   let station = Backend.get_station s.backend x y |> Option.get_exn_or "station" in
 
   (* Draw name and year *)
-  let font = Fonts.get_font s.textures.fonts 4 in
+  let font = Fonts.get_font s.fonts 4 in
   let name_s = Printf.sprintf "%s (%s)\nBuilt in %d" station.name (Station.kind_str station) station.year in
   Fonts.Font.write win font ~x:96 ~y:16 ~color:Ega.white name_s;
 

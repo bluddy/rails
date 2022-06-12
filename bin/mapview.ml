@@ -251,9 +251,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         let x = (x - start_x) * tile_w in
         let y = (y - start_y) * tile_h + v.dims.y in
         let x, y = x + 11, y - 15 in
-        Fonts.Render.write win s.textures.fonts name ~idx:4 ~x ~y ~color:Ega.black;
+        Fonts.Render.write win s.fonts name ~idx:4 ~x ~y ~color:Ega.black;
         let x, y = x + 1, y - 1 in
-        Fonts.Render.write win s.textures.fonts name ~idx:4 ~x ~y ~color:Ega.bcyan;
+        Fonts.Render.write win s.fonts name ~idx:4 ~x ~y ~color:Ega.bcyan;
       )
     )
     s.backend
@@ -329,14 +329,14 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       | _ ->
         let height = (B.get_tile_height s.backend map_x map_y) / 2 |> string_of_int in
         let x, y = j * tile_w + 4, i * tile_h + 4 + v.dims.y in
-        Fonts.Render.write win s.textures.fonts height ~idx:3 ~x ~y ~color:Ega.white
+        Fonts.Render.write win s.fonts height ~idx:3 ~x ~y ~color:Ega.white
     )
   in
 
   let draw_buildstation_mode () =
     let color = Ega.gray in
     let fill = false in
-    let font = Fonts.get_font s.textures.fonts 4 in
+    let font = Fonts.get_font s.fonts 4 in
     let x = (v.cursor_x - start_x - 1) * tile_w in
     let font_x = x in
     let y = (v.cursor_y - start_y - 1) * tile_h + v.dims.y in

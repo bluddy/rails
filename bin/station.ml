@@ -104,6 +104,17 @@ let add_upgrade v upgrade player =
   in
   {v with info}
 
+let suffixes = [
+  "Junction";
+  "Crossing";
+  "Central";
+  "Annex";
+  "Transfer";
+  "Valley";
+  "Hills";
+  "Woods";
+]
+
 module Map = struct
   type nonrec t = {
     map: (int, t) Hashtbl.t;
