@@ -61,7 +61,7 @@ let render win (s:State.t) x y =
     | MaintenanceShop ->
         let tex, _, h = get_tex `Barn in
         R.Texture.render ~x:engineshop_x ~y:(ground_y-h) win tex
-    | ColdStorage when Station.Upgrades.mem (Station.upgrades station) GoodsStorage ->
+    | ColdStorage when Station.Upgrades.mem (Station.get_upgrades station) GoodsStorage ->
         let h_bottom = draw_goods_bottom () in
         let tex, _, h = get_tex `Goods in
         let y = ground_y - h_bottom - h in
@@ -76,7 +76,7 @@ let render win (s:State.t) x y =
         let y = ground_y - h_bottom - h in
         R.Texture.render ~x:storage_x ~y win tex;
         draw_smokestacks y
-    | GoodsStorage when not @@ Station.Upgrades.mem (Station.upgrades station) ColdStorage ->
+    | GoodsStorage when not @@ Station.Upgrades.mem (Station.get_upgrades station) ColdStorage ->
         (* Only goods *)
         let h_bottom = draw_goods_bottom () in
         let tex, _, h = get_tex `Goods in
@@ -86,7 +86,7 @@ let render win (s:State.t) x y =
     | LivestockPens ->
         let tex, _, h = get_tex `Fence in
         R.Texture.render ~x:storage_x ~y:(ground_y-h) win tex
-    | PostOffice when Station.Upgrades.mem (Station.upgrades station) Restaurant ->
+    | PostOffice when Station.Upgrades.mem (Station.get_upgrades station) Restaurant ->
         (* both post office and resaurant *)
         let h_bottom = draw_rest_bottom () in
         let tex, _, h = get_tex `Restaurant in
@@ -103,7 +103,7 @@ let render win (s:State.t) x y =
         let y = ground_y - h_bottom - h in
         R.Texture.render ~x:restaurant_x ~y win tex;
         draw_post_top y
-    | Restaurant when not (Station.Upgrades.mem (Station.upgrades station) PostOffice) ->
+    | Restaurant when not (Station.Upgrades.mem (Station.get_upgrades station) PostOffice) ->
         (* Only restaurant *)
         let h_bottom = draw_rest_bottom () in
         let tex, _, h = get_tex `Restaurant in
@@ -115,7 +115,7 @@ let render win (s:State.t) x y =
         R.Texture.render ~x:hotel_x ~y:(ground_y-h) win tex
     | _ -> ()
   )
-  (Station.upgrades station);
+  (Station.get_upgrades station);
 
   (* Draw Station *)
   let station_kind :> Textures.Station.hash = match station.info with

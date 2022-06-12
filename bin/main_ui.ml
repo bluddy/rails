@@ -109,6 +109,26 @@ let main_menu fonts menu_h =
     (fun (s:State.t) -> Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view)
     |> Option.return
   in
+  let improve_station =
+    let check_upgrade upgrade (s:State.t) =
+      let station = Mapview.get_station_under_cursor s.backend s.ui.view in
+      Station.Upgrades.mem (Station.get_upgrades station) upgrade
+    in
+    let open MsgBox in
+    let module S = Station in
+    make ~fonts ~heading:"Improve Station"
+    [
+      make_entry "&Engine Shop" @@ `Checkbox(`ImproveStation S.EngineShop, check_upgrade S.EngineShop);
+      make_entry "&Switching Yard" @@ `Checkbox(`ImproveStation S.SwitchingYard, check_upgrade S.SwitchingYard);
+      make_entry "&Maintenance Shop" @@ `Checkbox(`ImproveStation S.MaintenanceShop, check_upgrade S.MaintenanceShop);
+      make_entry "&Cold Storage" @@ `Checkbox(`ImproveStation S.ColdStorage, check_upgrade S.ColdStorage);
+      make_entry "&LivestockPens" @@ `Checkbox(`ImproveStation S.LivestockPens, check_upgrade S.LivestockPens);
+      make_entry "&Goods Storage" @@ `Checkbox(`ImproveStation S.GoodsStorage, check_upgrade S.GoodsStorage);
+      make_entry "&Post Office" @@ `Checkbox(`ImproveStation S.PostOffice, check_upgrade S.PostOffice);
+      make_entry "&Restaurant" @@ `Checkbox(`ImproveStation S.Restaurant,  check_upgrade S.Restaurant);
+      make_entry "&Hotel" @@ `Checkbox(`ImproveStation S.Hotel, check_upgrade S.Hotel);
+    ]
+  in
   let build_menu =
     let check_trackbuild build (s:State.t) = Bool.equal s.ui.view.build_mode build in
     let open MsgBox in
@@ -119,7 +139,7 @@ let main_menu fonts menu_h =
       make_entry "Build &Industry" ~test_enabled:is_zoom4 @@ `Action `Build_industry;
       make_entry "&Build Track" ~test_enabled:is_zoom4 @@ `Checkbox(`BuildTrack, check_trackbuild true); 
       make_entry "&Remove Track" ~test_enabled:is_zoom4 @@ `Checkbox(`RemoveTrack, check_trackbuild false);
-      make_entry "Im&prove Station" ~test_enabled:is_station4 @@ `Action `Improve_station;
+      make_entry "Im&prove Station" ~test_enabled:is_station4 @@ `MsgBox improve_station;
       make_entry "Up&grade Bridge" ~test_enabled:is_woodbridge4 @@ `Action `Upgrade_bridge;
     ]
   in

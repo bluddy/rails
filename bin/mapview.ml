@@ -95,6 +95,12 @@ let cursor_on_station backend v =
       end
   | _ -> false
 
+let get_station_under_cursor backend v =
+  (* get the station the cursor is over *)
+  match B.get_station backend v.cursor_x v.cursor_y with
+  | Some station -> station
+  | None -> failwith "No station under cursor"
+
 let set_build_mode v mode = {v with build_mode = mode}
 
 let get_build_mode v = v.build_mode

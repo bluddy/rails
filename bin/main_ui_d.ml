@@ -63,7 +63,7 @@ type menu_action =
     | `Build_industry
     | `BuildTrack
     | `RemoveTrack
-    | `Improve_station
+    | `ImproveStation of Station.upgrade
     | `Upgrade_bridge
     | `Reality_level of Backend.reality_level
     | `Call_broker

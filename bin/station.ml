@@ -25,7 +25,7 @@ type upgrade =
   | Restaurant
   | LivestockPens (* keep it higher so it's drawn last *)
   | Hotel
-  [@@deriving enum]
+  [@@deriving enum, show]
 
 module Upgrades = Bitset.Make(struct
   type t = upgrade
@@ -50,7 +50,7 @@ type t = {
   player: int;
 }
 
-let upgrades v = match v.info with
+let get_upgrades v = match v.info with
   | Some {upgrades;_} -> upgrades
   | None -> Upgrades.empty
 
