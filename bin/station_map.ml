@@ -1,9 +1,10 @@
 open Containers
+open Sexplib.Std
 
 type t = {
   map: (int, Station.t) Hashtbl.t;
   width: int;
-} [@@deriving yojson]
+} [@@deriving sexp]
 
 let create width = {
   map= Hashtbl.create 10;

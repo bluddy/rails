@@ -1,4 +1,5 @@
 open Containers
+open Sexplib.Std
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -6,7 +7,7 @@ open Containers
 
 type speed =
   [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
-  [@@deriving enum, eq, show, yojson]
+  [@@deriving enum, eq, show, sexp]
 
 type reality_level =
   [`Dispatcher_ops | `Complex_economy | `Cutthroat_competition]
@@ -22,14 +23,14 @@ end)
 type options = {
   speed: speed;
   reality_levels: RealityLevels.t;
-} [@@deriving yojson]
+} [@@deriving sexp]
 
 module Cities = struct
   type t = {
     map: (int, string) Hashtbl.t;
     width: int;
     height: int;
-  } [@@deriving yojson]
+  } [@@deriving sexp]
 
   let make map width height = {map; width; height}
 
@@ -41,7 +42,7 @@ module Cities = struct
 
   let find v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
-  let to_list v = Hashtbl.to_list v.map
+  let to_list v = CCHashtbl.to_list v.map
     |> List.map (fun (i, city) ->
       let x, y = Utils.x_y_of_offset v.width i in
       x, y, city)
@@ -62,11 +63,11 @@ type t = {
   map : Tilemap.t;
   mutable track: Trackmap.t;
   cities: Cities.t;
-  mutable stations: Station.Map.t;
+  mutable stations: Station_map.t;
   options : options;
-  random: Random.State.t; [@yojson.opaque]
+  random: (Random.State.t [@sexp.opaque]);
   seed: int;
-} [@@deriving yojson]
+} [@@deriving sexp]
 
 let default region resources ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
@@ -81,7 +82,7 @@ let default region resources ~random ~seed =
   let speed = `Moderate in
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
-  let stations = Station.Map.create Tilemap.map_width in
+  let stations = Station_map.create Tilemap.map_width in
   {year=1800; map; region; cities; track; stations; options; random; seed}
 
 let map_height v = Tilemap.get_height v.map
@@ -94,7 +95,7 @@ let get_track v x y = Trackmap.get v.track x y
 
 let get_cities v = Cities.to_list v.cities
 
-let get_station v x y = Station.Map.get v.stations x y
+let get_station v x y = Station_map.get v.stations x y
 
 let get_region v = v.region
 
@@ -129,7 +130,7 @@ let _build_station v ~x ~y station_type ~player =
   let track = Trackmap.build_station v.track ~x ~y station_type in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let station = Station.make ~x ~y ~year:v.year ~name:city ~kind:station_type ~player in
-  let stations = Station.Map.add v.stations x y station in
+  let stations = Station_map.add v.stations x y station in
   v.track <- track;
   v.stations <- stations;
   v
@@ -176,7 +177,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
     match get_station v x y with
     | Some station ->
         let station = Station.add_upgrade station upgrade player in
-        Station.Map.add v.stations x y station
+        Station_map.add v.stations x y station
     | None -> v.stations
   in
   v.stations <- stations;

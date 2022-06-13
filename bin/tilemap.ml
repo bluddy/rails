@@ -1,4 +1,5 @@
 module Ndarray = Owl_base_dense_ndarray.Generic
+open Sexplib.Std
 open Containers
 
 (* Map data type. Starts at top left *)
@@ -8,7 +9,7 @@ type t = {
   heightmap: int array;
   width: int;
   height: int;
-} [@@deriving yojson]
+} [@@deriving sexp]
 
 let get_height v = v.height
 let get_width v = v.width

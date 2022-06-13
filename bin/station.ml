@@ -1,4 +1,5 @@
 open Containers
+open Sexplib.Std
 
 type kind =
   [
@@ -7,7 +8,7 @@ type kind =
   | `Station
   | `Terminal
   ]
-  [@@deriving eq, hash, enum, yojson]
+  [@@deriving eq, hash, enum, sexp]
 
 let show_kind = function
   | `SignalTower -> "Signal Tower"
@@ -59,7 +60,7 @@ type info = {
   supply: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
-}
+} [@@deriving sexp]
 
 type t = {
   x: int;
@@ -68,7 +69,7 @@ type t = {
   name: string;
   info: info option;
   player: int;
-}
+} [@@deriving sexp]
 
 let kind_str v =
   match v.info with

@@ -1,3 +1,4 @@
+open Sexplib.Std
 open Containers
 
 type kind =
@@ -6,7 +7,7 @@ type kind =
   | Tunnel
   | Station of Station.kind
   | Bridge of Bridge.t
-  [@@deriving eq, hash, yojson]
+  [@@deriving eq, hash, sexp]
 
 type t =
   {
@@ -14,7 +15,7 @@ type t =
     kind: kind;
     ixn: bool;
     player: int;
-  } [@@deriving yojson]
+  } [@@deriving sexp]
 
 let empty player kind = {
   dirs=Dir.Set.empty;

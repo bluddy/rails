@@ -40,7 +40,7 @@ type t =
   | Fort (* Eur *)
   | GlassWorks (* Eng *)
   | SheepFarm (* Eng, Eur *)
-  [@@deriving eq, yojson]
+  [@@deriving eq, sexp]
 
 let show = function
   | Clear -> "Clear"

@@ -11,7 +11,7 @@ module type S = sig
 
   type elt
 
-  type t [@@ deriving yojson]
+  type t [@@ deriving sexp]
 
   val empty: t
 

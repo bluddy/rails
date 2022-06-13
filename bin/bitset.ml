@@ -1,3 +1,4 @@
+open Sexplib.Std
 open Containers
 
 module type Elem = sig
@@ -13,7 +14,7 @@ module Make(E: Elem) = struct
 
   type elt = E.t
 
-  type t = int [@@ deriving yojson]
+  type t = int [@@ deriving sexp]
 
   let to_int v = v
 
@@ -94,9 +95,5 @@ module Make(E: Elem) = struct
 
   let pp fmt v =
     Format.fprintf fmt "%d" v
-
-  let yojson_of_t v = `Int (to_int v)
-
-  let t_of_yojson j = match j with `Int i -> of_int i | _ -> failwith "yojson"
 
 end

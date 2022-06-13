@@ -7,10 +7,10 @@ type t = {
   mutable ui: t Main_ui_d.t; (* get around circular modules *)
 
   (* non-saveable *)
-  screen: Screen.t; [@yojson.opaque]
-  mutable map_tex: Renderer.Texture.t; [@yojson.opaque]
-  textures: Textures.t; [@yojson.opaque]
-  resources: Resources.t; [@yojson.opaque]
-  fonts: Fonts.t; [@yojson.opaque]
+  screen: (Screen.t [@sexp.opaque]);
+  mutable map_tex: (Renderer.Texture.t [@sexp.opaque]);
+  textures: (Textures.t [@sexp.opaque]);
+  resources: (Resources.t [@sexp.opaque]);
+  fonts: (Fonts.t [@sexp.opaque]);
 }
-[@@deriving lens, yojson]
+[@@deriving lens, sexp]

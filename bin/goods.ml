@@ -24,6 +24,7 @@ type t =
   | Grapes (* EU *)
   | Wine (* EU *)
   | Caboose
+  [@@deriving sexp]
 
 let show = function
   | Mail -> "Mail"

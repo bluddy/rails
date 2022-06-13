@@ -1,4 +1,5 @@
 open Containers
+open Sexplib.Std
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 
@@ -7,7 +8,7 @@ type rect = {
   y: int;
   w: int;
   h: int;
-} [@@deriving yojson]
+} [@@deriving sexp]
 
 type point = {
   x: int;
