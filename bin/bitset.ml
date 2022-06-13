@@ -7,52 +7,17 @@ module type Elem = sig
   val last: t
 end
 
-module type S = sig
-
-  type elt
-
-  type t
-
-  val empty: t
-
-  val is_empty: t -> bool
-
-  val mem: t -> elt -> bool
-
-  val remove: t -> elt -> t
-
-  val find: t -> (elt -> bool) -> elt
-
-  val find_opt: t -> (elt -> bool) -> elt option
-
-  val add: t -> elt -> t
-
-  val singleton: elt -> t
-
-  val equal: t -> t -> bool
-
-  val fold: ('a -> elt -> 'a) -> 'a -> t -> 'a
-
-  val iter: (elt -> unit) -> t -> unit
-
-  val cardinal: t -> int
-
-  val of_list: elt list -> t
-
-  val to_list: t -> elt list
-
-  val to_int: t -> int
-
-  val pp: Format.formatter -> t -> unit
-
-end
+module type S = [%import: (module Bitset.S)]
 
 module Make(E: Elem) = struct
 
   type elt = E.t
-  type t = int
+
+  type t = int [@@ deriving yojson]
 
   let to_int v = v
+
+  let of_int (v:int) = v
 
   let empty = 0
 
@@ -129,5 +94,9 @@ module Make(E: Elem) = struct
 
   let pp fmt v =
     Format.fprintf fmt "%d" v
+
+  let yojson_of_t v = `Int (to_int v)
+
+  let t_of_yojson j = match j with `Int i -> of_int i | _ -> failwith "yojson"
 
 end

@@ -4,13 +4,18 @@ type zoom =
   | Zoom2
   | Zoom3
   | Zoom4
-  [@@deriving eq, show]
+  [@@deriving eq, show, yojson]
 
 type options =
   [ `StationBoxes | `Resources]
-  [@@ deriving enum, eq, show]
+  [@@ deriving enum, eq, show, yojson]
 
-module Options = Bitset.Make(struct type t = options let to_enum = options_to_enum let of_enum = options_of_enum let last = `Resources end)
+module Options = Bitset.Make(struct
+    type t = options
+    let to_enum = options_to_enum
+    let of_enum = options_of_enum
+    let last = `Resources
+  end)
 
 type t =
   {
@@ -24,3 +29,4 @@ type t =
     survey: bool;
     options: Options.t;
   }
+  [@@deriving yojson]

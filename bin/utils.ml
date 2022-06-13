@@ -7,7 +7,7 @@ type rect = {
   y: int;
   w: int;
   h: int;
-}
+} [@@deriving yojson]
 
 type point = {
   x: int;
