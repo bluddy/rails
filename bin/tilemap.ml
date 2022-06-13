@@ -8,7 +8,7 @@ type t = {
   heightmap: int array;
   width: int;
   height: int;
-}
+} [@@deriving yojson]
 
 let get_height v = v.height
 let get_width v = v.width

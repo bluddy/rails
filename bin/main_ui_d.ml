@@ -1,5 +1,4 @@
 
-
 type dims = {
   screen: Utils.rect;
   menu: Utils.rect;
@@ -12,7 +11,7 @@ type dims = {
 
 type message_speed =
   [`Slow | `Fast | `Off]
-  [@@deriving eq, show]
+  [@@deriving eq, show, yojson]
 
 type news_types =
   [`Financial | `Railroad | `Local]
@@ -38,7 +37,7 @@ type options = {
   messages: message_speed;
   news: NewsTypes.t;
   features: Features.t;
-}
+} [@@deriving yojson]
 
 type menu_action =
   [
@@ -93,9 +92,9 @@ and 'a mode =
   | StationView of int * int (* x, y *)
 
 type 'a t = {
-  dims: dims;
+  dims: dims; [@yojson.opaque]
   options: options;
-  menu: (menu_action, 'a) Menu.Global.t;
+  menu: (menu_action, 'a) Menu.Global.t; [@yojson.opaque]
   mode: 'a mode; (* determines mode of operation *)
   mutable view: Mapview_d.t;
 }

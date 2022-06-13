@@ -24,7 +24,7 @@ type t =
     cursor_x: int;
     cursor_y: int;
     zoom: zoom;
-    dims: Utils.rect;
+    dims: Utils.rect; [@yojson.opaque]
     build_mode: bool;
     survey: bool;
     options: Options.t;

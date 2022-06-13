@@ -7,7 +7,7 @@ type kind =
   | `Station
   | `Terminal
   ]
-  [@@deriving eq, hash, enum]
+  [@@deriving eq, hash, enum, yojson]
 
 let show_kind = function
   | `SignalTower -> "Signal Tower"

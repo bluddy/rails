@@ -4,7 +4,7 @@ type t = {
   map: (int, Track.t) Hashtbl.t;
   width: int;
   height: int;
-}
+} [@@deriving yojson]
 
 let empty width height =
   let map = Hashtbl.create 100 in

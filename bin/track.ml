@@ -6,7 +6,7 @@ type kind =
   | Tunnel
   | Station of Station.kind
   | Bridge of Bridge.t
-  [@@deriving eq, hash]
+  [@@deriving eq, hash, yojson]
 
 type t =
   {
@@ -14,7 +14,7 @@ type t =
     kind: kind;
     ixn: bool;
     player: int;
-  }
+  } [@@deriving yojson]
 
 let empty player kind = {
   dirs=Dir.Set.empty;

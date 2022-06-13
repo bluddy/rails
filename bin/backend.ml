@@ -6,7 +6,7 @@ open Containers
 
 type speed =
   [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
-  [@@deriving enum, eq, show]
+  [@@deriving enum, eq, show, yojson]
 
 type reality_level =
   [`Dispatcher_ops | `Complex_economy | `Cutthroat_competition]
@@ -22,14 +22,14 @@ end)
 type options = {
   speed: speed;
   reality_levels: RealityLevels.t;
-}
+} [@@deriving yojson]
 
 module Cities = struct
   type t = {
     map: (int, string) Hashtbl.t;
     width: int;
     height: int;
-  }
+  } [@@deriving yojson]
 
   let make map width height = {map; width; height}
 
@@ -64,9 +64,9 @@ type t = {
   cities: Cities.t;
   mutable stations: Station.Map.t;
   options : options;
-  random: Random.State.t;
+  random: Random.State.t; [@yojson.opaque]
   seed: int;
-}
+} [@@deriving yojson]
 
 let default region resources ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
