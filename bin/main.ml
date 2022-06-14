@@ -2,7 +2,7 @@ open Arg
 open Containers
 open Tsdl
 
-type actions = [ `Font | `Pic | `Pani | `City | `Game]
+type actions = [ `Font | `Pic | `Pani | `City | `Game | `LoadGame]
 
 let file = ref ""
 let mode : actions ref = ref `Game
@@ -19,6 +19,7 @@ let arglist =
     "--pani", String (set `Pani), "Run the PANI file";
     "--city", String (set `City), "Dump city info file";
     "--dump", Set dump, "Dump the file";
+    "--load", String (set `LoadGame), "Load a save file";
   ]
 
 module R = Renderer
@@ -93,4 +94,5 @@ let () =
   | `Pani -> Mainloop.main @@ init_pani ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Frontend.run ()
+  | `LoadGame -> Frontend.run ~save:!file ()
 
