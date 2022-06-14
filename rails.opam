@@ -19,8 +19,10 @@ depends: [
   "imagelib"
   "tsdl"
   "owl-base"
+  "ppx_import"
   "ppx_deriving"
   "ppx_hash"
+  "ppx_sexp_conv"
   "lens"
   "odoc" {with-doc}
 ]
