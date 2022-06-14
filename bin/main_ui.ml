@@ -4,6 +4,11 @@ open Main_ui_d
 module R = Renderer
 module B = Backend
 
+let save_game state =
+  let s = State.sexp_of_t state in
+  print_endline "Saved Game";
+  ignore(IO.File.write "./save.txt" (Sexplib.Sexp.to_string s))
+
 (* Create menu *)
 let main_menu fonts menu_h =
   let open Menu in
@@ -358,7 +363,9 @@ let handle_event (s:State.t) v (event:Event.t) =
       | On `ImproveStation upgrade, _ ->
           let x, y = Mapview.get_cursor_pos v.view in
           {v with mode=StationView(x, y)}, ImproveStation{x; y; player=0; upgrade}
-
+      | On `Save_game, _ ->
+          save_game s;
+          v, nobaction
       | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
       | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
       | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
