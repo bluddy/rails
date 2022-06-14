@@ -11,7 +11,7 @@ type speed =
 
 type reality_level =
   [`Dispatcher_ops | `Complex_economy | `Cutthroat_competition]
-  [@@deriving enum, eq, show]
+  [@@deriving enum, eq, show, sexp]
 
 module RealityLevels = Bitset.Make( struct
   type t = reality_level

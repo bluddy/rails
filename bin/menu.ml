@@ -54,35 +54,35 @@ let get_active_char str =
 
 module MsgBox = struct
 
-  type ('a, 'b) fire =
-    | Action of 'a
-    | Checkbox of 'a * ('b -> bool) (* function to check checkbox status *)
-    | MsgBox of bool * ('a, 'b) t (* open *)
+  type ('msg, 'state) fire =
+    | Action of 'msg
+    | Checkbox of 'msg * ('state -> bool) (* function to check checkbox status *)
+    | MsgBox of bool * ('msg, 'state) t (* open *)
 
-  and ('a, 'b) kind =
+  and ('msg, 'state) kind =
     | Static of {
       color: int * int * int * int;
     }
     | Interactive of {
-      fire: ('a, 'b) fire;
-      test_enabled: ('b -> bool) option;
+      fire: ('msg, 'state) fire;
+      test_enabled: ('state -> bool) option;
       enabled: bool;
     }
 
-  and ('a, 'b) entry = {
+  and ('msg, 'state) entry = {
     y: int;
     h: int;
     name: string;
-    kind: ('a, 'b) kind;
+    kind: ('msg, 'state) kind;
   }
 
-  and ('a, 'b) t =
+  and ('msg, 'state) t =
     { 
       x: int; y: int;
       w: int; h: int;
       border_x: int; border_y: int;
       heading: string option;
-      entries: ('a, 'b) entry list;
+      entries: ('msg, 'state) entry list;
       selected: int option;
       font: Fonts.Font.t;
       index: int CharMap.t; (* for keyboard shortcuts *)
@@ -427,13 +427,13 @@ end
 module Title = struct
 
   (* menu in the upper bar *)
-  type ('a, 'b) t = {
+  type ('msg, 'state) t = {
     x: int;
     y: int;
     w: int; (* for clicking only *)
     h: int;
     name: string;
-    msgbox: ('a, 'b) MsgBox.t;
+    msgbox: ('msg, 'state) MsgBox.t;
   }
 
   let make ~fonts ~x ~y name msgbox =
@@ -475,12 +475,19 @@ end
 
 module Global = struct
 
-  type ('a, 'b) t = {
+  type ('msg, 'state) t = {
     menu_h: int;
     open_menu: int option;
-    menus: ('a, 'b) Title.t list;
+    menus: ('msg, 'state) Title.t list;
     index: (char, int) Hashtbl.t; (* for speed of search *)
   }
+
+  (* dummy serialization functions *)
+  let t_of_sexp _ _ _ : ('msg, 'state) t =
+    {
+      menu_h=0; open_menu=None; menus=[]; index=Hashtbl.create 1;
+    }
+  let sexp_of_t _ _ _ = Sexplib.Sexp.Atom ""
 
   let make ~menu_h menus =
     let index = Hashtbl.create 10 in

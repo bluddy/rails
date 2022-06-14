@@ -7,7 +7,7 @@ type dims = {
   minimap: Utils.rect;
   infobar: Utils.rect;
   train_ui: Utils.rect;
-}
+} [@@deriving sexp]
 
 type message_speed =
   [`Slow | `Fast | `Off]
@@ -15,7 +15,7 @@ type message_speed =
 
 type news_types =
   [`Financial | `Railroad | `Local]
-  [@@deriving enum, eq, show]
+  [@@deriving enum, eq, show, sexp]
 
 module NewsTypes = Bitset.Make(struct
   type t = news_types
@@ -25,13 +25,14 @@ module NewsTypes = Bitset.Make(struct
 
 type features =
   [`Animations | `Sounds]
-  [@@deriving enum, eq, show]
+  [@@deriving enum, eq, show, sexp]
 
 module Features = Bitset.Make(struct
   type t = features
   let to_enum = features_to_enum
   let of_enum = features_of_enum
-  let last = `Sounds end)
+  let last = `Sounds
+end)
 
 type options = {
   messages: message_speed;
@@ -70,7 +71,7 @@ type menu_action =
     | `Name_rr
     | `Retire
     ]
-    [@@deriving show]
+    [@@deriving show, sexp]
 
     (* modalmenu type used for factoring *)
 type ('a, 'b, 'c) modalmenu =
@@ -91,12 +92,16 @@ and 'a mode =
   | BuildTunnel of ('a, [`Tunnel | `Track], (Utils.msg * int)) modalmenu
   | StationView of int * int (* x, y *)
 
-type 'a t = {
-  dims: (dims [@sexp.opaque]);
+let mode_of_sexp _ _ = Normal
+let sexp_of_mode _ _ = Sexplib.Sexp.Atom ""
+
+type 'state t = {
+  dims: dims;
   options: options;
-  menu: ((menu_action, 'a) Menu.Global.t [@sexp.opaque]);
-  mode: ('a mode [@sexp.opaque]); (* determines mode of operation *)
+  menu: (menu_action, 'state) Menu.Global.t;
+  mode: 'state mode; (* determines mode of operation *)
   mutable view: Mapview_d.t;
 } [@@deriving sexp]
+
 
 

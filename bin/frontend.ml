@@ -92,32 +92,42 @@ let run ?save ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
 
   let init_fn win =
     let random = Random.get_state () in
-    (* Used by different elements *)
-    let seed = Random.int 0x7FFF random in
 
-    let resources = Resources.load_all () in
+    let state =
+      match save with
+      | Some savefile ->
+          let s = IO.File.read_exn savefile in
+          Sexplib.Sexp.of_string s
+          |> State.t_of_sexp
 
-    let screen = view in
+      | None ->
 
-    let backend = B.default region resources ~random ~seed in
+        (* Used by different elements *)
+        let seed = Random.int 0x7FFF random in
 
-    let textures = Textures.of_resources win resources in
+        let resources = Resources.load_all () in
 
-    let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
+        let screen = view in
 
-    let fonts = Fonts.load win in
+        let backend = B.default region resources ~random ~seed in
 
-    let ui = Main_ui.default win fonts in
+        let textures = Textures.of_resources win resources in
 
-    let state = {
-      map_tex;
-      State.screen;
-      backend;
-      resources;
-      textures;
-      fonts;
-      ui;
-    }
+        let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
+
+        let fonts = Fonts.load win in
+
+        let ui = Main_ui.default win fonts in
+
+        {
+          map_tex;
+          State.screen;
+          backend;
+          resources;
+          textures;
+          fonts;
+          ui;
+        }
     in
 
     Printf.printf " done.\n";

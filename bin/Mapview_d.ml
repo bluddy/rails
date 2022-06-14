@@ -25,7 +25,7 @@ type t =
     cursor_x: int;
     cursor_y: int;
     zoom: zoom;
-    dims: Utils.rect; [@sexp.opaque]
+    dims: Utils.rect;
     build_mode: bool;
     survey: bool;
     options: Options.t;

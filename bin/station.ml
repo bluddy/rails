@@ -32,7 +32,7 @@ type upgrade =
   | Restaurant
   | LivestockPens (* keep it higher so it's drawn last *)
   | Hotel
-  [@@deriving enum, show]
+  [@@deriving enum, show, sexp]
 
 let get_price upgrade =
   let p = match upgrade with
