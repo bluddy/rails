@@ -87,16 +87,14 @@ let render win (s:State.t) =
 
   | _ -> ()
 
-let run ?load ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
+let run ?load ?(region=Region.WestUS) () : unit =
   Printf.printf "Loading resources...";
 
   let init_fn win =
 
-    let create_state ?backend ?ui_options ?ui_view () =
+    let create_state ?backend ?ui_options ?ui_view screen =
 
         let resources = Resources.load_all () in
-
-        let screen = view in
 
         let backend = match backend with
           | Some b -> b
@@ -132,17 +130,19 @@ let run ?load ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
       | Some savefile ->
           Printf.printf "Loading %s...\n" savefile;
           let s = IO.File.read_exn savefile in
-          begin match String.split_on_char '*' s with
+          let lst = String.split s ~by:"====" in
+          Printf.printf "len[%d]\n%!" (List.length lst);
+          begin match lst with
           | [backend;options;view] ->
               let backend = Sexplib.Sexp.of_string backend |> Backend.t_of_sexp in
               let ui_options = Sexplib.Sexp.of_string options |> Main_ui_d.options_of_sexp in
               let ui_view = Sexplib.Sexp.of_string view |> Mapview_d.t_of_sexp in
-              create_state ~backend ~ui_options ~ui_view ()
+              create_state ~backend ~ui_options ~ui_view Screen.MapView
 
           | _ -> assert false
           end
               
-      | None -> create_state ()
+      | None -> create_state (Screen.MapGen None)
 
     in
 
