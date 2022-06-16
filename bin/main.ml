@@ -94,5 +94,5 @@ let () =
   | `Pani -> Mainloop.main @@ init_pani ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Frontend.run ()
-  | `LoadGame -> Frontend.run ~save:!file ()
+  | `LoadGame -> Frontend.run ~load:!file ()
 

@@ -18,6 +18,11 @@ let default dims =
     options=Options.of_list [`StationBoxes];
   }
 
+(* let load default sexp = *)
+(*   { default with *)
+(*     cursor_x=int_of_ *)
+(*   } *)
+
 let get_cursor_pos v = (v.cursor_x, v.cursor_y)
 
 let get_zoom v = v.zoom

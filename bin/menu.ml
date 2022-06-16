@@ -487,7 +487,7 @@ module Global = struct
     {
       menu_h=0; open_menu=None; menus=[]; index=Hashtbl.create 1;
     }
-  let sexp_of_t _ _ _ = Sexplib.Sexp.Atom ""
+  let sexp_of_t _ _ _ = Sexplib.Sexp.Atom "menu"
 
   let make ~menu_h menus =
     let index = Hashtbl.create 10 in

@@ -57,6 +57,20 @@ module Cities = struct
 
 end
 
+module Random = struct
+  include Random
+  module State = struct
+    include Random.State
+    let t_of_sexp = function
+    | Sexplib.Sexp.Atom s ->
+        Marshal.from_string s 0
+    | _ -> failwith "unexpected sexp"
+    let sexp_of_t v =
+      Sexplib.Sexp.Atom (Marshal.to_string v [])
+  end
+end
+
+
 type t = {
   year: int;
   region: Region.t;
@@ -65,7 +79,7 @@ type t = {
   cities: Cities.t;
   mutable stations: Station_map.t;
   options : options;
-  random: (Random.State.t [@sexp.opaque]);
+  random: Random.State.t;
   seed: int;
 } [@@deriving sexp]
 

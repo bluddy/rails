@@ -87,18 +87,17 @@ let render win (s:State.t) =
 
   | _ -> ()
 
-let run ?save ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
+let run ?load ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
   Printf.printf "Loading resources...";
 
   let init_fn win =
     let random = Random.get_state () in
 
     let state =
-      match save with
+      match load with
       | Some savefile ->
           let s = IO.File.read_exn savefile in
-          Sexplib.Sexp.of_string s
-          |> State.t_of_sexp
+          Sexplib.Sexp.of_string s |> State.t_of_sexp
 
       | None ->
 
