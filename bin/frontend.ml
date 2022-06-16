@@ -91,24 +91,22 @@ let run ?load ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
   Printf.printf "Loading resources...";
 
   let init_fn win =
-    let random = Random.get_state () in
 
-    let state =
-      match load with
-      | Some savefile ->
-          let s = IO.File.read_exn savefile in
-          Sexplib.Sexp.of_string s |> State.t_of_sexp
-
-      | None ->
-
-        (* Used by different elements *)
-        let seed = Random.int 0x7FFF random in
+    let create_state ?backend ?ui_options ?ui_view () =
 
         let resources = Resources.load_all () in
 
         let screen = view in
 
-        let backend = B.default region resources ~random ~seed in
+        let backend = match backend with
+          | Some b -> b
+          | None ->
+              (* Used by different elements *)
+              Random.self_init ();
+              let random = Random.get_state () in
+              let seed = Random.int 0x7FFF random in
+              B.default region resources ~random ~seed
+        in
 
         let textures = Textures.of_resources win resources in
 
@@ -116,7 +114,7 @@ let run ?load ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
 
         let fonts = Fonts.load win in
 
-        let ui = Main_ui.default win fonts in
+        let ui = Main_ui.default ?options:ui_options ?view:ui_view win fonts in
 
         {
           map_tex;
@@ -129,6 +127,25 @@ let run ?load ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
         }
     in
 
+    let state =
+      match load with
+      | Some savefile ->
+          Printf.printf "Loading %s...\n" savefile;
+          let s = IO.File.read_exn savefile in
+          begin match String.split_on_char '*' s with
+          | [backend;options;view] ->
+              let backend = Sexplib.Sexp.of_string backend |> Backend.t_of_sexp in
+              let ui_options = Sexplib.Sexp.of_string options |> Main_ui_d.options_of_sexp in
+              let ui_view = Sexplib.Sexp.of_string view |> Mapview_d.t_of_sexp in
+              create_state ~backend ~ui_options ~ui_view ()
+
+          | _ -> assert false
+          end
+              
+      | None -> create_state ()
+
+    in
+
     Printf.printf " done.\n";
 
     state, Mainloop.{
@@ -138,8 +155,4 @@ let run ?load ?(view=Screen.MapGen None) ?(region=Region.WestUS) () : unit =
     }
   in
   Mainloop.main init_fn
-
-
-
-
 

@@ -4,7 +4,7 @@ open Containers
 type t = {
   (* saveable *)
   mutable backend: Backend.t;
-  mutable ui: t Main_ui_d.t; (* get around circular modules *)
+  mutable ui: (t Main_ui_d.t [@sexp.opaque]); (* get around circular modules *)
 
   (* non-saveable *)
   screen: (Screen.t [@sexp.opaque]);

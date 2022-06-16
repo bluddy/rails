@@ -93,7 +93,7 @@ and 'a mode =
   | StationView of int * int (* x, y *)
 
 let mode_of_sexp _ _ = Normal
-let sexp_of_mode _ _ = Sexplib.Sexp.Atom ""
+let sexp_of_mode _ _ = Sexplib.Sexp.Atom "mode"
 
 type 'state t = {
   dims: dims;
@@ -101,7 +101,7 @@ type 'state t = {
   menu: (menu_action, 'state) Menu.Global.t;
   mode: 'state mode; (* determines mode of operation *)
   mutable view: Mapview_d.t;
-} [@@deriving sexp]
+}
 
 
 

@@ -4,10 +4,17 @@ open Main_ui_d
 module R = Renderer
 module B = Backend
 
-let save_game state =
-  let s = State.sexp_of_t state in
-  print_endline "Saved Game";
-  ignore(IO.File.write "./save.txt" (Sexplib.Sexp.to_string s))
+let save_game (state:State.t) =
+  let lst =
+    [
+      Backend.sexp_of_t state.backend |> Sexplib.Conv.string_of_sexp;
+      Main_ui_d.sexp_of_options state.ui.options |> Sexplib.Conv.string_of_sexp;
+      Mapview_d.sexp_of_t state.ui.view |> Sexplib.Conv.string_of_sexp;
+    ]
+  in
+  let s = String.concat "*" lst in
+  ignore(IO.File.write "./save.txt" s);
+  print_endline "Saved Game"
 
 (* Create menu *)
 let main_menu fonts menu_h =
@@ -186,7 +193,7 @@ let main_menu fonts menu_h =
   in
   Menu.Global.make ~menu_h titles
 
-let default win fonts =
+let default ?options ?view win fonts =
   let screen = Utils.{
     w = R.width win;
     h = R.height win;
@@ -247,17 +254,24 @@ let default win fonts =
       train_ui;
     }
   in
-  let options =
-    {
-      messages=`Slow;
-      news=NewsTypes.of_list [`Financial; `Railroad; `Local];
-      features=Features.of_list [`Animations; `Sounds];
-    }
+  let options = match options with
+    | Some options -> options
+    | None ->
+      {
+        messages=`Slow;
+        news=NewsTypes.of_list [`Financial; `Railroad; `Local];
+        features=Features.of_list [`Animations; `Sounds];
+      }
   in
+  let view = match view with
+    | Some view -> view
+    | None -> Mapview.default dims.mapview
+  in
+  let menu = main_menu fonts dims.menu.h in
   {
     dims;
-    menu = main_menu fonts dims.menu.h;
-    view = Mapview.default dims.mapview;
+    menu;
+    view;
     options;
     mode=Normal;
   }
