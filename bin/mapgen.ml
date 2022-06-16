@@ -249,7 +249,11 @@ let add_city_list r region (city_list:(int * int * string) list) : (int * int) l
     let x_y_func = Utils.clip x_y_func ~min:0 ~max:767 in
     let max_val = x_y_func / 16 + factor / 4 in
     (* n is 0 to 24 *)
-    let n = Random.int max_val r |> Utils.clip ~min:0 ~max:24 in
+    let n =
+      if max_val > 0 then
+        Random.int max_val r |> Utils.clip ~min:0 ~max:24
+      else 0
+    in
     (* x_y_func is at most 767. /32 = 23 *)
     let factor = factor + (x_y_func / 32) - n in
     if debug then
