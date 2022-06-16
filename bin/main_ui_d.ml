@@ -92,9 +92,6 @@ and 'a mode =
   | BuildTunnel of ('a, [`Tunnel | `Track], (Utils.msg * int)) modalmenu
   | StationView of int * int (* x, y *)
 
-let mode_of_sexp _ _ = Normal
-let sexp_of_mode _ _ = Sexplib.Sexp.Atom "mode"
-
 type 'state t = {
   dims: dims;
   options: options;

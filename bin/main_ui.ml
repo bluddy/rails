@@ -5,14 +5,10 @@ module R = Renderer
 module B = Backend
 
 let save_game (state:State.t) =
-  let lst =
-    [
-      Backend.sexp_of_t state.backend |> Sexplib.Conv.string_of_sexp;
-      Main_ui_d.sexp_of_options state.ui.options |> Sexplib.Conv.string_of_sexp;
-      Mapview_d.sexp_of_t state.ui.view |> Sexplib.Conv.string_of_sexp;
-    ]
-  in
-  let s = String.concat "*" lst in
+  let s1 = Backend.sexp_of_t state.backend |> Sexplib.Sexp.to_string in
+  let s2 = Main_ui_d.sexp_of_options state.ui.options |> Sexplib.Sexp.to_string in
+  let s3 = Mapview_d.sexp_of_t state.ui.view |> Sexplib.Sexp.to_string in
+  let s = String.concat "*" [s1; s2; s3] in
   ignore(IO.File.write "./save.txt" s);
   print_endline "Saved Game"
 

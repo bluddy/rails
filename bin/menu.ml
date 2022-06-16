@@ -482,13 +482,6 @@ module Global = struct
     index: (char, int) Hashtbl.t; (* for speed of search *)
   }
 
-  (* dummy serialization functions *)
-  let t_of_sexp _ _ _ : ('msg, 'state) t =
-    {
-      menu_h=0; open_menu=None; menus=[]; index=Hashtbl.create 1;
-    }
-  let sexp_of_t _ _ _ = Sexplib.Sexp.Atom "menu"
-
   let make ~menu_h menus =
     let index = Hashtbl.create 10 in
     List.iteri (fun i title ->

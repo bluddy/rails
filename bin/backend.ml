@@ -67,6 +67,7 @@ module Random = struct
     | _ -> failwith "unexpected sexp"
     let sexp_of_t v =
       Sexplib.Sexp.Atom (Marshal.to_string v [])
+    (* let sexp_of_t v = Sexplib.Sexp.Atom "randomstuff" *)
   end
 end
 
