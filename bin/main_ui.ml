@@ -16,7 +16,7 @@ let save_game (state:State.t) =
 let main_menu fonts menu_h =
   let open Menu in
   let game_speed =
-    let check_speed speed (s:State.t) = B.equal_speed s.backend.options.speed speed in
+    let check_speed speed (s:State.t) = B.equal_speed (Backend.get_speed s.backend) speed in
     let open MsgBox in
     make ~fonts
     [
@@ -381,6 +381,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       | On `Save_game, _ ->
           save_game s;
           v, nobaction
+      | On (`Speed speed), _ -> v, B.Action.SetSpeed speed
       | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
       | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
       | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg

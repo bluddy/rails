@@ -101,6 +101,10 @@ let default region resources ~random ~seed =
   let stations = Station_map.create Tilemap.map_width in
   {time=0; year=1800; map; region; cities; track; stations; options; random; seed}
 
+let get_speed v = v.options.speed
+
+let _set_speed v speed = {v with options={v.options with speed}}
+
 let map_height v = Tilemap.get_height v.map
 
 let map_width v = Tilemap.get_width v.map
@@ -212,6 +216,7 @@ module Action = struct
     | BuildTunnel of Utils.msg * int (* length *)
     | RemoveTrack of Utils.msg
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
+    | SetSpeed of speed
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
@@ -228,6 +233,8 @@ module Action = struct
         _remove_track backend ~x ~y ~dir ~player
     | ImproveStation {x; y; player; upgrade} ->
         _improve_station backend ~x ~y ~player ~upgrade
+    | SetSpeed speed ->
+        _set_speed backend speed
     | NoAction -> backend
 
 end
