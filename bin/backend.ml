@@ -73,6 +73,7 @@ end
 
 
 type t = {
+  mutable time: int;
   year: int;
   region: Region.t;
   map : Tilemap.t;
@@ -98,7 +99,7 @@ let default region resources ~random ~seed =
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
   let stations = Station_map.create Tilemap.map_width in
-  {year=1800; map; region; cities; track; stations; options; random; seed}
+  {time=0; year=1800; map; region; cities; track; stations; options; random; seed}
 
 let map_height v = Tilemap.get_height v.map
 

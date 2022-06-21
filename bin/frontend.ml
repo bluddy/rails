@@ -122,6 +122,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
           textures;
           fonts;
           ui;
+          last_tick = 0l;
         }
     in
 

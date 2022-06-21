@@ -4,14 +4,15 @@ open Containers
 type t = {
   (* saveable *)
   mutable backend: Backend.t;
-  mutable ui: (t Main_ui_d.t [@sexp.opaque]); (* get around circular modules *)
+  mutable ui: t Main_ui_d.t; (* get around circular modules *)
 
   (* non-saveable *)
-  screen: (Screen.t [@sexp.opaque]);
-  mutable map_tex: (Renderer.Texture.t [@sexp.opaque]);
-  textures: (Textures.t [@sexp.opaque]);
-  resources: (Resources.t [@sexp.opaque]);
-  fonts: (Fonts.t [@sexp.opaque]);
+  mutable last_tick: Int32.t;
+  screen: Screen.t;
+  mutable map_tex: Renderer.Texture.t;
+  textures: Textures.t;
+  resources: Resources.t;
+  fonts: Fonts.t;
 }
-[@@deriving lens, sexp]
+[@@deriving lens]
 
