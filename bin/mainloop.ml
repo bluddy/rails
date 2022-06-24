@@ -5,7 +5,7 @@ module R = Renderer
 
 type 'a t = {
   handle_event: 'a -> Event.t -> 'a * bool;
-  handle_tick: 'a -> int32 -> 'a;
+  handle_tick: 'a -> int -> 'a;
   render: 'a -> unit;
 }
 
@@ -15,15 +15,16 @@ let main init_fn =
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)
 
-  let fps = 15l in (* WSL has limited fps support *)
-  let render_wait_time = Int32.(1000l/fps) in
-  let tick_fps = 15l in (* How fast we want to update state *)
-  let tick_wait_time = Int32.(1000l/tick_fps) in
-  let sleep_time = 30l in (* less than render_wait_time *)
+  let fps = 15 in (* WSL has limited fps support *)
+  let render_wait_time = 1000/fps in
+  let tick_fps = 15 in (* How fast we want to update state *)
+  let tick_wait_time = 1000/tick_fps in
+  let sleep_time = 30 in (* less than render_wait_time *)
+  let sleep_time_l = sleep_time |> Int32.of_int in
 
   let data, v = init_fn win in
 
-  let time = Sdl.get_ticks () in
+  let time = Sdl.get_ticks () |> Int32.to_int in
   let last_render_time = ref time in
   let last_tick_time = ref time in
 
@@ -41,9 +42,9 @@ let main init_fn =
           (* Get rid of events we don't care about *)
           event_loop data
       | _ -> 
-        let time = Sdl.get_ticks () in
+        let time = Sdl.get_ticks () |> Int32.to_int in
         let data =
-          if Int32.(time - !last_tick_time > tick_wait_time) then (
+          if time - !last_tick_time > tick_wait_time then (
             last_tick_time := time;
             v.handle_tick data time
           ) else
@@ -59,8 +60,7 @@ let main init_fn =
     match response with
     | `Quit -> ()
     | _ ->
-      let open Int32.Infix in
-      let time = Sdl.get_ticks () in
+      let time = Sdl.get_ticks () |> Int32.to_int in
       let tick_diff = time - !last_tick_time in
       let data =
         if tick_diff >= tick_wait_time then (
@@ -77,7 +77,7 @@ let main init_fn =
       );
       if render_wait_time - render_diff >= sleep_time && tick_wait_time - tick_diff >= sleep_time then (
         (* nap *)
-        Sdl.delay sleep_time;
+        Sdl.delay sleep_time_l;
       );
       update_loop data
   in

@@ -7,7 +7,7 @@ module B = Backend
 let update_map _win v map =
   R.Texture.update v.State.map_tex @@ Tilemap.to_img map
 
-let handle_tick win (s:State.t) (time:int32) =
+let handle_tick win (s:State.t) time =
   let state =
     match s.screen with
     | Screen.MapGen None ->
@@ -34,11 +34,9 @@ let handle_tick win (s:State.t) (time:int32) =
         {s with backend; screen=Screen.MapGen(Some data)}
 
     | Screen.MapView ->
-        let ui, action = Main_ui.handle_tick s s.ui time in
+        let ui = Main_ui.handle_tick s s.ui time in
         s.ui <- ui;
-        let backend = 
-          Backend.Action.run s.backend action
-        in
+        let backend = Backend.handle_tick s.backend time in
         s.backend <- backend;
         s
 
@@ -122,7 +120,6 @@ let run ?load ?(region=Region.WestUS) () : unit =
           textures;
           fonts;
           ui;
-          last_tick = 0l;
         }
     in
 

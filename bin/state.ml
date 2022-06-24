@@ -7,12 +7,10 @@ type t = {
   mutable ui: t Main_ui_d.t; (* get around circular modules *)
 
   (* non-saveable *)
-  mutable last_tick: Int32.t;
   screen: Screen.t;
   mutable map_tex: Renderer.Texture.t;
   textures: Textures.t;
   resources: Resources.t;
   fonts: Fonts.t;
 }
-[@@deriving lens]
 

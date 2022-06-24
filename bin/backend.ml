@@ -3,17 +3,30 @@ open Sexplib.Std
 
 (* This is the backend. All game-modifying functions go through here *)
 
-(* The actual game (server) state *)
+(* The actual game (server) state
+   Observers can observe data in the backend,
+   but actions can only be taken via messages (Backend.Action)
+ *)
+
+let min_tick = 15 (* ms *)
 
 type speed =
   [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
   [@@deriving enum, eq, show, sexp]
 
+  (* multiplier for speed, relationship between rates *)
+let delay_mult_of_speed = function
+  | `Frozen -> 1000000 (* frozen *)
+  | `Slow -> 30
+  | `Moderate -> 9
+  | `Fast -> 3
+  | `Turbo -> 1 (* approximate. "As fast as possible" in original *)
+
 type reality_level =
   [`Dispatcher_ops | `Complex_economy | `Cutthroat_competition]
   [@@deriving enum, eq, show, sexp]
 
-module RealityLevels = Bitset.Make( struct
+module RealityLevels = Bitset.Make(struct
   type t = reality_level
   let to_enum = reality_level_to_enum
   let of_enum = reality_level_of_enum
@@ -58,6 +71,7 @@ module Cities = struct
 end
 
 module Random = struct
+  (* Expand Random to serialize the state *)
   include Random
   module State = struct
     include Random.State
@@ -71,9 +85,10 @@ module Random = struct
   end
 end
 
-
 type t = {
-  mutable time: int;
+  mutable last_tick: int; (* last time we updated a cycle *)
+  mutable cycle: int; (* counter used for all sorts of per-tick updates *)
+  mutable time: int;  (* In-game time, resets at end of year *)
   year: int;
   region: Region.t;
   map : Tilemap.t;
@@ -99,7 +114,12 @@ let default region resources ~random ~seed =
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
   let stations = Station_map.create Tilemap.map_width in
-  {time=0; year=1800; map; region; cities; track; stations; options; random; seed}
+  {
+    time=0;
+    cycle=0;
+    last_tick=0;
+    year=1800;
+    map; region; cities; track; stations; options; random; seed}
 
 let get_speed v = v.options.speed
 
@@ -203,8 +223,22 @@ let _improve_station v ~x ~y ~player ~upgrade =
   v.stations <- stations;
   v
   
-
 let trackmap_iter v f = Trackmap.iter v.track f
+
+let handle_tick v cur_time =
+  let delay_mult = delay_mult_of_speed v.options.speed in
+  let tick_delta = delay_mult * min_tick in
+  let rec loop last_time =
+    let new_time = last_time + tick_delta in
+    if new_time > cur_time then last_time
+    else (
+      (* do stuff for tick *)
+      ();
+      loop new_time
+    )
+  in
+  v.last_tick <- loop v.last_tick;
+  v
 
 module Action = struct
   type t =

@@ -498,7 +498,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         v, B.Action.NoAction
 
 
-let handle_tick _s v _time = v, B.Action.NoAction
+let handle_tick _s v _time = v
 
 let render (win:R.window) (s:State.t) v =
   let render_main () =
