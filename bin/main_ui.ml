@@ -500,6 +500,8 @@ let handle_event (s:State.t) v (event:Event.t) =
 
 let handle_tick _s v _time = v
 
+let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
+
 let render (win:R.window) (s:State.t) v =
   let render_main () =
     let dims = v.dims in
@@ -535,6 +537,16 @@ let render (win:R.window) (s:State.t) v =
     (* Info bar *)
     let y = y + dims.minimap.h in
     R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
+
+    let money = B.get_money s.backend ~player:0 in
+    let money_s = Printf.sprintf "$%#6d,000" money |>
+       String.map (function '_' -> ',' | x -> x)
+    in
+    Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:66 money_s;
+
+    let month, year = B.get_date s.backend in
+    let date_s = Printf.sprintf "%s %d" (str_of_month.(month)) year in
+    Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:74 date_s;
 
     (* Train area *)
     let y = y + dims.infobar.h in

@@ -1,5 +1,6 @@
 open Containers
 open Sexplib.Std
+open Tsdl
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 
@@ -114,4 +115,6 @@ let scan ~range ~x ~y ~width ~height ~f =
 
 let snd_option (x,y) =
   x, (y |> Option.get_exn_or "error")
+
+let get_time () = Sdl.get_ticks () |> Int32.to_int
 

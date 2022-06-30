@@ -8,7 +8,10 @@ open Sexplib.Std
    but actions can only be taken via messages (Backend.Action)
  *)
 
-let min_tick = 15 (* ms *)
+let tick_ms = 15 (* ms *)
+let year_ticks = 2032 (* really 170*12 = 2040 is new year *)
+let month_ticks = 170
+let num_players = 4
 
 type speed =
   [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
@@ -89,7 +92,8 @@ type t = {
   mutable last_tick: int; (* last time we updated a cycle *)
   mutable cycle: int; (* counter used for all sorts of per-tick updates *)
   mutable time: int;  (* In-game time, resets at end of year *)
-  year: int;
+  mutable year: int;
+  players: Player.t array;
   region: Region.t;
   map : Tilemap.t;
   mutable track: Trackmap.t;
@@ -114,11 +118,13 @@ let default region resources ~random ~seed =
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
   let stations = Station_map.create Tilemap.map_width in
+  let players = Array.make num_players Player.default in
   {
     time=0;
     cycle=0;
     last_tick=0;
     year=1800;
+    players;
     map; region; cities; track; stations; options; random; seed}
 
 let get_speed v = v.options.speed
@@ -154,6 +160,8 @@ let check_build_track v ~x ~y ~dir ~player =
   | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
   | (`Ok | `Ferry) as ret when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
   | _ -> `Illegal
+
+let get_money v ~player = Player.get_money v.players.(player)
 
 let _build_tunnel v ~x ~y ~dir ~player ~length =
   let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
@@ -227,18 +235,21 @@ let trackmap_iter v f = Trackmap.iter v.track f
 
 let handle_tick v cur_time =
   let delay_mult = delay_mult_of_speed v.options.speed in
-  let tick_delta = delay_mult * min_tick in
-  let rec loop last_time =
-    let new_time = last_time + tick_delta in
-    if new_time > cur_time then last_time
-    else (
-      (* do stuff for tick *)
-      ();
-      loop new_time
-    )
-  in
-  v.last_tick <- loop v.last_tick;
+  let tick_delta = delay_mult * tick_ms in
+  let new_time = v.last_tick + tick_delta in
+  if cur_time >= new_time then (
+    (* do stuff for tick *)
+    v.time <- v.time + 1;
+    v.cycle <- v.cycle + 1;
+    v.last_tick <- cur_time;
+    if v.time >= year_ticks then (
+      v.year <- v.year + 1;
+    );
+  );
   v
+
+let month_of_time time = (time / month_ticks) mod 12
+let get_date v = month_of_time v.time, v.year
 
 module Action = struct
   type t =

@@ -24,7 +24,7 @@ let main init_fn =
 
   let data, v = init_fn win in
 
-  let time = Sdl.get_ticks () |> Int32.to_int in
+  let time = Utils.get_time () in
   let last_render_time = ref time in
   let last_tick_time = ref time in
 
