@@ -127,6 +127,9 @@ let default region resources ~random ~seed =
     players;
     map; region; cities; track; stations; options; random; seed}
 
+let modify_player v ~player f =
+  v.players.(player) <- f (v.players.(player))
+
 let get_speed v = v.options.speed
 
 let _set_speed v speed = {v with options={v.options with speed}}
@@ -165,6 +168,7 @@ let get_money v ~player = Player.get_money v.players.(player)
 
 let _build_tunnel v ~x ~y ~dir ~player ~length =
   let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
+  modify_player v ~player (Player.add_track ~length);
   v.track <- track;
   v
 
@@ -175,10 +179,13 @@ let check_build_station v ~x ~y ~player station_type =
 
 let _build_station v ~x ~y station_type ~player =
   (* TODO: graph *)
-  let track = Trackmap.build_station v.track ~x ~y station_type in
+  let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let station = Station.make ~x ~y ~year:v.year ~name:city ~kind:station_type ~player in
   let stations = Station_map.add v.stations x y station in
+  if build_new_track then (
+    modify_player v ~player (Player.add_track ~length:1)
+  );
   v.track <- track;
   v.stations <- stations;
   v
@@ -190,11 +197,13 @@ let check_build_bridge v ~x ~y ~dir ~player =
 
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
+  modify_player v ~player (Player.add_track ~length:2);
   v.track <- track;
   v
 
 let _build_track v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
+  modify_player v ~player (Player.add_track ~length:1);
   v.track <- track;
   v
 
@@ -209,6 +218,7 @@ let _build_ferry v ~x ~y ~dir ~player =
     | _ -> assert false
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
+  modify_player v ~player (Player.add_track ~length:1);
   v.track <- track;
   v
 
@@ -217,6 +227,7 @@ let check_remove_track v ~x ~y ~dir ~player=
 
 let _remove_track v ~x ~y ~dir ~player =
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
+  modify_player v ~player (Player.add_track ~length:(-1));
   v.track <- track;
   v
 
@@ -242,13 +253,16 @@ let handle_tick v cur_time =
     v.time <- v.time + 1;
     v.cycle <- v.cycle + 1;
     v.last_tick <- cur_time;
-    if v.time >= year_ticks then (
-      v.year <- v.year + 1;
-    );
   );
+  let v = 
+    if v.time >= year_ticks then
+      {v with year=v.year + 1}
+    else v
+  in
   v
 
 let _month_of_time time = (time / month_ticks) mod 12
+
 let get_date v = _month_of_time v.time, v.year
 
 module Action = struct

@@ -64,33 +64,34 @@ let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
    else match get v x y with
    | None -> `NoTrack
    | Some ({kind=Track;_} as t) when t.player = player && Track.is_straight t ->
-         let range = Station.range_of station_type in
-         let match_fn j i =
-           match get v j i with
-           | Some {kind=Station(st);_} ->
-               let range2 = Station.range_of st in
-               let range = range + range2 in
-               abs (j - x) < range && abs (i - y) < range
-           | _ -> false
-         in
-         let station_test =
-           Utils.scan ~range ~x ~y ~width:v.width ~height:v.height ~f:match_fn
-         in
-         begin match station_test with
-         | Some _ -> `TooClose
-         | None -> `Ok
-         end
-
+        let range = Station.range_of station_type in
+        let match_fn j i =
+          match get v j i with
+          | Some {kind=Station(st);_} ->
+              let range2 = Station.range_of st in
+              let range = range + range2 in
+              abs (j - x) < range && abs (i - y) < range
+          | _ -> false
+        in
+        let station_test =
+          Utils.scan ~range ~x ~y ~width:v.width ~height:v.height ~f:match_fn
+        in
+        begin match station_test with
+        | Some _ -> `TooClose
+        | None -> `Ok
+        end
    | _ -> `Illegal
    
 let build_station v ~x ~y station_type =
   match get v x y with
-  | Some ({kind=Track;_} as t) ->
+  | Some ({kind=Track; _} as t) ->
+      (* Do we build new track *)
+      let build_new_track = Dir.Set.cardinal t.dirs > 1 in
       let track = Track.straighten t in
       let station = {track with kind=Station(station_type)} in
       set v x y station;
-      v
-  | _ -> v
+      v, build_new_track
+  | _ -> assert false
 
   (* Check that a stretch of track is clear: tunnel or bridge
      No track can be in the middle, but it's ok if track is at the end
