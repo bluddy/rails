@@ -248,8 +248,8 @@ let handle_tick v cur_time =
   );
   v
 
-let month_of_time time = (time / month_ticks) mod 12
-let get_date v = month_of_time v.time, v.year
+let _month_of_time time = (time / month_ticks) mod 12
+let get_date v = _month_of_time v.time, v.year
 
 module Action = struct
   type t =
