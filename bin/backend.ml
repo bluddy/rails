@@ -13,6 +13,15 @@ let year_ticks = 2032 (* really 170*12 = 2040 is new year *)
 let month_ticks = 170
 let num_players = 4
 
+(* Cycle counts to perform some tasks *)
+let cycles_periodic_maintenance = 1024
+let cycles_priority_delivery = 8
+let cycles_background_update = 16
+let cycles_ai_update = cycles_background_update
+(* In the original game, we do slices of 1/32 stations. No need *)
+let cycles_station_supply_demand = cycles_background_update * 32
+let cycles_supply_decay = 512
+
 type speed =
   [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
   [@@deriving enum, eq, show, sexp]
@@ -107,17 +116,18 @@ type t = {
 let default region resources ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
   let map = Tilemap.of_ndarray ~region ~seed map in
+  let width, height = Tilemap.get_width map, Tilemap.get_height map in
   let cities =
     let h = Hashtbl.create 100 in
     List.assoc ~eq:(Stdlib.(=)) region resources.res_cities
-    |> List.iter (fun (name,x,y) -> Hashtbl.replace h (y*Tilemap.map_width + x) name);
-    Cities.make h Tilemap.map_width Tilemap.map_height
+    |> List.iter (fun (name,x,y) -> Hashtbl.replace h (y * width + x) name);
+    Cities.make h width height
   in
-  let track = Trackmap.empty Tilemap.map_width Tilemap.map_height in
+  let track = Trackmap.empty width height in
   let speed = `Moderate in
   let reality_levels = RealityLevels.empty in
   let options = {speed; reality_levels} in
-  let stations = Station_map.create Tilemap.map_width in
+  let stations = Station_map.create width in
   let players = Array.make num_players Player.default in
   {
     time=0;
@@ -244,19 +254,40 @@ let _improve_station v ~x ~y ~player ~upgrade =
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
+  (* Most time-based work happens here *)
+let increment_cycle v =
+  v.cycle <- v.cycle + 1;
+
+  (* ai_routines *)
+
+  (*
+  if v.cycle mod cycles_station_supply_demand = 0 then (
+    Station_map.iter 
+    (fun x y station -> 
+
+    v.stations
+
+  );
+  *)
+
+  (* check and handle new year *)
+  v.time <- v.time + 1;
+  let v = 
+    if v.time >= year_ticks then
+      {v with year=v.year + 1}
+    else v
+  in
+  v
+
 let handle_tick v cur_time =
   let delay_mult = delay_mult_of_speed v.options.speed in
   let tick_delta = delay_mult * tick_ms in
   let new_time = v.last_tick + tick_delta in
-  if cur_time >= new_time then (
-    (* do stuff for tick *)
-    v.time <- v.time + 1;
-    v.cycle <- v.cycle + 1;
-    v.last_tick <- cur_time;
-  );
-  let v = 
-    if v.time >= year_ticks then
-      {v with year=v.year + 1}
+  let v =
+    if cur_time >= new_time then (
+      v.last_tick <- cur_time;
+      increment_cycle v
+    )
     else v
   in
   v

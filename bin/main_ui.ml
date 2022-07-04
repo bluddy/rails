@@ -207,12 +207,12 @@ let default ?options ?view win fonts =
   let mapview = Utils.{
     x = 0;
     y = menu.h;
-    w = Tilemap.map_width;
-    h = Tilemap.map_height;
+    w = Tilemap.map_width_default;
+    h = Tilemap.map_height_default;
   }
   in
   let ui = Utils.{
-    x = Tilemap.map_width - 1;
+    x = Tilemap.map_width_default - 1;
     y = menu.h + menu.y;
     w = 64;
     h = screen.h - menu.h;

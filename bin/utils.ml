@@ -84,33 +84,51 @@ let scan_unordered ~range ~x ~y ~width ~height ~f =
   with
   | Found x -> x
 
-let scan ~range ~x ~y ~width ~height ~f =
+let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
+  let min_x = max 0 (x-range) in
+  let max_x = min (width-1) (x+range) in
+  let min_y = max 0 (y-range) in
+  let max_y = min (height-1) (y+range) in
+  let v = ref init in
+  for i=min_y to max_y do
+    for j=min_x to max_x do
+      let read_val = read_f j i in
+      v := f !v j i read_val
+    done
+  done;
+  !v
+
+  (* Scan in a spiral pattern *)
+let scan =
   let offsets =
     [Dir.Right; Down; Left; Up] |> List.map Dir.to_offsets
   in
-  if f x y then Some (x, y)
-  else
-    let rec loop i =
-      if i > range then None
-      else
-        let start_x, start_y = x - i, y - i in
+  let inner ~range ~x ~y ~width ~height ~f =
+    if f x y then Some (x, y)
+    else
+      let rec loop i =
+        if i > range then None
+        else
+          let start_x, start_y = x - i, y - i in
 
-        let rec loop_inner counter x y lst = match lst with
-          | (x_offset, y_offset)::_ when counter > 0 ->
-              let x, y = x + x_offset, y + y_offset in
-              if x >= 0 && y >= 0 && x < width && y < height && f x y then Some (x, y)
-              else
-                loop_inner (counter - 1) x y lst
-          | _::rest ->
-              loop_inner (i*2) x y rest
-          | [] ->
-              None
-        in
-        match loop_inner (i*2) start_x start_y offsets with
-        | None -> loop (i+1)
-        | x -> x
-    in
-    loop 1
+          let rec loop_inner counter x y lst = match lst with
+            | (x_offset, y_offset)::_ when counter > 0 ->
+                let x, y = x + x_offset, y + y_offset in
+                if x >= 0 && y >= 0 && x < width && y < height && f x y then Some (x, y)
+                else
+                  loop_inner (counter - 1) x y lst
+            | _::rest ->
+                loop_inner (i*2) x y rest
+            | [] ->
+                None
+          in
+          match loop_inner (i*2) start_x start_y offsets with
+          | None -> loop (i+1)
+          | x -> x
+      in
+      loop 1
+  in
+  inner
 
 
 let snd_option (x,y) =

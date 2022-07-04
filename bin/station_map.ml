@@ -6,10 +6,13 @@ type t = {
   width: int;
 } [@@deriving sexp]
 
-let create width = {
-  map= Hashtbl.create 10;
-  width;
-}
+let create width =
+  let map = Hashtbl.create 10
+  in
+  {
+    map;
+    width;
+  }
 
 let iter f v =
   Hashtbl.iter (fun offset station ->

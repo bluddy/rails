@@ -2,6 +2,9 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 open Sexplib.Std
 open Containers
 
+let map_height_default = 192
+let map_width_default = 256
+
 (* Map data type. Starts at top left *)
 type t = {
   seed: int; (* 15 bit value *)
@@ -9,6 +12,7 @@ type t = {
   heightmap: int array;
   width: int;
   height: int;
+  region: Region.t;
 } [@@deriving sexp]
 
 let get_height v = v.height
@@ -87,9 +91,6 @@ let pixel_of_tile = function
   | Mountains -> Mountain_pixel
   | EnemyRR -> assert false
 
-let map_height = 192
-let map_width = 256
-
 let get_tile v x y = v.map.(Utils.calc_offset v.width x y)
 
 let set_tile v x y tile =
@@ -100,20 +101,19 @@ let set_height v ~x ~y height =
 
 let get_tile_height v x y = v.heightmap.(Utils.calc_offset v.width x y)
 
-let mapxy ~width f arr =
+  (* generic map over any array (tile or height) *)
+let map_gen ~width f arr =
   Array.mapi (fun i value ->
     let x, y = Utils.x_y_of_offset width i in
     f x y value)
   arr
 
-let iter f v =
-  for y=0 to v.height - 1 do
-    for x=0 to v.width - 1 do
-      let tile = get_tile v x y in
-      f x y tile
-    done
-  done
+let map f v = map_gen ~width:v.width f v.map
 
+  (* Fold over a range of the tilemap *)
+let fold_range ~range ~x ~y ~f ~init v =
+  Utils.fold_range ~width:v.width ~height:v.height ~read_f:(get_tile v) 
+    ~range ~f ~init ~x ~y
 
   (* Get mask around a certain point based on a function
      edge: behavior along edges of map
@@ -261,12 +261,10 @@ let create_heightmap v =
   in
   (* Get plain height map *)
   let heightmap =
-    mapxy (fun _ _ tile -> pixel_of_tile tile |> height_of_pixel)
-      ~width:v.width
-      v.map
+    map (fun _ _ tile -> pixel_of_tile tile |> height_of_pixel) v
   in
   (* Get convolved height map *)
-  mapxy (fun x y height ->
+  map_gen (fun x y height ->
     let other_h = convolve x y (fun x y -> heightmap.(Utils.calc_offset v.width x y)) in
     let factor = (x * y) mod 8 in
     height * 16 + other_h + factor)
@@ -280,7 +278,7 @@ let update_heightmap v =
 let ndarray_of_file filename =
   let arr = Pic.ndarray_of_file filename in
   (* All maps are 256*192 *)
-  let ndarray = Ndarray.get_slice [[0;map_height-1]; [0;map_width-1]] arr in
+  let ndarray = Ndarray.get_slice [[0;map_height_default-1]; [0;map_width_default-1]] arr in
   ndarray
 
 let of_ndarray ~region ~seed ndarray =
@@ -316,10 +314,10 @@ let of_file ~region filename =
 
   (* Make an ndarray of pixel indices. Not RGBA! *)
 let to_ndarray mapdata =
-  let ndarray = Ndarray.empty Int8_unsigned [|map_height; map_width|] in
+  let ndarray = Ndarray.empty Int8_unsigned [|map_height_default; map_width_default|] in
   let idx = ref 0 in
-  for i=0 to map_height-1 do
-    for j=0 to map_width-1 do
+  for i=0 to map_height_default-1 do
+    for j=0 to map_width_default-1 do
       let v = mapdata.(!idx) in
       let v = pixel_to_enum @@ pixel_of_tile v in
       Ndarray.set ndarray [|i; j|] v;
@@ -411,9 +409,23 @@ let check_build_station v ~x ~y =
   if Tile.is_ground tile then `Ok
   else `Illegal
 
-
-
-
-
+  (* Collect demand and supply in the vicinity of a tile *)
+let collect_demand_supply v ~x ~y =
+  fold_range v ~x ~y ~init:(Hashtbl.create 10, Hashtbl.create 10)
+  ~f:(fun (demand_h, supply_h) _ _ tile ->
+    let tileinfo = Tile.Info.get v.region tile in
+    let collect_amount source target_h =
+      List.iter (fun (goods, amount) ->
+        Hashtbl.update target_h ~k:goods
+          ~f:(fun _ -> function
+            | None -> Some amount
+            | Some a -> Some (amount + a))
+      )
+      source
+    in
+    collect_amount tileinfo.demand demand_h;
+    collect_amount tileinfo.supply supply_h;
+    (demand_h, supply_h)
+  )
 
 

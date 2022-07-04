@@ -228,7 +228,7 @@ let add_city_list r region (city_list:(int * int * string) list) : (int * int) l
     (* add all cities as villages *)
     let acc =
       (* Amazingly, some cities seem to be out of bounds and they let the population expand into the map *)
-      if x >= 0 && y >= 0 && x < Tilemap.map_width && y < Tilemap.map_height then
+      if x >= 0 && y >= 0 && x < Tilemap.map_width_default && y < Tilemap.map_height_default then
         (x,y)::acc
       else acc
     in
@@ -266,7 +266,7 @@ let add_city_list r region (city_list:(int * int * string) list) : (int * int) l
       let x = x + Dir.x_offset.(offset) in
       let y = y + Dir.y_offset.(offset) in
       (* Here too, the game relies on borders and we need bounds checking *)
-      if x >= 0 && y >= 0 && x < Tilemap.map_width && y < Tilemap.map_height then
+      if x >= 0 && y >= 0 && x < Tilemap.map_width_default && y < Tilemap.map_height_default then
         (x, y)::acc
       else
         acc
