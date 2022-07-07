@@ -1,0 +1,6 @@
+_build/
+*.PIC
+*.PAN
+*.DTA
+*.png
+*.txt

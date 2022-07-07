@@ -287,7 +287,7 @@ let of_ndarray ~region ~seed ndarray =
   let height = 192 in
   let map = Array.make (width * height) @@ Tile.Ocean(Dir.Set.empty) in
   let heightmap = Array.empty in
-  let v = {map; seed; width; height; heightmap} in
+  let v = {map; seed; width; height; heightmap; region} in
   for y=0 to v.height-1 do
     for x=0 to v.width-1 do
       let value = Ndarray.get ndarray [|y; x|] in
@@ -410,8 +410,8 @@ let check_build_station v ~x ~y =
   else `Illegal
 
   (* Collect demand and supply in the vicinity of a tile *)
-let collect_demand_supply v ~x ~y =
-  fold_range v ~x ~y ~init:(Hashtbl.create 10, Hashtbl.create 10)
+let collect_demand_supply v ~x ~y ~range =
+  fold_range v ~x ~y ~range ~init:(Hashtbl.create 10, Hashtbl.create 10)
   ~f:(fun (demand_h, supply_h) _ _ tile ->
     let tileinfo = Tile.Info.get v.region tile in
     let collect_amount source target_h =

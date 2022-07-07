@@ -64,11 +64,11 @@ let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
    else match get v x y with
    | None -> `NoTrack
    | Some ({kind=Track;_} as t) when t.player = player && Track.is_straight t ->
-        let range = Station.range_of station_type in
+        let range = Station.to_range station_type in
         let match_fn j i =
           match get v j i with
           | Some {kind=Station(st);_} ->
-              let range2 = Station.range_of st in
+              let range2 = Station.to_range st in
               let range = range + range2 in
               abs (j - x) < range && abs (i - y) < range
           | _ -> false

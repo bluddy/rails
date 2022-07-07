@@ -1,6 +1,11 @@
 open Containers
 open Sexplib.Std
 
+(* minimum level to be real demand *)
+let min_demand = 64
+(* minimum level for mail on simple economy mode *)
+let min_demand_mail_simple = 32
+
 type kind =
   [
   | `SignalTower
@@ -16,7 +21,7 @@ let show_kind = function
   | `Station -> "Station"
   | `Terminal -> "Terminal"
 
-let range_of = function
+let to_range = function
   | `SignalTower -> 0
   | `Depot -> 1
   | `Station -> 2
@@ -56,10 +61,13 @@ module Upgrades = Bitset.Make(struct
 end)
 
 type info = {
-  demand: (Goods.t, int) Hashtbl.t;
+  demand: (Goods.t, int) Hashtbl.t; (* Goods with sufficient demand *)
   supply: (Goods.t, int) Hashtbl.t;
+  lost_supply: (Goods.t, int) Hashtbl.t;
+  min_demand: (Goods.t, unit) Hashtbl.t; (* Minimally accepted goods *)
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
+  rate_war: bool;
 } [@@deriving sexp]
 
 type t = {
@@ -88,8 +96,11 @@ let make ~x ~y ~year ~name ~kind ~player =
       {
         demand=Hashtbl.create 10;
         supply=Hashtbl.create 10;
+        lost_supply=Hashtbl.create 10;
+        min_demand=Hashtbl.create 10;
         kind=k;
         upgrades=Upgrades.empty;
+        rate_war=false;
       } |> Option.some
   in
   { x; y; year; name; info; player}
@@ -116,4 +127,23 @@ let suffixes = [
   "Woods";
 ]
 
+   (* some supplies are lost periodically in a rate war. *)
+let rate_war_lose_supplies info ~difficulty =
+  let div = 4 - difficulty in
+  Hashtbl.iter (fun goods level ->
+    ()
+  )
+  info.supply
 
+  (* Call periodically per station *)
+let update_supply_demand v tilemap ~difficulty ~climate =
+  match v.info with
+  | None -> ()
+  | Some info ->
+    if info.rate_war then
+      rate_war_lose_supplies info ~difficulty;
+    let demand_h, supply_h =
+      let range = to_range info.kind in
+      Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range in
+    ()
+  

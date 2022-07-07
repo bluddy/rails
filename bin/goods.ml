@@ -23,7 +23,6 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
-  | Caboose
   [@@deriving sexp]
 
 let show = function
@@ -49,7 +48,6 @@ let show = function
   | Wool -> "Wool"
   | Grapes -> "Grapes"
   | Wine -> "Wine"
-  | Caboose -> "Caboose"
 
 type freight =
   | FreightMail
@@ -59,7 +57,6 @@ type freight =
   | FreightBulk
 
 let freight_of_goods = function
-  | Caboose
   | Mail -> FreightMail
   | Passengers -> FreightPassenger
   | Food

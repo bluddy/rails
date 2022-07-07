@@ -404,7 +404,7 @@ module RouteScreen = struct
     tex (`Freight FreightFast) 139 117;
     tex (`Freight FreightSlow) 139 127;
     tex (`Freight FreightBulk) 139 137;
-    tex (`Car (Caboose, `Old)) 200 97;
+    tex `Caboose 200 97;
 
     let cars ~y ~dx age =
       let x = 160 in
@@ -953,7 +953,7 @@ type t = {
   station_en: (Station.hash, R.Texture.t) Hashtbl.t;
   cars_top: (CarsTop.hash * Dir.t, R.Texture.t) Hashtbl.t;
   route_engine: (Engine.t * bool, R.Texture.t) Hashtbl.t;
-  route_cars: ([ `Car of Goods.t * [ `New | `Old ]
+  route_cars: ([ `Caboose | `Car of Goods.t * [ `New | `Old ]
                | `Freight of Goods.freight ], R.Texture.t) Hashtbl.t;
   engine_detail: (Engine.t, R.Texture.t) Hashtbl.t;
   engine_anim: (Engine.t, TrainAnim.t) Hashtbl.t;
