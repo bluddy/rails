@@ -7,3 +7,4 @@ type t =
   | Boom
   [@@deriving enum, sexp]
 
+let default = Moderation

@@ -42,7 +42,7 @@ type options = {
 
 type menu_action =
   [
-    | `Speed of Backend.speed
+    | `Speed of B_options.speed
     | `Message of message_speed
     | `News of news_types
     | `Features of features
@@ -65,7 +65,7 @@ type menu_action =
     | `RemoveTrack
     | `ImproveStation of Station.upgrade
     | `Upgrade_bridge
-    | `Reality_level of Backend.reality_level
+    | `Reality_level of B_options.reality_level
     | `Call_broker
     | `Survey
     | `Name_rr

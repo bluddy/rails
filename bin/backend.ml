@@ -75,8 +75,17 @@ let default region resources ~random ~seed =
     cycle=0;
     last_tick=0;
     year=1800;
+    climate=Moderation;
     players;
-    map; region; cities; track; stations; options; random; seed}
+    map;
+    region;
+    cities;
+    track;
+    stations;
+    options;
+    random;
+    seed
+  }
 
 let modify_player v ~player f =
   v.players.(player) <- f (v.players.(player))
@@ -221,7 +230,7 @@ let increment_cycle v =
   v
 
 let handle_tick v cur_time =
-  let delay_mult = delay_mult_of_speed v.options.speed in
+  let delay_mult = B_options.delay_mult_of_speed v.options.speed in
   let tick_delta = delay_mult * tick_ms in
   let new_time = v.last_tick + tick_delta in
   let v =
@@ -247,7 +256,7 @@ module Action = struct
     | BuildTunnel of Utils.msg * int (* length *)
     | RemoveTrack of Utils.msg
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
-    | SetSpeed of speed
+    | SetSpeed of B_options.speed
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
