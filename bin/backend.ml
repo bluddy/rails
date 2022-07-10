@@ -22,34 +22,6 @@ let cycles_ai_update = cycles_background_update
 let cycles_station_supply_demand = cycles_background_update * 32
 let cycles_supply_decay = 512
 
-type speed =
-  [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
-  [@@deriving enum, eq, show, sexp]
-
-  (* multiplier for speed, relationship between rates *)
-let delay_mult_of_speed = function
-  | `Frozen -> 1000000 (* frozen *)
-  | `Slow -> 30
-  | `Moderate -> 9
-  | `Fast -> 3
-  | `Turbo -> 1 (* approximate. "As fast as possible" in original *)
-
-type reality_level =
-  [`Dispatcher_ops | `Complex_economy | `Cutthroat_competition]
-  [@@deriving enum, eq, show, sexp]
-
-module RealityLevels = Bitset.Make(struct
-  type t = reality_level
-  let to_enum = reality_level_to_enum
-  let of_enum = reality_level_of_enum
-  let last = `Cutthroat_competition
-end)
-
-type options = {
-  speed: speed;
-  reality_levels: RealityLevels.t;
-  difficulty: int; (* number from 0-3 *)
-} [@@deriving sexp]
 
 
 module Random = struct
@@ -79,7 +51,7 @@ type t = {
   mutable track: Trackmap.t;
   cities: Cities.t;
   mutable stations: Station_map.t;
-  options : options;
+  options : B_options.t;
   random: Random.State.t;
   seed: int;
 } [@@deriving sexp]
@@ -95,9 +67,7 @@ let default region resources ~random ~seed =
     Cities.make h width height
   in
   let track = Trackmap.empty width height in
-  let speed = `Moderate in
-  let reality_levels = RealityLevels.empty in
-  let options = {speed; reality_levels} in
+  let options = B_options.default in
   let stations = Station_map.create width in
   let players = Array.make num_players Player.default in
   {
