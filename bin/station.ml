@@ -60,11 +60,20 @@ module Upgrades = Bitset.Make(struct
   let last = Hotel
 end)
 
+module GoodsSet = struct
+  include Utils.Set.Make(struct
+    type t = Goods.t 
+    let compare = Goods.compare
+    let sexp_of_t = Goods.sexp_of_t
+    let t_of_sexp = Goods.t_of_sexp
+  end) [@@deriving_sexp]
+end
+
 type info = {
-  demand: (Goods.t, int) Hashtbl.t; (* Goods with sufficient demand *)
+  demand: GoodsSet.t; (* Goods with sufficient demand *)
+  min_demand: GoodsSet.t; (* Minimally accepted goods *)
   supply: (Goods.t, int) Hashtbl.t;
   lost_supply: (Goods.t, int) Hashtbl.t;
-  min_demand: (Goods.t, unit) Hashtbl.t; (* Minimally accepted goods *)
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
   rate_war: bool;
@@ -94,10 +103,10 @@ let make ~x ~y ~year ~name ~kind ~player =
     | `SignalTower -> None
     | `Depot | `Station | `Terminal as k ->
       {
-        demand=Hashtbl.create 10;
+        demand=GoodsSet.empty;
+        min_demand=GoodsSet.empty;
         supply=Hashtbl.create 10;
         lost_supply=Hashtbl.create 10;
-        min_demand=Hashtbl.create 10;
         kind=k;
         upgrades=Upgrades.empty;
         rate_war=false;
@@ -127,23 +136,56 @@ let suffixes = [
   "Woods";
 ]
 
-   (* some supplies are lost periodically in a rate war. *)
+   (* some supplies are lost every tick in a rate war. *)
 let rate_war_lose_supplies info ~difficulty =
-  let div = 4 - difficulty in
-  Hashtbl.iter (fun goods level ->
-    ()
+  let div = match difficulty with
+    | `Diff100 -> 1
+    | `Diff75 -> 2
+    | `Diff50 -> 3
+    | `Diff25 -> 4
+  in
+  Hashtbl.filter_map_inplace (fun good amount ->
+    let amount_lost = amount / div in
+    (* Save lost supply *)
+    CCHashtbl.incr ~by:amount_lost info.lost_supply good;
+    Some (amount - amount_lost)
   )
   info.supply
 
   (* Call periodically per station *)
-let update_supply_demand v tilemap ~difficulty ~climate =
+let update_supply_demand v tilemap ~difficulty ~climate ~complex_economy =
+  let mult = 4 + Climate.to_enum climate in
+  let modify_amount amount =
+    amount * mult / 12
+  in
   match v.info with
   | None -> ()
   | Some info ->
+    (* Check for rate war on this station *)
     if info.rate_war then
       rate_war_lose_supplies info ~difficulty;
-    let demand_h, supply_h =
+
+    let temp_demand_h, temp_supply_h =
       let range = to_range info.kind in
-      Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range in
-    ()
+      Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range
+    in
+    (* Add supply to station *)
+    Hashtbl.iter (fun good amount ->
+      CCHashtbl.incr ~by:(modify_amount amount) info.supply good
+    )
+    temp_supply_h;
+
+    if not complex_economy then (
+      (* All other demand is 2x mail *)
+      Hashtbl.filter_map_inplace (fun good amount ->
+        match good with
+        | Goods.Mail | Passengers -> Some amount
+        | _ -> Some (Hashtbl.find temp_demand_h Goods.Mail * 2))
+      temp_demand_h;
+    );
+
+
+
+
+
   

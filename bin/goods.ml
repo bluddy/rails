@@ -23,7 +23,7 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
-  [@@deriving sexp]
+  [@@deriving sexp, ord]
 
 let show = function
   | Mail -> "Mail"

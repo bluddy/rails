@@ -4,6 +4,30 @@ open Tsdl
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 
+module type OrderedType = sig
+  include Map.OrderedType
+  val t_of_sexp : Sexplib0.Sexp.t -> t
+  val sexp_of_t : t -> Sexplib0.Sexp.t
+end
+
+module Set = struct
+  module type S = sig
+    include CCSet.S
+    val t_of_sexp : Sexplib0.Sexp.t -> t
+    val sexp_of_t : t -> Sexplib0.Sexp.t
+  end
+  module Make(O:OrderedType) = struct
+    include CCSet.Make(O)
+
+    let t_of_sexp (sexp:Sexplib0.Sexp.t) =
+      Sexplib0.Sexp_conv.list_of_sexp O.t_of_sexp sexp |> of_list
+
+    let sexp_of_t (t:t) =
+      to_list t |>
+      Sexplib0.Sexp_conv.sexp_of_list O.sexp_of_t
+  end
+end
+
 type rect = {
   x: int;
   y: int;
