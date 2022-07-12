@@ -10,6 +10,7 @@ module type OrderedType = sig
   val sexp_of_t : t -> Sexplib0.Sexp.t
 end
 
+(* Set with sexplib extension *)
 module Set = struct
   module type S = sig
     include CCSet.S

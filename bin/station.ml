@@ -70,8 +70,8 @@ module GoodsSet = struct
 end
 
 type info = {
-  demand: GoodsSet.t; (* Goods with sufficient demand *)
-  min_demand: GoodsSet.t; (* Minimally accepted goods *)
+  mutable demand: GoodsSet.t; (* Goods with sufficient demand *)
+  mutable min_demand: GoodsSet.t; (* Minimally accepted goods *)
   supply: (Goods.t, int) Hashtbl.t;
   lost_supply: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
@@ -137,34 +137,35 @@ let suffixes = [
 ]
 
    (* some supplies are lost every tick in a rate war. *)
-let rate_war_lose_supplies info ~difficulty =
-  let div = match difficulty with
-    | `Diff100 -> 1
-    | `Diff75 -> 2
-    | `Diff50 -> 3
-    | `Diff25 -> 4
-  in
-  Hashtbl.filter_map_inplace (fun good amount ->
-    let amount_lost = amount / div in
-    (* Save lost supply *)
-    CCHashtbl.incr ~by:amount_lost info.lost_supply good;
-    Some (amount - amount_lost)
-  )
-  info.supply
+let check_rate_war_lose_supplies v ~difficulty =
+  match v.info with
+  | Some info when info.rate_war ->
+      let div = match difficulty with
+        | `Diff100 -> 1
+        | `Diff75 -> 2
+        | `Diff50 -> 3
+        | `Diff25 -> 4
+      in
+      Hashtbl.filter_map_inplace (fun good amount ->
+        let amount_lost = amount / div in
+        (* Save lost supply *)
+        CCHashtbl.incr ~by:amount_lost info.lost_supply good;
+        Some (amount - amount_lost)
+      )
+      info.supply
+  | _ -> ()
 
   (* Call periodically per station *)
-let update_supply_demand v tilemap ~difficulty ~climate ~complex_economy =
+let update_supply_demand v tilemap ~climate ~simple_economy =
+  (* TODO: better to memoize demand/supply calculation and recompute when things change *)
   let mult = 4 + Climate.to_enum climate in
   let modify_amount amount =
     amount * mult / 12
   in
   match v.info with
-  | None -> ()
+  | None -> []
   | Some info ->
     (* Check for rate war on this station *)
-    if info.rate_war then
-      rate_war_lose_supplies info ~difficulty;
-
     let temp_demand_h, temp_supply_h =
       let range = to_range info.kind in
       Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range
@@ -175,7 +176,7 @@ let update_supply_demand v tilemap ~difficulty ~climate ~complex_economy =
     )
     temp_supply_h;
 
-    if not complex_economy then (
+    if simple_economy then (
       (* All other demand is 2x mail *)
       Hashtbl.filter_map_inplace (fun good amount ->
         match good with
@@ -184,8 +185,32 @@ let update_supply_demand v tilemap ~difficulty ~climate ~complex_economy =
       temp_demand_h;
     );
 
+    (* Check if we changed *)
+    let demand2, msgs =
+      Hashtbl.fold (fun goods amount ((demand, msgs) as old) ->
+        let has_demand = match goods with
+          | Goods.Mail when simple_economy -> amount >= min_demand_mail_simple
+          | _ -> amount >= min_demand
+        in
+        let had_demand = GoodsSet.mem goods info.demand in
+        if has_demand && not had_demand then
+          (GoodsSet.add goods demand, (`AddDemand (v.x, v.y, goods))::msgs)
+        else if not has_demand && had_demand then
+          (GoodsSet.remove goods demand, (`RemoveDemand (v.x, v.y, goods))::msgs)
+        else old)
+      temp_demand_h
+      (info.demand, [])
+    in
+    let msgs = if simple_economy then [] else msgs in
+    let min_demand2 =
+      Hashtbl.fold (fun goods amount demand ->
+        let f = if amount > 0 then GoodsSet.add else GoodsSet.remove in
+        f goods demand)
+      temp_demand_h
+      info.demand
+    in
+    
+    info.demand <- demand2;
+    info.min_demand <- min_demand2;
+    msgs
 
-
-
-
-  
