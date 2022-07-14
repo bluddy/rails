@@ -55,6 +55,7 @@ type freight =
   | FreightFast
   | FreightSlow
   | FreightBulk
+  [@@deriving enum]
 
 let freight_of_goods = function
   | Mail -> FreightMail

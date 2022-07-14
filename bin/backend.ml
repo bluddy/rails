@@ -19,9 +19,9 @@ let cycles_priority_delivery = 8
 let cycles_background_update = 16
 let cycles_ai_update = cycles_background_update
 (* In the original game, we do slices of 1/32 stations. No need *)
-let cycles_station_supply_demand = cycles_background_update * 32
+let cycles_station_supply_demand = cycles_background_update * 32 (* 512 *)
+(* Since we don't spread out the supply addition, decay happens in the same cycle *)
 let cycles_supply_decay = 512
-
 
 
 module Random = struct
@@ -204,30 +204,36 @@ let _improve_station v ~x ~y ~player ~upgrade =
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-  (* Most time-based work happens here *)
+  (** Most time-based work happens here **)
 let handle_cycle v =
   v.cycle <- v.cycle + 1;
 
   (* TODO: ai_routines *)
-  let difficulty = v.options.difficulty in
-  let climate = v.climate in
-  let simple_economy =
-    not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
-  in
+
   let msgs =
     if v.cycle mod cycles_station_supply_demand = 0 then (
+      let difficulty = v.options.difficulty in
+      let climate = v.climate in
+      let simple_economy =
+        not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
+      in
       Station_map.fold 
         (fun station msgs ->
           Station.check_rate_war_lose_supplies station ~difficulty;
-          match Station.update_supply_demand station v.map ~climate ~simple_economy with
-          | [] -> msgs
-          | _  -> `ChangeDemand(station.x, station.y, msgs)::msgs
+          let msgs =
+            match Station.update_supply_demand station v.map ~climate ~simple_economy with
+            | [] -> msgs
+            | _  -> `ChangeDemand(station.x, station.y, msgs)::msgs
+          in
+          Station.lose_supplies station;
+          msgs
         )
       v.stations
       ~init:[]
     )
     else []
   in
+
   (* adjust time *)
   v.time <- v.time + 1;
   let v = 

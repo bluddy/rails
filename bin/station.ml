@@ -5,6 +5,7 @@ open Sexplib.Std
 let min_demand = 64
 (* minimum level for mail on simple economy mode *)
 let min_demand_mail_simple = 32
+let max_supply_with_upgrade = 64 * 20
 
 type kind =
   [
@@ -33,9 +34,11 @@ type upgrade =
   | SwitchingYard
   | ColdStorage
   | GoodsStorage
+  | ArmsStorage (* EU *)
   | PostOffice
   | Restaurant
   | LivestockPens (* keep it higher so it's drawn last *)
+  | GrapeStorage (* EU: also cold *)
   | Hotel
   [@@deriving enum, show, sexp]
 
@@ -45,10 +48,10 @@ let get_price upgrade =
   | EngineShop -> 100 (* ? *)
   | SwitchingYard -> 50
   | ColdStorage -> 25
-  | GoodsStorage -> 25
+  | GoodsStorage | ArmsStorage -> 25
   | PostOffice -> 50
   | Restaurant -> 25
-  | LivestockPens -> 25
+  | LivestockPens | GrapeStorage -> 25
   | Hotel -> 100
   in
   p * 1000
@@ -165,7 +168,6 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
   match v.info with
   | None -> []
   | Some info ->
-    (* Check for rate war on this station *)
     let temp_demand_h, temp_supply_h =
       let range = to_range info.kind in
       Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range
@@ -212,4 +214,34 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
     if not @@ CCEqual.physical info.demand demand2 then info.demand <- demand2;
     if not @@ CCEqual.physical info.min_demand min_demand2 then info.min_demand <- min_demand2;
     msgs
+
+    (** Lose supplies. Less supplies lost if we have the right upgrade *)
+let lose_supplies v =
+  match v.info with
+  | None -> ()
+  | Some info ->
+      CCHashtbl.keys info.supply (fun good ->
+        let amount = Hashtbl.find info.supply good in
+        let amount2 = Utils.clip amount ~min:0 ~max:max_supply_with_upgrade in
+
+        let open Goods in
+        let amount2 =
+          match good with
+          | Mail when Upgrades.mem info.upgrades PostOffice  -> amount2
+          | Passengers when Upgrades.mem info.upgrades Hotel -> amount2
+          | Food when Upgrades.mem info.upgrades ColdStorage -> amount2
+          | Livestock when Upgrades.mem info.upgrades LivestockPens -> amount2
+          | Grapes when Upgrades.mem info.upgrades GrapeStorage -> amount2
+          | MfgGoods when Upgrades.mem info.upgrades GoodsStorage -> amount2
+          | Armaments when Upgrades.mem info.upgrades ArmsStorage -> amount2
+          | _ -> 
+              (* higher freight classes are less time sensitive *)
+              let freight = Goods.freight_of_goods good in
+              let div = Goods.freight_to_enum freight + 2 in
+              let lost = (amount2 / div) / 2 in
+              amount2 - lost
+        in
+        Hashtbl.replace info.supply good amount2;
+        CCHashtbl.incr info.lost_supply good ~by:(amount - amount2);
+      )
 
