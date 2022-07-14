@@ -35,9 +35,10 @@ let handle_tick win (s:State.t) time =
 
     | Screen.MapView ->
         let ui = Main_ui.handle_tick s s.ui time in
-        s.ui <- ui;
+        if not @@ CCEqual.physical s.ui ui then s.ui <- ui;
         let backend, ui_msgs = Backend.handle_tick s.backend time in
-        s.backend <- backend;
+        (* TODO: handle ui_msgs from backend *)
+        if not @@ CCEqual.physical s.backend backend then s.backend <- backend;
         s
 
     | _ -> s
@@ -60,8 +61,8 @@ let handle_event (s:State.t) (event:Event.t) =
         let backend = 
           Backend.Action.run s.backend action
         in
-        s.ui <- ui;
-        s.backend <- backend;
+        if not @@ CCEqual.physical s.ui ui then s.ui <- ui;
+        if not @@ CCEqual.physical s.backend backend then s.backend <- backend;
         s
 
     | _ -> s

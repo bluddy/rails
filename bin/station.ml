@@ -209,7 +209,7 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
       temp_demand_h
       info.demand
     in
-    info.demand <- demand2;
-    info.min_demand <- min_demand2;
+    if not @@ CCEqual.physical info.demand demand2 then info.demand <- demand2;
+    if not @@ CCEqual.physical info.min_demand min_demand2 then info.min_demand <- min_demand2;
     msgs
 

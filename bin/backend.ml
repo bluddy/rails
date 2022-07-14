@@ -129,7 +129,7 @@ let get_money v ~player = Player.get_money v.players.(player)
 let _build_tunnel v ~x ~y ~dir ~player ~length =
   let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
   modify_player v ~player (Player.add_track ~length);
-  v.track <- track;
+  if not @@ CCEqual.physical v.track track then v.track <- track;
   v
 
 let check_build_station v ~x ~y ~player station_type =
@@ -146,8 +146,8 @@ let _build_station v ~x ~y station_type ~player =
   if build_new_track then (
     modify_player v ~player (Player.add_track ~length:1)
   );
-  v.track <- track;
-  v.stations <- stations;
+  if not @@ CCEqual.physical v.track track then v.track <- track;
+  if not @@ CCEqual.physical v.stations stations then v.stations <- stations;
   v
 
 let check_build_bridge v ~x ~y ~dir ~player =
@@ -158,13 +158,13 @@ let check_build_bridge v ~x ~y ~dir ~player =
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   modify_player v ~player (Player.add_track ~length:2);
-  v.track <- track;
+  if not @@ CCEqual.physical v.track track then v.track <- track;
   v
 
 let _build_track v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   modify_player v ~player (Player.add_track ~length:1);
-  v.track <- track;
+  if not @@ CCEqual.physical v.track track then v.track <- track;
   v
 
 let _build_ferry v ~x ~y ~dir ~player =
@@ -179,7 +179,7 @@ let _build_ferry v ~x ~y ~dir ~player =
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   modify_player v ~player (Player.add_track ~length:1);
-  v.track <- track;
+  if not @@ CCEqual.physical v.track track then v.track <- track;
   v
 
 let check_remove_track v ~x ~y ~dir ~player=
@@ -188,7 +188,7 @@ let check_remove_track v ~x ~y ~dir ~player=
 let _remove_track v ~x ~y ~dir ~player =
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
   modify_player v ~player (Player.add_track ~length:(-1));
-  v.track <- track;
+  if not @@ CCEqual.physical v.track track then v.track <- track;
   v
 
 let _improve_station v ~x ~y ~player ~upgrade =
@@ -199,7 +199,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
         Station_map.add v.stations x y station
     | None -> v.stations
   in
-  v.stations <- stations;
+  if not @@ CCEqual.physical v.stations stations then v.stations <- stations;
   v
   
 let trackmap_iter v f = Trackmap.iter v.track f
@@ -229,10 +229,10 @@ let handle_cycle v =
     else []
   in
   (* adjust time *)
-  v.time <- succ v.time;
+  v.time <- v.time + 1;
   let v = 
     if v.time >= year_ticks then
-      {v with year=succ v.year}
+      {v with year=v.year + 1}
     else v
   in
   v, msgs

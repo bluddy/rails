@@ -162,9 +162,12 @@ let main_menu fonts menu_h =
     let open MsgBox in
     make ~fonts ~x:0 ~y:0
     [
-      make_entry "&Dispatcher Operations" @@ `Checkbox(`Reality_level `Dispatcher_ops, check_reality `Dispatcher_ops);
-      make_entry "Complex &Economy" @@ `Checkbox(`Reality_level `Complex_economy, check_reality `Complex_economy);
-      make_entry "&Cut-Throat Competition" @@ `Checkbox(`Reality_level `Cutthroat_competition, check_reality `Cutthroat_competition);
+      make_entry "&Dispatcher Operations" @@
+        `Checkbox(`Reality_level `DispatcherOps, check_reality `DispatcherOps);
+      make_entry "Complex &Economy" @@
+        `Checkbox(`Reality_level `ComplexEconomy, check_reality `ComplexEconomy);
+      make_entry "&Cut-Throat Competition" @@
+        `Checkbox(`Reality_level `CutthroatCompetition, check_reality `CutthroatCompetition);
     ]
   in
   let actions_menu =
@@ -363,7 +366,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     let view, view_action =
       Mapview.handle_event s view event ~minimap:v.dims.minimap
     in
-    v.view <- view;
+    if not @@ CCEqual.physical v.view view then v.view <- view;
 
     let nobaction = B.Action.NoAction in
     let v, backend_action =
