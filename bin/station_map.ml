@@ -15,10 +15,10 @@ let create width =
   }
 
 let iter f v =
-  Hashtbl.iter (fun offset station ->
-    let x, y = Utils.x_y_of_offset v.width offset in
-    f x y station)
-  v.map
+  Hashtbl.iter (fun _ station -> f station) v.map
+
+let fold f v ~init =
+  Hashtbl.fold (fun _ station acc -> f station acc) v.map init
 
 let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 

@@ -205,42 +205,47 @@ let _improve_station v ~x ~y ~player ~upgrade =
 let trackmap_iter v f = Trackmap.iter v.track f
 
   (* Most time-based work happens here *)
-let increment_cycle v =
+let handle_cycle v =
   v.cycle <- v.cycle + 1;
 
   (* TODO: ai_routines *)
-
-  (*
-  if v.cycle mod cycles_station_supply_demand = 0 then (
-    Station_map.iter 
-    (fun x y station -> 
-
-    v.stations
-
-  );
-  *)
-
-  (* check and handle new year *)
-  v.time <- v.time + 1;
+  let difficulty = v.options.difficulty in
+  let climate = v.climate in
+  let simple_economy =
+    not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
+  in
+  let msgs =
+    if v.cycle mod cycles_station_supply_demand = 0 then (
+      Station_map.fold 
+        (fun station msgs ->
+          Station.check_rate_war_lose_supplies station ~difficulty;
+          match Station.update_supply_demand station v.map ~climate ~simple_economy with
+          | [] -> msgs
+          | _  -> `ChangeDemand(station.x, station.y, msgs)::msgs
+        )
+      v.stations
+      ~init:[]
+    )
+    else []
+  in
+  (* adjust time *)
+  v.time <- succ v.time;
   let v = 
     if v.time >= year_ticks then
-      {v with year=v.year + 1}
+      {v with year=succ v.year}
     else v
   in
-  v
+  v, msgs
 
 let handle_tick v cur_time =
   let delay_mult = B_options.delay_mult_of_speed v.options.speed in
   let tick_delta = delay_mult * tick_ms in
   let new_time = v.last_tick + tick_delta in
-  let v =
-    if cur_time >= new_time then (
-      v.last_tick <- cur_time;
-      increment_cycle v
-    )
-    else v
-  in
-  v
+  if cur_time >= new_time then (
+    v.last_tick <- cur_time;
+    handle_cycle v
+  )
+  else v, []
 
 let _month_of_time time = (time / month_ticks) mod 12
 

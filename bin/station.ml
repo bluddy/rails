@@ -155,9 +155,9 @@ let check_rate_war_lose_supplies v ~difficulty =
       info.supply
   | _ -> ()
 
-  (* Call periodically per station *)
-let update_supply_demand v tilemap ~climate ~simple_economy =
+  (* Call periodically per station -- impure for performance *)
   (* TODO: better to memoize demand/supply calculation and recompute when things change *)
+let update_supply_demand v tilemap ~climate ~simple_economy =
   let mult = 4 + Climate.to_enum climate in
   let modify_amount amount =
     amount * mult / 12
@@ -194,9 +194,9 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
         in
         let had_demand = GoodsSet.mem goods info.demand in
         if has_demand && not had_demand then
-          (GoodsSet.add goods demand, (`AddDemand (v.x, v.y, goods))::msgs)
+          (GoodsSet.add goods demand, (`Add  goods)::msgs)
         else if not has_demand && had_demand then
-          (GoodsSet.remove goods demand, (`RemoveDemand (v.x, v.y, goods))::msgs)
+          (GoodsSet.remove goods demand, (`Remove goods)::msgs)
         else old)
       temp_demand_h
       (info.demand, [])
@@ -209,7 +209,6 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
       temp_demand_h
       info.demand
     in
-    
     info.demand <- demand2;
     info.min_demand <- min_demand2;
     msgs

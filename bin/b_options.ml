@@ -17,14 +17,14 @@ let delay_mult_of_speed = function
   | `Turbo -> 1 (* approximate. "As fast as possible" in original *)
 
 type reality_level =
-  [`Dispatcher_ops | `Complex_economy | `Cutthroat_competition]
+  [`DispatcherOps | `ComplexEconomy | `CutthroatCompetition]
   [@@deriving enum, eq, show, sexp]
 
 module RealityLevels = Bitset.Make(struct
   type t = reality_level
   let to_enum = reality_level_to_enum
   let of_enum = reality_level_of_enum
-  let last = `Cutthroat_competition
+  let last = `CutthroatCompetition
 end)
 
 type difficulty =
@@ -41,7 +41,7 @@ let default =
   {
     speed=`Moderate;
     reality_levels=RealityLevels.of_list
-      [`Dispatcher_ops; `Complex_economy; `Cutthroat_competition];
+      [`DispatcherOps; `ComplexEconomy; `CutthroatCompetition];
     difficulty=`Diff100;
   }
 
