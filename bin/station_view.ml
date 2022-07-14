@@ -55,6 +55,17 @@ let render win (s:State.t) x y =
   let name_s = Printf.sprintf "%s (%s)\nBuilt in %d" station.name (Station.kind_str station) station.year in
   Fonts.Font.write win font ~x:96 ~y:16 ~color:Ega.white name_s;
 
+  let goods_and_other () =
+    let h_bottom = draw_goods_bottom () in
+    let tex, _, h = get_tex `Goods in
+    let y = ground_y - h_bottom - h in
+    R.Texture.render ~x:storage_x ~y win tex;
+    let tex, _, h = get_tex `Cold in
+    let y = y - h in
+    R.Texture.render ~x:storage_x ~y win tex;
+    draw_smokestacks y
+  in
+
   (* draw upgrades *)
   Station.Upgrades.iter (function
     | EngineShop ->
@@ -67,28 +78,23 @@ let render win (s:State.t) x y =
         let tex, _, h = get_tex `Barn in
         R.Texture.render ~x:engineshop_x ~y:(ground_y-h) win tex
     | ColdStorage when Station.Upgrades.mem (Station.get_upgrades station) GoodsStorage ->
-        let h_bottom = draw_goods_bottom () in
-        let tex, _, h = get_tex `Goods in
-        let y = ground_y - h_bottom - h in
-        R.Texture.render ~x:storage_x ~y win tex;
-        let tex, _, h = get_tex `Cold in
-        let y = y - h in
-        R.Texture.render ~x:storage_x ~y win tex;
-        draw_smokestacks y
+        goods_and_other ()
+    | ColdStorage when Station.Upgrades.mem (Station.get_upgrades station) ArmsStorage ->
+        goods_and_other ()
     | ColdStorage ->
         let h_bottom = draw_goods_bottom () in
         let tex, _, h = get_tex `Cold in
         let y = ground_y - h_bottom - h in
         R.Texture.render ~x:storage_x ~y win tex;
         draw_smokestacks y
-    | GoodsStorage when not @@ Station.Upgrades.mem (Station.get_upgrades station) ColdStorage ->
+    | (GoodsStorage | ArmsStorage) when not @@ Station.Upgrades.mem (Station.get_upgrades station) ColdStorage ->
         (* Only goods *)
         let h_bottom = draw_goods_bottom () in
         let tex, _, h = get_tex `Goods in
         let y = ground_y - h_bottom - h in
         R.Texture.render ~x:storage_x ~y win tex;
         draw_smokestacks y
-    | LivestockPens ->
+    | LivestockPens | GrapeStorage ->
         let tex, _, h = get_tex `Fence in
         R.Texture.render ~x:storage_x ~y:(ground_y-h) win tex
     | PostOffice when Station.Upgrades.mem (Station.get_upgrades station) Restaurant ->
