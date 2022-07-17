@@ -3,7 +3,7 @@ module R = Renderer
 
 (* Station view screen *)
 
-let render win (s:State.t) x y =
+let render win (s:State.t) x y ~show_demand =
   let ground_y = 186 in
   let switchingyard_x = 0 in
   let engineshop_x = 64 in
@@ -49,11 +49,7 @@ let render win (s:State.t) x y =
   in
 
   let station = Backend.get_station s.backend x y |> Option.get_exn_or "station" in
-
-  (* Draw name and year *)
-  let font = Fonts.get_font s.fonts 4 in
-  let name_s = Printf.sprintf "%s (%s)\nBuilt in %d" station.name (Station.kind_str station) station.year in
-  Fonts.Font.write win font ~x:96 ~y:16 ~color:Ega.white name_s;
+  let info = Option.get_exn_or "Not a real station" station.info in
 
   let goods_and_other () =
     let h_bottom = draw_goods_bottom () in
@@ -135,5 +131,40 @@ let render win (s:State.t) x y =
   in
   let tex, _, h = get_tex station_kind in
   R.Texture.render ~x:station_x ~y:(ground_y-h) win tex;
+
+  let font = Fonts.get_font s.fonts 4 in
+
+  if show_demand then (
+    Fonts.Font.write win font ~x:32 ~y:1 ~color:Ega.black "Waiting for pickup...";
+    (* draw demand of goods background *)
+    R.draw_rect win ~x:0 ~y:0 ~w:win_w ~h:100 ~color:Ega.white ~fill:true;
+    R.draw_line win ~x1:0 ~y1:(win_h/2) ~x2:win_w ~y2:(win_h/2) ~color:Ega.black;
+    R.draw_line win ~x1:(win_w/2) ~y1:0 ~x2:(win_w/2) ~y2:(win_h/2) ~color:Ega.black;
+
+    (* write *)
+    let _ =
+      Hashtbl.fold (fun good amount y ->
+        Fonts.Font.write win font ~x:2 ~y ~color:Ega.black (Goods.show good);
+        y + 10)
+      info.supply
+      10
+    in
+    let x = 192 in
+    Fonts.Font.write win font ~x ~y:1 ~color:Ega.black "Will pay for...";
+    let _ =
+      Goods.Set.fold (fun good y ->
+        Fonts.Font.write win font ~x ~y ~color:Ega.black (Goods.show good);
+        y + 10)
+      info.demand
+      10
+    in
+    ()
+
+  ) else (
+    (* Draw name and year at top *)
+    let name_s = Printf.sprintf "%s (%s)\nBuilt in %d" station.name (Station.kind_str station) station.year in
+    Fonts.Font.write win font ~x:96 ~y:16 ~color:Ega.white name_s;
+  );
+
   ()
 

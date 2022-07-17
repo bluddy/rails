@@ -25,6 +25,7 @@ type t =
   | Wine (* EU *)
   [@@deriving sexp, ord]
 
+
 let show = function
   | Mail -> "Mail"
   | Passengers -> "Passengers"
@@ -121,5 +122,14 @@ let convert region goods =
     | Britain -> en_convert
   in
   Hashtbl.find_opt tbl goods
+
+module Set = struct
+  include Utils.Set.Make(struct
+    type nonrec t = t 
+    let compare = compare
+    let sexp_of_t = sexp_of_t
+    let t_of_sexp = t_of_sexp
+  end) [@@deriving_sexp]
+end
 
 

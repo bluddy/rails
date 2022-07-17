@@ -63,18 +63,9 @@ module Upgrades = Bitset.Make(struct
   let last = Hotel
 end)
 
-module GoodsSet = struct
-  include Utils.Set.Make(struct
-    type t = Goods.t 
-    let compare = Goods.compare
-    let sexp_of_t = Goods.sexp_of_t
-    let t_of_sexp = Goods.t_of_sexp
-  end) [@@deriving_sexp]
-end
-
 type info = {
-  mutable demand: GoodsSet.t; (* Goods with sufficient demand *)
-  mutable min_demand: GoodsSet.t; (* Minimally accepted goods *)
+  mutable demand: Goods.Set.t; (* Goods with sufficient demand *)
+  mutable min_demand: Goods.Set.t; (* Minimally accepted goods *)
   supply: (Goods.t, int) Hashtbl.t;
   lost_supply: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
@@ -106,8 +97,8 @@ let make ~x ~y ~year ~name ~kind ~player =
     | `SignalTower -> None
     | `Depot | `Station | `Terminal as k ->
       {
-        demand=GoodsSet.empty;
-        min_demand=GoodsSet.empty;
+        demand=Goods.Set.empty;
+        min_demand=Goods.Set.empty;
         supply=Hashtbl.create 10;
         lost_supply=Hashtbl.create 10;
         kind=k;
@@ -194,11 +185,11 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
           | Goods.Mail when simple_economy -> amount >= min_demand_mail_simple
           | _ -> amount >= min_demand
         in
-        let had_demand = GoodsSet.mem goods info.demand in
+        let had_demand = Goods.Set.mem goods info.demand in
         if has_demand && not had_demand then
-          (GoodsSet.add goods demand, (`Add  goods)::msgs)
+          (Goods.Set.add goods demand, (`Add  goods)::msgs)
         else if not has_demand && had_demand then
-          (GoodsSet.remove goods demand, (`Remove goods)::msgs)
+          (Goods.Set.remove goods demand, (`Remove goods)::msgs)
         else old)
       temp_demand_h
       (info.demand, [])
@@ -206,7 +197,7 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
     let msgs = if simple_economy then [] else msgs in
     let min_demand2 =
       Hashtbl.fold (fun goods amount demand ->
-        let f = if amount > 0 then GoodsSet.add else GoodsSet.remove in
+        let f = if amount > 0 then Goods.Set.add else Goods.Set.remove in
         f goods demand)
       temp_demand_h
       info.demand

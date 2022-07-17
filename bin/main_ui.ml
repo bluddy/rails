@@ -576,7 +576,7 @@ let render (win:R.window) (s:State.t) v =
         render_main ();
         Menu.MsgBox.render win s modal.menu
     | StationView(x, y) ->
-        Station_view.render win s x y
+        Station_view.render win s x y ~show_demand:true
   in
   render_mode v.mode
 
