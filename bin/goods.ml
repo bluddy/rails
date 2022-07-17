@@ -23,8 +23,10 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
-  [@@deriving sexp, ord]
+  [@@deriving sexp, ord, enum]
 
+let order = List.((to_enum Mail) -- (to_enum Wine))
+  |> List.map of_enum |> List.map (Option.get_exn_or "error")
 
 let show = function
   | Mail -> "Mail"

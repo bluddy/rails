@@ -148,11 +148,14 @@ let render win (s:State.t) x y ~show_demand =
     (* write *)
     Fonts.Font.write win font ~x:32 ~y:1 ~color:Ega.black "Waiting for pickup...";
     let _ =
-      Hashtbl.fold (fun good amount y ->
-        Fonts.Font.write win font ~x:2 ~y ~color:Ega.black (Goods.show good);
-        y + 10)
-      info.supply
+      List.fold_left (fun y good ->
+        match Hashtbl.find_opt info.supply good with
+        | Some amount ->
+            Fonts.Font.write win font ~x:2 ~y ~color:Ega.black (Goods.show good);
+            y + 10
+        | _ -> y)
       10
+      Goods.order
     in
     let x = 192 in
     Fonts.Font.write win font ~x ~y:1 ~color:Ega.black "Will pay for...";
