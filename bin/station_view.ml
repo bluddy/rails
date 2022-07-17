@@ -156,9 +156,12 @@ let render win (s:State.t) x y ~show_demand =
     in
     let x = 192 in
     Fonts.Font.write win font ~x ~y:1 ~color:Ega.black "Will pay for...";
+    (* TODO: transition to new cars with year *)
     let _ =
       Goods.Set.fold (fun good y ->
         Fonts.Font.write win font ~x ~y ~color:Ega.black (Goods.show good);
+        let tex = Hashtbl.find s.textures.route_cars @@ `Car(good, `Old) in
+        R.Texture.render win ~x:162 ~y tex;
         y + 10)
       info.demand
       10
