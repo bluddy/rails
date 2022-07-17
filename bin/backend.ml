@@ -146,6 +146,13 @@ let _build_station v ~x ~y station_type ~player =
   if build_new_track then (
     modify_player v ~player (Player.add_track ~length:1)
   );
+  (* Initialize supply and demand *)
+  let simple_economy =
+    not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
+  in
+  let climate = v.climate in
+  ignore(Station.update_supply_demand station v.map ~climate ~simple_economy);
+
   if not @@ CCEqual.physical v.track track then v.track <- track;
   if not @@ CCEqual.physical v.stations stations then v.stations <- stations;
   v
@@ -212,6 +219,7 @@ let handle_cycle v =
 
   let msgs =
     if v.cycle mod cycles_station_supply_demand = 0 then (
+      Printf.printf "handle_cycle%!\n";
       let difficulty = v.options.difficulty in
       let climate = v.climate in
       let simple_economy =
