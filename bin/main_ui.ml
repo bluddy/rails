@@ -114,7 +114,7 @@ let main_menu fonts menu_h =
   let is_woodbridge4 (s:State.t) = Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view in
   let improve_station =
     let check_upgrade ?(flip=false) upgrade (s:State.t) =
-      let station = Mapview.get_station_under_cursor s.backend s.ui.view in
+      let station = Mapview.get_station_under_cursor_exn s.backend s.ui.view in
       let is_mem = Station.Upgrades.mem (Station.get_upgrades station) upgrade in
       if flip then not is_mem else is_mem
     in

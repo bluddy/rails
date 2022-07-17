@@ -87,6 +87,11 @@ let kind_str v =
   | None -> "Signal Tower"
   | Some {kind;_} -> show_kind kind
 
+let is_proper_station v =
+  match v.info with
+  | Some _ -> true
+  | None -> false
+
 let get_upgrades v = match v.info with
   | Some {upgrades;_} -> upgrades
   | None -> Upgrades.empty

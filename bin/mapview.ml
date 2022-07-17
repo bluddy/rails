@@ -100,7 +100,7 @@ let cursor_on_station backend v =
       end
   | _ -> false
 
-let get_station_under_cursor backend v =
+let get_station_under_cursor_exn backend v =
   (* get the station the cursor is over *)
   match B.get_station backend v.cursor_x v.cursor_y with
   | Some station -> station
@@ -179,8 +179,13 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     let dir = key_to_dir key in
     match dir, key with
     | None, Event.Enter ->
-        let tile = B.get_tile s.backend v.cursor_x v.cursor_y in
-        v, `ShowTileInfo (v.cursor_x, v.cursor_y, tile)
+        begin match B.get_station s.backend v.cursor_x v.cursor_y with
+        | Some station when Station.is_proper_station station ->
+          v, `StationView (v.cursor_x, v.cursor_y)
+        | _ ->
+          let tile = B.get_tile s.backend v.cursor_x v.cursor_y in
+          v, `ShowTileInfo (v.cursor_x, v.cursor_y, tile)
+        end
     | None, _ -> v, `NoAction
     | Some dir, _ ->
         let move i = move_cursor v dir i in
