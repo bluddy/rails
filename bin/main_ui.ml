@@ -427,6 +427,21 @@ let handle_event (s:State.t) v (event:Event.t) =
               static_entry ~color:Ega.white @@ Printf.sprintf "%s%d,000 per mile" money_sym info.cost;
             ]
             in
+            let demand = match info.demand with
+              | [] -> []
+              | demand ->
+                  static_entry ~color:Ega.bcyan " Demands" ::
+                  List.map (fun (good, amount) ->
+                    let prefix = match amount with
+                      | 8  -> " 1/8 "
+                      | 16 -> " 1/4 "
+                      | 32 -> " 1/2 "
+                      | _ -> " "
+                    in
+                    static_entry ~color:Ega.black @@ prefix ^ Goods.show good
+                  )
+                  demand
+            in
             let supply = match info.supply with
               | [] -> []
               | supply ->
@@ -435,7 +450,17 @@ let handle_event (s:State.t) v (event:Event.t) =
                     static_entry ~color:Ega.black @@ " "^Goods.show good)
                     supply
             in
-            entries @ supply
+            let convert =
+              List.filter_map (fun (good, _) ->
+                match Goods.convert s.backend.region good with
+                | None -> None
+                | Some good ->
+                  static_entry ~color:Ega.black @@ " ("^Goods.show good^")"
+                  |> Option.some
+              )
+              info.demand
+            in
+            entries @ demand @ supply @ convert
           in
           let menu =
             Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:4
