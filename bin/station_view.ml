@@ -145,21 +145,36 @@ let render win (s:State.t) x y ~show_demand =
     R.draw_line win ~x1:0 ~y1:(win_h/2) ~x2:win_w ~y2:(win_h/2) ~color:Ega.black;
     R.draw_line win ~x1:(win_w/2) ~y1:0 ~x2:(win_w/2) ~y2:(win_h/2) ~color:Ega.black;
 
-    (* write *)
+    (* Supply side *)
     Fonts.Font.write win font ~x:32 ~y:1 ~color:Ega.black "Waiting for pickup...";
     let _ =
       List.fold_left (fun y good ->
         match Hashtbl.find_opt info.supply good with
         | Some amount ->
-            Fonts.Font.write win font ~x:2 ~y ~color:Ega.black (Goods.show good);
+            Fonts.Font.write win font ~x:2 ~y:(y+1) ~color:Ega.black (Goods.show good);
+            let tex = Hashtbl.find s.textures.route_cars @@ `Car(good, `Old) in
+            let tex_w = R.Texture.get_w tex in
+            (* Draw (partial) cars of supply *)
+            let rec loop x amount =
+              if amount >= Goods.full_car then (
+                R.Texture.render win ~x ~y tex;
+                loop (x + tex_w) (amount - Goods.full_car)
+              ) else (
+                let frac = (float_of_int amount) /. (float_of_int Goods.full_car) in
+                let w_frac = int_of_float @@ frac *. (float_of_int tex_w) in
+                R.Texture.render_subtex win tex ~x ~y ~w:w_frac
+              )
+            in
+            loop 64 amount;
             y + 10
         | _ -> y)
-      10
+      9
       Goods.order
     in
+    (* Demand side *)
     let x = 192 in
     Fonts.Font.write win font ~x ~y:1 ~color:Ega.black "Will pay for...";
-    (* TODO: transition to new cars with year *)
+    (* TODO: transition to new cars with year X *)
     let _ =
       Goods.Set.fold (fun good y ->
         Fonts.Font.write win font ~x ~y ~color:Ega.black (Goods.show good);

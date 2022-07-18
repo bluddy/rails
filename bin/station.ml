@@ -2,10 +2,10 @@ open Containers
 open Sexplib.Std
 
 (* minimum level to be real demand *)
-let min_demand = 64
+let min_demand = Goods.full_car
 (* minimum level for mail on simple economy mode *)
-let min_demand_mail_simple = 32
-let max_supply_with_upgrade = 64 * 20
+let min_demand_mail_simple = Goods.full_car / 2
+let max_supply_with_upgrade = Goods.full_car * 20
 
 type kind =
   [
@@ -164,6 +164,7 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
   match v.info with
   | None -> []
   | Some info ->
+    Printf.printf "Updating demand/supply\n";
     let temp_demand_h, temp_supply_h =
       let range = to_range info.kind in
       Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range

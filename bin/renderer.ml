@@ -90,7 +90,10 @@ module Texture = struct
     Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn
 
     (* Render only a part of the texture *)
-  let render_subtex win tex ~x ~y ~from_x ~from_y ~w ~h =
+    (* Use different rects so we don't disturb the texture's w and h *)
+  let render_subtex ?w ?h ?(from_x=0) ?(from_y=0) ~x ~y win tex =
+    let w = match w with | None -> get_w tex | Some w -> w in
+    let h = match h with | None -> get_h tex | Some h -> h in
     Sdl.Rect.set_x win.rect @@ zoom win from_x;
     Sdl.Rect.set_y win.rect @@ zoom win from_y;
     Sdl.Rect.set_w win.rect @@ zoom win w;
