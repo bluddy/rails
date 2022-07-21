@@ -858,6 +858,7 @@ module Misc = struct
   | `Newspaper
   | `SmokeSide of int
   | `SmokeSideBig of int
+  | `SideTrack 
   | `SmokeTop of int
   | `Title ]
 
@@ -900,14 +901,15 @@ module Misc = struct
     tex `Logo 256 63 320 119;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "LOCOS" in
-    let tex key x y =
-      let tex = Ndarray.get_slice [[y; y + 15 - 1]; [x; x + 79 - 1]] ndarray |> R.Texture.make win in
+    let tex key ?(w=79) ?(h=15) x y =
+      let tex = Ndarray.get_slice [[y; y + h - 1]; [x; x + w - 1]] ndarray |> R.Texture.make win in
       Hashtbl.replace hash key tex
     in
     tex (`SmokeSideBig 1) 160 49;
     tex (`SmokeSideBig 2) 160 65;
     tex (`SmokeSideBig 3) 241 49;
     tex (`SmokeSideBig 4) 241 65;
+    tex `SideTrack 0 24 ~w:159 ~h:3;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "DIFFSP" in
     let tex key x y x2 y2 =

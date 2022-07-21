@@ -161,3 +161,7 @@ let snd_option (x,y) =
 
 let get_time () = Sdl.get_ticks () |> Int32.to_int
 
+let string_of_num num =
+  Printf.sprintf "%#d" num
+  |> String.map (function '_' -> ',' | x -> x)
+
