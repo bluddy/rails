@@ -190,6 +190,7 @@ let render win (s:State.t) x y ~show_demand =
     ()
 
   ) else (
+    (* normal view *)
     write_name ~x:96 ~y:16 ~color:Ega.white
   );
 

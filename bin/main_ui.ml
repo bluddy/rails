@@ -371,6 +371,8 @@ let handle_event (s:State.t) v (event:Event.t) =
     let nobaction = B.Action.NoAction in
     let v, backend_action =
       match menu_action, view_action with
+      | On `Build_train, _ ->
+          {v with mode=BuildTrain(`ChooseEngine)}, nobaction
       | On `Build_station, _ ->
           let menu = build_station_menu s.fonts |> Menu.MsgBox.do_open_menu s in
           let modal = {menu; data=(); last=Normal} in
@@ -522,10 +524,15 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | StationView _ ->
       if Event.is_left_click event || Event.key_modal_dismiss event then
-        { v with mode=Normal }, B.Action.NoAction
+        {v with mode=Normal}, B.Action.NoAction
       else
         v, B.Action.NoAction
 
+  | BuildTrain(`ChooseEngine) ->
+      if Event.is_left_click event || Event.key_modal_dismiss event then
+        {v with mode=Normal}, B.Action.NoAction
+      else
+        v, B.Action.NoAction
 
 let handle_tick _s v _time = v
 
@@ -602,6 +609,9 @@ let render (win:R.window) (s:State.t) v =
         Menu.MsgBox.render win s modal.menu
     | StationView(x, y) ->
         Station_view.render win s x y ~show_demand:true
+    | BuildTrain(`ChooseEngine) ->
+        Choose_engine_view.render win s ~region:s.backend.region ~year:s.backend.year
+
   in
   render_mode v.mode
 

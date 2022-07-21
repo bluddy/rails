@@ -123,6 +123,9 @@ let draw_rect win ~x ~y ~w ~h ~color ~fill =
   else
     Sdl.render_draw_rect win.renderer win.opt_rect |> get_exn
 
+let paint_screen win ~color =
+  draw_rect win ~x:0 ~y:0 ~w:(width win) ~h:(height win) ~color ~fill:true
+
 let draw_point ?color win ~x ~y =
   begin match color with
   | Some color ->

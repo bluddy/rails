@@ -91,6 +91,11 @@ and 'a mode =
   | BuildBridge of ('a, Bridge.t, Utils.msg) modalmenu
   | BuildTunnel of ('a, [`Tunnel | `Track], (Utils.msg * int)) modalmenu
   | StationView of int * int (* x, y *)
+  | BuildTrain of [
+    | `ChooseEngine
+    | `AnimateEngine of Engine.t * Goods.t list
+    | `EditTrain of int
+  ]
 
 type 'state t = {
   dims: dims;

@@ -524,8 +524,7 @@ module TrainAnim = struct
     let slice_full ~arr x y x2 y2 =
       Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] arr |> R.Texture.make win
     in
-    let engine_full kind ?(anim_x=0) ?(anim_y=0) ?smoke_x ?(anim=[||]) ~arr x y x2 =
-      let y2 = y + 23 in
+    let engine_full kind ?(anim_x=0) ?(anim_y=0) ?smoke_x ?(anim=[||]) ~arr x y x2 y2 =
       let tex = slice_full ~arr x y x2 y2 in
       let w, h = x2 - x, y2 - y in
       let engine = {
@@ -537,64 +536,64 @@ module TrainAnim = struct
     let slice = slice_full ~arr:ndarray in
     let engine = engine_full ~arr:ndarray in
 
-    engine Engine.Grasshopper 0 5 32 ~anim_x:10 ~anim_y:0 ~smoke_x:15
+    engine Engine.Grasshopper 0 5 32 24 ~anim_x:10 ~anim_y:0 ~smoke_x:15
       ~anim: [|
         slice 140 5 159 24;
         slice 140 29 159 48;
       |];
-    engine Engine.Norris 0 29 49 ~anim_x:23 ~anim_y:12 ~smoke_x:41
+    engine Engine.Norris 0 29 49 48 ~anim_x:23 ~anim_y:12 ~smoke_x:41
       ~anim: [|
         slice 109 177 133 184;
         slice 109 185 133 192;
         slice 135 177 159 184;
         slice 135 185 159 192;
       |];
-    engine Engine.American 0 53 74 ~anim_x:31 ~anim_y:10 ~smoke_x:59
+    engine Engine.American 0 53 74 72 ~anim_x:31 ~anim_y:10 ~smoke_x:59
       ~anim: [|
         slice 90 77 123 86;
         slice 90 87 123 96;
         slice 125 77 158 86;
         slice 125 87 158 96;
       |];
-    engine Engine.Mogul 0 76 86 ~anim_x:38 ~anim_y:13 ~smoke_x:70
+    engine Engine.Mogul 0 76 86 96 ~anim_x:38 ~anim_y:13 ~smoke_x:70
       ~anim: [|
         slice 34  9 73 16;
         slice 34 17 73 24;
         slice 75  9 114 16;
         slice 75 17 114 24;
       |];
-    engine Engine.TenWheeler 0 98 85 ~anim_x:44 ~anim_y:15 ~smoke_x:70
+    engine Engine.TenWheeler 0 98 85 120 ~anim_x:44 ~anim_y:15 ~smoke_x:70
       ~anim: [|
         slice 86 104 119 111;
         slice 86 113 119 120;
         slice 126 104 159 111;
         slice 126 113 159 120;
       |];
-    engine Engine.Consolidation 0 123 89 ~anim_x:44 ~anim_y:136 ~smoke_x:73
+    engine Engine.Consolidation 0 123 89 144 ~anim_x:44 ~anim_y:136 ~smoke_x:73
       ~anim: [|
         slice 80 55 118 63;
         slice 80 64 118 73;
         slice 120 55 158 63;
         slice 120 64 158 73;
       |];
-    engine Engine.Pacific 0 149 116 ~anim_x:70 ~anim_y:10 ~smoke_x:105
+    engine Engine.Pacific 0 149 116 168 ~anim_x:70 ~anim_y:10 ~smoke_x:105
       ~anim: [|
         slice 53 29 95 38;
         slice 53 39 95 48;
         slice 96 29 138 38;
         slice 96 39 138 48;
       |];
-    engine Engine.Mikado 0 175 106 ~anim_x:66 ~anim_y:10 ~smoke_x:94
+    engine Engine.Mikado 0 175 106 192 ~anim_x:66 ~anim_y:10 ~smoke_x:94
       ~anim: [|
         slice 90 129 124 136;
         slice 90 137 124 144;
         slice 125 129 159 136;
         slice 125 137 159 144;
       |];
-    engine Engine.Mallet 160 2 319;
-    engine Engine.FSeriesDiesel 160 27 319;
+    engine Engine.Mallet 160 2 319 24;
+    engine Engine.FSeriesDiesel 160 27 319 48;
     (* Seems like it's the same sprite *)
-    engine Engine.GPSeriesDiesel 160 27 319;
+    engine Engine.GPSeriesDiesel 160 27 319 48;
 
     (* British/Euro engines *)
 
@@ -602,64 +601,64 @@ module TrainAnim = struct
     let slice = slice_full ~arr:ndarray in
     let engine = engine_full ~arr:ndarray in
 
-    engine Engine.Planet 0 5 38 ~anim_x:2 ~anim_y:12 ~smoke_x:33
+    engine Engine.Planet 0 5 38 24 ~anim_x:2 ~anim_y:12 ~smoke_x:33
       ~anim:[|
         slice 90 2 121 9;
         slice 90 10 121 17;
         slice 122 2 153 9;
         slice 122 10 153 17;
       |];
-    engine Engine.Patentee 0 28 43 ~anim_x:3 ~anim_y:17 ~smoke_x:37
+    engine Engine.Patentee 0 28 43 48 ~anim_x:3 ~anim_y:17 ~smoke_x:37
       ~anim:[|
         slice 52 2 88 5;
         slice 52 6 88 9;
       |];
-    engine Engine.IronDuke 0 53 62 ~anim_x:3 ~anim_y:10 ~smoke_x:54
+    engine Engine.IronDuke 0 53 62 72 ~anim_x:3 ~anim_y:10 ~smoke_x:54
       ~anim:[|
         slice 102 53 158 62;
         slice 102 63 158 72;
       |];
-    engine Engine.DxGoods 0 80 63 ~anim_x:3 ~anim_y:13 ~smoke_x:56
+    engine Engine.DxGoods 0 80 63 96 ~anim_x:3 ~anim_y:13 ~smoke_x:56
       ~anim:[|
         slice 47 29 102 32;
         slice 47 33 102 36;
         slice 103 29 158 32;
         slice 103 33 158 36;
       |];
-    engine Engine.Stirling 0 100 81 ~anim_x:36 ~anim_y:13 ~smoke_x:69
+    engine Engine.Stirling 0 100 81 120 ~anim_x:36 ~anim_y:13 ~smoke_x:69
       ~anim:[|
         slice 74 74 115 81;
         slice 74 82 115 89;
         slice 117 74 158 81;
         slice 117 82 158 89;
       |];
-    engine Engine.MidlandSpinner 0 125 78 ~anim_x:35 ~anim_y:13 ~smoke_x:66
+    engine Engine.MidlandSpinner 0 125 78 144 ~anim_x:35 ~anim_y:13 ~smoke_x:66
       ~anim:[|
         slice 47 10 88 16;
         slice 47 17 88 23;
       |];
-    engine Engine.WebbCompound 0 152 75 ~anim_x:29 ~anim_y:10 ~smoke_x:69
+    engine Engine.WebbCompound 0 152 75 168 ~anim_x:29 ~anim_y:10 ~smoke_x:69
       ~anim:[|
         slice 78 38 118 44;
         slice 78 45 118 51;
         slice 119 38 159 44;
         slice 119 45 159 51;
       |];
-    engine Engine.ClaudHamilton 0 176 69 ~anim_x:29 ~anim_y:11 ~smoke_x:59
+    engine Engine.ClaudHamilton 0 176 69 192 ~anim_x:29 ~anim_y:11 ~smoke_x:59
       ~anim:[|
         slice 85 90 121 95;
         slice 85 96 121 101;
         slice 122 90 158 95;
         slice 122 96 158 101;
       |];
-    engine Engine.A1Class 160 10 256 ~anim_x:52 ~anim_y:7 ~smoke_x:83
+    engine Engine.A1Class 160 10 256 24 ~anim_x:52 ~anim_y:7 ~smoke_x:83
       ~anim:[|
         slice 70 177 114 184;
         slice 70 185 114 192;
         slice 115 177 159 184;
         slice 115 185 159 192;
       |];
-    engine Engine.A4Class 160 33 255 ~anim_x:51 ~anim_y:10 ~smoke_x:82
+    engine Engine.A4Class 160 33 255 48 ~anim_x:51 ~anim_y:10 ~smoke_x:82
       ~anim:[|
         slice 79 165 118 170;
         slice 79 171 118 176;
@@ -673,28 +672,28 @@ module TrainAnim = struct
     let slice = slice_full ~arr:ndarray in
     let engine = engine_full ~arr:ndarray in
 
-    engine Engine.ClassCrocodile 0 103 55 ~anim_x:2 ~anim_y:12
+    engine Engine.ClassCrocodile 0 103 55 120 ~anim_x:2 ~anim_y:12
       ~anim:[|
         slice 57 98 107 103;
         slice 57 104 107 109;
         slice 108 98 158 103;
         slice 108 104 158 109;
       |];
-    engine Engine.ClassE18 0 124 74;
-    engine Engine.R242A1 0 154 86 ~anim_x:44 ~anim_y:7 ~smoke_x:74
+    engine Engine.ClassE18 0 124 74 144;
+    engine Engine.R242A1 0 154 86 168 ~anim_x:44 ~anim_y:7 ~smoke_x:74
       ~anim:[|
         slice 82 129 120 136;
         slice 82 137 120 144;
         slice 121 129 159 136;
         slice 121 137 159 144;
       |];
-    engine Engine.V200BB 0 172 91;
-    engine Engine.BoBoBo 160 4 253 ~anim_x:8 ~anim_y:14
+    engine Engine.V200BB 0 172 91 192;
+    engine Engine.BoBoBo 160 4 253 24 ~anim_x:8 ~anim_y:14
       ~anim:[|
         slice 82 114 159 120;
         slice 82 121 159 127;
       |];
-    engine Engine.TGV 160 30 261;
+    engine Engine.TGV 160 30 261 48;
 
     (* Cars *)
     let hash_car = Hashtbl.create 10 in
@@ -952,11 +951,11 @@ type t = {
   station_us: (Station.hash, R.Texture.t) Hashtbl.t;
   station_en: (Station.hash, R.Texture.t) Hashtbl.t;
   cars_top: (CarsTop.hash * Dir.t, R.Texture.t) Hashtbl.t;
-  route_engine: (Engine.t * bool, R.Texture.t) Hashtbl.t;
+  route_engine: (Engine.make * bool, R.Texture.t) Hashtbl.t;
   route_cars: ([ `Caboose | `Car of Goods.t * [ `New | `Old ]
                | `Freight of Goods.freight ], R.Texture.t) Hashtbl.t;
-  engine_detail: (Engine.t, R.Texture.t) Hashtbl.t;
-  engine_anim: (Engine.t, TrainAnim.t) Hashtbl.t;
+  engine_detail: (Engine.make, R.Texture.t) Hashtbl.t;
+  engine_anim: (Engine.make, TrainAnim.t) Hashtbl.t;
   car_anim: (Goods.t * [`New | `Old ], TrainAnim.t) Hashtbl.t;
   opponents: (Opponent.t, R.Texture.t) Hashtbl.t;
   jobs: (Jobs.t, R.Texture.t) Hashtbl.t;
