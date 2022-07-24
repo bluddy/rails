@@ -529,10 +529,12 @@ let handle_event (s:State.t) v (event:Event.t) =
         v, B.Action.NoAction
 
   | BuildTrain(`ChooseEngine) ->
-      if Event.is_left_click event || Event.key_modal_dismiss event then
-        {v with mode=Normal}, B.Action.NoAction
-      else
-        v, B.Action.NoAction
+      match Build_train.ChooseEngine.handle_event event ~region:s.backend.region ~year:s.backend.year with
+      | Some engine ->
+          let animate = 
+          {v with mode=BuildTrain(`InitTrain [engine])}, B.Action.NoAction
+      | None ->
+          v, B.Action.NoAction
 
 let handle_tick _s v _time = v
 
