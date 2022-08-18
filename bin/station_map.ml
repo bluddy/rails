@@ -29,3 +29,8 @@ let add v x y station =
 let delete v x y =
   Hashtbl.remove v.map (Utils.calc_offset v.width x y);
   v
+
+let filter v f =
+  CCHashtbl.to_iter v.map |> Iter.filter (fun (_,station) -> f station)
+  |> Iter.map (fun (_,station) -> station)
+

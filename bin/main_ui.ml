@@ -343,6 +343,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _ -> {v with mode=build_fn {modal with menu}}, B.Action.NoAction
       end
   in
+  let nobaction = B.Action.NoAction in
 
   match v.mode with
   | Normal ->
@@ -368,7 +369,6 @@ let handle_event (s:State.t) v (event:Event.t) =
     in
     if not @@ CCEqual.physical v.view view then v.view <- view;
 
-    let nobaction = B.Action.NoAction in
     let v, backend_action =
       match menu_action, view_action with
       | On `Build_train, _ ->
@@ -481,12 +481,12 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | ModalMsgbox menu ->
       handle_modal_menu_events ~is_msgbox:true menu (fun x -> ModalMsgbox x)
-      (fun _ () -> v, B.Action.NoAction)
+      (fun _ () -> v, nobaction)
 
   | BuildStation build_menu ->
       handle_modal_menu_events build_menu (fun x -> BuildStation x)
       (fun modal station_kind ->
-          let exit_mode () = {v with mode=modal.last}, B.Action.NoAction in
+          let exit_mode () = {v with mode=modal.last}, nobaction in
           let x, y = Mapview.get_cursor_pos v.view in
           match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
           | `Ok -> 
@@ -507,7 +507,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               let view = Mapview.move_cursor v.view dir 2 in
               {v with mode=modal.last; view}, backend_action
           | _ ->
-              {v with mode=modal.last}, B.Action.NoAction
+              {v with mode=modal.last}, nobaction
           )
 
   | BuildTunnel build_menu ->
@@ -524,19 +524,36 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | StationView _ ->
       if Event.is_left_click event || Event.key_modal_dismiss event then
-        {v with mode=Normal}, B.Action.NoAction
+        {v with mode=Normal}, nobaction
       else
-        v, B.Action.NoAction
+        v, nobaction
 
   | BuildTrain(`ChooseEngine) ->
-      match Build_train.ChooseEngine.handle_event event ~region:s.backend.region ~year:s.backend.year with
+      begin match Build_train.ChooseEngine.handle_event event ~region:s.backend.region ~year:s.backend.year with
       | Some engine ->
-          let animate = 
-          {v with mode=BuildTrain(`InitTrain [engine])}, B.Action.NoAction
+          (* We chose an engine *)
+          let add_cars = Build_train.AddCars.init s ~engine in
+          {v with mode=BuildTrain(`AddCars add_cars)}, nobaction
       | None ->
-          v, B.Action.NoAction
+          v, nobaction
+      end
 
-let handle_tick _s v _time = v
+  | BuildTrain(`AddCars state) ->
+      let state2 = Build_train.AddCars.handle_event s event state in
+      if CCEqual.physical state state2 then
+        v, nobaction
+      else
+        {v with mode=BuildTrain(`AddCars state2)}, nobaction
+
+
+let handle_tick s v time = match v.mode with
+  | BuildTrain(`AddCars state) ->
+      let state2 = Build_train.AddCars.handle_tick s state time in
+      if CCEqual.physical state state2 then v
+      else
+        {v with mode=BuildTrain(`AddCars state2)}
+
+  | _ -> v
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
 
@@ -612,8 +629,9 @@ let render (win:R.window) (s:State.t) v =
     | StationView(x, y) ->
         Station_view.render win s x y ~show_demand:true
     | BuildTrain(`ChooseEngine) ->
-        Choose_engine_view.render win s ~region:s.backend.region ~year:s.backend.year
-
+        Build_train.ChooseEngine.render win s ~region:s.backend.region ~year:s.backend.year
+    | BuildTrain(`AddCars state) ->
+        Build_train.AddCars.render win s state 
   in
   render_mode v.mode
 

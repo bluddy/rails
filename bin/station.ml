@@ -96,6 +96,10 @@ let get_upgrades v = match v.info with
   | Some {upgrades;_} -> upgrades
   | None -> Upgrades.empty
 
+let has_upgrade v upgrade =
+  let upgrades = get_upgrades v in
+  Upgrades.mem upgrades upgrade
+
 let make ~x ~y ~year ~name ~kind ~player =
   let info =
     match kind with

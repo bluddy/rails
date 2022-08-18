@@ -93,8 +93,7 @@ and 'a mode =
   | StationView of int * int (* x, y *)
   | BuildTrain of [
     | `ChooseEngine
-    | `AnimateEngine of Engine.t * Goods.t list
-    | `EditTrain of int
+    | `AddCars of Train_animate_side_d.t
   ]
 
 type 'state t = {

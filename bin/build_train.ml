@@ -3,15 +3,36 @@ open Containers
 module R = Renderer
 
 module AddCars = struct
-  (* Create the animation that will be used when we add cars *)
-  let init ~engine ~station_x ~station_y =
-    let animation = Train_animate_side.default engine [] ~pause_at_cars:true ~station_x ~station_y in
 
+  (* Create the animation that will be used when we add cars *)
+  let init (s:State.t) ~engine =
+    (* Find station with engine shop *)
+    let station = Station_map.filter s.backend.stations
+      (fun station -> Station.has_upgrade station Station.EngineShop)
+      |> Iter.head_exn
+    in
+    let station_x, station_y = station.x, station.y in
+    let animation =
+      let engine = engine.Engine.make in
+      Train_animate_side.init s ~engine ~cars:[] ~pause_at_cars:true ~station_x ~station_y ~moving:true ~rail:`Back
+    in
+    animation
+
+  let handle_event (s:State.t) event v = v
+
+  let handle_tick s v time =
+    let v = Train_animate_side.handle_tick s v time in
+    v
+
+  let render win s v =
+    Train_animate_side.render win s v
 
 end
 
 module ChooseEngine = struct
-  (* Choose engine screen *)
+  (* Choose engine screen: select with mouse only *)
+  let engine_start_y = 24
+  let engine_each_y = 25
 
   let get_engines_before region year =
     Engine.get region
@@ -32,7 +53,7 @@ module ChooseEngine = struct
         let h = R.Texture.get_h anim.tex in
         R.Texture.render win anim.tex ~x:8 ~y:(21-h+y+1);
         R.Texture.render win track_tex ~x:0 ~y:(22+y);
-        y + 25)
+        y + engine_each_y)
       0
       engine_anims
     in
@@ -49,7 +70,7 @@ module ChooseEngine = struct
           engine.name engine.max_speed engine.horsepower price
         in
         Fonts.Font.write win font ~color:Ega.cyan str ~x:164 ~y;
-        y + 25)
+        y + engine_each_y)
       4
       engines
     in
@@ -59,13 +80,10 @@ module ChooseEngine = struct
     match event with
     | MouseButton {y; _} when Event.is_left_click event ->
       let engines = get_engines_before region year in
-      let engine =
-        if y <= 24 then List.nth engines 0 else
-          let idx = ((y - 24) / 25) + 1 in
-          if List.length engines <= idx then None
-          else List.nth engines
-      in
-      Some engine
+      if y <= 24 then List.nth engines 0 |> Option.some else
+        let click_idx = ((y - engine_start_y) / engine_each_y) + 1 in
+        if click_idx >= List.length engines then None
+        else List.nth engines click_idx |> Option.some
     | _ -> None
 
 end

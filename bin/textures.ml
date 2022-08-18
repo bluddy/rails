@@ -334,6 +334,7 @@ end
 
 module RouteScreen = struct
   let load win res =
+    let small_engine_hash = Hashtbl.create 10 in
     let engine_hash = Hashtbl.create 10 in
     let car_hash = Hashtbl.create 10 in
 
@@ -342,53 +343,65 @@ module RouteScreen = struct
       Hashtbl.replace hash key tex
     in
     let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
-    let tex = tex_full ~arr:ndarray ~hash:engine_hash ~dx:63 ~dy:9 in
+    let tex white =
+      let tt = tex_full ~arr:ndarray ~dx:63 ~dy:9 in
+      if white then tt ~hash:engine_hash
+      else tt ~hash:small_engine_hash
+    in
     let open Engine in
     (* US *)
     let engines x white =
-      tex (Grasshopper, white) x 96;  (*  background *)
-      tex (Norris, white) x 106;
-      tex (American, white) x 116;
-      tex (Mogul, white) x 126;
-      tex (TenWheeler, white) x 136;
-      tex (Consolidation, white) x 146;
-      tex (Pacific, white) x 156;
-      tex (Mikado, white) x 166;
-      tex (Mallet, white) x 176;
-      tex (FSeriesDiesel, white) x 186;
-      tex (GPSeriesDiesel, white) x 186;
+      tex white Grasshopper x 96;  (*  background *)
+      tex white Norris x 106;
+      tex white American x 116;
+      tex white Mogul x 126;
+      tex white TenWheeler x 136;
+      tex white Consolidation x 146;
+      tex white Pacific x 156;
+      tex white Mikado x 166;
+      tex white Mallet x 176;
+      tex white FSeriesDiesel x 186;
+      tex white GPSeriesDiesel x 186;
     in
     engines 0 true;
     engines 63 false;
 
     (* Britain *)
     let ndarray = Hashtbl.find res.Resources.res_pics "ESPRITES" in
-    let tex = tex_full ~arr:ndarray ~hash:engine_hash ~dx:63 ~dy:9 in
+    let tex white =
+      let tt = tex_full ~arr:ndarray ~dx:63 ~dy:9 in
+      if white then tt ~hash:engine_hash
+      else tt ~hash:small_engine_hash
+    in
     let engines x white =
-      tex (Planet, white) x 96;  (*  background *)
-      tex (Patentee, white) x 106;
-      tex (IronDuke, white) x 116;
-      tex (DxGoods, white) x 126;
-      tex (Stirling, white) x 136;
-      tex (MidlandSpinner, white) x 146;
-      tex (WebbCompound, white) x 156;
-      tex (ClaudHamilton, white) x 166;
-      tex (A1Class, white) x 176;
-      tex (A4Class, white) x 186;
+      tex white Planet x 96;  (*  background *)
+      tex white Patentee x 106;
+      tex white IronDuke x 116;
+      tex white DxGoods x 126;
+      tex white Stirling x 136;
+      tex white MidlandSpinner x 146;
+      tex white WebbCompound x 156;
+      tex white ClaudHamilton x 166;
+      tex white A1Class x 176;
+      tex white A4Class x 186;
     in
     engines 0 true;
     engines 63 false;
 
     (* Europe *)
     let ndarray = Hashtbl.find res.Resources.res_pics "CSPRITES" in
-    let tex = tex_full ~arr:ndarray ~hash:engine_hash ~dx:63 ~dy:9 in
+    let tex white =
+      let tt = tex_full ~arr:ndarray ~dx:63 ~dy:9 in
+      if white then tt ~hash:engine_hash
+      else tt ~hash:small_engine_hash
+    in
     let engines x white =
-      tex (ClassCrocodile, white) x 136;
-      tex (ClassE18, white) x 146;
-      tex (R242A1, white) x 156;
-      tex (V200BB, white) x 166;
-      tex (BoBoBo, white) x 176;
-      tex (TGV, white) x 186;
+      tex white ClassCrocodile x 136;
+      tex white ClassE18 x 146;
+      tex white R242A1 x 156;
+      tex white V200BB x 166;
+      tex white BoBoBo x 176;
+      tex white TGV x 186;
     in
     engines 0 true;
     engines 63 false;
@@ -457,7 +470,7 @@ module RouteScreen = struct
     cars ~y:97 ~dx:20 `Old;
     cars ~y:147 ~dx:24 `New;
 
-    engine_hash, car_hash
+    small_engine_hash, engine_hash, car_hash
 end
 
 module EngineDetail = struct
@@ -953,7 +966,8 @@ type t = {
   station_us: (Station.hash, R.Texture.t) Hashtbl.t;
   station_en: (Station.hash, R.Texture.t) Hashtbl.t;
   cars_top: (CarsTop.hash * Dir.t, R.Texture.t) Hashtbl.t;
-  route_engine: (Engine.make * bool, R.Texture.t) Hashtbl.t;
+  small_engine: (Engine.make, R.Texture.t) Hashtbl.t;
+  route_engine: (Engine.make, R.Texture.t) Hashtbl.t;
   route_cars: ([ `Caboose | `Car of Goods.t * [ `New | `Old ]
                | `Freight of Goods.freight ], R.Texture.t) Hashtbl.t;
   engine_detail: (Engine.make, R.Texture.t) Hashtbl.t;
@@ -971,7 +985,7 @@ let of_resources win res =
   in
   let pixel = R.Texture.make win Pic.white_pixel in
   let tiles, small_tiles = TileTex.slice_tiles win res in
-  let route_engine, route_cars = RouteScreen.load win res in
+  let small_engine, route_engine, route_cars = RouteScreen.load win res in
   let engine_anim, car_anim = TrainAnim.load win res in
   let station_us, station_en = Station.load win res in
   {
@@ -987,6 +1001,7 @@ let of_resources win res =
     station_en;
     jobs = Job.load win res;
     misc = Misc.load win res;
+    small_engine;
     route_engine;
     route_cars;
     engine_anim;
