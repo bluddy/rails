@@ -70,11 +70,17 @@ let default region resources ~random ~seed =
   let options = B_options.default in
   let stations = Station_map.create width in
   let players = Array.make num_players Player.default in
+  let year = match region with
+    | EastUS -> 1830
+    | WestUS -> 1866
+    | Britain -> 1828
+    | Europe -> 1900
+  in
   {
     time=0;
     cycle=0;
     last_tick=0;
-    year=1800;
+    year;
     climate=Moderation;
     players;
     map;
