@@ -14,6 +14,9 @@ let create width =
     width;
   }
 
+let length v =
+  Hashtbl.length v.map
+
 let iter f v =
   Hashtbl.iter (fun _ station -> f station) v.map
 

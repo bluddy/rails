@@ -489,7 +489,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           let exit_mode () = {v with mode=modal.last}, nobaction in
           let x, y = Mapview.get_cursor_pos v.view in
           match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
-          | `Ok -> 
+          | `Ok ->
               let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player=0} in
               {v with mode=modal.last}, backend_action
               (* TODO: handle other cases *)

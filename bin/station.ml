@@ -96,11 +96,11 @@ let get_upgrades v = match v.info with
   | Some {upgrades;_} -> upgrades
   | None -> Upgrades.empty
 
-let has_upgrade v upgrade =
+let has_upgrade v ~upgrade =
   let upgrades = get_upgrades v in
   Upgrades.mem upgrades upgrade
 
-let make ~x ~y ~year ~name ~kind ~player =
+let make ~x ~y ~year ~name ~kind ~player ~first =
   let info =
     match kind with
     | `SignalTower -> None
@@ -111,7 +111,7 @@ let make ~x ~y ~year ~name ~kind ~player =
         supply=Hashtbl.create 10;
         lost_supply=Hashtbl.create 10;
         kind=k;
-        upgrades=Upgrades.empty;
+        upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
         rate_war=false;
       } |> Option.some
   in

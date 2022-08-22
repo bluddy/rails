@@ -7,9 +7,12 @@ module AddCars = struct
   (* Create the animation that will be used when we add cars *)
   let init (s:State.t) ~engine =
     (* Find station with engine shop *)
-    let station = Station_map.filter s.backend.stations
-      (fun station -> Station.has_upgrade station Station.EngineShop)
-      |> Iter.head_exn
+    let station =
+      try
+        Station_map.filter s.backend.stations
+        (fun station -> Station.has_upgrade station Station.EngineShop)
+        |> Iter.head_exn
+      with Invalid_argument _ -> invalid_arg "No station with engine found"
     in
     let station_x, station_y = station.x, station.y in
     let animation =

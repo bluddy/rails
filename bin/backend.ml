@@ -147,7 +147,14 @@ let _build_station v ~x ~y station_type ~player =
   (* TODO: graph *)
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
-  let station = Station.make ~x ~y ~year:v.year ~name:city ~kind:station_type ~player in
+  let first =
+    match
+      Station_map.filter v.stations (Station.has_upgrade ~upgrade:Station.EngineShop) |> Iter.head
+    with
+    | Some _ -> false
+    | None -> true
+  in
+  let station = Station.make ~x ~y ~year:v.year ~name:city ~kind:station_type ~player ~first in
   let stations = Station_map.add v.stations x y station in
   if build_new_track then (
     modify_player v ~player (Player.add_track ~length:1)
