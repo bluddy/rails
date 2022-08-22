@@ -39,19 +39,36 @@ let render win (s:State.t) v =
       R.Texture.render win ~x:v.x ~y:v.y engine_tex
 
   | `Front ->
-      let engine_tex = Hashtbl.find s.textures.engine_anim v.engine in
-      R.Texture.render win ~x:v.x ~y:v.y engine_tex.tex
+      let engine = Hashtbl.find s.textures.engine_anim v.engine in
+      R.Texture.render win ~x:v.x ~y:v.y engine.tex;
+      let len = Array.length engine.anim in
+      (* Draw animating wheels *)
+      if len > 0 then
+        R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(v.y+engine.anim_y) engine.anim.(v.anim_idx)
 
-let handle_tick (_s:State.t) v time =
+let handle_tick (s:State.t) v time =
   if time - v.last_time < wait_time then v
   else (
     v.last_time <- time;
-    (match v.rail with
+    match v.rail with
     | `Back ->
-        v.x <- v.x - 1
+        let engine_tex = Hashtbl.find s.textures.small_engine v.engine in
+        let width = R.Texture.get_w engine_tex in
+        v.x <- v.x - 1;
+        if v.x + width < 0 then (
+          let engine_tex = Hashtbl.find s.textures.engine_anim v.engine in
+          let x = 0 - engine_tex.Textures.TrainAnim.w in
+          {v with rail=`Front; x}
+        ) else
+          v
+
     | `Front ->
-        v.x <- v.x + 1);
-    v
+        let anim = Hashtbl.find s.textures.engine_anim v.engine in
+        v.x <- v.x + 1;
+        let len = Array.length anim.anim in
+        if len > 0 then
+          v.anim_idx <- (v.anim_idx + 1) mod len;
+        v
   )
 
 
