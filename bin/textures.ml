@@ -925,7 +925,7 @@ module Misc = struct
       Hashtbl.replace hash key tex
     in
     let slice l =
-      List.map (fun (x, y) -> Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray
+      List.map (fun (x, y) -> Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 79 - 1]] ndarray
       |> R.Texture.make win) l |> Array.of_list
     in
     slice [160, 49; 160, 65; 241, 49; 241, 65] |> Hashtbl.replace smoke_hash `SmokeSideBig;
