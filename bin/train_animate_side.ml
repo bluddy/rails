@@ -72,11 +72,20 @@ let handle_tick (s:State.t) v time =
           v
 
     | `Front ->
-        let anim = Hashtbl.find s.textures.engine_anim v.engine in
+        let engine = Hashtbl.find s.textures.engine_anim v.engine in
+        let anim_len = Array.length engine.anim in
+        if anim_len > 0 then
+          v.anim_idx <- (v.anim_idx + 1) mod anim_len;
+
+        begin match engine.smoke_x with
+        | Some _ ->
+          let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
+          let smoke_len = Array.length smoke_arr in
+          v.smoke_idx <- (v.smoke_idx + 1) mod smoke_len
+        | None -> ()
+        end;
+
         v.x <- v.x + 1;
-        let len = Array.length anim.anim in
-        if len > 0 then
-          v.anim_idx <- (v.anim_idx + 1) mod len;
         v
   )
 
