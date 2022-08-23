@@ -869,39 +869,45 @@ module Misc = struct
   | `MainMenuBackground
   | `MainMenuMan of int
   | `Newspaper
-  | `SmokeSide of int
-  | `SmokeSideBig of int
   | `SideTrack 
-  | `SmokeTop of int
   | `Title ]
+
+  type smoke =
+  [ `SmokeTop
+  | `SmokeSide
+  | `SmokeSideBig ]
 
   let load win res =
     let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS" in
     let hash = Hashtbl.create 10 in
+    let smoke_hash = Hashtbl.create 10 in
 
     let tex key x y =
       let tex = Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray |> R.Texture.make win in
       Hashtbl.replace hash key tex
     in
+    let slice l =
+      List.map (fun (x, y) -> Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray
+      |> R.Texture.make win) l |> Array.of_list
+    in
 
     tex `Cursor 300 100;
-    tex (`SmokeTop 1) 220 100;
-    tex (`SmokeTop 2) 240 100;
-    tex (`SmokeTop 3) 260 100;
-    tex (`SmokeTop 4) 280 100;
+    slice [220, 100; 240, 100; 260, 100; 280, 100] |> Hashtbl.replace smoke_hash `SmokeTop;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
     let tex key x y x2 y2 =
       Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win
       |> Hashtbl.replace hash key
     in
+    let slice l =
+      List.map (fun (x, y, x2, y2) -> Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray
+      |> R.Texture.make win) l |> Array.of_list
+    in
 
     tex `Newspaper 240 120 280 160;
 
-    tex (`SmokeSide 1) 240 162 286 169;
-    tex (`SmokeSide 2) 240 170 286 177;
-    tex (`SmokeSide 3) 240 178 286 185;
-    tex (`SmokeSide 4) 240 186 286 193;
+    slice [240, 62, 286, 169; 240, 170, 286, 177; 240, 178, 286, 185; 240, 186, 286, 193]
+      |> Hashtbl.replace smoke_hash `SmokeSide;
 
     tex `FrameTL 281 121 289 129;
     tex `FrameTR 311 121 319 129;
@@ -918,10 +924,11 @@ module Misc = struct
       let tex = Ndarray.get_slice [[y; y + h - 1]; [x; x + w - 1]] ndarray |> R.Texture.make win in
       Hashtbl.replace hash key tex
     in
-    tex (`SmokeSideBig 1) 160 49;
-    tex (`SmokeSideBig 2) 160 65;
-    tex (`SmokeSideBig 3) 241 49;
-    tex (`SmokeSideBig 4) 241 65;
+    let slice l =
+      List.map (fun (x, y) -> Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 20 - 1]] ndarray
+      |> R.Texture.make win) l |> Array.of_list
+    in
+    slice [160, 49; 160, 65; 241, 49; 241, 65] |> Hashtbl.replace smoke_hash `SmokeSideBig;
     tex `SideTrack 0 24 ~w:159 ~h:3;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "DIFFSP" in
@@ -953,7 +960,7 @@ module Misc = struct
     tex `Title "TITLE";
     tex `Advert "ADVERT";
 
-    hash
+    hash, smoke_hash
 
 end
 
@@ -976,6 +983,7 @@ type t = {
   opponents: (Opponent.t, R.Texture.t) Hashtbl.t;
   jobs: (Jobs.t, R.Texture.t) Hashtbl.t;
   misc: (Misc.t, R.Texture.t) Hashtbl.t;
+  smoke: (Misc.smoke, R.Texture.t array) Hashtbl.t;
 }
 
 let of_resources win res =
@@ -988,6 +996,7 @@ let of_resources win res =
   let small_engine, route_engine, route_cars = RouteScreen.load win res in
   let engine_anim, car_anim = TrainAnim.load win res in
   let station_us, station_en = Station.load win res in
+  let misc, smoke = Misc.load win res in
   {
     pics;
     pixel;
@@ -1000,12 +1009,13 @@ let of_resources win res =
     station_us;
     station_en;
     jobs = Job.load win res;
-    misc = Misc.load win res;
+    misc;
     small_engine;
     route_engine;
     route_cars;
     engine_anim;
     car_anim;
+    smoke;
   }
 
 
