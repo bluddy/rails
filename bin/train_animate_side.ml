@@ -44,7 +44,16 @@ let render win (s:State.t) v =
       let len = Array.length engine.anim in
       (* Draw animating wheels *)
       if len > 0 then
-        R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(v.y+engine.anim_y) engine.anim.(v.anim_idx)
+        R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(v.y+engine.anim_y) engine.anim.(v.anim_idx);
+      (* Draw smoke *)
+      begin match engine.smoke_x with
+      | None -> ()
+      | Some smoke_x ->
+          let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
+          let smoke_tex = smoke_arr.(v.smoke_idx) in
+          let w, h = R.Texture.get_w smoke_tex, R.Texture.get_h smoke_tex in
+          R.Texture.render win ~x:(v.x + smoke_x - w) ~y:(v.y - h) smoke_tex
+      end
 
 let handle_tick (s:State.t) v time =
   if time - v.last_time < wait_time then v
