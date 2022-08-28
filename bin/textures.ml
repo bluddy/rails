@@ -925,10 +925,13 @@ module Misc = struct
       Hashtbl.replace hash key tex
     in
     let slice l =
-      List.map (fun (x, y) -> Ndarray.get_slice [[y; y + 20 - 1]; [x; x + 79 - 1]] ndarray
+      List.map (fun (x, y, x2, y2) -> Ndarray.get_slice [[y; y2]; [x; x2]] ndarray
       |> R.Texture.make win) l |> Array.of_list
     in
-    slice [160, 49; 160, 65; 241, 49; 241, 65] |> Hashtbl.replace smoke_hash `SmokeSideBig;
+    slice [160, 49, 239, 63;
+           160, 65, 239, 78;
+           241, 49, 319, 63;
+           241, 65, 319, 78] |> Hashtbl.replace smoke_hash `SmokeSideBig;
     tex `SideTrack 0 24 ~w:159 ~h:3;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "DIFFSP" in

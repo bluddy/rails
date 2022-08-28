@@ -6,6 +6,8 @@ module R = Renderer
 let fps = 15
 let wait_time = 1000/fps
 
+let smoke_x_off = 76 (* depends on smoke image *)
+
 let init ?(pause_at_cars=false) (s:State.t) ~engine ~cars ~station_x ~station_y ~rail ~moving =
   let x, y = match rail with
     | `Back ->
@@ -51,8 +53,8 @@ let render win (s:State.t) v =
       | Some smoke_x ->
           let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
           let smoke_tex = smoke_arr.(v.smoke_idx) in
-          let w, h = R.Texture.get_w smoke_tex, R.Texture.get_h smoke_tex in
-          R.Texture.render win ~x:(v.x + smoke_x - w) ~y:(v.y - h) smoke_tex
+          let _, h = R.Texture.get_w smoke_tex, R.Texture.get_h smoke_tex in
+          R.Texture.render win ~x:(v.x + smoke_x - smoke_x_off) ~y:(v.y - h) smoke_tex
       end
 
 let handle_tick (s:State.t) v time =
