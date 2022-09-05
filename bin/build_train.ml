@@ -10,22 +10,26 @@ module AddCars = struct
     let station =
       try
         Station_map.filter s.backend.stations
-        (fun station -> Station.has_upgrade station Station.EngineShop)
+        (fun station -> Station.has_upgrade station ~upgrade:Station.EngineShop)
         |> Iter.head_exn
       with Invalid_argument _ -> invalid_arg "No station with engine found"
     in
     let station_x, station_y = station.x, station.y in
     let animation =
       let engine = engine.Engine.make in
-      Train_animate_side.init s ~engine ~cars:[] ~pause_at_cars:true ~station_x ~station_y ~moving:true ~rail:`Back
+      Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station_x ~station_y ~rail:`Back
     in
     animation
 
-  let handle_event (s:State.t) event v = v
+  let handle_event (_s:State.t) _event v = v
 
   let handle_tick s v time =
     let v = Train_animate_side.handle_tick s v time in
-    v
+    (* Check if we reached end *)
+    if Train_animate_side.train_end_at_screen_edge s v then
+      Train_animate_side.pause v
+    else
+      v
 
   let render win s v =
     Train_animate_side.render win s v

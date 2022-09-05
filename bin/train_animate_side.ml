@@ -8,7 +8,7 @@ let wait_time = 1000/fps
 
 let smoke_x_off = 76 (* depends on smoke image *)
 
-let init ?(pause_at_cars=false) (s:State.t) ~engine ~cars ~station_x ~station_y ~rail ~moving =
+let init (s:State.t) ~engine ~cars ~station_x ~station_y ~rail ~paused =
   let x, y = match rail with
     | `Back ->
         let engine_tex = Hashtbl.find s.textures.small_engine engine in
@@ -26,12 +26,25 @@ let init ?(pause_at_cars=false) (s:State.t) ~engine ~cars ~station_x ~station_y 
     rail;
     engine;
     cars;
-    visible=false;
-    pause_at_cars=if pause_at_cars then Some false else None;
+    paused;
     station_x;
     station_y;
-    moving;
   }
+
+let pause v = {v with paused=true}
+let unpause v = {v with paused=false}
+
+let train_end_at_screen_edge (s:State.t) v =
+    (* Check if at edge *)
+    let train_end =
+      List.fold_left (fun x car ->
+        let car_tex_old, _ = Hashtbl.find s.textures.car_anim car in
+        let w = R.Texture.get_w car_tex_old in
+        x - w)
+      v.x
+      v.cars
+    in
+    train_end = 0
 
 let render win (s:State.t) v =
   Station_view.render win s v.station_x v.station_y ~show_demand:false;
@@ -44,18 +57,35 @@ let render win (s:State.t) v =
       let engine = Hashtbl.find s.textures.engine_anim v.engine in
       R.Texture.render win ~x:v.x ~y:v.y engine.tex;
       let len = Array.length engine.anim in
-      (* Draw animating wheels *)
-      if len > 0 then
-        R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(v.y+engine.anim_y) engine.anim.(v.anim_idx);
-      (* Draw smoke *)
-      begin match engine.smoke_x with
-      | None -> ()
-      | Some smoke_x ->
-          let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
-          let smoke_tex = smoke_arr.(v.smoke_idx) in
-          let _, h = R.Texture.get_w smoke_tex, R.Texture.get_h smoke_tex in
-          R.Texture.render win ~x:(v.x + smoke_x - smoke_x_off) ~y:(v.y - h) smoke_tex
-      end
+
+      if not v.paused then begin
+        (* Draw animating wheels *)
+        if len > 0 then
+          R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(v.y+engine.anim_y) engine.anim.(v.anim_idx);
+
+        (* Draw smoke *)
+        begin match engine.smoke_x with
+        | None -> ()
+        | Some smoke_x ->
+            let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
+            let smoke_tex = smoke_arr.(v.smoke_idx) in
+            let _, h = R.Texture.get_w smoke_tex, R.Texture.get_h smoke_tex in
+            R.Texture.render win ~x:(v.x + smoke_x - smoke_x_off) ~y:(v.y - h) smoke_tex
+        end;
+      end;
+
+      (* Draw cars *)
+      let _ =
+        List.fold_left (fun x car ->
+          let car_tex_old, _ = Hashtbl.find s.textures.car_anim car in
+          R.Texture.render win ~x ~y:v.y car_tex_old;
+          let w = R.Texture.get_w car_tex_old in
+          x - w
+        )
+        v.x
+        v.cars
+      in
+      ()
 
 let handle_tick (s:State.t) v time =
   if time - v.last_time < wait_time then v
@@ -75,19 +105,24 @@ let handle_tick (s:State.t) v time =
 
     | `Front ->
         let engine = Hashtbl.find s.textures.engine_anim v.engine in
-        let anim_len = Array.length engine.anim in
-        if anim_len > 0 then
-          v.anim_idx <- (v.anim_idx + 1) mod anim_len;
 
-        begin match engine.smoke_x with
-        | Some _ ->
-          let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
-          let smoke_len = Array.length smoke_arr in
-          v.smoke_idx <- (v.smoke_idx + 1) mod smoke_len
-        | None -> ()
+        if not v.paused then begin
+          (* Run wheel animation if present *)
+          let anim_len = Array.length engine.anim in
+          if anim_len > 0 then
+            v.anim_idx <- (v.anim_idx + 1) mod anim_len;
+
+          (* Run smoke animation if present *)
+          begin match engine.smoke_x with
+          | Some _ ->
+            let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
+            let smoke_len = Array.length smoke_arr in
+            v.smoke_idx <- (v.smoke_idx + 1) mod smoke_len
+          | None -> ()
+          end;
+
+          v.x <- v.x + 1;
         end;
-
-        v.x <- v.x + 1;
         v
   )
 

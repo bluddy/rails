@@ -711,55 +711,63 @@ module TrainAnim = struct
     (* Cars *)
     let hash_car = Hashtbl.create 10 in
 
-    let load_cars version suffix =
-      let ndarray = Hashtbl.find res.Resources.res_pics @@ "LOCOS"^suffix in
-      let car_full ?(h=19) ?(w=47) ~arr kind x y =
+    let load_cars () =
+      let get_ndarray prefix suffix = 
+        Hashtbl.find res.Resources.res_pics @@ prefix^"LOCOS"^suffix
+      in
+      let get_ndarrays prefix =
+        get_ndarray prefix "", get_ndarray prefix "M"
+      in
+      let ndarray_old, ndarray_new = get_ndarrays ""
+      in
+      let car_full ?(h=19) ?(w=47) ~arr x y =
         let y2 = y + h in
         let x2 = x + w in
         let tex = slice_full ~arr x y x2 y2 in
-        let car = {
-          tex; w; h; anim_x=0; anim_y=0; anim=[||]; smoke_x=None;
-        }
-        in
-        Hashtbl.add hash_car kind car
+        tex
       in
-      let car = car_full ~arr:ndarray in
+      let car ~arrs kind x y=
+        let ndarray_old, ndarray_new = arrs in
+        let car_old = car_full ~arr:ndarray_old x y in
+        let car_new = car_full ~arr:ndarray_new x y in
+        Hashtbl.add hash_car kind (car_old, car_new)
+      in
       let open Goods in
-      car (Mail, version) 160 80;
-      car (Passengers, version) 240 80;
-      car (Food, version) 160 100;
-      car (Livestock, version) 240 100;
-      car (MfgGoods, version) 160 120;
-      car (Grain, version) 240 120;
-      car (Paper, version) 160 140;
-      car (Steel, version) 240 140;
-      car (Petroleum, version) 160 160;
-      car (Wood, version) 240 160;
-      car (Coal, version) 160 180;
+      let car2 = car ~arrs:(ndarray_old, ndarray_new) in
+      car2 Mail 160 80;
+      car2 Passengers 240 80;
+      car2 Food 160 100;
+      car2 Livestock 240 100;
+      car2 MfgGoods 160 120;
+      car2 Grain 240 120;
+      car2 Paper 160 140;
+      car2 Steel 240 140;
+      car2 Petroleum  160 160;
+      car2 Wood 240 160;
+      car2 Coal  160 180;
 
       (* Britain *)
-      let ndarray = Hashtbl.find res.Resources.res_pics @@ "ELOCOS"^suffix in
-      let car = car_full ~arr:ndarray in
+      let ndarray_old, ndarray_new = get_ndarrays "E" in
+      let car2 = car ~arrs:(ndarray_old, ndarray_new) in
 
-      car (Beer, version) 160 100;
-      car (Hops, version) 240 120;
-      car (Textiles, version) 160 140;
-      car (Chemicals, version) 160 160;
-      car (Cotton, version) 240 160;
+      car2 Beer 160 100;
+      car2 Hops 240 120;
+      car2 Textiles 160 140;
+      car2 Chemicals 160 160;
+      car2 Cotton 240 160;
 
       (* Europe *)
-      let ndarray = Hashtbl.find res.Resources.res_pics @@ "CLOCOS"^suffix in
-      let car = car_full ~arr:ndarray in
+      let ndarray_old, ndarray_new = get_ndarrays "C" in
+      let car = car ~arrs:(ndarray_old, ndarray_new) in
 
-      car (Wine, version) 160 100;
-      car (Grapes, version) 240 100;
-      car (Armaments, version) 160 120;
-      car (Fertilizer, version) 240 120;
-      car (Nitrates, version) 160 160;
-      car (Wool, version) 240 160;
+      car Wine 160 100;
+      car Grapes 240 100;
+      car Armaments 160 120;
+      car Fertilizer 240 120;
+      car Nitrates 160 160;
+      car Wool 240 160;
     in
-    load_cars `Old "";
-    load_cars `New "M";
+    load_cars ();
 
     hash_engine, hash_car
 end
@@ -982,7 +990,7 @@ type t = {
                | `Freight of Goods.freight ], R.Texture.t) Hashtbl.t;
   engine_detail: (Engine.make, R.Texture.t) Hashtbl.t;
   engine_anim: (Engine.make, TrainAnim.t) Hashtbl.t;
-  car_anim: (Goods.t * [`New | `Old ], TrainAnim.t) Hashtbl.t;
+  car_anim: (Goods.t, (R.Texture.t * R.Texture.t)) Hashtbl.t;
   opponents: (Opponent.t, R.Texture.t) Hashtbl.t;
   jobs: (Jobs.t, R.Texture.t) Hashtbl.t;
   misc: (Misc.t, R.Texture.t) Hashtbl.t;

@@ -8,9 +8,7 @@ type t = {
   rail: [`Back | `Front];
   engine: Engine.make;
   cars: Goods.t list;
-  visible: bool;
-  pause_at_cars: bool option;
   station_x: int;
   station_y: int;
-  moving: bool;
+  paused: bool;
 }
