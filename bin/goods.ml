@@ -54,6 +54,34 @@ let show = function
   | Grapes -> "Grapes"
   | Wine -> "Wine"
 
+let car_s_of x =
+  let s = match x with
+    | Wood -> " Hopper"
+    | _ -> " Car"
+  in
+  (show x)^s
+
+let us = [
+  Mail; Passengers; Food;
+  Livestock; MfgGoods; Grain;
+  Paper; Steel; Petroleum;
+  Wood; Coal
+]
+
+let england = [
+  Mail; Passengers;
+  Beer; Livestock; MfgGoods;
+  Hops; Textiles; Steel;
+  Chemicals; Cotton; Coal;
+]
+
+let europe = [
+  Mail; Passengers;
+  Wine; Grapes; Armaments;
+  Fertilizer; Textiles; Steel;
+  Nitrates; Wood; Coal;
+]
+
 type freight =
   | FreightMail
   | FreightPassenger

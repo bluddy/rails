@@ -4,6 +4,12 @@ module R = Renderer
 
 module AddCars = struct
 
+  type t = {
+    anim: Train_animate_side_d.t;
+    menu: (Goods.t, unit) Menu.MsgBox.t;
+    show_menu: bool;
+  }
+
   (* Create the animation that will be used when we add cars *)
   let init (s:State.t) ~engine =
     (* Find station with engine shop *)
