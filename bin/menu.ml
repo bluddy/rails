@@ -95,6 +95,7 @@ module MsgBox = struct
     { y=0; h=0; name; kind=Static {color} }
 
   let make_entry ?test_enabled name fire =
+    (* test_enabled: entry can be disabled under some circumstances *)
     let fire =
       match fire with
       | `MsgBox m -> MsgBox(false, m)

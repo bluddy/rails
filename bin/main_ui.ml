@@ -1,4 +1,5 @@
 open Containers
+open Utils.Infix
 open Main_ui_d
 
 module R = Renderer
@@ -367,7 +368,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     let view, view_action =
       Mapview.handle_event s view event ~minimap:v.dims.minimap
     in
-    if not @@ CCEqual.physical v.view view then v.view <- view;
+    if v.view =!= view then v.view <- view;
 
     let v, backend_action =
       match menu_action, view_action with
@@ -537,10 +538,9 @@ let handle_event (s:State.t) v (event:Event.t) =
       | None ->
           v, nobaction
       end
-
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_event s event state in
-      if CCEqual.physical state state2 then
+      if state === state2 then
         v, nobaction
       else
         {v with mode=BuildTrain(`AddCars state2)}, nobaction
@@ -549,7 +549,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 let handle_tick s v time = match v.mode with
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
-      if CCEqual.physical state state2 then v
+      if state === state2 then v
       else
         {v with mode=BuildTrain(`AddCars state2)}
 

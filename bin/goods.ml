@@ -54,7 +54,7 @@ let show = function
   | Grapes -> "Grapes"
   | Wine -> "Wine"
 
-let car_s_of x =
+let car_str_of x =
   let s = match x with
     | Wood -> " Hopper"
     | _ -> " Car"
@@ -81,6 +81,11 @@ let europe = [
   Fertilizer; Textiles; Steel;
   Nitrates; Wood; Coal;
 ]
+
+let of_region = function
+  | Region.WestUS | EastUS -> us
+  | Europe -> europe
+  | Britain -> england
 
 type freight =
   | FreightMail

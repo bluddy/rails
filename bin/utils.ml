@@ -29,6 +29,11 @@ module Set = struct
   end
 end
 
+module Infix = struct
+  let (===) = Stdlib.(==)
+  let (=!=) = Stdlib.(!=)
+end
+
 type rect = {
   x: int;
   y: int;

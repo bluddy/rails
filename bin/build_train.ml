@@ -1,14 +1,10 @@
 open Containers
+open Utils.Infix
 
 module R = Renderer
 
 module AddCars = struct
-
-  type t = {
-    anim: Train_animate_side_d.t;
-    menu: (Goods.t, unit) Menu.MsgBox.t;
-    show_menu: bool;
-  }
+  open Build_train_d
 
   (* Create the animation that will be used when we add cars *)
   let init (s:State.t) ~engine =
@@ -21,24 +17,39 @@ module AddCars = struct
       with Invalid_argument _ -> invalid_arg "No station with engine found"
     in
     let station_x, station_y = station.x, station.y in
-    let animation =
+    let anim =
       let engine = engine.Engine.make in
       Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station_x ~station_y ~rail:`Back
     in
-    animation
+    let menu =
+      let goods = Goods.of_region s.backend.region in
+      let car_list = List.map Goods.car_str_of goods in
+      let goods_cars = List.combine car_list goods in
+      let open Menu.MsgBox in
+      make ~fonts:s.fonts ~heading:"Add Car?" @@
+        [make_entry "No Thanks" (`Action `Done)] @
+        (List.map (fun (name, good) -> make_entry name @@ `Action(`AddCar good)) goods_cars)
+    in
+    {
+      anim;
+      menu;
+      show_menu=false;
+    }
 
   let handle_event (_s:State.t) _event v = v
 
   let handle_tick s v time =
-    let v = Train_animate_side.handle_tick s v time in
+    let anim = Train_animate_side.handle_tick s v.anim time in
     (* Check if we reached end *)
-    if Train_animate_side.train_end_at_screen_edge s v then
-      Train_animate_side.pause v
-    else
-      v
+    let anim =
+      if Train_animate_side.train_end_at_screen_edge s anim then
+        Train_animate_side.pause anim
+      else anim
+    in
+    if anim =!= v.anim then {v with anim} else v
 
   let render win s v =
-    Train_animate_side.render win s v
+    Train_animate_side.render win s v.anim
 
 end
 
