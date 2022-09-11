@@ -36,14 +36,29 @@ module AddCars = struct
       show_menu=false;
     }
 
-  let handle_event (_s:State.t) _event v = v
+  let handle_event (s:State.t) v event =
+    if v.show_menu then
+      let menu, action = Menu.MsgBox.update s v.menu event in
+      let anim =
+        match action with
+        | Menu.On(`AddCar good) ->
+            let cars = v.anim.cars @ [good] in
+            {v.anim with cars}
+        | Menu.On(`Done) -> v.anim
+        | _ -> v.anim
+      in
+      let v = if menu =!= v.menu || anim =!= v.anim then {v with menu; anim} else v in
+      v, Backend.Action.NoAction
+    else
+      v, Backend.Action.NoAction
 
   let handle_tick s v time =
     let anim = Train_animate_side.handle_tick s v.anim time in
     (* Check if we reached end *)
     let anim, v =
-      if Train_animate_side.train_end_at_screen_edge s anim then (
-        Train_animate_side.pause anim, {v with show_menu = true}
+      if not v.show_menu && Train_animate_side.train_end_at_screen_edge s anim then (
+        let menu = Menu.MsgBox.do_open_menu s v.menu ~selected:(Some 0) in
+        Train_animate_side.pause anim, {v with show_menu = true; menu}
       ) else
         anim, v
     in

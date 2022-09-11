@@ -539,11 +539,11 @@ let handle_event (s:State.t) v (event:Event.t) =
           v, nobaction
       end
   | BuildTrain(`AddCars state) ->
-      let state2 = Build_train.AddCars.handle_event s event state in
-      if state === state2 then
-        v, nobaction
+      let state2, action = Build_train.AddCars.handle_event s state event in
+      if state =!= state2 then
+        {v with mode=BuildTrain(`AddCars state2)}, action
       else
-        {v with mode=BuildTrain(`AddCars state2)}, nobaction
+        v, action
 
 
 let handle_tick s v time = match v.mode with

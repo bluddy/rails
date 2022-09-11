@@ -362,6 +362,7 @@ module MsgBox = struct
       {v with entries; selected}, action
 
     let update s v (event:Event.t) =
+      (* Returns new v and action *)
       let v, action =
         match event with
         | MouseButton {down=true; x; y; _} ->
@@ -600,6 +601,7 @@ module Global = struct
           {v with menus; open_menu}, action
 
   let update s v (event:Event.t) =
+    (* Returns new v and the action derived from the menu *)
     let v, action =
       match event with
       | MouseButton {down=true; x; y; _} ->
