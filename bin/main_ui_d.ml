@@ -93,7 +93,7 @@ and 'a mode =
   | StationView of int * int (* x, y *)
   | BuildTrain of [
     | `ChooseEngine
-    | `AddCars of Build_train_d.addcars
+    | `AddCars of 'a Build_train_d.addcars
   ]
 
 type 'state t = {

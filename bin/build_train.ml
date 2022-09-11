@@ -48,8 +48,11 @@ module AddCars = struct
     in
     if anim =!= v.anim then {v with anim} else v
 
-  let render win s v =
-    Train_animate_side.render win s v.anim
+  let render win (s:State.t) v =
+    Train_animate_side.render win s v.anim;
+    if v.show_menu then
+      Menu.MsgBox.render win s v.menu;
+    ()
 
 end
 
