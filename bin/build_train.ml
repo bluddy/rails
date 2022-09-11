@@ -26,7 +26,7 @@ module AddCars = struct
       let car_list = List.map Goods.car_str_of goods in
       let goods_cars = List.combine car_list goods in
       let open Menu.MsgBox in
-      make ~fonts:s.fonts ~heading:"Add Car?" @@
+      make ~fonts:s.fonts ~heading:"Add Car?" ~x:200 ~y:10 @@
         [make_entry "No Thanks" (`Action `Done)] @
         (List.map (fun (name, good) -> make_entry name @@ `Action(`AddCar good)) goods_cars)
     in
@@ -41,10 +41,11 @@ module AddCars = struct
   let handle_tick s v time =
     let anim = Train_animate_side.handle_tick s v.anim time in
     (* Check if we reached end *)
-    let anim =
-      if Train_animate_side.train_end_at_screen_edge s anim then
-        Train_animate_side.pause anim
-      else anim
+    let anim, v =
+      if Train_animate_side.train_end_at_screen_edge s anim then (
+        Train_animate_side.pause anim, {v with show_menu = true}
+      ) else
+        anim, v
     in
     if anim =!= v.anim then {v with anim} else v
 

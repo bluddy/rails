@@ -35,6 +35,8 @@ let pause v = {v with paused=true}
 let unpause v = {v with paused=false}
 
 let train_end_at_screen_edge (s:State.t) v =
+  match v.rail with
+  | `Front ->
     (* Check if at edge *)
     let train_end =
       List.fold_left (fun x car ->
@@ -45,6 +47,7 @@ let train_end_at_screen_edge (s:State.t) v =
       v.cars
     in
     train_end = 0
+  | `Back -> false
 
 let render win (s:State.t) v =
   Station_view.render win s v.station_x v.station_y ~show_demand:false;
