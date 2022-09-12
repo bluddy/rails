@@ -39,15 +39,21 @@ module AddCars = struct
   let handle_event (s:State.t) v event =
     if v.show_menu then
       let menu, action = Menu.MsgBox.update s v.menu event in
-      let anim =
+      let anim, show_menu =
         match action with
         | Menu.On(`AddCar good) ->
             let cars = v.anim.cars @ [good] in
-            {v.anim with cars}
-        | Menu.On(`Done) -> v.anim
-        | _ -> v.anim
+            {v.anim with cars; paused=false}, false
+        | Menu.On(`Done) ->
+            (* Finished building train *)
+            {v.anim with paused=false}, false
+        | _ -> v.anim, true
       in
-      let v = if menu =!= v.menu || anim =!= v.anim then {v with menu; anim} else v in
+      let v =
+        if menu =!= v.menu || anim =!= v.anim || show_menu =!= v.show_menu then
+          {menu; anim; show_menu}
+        else v
+      in
       v, Backend.Action.NoAction
     else
       v, Backend.Action.NoAction
