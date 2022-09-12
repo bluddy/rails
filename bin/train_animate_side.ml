@@ -81,9 +81,10 @@ let render win (s:State.t) v =
       let _ =
         List.fold_left (fun x car ->
           let car_tex_old, _ = Hashtbl.find s.textures.car_anim car in
-          R.Texture.render win ~x ~y:v.y car_tex_old;
           let w = R.Texture.get_w car_tex_old in
-          x - w
+          let x = x - w in
+          R.Texture.render win ~x ~y:v.y car_tex_old;
+          x
         )
         v.x
         v.cars
