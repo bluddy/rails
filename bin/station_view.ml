@@ -152,7 +152,7 @@ let render win (s:State.t) x y ~show_demand =
         match Hashtbl.find_opt info.supply good with
         | Some amount ->
             Fonts.Font.write win font ~x:2 ~y:(y+1) ~color:Ega.black (Goods.show good);
-            let tex = Hashtbl.find s.textures.route_cars @@ `Car(good, `Old) in
+            let tex = Hashtbl.find s.textures.route_cars @@ `CarOld good in
             let tex_w = R.Texture.get_w tex in
             (* Draw (partial) cars of supply *)
             let rec loop x amount =
@@ -178,7 +178,7 @@ let render win (s:State.t) x y ~show_demand =
     let _ =
       Goods.Set.fold (fun good y ->
         Fonts.Font.write win font ~x ~y ~color:Ega.black (Goods.show good);
-        let tex = Hashtbl.find s.textures.route_cars @@ `Car(good, `Old) in
+        let tex = Hashtbl.find s.textures.route_cars @@ `CarOld good in
         R.Texture.render win ~x:162 ~y tex;
         y + 10)
       info.demand

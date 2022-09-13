@@ -419,56 +419,60 @@ module RouteScreen = struct
     tex (`Freight FreightBulk) 139 137;
     tex `Caboose 200 97;
 
-    let cars ~y ~dx age =
+    let cars ~y ~dx car_age_fn =
       let x = 160 in
-      let tex = tex_part ~dx in
-      tex (`Car (Mail, age)) x y;
-      tex (`Car (Passengers, age)) x (y+10);
-      tex (`Car (Food, age)) x (y+20);
-      tex (`Car (Livestock, age)) (x+dx) (y+20);
-      tex (`Car (MfgGoods, age)) (x+2*dx) (y+20);
-      tex (`Car (Grain, age)) x (y+30);
-      tex (`Car (Paper, age)) (x+dx) (y+30);
-      tex (`Car (Steel, age)) (x+2*dx) (y+30);
-      tex (`Car (Petroleum, age)) x (y+40);
-      tex (`Car (Wood, age)) (x+dx) (y+40);
-      tex (`Car (Coal, age)) (x+2*dx) (y+40);
+      let tex car =
+        tex_full ~arr:ndarray ~hash:car_hash ~dx ~dy:8 (car_age_fn car)
+      in
+      tex Mail x y;
+      tex Passengers x (y+10);
+      tex Food x (y+20);
+      tex Livestock (x+dx) (y+20);
+      tex MfgGoods (x+2*dx) (y+20);
+      tex Grain x (y+30);
+      tex Paper (x+dx) (y+30);
+      tex Steel (x+2*dx) (y+30);
+      tex Petroleum x (y+40);
+      tex Wood (x+dx) (y+40);
+      tex Coal (x+2*dx) (y+40);
     in
-    cars ~y:97 ~dx:20 `Old;
-    cars ~y:147 ~dx:24 `New;
+    cars ~y:97 ~dx:20 (fun x -> `CarOld x);
+    cars ~y:147 ~dx:24 (fun x -> `CarNew x);
 
     (* Britain *)
     let ndarray = Hashtbl.find res.Resources.res_pics "ESPRITES" in
-    let tex_part = tex_full ~arr:ndarray ~hash:car_hash ~dy:8 in
 
-    let cars ~y ~dx age =
+    let cars ~y ~dx car_age_fn =
       let x = 160 in
-      let tex = tex_part ~dx in
-      tex (`Car (Beer, age)) x (y+20);
-      tex (`Car (Hops, age)) (x+dx) (y+20);
-      tex (`Car (Textiles, age)) (x+dx) (y+30);
-      tex (`Car (Chemicals, age)) x (y+40);
-      tex (`Car (Cotton, age)) (x+dx) (y+40);
+      let tex car =
+        tex_full ~arr:ndarray ~hash:car_hash ~dx ~dy:8 (car_age_fn car)
+      in
+      tex Beer x (y+20);
+      tex Hops (x+dx) (y+20);
+      tex Textiles (x+dx) (y+30);
+      tex Chemicals x (y+40);
+      tex Cotton (x+dx) (y+40);
     in
-    cars ~y:97 ~dx:20 `Old;
-    cars ~y:147 ~dx:24 `New;
+    cars ~y:97 ~dx:20 (fun x -> `CarOld x);
+    cars ~y:147 ~dx:24 (fun x -> `CarNew x);
 
     (* Europe *)
     let ndarray = Hashtbl.find res.Resources.res_pics "CSPRITES" in
-    let tex_part = tex_full ~arr:ndarray ~hash:car_hash ~dy:8 in
 
-    let cars ~y ~dx age =
+    let cars ~y ~dx car_age_fn =
       let x = 160 in
-      let tex = tex_part ~dx in
-      tex (`Car (Wine, age)) x (y+20);
-      tex (`Car (Grapes, age)) (x+dx) (y+20);
-      tex (`Car (Armaments, age)) (x+2*dx) (y+20);
-      tex (`Car (Fertilizer, age)) x (y+30);
-      tex (`Car (Nitrates, age)) x (y+40);
-      tex (`Car (Wool, age)) (x+dx) (y+40);
+      let tex car =
+        tex_full ~arr:ndarray ~hash:car_hash ~dx ~dy:8 (car_age_fn car)
+      in
+      tex Wine x (y+20);
+      tex Grapes (x+dx) (y+20);
+      tex Armaments (x+2*dx) (y+20);
+      tex Fertilizer x (y+30);
+      tex Nitrates x (y+40);
+      tex Wool (x+dx) (y+40);
     in
-    cars ~y:97 ~dx:20 `Old;
-    cars ~y:147 ~dx:24 `New;
+    cars ~y:97 ~dx:20 (fun x -> `CarOld x);
+    cars ~y:147 ~dx:24 (fun x -> `CarNew x);
 
     small_engine_hash, engine_hash, car_hash
 end
@@ -986,7 +990,7 @@ type t = {
   cars_top: (CarsTop.hash * Dir.t, R.Texture.t) Hashtbl.t;
   small_engine: (Engine.make, R.Texture.t) Hashtbl.t;
   route_engine: (Engine.make, R.Texture.t) Hashtbl.t;
-  route_cars: ([ `Caboose | `Car of Goods.t * [ `New | `Old ]
+  route_cars: ([ `Caboose | `CarNew of Goods.t | `CarOld of Goods.t
                | `Freight of Goods.freight ], R.Texture.t) Hashtbl.t;
   engine_detail: (Engine.make, R.Texture.t) Hashtbl.t;
   engine_anim: (Engine.make, TrainAnim.t) Hashtbl.t;
