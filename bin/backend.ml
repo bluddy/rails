@@ -1,5 +1,6 @@
 open Containers
 open Sexplib.Std
+open Utils.Infix
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -49,6 +50,7 @@ type t = {
   region: Region.t;
   map : Tilemap.t;
   mutable track: Trackmap.t;
+  trains: Train.Map.t;
   cities: Cities.t;
   mutable stations: Station_map.t;
   options : B_options.t;
@@ -221,6 +223,12 @@ let _improve_station v ~x ~y ~player ~upgrade =
   in
   if not @@ CCEqual.physical v.stations stations then v.stations <- stations;
   v
+
+let _build_train v station_x station_y engine goods =
+  let train = Train.make station_x station_y engine goods in
+  let trains = Train.Map.add v.train_map train in
+  if trains === v.trains then v
+  else {v with trains}
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
@@ -289,6 +297,7 @@ module Action = struct
     | RemoveTrack of Utils.msg
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
+    | BuildTrain of Engine.t * Goods.t list * int * int (* x, y *)
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
@@ -307,6 +316,8 @@ module Action = struct
         _improve_station backend ~x ~y ~player ~upgrade
     | SetSpeed speed ->
         _set_speed backend speed
+    | BuildTrain (engine, goods, station_x, station_y) ->
+        _build_train backend station_x station_y engine goods
     | NoAction -> backend
 
 end

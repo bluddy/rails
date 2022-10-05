@@ -34,29 +34,34 @@ module AddCars = struct
       anim;
       menu;
       show_menu=false;
+      train_done=false;
     }
+
+  let nobaction = Backend.Action.NoAction
 
   let handle_event (s:State.t) v event =
     if v.show_menu then
       let menu, action = Menu.MsgBox.update s v.menu event in
-      let anim, show_menu =
+      let anim, show_menu, train_done =
         match action with
         | Menu.On(`AddCar good) ->
             let cars = v.anim.cars @ [good] in
-            {v.anim with cars; paused=false}, false
+            {v.anim with cars; paused=false}, false, false
         | Menu.On(`Done) ->
             (* Finished building train *)
-            {v.anim with paused=false}, false
-        | _ -> v.anim, true
+            {v.anim with paused=false}, false, true
+        | _ -> v.anim, true, false
       in
       let v =
-        if menu =!= v.menu || anim =!= v.anim || show_menu =!= v.show_menu then
-          {menu; anim; show_menu}
+        if menu =!= v.menu || anim =!= v.anim || show_menu =!= v.show_menu || train_done =!= v.train_done then
+          {menu; anim; show_menu; train_done}
         else v
       in
-      v, Backend.Action.NoAction
+      v, nobaction
+    else if v.train_done && (Event.pressed_esc event || Event.is_left_click event) then
+      v, Backend.Action.BuildTrain(v.anim.engine, v.anim.cars, station_x, station_y)
     else
-      v, Backend.Action.NoAction
+      v, nobaction
 
   let handle_tick s v time =
     let anim = Train_animate_side.handle_tick s v.anim time in

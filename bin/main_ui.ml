@@ -538,6 +538,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       | None ->
           v, nobaction
       end
+
   | BuildTrain(`AddCars state) ->
       let state2, action = Build_train.AddCars.handle_event s state event in
       if state =!= state2 then
