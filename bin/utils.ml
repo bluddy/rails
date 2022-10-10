@@ -24,9 +24,22 @@ module Set = struct
       Sexplib0.Sexp_conv.list_of_sexp O.t_of_sexp sexp |> of_list
 
     let sexp_of_t (t:t) =
-      to_list t |>
-      Sexplib0.Sexp_conv.sexp_of_list O.sexp_of_t
+      to_list t |> Sexplib0.Sexp_conv.sexp_of_list O.sexp_of_t
   end
+end
+
+module Vector = struct
+  include CCVector
+  let t_of_sexp conv _a (sexp:Sexplib0.Sexp.t) =
+    Sexplib0.Sexp_conv.list_of_sexp conv sexp |> CCVector.of_list
+
+  let sexp_of_t conv _a v =
+    CCVector.to_list v |> Sexplib0.Sexp_conv.sexp_of_list conv
+
+  let rw_of_sexp (_sexp:Sexplib0.Sexp.t) = `RW
+
+  let sexp_of_rw _rw = Sexplib0.Sexp.Atom "RW"
+
 end
 
 module Infix = struct

@@ -9,7 +9,7 @@ type t =
   | DownLeft
   | Left
   | UpLeft
-  [@@deriving ord, enum]
+  [@@deriving ord, enum, sexp]
 
 let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
 

@@ -1,3 +1,4 @@
+open Sexplib.Std
 open Containers
 
 type make =
@@ -31,6 +32,7 @@ type make =
   | V200BB
   | BoBoBo
   | TGV
+  [@@deriving sexp, eq]
 
 type t = {
   make: make;
@@ -39,7 +41,7 @@ type t = {
   horsepower: int;
   price: int;
   year: int;
-}
+} [@@deriving sexp]
 
 let make make name max_speed horsepower price year =
   { make; name; max_speed; horsepower; price; year }
@@ -90,8 +92,12 @@ let eu_engines =
     make TGV "TresGrandVitesse" 160 8000 150000 1978;
   ]
 
-let get = function
+let of_region = function
   | Region.WestUS | EastUS -> us_engines
   | Britain -> en_engines
   | Europe -> eu_engines
 
+let t_of_make region make =
+  let engines = of_region region in
+  List.find (fun engine -> equal_make engine.make make) engines
+  

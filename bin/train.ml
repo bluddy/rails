@@ -1,14 +1,15 @@
+open Sexplib.Std
 open Containers
 
 type t = {
   x: int;
   y: int;
-  engine: Engine.make;
+  engine: Engine.t;
   dir: Dir.t;
   speed: int;
   target_speed: int;
   cars: Goods.t list;
-}
+} [@@deriving sexp]
 
 let make x y engine cars =
   {
@@ -19,17 +20,4 @@ let make x y engine cars =
     target_speed=0;
     cars;
   }
-
-module Map = struct
-  type nonrec t = {
-    map: (t, CCVector.rw) CCVector.t;
-  }
-  [@@deriving sexp]
-
-  let add v train =
-    CCVector.push v.map train; v
-
-  let delete v idx =
-    CCVector.remove_and_shift v.map idx; v
-end
 

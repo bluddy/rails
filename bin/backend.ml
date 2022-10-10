@@ -50,7 +50,7 @@ type t = {
   region: Region.t;
   map : Tilemap.t;
   mutable track: Trackmap.t;
-  trains: Train.Map.t;
+  trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station_map.t;
   options : B_options.t;
@@ -78,6 +78,7 @@ let default region resources ~random ~seed =
     | Britain -> 1828
     | Europe -> 1900
   in
+  let trains = Trainmap.empty () in
   {
     time=0;
     cycle=0;
@@ -88,6 +89,7 @@ let default region resources ~random ~seed =
     map;
     region;
     cities;
+    trains;
     track;
     stations;
     options;
@@ -225,8 +227,9 @@ let _improve_station v ~x ~y ~player ~upgrade =
   v
 
 let _build_train v station_x station_y engine goods =
-  let train = Train.make station_x station_y engine goods in
-  let trains = Train.Map.add v.train_map train in
+  let engine_t = Engine.t_of_make v.region engine in
+  let train = Train.make station_x station_y engine_t goods in
+  let trains = Trainmap.add v.trains train in
   if trains === v.trains then v
   else {v with trains}
   
@@ -297,7 +300,7 @@ module Action = struct
     | RemoveTrack of Utils.msg
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
-    | BuildTrain of Engine.t * Goods.t list * int * int (* x, y *)
+    | BuildTrain of Engine.make * Goods.t list * int * int (* x, y *)
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
