@@ -1,5 +1,6 @@
 open Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
+open Utils.Infix
 
 module R = Renderer
 module B = Backend
@@ -35,10 +36,10 @@ let handle_tick win (s:State.t) time =
 
     | Screen.MapView ->
         let ui = Main_ui.handle_tick s s.ui time in
-        if not @@ CCEqual.physical s.ui ui then s.ui <- ui;
+        if s.ui =!= ui then s.ui <- ui;
         let backend, ui_msgs = Backend.handle_tick s.backend time in
         (* TODO: handle ui_msgs from backend *)
-        if not @@ CCEqual.physical s.backend backend then s.backend <- backend;
+        if s.backend =!= backend then s.backend <- backend;
         s
 
     | _ -> s
@@ -61,8 +62,8 @@ let handle_event (s:State.t) (event:Event.t) =
         let backend = 
           Backend.Action.run s.backend action
         in
-        if not @@ CCEqual.physical s.ui ui then s.ui <- ui;
-        if not @@ CCEqual.physical s.backend backend then s.backend <- backend;
+        if s.ui =!= ui then s.ui <- ui;
+        if s.backend =!= backend then s.backend <- backend;
         s
 
     | _ -> s

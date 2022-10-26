@@ -59,7 +59,7 @@ module AddCars = struct
       in
       v, nobaction
     else if v.train_done && (Event.pressed_esc event || Event.is_left_click event) then
-      v, Backend.Action.BuildTrain(v.anim.engine, v.anim.cars, station_x, station_y)
+      v, Backend.Action.BuildTrain(v.anim.engine, v.anim.cars, v.anim.station_x, v.anim.station_y)
     else
       v, nobaction
 
@@ -81,6 +81,8 @@ module AddCars = struct
       Menu.MsgBox.render win s v.menu;
     ()
 
+  let is_done v = v.train_done
+
 end
 
 module ChooseEngine = struct
@@ -89,7 +91,7 @@ module ChooseEngine = struct
   let engine_each_y = 25
 
   let get_engines_before region year =
-    Engine.get region
+    Engine.of_region region
     |> List.filter (fun engine -> engine.Engine.year <= year)
 
   let render win (s:State.t) ~region ~year =

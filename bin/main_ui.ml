@@ -541,7 +541,9 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | BuildTrain(`AddCars state) ->
       let state2, action = Build_train.AddCars.handle_event s state event in
-      if state =!= state2 then
+      if Build_train.AddCars.is_done state2 then
+        {v with mode=EditTrain `WaitForIndex}, action
+      else if state =!= state2 then
         {v with mode=BuildTrain(`AddCars state2)}, action
       else
         v, action
