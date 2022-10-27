@@ -232,6 +232,10 @@ let _build_train v station_x station_y engine goods =
   let trains = Trainmap.add v.trains train in
   if trains === v.trains then v
   else {v with trains}
+
+let get_num_trains v = Trainmap.size v.trains
+
+let get_train v idx = Trainmap.get v.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 

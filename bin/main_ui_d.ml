@@ -95,6 +95,7 @@ and 'a mode =
     | `ChooseEngine
     | `AddCars of 'a Build_train_d.addcars
   ]
+  | EditTrain of int
 
 type 'state t = {
   dims: dims;

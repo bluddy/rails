@@ -540,13 +540,15 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
 
   | BuildTrain(`AddCars state) ->
-      let state2, action = Build_train.AddCars.handle_event s state event in
-      if Build_train.AddCars.is_done state2 then
-        {v with mode=EditTrain `WaitForIndex}, action
-      else if state =!= state2 then
-        {v with mode=BuildTrain(`AddCars state2)}, action
+      if Build_train.AddCars.is_done state then
+        let num_trains = Backend.get_num_trains s.backend in
+        {v with mode=EditTrain (num_trains - 1)}, nobaction
       else
-        v, action
+        let state2, action = Build_train.AddCars.handle_event s state event in
+        if state =!= state2 then
+          {v with mode=BuildTrain(`AddCars state2)}, action
+        else
+          v, action
 
 
 let handle_tick s v time = match v.mode with
