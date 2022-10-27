@@ -562,74 +562,74 @@ let handle_tick s v time = match v.mode with
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
 
-let render (win:R.window) (s:State.t) v =
-  let render_main () =
-    let dims = v.dims in
-    (* Render main view *)
-    let build_station = match v.mode with
-      | BuildStation _ -> true
-      | _ -> false
-    in
-    
-    let s = Mapview.render win s v.view ~minimap:dims.minimap ~build_station in
-
-    (* Menu bar background *)
-    R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;
-    let h = dims.screen.h - dims.menu.h in
-    let y = dims.menu.h in
-
-    (* Screen White border *)
-    R.draw_rect win ~x:0 ~y ~w:dims.screen.w ~h ~color:Ega.white ~fill:false;
-
-    let x = dims.ui.x in
-
-    (* Border of UI *)
-    R.draw_rect win ~x ~y ~h ~w:(dims.ui.w+1) ~color:Ega.white ~fill:false;
-
-    (* Draw logo *)
-    begin match Mapview.get_zoom v.view with
-    | Zoom1 ->
-        let logo = Hashtbl.find s.State.textures.misc `Logo in
-        R.Texture.render ~x:(x+1) ~y:(y+1) win logo;
-    | _ -> ()
-    end;
-
-    (* Info bar *)
-    let y = y + dims.minimap.h in
-    R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
-
-    let money = B.get_money s.backend ~player:0 in
-    let money_s = Printf.sprintf "$%#6d,000" money |>
-       String.map (function '_' -> ',' | x -> x)
-    in
-    Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:66 money_s;
-
-    let month, year = B.get_date s.backend in
-    let date_s = Printf.sprintf "%s %d" (str_of_month.(month)) year in
-    Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:74 date_s;
-
-    (* Train area *)
-    let y = y + dims.infobar.h in
-    R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
-
-    (* Menu bar *)
-    Menu.Global.render win s s.fonts v.menu;
+let render_main win s v =
+  let dims = v.dims in
+  (* Render main view *)
+  let build_station = match v.mode with
+    | BuildStation _ -> true
+    | _ -> false
   in
+  
+  let s = Mapview.render win s v.view ~minimap:dims.minimap ~build_station in
 
+  (* Menu bar background *)
+  R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;
+  let h = dims.screen.h - dims.menu.h in
+  let y = dims.menu.h in
+
+  (* Screen White border *)
+  R.draw_rect win ~x:0 ~y ~w:dims.screen.w ~h ~color:Ega.white ~fill:false;
+
+  let x = dims.ui.x in
+
+  (* Border of UI *)
+  R.draw_rect win ~x ~y ~h ~w:(dims.ui.w+1) ~color:Ega.white ~fill:false;
+
+  (* Draw logo *)
+  begin match Mapview.get_zoom v.view with
+  | Zoom1 ->
+      let logo = Hashtbl.find s.State.textures.misc `Logo in
+      R.Texture.render ~x:(x+1) ~y:(y+1) win logo;
+  | _ -> ()
+  end;
+
+  (* Info bar *)
+  let y = y + dims.minimap.h in
+  R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
+
+  let money = B.get_money s.backend ~player:0 in
+  let money_s = Printf.sprintf "$%#6d,000" money |>
+      String.map (function '_' -> ',' | x -> x)
+  in
+  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:66 money_s;
+
+  let month, year = B.get_date s.backend in
+  let date_s = Printf.sprintf "%s %d" (str_of_month.(month)) year in
+  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:74 date_s;
+
+  (* Train area *)
+  let y = y + dims.infobar.h in
+  R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
+
+  (* Menu bar *)
+  Menu.Global.render win s s.fonts v.menu
+
+let render (win:R.window) (s:State.t) v =
   (* Msgboxes *)
   let rec render_mode = function
-    | Normal -> render_main ()
+    | Normal ->
+        render_main win s v
     | ModalMsgbox modal ->
         render_mode modal.last;
         Menu.MsgBox.render win s modal.menu
     | BuildStation modal ->
-        render_main ();
+        render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | BuildBridge modal ->
-        render_main ();
+        render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | BuildTunnel modal ->
-        render_main ();
+        render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | StationView(x, y) ->
         Station_view.render win s x y ~show_demand:true
