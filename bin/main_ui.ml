@@ -533,8 +533,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       begin match Build_train.ChooseEngine.handle_event event ~region:s.backend.region ~year:s.backend.year with
       | Some engine ->
           (* We chose an engine *)
-          let add_cars = Build_train.AddCars.init s ~engine in
-          {v with mode=BuildTrain(`AddCars add_cars)}, nobaction
+          let state = Build_train.AddCars.init s ~engine in
+          {v with mode=BuildTrain(`AddCars state)}, nobaction
       | None ->
           v, nobaction
       end
@@ -551,8 +551,10 @@ let handle_event (s:State.t) v (event:Event.t) =
           v, action
 
   | EditTrain state ->
-      let state2, action = Edit_train.handle_event s state event in
-      if state =!= state2 then
+      let exit_state, state2, action = Edit_train.handle_event s state event in
+      if exit_state then
+        {v with mode=Normal}, action
+      else if state =!= state2 then
         {v with mode=EditTrain state}, action
       else
         v, action

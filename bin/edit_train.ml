@@ -6,11 +6,18 @@ type t = {
   index: int;
 }
 
-let make index =
-  { index }
+let nobaction = B.Action.NoAction
 
-let render win s v =
+let make index = {
+  index
+}
+
+let render win _s _v =
+  R.paint_screen win ~color:Ega.white;
   ()
 
-let handle_event s v event =
-  v, B.Action.NoAction
+let handle_event _s v event =
+  if Event.pressed_esc event then
+    true, v, nobaction
+  else
+    false, v, nobaction

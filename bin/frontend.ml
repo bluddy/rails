@@ -37,7 +37,7 @@ let handle_tick win (s:State.t) time =
     | Screen.MapView ->
         let ui = Main_ui.handle_tick s s.ui time in
         if s.ui =!= ui then s.ui <- ui;
-        let backend, ui_msgs = Backend.handle_tick s.backend time in
+        let backend, _ui_msgs = Backend.handle_tick s.backend time in
         (* TODO: handle ui_msgs from backend *)
         if s.backend =!= backend then s.backend <- backend;
         s
