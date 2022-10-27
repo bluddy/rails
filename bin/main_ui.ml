@@ -550,6 +550,13 @@ let handle_event (s:State.t) v (event:Event.t) =
         else
           v, action
 
+  | EditTrain state ->
+      let state2, action = Edit_train.handle_event s state event in
+      if state =!= state2 then
+        {v with mode=EditTrain state}, action
+      else
+        v, action
+
 
 let handle_tick s v time = match v.mode with
   | BuildTrain(`AddCars state) ->
@@ -637,6 +644,8 @@ let render (win:R.window) (s:State.t) v =
         Build_train.ChooseEngine.render win s ~region:s.backend.region ~year:s.backend.year
     | BuildTrain(`AddCars state) ->
         Build_train.AddCars.render win s state 
+    | EditTrain state ->
+        Edit_train.render win s state
   in
   render_mode v.mode
 
