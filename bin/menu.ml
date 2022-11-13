@@ -617,7 +617,8 @@ module Global = struct
     in
     v, action
 
-  let render win s fonts v =
+  let render win s fonts v ~w ~h =
+    Renderer.draw_rect win ~x:0 ~y:0 ~w ~h ~color:Ega.cyan ~fill:true;
     (* Render menu titles *)
     List.iter (Title.render win ~fonts) v.menus;
     match v.open_menu with

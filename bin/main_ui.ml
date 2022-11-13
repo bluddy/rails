@@ -542,7 +542,8 @@ let handle_event (s:State.t) v (event:Event.t) =
   | BuildTrain(`AddCars state) ->
       if Build_train.AddCars.is_done state then
         let num_trains = Backend.get_num_trains s.backend in
-        {v with mode=EditTrain (num_trains - 1)}, nobaction
+        let state = Edit_train.make ~fonts:s.fonts (num_trains-1) in
+        {v with mode=EditTrain state}, nobaction
       else
         let state2, action = Build_train.AddCars.handle_event s state event in
         if state =!= state2 then
@@ -571,7 +572,7 @@ let handle_tick s v time = match v.mode with
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
 
-let render_main win s v =
+let render_main win (s:State.t) v =
   let dims = v.dims in
   (* Render main view *)
   let build_station = match v.mode with
@@ -582,7 +583,6 @@ let render_main win s v =
   let s = Mapview.render win s v.view ~minimap:dims.minimap ~build_station in
 
   (* Menu bar background *)
-  R.draw_rect win ~x:0 ~y:0 ~w:dims.screen.w ~h:dims.menu.h ~color:Ega.cyan ~fill:true;
   let h = dims.screen.h - dims.menu.h in
   let y = dims.menu.h in
 
@@ -621,7 +621,8 @@ let render_main win s v =
   R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
 
   (* Menu bar *)
-  Menu.Global.render win s s.fonts v.menu
+  Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:dims.menu.h;
+  ()
 
 let render (win:R.window) (s:State.t) v =
   (* Msgboxes *)
