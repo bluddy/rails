@@ -45,6 +45,12 @@ let render win (s:State.t) v =
 
   (* Menu bar *)
   Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
+
+  let line1 = Printf.sprintf "Train #%d: %s %s\n" v.index "Passenger" "Limited" in
+  let line2 = Printf.sprintf "near %s (%s/%s)\n" "Wausau" "2-6-0 Mogul" "$4,000" in
+  let line3 = Printf.sprintf "Speed: %d mph, bound for %s" 25 "Wausau" in
+  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:8 ~y:12 (line1^line2^line3);
+
   ()
 
 let handle_event _s v event =
