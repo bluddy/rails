@@ -348,6 +348,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   match v.mode with
   | Normal ->
+    (* Main gameplay view *)
     let v, menu_action, event =
       match Menu.Global.update s v.menu event with
       | _, Menu.NoAction ->
@@ -540,16 +541,11 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
 
   | BuildTrain(`AddCars state) ->
-      if Build_train.AddCars.is_done state then
-        let num_trains = Backend.get_num_trains s.backend in
-        let state = Edit_train.make ~fonts:s.fonts (num_trains-1) in
-        {v with mode=EditTrain state}, nobaction
+      let state2, action = Build_train.AddCars.handle_event s state event in
+      if state =!= state2 then
+        {v with mode=BuildTrain(`AddCars state2)}, action
       else
-        let state2, action = Build_train.AddCars.handle_event s state event in
-        if state =!= state2 then
-          {v with mode=BuildTrain(`AddCars state2)}, action
-        else
-          v, action
+        v, action
 
   | EditTrain state ->
       let exit_state, state2, action = Edit_train.handle_event s state event in
@@ -560,6 +556,17 @@ let handle_event (s:State.t) v (event:Event.t) =
       else
         v, action
 
+(* Handle incoming messages from backend *)
+let handle_msgs (s:State.t) v ui_msgs =
+  let handle_msg v ui_msg =
+    match v.mode, ui_msg with
+    | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
+        let state = Edit_train.make ~fonts:s.fonts idx in
+        {v with mode=EditTrain state}
+    | _ ->
+        v
+  in
+  List.fold_left handle_msg v ui_msgs
 
 let handle_tick s v time = match v.mode with
   | BuildTrain(`AddCars state) ->

@@ -40,6 +40,11 @@ module Random = struct
   end
 end
 
+type ui_msg =
+  | TrainBuilt of int
+  | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
+  [@@deriving sexp]
+
 type t = {
   mutable last_tick: int; (* last time we updated a cycle *)
   mutable cycle: int; (* counter used for all sorts of per-tick updates *)
@@ -53,7 +58,8 @@ type t = {
   trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station_map.t;
-  options : B_options.t;
+  options: B_options.t;
+  mutable ui_msgs: ui_msg list;
   random: Random.State.t;
   seed: int;
 } [@@deriving sexp]
@@ -93,6 +99,7 @@ let default region resources ~random ~seed =
     track;
     stations;
     options;
+    ui_msgs = [];
     random;
     seed
   }
@@ -230,6 +237,8 @@ let _build_train v station_x station_y engine goods =
   let engine_t = Engine.t_of_make v.region engine in
   let train = Train.make station_x station_y engine_t goods in
   let trains = Trainmap.add v.trains train in
+  let msg = TrainBuilt (Trainmap.size v.trains - 1) in
+  v.ui_msgs <- msg::v.ui_msgs;
   if trains === v.trains then v
   else {v with trains}
 
@@ -245,7 +254,7 @@ let handle_cycle v =
 
   (* TODO: ai_routines *)
 
-  let msgs =
+  let demand_msgs =
     if v.cycle mod cycles_station_supply_demand = 0 then (
       Printf.printf "handle_cycle%!\n";
       let difficulty = v.options.difficulty in
@@ -254,16 +263,18 @@ let handle_cycle v =
         not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
       in
       Station_map.fold 
-        (fun station msgs ->
+        (fun station old_msgs ->
           Station.check_rate_war_lose_supplies station ~difficulty;
           let msgs =
-            match Station.update_supply_demand station v.map ~climate ~simple_economy with
-            | [] -> msgs
-            | _  -> `ChangeDemand(station.x, station.y, msgs)::msgs
+            Station.update_supply_demand station v.map ~climate ~simple_economy
           in
           Station.lose_supplies station;
-          msgs
-        )
+          let msgs =
+            List.map (fun (good, add) ->
+                DemandChanged {x=station.x; y=station.y; good; add})
+              msgs
+          in
+          msgs @ old_msgs)
       v.stations
       ~init:[]
     )
@@ -277,17 +288,22 @@ let handle_cycle v =
       {v with year=v.year + 1}
     else v
   in
-  v, msgs
+  v, demand_msgs
 
 let handle_tick v cur_time =
   let delay_mult = B_options.delay_mult_of_speed v.options.speed in
   let tick_delta = delay_mult * tick_ms in
   let new_time = v.last_tick + tick_delta in
+  let ui_msgs = v.ui_msgs in
+  v.ui_msgs <- [];
+
   if cur_time >= new_time then (
     v.last_tick <- cur_time;
-    handle_cycle v
+    let v, misc_msgs = handle_cycle v in
+    v, ui_msgs @ misc_msgs
   )
-  else v, []
+  else
+    v, ui_msgs
 
 let _month_of_time time = (time / month_ticks) mod 12
 

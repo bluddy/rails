@@ -197,9 +197,9 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
         in
         let had_demand = Goods.Set.mem goods info.demand in
         if has_demand && not had_demand then
-          (Goods.Set.add goods demand, (`Add  goods)::msgs)
+          (Goods.Set.add goods demand, (goods, true)::msgs)
         else if not has_demand && had_demand then
-          (Goods.Set.remove goods demand, (`Remove goods)::msgs)
+          (Goods.Set.remove goods demand, (goods, false)::msgs)
         else old)
       temp_demand_h
       (info.demand, [])

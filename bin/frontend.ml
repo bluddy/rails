@@ -36,9 +36,10 @@ let handle_tick win (s:State.t) time =
 
     | Screen.MapView ->
         let ui = Main_ui.handle_tick s s.ui time in
+        let backend, ui_msgs = Backend.handle_tick s.backend time in
+        let ui = Main_ui.handle_msgs s ui ui_msgs in
+
         if s.ui =!= ui then s.ui <- ui;
-        let backend, _ui_msgs = Backend.handle_tick s.backend time in
-        (* TODO: handle ui_msgs from backend *)
         if s.backend =!= backend then s.backend <- backend;
         s
 
@@ -58,10 +59,8 @@ let handle_event (s:State.t) (event:Event.t) =
         end
 
     | Screen.MapView ->
-        let ui, action = Main_ui.handle_event s s.ui event in
-        let backend = 
-          Backend.Action.run s.backend action
-        in
+        let ui, backend_msg = Main_ui.handle_event s s.ui event in
+        let backend = Backend.Action.run s.backend backend_msg in
         if s.ui =!= ui then s.ui <- ui;
         if s.backend =!= backend then s.backend <- backend;
         s
@@ -89,6 +88,7 @@ let render win (s:State.t) =
 
 let run ?load ?(region=Region.WestUS) () : unit =
   Printf.printf "Loading resources...";
+  print_newline ();
 
   let init_fn win =
 
