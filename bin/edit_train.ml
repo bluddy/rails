@@ -36,6 +36,8 @@ let make ~fonts index =
   }
 
 let render win (s:State.t) v =
+  let train = Backend.get_train s.backend v.index in
+
   (* Draw screen background *)
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~x:2 ~y:9 ~color:Ega.black ~w:315 ~h:106 ~fill:false;
@@ -46,9 +48,11 @@ let render win (s:State.t) v =
   (* Menu bar *)
   Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
 
-  let line1 = Printf.sprintf "Train #%d: %s %s\n" v.index "Passenger" "Limited" in
-  let line2 = Printf.sprintf "near %s (%s/%s)\n" "Wausau" "2-6-0 Mogul" "$4,000" in
-  let line3 = Printf.sprintf "Speed: %d mph, bound for %s" 25 "Wausau" in
+  (* TODO: make these things dynamic *)
+  let open Printf in
+  let line1 = sprintf "Train #%d: %s %s\n" v.index (Goods.show_freight train.freight) "Limited" in
+  let line2 = sprintf "near %s (%s/%s)\n" "Wausau" train.engine.name "$4,000" in
+  let line3 = sprintf "Speed: %d mph, bound for %s" 25 "Wausau" in
   Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:8 ~y:12 (line1^line2^line3);
 
   ()

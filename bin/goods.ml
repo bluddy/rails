@@ -93,7 +93,14 @@ type freight =
   | FreightFast
   | FreightSlow
   | FreightBulk
-  [@@deriving enum]
+  [@@deriving enum, ord, sexp]
+
+let show_freight = function
+  | FreightMail -> "Mail"
+  | FreightPassenger -> "Passenger"
+  | FreightFast -> "Fast"
+  | FreightSlow -> "Slow"
+  | FreightBulk -> "Bulk"
 
 let freight_of_goods = function
   | Mail -> FreightMail
