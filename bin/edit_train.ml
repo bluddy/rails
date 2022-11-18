@@ -37,6 +37,7 @@ let make ~fonts index =
 
 let render win (s:State.t) v =
   let train = Backend.get_train s.backend v.index in
+  let write_black = Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 in
 
   (* Draw screen background *)
   R.paint_screen win ~color:Ega.white;
@@ -53,7 +54,19 @@ let render win (s:State.t) v =
   let line1 = sprintf "Train #%d: %s %s\n" v.index (Goods.show_freight train.freight) "Limited" in
   let line2 = sprintf "near %s (%s/%s)\n" "Wausau" train.engine.name "$4,000" in
   let line3 = sprintf "Speed: %d mph, bound for %s" 25 "Wausau" in
-  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:8 ~y:12 (line1^line2^line3);
+  write_black ~x:8 ~y:12 (line1^line2^line3);
+
+  write_black ~x:292 ~y:40 "Exit";
+
+  write_black ~x:105 ~y:118 "TRAIN ORDERS";
+  Renderer.draw_rect win ~x:2 ~y:127 ~w:315 ~h:10 ~color:Ega.yellow ~fill:true;
+  write_black ~x:8 ~y:128 "Priority Orders:";
+  write_black ~x:160 ~y:128 "Priority Consist:";
+  Renderer.draw_rect win ~x:2 ~y:148 ~w:315 ~h:10 ~color:Ega.green ~fill:true;
+  write_black ~x:8 ~y:149 "Scheduled Stops:";
+  write_black ~x:160 ~y:149 "New Consist:";
+
+
 
   ()
 
