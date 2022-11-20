@@ -1,11 +1,10 @@
 open Containers
-open Sexplib.Std
 
 type t = {
   money: int; (* x1000 *)
   track_length: int;
 }
-[@@deriving sexp]
+[@@deriving yojson]
 
 let default = {
   money = 1000;

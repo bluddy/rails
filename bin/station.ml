@@ -1,5 +1,4 @@
 open Containers
-open Sexplib.Std
 
 (* minimum level to be real demand *)
 let min_demand = Goods.full_car
@@ -14,7 +13,7 @@ type kind =
   | `Station
   | `Terminal
   ]
-  [@@deriving eq, hash, enum, sexp]
+  [@@deriving eq, hash, enum, yojson]
 
 let show_kind = function
   | `SignalTower -> "Signal Tower"
@@ -40,7 +39,7 @@ type upgrade =
   | LivestockPens (* keep it higher so it's drawn last *)
   | GrapeStorage (* EU: also cold *)
   | Hotel
-  [@@deriving enum, show, sexp]
+  [@@deriving enum, show, yojson]
 
 let get_price upgrade =
   let p = match upgrade with
@@ -66,12 +65,12 @@ end)
 type info = {
   mutable demand: Goods.Set.t; (* Goods with sufficient demand *)
   mutable min_demand: Goods.Set.t; (* Minimally accepted goods *)
-  supply: (Goods.t, int) Hashtbl.t;
-  lost_supply: (Goods.t, int) Hashtbl.t;
+  supply: (Goods.t, int) Utils.Hashtbl.t;
+  lost_supply: (Goods.t, int) Utils.Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
   rate_war: bool;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 type t = {
   x: int;
@@ -80,7 +79,7 @@ type t = {
   name: string;
   info: info option;
   player: int;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 let kind_str v =
   match v.info with

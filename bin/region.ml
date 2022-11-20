@@ -4,7 +4,7 @@ type t =
   | WestUS
   | Britain
   | Europe
-  [@@deriving enum, eq, sexp]
+  [@@deriving enum, eq, yojson]
 
 let regions = [EastUS; WestUS; Britain; Europe]
 

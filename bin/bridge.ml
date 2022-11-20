@@ -3,5 +3,5 @@ type t =
   | Wood
   | Iron
   | Stone
-  [@@deriving eq, hash, sexp]
+  [@@deriving eq, hash, yojson]
 

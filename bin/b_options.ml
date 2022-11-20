@@ -1,4 +1,3 @@
-open Sexplib.Std
 
 (**
    Backend options
@@ -6,7 +5,7 @@ open Sexplib.Std
 
 type speed =
   [`Frozen | `Slow | `Moderate | `Fast | `Turbo]
-  [@@deriving enum, eq, show, sexp]
+  [@@deriving enum, eq, show, yojson]
 
   (* multiplier for speed, relationship between rates *)
 let delay_mult_of_speed = function
@@ -18,7 +17,7 @@ let delay_mult_of_speed = function
 
 type reality_level =
   [`DispatcherOps | `ComplexEconomy | `CutthroatCompetition]
-  [@@deriving enum, eq, show, sexp]
+  [@@deriving enum, eq, show, yojson]
 
 module RealityLevels = Bitset.Make(struct
   type t = reality_level
@@ -29,13 +28,13 @@ end)
 
 type difficulty =
   [ `Diff25 | `Diff50 | `Diff75 | `Diff100 ]
-  [@@deriving sexp]
+  [@@deriving yojson]
 
 type t = {
   speed: speed;
   reality_levels: RealityLevels.t;
   difficulty: difficulty;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 let default =
   {

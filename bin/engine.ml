@@ -1,4 +1,3 @@
-open Sexplib.Std
 open Containers
 
 type make =
@@ -32,7 +31,7 @@ type make =
   | V200BB
   | BoBoBo
   | TGV
-  [@@deriving sexp, eq]
+  [@@deriving yojson, eq]
 
 type t = {
   make: make;
@@ -41,7 +40,7 @@ type t = {
   horsepower: int;
   price: int;
   year: int;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 let make make name max_speed horsepower price year =
   { make; name; max_speed; horsepower; price; year }

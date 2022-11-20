@@ -25,7 +25,7 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
-  [@@deriving sexp, ord, enum]
+  [@@deriving yojson, ord, enum]
 
 let order = List.((to_enum Mail) -- (to_enum Wine))
   |> List.map of_enum |> List.map (Option.get_exn_or "error")
@@ -93,7 +93,7 @@ type freight =
   | FreightFast
   | FreightSlow
   | FreightBulk
-  [@@deriving enum, ord, sexp]
+  [@@deriving enum, ord, yojson]
 
 let show_freight = function
   | FreightMail -> "Mail"
@@ -171,9 +171,9 @@ module Set = struct
   include Utils.Set.Make(struct
     type nonrec t = t 
     let compare = compare
-    let sexp_of_t = sexp_of_t
-    let t_of_sexp = t_of_sexp
-  end) [@@deriving_sexp]
+    let t_of_yojson = t_of_yojson
+    let yojson_of_t = yojson_of_t
+  end) [@@deriving yojson]
 end
 
 

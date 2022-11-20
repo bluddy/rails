@@ -1,4 +1,3 @@
-open Sexplib.Std
 open Containers
 
 module type Elem = sig
@@ -14,7 +13,7 @@ module Make(E: Elem) = struct
 
   type elt = E.t
 
-  type t = int [@@ deriving sexp]
+  type t = int [@@ deriving yojson]
 
   let to_int v = v
 

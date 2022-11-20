@@ -7,15 +7,15 @@ type dims = {
   minimap: Utils.rect;
   infobar: Utils.rect;
   train_ui: Utils.rect;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 type message_speed =
   [`Slow | `Fast | `Off]
-  [@@deriving eq, show, sexp]
+  [@@deriving eq, show, yojson]
 
 type news_types =
   [`Financial | `Railroad | `Local]
-  [@@deriving enum, eq, show, sexp]
+  [@@deriving enum, eq, show, yojson]
 
 module NewsTypes = Bitset.Make(struct
   type t = news_types
@@ -25,7 +25,7 @@ module NewsTypes = Bitset.Make(struct
 
 type features =
   [`Animations | `Sounds]
-  [@@deriving enum, eq, show, sexp]
+  [@@deriving enum, eq, show, yojson]
 
 module Features = Bitset.Make(struct
   type t = features
@@ -38,7 +38,7 @@ type options = {
   messages: message_speed;
   news: NewsTypes.t;
   features: Features.t;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 type menu_action =
   [
@@ -71,7 +71,7 @@ type menu_action =
     | `Name_rr
     | `Retire
     ]
-    [@@deriving show, sexp]
+    [@@deriving show, yojson]
 
     (* modalmenu type used for factoring *)
 type ('a, 'b, 'c) modalmenu =

@@ -1,5 +1,4 @@
 module Ndarray = Owl_base_dense_ndarray.Generic
-open Sexplib.Std
 open Containers
 
 let map_height_default = 192
@@ -13,7 +12,7 @@ type t = {
   width: int;
   height: int;
   region: Region.t;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 let get_height v = v.height
 let get_width v = v.width

@@ -1,10 +1,9 @@
-open Sexplib.Std
 
   type t = {
-    map: (int, string) Hashtbl.t;
+    map: (int, string) Utils.Hashtbl.t;
     width: int;
     height: int;
-  } [@@deriving sexp]
+  } [@@deriving yojson]
 
   let make map width height = {map; width; height}
 

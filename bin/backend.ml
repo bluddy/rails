@@ -1,5 +1,4 @@
 open Containers
-open Sexplib.Std
 open Utils.Infix
 
 (* This is the backend. All game-modifying functions go through here *)
@@ -25,25 +24,10 @@ let cycles_station_supply_demand = cycles_background_update * 32 (* 512 *)
 let cycles_supply_decay = 512
 
 
-module Random = struct
-  (* Expand Random to serialize the state *)
-  include Random
-  module State = struct
-    include Random.State
-    let t_of_sexp = function
-    | Sexplib.Sexp.Atom s ->
-        Marshal.from_string s 0
-    | _ -> failwith "unexpected sexp"
-    let sexp_of_t v =
-      Sexplib.Sexp.Atom (Marshal.to_string v [])
-    (* let sexp_of_t v = Sexplib.Sexp.Atom "randomstuff" *)
-  end
-end
-
 type ui_msg =
   | TrainBuilt of int
   | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
-  [@@deriving sexp]
+  [@@deriving yojson]
 
 type t = {
   mutable last_tick: int; (* last time we updated a cycle *)
@@ -61,9 +45,9 @@ type t = {
   mutable stations: Station_map.t;
   options: B_options.t;
   mutable ui_msgs: ui_msg list;
-  random: Random.State.t;
+  random: Utils.Random.State.t;
   seed: int;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 let default region resources ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in

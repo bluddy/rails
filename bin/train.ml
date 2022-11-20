@@ -1,4 +1,3 @@
-open Sexplib.Std
 open Containers
 
 type t = {
@@ -10,7 +9,7 @@ type t = {
   target_speed: int;
   cars: Goods.t list;
   freight: Goods.freight;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 let freight_of_cars cars =
   List.fold_left (fun freight car ->

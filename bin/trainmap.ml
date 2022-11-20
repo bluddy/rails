@@ -1,7 +1,7 @@
 open Containers
 
 type t = (Train.t, Utils.Vector.rw) Utils.Vector.t
-[@@deriving sexp]
+[@@deriving yojson]
 
 let empty () = Utils.Vector.create ()
 

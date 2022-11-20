@@ -1,15 +1,14 @@
-open Sexplib.Std
 
 type zoom =
   | Zoom1
   | Zoom2
   | Zoom3
   | Zoom4
-  [@@deriving eq, show, sexp]
+  [@@deriving eq, show, yojson]
 
 type options =
   [ `StationBoxes | `Resources]
-  [@@ deriving enum, eq, show, sexp]
+  [@@ deriving enum, eq, show, yojson]
 
 module Options = Bitset.Make(struct
     type t = options
@@ -30,4 +29,4 @@ type t =
     survey: bool;
     options: Options.t;
   }
-  [@@deriving sexp]
+  [@@deriving yojson]

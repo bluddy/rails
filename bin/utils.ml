@@ -1,44 +1,66 @@
 open Containers
-open Sexplib.Std
 open Tsdl
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 
 module type OrderedType = sig
   include Map.OrderedType
-  val t_of_sexp : Sexplib0.Sexp.t -> t
-  val sexp_of_t : t -> Sexplib0.Sexp.t
+  val t_of_yojson : Yojson.Safe.t -> t
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module Random = struct
+  (* Expand Random to serialize the state *)
+  include Random
+  module State = struct
+    include Random.State
+    let t_of_yojson = function
+    | `String s -> Marshal.from_string s 0
+    | _ -> failwith "unexpected json"
+    let json_of_t v =
+      `String (Marshal.to_string v [])
+  end
 end
 
 (* Set with sexplib extension *)
 module Set = struct
   module type S = sig
     include CCSet.S
-    val t_of_sexp : Sexplib0.Sexp.t -> t
-    val sexp_of_t : t -> Sexplib0.Sexp.t
+    val t_of_yojson : Yojson.Safe.t -> t
+    val yojson_of_t : t -> Yojson.Safe.t
   end
   module Make(O:OrderedType) = struct
     include CCSet.Make(O)
 
-    let t_of_sexp (sexp:Sexplib0.Sexp.t) =
-      Sexplib0.Sexp_conv.list_of_sexp O.t_of_sexp sexp |> of_list
+    let t_of_yojson (json:Yojson.Safe.t) =
+      list_of_yojson O.t_of_yojson json |> of_list
 
-    let sexp_of_t (t:t) =
-      to_list t |> Sexplib0.Sexp_conv.sexp_of_list O.sexp_of_t
+    let yojson_of_t (t:t) =
+      to_list t |> yojson_of_list O.yojson_of_t
   end
+end
+
+module Hashtbl = struct
+  include Hashtbl
+
+  let t_of_yojson conva convb json =
+    hashtbl_of_yojson conva convb json
+
+  let yojson_of_t conva convb t =
+    yojson_of_hashtbl conva convb t
 end
 
 module Vector = struct
   include CCVector
-  let t_of_sexp conv _a (sexp:Sexplib0.Sexp.t) =
-    Sexplib0.Sexp_conv.list_of_sexp conv sexp |> CCVector.of_list
 
-  let sexp_of_t conv _a v =
-    CCVector.to_list v |> Sexplib0.Sexp_conv.sexp_of_list conv
+  let rw_of_yojson _ = `RW
+  let yojson_of_rw _ = `Null
+  
+  let t_of_yojson conv _ (json:Yojson.Safe.t) =
+    list_of_yojson conv json |> CCVector.of_list
 
-  let rw_of_sexp (_sexp:Sexplib0.Sexp.t) = `RW
-
-  let sexp_of_rw _rw = Sexplib0.Sexp.Atom "RW"
+  let yojson_of_t conv _ v =
+    CCVector.to_list v |> yojson_of_list conv
 
 end
 
@@ -52,7 +74,7 @@ type rect = {
   y: int;
   w: int;
   h: int;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 type point = {
   x: int;

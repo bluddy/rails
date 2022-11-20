@@ -5,6 +5,6 @@ type t =
   | Moderation
   | Prosperity
   | Boom
-  [@@deriving enum, sexp]
+  [@@deriving enum, yojson]
 
 let default = Moderation

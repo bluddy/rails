@@ -1,13 +1,12 @@
 open Containers
-open Sexplib.Std
 
 (* This map contains independent tiles of track *)
 
 type t = {
-  map: (int, Track.t) Hashtbl.t;
+  map: (int, Track.t) Utils.Hashtbl.t;
   width: int;
   height: int;
-} [@@deriving sexp]
+} [@@deriving yojson]
 
 let empty width height =
   let map = Hashtbl.create 100 in
