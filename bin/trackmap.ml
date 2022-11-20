@@ -1,6 +1,8 @@
 open Containers
 open Sexplib.Std
 
+(* This map contains independent tiles of track *)
+
 type t = {
   map: (int, Track.t) Hashtbl.t;
   width: int;

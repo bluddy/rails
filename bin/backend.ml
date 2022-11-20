@@ -55,6 +55,7 @@ type t = {
   region: Region.t;
   map : Tilemap.t;
   mutable track: Trackmap.t;
+  graph: Track_graph.t;
   trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station_map.t;

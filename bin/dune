@@ -1,7 +1,7 @@
 (executable
   (public_name rails)
   (name main)
-  (libraries iter containers containers-data gen imagelib imagelib.unix tsdl owl-base sexplib)
+  (libraries iter containers containers-data gen imagelib imagelib.unix tsdl owl-base sexplib ocamlgraph)
   (preprocess (staged_pps ppx_import ppx_deriving.show ppx_deriving.enum ppx_deriving.eq ppx_deriving.ord lens.ppx_deriving ppx_hash ppx_sexp_conv))
   (modes exe)
   )
