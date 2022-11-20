@@ -17,7 +17,7 @@ module Random = struct
     let t_of_yojson = function
     | `String s -> Marshal.from_string s 0
     | _ -> failwith "unexpected json"
-    let json_of_t v =
+    let yojson_of_t v =
       `String (Marshal.to_string v [])
   end
 end
