@@ -42,7 +42,7 @@ type t = {
   graph: Track_graph.t;
   trains: Trainmap.t;
   cities: Cities.t;
-  mutable stations: Station_map.t;
+  mutable stations: Station.t Loc_map.t;
   options: B_options.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;
@@ -61,7 +61,7 @@ let default region resources ~random ~seed =
   in
   let track = Trackmap.empty width height in
   let options = B_options.default in
-  let stations = Station_map.create width in
+  let stations = Loc_map.create width in
   let players = Array.make num_players Player.default in
   let year = match region with
     | EastUS -> 1830
@@ -108,7 +108,7 @@ let get_track v x y = Trackmap.get v.track x y
 
 let get_cities v = Cities.to_list v.cities
 
-let get_station v x y = Station_map.get v.stations x y
+let get_station v x y = Loc_map.get v.stations x y
 
 let get_region v = v.region
 
@@ -147,13 +147,13 @@ let _build_station v ~x ~y station_type ~player =
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let first =
     match
-      Station_map.filter v.stations (Station.has_upgrade ~upgrade:Station.EngineShop) |> Iter.head
+      Loc_map.filter v.stations (Station.has_upgrade ~upgrade:Station.EngineShop) |> Iter.head
     with
     | Some _ -> false
     | None -> true
   in
   let station = Station.make ~x ~y ~year:v.year ~name:city ~kind:station_type ~player ~first in
-  let stations = Station_map.add v.stations x y station in
+  let stations = Loc_map.add v.stations x y station in
   if build_new_track then (
     modify_player v ~player (Player.add_track ~length:1)
   );
@@ -214,7 +214,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
     match get_station v x y with
     | Some station ->
         let station = Station.add_upgrade station upgrade player in
-        Station_map.add v.stations x y station
+        Loc_map.add v.stations x y station
     | None -> v.stations
   in
   if not @@ CCEqual.physical v.stations stations then v.stations <- stations;
@@ -249,7 +249,7 @@ let handle_cycle v =
       let simple_economy =
         not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
       in
-      Station_map.fold 
+      Loc_map.fold 
         (fun station old_msgs ->
           Station.check_rate_war_lose_supplies station ~difficulty;
           let msgs =

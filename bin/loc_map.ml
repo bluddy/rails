@@ -1,7 +1,9 @@
 open Containers
 
-type t = {
-  map: (int, Station.t) Utils.Hashtbl.t;
+(* A common pattern: a hashtbl from location to a thing *)
+
+type 'a t = {
+  map: (int, 'a) Utils.Hashtbl.t;
   width: int;
 } [@@deriving yojson]
 
