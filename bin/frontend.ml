@@ -134,9 +134,9 @@ let run ?load ?(region=Region.WestUS) () : unit =
           Printf.printf "len[%d]\n%!" (List.length lst);
           begin match lst with
           | [backend;options;view] ->
-              let backend = Sexplib.Sexp.of_string backend |> Backend.t_of_sexp in
-              let ui_options = Sexplib.Sexp.of_string options |> Main_ui_d.options_of_sexp in
-              let ui_view = Sexplib.Sexp.of_string view |> Mapview_d.t_of_sexp in
+              let backend = Yojson.Safe.from_string backend |> Backend.t_of_yojson in
+              let ui_options = Yojson.Safe.from_string options |> Main_ui_d.options_of_yojson in
+              let ui_view = Yojson.Safe.from_string view |> Mapview_d.t_of_yojson in
               create_state ~backend ~ui_options ~ui_view Screen.MapView
 
           | _ -> assert false
