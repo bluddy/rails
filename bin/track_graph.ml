@@ -2,6 +2,15 @@ open Containers
 
 (* Graph for intersections and stations *)
 
+module Edge = struct
+  type t = {
+    id: int; (* unique id *)
+    dist: int;
+  } [@@ deriving eq, ord, yojson]
+
+  let default = {id=0; dist=0}
+end
+
 module Node = struct
   type t = {
     x: int;
@@ -11,13 +20,6 @@ module Node = struct
   let hash = Hashtbl.hash
 end
 
-module Edge = struct
-  type t = {
-    id: int; (* unique id *)
-    dist: int;
-  } [@@ deriving ord, yojson]
-  let default = {id=0; dist=0}
-end
 
 module G = struct
   module G = Graph.Imperative.Graph.ConcreteLabeled(Node)(Edge)
@@ -47,14 +49,21 @@ module G = struct
     | _ -> invalid_arg "Graph vertex/edge data not found"
 end
 
+type ixn_data = {
+  node: Node.t;
+  edges: (Dir.t * Edge.t) list;
+} [@@deriving yojson]
+
 type t = {
   mutable last_id: int;
   graph: G.t;
-} [@@ deriving yojson]
+  ixn_map: ixn_data Loc_map.t;
+} [@@deriving yojson]
 
-let make () = {
+let make width = {
   last_id=0;
   graph=G.create ();
+  ixn_map = Loc_map.create width;
 }
 
 let add_ixn g ~x ~y ~is_station =

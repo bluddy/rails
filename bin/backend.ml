@@ -70,7 +70,7 @@ let default region resources ~random ~seed =
     | Europe -> 1900
   in
   let trains = Trainmap.empty () in
-  let graph = Track_graph.make () in
+  let graph = Track_graph.make width in
   {
     time=0;
     cycle=0;

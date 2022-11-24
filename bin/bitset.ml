@@ -92,6 +92,17 @@ module Make(E: Elem) = struct
   let to_list v =
     fold (fun acc x -> x::acc) [] v
 
+    (* raises exception on empty *)
+  let pop v =
+    let elem = find v (fun _ -> true) in
+    let v = remove v elem in
+    elem, v
+
+  let pop_opt v =
+    try
+      Some(pop v)
+    with Not_found -> None
+
   let pp fmt v =
     Format.fprintf fmt "%d" v
 

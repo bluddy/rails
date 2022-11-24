@@ -37,6 +37,11 @@ module type S = sig
 
   val cardinal: t -> int
 
+  (** Remove element from set. Raise Not_found on empty set *)
+  val pop: t -> (elt * t)
+
+  val pop_opt: t -> (elt * t) option
+
   val of_list: elt list -> t
 
   val to_list: t -> elt list

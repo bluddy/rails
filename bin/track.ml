@@ -108,6 +108,3 @@ let straighten v =
     else
       failwith "Unexpected non-straight track"
 
-
-
-
