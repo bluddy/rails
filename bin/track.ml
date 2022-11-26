@@ -23,22 +23,27 @@ let empty player kind = {
   player
 }
 
-let is_ixn dirs = Dir.Set.cardinal dirs > 2
+let _is_ixn dirs = Dir.Set.cardinal dirs > 2
 
 let is_empty v = Dir.Set.cardinal v.dirs = 0
 
+let is_station v = match v.kind with
+  | Station _ -> true | _ -> false
+
+let is_ixn v = v.ixn
+
 let make dirs kind ~player =
-  let ixn = is_ixn dirs in
+  let ixn = _is_ixn dirs in
   {dirs; kind; ixn; player}
 
 let add_dir v ~dir =
   let dirs = Dir.Set.add v.dirs dir in
-  let ixn = is_ixn dirs in
+  let ixn = _is_ixn dirs in
   {v with dirs; ixn}
 
 let remove_dir v ~dir =
   let dirs = Dir.Set.remove v.dirs dir in
-  let ixn = is_ixn dirs in
+  let ixn = _is_ixn dirs in
   {v with dirs; ixn}
 
 let has_dir v ~dir =

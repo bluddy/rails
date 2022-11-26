@@ -121,6 +121,7 @@ let iter_cities f v = Cities.iter f v.cities
 let find_close_city v x y ~range = Cities.find_close v.cities x y ~range
 
 let check_build_track v ~x ~y ~dir ~player =
+  (* First check the tilemap, then the trackmap *)
   match Tilemap.check_build_track v.map ~x ~y ~dir with
   | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
   | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
@@ -162,8 +163,7 @@ let _build_station v ~x ~y station_type ~player =
     not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
   in
   let climate = v.climate in
-  ignore(Station.update_supply_demand station v.map ~climate ~simple_economy);
-
+  ignore @@ Station.update_supply_demand station v.map ~climate ~simple_economy;
   if v.track =!= track then v.track <- track;
   if v.stations =!= stations then v.stations <- stations;
   v
@@ -182,6 +182,8 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
 let _build_track v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   modify_player v ~player (Player.add_track ~length:1);
+  (* Graph logic *)
+  (* search for ixn going forward *)
   if v.track =!= track then v.track <- track;
   v
 

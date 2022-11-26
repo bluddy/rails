@@ -32,21 +32,26 @@ let iter v f =
 let out_of_bounds v x y =
   x < 0 || y < 0 || x >= v.width || y >= v.height
 
-  (* Common function for moving by dir *)
-let move_dir v ~x ~y ~dir =
+(* Common function for moving by dir *)
+let move_dir ~x ~y ~dir =
   let dx, dy = Dir.to_offsets dir in
-  let x2, y2 = x + dx, y + dy in
+  x + dx, y + dy
+
+(* Common function for moving by dir, with bounds check *)
+let move_dir_bounds v ~x ~y ~dir =
+  let x2, y2 = move_dir ~x ~y ~dir in
   if out_of_bounds v x2 y2 then None
   else Some(x2, y2)
 
 let check_build_track v ~x ~y ~dir ~player =
-  match out_of_bounds v x y, move_dir v ~x ~y ~dir with
+  match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
   | false, _ | _, None  -> false
   | _, Some (x2, y2) ->
     let track1 = get_track_default v x y ~player in
     let track2 = get_track_default v x2 y2 ~player in
     let track12 = Track.add_dir track1 ~dir in
     let track22 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
+    (* Check that we changed something *)
     if Track.equal_dirs track1 track12 && Track.equal_dirs track2 track22 then false
     else
       track1.player = player && track2.player = player
@@ -57,7 +62,7 @@ let check_build_track v ~x ~y ~dir ~player =
      kind2: kind of track in to tile
    *)
 let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
-  match move_dir v ~x ~y ~dir with
+  match move_dir_bounds v ~x ~y ~dir with
   | None -> v
   | Some (x2, y2) ->
     let track1 = get_track_default ?kind:kind1 v x y ~player in
@@ -178,7 +183,7 @@ let build_tunnel v ~x ~y ~dir ~player ~length =
    
   (* Can work for all kinds of constructs *)
 let check_remove_track v ~x ~y ~dir ~player =
-  match out_of_bounds v x y, move_dir v ~x ~y ~dir with
+  match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
   | false, _ | _, None  -> false
   | _, Some (x2, y2) ->
     let track1 = get_track_default v x y ~player in
@@ -203,8 +208,7 @@ let remove_track v ~x ~y ~dir ~player =
         set v x y track
     | None -> ()
   in
-  let dx, dy = Dir.to_offsets dir in
-  let x2, y2 = x + dx, y + dy in
+  let x2, y2 = move_dir ~x ~y ~dir in
   let track1 = get_track_default v x y ~player in
   if track1.player = player then
     begin match track1.kind with
@@ -229,28 +233,59 @@ let remove_track v ~x ~y ~dir ~player =
   v
 
   (* Scan for a new segment ending in a station or ixn *)
-let _scan_segment v ~target_x ~target_y ~dir ~player =
+  (* x, y: before movement *)
+let _scan_for_ixn v ~x ~y ~dir ~player =
   (* explore along dir *)
   let player2 = player in
   let rec loop_to_node x y dir dist =
+    let oppo_dir = Dir.opposite dir in
     match get v x y with
     | Some {ixn = true; player; _} when player = player2 ->
-        Some (x,y,dist,`Ixn)
+        Some (x, y, dist, oppo_dir, `Ixn)
     | Some {kind = Station _; player; _} when player = player2 ->
-        Some (x,y,dist,`Station)
+        Some (x, y, dist, oppo_dir, `Station)
     | Some {dirs; player; _} when player = player2 ->
         (* Find other dir and follow it *)
-        let other_dirs = Dir.Set.remove dirs (Dir.opposite dir) in
+        let other_dirs = Dir.Set.remove dirs oppo_dir in
         begin match Dir.Set.pop_opt other_dirs with
         | Some (other_dir, _) ->
-          begin match move_dir v ~x ~y ~dir:other_dir with
+          begin match move_dir_bounds v ~x ~y ~dir:other_dir with
           | None -> None
           | Some (x2, y2) ->
               loop_to_node x2 y2 other_dir (dist+1)
           end
-        | None -> None
+        | None -> None (* dead end *)
         end
     | _ -> None
   in
-  loop_to_node target_x target_y dir 0
+  let x2, y2 = move_dir ~x ~y ~dir in
+  loop_to_node x2 y2 dir 1
         
+(* Return a query about the segment from a particular tile *)
+let get_segment_info v ~x ~y ~dir ~player =
+  let player2 = player in
+  match get v x y with
+  | None -> None
+  | Some {player; _} when player <> player2 -> None
+  | Some track when Track.is_ixn track || Track.is_station track ->
+      let res1 =
+        let kind = if Track.is_ixn track then `Ixn else `Station in
+        (x, y, 0, dir, kind)
+      in
+      begin match _scan_for_ixn v ~x ~y ~player ~dir with
+      | None -> None
+      | Some res2 -> Some (res1, res2)
+      end
+  | Some track ->
+    let dir1, dirs = Dir.Set.pop track.dirs in
+    begin match _scan_for_ixn v ~x ~y ~player ~dir:dir1 with
+    | None -> None
+    | Some res1 ->
+        let dir2, _ = Dir.Set.pop dirs in
+        begin match _scan_for_ixn v ~x ~y ~player ~dir:dir2 with
+        | None -> None
+        | Some res2 ->
+            Some (res1, res2)
+        end
+    end
+          
