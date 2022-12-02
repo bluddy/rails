@@ -39,7 +39,7 @@ type t = {
   region: Region.t;
   map : Tilemap.t;
   mutable track: Trackmap.t;
-  graph: Track_graph.t;
+  mutable graph: Track_graph.t;
   trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station.t Loc_map.t;
@@ -70,7 +70,7 @@ let default region resources ~random ~seed =
     | Europe -> 1900
   in
   let trains = Trainmap.empty () in
-  let graph = Track_graph.make width in
+  let graph = Track_graph.make () in
   {
     time=0;
     cycle=0;
@@ -179,12 +179,36 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   if v.track =!= track then v.track <- track;
   v
 
-let _build_track v ~x ~y ~dir ~player =
+let _build_track (v:t) ~x ~y ~dir ~player =
+  let module TS = Trackmap.Search in
+  let module G = Track_graph in
+  (* Can either create a new edge or a new node (ixn) *)
+  let segment1 = Trackmap.Search.segment v.track ~x ~y ~dir ~player in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   modify_player v ~player (Player.add_track ~length:1);
-  (* Graph logic *)
-  (* search for ixn going forward *)
+  let segment2 = Trackmap.Search.segment v.track ~x ~y ~dir ~player in
+  let graph = match segment1, segment2 with
+    | `Edge(ixn1, ixn2), `Node(ixn3)
+       when not (TS.eq_loc ixn1 ixn3) && not (TS.eq_loc ixn2 ixn3) && ixn3.dist = 0 ->
+         (* Regular edge. We add an intersection in the middle.
+            x-----x    ->    x--+--x *)
+        v.graph
+        |> G.add_segment ~x1:ixn1.x ~y1:ixn1.y ~dir1:ixn1.dir
+                         ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir ~dist:ixn1.dist
+        |> G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
+                         ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir ~dist:ixn2.dist
+    | `Node(ixn1), `Edge(ixn2, ixn3)
+        when TS.eq_loc ixn1 ixn2 || TS.eq_loc ixn1 ixn3 ->
+         (* Unfinished edge. Create an intersection.
+            x---       ->    x--+ *)
+        v.graph
+        |> G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
+                         ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir ~dist:(ixn2.dist+ixn3.dist)
+    | _ -> v.graph
+       (* All other cases require no graph changes *)
+  in
   if v.track =!= track then v.track <- track;
+  if v.graph =!= graph then v.graph <- graph;
   v
 
 let _build_ferry v ~x ~y ~dir ~player =

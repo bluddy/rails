@@ -232,60 +232,78 @@ let remove_track v ~x ~y ~dir ~player =
   end;
   v
 
-  (* Scan for a new segment ending in a station or ixn *)
-  (* x, y: before movement *)
-let _scan_for_ixn v ~x ~y ~dir ~player =
-  (* explore along dir *)
-  let player2 = player in
-  let rec loop_to_node x y dir dist =
-    let oppo_dir = Dir.opposite dir in
-    match get v x y with
-    | Some {ixn = true; player; _} when player = player2 ->
-        Some (x, y, dist, oppo_dir, `Ixn)
-    | Some {kind = Station _; player; _} when player = player2 ->
-        Some (x, y, dist, oppo_dir, `Station)
-    | Some {dirs; player; _} when player = player2 ->
-        (* Find other dir and follow it *)
-        let other_dirs = Dir.Set.remove dirs oppo_dir in
-        begin match Dir.Set.pop_opt other_dirs with
-        | Some (other_dir, _) ->
-          begin match move_dir_bounds v ~x ~y ~dir:other_dir with
-          | None -> None
-          | Some (x2, y2) ->
-              loop_to_node x2 y2 other_dir (dist+1)
+module Search = struct
+  (* For searching for stations and ixns.
+     For updating the graph
+   *)
+  type t = {
+    x: int;
+    y: int;
+    dist: int;
+    dir: Dir.t; (* out dir from station/ixn *)
+    station: bool;
+  }
+
+  let eq_loc res1 res2 = res1.x = res2.x && res1.y = res2.y
+
+  let make x y dist dir station =
+    {x; y; dist; dir; station}
+
+    (* Scan for a new segment ending in a station or ixn *)
+    (* x, y: before movement *)
+  let _scan_for_ixn v ~x ~y ~dir ~player =
+    (* explore along dir *)
+    let player2 = player in
+    let rec loop_to_node x y dir dist =
+      let oppo_dir = Dir.opposite dir in
+      match get v x y with
+      | Some {ixn = true; player; _} when player = player2 ->
+          Some (make x y dist oppo_dir false) 
+      | Some {kind = Station _; player; _} when player = player2 ->
+          Some (make x y dist oppo_dir true)
+      | Some {dirs; player; _} when player = player2 ->
+          (* Find other dir and follow it *)
+          let other_dirs = Dir.Set.remove dirs oppo_dir in
+          begin match Dir.Set.pop_opt other_dirs with
+          | Some (other_dir, _) ->
+            begin match move_dir_bounds v ~x ~y ~dir:other_dir with
+            | None -> None
+            | Some (x2, y2) ->
+                loop_to_node x2 y2 other_dir (dist+1)
+            end
+          | None -> None (* dead end *)
           end
-        | None -> None (* dead end *)
-        end
-    | _ -> None
-  in
-  let x2, y2 = move_dir ~x ~y ~dir in
-  loop_to_node x2 y2 dir 1
-        
-(* Return a query about the segment from a particular tile *)
-let get_segment_info v ~x ~y ~dir ~player =
-  let player2 = player in
-  match get v x y with
-  | None -> None
-  | Some {player; _} when player <> player2 -> None
-  | Some track when Track.is_ixn track || Track.is_station track ->
-      let res1 =
-        let kind = if Track.is_ixn track then `Ixn else `Station in
-        (x, y, 0, dir, kind)
-      in
-      begin match _scan_for_ixn v ~x ~y ~player ~dir with
-      | None -> None
-      | Some res2 -> Some (res1, res2)
-      end
-  | Some track ->
-    let dir1, dirs = Dir.Set.pop track.dirs in
-    begin match _scan_for_ixn v ~x ~y ~player ~dir:dir1 with
-    | None -> None
-    | Some res1 ->
-        let dir2, _ = Dir.Set.pop dirs in
-        begin match _scan_for_ixn v ~x ~y ~player ~dir:dir2 with
-        | None -> None
-        | Some res2 ->
-            Some (res1, res2)
-        end
-    end
+      | _ -> None
+    in
+    let x2, y2 = move_dir ~x ~y ~dir in
+    loop_to_node x2 y2 dir 1
           
+  (* Return a query about the segment from a particular tile *)
+  let segment v ~x ~y ~dir ~player =
+    let player2 = player in
+    match get v x y with
+    | None -> `NoResult
+    | Some {player; _} when player <> player2 -> `NoResult
+    | Some track when Track.is_ixn track || Track.is_station track ->
+        (* Ixn or station: follow the suggested dir *)
+        let res1 =
+          let kind = Track.is_ixn track in
+          make x y 0 dir kind
+        in
+        begin match _scan_for_ixn v ~x ~y ~player ~dir with
+        | None -> `Node res1
+        | Some res2 -> `Edge (res1, res2)
+        end
+    | Some track ->
+      (* Regular track: follow the dirs of the track itself *)
+      let dir1, dirs = Dir.Set.pop track.dirs in
+      begin match _scan_for_ixn v ~x ~y ~player ~dir:dir1 with
+      | None -> `NoResult
+      | Some res1 ->
+          let dir2, _ = Dir.Set.pop dirs in
+          begin match _scan_for_ixn v ~x ~y ~player ~dir:dir2 with
+          | None -> `Node res1
+          | Some res2 -> `Edge (res1, res2)
+          end
+      end
+end

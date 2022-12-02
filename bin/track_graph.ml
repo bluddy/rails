@@ -3,20 +3,34 @@ open Containers
 (* Graph for intersections and stations *)
 
 module Edge = struct
-  type t = {
-    id: int; (* unique id *)
-    dist: int;
-  } [@@ deriving eq, ord, yojson]
+  type xy_dir = (int * int * Dir.t)
+  [@@ deriving yojson]
 
-  let default = {id=0; dist=0}
+  type t = {
+    id: int;
+    nodes: xy_dir * xy_dir;
+    dist: int;
+  } [@@ deriving yojson]
+
+  let default = {id=0; nodes=((0,0,Dir.Up),(0,0,Dir.Up)); dist=0}
+  let equal x y = x.id = y.id
+  let compare x y = x.id - y.id
+  let make id x1 y1 dir1 x2 y2 dir2 dist =
+    let nodes = ((x1,y1,dir1),(x2,y2,dir2)) in
+    {id; nodes; dist}
+  let eq_xydir x1 y1 dir1 (x2,y2,dir2) =
+    x1 = x2 && y1 = y2 && Dir.equal dir1 dir2
+
+    (* Either node can match *)
+  let has_xydir x1 y1 dir1 v =
+    let d1, d2 = v.nodes in
+    eq_xydir x1 y1 dir1 d1 || eq_xydir x1 y1 dir1 d2
 end
 
 module Node = struct
-  type t = {
-    x: int;
-    y: int;
-    is_station: bool;
-  } [@@deriving eq, ord, yojson]
+  type t = int * int
+    [@@deriving eq, ord, yojson]
+
   let hash = Hashtbl.hash
 end
 
@@ -47,42 +61,45 @@ module G = struct
         edges;
         g
     | _ -> invalid_arg "Graph vertex/edge data not found"
-end
 
-type ixn_data = {
-  node: Node.t;
-  edges: (Dir.t * Edge.t) list;
-} [@@deriving yojson]
+end
 
 type t = {
   mutable last_id: int;
   graph: G.t;
-  ixn_map: ixn_data Loc_map.t;
 } [@@deriving yojson]
 
-let make width = {
+let make () = {
   last_id=0;
   graph=G.create ();
-  ixn_map = Loc_map.create width;
 }
 
-let add_ixn g ~x ~y ~is_station =
-  let ixn = Node.{x; y; is_station} in
-  G.add_vertex g ixn;
+let add_ixn g ~x ~y =
+  G.add_vertex g.graph (x, y);
   g
 
-let remove_ixn g ixn =
-  G.remove_vertex g ixn;
+let remove_ixn g ~x ~y =
+  G.remove_vertex g.graph (x, y);
   g
 
-let remove_segment g segment ixn1 ixn2 =
-  G.remove_edge_e g (ixn1,segment,ixn2);
-  g
-
-let add_segment g ixn1 ixn2 dist =
+let add_segment g ~x1 ~y1 ~dir1 ~x2 ~y2 ~dir2 ~dist =
   let id = g.last_id in
-  g.last_id <- g.last_id + 1;
-  let edge = Edge.{id; dist} in
-  G.add_edge_e g.graph (ixn1,edge,ixn2);
+  g.last_id <- succ g.last_id;
+  let edge = Edge.make id x1 y1 dir1 x2 y2 dir2 dist in
+  G.add_edge_e g.graph ((x1,y1),edge,(x2,y2));
   g
+
+let remove_segment g ~x ~y ~dir =
+  (* Find the edge we want *)
+  let edge =
+    G.fold_succ_e (fun ((_,e,_) as edge) acc ->
+      if Edge.has_xydir x y dir e then Some edge
+      else acc
+    ) g (x,y) None
+  in
+  match edge with
+  | None -> g
+  | Some edge ->
+      G.remove_edge_e g edge;
+      g
 
