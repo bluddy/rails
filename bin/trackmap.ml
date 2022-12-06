@@ -45,7 +45,7 @@ let move_dir_bounds v ~x ~y ~dir =
 
 let check_build_track v ~x ~y ~dir ~player =
   match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
-  | false, _ | _, None  -> false
+  | true, _ | _, None  -> false
   | _, Some (x2, y2) ->
     let track1 = get_track_default v x y ~player in
     let track2 = get_track_default v x2 y2 ~player in
@@ -184,7 +184,7 @@ let build_tunnel v ~x ~y ~dir ~player ~length =
   (* Can work for all kinds of constructs *)
 let check_remove_track v ~x ~y ~dir ~player =
   match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
-  | false, _ | _, None  -> false
+  | true, _ | _, None  -> false
   | _, Some (x2, y2) ->
     let track1 = get_track_default v x y ~player in
     let track2 = get_track_default v x2 y2 ~player in
