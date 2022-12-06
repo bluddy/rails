@@ -74,32 +74,32 @@ let make () = {
   graph=G.create ();
 }
 
-let add_ixn g ~x ~y =
-  G.add_vertex g.graph (x, y);
-  g
+let add_ixn v ~x ~y =
+  G.add_vertex v.graph (x, y);
+  v
 
-let remove_ixn g ~x ~y =
-  G.remove_vertex g.graph (x, y);
-  g
+let remove_ixn v ~x ~y =
+  G.remove_vertex v.graph (x, y);
+  v
 
-let add_segment g ~x1 ~y1 ~dir1 ~x2 ~y2 ~dir2 ~dist =
-  let id = g.last_id in
-  g.last_id <- succ g.last_id;
+let add_segment v ~x1 ~y1 ~dir1 ~x2 ~y2 ~dir2 ~dist =
+  let id = v.last_id in
+  v.last_id <- succ v.last_id;
   let edge = Edge.make id x1 y1 dir1 x2 y2 dir2 dist in
-  G.add_edge_e g.graph ((x1,y1),edge,(x2,y2));
-  g
+  G.add_edge_e v.graph ((x1,y1),edge,(x2,y2));
+  v
 
-let remove_segment g ~x ~y ~dir =
+let remove_segment v ~x ~y ~dir =
   (* Find the edge we want *)
   let edge =
     G.fold_succ_e (fun ((_,e,_) as edge) acc ->
       if Edge.has_xydir x y dir e then Some edge
       else acc
-    ) g (x,y) None
+    ) v.graph (x,y) None
   in
   match edge with
-  | None -> g
+  | None -> v 
   | Some edge ->
-      G.remove_edge_e g edge;
-      g
+      G.remove_edge_e v.graph edge;
+      v
 

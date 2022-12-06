@@ -73,28 +73,28 @@ let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
     set v x2 y2 track2;
     v
 
- let check_build_station v ~x ~y ~player station_type =
-   if out_of_bounds v x y then `Illegal
-   else match get v x y with
-   | None -> `NoTrack
-   | Some ({kind=Track;_} as t) when t.player = player && Track.is_straight t ->
-        let range = Station.to_range station_type in
-        let match_fn j i =
-          match get v j i with
-          | Some {kind=Station(st);_} ->
-              let range2 = Station.to_range st in
-              let range = range + range2 in
-              abs (j - x) < range && abs (i - y) < range
-          | _ -> false
-        in
-        let station_test =
-          Utils.scan ~range ~x ~y ~width:v.width ~height:v.height ~f:match_fn
-        in
-        begin match station_test with
-        | Some _ -> `TooClose
-        | None -> `Ok
-        end
-   | _ -> `Illegal
+let check_build_station v ~x ~y ~player station_type =
+  if out_of_bounds v x y then `Illegal
+  else match get v x y with
+  | None -> `NoTrack
+  | Some ({kind=Track;_} as t) when t.player = player && Track.is_straight t ->
+       let range = Station.to_range station_type in
+       let match_fn j i =
+         match get v j i with
+         | Some {kind=Station(st);_} ->
+             let range2 = Station.to_range st in
+             let range = range + range2 in
+             abs (j - x) < range && abs (i - y) < range
+         | _ -> false
+       in
+       let station_test =
+         Utils.scan ~range ~x ~y ~width:v.width ~height:v.height ~f:match_fn
+       in
+       begin match station_test with
+       | Some _ -> `TooClose
+       | None -> `Ok
+       end
+  | _ -> `Illegal
    
 let build_station v ~x ~y station_type =
   match get v x y with
@@ -241,26 +241,28 @@ module Search = struct
     y: int;
     dist: int;
     dir: Dir.t; (* out dir from station/ixn *)
+    search_dir: Dir.t; (* search dir to get here *)
     station: bool;
   }
 
-  let eq_loc res1 res2 = res1.x = res2.x && res1.y = res2.y
+  let eq res1 res2 = res1.x = res2.x && res1.y = res2.y
+  let neq res1 res2 = not (res1 = res2)
 
-  let make x y dist dir station =
-    {x; y; dist; dir; station}
+  let make x y dist dir search_dir station =
+    {x; y; dist; dir; search_dir; station}
 
     (* Scan for a new segment ending in a station or ixn *)
     (* x, y: before movement *)
   let _scan_for_ixn v ~x ~y ~dir ~player =
-    (* explore along dir *)
+    let search_dir = dir in
     let player2 = player in
     let rec loop_to_node x y dir dist =
       let oppo_dir = Dir.opposite dir in
       match get v x y with
       | Some {ixn = true; player; _} when player = player2 ->
-          Some (make x y dist oppo_dir false) 
+          Some (make x y dist oppo_dir search_dir false) 
       | Some {kind = Station _; player; _} when player = player2 ->
-          Some (make x y dist oppo_dir true)
+          Some (make x y dist oppo_dir search_dir true)
       | Some {dirs; player; _} when player = player2 ->
           (* Find other dir and follow it *)
           let other_dirs = Dir.Set.remove dirs oppo_dir in
@@ -278,32 +280,23 @@ module Search = struct
     let x2, y2 = move_dir ~x ~y ~dir in
     loop_to_node x2 y2 dir 1
           
-  (* Return a query about the segment from a particular tile *)
-  let segment v ~x ~y ~dir ~player =
+  (* Return a query about the segment from a particular tile
+     Get back a list of directions and result pairs
+   *)
+  let scan v ~x ~y ~player =
     let player2 = player in
     match get v x y with
     | None -> `NoResult
     | Some {player; _} when player <> player2 -> `NoResult
-    | Some track when Track.is_ixn track || Track.is_station track ->
-        (* Ixn or station: follow the suggested dir *)
-        let res1 =
-          let kind = Track.is_ixn track in
-          make x y 0 dir kind
-        in
-        begin match _scan_for_ixn v ~x ~y ~player ~dir with
-        | None -> `Node res1
-        | Some res2 -> `Edge (res1, res2)
-        end
     | Some track ->
-      (* Regular track: follow the dirs of the track itself *)
-      let dir1, dirs = Dir.Set.pop track.dirs in
-      begin match _scan_for_ixn v ~x ~y ~player ~dir:dir1 with
-      | None -> `NoResult
-      | Some res1 ->
-          let dir2, _ = Dir.Set.pop dirs in
-          begin match _scan_for_ixn v ~x ~y ~player ~dir:dir2 with
-          | None -> `Node res1
-          | Some res2 -> `Edge (res1, res2)
-          end
-      end
+        let scan =
+          Dir.Set.fold (fun acc dir ->
+            match _scan_for_ixn v ~x ~y ~player ~dir with
+            | None -> acc
+            | Some res -> res::acc)
+          [] track.dirs
+        in
+        if Track.is_ixn track then `Ixn scan
+        else if Track.is_station track then `Station scan
+        else `Track scan
 end
