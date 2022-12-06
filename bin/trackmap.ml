@@ -279,6 +279,12 @@ module Search = struct
     in
     let x2, y2 = move_dir ~x ~y ~dir in
     loop_to_node x2 y2 dir 1
+
+  type scan =
+    | NoResult
+    | Ixn of t list
+    | Station of t list
+    | Track of t list
           
   (* Return a query about the segment from a particular tile
      Get back a list of directions and result pairs
@@ -286,8 +292,8 @@ module Search = struct
   let scan v ~x ~y ~player =
     let player2 = player in
     match get v x y with
-    | None -> `NoResult
-    | Some {player; _} when player <> player2 -> `NoResult
+    | None -> NoResult
+    | Some {player; _} when player <> player2 -> NoResult
     | Some track ->
         let scan =
           Dir.Set.fold (fun acc dir ->
@@ -296,7 +302,7 @@ module Search = struct
             | Some res -> res::acc)
           [] track.dirs
         in
-        if Track.is_ixn track then `Ixn scan
-        else if Track.is_station track then `Station scan
-        else `Track scan
+        if Track.is_ixn track then Ixn scan
+        else if Track.is_station track then Station scan
+        else Track scan
 end

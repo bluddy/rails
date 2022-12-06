@@ -134,10 +134,161 @@ let check_build_track v ~x ~y ~dir ~player =
 
 let get_money v ~player = Player.get_money v.players.(player)
 
+module Graph = struct
+  open TS
+  (* Routines to handle building/tearing down of track graph *)
+
+  let handle_build_station v ~x ~y scan1 scan2 =
+    (* We just don't add stations until they've been hooked up *)
+    let add_to_edge ixn1 _ ixn3 ixn4 =
+      v.graph
+      |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
+      |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
+                        ~x2:x ~y2:y ~dir2:ixn3.search_dir
+                        ~dist:ixn3.dist
+      |> G.add_segment ~x1:ixn4.x ~y1:ixn4.y ~dir1:ixn4.dir
+                        ~x2:x ~y2:y ~dir2:ixn4.search_dir
+                        ~dist:ixn4.dist
+    in
+    match scan1, scan2 with
+      (* Unfinished edge. Connect a station here.
+          x---       ->    x---s *)
+    | Track [ixn1], Station [ixn2] when TS.(eq ixn1 ixn2) ->
+        G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
+                      ~x2:x ~y2:y ~dir2:ixn2.search_dir ~dist:ixn2.dist
+                      v.graph
+
+    (* Edge. Add a station.
+      x-------x  ->    x---s---x
+      Remove the edge and rebuild it to the new station.
+    *)
+    | Track [ixn1; ixn2], Station [ixn3; ixn4]
+        when TS.(eq ixn1 ixn3 && eq ixn2 ixn4) ->
+        add_to_edge ixn1 ixn2 ixn3 ixn4
+    | Track [ixn1; ixn2], Station [ixn4; ixn3]
+        when TS.(eq ixn1 ixn3 && eq ixn2 ixn4) ->
+        add_to_edge ixn1 ixn2 ixn3 ixn4
+    | _, _ -> v.graph
+
+  (* Handle simple building of track graph-wise *)
+  let handle_build_track v scan1 scan2 =
+    match scan1, scan2 with
+      | Track [ixn1], Track [ixn2; ixn3]
+          when TS.(eq ixn1 ixn2 || eq ixn1 ixn3) ->
+          (* Only case: unfinished edge. Connect an intersection.
+              x---       ->    x---x *)
+          G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
+                        ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir
+                        ~dist:(ixn2.dist+ixn3.dist)
+                        v.graph
+      | _ -> v.graph
+
+  (* Handle graph management for building track.
+      Complicated because we can have ixns everywhere *)
+  let handle_build_track_complex v ~x ~y scan1 scan2 =
+    match scan1, scan2 with
+        (* Unfinished edge. Connect an intersection.
+          x---       ->    x---x *)
+      | Track [ixn1], Track [ixn2; ixn3]
+          when TS.(eq ixn1 ixn2 || TS.eq ixn1 ixn3) ->
+            G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
+                          ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir
+                          ~dist:(ixn2.dist+ixn3.dist)
+                          v.graph
+        (* Unfinished edge. Create an intersection.
+          x---       ->    x--+ *)
+      | Track [ixn1], Ixn [ixn2] when TS.eq ixn1 ixn2 ->
+          G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
+                        ~x2:x ~y2:y ~dir2:ixn2.search_dir
+                        ~dist:ixn2.dist
+                        v.graph
+        (* Regular edge. We add an intersection in the middle.
+          x-----x    ->    x--+--x *)
+      | Track [ixn1; ixn2], Ixn [ixn3; ixn4]
+        when TS.(eq ixn1 ixn3 && eq ixn2 ixn4 || eq ixn1 ixn4 && eq ixn2 ixn3) ->
+          v.graph
+          |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
+          |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
+                          ~x2:x ~y2:y ~dir2:ixn3.search_dir
+                          ~dist:ixn3.dist
+          |> G.add_segment ~x1:ixn4.x ~y1:ixn4.y ~dir1:ixn4.dir
+                          ~x2:x ~y2:y ~dir2:ixn4.search_dir
+                          ~dist:ixn4.dist
+                          
+
+        (* Regular edge. We add an intersection in the middle that connects to another
+          intersection:
+            x                x
+            |                |
+          x-----x    ->    x--+--x *)
+      | Track [ixn1; ixn2], Ixn [ixn3; ixn4; ixn5]
+        when TS.((eq ixn1 ixn3 && (eq ixn2 ixn4 || eq ixn2 ixn5))
+          || (eq ixn1 ixn4 && (eq ixn2 ixn3 || eq ixn2 ixn5))
+          || (eq ixn1 ixn5 && (eq ixn2 ixn3 || eq ixn2 ixn4))) ->
+          v.graph
+          |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
+          |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
+                          ~x2:x ~y2:y ~dir2:ixn3.search_dir
+                          ~dist:ixn3.dist
+          |> G.add_segment ~x1:ixn4.x ~y1:ixn4.y ~dir1:ixn4.dir
+                          ~x2:x ~y2:y ~dir2:ixn4.search_dir
+                          ~dist:ixn4.dist
+          |> G.add_segment ~x1:ixn5.x ~y1:ixn5.y ~dir1:ixn5.dir
+                          ~x2:x ~y2:y ~dir2:ixn5.search_dir
+                          ~dist:ixn5.dist
+      | _ -> v.graph
+        (* All other cases require no graph changes *)
+
+  let handle_remove_track v ~x ~y scan1 scan2 =
+    match scan1, scan2 with
+        (* Was edge. Now disconnected
+          x---x       ->    x- -x *)
+      | Track [ixn1; ixn2], Track [ixn3]
+          when TS.(eq ixn2 ixn3 || TS.eq ixn1 ixn3) ->
+            G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir v.graph
+
+        (* Was station. Now station gone.
+          x---S       ->    x--- *)
+      | Station [_], (Track [_] | NoResult) ->
+            G.remove_ixn ~x ~y v.graph
+
+        (* Was ixn. Now deleted.
+          x---+       ->    x--- *)
+      | Ixn [_], (Track [_] | NoResult) ->
+            G.remove_ixn ~x ~y v.graph
+
+        (* Was connecting station. Now disconnected
+          x---S---x   ->    x--- ---x *)
+      | Station [_; _], Track[_] ->
+            G.remove_ixn ~x ~y v.graph
+
+        (* Was 2 ixn. Now edge
+          x---+---x   ->    x-------x *)
+
+        (* Was 3 ixn. Now edge + disconnected
+              x                 x
+              |                 |
+          x---+---x   ->    x-------x *)
+      | Ixn [_; _], Track [ixn3; ixn4]
+      | Ixn [_; _; _], Track [ixn3; ixn4] ->
+          v.graph
+          |> G.remove_ixn ~x ~y
+          |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
+                          ~x2:ixn4.x ~y2:ixn4.y ~dir2:ixn4.dir
+                          ~dist:(ixn3.dist + ixn4.dist)
+      | _ -> v.graph
+        (* All other cases require no graph changes *)
+
+end
+
 let _build_tunnel v ~x ~y ~dir ~player ~length =
+  let scan1 = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
+  let scan2 = TS.scan v.track ~x ~y ~player in
+  let graph = Graph.handle_build_track v scan1 scan2 in
   modify_player v ~player (Player.add_track ~length);
   if v.track =!= track then v.track <- track;
+  if v.graph =!= graph then v.graph <- graph;
   v
 
 let check_build_station v ~x ~y ~player station_type =
@@ -145,42 +296,12 @@ let check_build_station v ~x ~y ~player station_type =
   | `Ok -> Tilemap.check_build_station v.map ~x ~y
   | x -> x
 
-let _handle_build_station_graph v ~x ~y scan1 scan2 =
-  (* We just don't add stations until they've been hooked up *)
-  let add_to_edge ixn1 _ ixn3 ixn4 =
-    let open TS in
-    v.graph
-    |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
-    |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
-                      ~x2:x ~y2:y ~dir2:ixn3.search_dir
-                      ~dist:ixn3.dist
-    |> G.add_segment ~x1:ixn4.x ~y1:ixn4.y ~dir1:ixn4.dir
-                      ~x2:x ~y2:y ~dir2:ixn4.search_dir
-                      ~dist:ixn4.dist
-  in
-  match scan1, scan2 with
-    (* Unfinished edge. Connect a station here.
-        x---       ->    x---s *)
-  | `Track [ixn1], `Station [ixn2] when TS.(eq ixn1 ixn2) ->
-      G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
-                    ~x2:x ~y2:y ~dir2:ixn2.search_dir ~dist:ixn2.dist
-                    v.graph
-
-      (* Edge. Add a station.
-        x-------x  ->    x---s---x
-        Remove the edge and rebuild it to the new station.
-      *)
-  | `Track [ixn1; ixn2], `Station [ixn3; ixn4] when TS.(eq ixn1 ixn3 && eq ixn2 ixn4) ->
-      add_to_edge ixn1 ixn2 ixn3 ixn4
-  | `Track [ixn1; ixn2], `Station [ixn4; ixn3] when TS.(eq ixn1 ixn3 && eq ixn2 ixn4) ->
-      add_to_edge ixn1 ixn2 ixn3 ixn4
-  | _, _ -> v.graph
 
 let _build_station v ~x ~y station_type ~player =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let scan2 = TS.scan v.track ~x ~y ~player in
-  let graph = _handle_build_station_graph v ~x ~y scan1 scan2 in
+  let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
 
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   (* Check for first city: first one has engine shop *)
@@ -214,84 +335,15 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | `Bridge -> `Ok
   | _ -> `Illegal
 
-  (* Handle simple building of track graph-wise *)
-let _handle_build_track_graph_simple v scan1 scan2 =
-  match scan1, scan2 with
-    | `Track [ixn1], `Track [ixn2; ixn3]
-        when TS.(eq ixn1 ixn2 || eq ixn1 ixn3) ->
-         (* Only case: unfinished edge. Connect an intersection.
-            x---       ->    x---x *)
-        v.graph
-        |> G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
-                         ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir
-                         ~dist:(ixn2.dist+ixn3.dist)
-    | _ -> v.graph
-
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   modify_player v ~player (Player.add_track ~length:2);
   let scan2 = TS.scan v.track ~x ~y ~player in
-  let graph = _handle_build_track_graph_simple v scan1 scan2 in
+  let graph = Graph.handle_build_track v scan1 scan2 in
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
-
-(* Handle graph management for building track.
-    Complicated because we can have ixns everywhere *)
-let _handle_build_track_graph v ~x ~y scan1 scan2 =
-  match scan1, scan2 with
-      (* Unfinished edge. Connect an intersection.
-        x---       ->    x---x *)
-    | `Track [ixn1], `Track [ixn2; ixn3]
-        when TS.(eq ixn1 ixn2 || TS.eq ixn1 ixn3) ->
-          G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
-                        ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir
-                        ~dist:(ixn2.dist+ixn3.dist)
-                        v.graph
-      (* Unfinished edge. Create an intersection.
-        x---       ->    x--+ *)
-    | `Track [ixn1], `Ixn [ixn2] when TS.eq ixn1 ixn2 ->
-        G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
-                      ~x2:x ~y2:y ~dir2:ixn2.search_dir
-                      ~dist:ixn2.dist
-                      v.graph
-      (* Regular edge. We add an intersection in the middle.
-        x-----x    ->    x--+--x *)
-    | `Track [ixn1; ixn2], `Ixn [ixn3; ixn4]
-       when TS.(eq ixn1 ixn3 && eq ixn2 ixn4 || eq ixn1 ixn4 && eq ixn2 ixn3) ->
-        v.graph
-        |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
-        |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
-                         ~x2:x ~y2:y ~dir2:ixn3.search_dir
-                         ~dist:ixn3.dist
-        |> G.add_segment ~x1:ixn4.x ~y1:ixn4.y ~dir1:ixn4.dir
-                         ~x2:x ~y2:y ~dir2:ixn4.search_dir
-                         ~dist:ixn4.dist
-                         
-
-      (* Regular edge. We add an intersection in the middle that connects to another
-        intersection:
-           x                x
-           |                |
-        x-----x    ->    x--+--x *)
-    | `Track [ixn1; ixn2], `Ixn [ixn3; ixn4; ixn5]
-       when TS.((eq ixn1 ixn3 && (eq ixn2 ixn4 || eq ixn2 ixn5))
-         || (eq ixn1 ixn4 && (eq ixn2 ixn3 || eq ixn2 ixn5))
-         || (eq ixn1 ixn5 && (eq ixn2 ixn3 || eq ixn2 ixn4))) ->
-        v.graph
-        |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
-        |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
-                         ~x2:x ~y2:y ~dir2:ixn3.search_dir
-                         ~dist:ixn3.dist
-        |> G.add_segment ~x1:ixn4.x ~y1:ixn4.y ~dir1:ixn4.dir
-                         ~x2:x ~y2:y ~dir2:ixn4.search_dir
-                         ~dist:ixn4.dist
-        |> G.add_segment ~x1:ixn5.x ~y1:ixn5.y ~dir1:ixn5.dir
-                         ~x2:x ~y2:y ~dir2:ixn5.search_dir
-                         ~dist:ixn5.dist
-    | _ -> v.graph
-       (* All other cases require no graph changes *)
 
 let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
@@ -299,7 +351,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   modify_player v ~player (Player.add_track ~length:1);
   let scan2 = TS.scan v.track ~x ~y ~player in
-  let graph = _handle_build_track_graph v ~x ~y scan1 scan2 in
+  let graph = Graph.handle_build_track_complex v ~x ~y scan1 scan2 in
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
@@ -318,7 +370,7 @@ let _build_ferry v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   modify_player v ~player (Player.add_track ~length:1);
   let scan2 = TS.scan v.track ~x ~y ~player in
-  let graph = _handle_build_track_graph_simple v scan1 scan2 in
+  let graph = Graph.handle_build_track v scan1 scan2 in
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
@@ -326,51 +378,11 @@ let _build_ferry v ~x ~y ~dir ~player =
 let check_remove_track v ~x ~y ~dir ~player=
   Trackmap.check_remove_track v.track ~x ~y ~dir ~player
 
-let _handle_remove_track_graph v ~x ~y scan1 scan2 =
-  match scan1, scan2 with
-      (* Was edge. Now disconnected
-        x---x       ->    x- -x *)
-    | `Track [ixn1; ixn2], `Track [ixn3]
-        when TS.(eq ixn2 ixn3 || TS.eq ixn1 ixn3) ->
-          G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir v.graph
-
-      (* Was station. Now station gone.
-        x---S       ->    x--- *)
-    | `Station [_], (`Track [_] | `NoResult) ->
-          G.remove_ixn ~x ~y v.graph
-
-      (* Was ixn. Now deleted.
-        x---+       ->    x--- *)
-    | `Ixn [_], (`Track [_] | `NoResult) ->
-          G.remove_ixn ~x ~y v.graph
-
-      (* Was connecting station. Now disconnected
-        x---S---x   ->    x--- ---x *)
-    | `Station [_; _], `Track[_] ->
-          G.remove_ixn ~x ~y v.graph
-
-      (* Was 2 ixn. Now edge
-        x---+---x   ->    x-------x *)
-
-      (* Was 3 ixn. Now edge + disconnected
-            x                 x
-            |                 |
-        x---+---x   ->    x-------x *)
-    | `Ixn [_; _], `Track [ixn3; ixn4]
-    | `Ixn [_; _; _], `Track [ixn3; ixn4] ->
-        v.graph
-        |> G.remove_ixn ~x ~y
-        |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
-                         ~x2:ixn4.x ~y2:ixn4.y ~dir2:ixn4.dir
-                         ~dist:(ixn3.dist + ixn4.dist)
-    | _ -> v.graph
-       (* All other cases require no graph changes *)
-
 let _remove_track v ~x ~y ~dir ~player =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
   let scan2 = TS.scan v.track ~x ~y ~player in
-  let graph = _handle_remove_track_graph v ~x ~y scan1 scan2 in
+  let graph = Graph.handle_remove_track v ~x ~y scan1 scan2 in
   modify_player v ~player (Player.add_track ~length:(-1));
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
