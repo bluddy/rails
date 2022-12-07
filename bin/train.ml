@@ -7,7 +7,7 @@ type t = {
   dir: Dir.t;
   speed: int;
   target_speed: int;
-  cars: Goods.t list;
+  cars: (Goods.t * int) list; (* good type, level to 160 *)
   freight: Goods.freight;
 } [@@deriving yojson]
 
@@ -26,7 +26,7 @@ let make x y engine cars =
     dir=Dir.Up;
     speed=0;
     target_speed=0;
-    cars;
+    cars=List.map (fun x -> (x,0)) cars;
     freight=freight_of_cars cars;
   }
 
