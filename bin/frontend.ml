@@ -87,6 +87,9 @@ let render win (s:State.t) =
   | _ -> ()
 
 let run ?load ?(region=Region.WestUS) () : unit =
+  Logs.set_reporter (Logs_fmt.reporter ());
+  Logs.set_level (Some Debug);
+
   Printf.printf "Loading resources...";
   print_newline ();
 

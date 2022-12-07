@@ -1,5 +1,8 @@
 open Containers
 
+let src = Logs.Src.create "track_graph" ~doc:"The track graph"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 (* Graph for intersections and stations *)
 
 module Edge = struct
@@ -75,14 +78,18 @@ let make () = {
 }
 
 let add_ixn v ~x ~y =
+  Log.debug (fun f -> f "Adding ixn at (%d,%d)" x y);
   G.add_vertex v.graph (x, y);
   v
 
 let remove_ixn v ~x ~y =
+  Log.debug (fun f -> f "Removing ixn at (%d,%d)" x y);
   G.remove_vertex v.graph (x, y);
   v
 
 let add_segment v ~x1 ~y1 ~dir1 ~x2 ~y2 ~dir2 ~dist =
+  Log.debug (fun f -> f "Adding segment from (%d,%d,%s) to (%d,%d,%s), dist %d"
+              x1 y1 (Dir.show dir1) x2 y2 (Dir.show dir2) dist);
   let id = v.last_id in
   v.last_id <- succ v.last_id;
   let edge = Edge.make id x1 y1 dir1 x2 y2 dir2 dist in
@@ -90,6 +97,7 @@ let add_segment v ~x1 ~y1 ~dir1 ~x2 ~y2 ~dir2 ~dist =
   v
 
 let remove_segment v ~x ~y ~dir =
+  Log.debug (fun f -> f "Remove segment from (%d,%d,%s)" x y (Dir.show dir));
   (* Find the edge we want *)
   let edge =
     G.fold_succ_e (fun ((_,e,_) as edge) acc ->
