@@ -19,10 +19,12 @@ depends: [
   "imagelib"
   "tsdl"
   "owl-base"
+  "ocamlgraph"
+  "logs"
   "ppx_import"
   "ppx_deriving"
   "ppx_hash"
-  "ppx_sexp_conv"
+  "ppx_yojson_conv"
   "lens"
   "odoc" {with-doc}
 ]
