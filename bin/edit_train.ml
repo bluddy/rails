@@ -41,7 +41,7 @@ let render win (s:State.t) v =
 
   (* Draw screen background *)
   R.paint_screen win ~color:Ega.white;
-  R.draw_rect win ~x:2 ~y:9 ~color:Ega.black ~w:315 ~h:106 ~fill:false;
+  R.draw_rect win ~x:2 ~y:9 ~color:Ega.black ~w:316 ~h:107 ~fill:false;
   R.draw_line win ~color:Ega.black ~x1:2 ~y1:49 ~x2:316 ~y2:49;
   R.draw_line win ~color:Ega.black ~x1:0 ~y1:115 ~x2:319 ~y2:115;
   R.draw_line win ~color:Ega.black ~x1:0 ~y1:116 ~x2:319 ~y2:116;
@@ -56,6 +56,18 @@ let render win (s:State.t) v =
   let line3 = sprintf "Speed: %d mph, bound for %s" 25 "Wausau" in
   write_black ~x:8 ~y:12 (line1^line2^line3);
 
+  (* Draw current train engine *)
+  let engine_tex = Hashtbl.find s.textures.route_engine @@ train.engine.make in
+  R.Texture.render ~x:3 ~y:40 win engine_tex;
+
+  (* Draw current cars *)
+  ignore @@
+    List.fold_left (fun x (car,_) ->
+      let car_tex = Hashtbl.find s.textures.route_cars (`CarOld car) in
+      R.Texture.render ~x ~y:41 win car_tex;
+      x + car_tex.w
+    ) 66 train.cars;
+  
   write_black ~x:292 ~y:40 "Exit";
 
   write_black ~x:105 ~y:118 "TRAIN ORDERS";
