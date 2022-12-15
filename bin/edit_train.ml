@@ -37,7 +37,7 @@ let make ~fonts index =
 
 let render win (s:State.t) v =
   let train = Backend.get_train s.backend v.index in
-  let write_black = Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 in
+  let write color = Fonts.Render.write win s.fonts ~color ~idx:4 in
 
   (* Draw screen background *)
   R.paint_screen win ~color:Ega.white;
@@ -54,32 +54,75 @@ let render win (s:State.t) v =
   let line1 = sprintf "Train #%d: %s %s\n" v.index (Goods.show_freight train.freight) "Limited" in
   let line2 = sprintf "near %s (%s/%s)\n" "Wausau" train.engine.name "$4,000" in
   let line3 = sprintf "Speed: %d mph, bound for %s" 25 "Wausau" in
-  write_black ~x:8 ~y:12 (line1^line2^line3);
+  write Ega.black ~x:8 ~y:12 (line1^line2^line3);
 
   (* Draw current train engine *)
   let engine_tex = Hashtbl.find s.textures.route_engine @@ train.engine.make in
   R.Texture.render ~x:3 ~y:40 win engine_tex;
 
   (* Draw current cars *)
-  ignore @@
-    List.fold_left (fun x (car,_) ->
-      let car_tex = Hashtbl.find s.textures.route_cars (`CarOld car) in
-      R.Texture.render ~x ~y:41 win car_tex;
-      x + car_tex.w
-    ) 66 train.cars;
+  let draw_cars cars ~x ~y extract_fn =
+    ignore @@
+      List.fold_left (fun x car_data ->
+        let car = extract_fn car_data in
+        let car_tex = Hashtbl.find s.textures.route_cars (`CarOld car) in
+        R.Texture.render ~x ~y win car_tex;
+        x + car_tex.w
+      ) x cars
+  in
+  draw_cars train.cars ~x:66 ~y:41 fst;
   
-  write_black ~x:292 ~y:40 "Exit";
+  write Ega.black ~x:292 ~y:40 "Exit";
 
-  write_black ~x:105 ~y:118 "TRAIN ORDERS";
+  write Ega.black ~x:105 ~y:118 "TRAIN ORDERS";
+
+  let draw_cars_option (stop:Train.stop) ~y =
+    match stop.cars with
+    | None -> write Ega.gray ~x:168 ~y "no changes"
+    | Some cars -> draw_cars cars ~x:160 ~y Utils.id
+  in
+
+  (* Priority *)
   Renderer.draw_rect win ~x:2 ~y:127 ~w:315 ~h:10 ~color:Ega.yellow ~fill:true;
-  write_black ~x:8 ~y:128 "Priority Orders:";
-  write_black ~x:160 ~y:128 "Priority Consist:";
-  Renderer.draw_rect win ~x:2 ~y:148 ~w:315 ~h:10 ~color:Ega.green ~fill:true;
-  write_black ~x:8 ~y:149 "Scheduled Stops:";
-  write_black ~x:160 ~y:149 "New Consist:";
+  write Ega.black ~x:8 ~y:128 "Priority Orders:";
+  write Ega.black ~x:160 ~y:128 "Priority Consist:";
+  write Ega.gray ~x:8 ~y:138 "P";
+  R.draw_line win ~color:Ega.black ~x1:160 ~y1:147 ~x2:312 ~y2:147;
 
+  begin match train.priority with
+  | None ->
+      write Ega.black ~x:29 ~y:138 "---";
+      write Ega.gray ~x:168 ~y:138 "no changes"
+  | Some stop ->
+      draw_cars_option stop ~y:138
+  end;
 
+  (* Stops *)
+  R.draw_rect win ~x:2 ~y:148 ~w:315 ~h:10 ~color:Ega.bgreen ~fill:true;
+  write Ega.black ~x:8 ~y:149 "Scheduled Stops:";
+  write Ega.black ~x:160 ~y:149 "New Consist:";
 
+  (* Write stops *)
+  let n, y =
+    List.fold_left (fun (i, y) (stop:Train.stop) ->
+      let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
+      write Ega.gray ~x:8 ~y @@ Printf.sprintf "%d." (i+1);
+      let color = if i = train.target_stop then Ega.black else Ega.gray in
+      write color ~x:24 ~y station.name;
+      draw_cars_option stop ~y;
+      R.draw_line win ~color:Ega.black ~x1:160 ~y1:(y+9) ~x2:312 ~y2:(y+9);
+      (i+1, y+10)
+    )
+    (0, 159)
+    train.route
+  in
+  (* Fill in blank stops *)
+  ignore @@
+  Iter.fold (fun y _ ->
+    write Ega.gray ~x:29 ~y "---";
+    y + 10)
+    y
+    Iter.(n -- Train.max_stops);
   ()
 
 let handle_event _s v event =
@@ -87,3 +130,4 @@ let handle_event _s v event =
     true, v, nobaction
   else
     false, v, nobaction
+

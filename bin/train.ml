@@ -1,10 +1,12 @@
 open Containers
 
-(* A leg of a route *)
-type leg = {
+let max_stops = 4
+
+(* A stop of a route *)
+type stop = {
   x: int;
   y: int;
-  cars: Goods.t list;
+  cars: (Goods.t list) option; (* change of cars *)
 } [@@deriving yojson]
 
 type t = {
@@ -17,9 +19,9 @@ type t = {
   cars: (Goods.t * int) list; (* good type, amount to 160, /4 = tons *)
   freight: Goods.freight; (* freight class *)
 
-  leg: int; (* current leg of route *)
-  route: leg list; (* route stops *)
-  priority: leg option;
+  target_stop: int; (* current stop of route *)
+  route: stop list; (* route stops *)
+  priority: stop option;
 } [@@deriving yojson]
 
 let freight_of_cars cars =
@@ -39,7 +41,7 @@ let make x y engine cars =
     target_speed=0;
     cars=List.map (fun x -> (x,0)) cars;
     freight=freight_of_cars cars;
-    leg=0;
+    target_stop=0;
     route=[];
     priority=None;
   }

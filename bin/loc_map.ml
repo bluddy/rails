@@ -26,6 +26,8 @@ let fold f v ~init =
 
 let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
+let get_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)
+
 let add v x y station =
   Hashtbl.replace v.map (Utils.calc_offset v.width x y) station;
   v

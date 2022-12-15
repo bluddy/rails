@@ -195,6 +195,7 @@ let scan =
   in
   inner
 
+let id x = x
 
 let snd_option (x,y) =
   x, (y |> Option.get_exn_or "error")
