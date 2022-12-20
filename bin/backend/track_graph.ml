@@ -5,6 +5,8 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 (* Graph for intersections and stations *)
 
+(* NOTE: must be per player! *)
+
 module Edge = struct
   type xy_dir = (int * int * Dir.t)
   [@@ deriving yojson]
