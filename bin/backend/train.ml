@@ -46,3 +46,4 @@ let make x y engine cars =
     priority=None;
   }
 
+let get_route v = v.route

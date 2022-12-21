@@ -158,7 +158,7 @@ let handle_event (s:State.t) v (event:Event.t) =
   | Normal ->
       let menu, action = Menu.Global.update s v.menu event in
       let screen = match action with
-        | Menu.On(`ShowMap) -> StationMap (Station_map_ui.make ())
+        | Menu.On(`ShowMap) -> StationMap (Station_map_ui.make v.train)
         | _ -> v.screen
       in
       let v =

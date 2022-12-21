@@ -2,11 +2,11 @@ open Containers
 
 module R = Renderer
 
-let make () : Edit_train_d.station_map = {
-  highlighted=0;
+let make train : Edit_train_d.station_map = {
+  train;
 }
 
-let render win (s:State.t) _v =
+let render win (s:State.t) (v:Edit_train_d.station_map) =
   (* min and max over stations and ixns *)
   let min_x, min_y, max_x, max_y =
     Track_graph.G.fold_vertex (fun (x,y) (min_x, min_y, max_x, max_y) ->
@@ -42,7 +42,19 @@ let render win (s:State.t) _v =
     let x2, y2 = scale_xy x2 y2 in
     R.draw_line win ~x1 ~y1 ~x2 ~y2 ~color:Ega.gray)
     s.backend.graph.graph;
+
+  (* Write text *)
+  let train = Trainmap.get s.backend.trains v.train in
+  let route = Train.get_route train in
+  List.iter (fun (stop:Train.stop) ->
+    let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
+    let name = Station.get_name station in
+    let sx, sy = scale_xy stop.x stop.y in
+    Fonts.Render.write win s.fonts name ~idx:1 ~x:(sx-2) ~y:(sy+3) ~color:Ega.bgreen
+  ) route;
+
   ()
+
 
 let handle_event (_s:State.t) _v (event:Event.t) =
   if Event.pressed_esc event then

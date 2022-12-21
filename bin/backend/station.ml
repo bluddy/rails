@@ -138,6 +138,8 @@ let suffixes = [
   "Woods";
 ]
 
+let get_name v = v.name
+
    (* some supplies are lost every tick in a rate war. *)
 let check_rate_war_lose_supplies v ~difficulty =
   match v.info with

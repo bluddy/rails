@@ -4,7 +4,7 @@ type msg =
   ]
 
 type station_map = {
-  highlighted: int;
+  train: int;
 }
 
 type screen =
