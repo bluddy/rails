@@ -32,6 +32,9 @@ type ui_msg =
   | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
   [@@deriving yojson]
 
+type loc = int * int (* x, y *)
+  [@@ deriving yojson]
+
 type t = {
   mutable last_tick: int; (* last time we updated a cycle *)
   mutable cycle: int; (* counter used for all sorts of per-tick updates *)
@@ -46,6 +49,7 @@ type t = {
   trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station.t Loc_map.t;
+  priority: (loc * loc * Goods.t) option;  (* priority shipment *)
   options: B_options.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;
@@ -88,6 +92,7 @@ let default region resources ~random ~seed =
     track;
     graph;
     stations;
+    priority=None;
     options;
     ui_msgs = [];
     random;

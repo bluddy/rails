@@ -117,7 +117,7 @@ let render win (s:State.t) v : unit =
     write Ega.black ~x:8 ~y:149 "Scheduled Stops:";
     write Ega.black ~x:160 ~y:149 "New Consist:";
 
-    (* Write stops *)
+    (* Write stop names *)
     let n, y =
       List.fold_left (fun (i, y) (stop:Train.stop) ->
         let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
@@ -158,7 +158,7 @@ let handle_event (s:State.t) v (event:Event.t) =
   | Normal ->
       let menu, action = Menu.Global.update s v.menu event in
       let screen = match action with
-        | Menu.On(`ShowMap) -> StationMap (Station_map_ui.make v.train)
+        | Menu.On(`ShowMap) -> StationMap (Station_map_ui.make v.train `ShowRoute)
         | _ -> v.screen
       in
       let v =

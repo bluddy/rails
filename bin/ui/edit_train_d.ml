@@ -5,6 +5,7 @@ type msg =
 
 type station_map = {
   train: int;
+  stop_to_update: [`ShowRoute | `EditPriority | `EditStop of int];
 }
 
 type screen =

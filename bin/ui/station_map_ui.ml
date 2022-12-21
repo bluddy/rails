@@ -2,9 +2,11 @@ open Containers
 
 module R = Renderer
 
-let make train : Edit_train_d.station_map = {
+let make train stop_to_update : Edit_train_d.station_map = {
   train;
+  stop_to_update;
 }
+
 
 let render win (s:State.t) (v:Edit_train_d.station_map) =
   (* min and max over stations and ixns *)
@@ -49,9 +51,30 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   List.iter (fun (stop:Train.stop) ->
     let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
     let name = Station.get_name station in
-    let sx, sy = scale_xy stop.x stop.y in
-    Fonts.Render.write win s.fonts name ~idx:1 ~x:(sx-2) ~y:(sy+3) ~color:Ega.bgreen
+    let x, y = scale_xy stop.x stop.y in
+    Fonts.Render.write win s.fonts name ~idx:1 ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   ) route;
+
+  (* Draw station boxes *)
+  Loc_map.iter (fun (station:Station.t) ->
+    let color =
+      match s.backend.priority with
+      | Some ((x,y),_,_) when x = station.x && y = station.y -> Ega.bgreen
+      | Some (_,(x,y),_) when x = station.x && y = station.y -> Ega.bgreen
+      | _ -> Ega.gray
+    in
+    let x, y = scale_xy station.x station.y in
+    R.draw_rect win ~x:(x-1) ~y:(y-1) ~w:3 ~h:3 ~color ~fill:true
+  ) s.backend.stations;
+
+  R.draw_rect win ~x:48 ~y:1 ~w:160 ~h:9 ~color:Ega.white ~fill:true;
+
+  let heading = match v.stop_to_update with
+    | `ShowRoute -> "    Route Map"
+    | `EditPriority -> "Priority Destination"
+    | `EditStop i -> Printf.sprintf "Scheduled Stop #%d" i
+  in
+  Fonts.Render.write win s.fonts ~idx:1 ~x:52 ~y:1 ~color:Ega.black heading;
 
   ()
 
