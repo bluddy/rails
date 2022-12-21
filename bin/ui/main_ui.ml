@@ -549,12 +549,12 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | EditTrain state ->
       let exit_state, state2, action = Edit_train.handle_event s state event in
-      if exit_state then
-        {v with mode=Normal}, action
-      else if state =!= state2 then
-        {v with mode=EditTrain state}, action
-      else
-        v, action
+      let v =
+        if exit_state then {v with mode=Normal}
+        else if state =!= state2 then {v with mode=EditTrain state2}
+        else v
+      in
+      v, action
 
 (* Handle incoming messages from backend *)
 let handle_msgs (s:State.t) v ui_msgs =

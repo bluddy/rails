@@ -15,7 +15,8 @@ let make_menu fonts menu_h =
   let engine_menu =
     let open MsgBox in
     make ~fonts [
-      make_entry "Dummy" @@ `Action `ShowMap
+      make_entry "Dummy" @@ `Action `ShowMap;
+      make_entry "Dummy" @@ `Action `ShowMap;
     ]
     in
   let train_type_menu = engine_menu in
@@ -137,7 +138,7 @@ let render win (s:State.t) v : unit =
 let handle_event (s:State.t) v (event:Event.t) =
   match v.screen with
   | StationMap state ->
-      let screen =
+      let v =
         if Station_map_ui.handle_event s state event then
           {v with screen=Normal}
         else
