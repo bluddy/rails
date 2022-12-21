@@ -10,7 +10,9 @@ open Station_map_ui
 
 let nobaction = B.Action.NoAction
 
-let make_menu fonts menu_h =
+let menu_h = 8
+
+let make_menu fonts =
   let open Menu in
   let engine_menu =
     let open MsgBox in
@@ -20,20 +22,26 @@ let make_menu fonts menu_h =
     ]
     in
   let train_type_menu = engine_menu in
-  let route_map = engine_menu in
+  let route_map_menu =
+    let open MsgBox in
+    make ~fonts ~x:160 ~y:8 [
+      make_entry "Dummy" @@ `Action `ShowMap;
+      make_entry "Dummy" @@ `Action `ShowMap;
+    ]
+    in
 
   let titles =
     let open Menu.Title in
     [
       make ~fonts ~x:8 ~y:1 "&Engine" engine_menu;
       make ~fonts ~x:72 ~y:1 "&Train type" train_type_menu;
-      make ~fonts ~x:160 ~y:1 "&Route map" route_map;
+      make ~fonts ~x:160 ~y:1 "&Route map" route_map_menu;
     ]
   in
   Menu.Global.make ~menu_h titles
 
 let make ~fonts train =
-  let menu = make_menu fonts 8 in
+  let menu = make_menu fonts in
   {
     train;
     menu;
@@ -55,9 +63,6 @@ let render win (s:State.t) v : unit =
     R.draw_line win ~color:Ega.black ~x1:2 ~y1:49 ~x2:316 ~y2:49;
     R.draw_line win ~color:Ega.black ~x1:0 ~y1:115 ~x2:319 ~y2:115;
     R.draw_line win ~color:Ega.black ~x1:0 ~y1:116 ~x2:319 ~y2:116;
-
-    (* Menu bar *)
-    Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
 
     (* TODO: make these things dynamic *)
     let open Printf in
@@ -133,6 +138,10 @@ let render win (s:State.t) v : unit =
       y + 10)
       y
       Iter.(n -- Train.max_stops);
+
+    (* Menu bar - last so we draw over all else *)
+    Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
+
     ()
 
 let handle_event (s:State.t) v (event:Event.t) =

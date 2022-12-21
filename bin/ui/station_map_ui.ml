@@ -46,7 +46,7 @@ let render win (s:State.t) _v =
 
 let handle_event (_s:State.t) _v (event:Event.t) =
   if Event.pressed_esc event then
-    false
-  else
     true
+  else
+    false
 
