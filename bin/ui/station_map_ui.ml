@@ -30,8 +30,8 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   let map_y = (min_y + max_y) / 2 - map_dim in
 
   let scale_xy x y =
-    let x = (x - map_x) * 120 / dim in
-    let y = (y - map_y) * 100 / dim in
+    let x = (x - map_x) * 120 / map_dim in
+    let y = (y - map_y) * 100 / map_dim in
     (x,y)
   in
 
