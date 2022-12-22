@@ -154,7 +154,7 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
         draw_point win ~x ~y;
         let x, d = 
           if d > 0 then
-            x + xi, d + (2 * (dy - dx))
+            x + xi, d + (2 * (dx - dy))
           else
             x, d + 2 * dx
         in
@@ -191,7 +191,7 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
   if abs(y2 - y1) < abs(x2 - x1) then
     let x1, y1, x2, y2 =
       if x1 > x2 then
-        x2, y2, x1, y2
+        x2, y2, x1, y1
       else
         x1, y1, x2, y2
     in
@@ -199,7 +199,7 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
   else
     let x1, y1, x2, y2 =
       if y1 > y2 then
-        x2, y2, x1, y2
+        x2, y2, x1, y1
       else
         x1, y1, x2, y2
     in
