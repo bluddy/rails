@@ -69,10 +69,11 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
 
   R.draw_rect win ~x:48 ~y:1 ~w:160 ~h:9 ~color:Ega.white ~fill:true;
 
+  (* Write heading *)
   let heading = match v.stop_to_update with
     | `ShowRoute -> "    Route Map"
-    | `EditPriority -> "Priority Destination"
-    | `EditStop i -> Printf.sprintf "Scheduled Stop #%d" i
+    | `EditPriority -> "Update Priority Destination"
+    | `EditStop i -> Printf.sprintf "Update Scheduled Stop #%d" i
   in
   Fonts.Render.write win s.fonts ~idx:1 ~x:52 ~y:1 ~color:Ega.black heading;
 

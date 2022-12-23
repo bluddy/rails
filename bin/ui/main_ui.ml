@@ -568,6 +568,7 @@ let handle_msgs (s:State.t) v ui_msgs =
   in
   List.fold_left handle_msg v ui_msgs
 
+  (* Mostly animations *)
 let handle_tick s v time = match v.mode with
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
