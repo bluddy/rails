@@ -461,6 +461,7 @@ let handle_cycle v =
   v, demand_msgs
 
 let handle_tick v cur_time =
+  (* TODO: handle pausing *)
   let delay_mult = B_options.delay_mult_of_speed v.options.speed in
   let tick_delta = delay_mult * tick_ms in
   let new_time = v.last_tick + tick_delta in
