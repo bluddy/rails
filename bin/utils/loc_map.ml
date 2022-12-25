@@ -24,6 +24,16 @@ let iter f v =
 let fold f v ~init =
   Hashtbl.fold (fun _ station acc -> f station acc) v.map init
 
+let find f v =
+  let exception Found of int in
+  try
+    Hashtbl.iter (fun i station ->
+      if f station then raise_notrace @@ Found i)
+    v.map;
+    None
+  with
+    Found i -> Some(Utils.x_y_of_offset v.width i) 
+
 let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
 let get_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)

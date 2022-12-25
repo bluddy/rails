@@ -206,3 +206,9 @@ let string_of_num num =
   Printf.sprintf "%#d" num
   |> String.map (function '_' -> ',' | x -> x)
 
+  (* The way the original game approximates distance *)
+let classic_dist dx dy =
+  let big, small = if dx > dy then dx, dy else dy, dx in
+  big + small / 2
+
+

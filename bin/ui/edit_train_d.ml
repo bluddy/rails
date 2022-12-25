@@ -5,7 +5,11 @@ type msg =
 
 type station_map = {
   train: int;
-  stop_to_update: [`ShowRoute | `EditPriority | `EditStop of int];
+  purpose: [`ShowRoute | `EditPriority | `EditStop of int];
+  selected_station: (int * int) option;
+  map_x: int; (* for scaling map *)
+  map_y: int; (* for scaling map *)
+  map_dim: int; (* for scaling map *)
 }
 
 type screen =

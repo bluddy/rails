@@ -148,17 +148,20 @@ let handle_event (s:State.t) v (event:Event.t) =
   match v.screen with
   | StationMap state ->
       let v =
-        if Station_map_ui.handle_event s state event then
+        let exit, state2 = Station_map_ui.handle_event s state event in
+        if exit then
           {v with screen=Normal}
-        else
-          v
+        else if state =!= state2 then
+          {v with screen=StationMap state2}
+        else v
       in
       false, v, nobaction
 
   | Normal ->
       let menu, action = Menu.Global.update s v.menu event in
       let screen = match action with
-        | Menu.On(`ShowMap) -> StationMap (Station_map_ui.make v.train `ShowRoute)
+        | Menu.On(`ShowMap) ->
+            StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute)
         | _ -> v.screen
       in
       let v =
