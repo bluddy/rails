@@ -530,22 +530,12 @@ let handle_event (s:State.t) v (event:Event.t) =
       else
         v, nobaction
 
-  | BuildTrain(`ChooseEngine) ->
-      begin match Build_train.ChooseEngine.handle_event event ~region:s.backend.region ~year:s.backend.year with
-      | Some engine ->
-          (* We chose an engine *)
-          let state = Build_train.AddCars.init s ~engine in
-          {v with mode=BuildTrain(`AddCars state)}, nobaction
-      | None ->
-          v, nobaction
-      end
-
-  | BuildTrain(`AddCars state) ->
-      let state2, action = Build_train.AddCars.handle_event s state event in
-      if state =!= state2 then
-        {v with mode=BuildTrain(`AddCars state2)}, action
-      else
-        v, action
+  | BuildTrain state ->
+      let state2, action = Build_train.handle_event s state event in
+      let v = 
+        if state2 =!= state then {v with mode=BuildTrain(state2)} else v
+      in
+      v, action
 
   | EditTrain state ->
       let exit_state, state2, action = Edit_train.handle_event s state event in

@@ -4,6 +4,8 @@ module R = Renderer
 
 open Edit_train_d
 
+let selection_dist = 24
+
 let make graph train purpose : Edit_train_d.station_map =
   (* min and max over stations and ixns *)
   let min_x, min_y, max_x, max_y =
@@ -33,6 +35,7 @@ let make graph train purpose : Edit_train_d.station_map =
     selected_station=None;
   }
 
+  (* Function used to scale to the screen *)
 let scale_xy v x y =
   let x = (x - v.map_x) * 120 / v.map_dim in
   let y = (y - v.map_y) * 100 / v.map_dim in
@@ -64,9 +67,10 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   Loc_map.iter (fun (station:Station.t) ->
     if Station.is_proper_station station then
       let color =
-        match s.backend.priority with
-        | Some ((x,y),_,_) when x = station.x && y = station.y -> Ega.bgreen
-        | Some (_,(x,y),_) when x = station.x && y = station.y -> Ega.bgreen
+        match v.selected_station, s.backend.priority with
+        | Some (x,y), _ when x = station.x && y = station.y -> Ega.white
+        | _, Some ((x,y),_,_) when x = station.x && y = station.y -> Ega.bgreen
+        | _, Some (_,(x,y),_) when x = station.x && y = station.y -> Ega.bgreen
         | _ -> Ega.gray
       in
       let x, y = scale_xy v station.x station.y in
@@ -85,17 +89,28 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
 
   ()
 
-
   (* returns v and whether we exit *)
 let handle_event (s:State.t) v (event:Event.t) =
   match event with
   | Event.MouseMotion mouse ->
     let selected_station =
-      Loc_map.find (fun (station:Station.t) ->
+      Loc_map.fold (fun (station:Station.t) closest ->
         let x, y = scale_xy v station.x station.y in
-        Station.is_proper_station station &&
-          mouse.x >= x - 1 && mouse.x <= x + 1 && mouse.y >= y - 1 && mouse.y <= y + 1
-      ) s.backend.stations
+        let dist = Utils.classic_dist (abs(mouse.x - x)) (abs(mouse.y - y)) in
+        match closest with
+        | None when Station.is_proper_station station && dist < selection_dist ->
+            Some ((station.x, station.y), dist)
+        | Some (_, min_dist) when Station.is_proper_station station && dist < selection_dist && dist < min_dist ->
+            Some ((station.x, station.y), dist)
+        | _ -> closest
+      )
+      s.backend.stations
+      ~init:None
+    in
+    let selected_station =
+      match selected_station with
+      | Some (loc, _ ) -> Some loc
+      | None -> None
     in
     false, {v with selected_station}
   | Key _k when Event.pressed_esc event ->

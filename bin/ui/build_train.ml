@@ -144,3 +144,23 @@ module ChooseEngine = struct
 
 end
 
+let nobaction = Backend.Action.NoAction
+
+let handle_event (s:State.t) v (event:Event.t) = match v with
+  | `ChooseEngine ->
+      begin match ChooseEngine.handle_event event ~region:s.backend.region
+                                                  ~year:s.backend.year with
+      | Some engine ->
+          (* We chose an engine *)
+          let state = AddCars.init s ~engine in
+          `AddCars state, nobaction
+      | None ->
+          `ChooseEngine, nobaction
+      end
+  | `AddCars state ->
+      let state2, action = AddCars.handle_event s state event in
+      if state =!= state2 then
+        `AddCars state2, action
+      else
+        v, action
+
