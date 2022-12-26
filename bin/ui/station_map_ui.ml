@@ -87,6 +87,43 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   in
   Fonts.Render.write win s.fonts ~idx:1 ~x:52 ~y:1 ~color:Ega.black heading;
 
+  (* Info bar *)
+  begin match v.selected_station with
+  | Some (x,y) ->
+      let station = Loc_map.get_exn s.backend.stations x y in
+      let demand = Station.get_demand_exn station in
+      let write_black = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black in
+      write_black ~x:258 ~y:1 @@ Station.get_name station;
+      write_black ~x:258 ~y:13 @@ Printf.sprintf "(%s)" @@ Station.kind_str station;
+
+      let supply = Station.get_supply_exn station in
+      write_black ~x:258 ~y:25 "Waiting";
+      let y =
+        List.fold_left (fun y good ->
+          match Hashtbl.find_opt supply good with
+          | Some amount ->
+              let cars = amount / Goods.full_car in
+              if cars > 0 then (
+                let tex = Hashtbl.find s.textures.route_cars @@ `CarOld good in
+                R.Texture.render win ~x:258 ~y tex;
+                write_black ~x:292 ~y:(y+1) @@ Printf.sprintf "(%d)" cars;
+                y + 10)
+              else
+                y
+          | _ -> y)
+        34
+        Goods.order
+      in
+      let y = write_black ~x:258 ~y "Demands"; y + 8 in
+      ignore @@
+        Goods.Set.fold (fun good y ->
+          write_black ~x:258 ~y @@ Goods.show good;
+          y + 8)
+        demand
+      y
+
+  | _ -> ()
+  end;
   ()
 
   (* returns v and whether we exit *)

@@ -1,4 +1,5 @@
 open Containers
+open Utils.Infix
 
 (* minimum level to be real demand *)
 let min_demand = Goods.full_car
@@ -65,7 +66,7 @@ end)
 type info = {
   mutable demand: Goods.Set.t; (* Goods with sufficient demand *)
   mutable min_demand: Goods.Set.t; (* Minimally accepted goods *)
-  supply: (Goods.t, int) Utils.Hashtbl.t;
+  supply: (Goods.t, int) Utils.Hashtbl.t; (* val is in terms of Goods.full_car *)
   lost_supply: (Goods.t, int) Utils.Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
@@ -140,6 +141,14 @@ let suffixes = [
 
 let get_name v = v.name
 
+let get_supply_exn v = match v.info with
+  | Some info -> info.supply
+  | None -> failwith "not a proper station"
+
+let get_demand_exn v = match v.info with
+  | Some info -> info.demand
+  | None -> failwith "not a proper station"
+
    (* some supplies are lost every tick in a rate war. *)
 let check_rate_war_lose_supplies v ~difficulty =
   match v.info with
@@ -213,8 +222,8 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
       temp_demand_h
       info.demand
     in
-    if not @@ CCEqual.physical info.demand demand2 then info.demand <- demand2;
-    if not @@ CCEqual.physical info.min_demand min_demand2 then info.min_demand <- min_demand2;
+    if info.demand =!= demand2 then info.demand <- demand2;
+    if info.min_demand =!= min_demand2 then info.min_demand <- min_demand2;
     msgs
 
     (** Lose supplies. Less supplies lost if we have the right upgrade *)
@@ -228,14 +237,15 @@ let lose_supplies v =
 
         let open Goods in
         let amount2 =
+          let has x = Upgrades.mem info.upgrades x in
           match good with
-          | Mail when Upgrades.mem info.upgrades PostOffice  -> amount2
-          | Passengers when Upgrades.mem info.upgrades Hotel -> amount2
-          | Food when Upgrades.mem info.upgrades ColdStorage -> amount2
-          | Livestock when Upgrades.mem info.upgrades LivestockPens -> amount2
-          | Grapes when Upgrades.mem info.upgrades GrapeStorage -> amount2
-          | MfgGoods when Upgrades.mem info.upgrades GoodsStorage -> amount2
-          | Armaments when Upgrades.mem info.upgrades ArmsStorage -> amount2
+          | Mail when has PostOffice  -> amount2
+          | Passengers when has Hotel -> amount2
+          | Food when has ColdStorage -> amount2
+          | Livestock when has LivestockPens -> amount2
+          | Grapes when has GrapeStorage -> amount2
+          | MfgGoods when has GoodsStorage -> amount2
+          | Armaments when has ArmsStorage -> amount2
           | _ -> 
               (* higher freight classes are less time sensitive *)
               let freight = Goods.freight_of_goods good in

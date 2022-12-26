@@ -1,5 +1,10 @@
 Notes:
+- Bugs:
+  - When running for a while, the years start switching fast but not the months
+  - Depots don't seem to collect any demand/supply
 - TODO:
+  - Pause backend when modal screens are showing
+    - Can't just cutoff cycles: need backend to respond
   - Don't allow station on curved tracks
   - Build tunnel:
     - Shows msgbox with cost and length of tunnel to confirm
