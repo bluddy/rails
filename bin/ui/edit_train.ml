@@ -170,3 +170,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       let exit = Event.pressed_esc event in
       exit, v, nobaction
 
+let handle_tick v time =
+  match v.screen with
+  | StationMap state -> Station_map_ui.handle_tick state time
+  | _ -> ()
+

@@ -10,6 +10,8 @@ type station_map = {
   map_x: int; (* for scaling map *)
   map_y: int; (* for scaling map *)
   map_dim: int; (* for scaling map *)
+  mutable flash_time: int; (* flashing cursor *)
+  mutable flash_on: bool;  (* flashing state *)
 }
 
 type screen =

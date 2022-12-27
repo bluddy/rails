@@ -5,6 +5,7 @@ module R = Renderer
 open Edit_train_d
 
 let selection_dist = 24
+let blink_time = 500
 
 let make graph train purpose : Edit_train_d.station_map =
   (* min and max over stations and ixns *)
@@ -33,6 +34,8 @@ let make graph train purpose : Edit_train_d.station_map =
     map_y;
     map_dim;
     selected_station=None;
+    flash_time=0;
+    flash_on=false;
   }
 
   (* Function used to scale to the screen *)
@@ -68,7 +71,8 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
     if Station.is_proper_station station then
       let color =
         match v.selected_station, s.backend.priority with
-        | Some (x,y), _ when x = station.x && y = station.y -> Ega.white
+        | Some (x,y), _ when x = station.x && y = station.y && v.flash_on -> Ega.white
+        | Some (x,y), _ when x = station.x && y = station.y -> Ega.black
         | _, Some ((x,y),_,_) when x = station.x && y = station.y -> Ega.bgreen
         | _, Some (_,(x,y),_) when x = station.x && y = station.y -> Ega.bgreen
         | _ -> Ega.gray
@@ -154,4 +158,12 @@ let handle_event (s:State.t) v (event:Event.t) =
       true, v
   | _ ->
       false, v
+
+let handle_tick v time =
+  if time - v.flash_time > blink_time then (
+    v.flash_time <- time;
+    v.flash_on <- not v.flash_on;
+  );
+  ()
+
 

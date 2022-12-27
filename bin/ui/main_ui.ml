@@ -563,6 +563,9 @@ let handle_tick s v time = match v.mode with
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
       if state === state2 then v else {v with mode=BuildTrain(`AddCars state2)}
+  | EditTrain state ->
+      Edit_train.handle_tick state time;
+      v
   | _ -> v
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
