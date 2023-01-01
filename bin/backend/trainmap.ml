@@ -13,6 +13,11 @@ let delete v idx =
 
 let get v idx = CCVector.get v idx
 
+let update v idx f =
+  let train = get v idx in
+  CCVector.set v idx (f train);
+  v
+
 let size v = CCVector.size v
 
 let last v =

@@ -1,4 +1,5 @@
 open Containers
+open Utils.Infix
 
 let max_stops = 4
 
@@ -6,7 +7,7 @@ let max_stops = 4
 type stop = {
   x: int;
   y: int;
-  cars: (Goods.t list) option; (* change of cars *)
+  cars: (Goods.t list) option; (* change of cars. None -> "No Change" *)
 } [@@deriving yojson]
 
 type t = {
@@ -47,3 +48,16 @@ let make x y engine cars =
   }
 
 let get_route v = v.route
+
+let remove_stop_car (v:t) stop car =
+  let route =
+    Utils.List.modify_at_idx stop (fun (stop:stop) ->
+    let cars = match stop.cars with
+      | None -> None
+      | Some car_list -> Some(List.remove_at_idx car car_list)
+    in
+    {stop with cars})
+    v.route
+  in
+  {v with route}
+

@@ -40,11 +40,18 @@ let make_menu fonts =
   in
   Menu.Global.make ~menu_h titles
 
-let make ~fonts train =
-  let menu = make_menu fonts in
+let make (s:State.t) train =
+  let menu = make_menu s.fonts in
+  let car_menu = 
+    let open Menu.MsgBox in
+    Build_train.AddCars.create_menu ~fonts:s.fonts s.backend.region
+      ~suffix:[make_entry "Caboose only" (`Action `Caboose)]
+  in
   {
     train;
     menu;
+    car_menu;
+    show_car_menu=None;
     screen=Normal;
   }
 
@@ -159,19 +166,72 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | Normal ->
       let menu, action = Menu.Global.update s v.menu event in
-      let screen = match action with
-        | Menu.On(`ShowMap) ->
-            StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute)
-        | _ -> v.screen
+      let train = Backend.get_train s.backend v.train in
+      let line_h = 10 in
+      let screen, show_car_menu, bk_action = match action, event with
+
+          (* Menu choice: route map view *)
+        | Menu.On(`ShowMap), _ ->
+            StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute), None, nobaction
+
+          (* Click on a stop -> open route map *)
+        | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 159 ->
+            let ystart = 167 in
+            let res =
+              List.foldi (fun acc i _ -> match acc with
+                | None when y <= ystart + i * line_h -> Some i
+                | x -> x)
+              None
+              train.route
+            in
+            begin match res with
+            | Some i ->
+                StationMap (Station_map_ui.make s.backend.graph v.train @@
+                  `EditStop i), None, nobaction
+            | _ -> v.screen, None, nobaction
+            end
+
+          (* Click on car or space in stop *)
+        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
+            let ystart = 167 in
+            let xstart = 160 in
+            let car_w = 20 in
+            let res =
+              List.foldi (fun acc i (stop:Train.stop) -> match acc with
+                | `None when y < ystart + i * line_h ->
+                    begin match stop.cars with
+                    | None -> `AddCarMenu i  (* currently "No Change" *)
+                    | Some cars ->
+                        List.foldi (fun acc j _ -> match acc with
+                          | `AddCarMenu _ when x < xstart + j * car_w -> `DeleteCar (i, j)
+                          | _ -> acc)
+                        (`AddCarMenu i)
+                        cars
+                    end
+                | x -> x)
+              `None
+              train.route
+            in
+            begin match res with
+            | `AddCarMenu i -> v.screen, Some i, nobaction
+            | `DeleteCar (i, j) -> v.screen, None,
+                Backend.Action.RemoveStopCar{train=v.train; stop=i; car=j}
+            | `None -> v.screen, None, nobaction
+            end
+
+        | _ -> v.screen, None, nobaction
       in
       let v =
-        if menu =!= v.menu || screen =!= v.screen then {v with menu; screen} else v
+        if menu =!= v.menu || screen =!= v.screen || show_car_menu =!= v.show_car_menu then
+          {v with menu; screen; show_car_menu} else v
       in
       let exit = Event.pressed_esc event in
-      exit, v, nobaction
+      exit, v, bk_action
 
 let handle_tick v time =
-  match v.screen with
+  begin match v.screen with
   | StationMap state -> Station_map_ui.handle_tick state time
   | _ -> ()
+  end;
+  v
 

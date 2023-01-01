@@ -6,6 +6,16 @@ module R = Renderer
 module AddCars = struct
   open Build_train_d
 
+  let create_menu ?(suffix=[]) ~fonts region =
+    let goods = Goods.of_region region in
+    let car_list = List.map Goods.car_str_of goods in
+    let goods_cars = List.combine car_list goods in
+    let open Menu.MsgBox in
+    make ~fonts ~heading:"Add Car?" ~x:200 ~y:10 @@
+      [make_entry "No Thanks" (`Action `Done)] @
+      (List.map (fun (name, good) -> make_entry name @@ `Action(`AddCar good)) goods_cars) @
+      suffix
+
   (* Create the animation that will be used when we add cars *)
   let init (s:State.t) ~engine =
     (* Find station with engine shop *)
@@ -21,15 +31,7 @@ module AddCars = struct
       let engine = engine.Engine.make in
       Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station_x ~station_y ~rail:`Back
     in
-    let menu =
-      let goods = Goods.of_region s.backend.region in
-      let car_list = List.map Goods.car_str_of goods in
-      let goods_cars = List.combine car_list goods in
-      let open Menu.MsgBox in
-      make ~fonts:s.fonts ~heading:"Add Car?" ~x:200 ~y:10 @@
-        [make_entry "No Thanks" (`Action `Done)] @
-        (List.map (fun (name, good) -> make_entry name @@ `Action(`AddCar good)) goods_cars)
-    in
+    let menu = create_menu ~fonts:s.fonts s.backend.region in
     {
       anim;
       menu;

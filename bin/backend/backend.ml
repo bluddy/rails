@@ -412,6 +412,13 @@ let _build_train v station_x station_y engine goods =
   v.ui_msgs <- msg::v.ui_msgs;
   if trains === v.trains then v else {v with trains}
 
+let _remove_stop_car v train stop car =
+  let trains =
+    Trainmap.update v.trains train
+      (fun train -> Train.remove_stop_car train stop car);
+  in
+  if trains =!= v.trains then {v with trains} else v
+
 let get_num_trains v = Trainmap.size v.trains
 
 let get_train v idx = Trainmap.get v.trains idx
@@ -492,6 +499,7 @@ module Action = struct
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
     | BuildTrain of Engine.make * Goods.t list * int * int (* x, y *)
+    | RemoveStopCar of {train: int; stop: int; car: int}
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
@@ -512,6 +520,8 @@ module Action = struct
         _set_speed backend speed
     | BuildTrain (engine, goods, station_x, station_y) ->
         _build_train backend station_x station_y engine goods
+    | RemoveStopCar {train; stop; car} ->
+        _remove_stop_car backend train stop car
     | NoAction -> backend
 
 end

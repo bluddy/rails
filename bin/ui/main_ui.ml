@@ -551,7 +551,7 @@ let handle_msgs (s:State.t) v ui_msgs =
   let handle_msg v ui_msg =
     match v.mode, ui_msg with
     | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
-        let state = Edit_train.make ~fonts:s.fonts idx in
+        let state = Edit_train.make s idx in
         {v with mode=EditTrain state}
     | _ ->
         v
@@ -564,8 +564,8 @@ let handle_tick s v time = match v.mode with
       let state2 = Build_train.AddCars.handle_tick s state time in
       if state === state2 then v else {v with mode=BuildTrain(`AddCars state2)}
   | EditTrain state ->
-      Edit_train.handle_tick state time;
-      v
+      let state2 = Edit_train.handle_tick state time in
+      if state === state2 then v else {v with mode=EditTrain state2}
   | _ -> v
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
