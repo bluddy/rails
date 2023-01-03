@@ -146,6 +146,13 @@ let render win (s:State.t) v : unit =
       y
       Iter.(n -- Train.max_stops);
 
+    (* Car menu *)
+    begin match v.show_car_menu with
+    | None -> ()
+    | Some _ ->
+        Menu.MsgBox.render win s v.car_menu
+    end;
+
     (* Menu bar - last so we draw over all else *)
     Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
 
@@ -175,14 +182,15 @@ let handle_event (s:State.t) v (event:Event.t) =
             StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute), None, nobaction
 
           (* Click on a stop -> open route map *)
-        | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 159 ->
+        | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 158 ->
             let ystart = 167 in
             let res =
-              List.foldi (fun acc i _ -> match acc with
-                | None when y <= ystart + i * line_h -> Some i
+              Iter.foldi (fun acc i _ -> match acc with
+                | None when y <= ystart + i * line_h ->
+                    Some i
                 | x -> x)
               None
-              train.route
+              Iter.(0 -- List.length(train.route))
             in
             begin match res with
             | Some i ->

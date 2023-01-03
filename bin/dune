@@ -3,7 +3,8 @@
   (public_name rails)
   (name main)
   (libraries iter containers containers-data gen imagelib imagelib.unix tsdl owl-base ocamlgraph ppx_deriving_yojson.runtime logs logs.fmt)
-  (preprocess (staged_pps ppx_import ppx_deriving.show ppx_deriving.enum ppx_deriving.eq ppx_deriving.ord lens.ppx_deriving ppx_hash ppx_yojson_conv))
+  (preprocess
+    (staged_pps ppx_import ppx_deriving.show ppx_deriving.enum ppx_deriving.eq ppx_deriving.ord lens.ppx_deriving ppx_hash ppx_yojson_conv))
   (modes exe)
   )
 

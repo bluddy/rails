@@ -7,7 +7,7 @@ open Edit_train_d
 let selection_dist = 24
 let blink_time = 500
 
-let make graph train purpose : Edit_train_d.station_map =
+let make graph train state : Edit_train_d.station_map =
   (* min and max over stations and ixns *)
   let min_x, min_y, max_x, max_y =
     Track_graph.G.fold_vertex (fun (x,y) (min_x, min_y, max_x, max_y) ->
@@ -29,7 +29,7 @@ let make graph train purpose : Edit_train_d.station_map =
   let map_y = (min_y + max_y) / 2 - map_dim in
   {
     train;
-    purpose;
+    state;
     map_x;
     map_y;
     map_dim;
@@ -84,7 +84,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   R.draw_rect win ~x:48 ~y:1 ~w:160 ~h:9 ~color:Ega.white ~fill:true;
 
   (* Write heading *)
-  let heading = match v.purpose with
+  let heading = match v.state with
     | `ShowRoute -> "    Route Map"
     | `EditPriority -> "Update Priority Destination"
     | `EditStop i -> Printf.sprintf "Update Scheduled Stop #%d" i
