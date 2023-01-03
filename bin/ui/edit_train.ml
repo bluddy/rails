@@ -161,15 +161,10 @@ let render win (s:State.t) v : unit =
 let handle_event (s:State.t) v (event:Event.t) =
   match v.screen with
   | StationMap state ->
-      let v =
-        let exit, state2 = Station_map_ui.handle_event s state event in
-        if exit then
-          {v with screen=Normal}
-        else if state =!= state2 then
-          {v with screen=StationMap state2}
-        else v
-      in
-      false, v, nobaction
+      let exit, state2, b_action = Station_map_ui.handle_event s state event in
+      let v = if state =!= state2 then {v with screen=StationMap state2} else v in
+      let v = if exit then {v with screen=Normal} else v in
+      false, v, b_action
 
   | Normal ->
       let menu, action = Menu.Global.update s v.menu event in

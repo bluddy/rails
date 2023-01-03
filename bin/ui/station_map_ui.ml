@@ -59,9 +59,9 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   (* Write stop text *)
   let train = Trainmap.get s.backend.trains v.train in
   let route = Train.get_route train in
-  List.iter (fun (stop:Train.stop) ->
+  List.iteri (fun i (stop:Train.stop) ->
     let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
-    let name = Station.get_name station in
+    let name = Printf.sprintf "%d. %s" i (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
     Fonts.Render.write win s.fonts name ~idx:1 ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   ) route;
@@ -130,10 +130,12 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   end;
   ()
 
+let nobaction = Backend.Action.NoAction
+
   (* returns v and whether we exit *)
 let handle_event (s:State.t) v (event:Event.t) =
-  match event with
-  | Event.MouseMotion mouse ->
+  match event, v.selected_station, v.state with
+  | Event.MouseMotion mouse, _, _ ->
     let selected_station =
       Loc_map.fold (fun (station:Station.t) closest ->
         let x, y = scale_xy v station.x station.y in
@@ -153,11 +155,15 @@ let handle_event (s:State.t) v (event:Event.t) =
       | Some (loc, _ ) -> Some loc
       | None -> None
     in
-    false, {v with selected_station}
-  | Key _k when Event.pressed_esc event ->
-      true, v
+    false, {v with selected_station}, nobaction
+
+  | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditStop stop  ->
+      false, v, Backend.Action.SetStopStation {train=v.train; stop; station}
+
+  | Key _k, _, _ when Event.pressed_esc event ->
+      true, v, nobaction
   | _ ->
-      false, v
+      false, v, nobaction
 
 let handle_tick v time =
   if time - v.flash_time > blink_time then (

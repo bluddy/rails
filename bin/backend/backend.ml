@@ -415,7 +415,14 @@ let _build_train v station_x station_y engine goods =
 let _remove_stop_car v train stop car =
   let trains =
     Trainmap.update v.trains train
-      (fun train -> Train.remove_stop_car train stop car);
+      (fun train -> Train.remove_stop_car train stop car)
+  in
+  if trains =!= v.trains then {v with trains} else v
+
+let _set_stop_station v train stop station =
+  let trains =
+    Trainmap.update v.trains train
+      (fun train -> Train.set_stop_station train stop station)
   in
   if trains =!= v.trains then {v with trains} else v
 
@@ -500,6 +507,7 @@ module Action = struct
     | SetSpeed of B_options.speed
     | BuildTrain of Engine.make * Goods.t list * int * int (* x, y *)
     | RemoveStopCar of {train: int; stop: int; car: int}
+    | SetStopStation of {train: int; stop: int; station: int * int}
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
@@ -522,6 +530,8 @@ module Action = struct
         _build_train backend station_x station_y engine goods
     | RemoveStopCar {train; stop; car} ->
         _remove_stop_car backend train stop car
+    | SetStopStation {train; stop; station} ->
+        _set_stop_station backend train stop station
     | NoAction -> backend
 
 end

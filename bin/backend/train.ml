@@ -10,6 +10,8 @@ type stop = {
   cars: (Goods.t list) option; (* change of cars. None -> "No Change" *)
 } [@@deriving yojson]
 
+let make_stop x y cars = {x; y; cars}
+
 type t = {
   x: int;
   y: int;
@@ -43,7 +45,7 @@ let make x y engine cars =
     cars=List.map (fun x -> (x,0)) cars;
     freight=freight_of_cars cars;
     target_stop=0;
-    route=[];
+    route=[make_stop x y None];
     priority=None;
   }
 
@@ -58,6 +60,12 @@ let remove_stop_car (v:t) stop car =
     in
     {stop with cars})
     v.route
+  in
+  {v with route}
+
+let set_stop_station (v:t) stop (x,y) =
+  let route =
+    Utils.List.modify_at_idx stop (fun (stop:stop) -> {stop with x; y}) v.route
   in
   {v with route}
 
