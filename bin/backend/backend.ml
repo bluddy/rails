@@ -412,14 +412,18 @@ let _build_train v station_x station_y engine goods =
   v.ui_msgs <- msg::v.ui_msgs;
   if trains === v.trains then v else {v with trains}
 
-let _remove_stop_car v train stop car =
+let _remove_stop_car v ~train ~stop ~car =
   let trains =
     Trainmap.update v.trains train
       (fun train -> Train.remove_stop_car train stop car)
   in
   if trains =!= v.trains then {v with trains} else v
 
-let _set_stop_station v train stop station =
+let check_stop_station v ~train ~stop ~station =
+  let train = Trainmap.get v.trains train in
+  Train.check_stop_station train stop station
+
+let _set_stop_station v ~train ~stop ~station =
   let trains =
     Trainmap.update v.trains train
       (fun train -> Train.set_stop_station train stop station)
@@ -529,9 +533,9 @@ module Action = struct
     | BuildTrain (engine, goods, station_x, station_y) ->
         _build_train backend station_x station_y engine goods
     | RemoveStopCar {train; stop; car} ->
-        _remove_stop_car backend train stop car
+        _remove_stop_car backend ~train ~stop ~car
     | SetStopStation {train; stop; station} ->
-        _set_stop_station backend train stop station
+        _set_stop_station backend ~train ~stop ~station
     | NoAction -> backend
 
 end

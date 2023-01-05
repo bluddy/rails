@@ -63,9 +63,30 @@ let remove_stop_car (v:t) stop car =
   in
   {v with route}
 
+let check_stop_station (v:t) stop (x,y) =
+  (* Don't allow setting the station if the previous or next station is the same station already *)
+  let len = List.length v.route in
+  let prev, next = match stop with
+    | 0 when len >= 2 -> None, Some 1
+    | 0 -> None, None
+    | s when len >= (s + 1) -> Some (s-1), Some (s+1)
+    | s -> Some (s-1), None
+  in
+  let check = function
+    | Some i ->
+        let stop = List.nth v.route i in
+        Utils.eq_xy x y stop.x stop.y
+    | None -> false
+  in
+  not (check prev || check next)
+
 let set_stop_station (v:t) stop (x,y) =
   let route =
-    Utils.List.modify_at_idx stop (fun (stop:stop) -> {stop with x; y}) v.route
+    (* Check for lengthening *)
+    if List.length v.route = stop then
+      v.route @ [make_stop x y None]
+    else
+      Utils.List.modify_at_idx stop (fun (stop:stop) -> {stop with x; y}) v.route
   in
   {v with route}
 

@@ -107,6 +107,8 @@ let x_y_of_offset width offset =
   let x = offset mod width in
   x, y
 
+let eq_xy x1 y1 x2 y2 = x1 = x2 && y1 = y2
+
 
 module List = struct
   include List

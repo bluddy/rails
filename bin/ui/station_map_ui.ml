@@ -61,7 +61,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   let route = Train.get_route train in
   List.iteri (fun i (stop:Train.stop) ->
     let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
-    let name = Printf.sprintf "%d. %s" i (Station.get_name station) in
+    let name = Printf.sprintf "%d.%s" (i+1) (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
     Fonts.Render.write win s.fonts name ~idx:1 ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   ) route;
@@ -158,7 +158,12 @@ let handle_event (s:State.t) v (event:Event.t) =
     false, {v with selected_station}, nobaction
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditStop stop  ->
-      false, v, Backend.Action.SetStopStation {train=v.train; stop; station}
+      let b_action =
+        if Backend.check_stop_station s.backend ~train:v.train ~stop ~station then
+          Backend.Action.SetStopStation {train=v.train; stop; station}
+        else nobaction
+      in
+      false, v, b_action
 
   | Key _k, _, _ when Event.pressed_esc event ->
       true, v, nobaction
