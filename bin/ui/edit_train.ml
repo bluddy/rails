@@ -40,18 +40,21 @@ let make_menu fonts =
   in
   Menu.Global.make ~menu_h titles
 
+let open_car_menu (s:State.t) i =
+  let open Menu.MsgBox in
+  let menu =
+    (Build_train.AddCars.create_menu ~fonts:s.fonts s.backend.region
+      ~suffix:[make_entry "Caboose only" (`Action `Caboose)])
+      |> do_open_menu s
+  in
+  Some(menu, i)
+
 let make (s:State.t) train =
   let menu = make_menu s.fonts in
-  let car_menu = 
-    let open Menu.MsgBox in
-    Build_train.AddCars.create_menu ~fonts:s.fonts s.backend.region
-      ~suffix:[make_entry "Caboose only" (`Action `Caboose)]
-  in
   {
     train;
     menu;
-    car_menu;
-    show_car_menu=None;
+    car_menu=None;
     screen=Normal;
   }
 
@@ -147,10 +150,9 @@ let render win (s:State.t) v : unit =
       Iter.(n -- Train.max_stops);
 
     (* Car menu *)
-    begin match v.show_car_menu with
+    begin match v.car_menu with
     | None -> ()
-    | Some _ ->
-        Menu.MsgBox.render win s v.car_menu
+    | Some (car_menu, _) -> Menu.MsgBox.render win s car_menu
     end;
 
     (* Menu bar - last so we draw over all else *)
@@ -159,22 +161,41 @@ let render win (s:State.t) v : unit =
     ()
 
 let handle_event (s:State.t) v (event:Event.t) =
-  match v.screen with
-  | StationMap state ->
+  match v.screen, v.car_menu with
+  | StationMap state, _ ->
       let exit, state2, b_action = Station_map_ui.handle_event s state event in
       let v = if state =!= state2 then {v with screen=StationMap state2} else v in
       let v = if exit then {v with screen=Normal} else v in
       false, v, b_action
 
-  | Normal ->
-      let menu, action = Menu.Global.update s v.menu event in
+  | Normal, (Some(car_menu, stop) as current) ->
+      let car_menu2, action = Menu.MsgBox.update s car_menu event in
+      let car_menu, b_action = match action with
+        | Menu.On(`Caboose) ->
+            None, Backend.Action.RemoveAllStopCars({train=v.train; stop})
+        | Menu.On(`AddCar car) ->
+            None, Backend.Action.AddStopCar({train=v.train; stop; car})
+        | Menu.NoAction when Event.pressed_esc event ->
+            None, nobaction
+        | Menu.On(`Done) ->
+            None, nobaction
+        | _ ->
+            let car_menu = if car_menu2 =!= car_menu then Some(car_menu2, stop) else current in
+            car_menu, nobaction
+      in
+      let v = if car_menu =!= v.car_menu then {v with car_menu} else v in
+      false, v, b_action
+
+  | Normal, _ ->
+      let menu, action, event = Menu.Global.update s v.menu event in
       let train = Backend.get_train s.backend v.train in
       let line_h = 10 in
-      let screen, show_car_menu, bk_action = match action, event with
-
-          (* Menu choice: route map view *)
+      let screen, car_menu, bk_action =
+        match action, event with
+          (* Global menu choice: route map view *)
         | Menu.On(`ShowMap), _ ->
-            StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute), None, nobaction
+            let screen = StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute) in
+            screen, None, nobaction
 
           (* Click on a stop -> open route map *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 158 ->
@@ -189,16 +210,16 @@ let handle_event (s:State.t) v (event:Event.t) =
             in
             begin match res with
             | Some i ->
-                StationMap (Station_map_ui.make s.backend.graph v.train @@
-                  `EditStop i), None, nobaction
+                let screen =
+                  StationMap (Station_map_ui.make s.backend.graph v.train @@ `EditStop i)
+                in
+                screen, None, nobaction
             | _ -> v.screen, None, nobaction
             end
 
           (* Click on car or space in stop *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
-            let ystart = 167 in
-            let xstart = 160 in
-            let car_w = 20 in
+            let ystart, xstart, car_w = 167, 160, 20 in
             let res =
               List.foldi (fun acc i (stop:Train.stop) -> match acc with
                 | `None when y < ystart + i * line_h ->
@@ -216,17 +237,20 @@ let handle_event (s:State.t) v (event:Event.t) =
               train.route
             in
             begin match res with
-            | `AddCarMenu i -> v.screen, Some i, nobaction
-            | `DeleteCar (i, j) -> v.screen, None,
-                Backend.Action.RemoveStopCar{train=v.train; stop=i; car=j}
-            | `None -> v.screen, None, nobaction
+            | `AddCarMenu i ->
+                v.screen, open_car_menu s i, nobaction
+            | `DeleteCar (i, j) ->
+                let b_action = Backend.Action.RemoveStopCar{train=v.train; stop=i; car=j} in
+                v.screen, None, b_action
+            | `None ->
+                v.screen, None, nobaction
             end
 
         | _ -> v.screen, None, nobaction
       in
       let v =
-        if menu =!= v.menu || screen =!= v.screen || show_car_menu =!= v.show_car_menu then
-          {v with menu; screen; show_car_menu} else v
+        if menu =!= v.menu || screen =!= v.screen || car_menu =!= v.car_menu then
+          {v with menu; screen; car_menu} else v
       in
       let exit = Event.pressed_esc event in
       exit, v, bk_action

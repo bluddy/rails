@@ -349,21 +349,14 @@ let handle_event (s:State.t) v (event:Event.t) =
   match v.mode with
   | Normal ->
     (* Main gameplay view *)
-    let v, menu_action, event =
-      match Menu.Global.update s v.menu event with
-      | _, Menu.NoAction ->
-          (* Only update view if we have a change *)
-          v, Menu.NoAction, event
-      | menu, a ->
-          (* Cancel out events we handled *)
-          {v with menu}, a, NoEvent 
-    in
-    let view = v.view in
+    let menu, menu_action, event = Menu.Global.update s v.menu event in
+    let v = if menu =!= v.menu then {v with menu} else v in
+
     let view =
       match menu_action with
-      | On(`Survey)  -> Mapview.set_survey view true
-      | Off(`Survey) -> Mapview.set_survey view false
-      | _ -> view
+      | On(`Survey)  -> Mapview.set_survey v.view true
+      | Off(`Survey) -> Mapview.set_survey v.view false
+      | _ -> v.view
     in
 
     let view, view_action =

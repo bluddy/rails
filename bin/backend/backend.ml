@@ -430,6 +430,20 @@ let _set_stop_station v ~train ~stop ~station =
   in
   if trains =!= v.trains then {v with trains} else v
 
+let _add_stop_car v ~train ~stop ~car =
+  let trains =
+    Trainmap.update v.trains train
+      (fun train -> Train.add_stop_car train stop car)
+  in
+  if trains =!= v.trains then {v with trains} else v
+
+let _remove_all_stop_cars v ~train ~stop =
+  let trains =
+    Trainmap.update v.trains train
+      (fun train -> Train.remove_all_stop_cars train stop)
+  in
+  if trains =!= v.trains then {v with trains} else v
+
 let get_num_trains v = Trainmap.size v.trains
 
 let get_train v idx = Trainmap.get v.trains idx
@@ -512,6 +526,8 @@ module Action = struct
     | BuildTrain of Engine.make * Goods.t list * int * int (* x, y *)
     | RemoveStopCar of {train: int; stop: int; car: int}
     | SetStopStation of {train: int; stop: int; station: int * int}
+    | RemoveAllStopCars of {train: int; stop: int}
+    | AddStopCar of {train: int; stop: int; car: Goods.t}
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->
@@ -536,6 +552,10 @@ module Action = struct
         _remove_stop_car backend ~train ~stop ~car
     | SetStopStation {train; stop; station} ->
         _set_stop_station backend ~train ~stop ~station
+    | RemoveAllStopCars {train; stop} ->
+        _remove_all_stop_cars backend ~train ~stop
+    | AddStopCar {train; stop; car} ->
+        _add_stop_car backend ~train ~stop ~car
     | NoAction -> backend
 
 end

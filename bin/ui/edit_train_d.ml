@@ -21,8 +21,7 @@ type screen =
 type 'state t = {
   train: int;
   menu: (msg, 'state) Menu.Global.t;
-  car_menu: ([`AddCar of Goods.t | `Done | `Caboose], 'state) Menu.MsgBox.t;
-  show_car_menu: int option;  (* stop number *)
+  car_menu: (([`AddCar of Goods.t | `Done | `Caboose], 'state) Menu.MsgBox.t * int) option; (* stop *)
   screen: screen;
 }
 

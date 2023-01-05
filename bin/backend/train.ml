@@ -28,6 +28,7 @@ type t = {
 } [@@deriving yojson]
 
 let freight_of_cars cars =
+  (* Freight goes by the highest level *)
   List.fold_left (fun freight car ->
     let freight2 = Goods.freight_of_goods car in
     if Goods.compare_freight freight2 freight > 0
@@ -63,6 +64,26 @@ let remove_stop_car (v:t) stop car =
   in
   {v with route}
 
+let add_stop_car (v:t) stop car =
+  let route =
+    Utils.List.modify_at_idx stop (fun (stop:stop) ->
+    let cars = match stop.cars with
+      | Some car_list -> Some(car_list @ [car])
+      | None -> Some([car])
+    in
+    {stop with cars})
+    v.route
+  in
+  {v with route}
+
+let remove_all_stop_cars (v:t) stop =
+  let route =
+    Utils.List.modify_at_idx stop
+      (fun (stop:stop) -> {stop with cars=None})
+      v.route
+  in
+  {v with route}
+
 let check_stop_station (v:t) stop (x,y) =
   (* Don't allow setting the station if the previous or next station is the same station already *)
   let len = List.length v.route in
@@ -89,4 +110,5 @@ let set_stop_station (v:t) stop (x,y) =
       Utils.List.modify_at_idx stop (fun (stop:stop) -> {stop with x; y}) v.route
   in
   {v with route}
+
 

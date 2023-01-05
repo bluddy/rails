@@ -615,7 +615,12 @@ module Global = struct
       | On _ | Off _ -> close v
       | _ -> v
     in
-    v, action
+    (* Cancel events we handled *)
+    let event = match action with
+      | NoAction -> event
+      | _ -> NoEvent
+    in
+    v, action, event
 
   let render win s fonts v ~w ~h =
     Renderer.draw_rect win ~x:0 ~y:0 ~w ~h ~color:Ega.cyan ~fill:true;
