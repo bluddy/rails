@@ -66,6 +66,16 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
     Fonts.Render.write win s.fonts name ~idx:1 ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   ) route;
 
+  (* Priority stop *)
+  begin match train.priority with
+  | Some stop -> 
+    let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
+    let name = Printf.sprintf "P:%s" (Station.get_name station) in
+    let x, y = scale_xy v stop.x stop.y in
+    Fonts.Render.write win s.fonts name ~idx:1 ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
+  | None -> ()
+  end;
+
   (* Draw station boxes *)
   Loc_map.iter (fun (station:Station.t) ->
     if Station.is_proper_station station then

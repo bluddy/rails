@@ -236,8 +236,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             let ystart = 167 in
             let res =
               Iter.foldi (fun acc i _ -> match acc with
-                | None when y <= ystart + i * line_h ->
-                    Some i
+                | None when y <= ystart + i * line_h -> Some i
                 | x -> x)
               None
               Iter.(0 -- List.length(train.route))
