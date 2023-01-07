@@ -169,6 +169,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       false, v, b_action
 
   | Normal, (Some(car_menu, stop) as current) ->
+      (* Car menu selection open *)
       let car_menu2, action = Menu.MsgBox.update s car_menu event in
       let car_menu, b_action = match action with
         | Menu.On(`Caboose) ->
@@ -217,7 +218,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             | _ -> v.screen, None, nobaction
             end
 
-          (* Click on car or space in stop *)
+          (* Click on car to delete, or space in stop to open the menu *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
             let ystart, xstart, car_w = 167, 160, 20 in
             let res =
@@ -227,7 +228,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                     | None -> `AddCarMenu i  (* currently "No Change" *)
                     | Some cars ->
                         List.foldi (fun acc j _ -> match acc with
-                          | `AddCarMenu _ when x < xstart + j * car_w -> `DeleteCar (i, j)
+                          | `AddCarMenu _ when x < xstart + (j + 1) * car_w -> `DeleteCar (i, j)
                           | _ -> acc)
                         (`AddCarMenu i)
                         cars
