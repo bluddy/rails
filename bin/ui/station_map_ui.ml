@@ -157,10 +157,16 @@ let handle_event (s:State.t) v (event:Event.t) =
     in
     false, {v with selected_station}, nobaction
 
+  | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditPriority ->
+      let b_action =
+        Backend.Action.SetStopStation {train=v.train; stop=`Priority; station}
+      in
+      false, v, b_action
+
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditStop stop  ->
       let b_action =
         if Backend.check_stop_station s.backend ~train:v.train ~stop ~station then
-          Backend.Action.SetStopStation {train=v.train; stop; station}
+          Backend.Action.SetStopStation {train=v.train; stop=`Stop stop; station}
         else nobaction
       in
       false, v, b_action

@@ -513,6 +513,7 @@ let _month_of_time time = (time / month_ticks) mod 12
 let get_date v = _month_of_time v.time, v.year
 
 module Action = struct
+  type stop = [`Stop of int | `Priority]
   type t =
     | NoAction
     | BuildTrack of Utils.msg
@@ -524,10 +525,10 @@ module Action = struct
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
     | BuildTrain of Engine.make * Goods.t list * int * int (* x, y *)
-    | RemoveStopCar of {train: int; stop: int; car: int}
-    | SetStopStation of {train: int; stop: int; station: int * int}
-    | RemoveAllStopCars of {train: int; stop: int}
-    | AddStopCar of {train: int; stop: int; car: Goods.t}
+    | SetStopStation of {train: int; stop: stop; station: int * int}
+    | AddStopCar of {train: int; stop: stop; car: Goods.t}
+    | RemoveStopCar of {train: int; stop: stop; car: int}
+    | RemoveAllStopCars of {train: int; stop: stop}
 
   let run backend = function
     | BuildTrack {x; y; dir; player} ->

@@ -53,8 +53,7 @@ let make x y engine cars =
 let get_route v = v.route
 
 let remove_stop_car (v:t) stop car =
-  let route =
-    Utils.List.modify_at_idx stop (fun (stop:stop) ->
+  let remove_car (stop:stop) =
     let cars = match stop.cars with
       | None -> None
       | Some car_list ->
@@ -63,33 +62,45 @@ let remove_stop_car (v:t) stop car =
           | l  -> Some l
           end
     in
-    {stop with cars})
-    v.route
+    {stop with cars}
   in
-  {v with route}
+  match stop with
+  | `Stop stop ->
+    let route = Utils.List.modify_at_idx stop remove_car v.route in
+    {v with route}
+  | `Priority ->
+      let priority = Option.map remove_car v.priority in
+      {v with priority}
 
 let add_stop_car (v:t) stop car =
-  let route =
-    Utils.List.modify_at_idx stop (fun (stop:stop) ->
+  let add_car (stop:stop) =
     let cars = match stop.cars with
       | Some car_list -> Some(car_list @ [car])
       | None -> Some([car])
     in
-    {stop with cars})
-    v.route
+    {stop with cars}
   in
-  {v with route}
+  match stop with
+  | `Stop stop ->
+      let route = Utils.List.modify_at_idx stop add_car v.route in
+      {v with route}
+  | `Priority ->
+      let priority = Option.map add_car v.priority in
+      {v with priority}
 
 let remove_all_stop_cars (v:t) stop =
-  let route =
-    Utils.List.modify_at_idx stop
-      (fun (stop:stop) -> {stop with cars=Some []})
-      v.route
-  in
-  {v with route}
+  let remove_all_cars (stop:stop) = {stop with cars = Some []} in
+  match stop with
+  | `Stop stop ->
+      let route = Utils.List.modify_at_idx stop remove_all_cars v.route in
+      {v with route}
+  | `Priority ->
+      let priority = Option.map remove_all_cars v.priority in
+      {v with priority}
 
 let check_stop_station (v:t) stop (x,y) =
-  (* Don't allow setting the station if the previous or next station is the same station already *)
+  (* Don't allow setting the station if the previous or next station
+     is the same station already *)
   let len = List.length v.route in
   let prev, next = match stop with
     | 0 when len >= 2 -> None, Some 1
@@ -106,13 +117,23 @@ let check_stop_station (v:t) stop (x,y) =
   not (check prev || check next)
 
 let set_stop_station (v:t) stop (x,y) =
-  let route =
-    (* Check for lengthening *)
-    if List.length v.route = stop then
-      v.route @ [make_stop x y None]
-    else
-      Utils.List.modify_at_idx stop (fun (stop:stop) -> {stop with x; y}) v.route
-  in
-  {v with route}
+  match stop with
+  | `Stop i ->
+    let route =
+      (* Check for lengthening *)
+      if List.length v.route = i then
+        v.route @ [make_stop x y None]
+      else
+        Utils.List.modify_at_idx i (fun (stop:stop) -> {stop with x; y}) v.route
+    in
+    {v with route}
+  | `Priority ->
+      let stop = match v.priority with
+        | None -> make_stop x y None
+        | Some stop -> {stop with x; y}
+      in
+      {v with priority=Some stop}
+
+
 
 

@@ -40,14 +40,14 @@ let make_menu fonts =
   in
   Menu.Global.make ~menu_h titles
 
-let open_car_menu (s:State.t) i =
+let open_car_menu (s:State.t) stop =
   let open Menu.MsgBox in
   let menu =
     (Build_train.AddCars.create_menu ~fonts:s.fonts s.backend.region
       ~suffix:[make_entry "Caboose only" (`Action `Caboose)])
       |> do_open_menu s
   in
-  Some(menu, i)
+  Some(menu, stop)
 
 let make (s:State.t) train =
   let menu = make_menu s.fonts in
@@ -197,11 +197,38 @@ let handle_event (s:State.t) v (event:Event.t) =
       let menu, action, event = Menu.Global.update s v.menu event in
       let train = Backend.get_train s.backend v.train in
       let line_h = 10 in
+      let xstart = 160 in
+      let car_w = 20 in
+      let car_msg inner_msg cars x =
+          List.foldi (fun acc j _ -> match acc with
+            | `AddCarMenu _ when x < xstart + (j + 1) * car_w ->
+                `DeleteCar (inner_msg, j)
+            | _ -> acc)
+          (`AddCarMenu inner_msg)
+          cars
+      in
+      let handle_car_msg = function
+        | `AddCarMenu stop ->
+            v.screen, open_car_menu s stop, nobaction
+        | `DeleteCar (stop, car) ->
+            let b_action = Backend.Action.RemoveStopCar{train=v.train; stop; car} in
+            v.screen, None, b_action
+        | `None ->
+            v.screen, None, nobaction
+      in
+
       let screen, car_menu, bk_action =
         match action, event with
           (* Global menu choice: route map view *)
         | Menu.On(`ShowMap), _ ->
             let screen = StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute) in
+            screen, None, nobaction
+
+          (* Click on priority stop -> open route map *)
+        | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->
+            let screen = 
+              StationMap (Station_map_ui.make s.backend.graph v.train `EditPriority)
+            in
             screen, None, nobaction
 
           (* Click on a stop -> open route map *)
@@ -224,34 +251,29 @@ let handle_event (s:State.t) v (event:Event.t) =
             | _ -> v.screen, None, nobaction
             end
 
-          (* Click on car to delete, or space in stop to open the menu *)
+          (* Click on car to delete, or space in priority stop to open the menu *)
+        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 137 && y <= 147 ->
+            let msg = match train.priority with
+              | Some {cars=Some cars;_} -> car_msg `Priority cars x
+              | _ -> `None
+            in
+            handle_car_msg msg
+
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
-            let ystart, xstart, car_w = 167, 160, 20 in
-            let res =
+            let ystart = 167 in
+            let msg =
               List.foldi (fun acc i (stop:Train.stop) -> match acc with
                 | `None when y < ystart + i * line_h ->
                     begin match stop.cars with
-                    | None -> `AddCarMenu i  (* currently "No Change" *)
+                    | None -> `AddCarMenu (`Stop i)  (* currently "No Change" *)
                     | Some cars ->
-                        List.foldi (fun acc j _ -> match acc with
-                          | `AddCarMenu _ when x < xstart + (j + 1) * car_w -> `DeleteCar (i, j)
-                          | _ -> acc)
-                        (`AddCarMenu i)
-                        cars
+                        car_msg (`Stop i) cars x
                     end
                 | x -> x)
               `None
               train.route
             in
-            begin match res with
-            | `AddCarMenu i ->
-                v.screen, open_car_menu s i, nobaction
-            | `DeleteCar (i, j) ->
-                let b_action = Backend.Action.RemoveStopCar{train=v.train; stop=i; car=j} in
-                v.screen, None, b_action
-            | `None ->
-                v.screen, None, nobaction
-            end
+            handle_car_msg msg
 
         | _ -> v.screen, None, nobaction
       in
