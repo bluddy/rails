@@ -57,7 +57,11 @@ let remove_stop_car (v:t) stop car =
     Utils.List.modify_at_idx stop (fun (stop:stop) ->
     let cars = match stop.cars with
       | None -> None
-      | Some car_list -> Some(List.remove_at_idx car car_list)
+      | Some car_list ->
+          begin match List.remove_at_idx car car_list with
+          | [] -> None
+          | l  -> Some l
+          end
     in
     {stop with cars})
     v.route
@@ -79,7 +83,7 @@ let add_stop_car (v:t) stop car =
 let remove_all_stop_cars (v:t) stop =
   let route =
     Utils.List.modify_at_idx stop
-      (fun (stop:stop) -> {stop with cars=None})
+      (fun (stop:stop) -> {stop with cars=Some []})
       v.route
   in
   {v with route}

@@ -87,13 +87,19 @@ let render win (s:State.t) v : unit =
 
     (* Draw current cars *)
     let draw_cars cars ~x ~y extract_fn =
-      ignore @@
-        List.fold_left (fun x car_data ->
-          let car = extract_fn car_data in
-          let car_tex = Hashtbl.find s.textures.route_cars (`CarOld car) in
-          R.Texture.render ~x ~y win car_tex;
-          x + car_tex.w
-        ) x cars
+      match cars with
+      | [] ->
+          let caboose = Hashtbl.find s.textures.route_cars `Caboose in
+          R.Texture.render ~x ~y win caboose
+
+      | cars ->
+        ignore @@
+          List.fold_left (fun x car_data ->
+            let car = extract_fn car_data in
+            let car_tex = Hashtbl.find s.textures.route_cars (`CarOld car) in
+            R.Texture.render ~x ~y win car_tex;
+            x + car_tex.w
+          ) x cars
     in
     draw_cars train.cars ~x:66 ~y:41 fst;
     
