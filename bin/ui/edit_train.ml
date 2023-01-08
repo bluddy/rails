@@ -107,6 +107,18 @@ let render win (s:State.t) v : unit =
 
     write Ega.black ~x:105 ~y:118 "TRAIN ORDERS";
 
+    let write_station (stop:Train.stop) ~i ~y =
+      let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
+      let color = match i with
+        | Some i ->
+            write Ega.gray ~x:8 ~y @@ Printf.sprintf "%d." (i+1);
+            if i = train.target_stop then Ega.black else Ega.gray
+        | None ->
+            Ega.black
+      in
+      write color ~x:24 ~y station.name
+    in
+
     let draw_cars_option (stop:Train.stop) ~y =
       match stop.cars with
       | None -> write Ega.gray ~x:168 ~y "no changes"
@@ -125,6 +137,7 @@ let render win (s:State.t) v : unit =
         write Ega.black ~x:29 ~y:138 "---";
         write Ega.gray ~x:168 ~y:138 "no changes"
     | Some stop ->
+        write_station stop ~i:None ~y:138;
         draw_cars_option stop ~y:138
     end;
 
@@ -136,10 +149,7 @@ let render win (s:State.t) v : unit =
     (* Write stop names *)
     let n, y =
       List.fold_left (fun (i, y) (stop:Train.stop) ->
-        let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
-        write Ega.gray ~x:8 ~y @@ Printf.sprintf "%d." (i+1);
-        let color = if i = train.target_stop then Ega.black else Ega.gray in
-        write color ~x:24 ~y station.name;
+        write_station stop ~i:(Some i) ~y;
         draw_cars_option stop ~y;
         R.draw_line win ~color:Ega.black ~x1:160 ~y1:(y+9) ~x2:312 ~y2:(y+9);
         (i+1, y+10)
@@ -199,7 +209,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       let line_h = 10 in
       let xstart = 160 in
       let car_w = 20 in
-      let car_msg inner_msg cars x =
+      let make_car_msg inner_msg cars x =
           List.foldi (fun acc j _ -> match acc with
             | `AddCarMenu _ when x < xstart + (j + 1) * car_w ->
                 `DeleteCar (inner_msg, j)
@@ -253,7 +263,8 @@ let handle_event (s:State.t) v (event:Event.t) =
           (* Click on car to delete, or space in priority stop to open the menu *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 137 && y <= 147 ->
             let msg = match train.priority with
-              | Some {cars=Some cars;_} -> car_msg `Priority cars x
+              | Some {cars=Some cars;_} -> make_car_msg `Priority cars x
+              | Some {cars=None;_} -> `AddCarMenu `Priority
               | _ -> `None
             in
             handle_car_msg msg
@@ -266,7 +277,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                     begin match stop.cars with
                     | None -> `AddCarMenu (`Stop i)  (* currently "No Change" *)
                     | Some cars ->
-                        car_msg (`Stop i) cars x
+                        make_car_msg (`Stop i) cars x
                     end
                 | x -> x)
               `None
