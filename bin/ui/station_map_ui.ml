@@ -156,6 +156,15 @@ let nobaction = Backend.Action.NoAction
 
   (* returns v and whether we exit *)
 let handle_event (s:State.t) v (event:Event.t) =
+  let remove_stop () =
+    let stop = match v.state with
+      | `EditPriority -> `Priority
+      | `EditStop i -> `Stop i
+      | _ -> assert false
+    in
+    let b_action = Backend.Action.RemoveStop {train=v.train; stop} in
+    false, v, b_action
+  in
   match event, v.selected_station, v.state with
   | Event.MouseMotion mouse, _, _ ->
     let selected_station =
@@ -178,6 +187,13 @@ let handle_event (s:State.t) v (event:Event.t) =
       | None -> None
     in
     false, {v with selected_station}, nobaction
+
+    (* Remove stop box *)
+  | Event.MouseButton {button=`Left; down=true; x; y; _}, _, (`EditPriority | `EditStop _) when x >= 256 && y >= 182 ->
+      remove_stop ()
+
+  | Event.Key {key=Event.R; down=true; _}, _, (`EditPriority | `EditStop _) ->
+      remove_stop ()
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditPriority ->
       let b_action =

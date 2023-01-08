@@ -134,6 +134,13 @@ let set_stop_station (v:t) stop (x,y) =
       in
       {v with priority=Some stop}
 
+let remove_stop (v:t) stop =
+  match stop with
+  | `Stop i ->
+    let route = List.remove_at_idx i v.route in
+    {v with route}
+
+  | `Priority -> {v with priority=None}
 
 
 

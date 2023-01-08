@@ -430,6 +430,14 @@ let _set_stop_station v ~train ~stop ~station =
   in
   if trains =!= v.trains then {v with trains} else v
 
+let _remove_stop v ~train ~stop =
+  let trains =
+    Trainmap.update v.trains train
+      (fun train -> Train.remove_stop train stop)
+  in
+  if trains =!= v.trains then {v with trains} else v
+
+
 let _add_stop_car v ~train ~stop ~car =
   let trains =
     Trainmap.update v.trains train
@@ -526,6 +534,7 @@ module Action = struct
     | SetSpeed of B_options.speed
     | BuildTrain of Engine.make * Goods.t list * int * int (* x, y *)
     | SetStopStation of {train: int; stop: stop; station: int * int}
+    | RemoveStop of {train: int; stop: stop}
     | AddStopCar of {train: int; stop: stop; car: Goods.t}
     | RemoveStopCar of {train: int; stop: stop; car: int}
     | RemoveAllStopCars of {train: int; stop: stop}
@@ -553,6 +562,8 @@ module Action = struct
         _remove_stop_car backend ~train ~stop ~car
     | SetStopStation {train; stop; station} ->
         _set_stop_station backend ~train ~stop ~station
+    | RemoveStop {train; stop} ->
+        _remove_stop backend ~train ~stop
     | RemoveAllStopCars {train; stop} ->
         _remove_all_stop_cars backend ~train ~stop
     | AddStopCar {train; stop; car} ->
