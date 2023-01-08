@@ -107,7 +107,7 @@ let get_str_w_h ?(skip_amp=false) font str =
         failwith @@ Printf.sprintf "char[%c] not found." c
 
     (* Write a string.
-       active_color: active letter color
+       active_color: color for automatically highlighting chars with &
     *)
   let write ?active_color win font ~color str ~x ~y =
     let x_first = x in (* keep starting column *)

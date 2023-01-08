@@ -45,6 +45,9 @@ let scale_xy v x y =
   (x,y)
 
 let render win (s:State.t) (v:Edit_train_d.station_map) =
+  let write ?(color=Ega.black) ?(active_color=Ega.white) ?(idx=1) =
+    Fonts.Render.write win s.fonts ~idx ~color ~active_color
+  in
 
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~x:1 ~y:1 ~w:255 ~h:198 ~color:Ega.green ~fill:true;
@@ -63,7 +66,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
     let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
     let name = Printf.sprintf "%d.%s" (i+1) (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
-    Fonts.Render.write win s.fonts name ~idx:1 ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
+    write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   ) route;
 
   (* Priority stop *)
@@ -72,7 +75,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
     let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
     let name = Printf.sprintf "P:%s" (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
-    Fonts.Render.write win s.fonts name ~idx:1 ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
+    write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   | None -> ()
   end;
 
@@ -99,19 +102,19 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
     | `EditPriority -> "Update Priority Destination"
     | `EditStop i -> Printf.sprintf "Update Scheduled Stop #%d" i
   in
-  Fonts.Render.write win s.fonts ~idx:1 ~x:52 ~y:1 ~color:Ega.black heading;
+  write ~x:52 ~y:1 heading;
 
   (* Info bar *)
   begin match v.selected_station with
   | Some (x,y) ->
+      let write = write ~idx:4 in
       let station = Loc_map.get_exn s.backend.stations x y in
       let demand = Station.get_demand_exn station in
-      let write_black = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black in
-      write_black ~x:258 ~y:1 @@ Station.get_name station;
-      write_black ~x:258 ~y:13 @@ Printf.sprintf "(%s)" @@ Station.kind_str station;
+      write ~x:258 ~y:1 @@ Station.get_name station;
+      write ~x:258 ~y:13 @@ Printf.sprintf "(%s)" @@ Station.kind_str station;
 
       let supply = Station.get_supply_exn station in
-      write_black ~x:258 ~y:25 "Waiting";
+      write ~x:258 ~y:25 "Waiting";
       let y =
         List.fold_left (fun y good ->
           match Hashtbl.find_opt supply good with
@@ -120,7 +123,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
               if cars > 0 then (
                 let tex = Hashtbl.find s.textures.route_cars @@ `CarOld good in
                 R.Texture.render win ~x:258 ~y tex;
-                write_black ~x:292 ~y:(y+1) @@ Printf.sprintf "(%d)" cars;
+                write ~x:292 ~y:(y+1) @@ Printf.sprintf "(%d)" cars;
                 y + 10)
               else
                 y
@@ -128,15 +131,24 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
         34
         Goods.order
       in
-      let y = write_black ~x:258 ~y "Demands"; y + 8 in
+      let y = write ~x:258 ~y "Demands"; y + 8 in
       ignore @@
         Goods.Set.fold (fun good y ->
-          write_black ~x:258 ~y @@ Goods.show good;
+          write ~x:258 ~y @@ Goods.show good;
           y + 8)
         demand
       y
 
   | _ -> ()
+  end;
+
+  (* Remove Station box *)
+  begin match v.state with
+    | `EditPriority | `EditStop _ ->
+        R.draw_rect win ~x:256 ~y:182 ~w:64 ~h:18 ~color:Ega.cyan ~fill:true;
+        R.draw_rect win ~x:256 ~y:182 ~w:64 ~h:18 ~color:Ega.black ~fill:false;
+        write ~x:272 ~y:184 "&Remove\nStation"
+    | _ -> ()
   end;
   ()
 
