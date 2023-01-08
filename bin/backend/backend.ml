@@ -458,6 +458,17 @@ let get_train v idx = Trainmap.get v.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
+(*
+let update_all_trains v =
+  Trainmap.fold (fun max_priority train ->
+    let priority = train.freight * 3 - train._type + 2 in
+    if priority <= max_priority && v.wait_time > 0 && v.speed > 0 then
+    else max_priority
+  )
+  v.trains
+  ~init:0
+*)
+
   (** Most time-based work happens here **)
 let handle_cycle v =
   v.cycle <- v.cycle + 1;

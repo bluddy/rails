@@ -24,3 +24,6 @@ let last v =
   let size = size v in
   get v (size - 1)
 
+let iter f v = Utils.Vector.iter f v
+
+let fold f v ~init = Utils.Vector.fold f init v

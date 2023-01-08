@@ -12,15 +12,24 @@ type stop = {
 
 let make_stop x y cars = {x; y; cars}
 
+type train_type =
+  | Local (* Stops at every stop *)
+  | Through (* Skips depots *)
+  | Express (* Skips stations or less *)
+  | Limited (* Skips terminals or less *)
+  [@@deriving yojson, enum]
+
 type t = {
   x: int;
   y: int;
   engine: Engine.t;
   dir: Dir.t;
   speed: int;
+  mutable wait_time: int; (* for updating train *)
   target_speed: int;
   cars: (Goods.t * int) list; (* good type, amount to 160, /4 = tons *)
   freight: Goods.freight; (* freight class *)
+  _type: train_type;
 
   target_stop: int; (* current stop of route *)
   route: stop list; (* route stops *)
@@ -45,6 +54,8 @@ let make x y engine cars =
     target_speed=0;
     cars=List.map (fun x -> (x,0)) cars;
     freight=freight_of_cars cars;
+    wait_time=0;
+    _type=Local;
     target_stop=0;
     route=[make_stop x y None];
     priority=None;
