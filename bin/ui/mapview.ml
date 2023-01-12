@@ -234,6 +234,7 @@ module R = Renderer
 let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let tile_w2, tile_h2 = tile_w/2, tile_h/2 in
+  (* In tile coordinates *)
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
   let iter_screen f =
     for i = 0 to v.dims.h/tile_h - 1 do
@@ -334,11 +335,17 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_trains_zoom4 () =
     (* For now, draw only the engine *)
     let open Textures.CarsTop in
+    let offset_x, offset_y = -4, 7 in
     Trainmap.iter (fun (train:Train.t) ->
       let tex = Hashtbl.find s.textures.cars_top (Engine train.engine._type, train.dir) in
-      if train.x > start_x && train.y > start_y &&
-         train.x < end_x && train.y < end_y then
-           let x, y = train.x - start_x, train.y - start_y in
+      let start_x_px = start_x * Constants.tile_w in
+      let start_y_px = start_y * Constants.tile_h in
+      let end_x_px = end_x * Constants.tile_w in
+      let end_y_px = end_y * Constants.tile_h in
+      if train.x > start_x_px && train.y > start_y_px &&
+         train.x < end_x_px && train.y < end_y_px then
+        let x = train.x - start_x_px + offset_x in
+        let y = train.y - start_y_px + offset_y in
         R.Texture.render win tex ~x ~y
       else
         ()

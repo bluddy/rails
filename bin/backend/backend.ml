@@ -404,9 +404,12 @@ let _improve_station v ~x ~y ~player ~upgrade =
   if v.stations =!= stations then v.stations <- stations;
   v
 
-let _build_train v station engine cars other_station =
+let _build_train v ((x, y) as station) engine cars other_station =
   let engine_t = Engine.t_of_make v.region engine in
-  let train = Train.make station engine_t cars other_station in
+  (* Temporary solution for getting track dir *)
+  let track = Trackmap.get v.track x y |> Option.get_exn in
+  let dir, _ = Dir.Set.pop track.dirs in
+  let train = Train.make station engine_t cars other_station ~dir in
   let trains = Trainmap.add v.trains train in
   let msg = TrainBuilt (Trainmap.size v.trains - 1) in
   v.ui_msgs <- msg::v.ui_msgs;
@@ -471,8 +474,7 @@ let find_connected_stations v ixn =
       ixns;
     if Hashtbl.length ixns2 = 0 then (
       Hashtbl.remove stations ixn;
-      Hashtbl.to_iter stations
-      |> Iter.map fst
+      Hashtbl.to_iter stations |> Iter.map fst
     ) else loop ixns2
   in
   loop start_ixns

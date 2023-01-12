@@ -45,17 +45,17 @@ let freight_of_cars cars =
   Goods.FreightMail
   cars
 
-let make (x, y) engine cars other_station =
+let make (x, y) engine cars other_station ~dir =
   let route = [make_stop x y None] in
-  let route =
-    match other_station with
+  let route = match other_station with
     | Some (x,y) -> route @ [make_stop x y None]
     | None -> route
   in
   {
-    x; y;
+    x=x * Constants.tile_w;
+    y=y * Constants.tile_h;
     engine;
-    dir=Dir.Up;
+    dir;
     speed=0;
     target_speed=0;
     cars=List.map (fun x -> (x,0)) cars;
