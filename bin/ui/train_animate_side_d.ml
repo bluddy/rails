@@ -7,7 +7,6 @@ type t = {
   rail: [`Back | `Front];
   engine: Engine.make;
   cars: Goods.t list;
-  station_x: int;
-  station_y: int;
+  station: int * int;
   paused: bool;
 }

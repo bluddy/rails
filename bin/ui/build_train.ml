@@ -26,10 +26,10 @@ module AddCars = struct
         |> Iter.head_exn
       with Invalid_argument _ -> invalid_arg "No station with engine found"
     in
-    let station_x, station_y = station.x, station.y in
+    let xy = station.x, station.y in
     let anim =
       let engine = engine.Engine.make in
-      Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station_x ~station_y ~rail:`Back
+      Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:xy ~rail:`Back
     in
     let menu = create_menu ~fonts:s.fonts s.backend.region in
     {
@@ -61,7 +61,13 @@ module AddCars = struct
       in
       v, nobaction
     else if v.train_done && (Event.pressed_esc event || Event.is_left_click event) then
-      v, Backend.Action.BuildTrain(v.anim.engine, v.anim.cars, v.anim.station_x, v.anim.station_y)
+      let station = v.anim.station in
+      let other_station =
+        Backend.find_connected_stations s.backend station |> Iter.head
+      in
+      v, Backend.Action.BuildTrain{engine=v.anim.engine;
+                                   cars=v.anim.cars;
+                                   station; other_station}
     else
       v, nobaction
 

@@ -8,7 +8,7 @@ let wait_time = 1000/fps
 
 let smoke_x_off = 76 (* depends on smoke image *)
 
-let init (s:State.t) ~engine ~cars ~station_x ~station_y ~rail ~paused =
+let init (s:State.t) ~engine ~cars ~station ~rail ~paused =
   let x = match rail with
     | `Back -> 62
     | `Front ->
@@ -24,8 +24,7 @@ let init (s:State.t) ~engine ~cars ~station_x ~station_y ~rail ~paused =
     engine;
     cars;
     paused;
-    station_x;
-    station_y;
+    station;
   }
 
 let pause v = {v with paused=true}
@@ -47,7 +46,7 @@ let train_end_at_screen_edge (s:State.t) v =
   | `Back -> false
 
 let render win (s:State.t) v =
-  Station_view.render win s v.station_x v.station_y ~show_demand:false;
+  Station_view.render win s v.station ~show_demand:false;
   match v.rail with
   | `Back ->
       let y = 186 in

@@ -113,3 +113,7 @@ let remove_segment v ~x ~y ~dir =
       G.remove_edge_e v.graph edge;
       v
 
+let fold_succ_ixns f v ~ixn ~init = G.fold_succ f v.graph ixn init
+let iter_succ_ixns f v ~ixn = G.iter_succ f v.graph ixn
+
+

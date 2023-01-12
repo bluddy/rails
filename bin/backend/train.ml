@@ -45,7 +45,13 @@ let freight_of_cars cars =
   Goods.FreightMail
   cars
 
-let make x y engine cars =
+let make (x, y) engine cars other_station =
+  let route = [make_stop x y None] in
+  let route =
+    match other_station with
+    | Some (x,y) -> route @ [make_stop x y None]
+    | None -> route
+  in
   {
     x; y;
     engine;
@@ -57,7 +63,7 @@ let make x y engine cars =
     wait_time=0;
     _type=Local;
     target_stop=0;
-    route=[make_stop x y None];
+    route;
     priority=None;
   }
 

@@ -635,7 +635,7 @@ let render (win:R.window) (s:State.t) v =
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | StationView(x, y) ->
-        Station_view.render win s x y ~show_demand:true
+        Station_view.render win s (x,y) ~show_demand:true
     | BuildTrain(`ChooseEngine) ->
         Build_train.ChooseEngine.render win s ~region:s.backend.region ~year:s.backend.year
     | BuildTrain(`AddCars state) ->

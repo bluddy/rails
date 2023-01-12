@@ -404,9 +404,9 @@ let _improve_station v ~x ~y ~player ~upgrade =
   if v.stations =!= stations then v.stations <- stations;
   v
 
-let _build_train v station_x station_y engine goods =
+let _build_train v station engine cars other_station =
   let engine_t = Engine.t_of_make v.region engine in
-  let train = Train.make station_x station_y engine_t goods in
+  let train = Train.make station engine_t cars other_station in
   let trains = Trainmap.add v.trains train in
   let msg = TrainBuilt (Trainmap.size v.trains - 1) in
   v.ui_msgs <- msg::v.ui_msgs;
@@ -451,6 +451,31 @@ let _remove_all_stop_cars v ~train ~stop =
       (fun train -> Train.remove_all_stop_cars train stop)
   in
   if trains =!= v.trains then {v with trains} else v
+
+let find_connected_stations v ixn =
+  let stations = Hashtbl.create 10 in
+  let start_ixns = Hashtbl.create 1 in
+  Hashtbl.replace start_ixns ixn ();
+
+  let rec loop ixns =
+    let ixns2 = Hashtbl.create 10 in
+    Hashtbl.iter (fun ixn _ ->
+      Track_graph.iter_succ_ixns
+        (fun ((x,y) as ixn) ->
+          if Loc_map.mem v.stations x y then
+            Hashtbl.replace stations ixn ()
+          else
+            Hashtbl.replace ixns2 ixn ())
+        ~ixn
+        v.graph)
+      ixns;
+    if Hashtbl.length ixns2 = 0 then (
+      Hashtbl.remove stations ixn;
+      Hashtbl.to_iter stations
+      |> Iter.map fst
+    ) else loop ixns2
+  in
+  loop start_ixns
 
 let get_num_trains v = Trainmap.size v.trains
 
@@ -543,7 +568,7 @@ module Action = struct
     | RemoveTrack of Utils.msg
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
-    | BuildTrain of Engine.make * Goods.t list * int * int (* x, y *)
+    | BuildTrain of {engine: Engine.make; cars: Goods.t list; station: int * int; other_station: (int * int) option} 
     | SetStopStation of {train: int; stop: stop; station: int * int}
     | RemoveStop of {train: int; stop: stop}
     | AddStopCar of {train: int; stop: stop; car: Goods.t}
@@ -567,8 +592,8 @@ module Action = struct
         _improve_station backend ~x ~y ~player ~upgrade
     | SetSpeed speed ->
         _set_speed backend speed
-    | BuildTrain (engine, goods, station_x, station_y) ->
-        _build_train backend station_x station_y engine goods
+    | BuildTrain {engine; cars; station; other_station} ->
+        _build_train backend station engine cars other_station
     | RemoveStopCar {train; stop; car} ->
         _remove_stop_car backend ~train ~stop ~car
     | SetStopStation {train; stop; station} ->

@@ -3,7 +3,7 @@ module R = Renderer
 
 (* Station view screen *)
 
-let render win (s:State.t) x y ~show_demand =
+let render win (s:State.t) (x, y) ~show_demand =
   let ground_y = 186 in
   let switchingyard_x = 0 in
   let engineshop_x = 64 in

@@ -331,8 +331,19 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     )
   in
 
-  let draw_trains_zoom4 () = ()
+  let draw_trains_zoom4 () =
     (* For now, draw only the engine *)
+    let open Textures.CarsTop in
+    Trainmap.iter (fun (train:Train.t) ->
+      let tex = Hashtbl.find s.textures.cars_top (Engine train.engine._type, train.dir) in
+      if train.x > start_x && train.y > start_y &&
+         train.x < end_x && train.y < end_y then
+           let x, y = train.x - start_x, train.y - start_y in
+        R.Texture.render win tex ~x ~y
+      else
+        ()
+    )
+    s.backend.trains
   in
 
   let draw_survey_zoom4 () =
