@@ -153,5 +153,6 @@ let remove_stop (v:t) stop =
 
   | `Priority -> {v with priority=None}
 
+let calc_car_pos (v:t) car = ()
 
 

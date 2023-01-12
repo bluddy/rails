@@ -290,14 +290,8 @@ end
 
 module CarsTop = struct
   type hash =
-  [ `BigOldEngine
-  | `BulkCar
-  | `DieselEngine
-  | `FastCar
-  | `LittleOldEngine
-  | `MailCar
-  | `PaseengerCar
-  | `SlowCar ]
+  | Engine of Engine._type
+  | Car of Goods.freight
 
   let tile_w, tile_h = 20, 20
 
@@ -321,14 +315,14 @@ module CarsTop = struct
       |> ignore
     in
 
-    tex 200 120 `BigOldEngine;
-    tex 200 140 `LittleOldEngine;
-    tex 40 120 `DieselEngine;
-    tex 40 140 `MailCar;
-    tex 200 160 `PaseengerCar;
-    tex 40 160 `FastCar;
-    tex 200 180 `SlowCar;
-    tex 40 180 `BulkCar;
+    tex 200 120 @@ Engine(Engine.SteamBig);
+    tex 200 140 @@ Engine(Engine.SteamSmall);
+    tex 40 120 @@ Engine(Engine.Diesel);
+    tex 40 140 @@ Car(Goods.FreightMail);
+    tex 200 160 @@ Car(Goods.FreightPassenger);
+    tex 40 160 @@ Car(Goods.FreightFast);
+    tex 200 180 @@ Car(Goods.FreightSlow);
+    tex 40 180 @@ Car(Goods.FreightBulk);
     hash
 end
 

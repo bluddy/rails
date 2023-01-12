@@ -111,8 +111,10 @@ let main_menu fonts menu_h =
     ]
   in
   let is_zoom4 (s:State.t) = Mapview.is_zoom4 s.ui.view in
-  let is_station4 (s:State.t) = Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_station s.backend s.ui.view in
-  let is_woodbridge4 (s:State.t) = Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view in
+  let is_station4 (s:State.t) =
+    Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_station s.backend s.ui.view in
+  let is_woodbridge4 (s:State.t) =
+    Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view in
   let improve_station =
     let check_upgrade ?(flip=false) upgrade (s:State.t) =
       let station = Mapview.get_station_under_cursor_exn s.backend s.ui.view in

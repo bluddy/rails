@@ -331,6 +331,10 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     )
   in
 
+  let draw_trains_zoom4 () = ()
+    (* For now, draw only the engine *)
+  in
+
   let draw_survey_zoom4 () =
     iter_screen (fun i j ->
       let map_x, map_y = start_x + j, start_y + i in
@@ -381,6 +385,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       if build_station then
         draw_buildstation_mode ();
       draw_track_zoom4 ();
+      draw_trains_zoom4 ();
       draw_cursor_zoom4 ();
   end;
   s
