@@ -23,13 +23,20 @@ module Edge = struct
   let make id x1 y1 dir1 x2 y2 dir2 dist =
     let nodes = ((x1,y1,dir1),(x2,y2,dir2)) in
     {id; nodes; dist}
+
   let eq_xydir x1 y1 dir1 (x2,y2,dir2) =
     x1 = x2 && y1 = y2 && Dir.equal dir1 dir2
 
     (* Either node can match *)
-  let has_xydir x1 y1 dir1 v =
+  let has_xydir x y dir v =
     let d1, d2 = v.nodes in
-    eq_xydir x1 y1 dir1 d1 || eq_xydir x1 y1 dir1 d2
+    eq_xydir x y dir d1 || eq_xydir x y dir d2
+
+    (* Return matching dir for ixn x, y *)
+  let dir_of_xy x y v = match v.nodes with
+    | ((x1,y1,dir1),_) when x=x1 && y=y1 -> Some dir1
+    | (_,(x2,y2,dir2)) when x=x2 && y=y2 -> Some dir2
+    | _ -> None
 end
 
 module Node = struct
@@ -38,7 +45,6 @@ module Node = struct
 
   let hash = Hashtbl.hash
 end
-
 
 module G = struct
   module G = Graph.Imperative.Graph.ConcreteLabeled(Node)(Edge)
@@ -68,6 +74,27 @@ module G = struct
     | _ -> invalid_arg "Graph vertex/edge data not found"
 
 end
+
+module Weight = struct
+  type edge = Node.t * Edge.t * Node.t
+  type t = int
+
+  (* Allows us to block computation of distance for a certain edge *)
+  let block_id = ref None
+
+  let set_block_id i = block_id := Some i
+  let clear_block_id () = block_id := None
+  let weight (_,e,_) =
+    match !block_id with
+    | Some id when id = e.Edge.id -> 100000
+    | _ -> e.dist
+  let compare = Int.compare
+  let add = (+)
+  let zero = 0
+end
+
+
+module ShortestPath = Graph.Path.Dijkstra(G)(Weight)
 
 type t = {
   mutable last_id: int;
@@ -115,5 +142,20 @@ let remove_segment v ~x ~y ~dir =
 
 let fold_succ_ixns f v ~ixn ~init = G.fold_succ f v.graph ixn init
 let iter_succ_ixns f v ~ixn = G.iter_succ f v.graph ixn
+
+  (* Find the shortest path branch from an ixn given a from_dir entering the ixn,
+     which is excluded *)
+let shortest_path_branch ~ixn ~dir ~dest v =
+  (* First get dir_from and disable it *)
+  let x, y = ixn in
+  let rev_dir = Dir.opposite dir in
+  G.iter_succ_e (fun (_,e,_) ->
+    if Edge.has_xydir x y rev_dir e then Weight.set_block_id e.id)
+    v.graph ixn;
+  let path, _ = ShortestPath.shortest_path v.graph ixn dest in
+  Weight.clear_block_id ();
+  match path with
+  | (_,edge,_)::_ -> Edge.dir_of_xy x y edge
+  | _ -> None
 
 

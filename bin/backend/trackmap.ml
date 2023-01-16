@@ -14,6 +14,8 @@ let empty width height =
 
 let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
+let get_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)
+
   (* get, buf if there's nothing, create a track *)
 let get_track_default ?(kind=Track.Track) v x y ~player =
   get v x y
@@ -306,3 +308,5 @@ module Search = struct
         else if Track.is_station track then Station scan
         else Track scan
 end
+
+

@@ -20,11 +20,11 @@ type train_type =
   [@@deriving yojson, enum]
 
 type t = {
-  x: int;
-  y: int;
+  mutable x: int;
+  mutable y: int;
   engine: Engine.t;
   dir: Dir.t;
-  speed: int;
+  mutable speed: int;
   mutable wait_time: int; (* for updating train *)
   target_speed: int;
   cars: (Goods.t * int) list; (* good type, amount to 160, /4 = tons *)

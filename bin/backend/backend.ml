@@ -3,6 +3,7 @@ open Utils.Infix
 
 module TS = Trackmap.Search
 module G = Track_graph
+module C = Constants
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -15,6 +16,9 @@ let tick_ms = 15 (* ms *)
 let year_ticks = 2032 (* really 170*12 = 2040 is new year *)
 let month_ticks = 170
 let num_players = 4
+
+(* Cycles used to update integer speed up to index=12 *)
+let update_cycle_array = [| 0; 1; 0x41; 0x111; 0x249; 0x8A5; 0x555; 0x5AD; 0x6DB; 0x777; 0x7DF; 0x7FF; 0xFFF |]
 
 (* Cycle counts to perform some tasks *)
 let cycles_periodic_maintenance = 1024
@@ -455,6 +459,7 @@ let _remove_all_stop_cars v ~train ~stop =
   in
   if trains =!= v.trains then {v with trains} else v
 
+  (* Get stations directly connected to a particular ixn or station *)
 let find_connected_stations v ixn =
   let stations = Hashtbl.create 10 in
   let start_ixns = Hashtbl.create 1 in
@@ -485,16 +490,63 @@ let get_train v idx = Trainmap.get v.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-(*
-let update_all_trains v =
-  Trainmap.fold (fun max_priority train ->
-    let priority = train.freight * 3 - train._type + 2 in
-    if priority <= max_priority && v.wait_time > 0 && v.speed > 0 then
-    else max_priority
-  )
+(* Handle non-fractional acceleration/decelration *)
+
+let update_all_trains (v:t) =
+  let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
+  let cycle_bit = 1 lsl ((v.cycle / 16) mod 12) in
+  Trainmap.fold (fun max_priority (train:Train.t) ->
+    let priority = (Goods.freight_to_enum train.freight) * 3 -
+                   (Train.train_type_to_enum train._type) + 2 in
+    if priority <= max_priority && train.wait_time > 0 && train.speed > 0 then begin
+      (* Check accelerate and decelerate *)
+      let speed_diff = max 12 @@ train.target_speed - train.speed in
+      if (v.cycle mod cycle_check) = 0 && train.speed > 1 then begin
+        if (update_cycle_array.(speed_diff) land cycle_bit) <> 0 then begin
+          train.speed <- succ train.speed
+        end
+      end;
+      if v.cycle mod 8 = 0 && train.target_speed < train.speed then begin
+        train.speed <- pred train.speed
+      end;
+      (* Todo: fiscal period update stuff *)
+
+      (* Adjust location based on speed / 12 *)
+      let rec loop mult_12 =
+        if mult_12 * 12 >= train.speed then ()
+        else
+          let speed =
+            if Dir.is_diagonal train.dir then ((train.speed * 2) + 1) / 3 else train.speed
+          in
+          let speed = if speed > 12 then if mult_12 = 0 then 12 else speed - 12 else speed in
+          let speed = speed / region_div |> Utils.clip ~min:1 ~max:99 in
+
+          if update_cycle_array.(speed) land cycle_bit <> 0 then begin
+            (* check location: edge or middle *)
+            if train.x mod C.tile_w = C.tile_w / 2 &&
+               train.y mod C.tile_h = C.tile_h / 2 then begin
+
+              let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
+              
+              (* TODO: check for colocated train *)
+
+              let tile = Trackmap.get_exn v.track tile_x tile_y in
+              ()
+            end;
+            (* Advance train by single pixels *)
+            let dx, dy = Dir.to_offsets train.dir in
+            train.x <- train.x + dx;
+            train.y <- train.y + dy;
+          end;
+
+          loop (mult_12 + 1)
+      in
+      loop 0;
+      priority
+    end else
+      priority)
   v.trains
   ~init:0
-*)
 
   (** Most time-based work happens here **)
 let handle_cycle v =
