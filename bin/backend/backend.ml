@@ -17,8 +17,6 @@ let year_ticks = 2032 (* really 170*12 = 2040 is new year *)
 let month_ticks = 170
 let num_players = 4
 
-(* Cycles used to update integer speed up to index=12 *)
-let update_cycle_array = [| 0; 1; 0x41; 0x111; 0x249; 0x8A5; 0x555; 0x5AD; 0x6DB; 0x777; 0x7DF; 0x7FF; 0xFFF |]
 
 (* Cycle counts to perform some tasks *)
 let cycles_periodic_maintenance = 1024
@@ -499,16 +497,8 @@ let update_all_trains (v:t) =
     let priority = (Goods.freight_to_enum train.freight) * 3 -
                    (Train.train_type_to_enum train._type) + 2 in
     if priority <= max_priority && train.wait_time > 0 && train.speed > 0 then begin
-      (* Check accelerate and decelerate *)
-      let speed_diff = max 12 @@ train.target_speed - train.speed in
-      if (v.cycle mod cycle_check) = 0 && train.speed > 1 then begin
-        if (update_cycle_array.(speed_diff) land cycle_bit) <> 0 then begin
-          train.speed <- succ train.speed
-        end
-      end;
-      if v.cycle mod 8 = 0 && train.target_speed < train.speed then begin
-        train.speed <- pred train.speed
-      end;
+      Train.update_speed train ~cycle:v.cycle ~cycle_check ~cycle_bit;
+
       (* Todo: fiscal period update stuff *)
 
       (* Adjust location based on speed / 12 *)
@@ -516,24 +506,57 @@ let update_all_trains (v:t) =
         if mult_12 * 12 >= train.speed then ()
         else
           let speed =
-            if Dir.is_diagonal train.dir then ((train.speed * 2) + 1) / 3 else train.speed
+            if Dir.is_diagonal train.dir then ((train.speed * 2) + 1) / 3
+            else train.speed
           in
-          let speed = if speed > 12 then if mult_12 = 0 then 12 else speed - 12 else speed in
+          let speed =
+            if speed > 12 then if mult_12 = 0 then 12 else speed - 12 else speed
+          in
           let speed = speed / region_div |> Utils.clip ~min:1 ~max:99 in
 
-          if update_cycle_array.(speed) land cycle_bit <> 0 then begin
-            (* check location: edge or middle *)
+          if Train.update_cycle_array.(speed) land cycle_bit <> 0 then begin
+
+            (* Check if we're in the middle of a tile *)
             if train.x mod C.tile_w = C.tile_w / 2 &&
                train.y mod C.tile_h = C.tile_h / 2 then begin
 
               let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
               
-              (* TODO: check for colocated train *)
+              (* TODO: check for colocated trains *)
 
-              let tile = Trackmap.get_exn v.track tile_x tile_y in
-              ()
+              let track = Trackmap.get_exn v.track tile_x tile_y in
+              (* Find the closest dir to the original direction,
+                 allowing up to a 90 degree turn
+               *)
+              let find_nearest_dir dir dirs =
+                let check = Dir.Set.mem dirs in
+                if check dir then Some dir
+                else
+                  let cwd = Dir.cw dir in
+                  if check cwd then Some cwd
+                  else
+                    let ccwd = Dir.ccw dir in
+                    if check ccwd then Some ccwd
+                    else
+                      let cwd = Dir.cw cwd in
+                      if check cwd then Some cwd
+                      else
+                        let ccwd = Dir.ccw ccwd in
+                        if check ccwd then Some ccwd
+                        else
+                          None
+              in
+              if track.ixn then begin
+                ()
+              end;
+              let dir = match find_nearest_dir train.dir track.dirs with
+                | Some dir -> dir
+                | None -> failwith "Cannot find track for train"
+              in
+              train.dir <- dir
             end;
-            (* Advance train by single pixels *)
+
+            (* Always advance train by single pixel *)
             let dx, dy = Dir.to_offsets train.dir in
             train.x <- train.x + dx;
             train.y <- train.y + dy;

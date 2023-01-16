@@ -23,7 +23,7 @@ type t = {
   mutable x: int;
   mutable y: int;
   engine: Engine.t;
-  dir: Dir.t;
+  mutable dir: Dir.t;
   mutable speed: int;
   mutable wait_time: int; (* for updating train *)
   target_speed: int;
@@ -161,4 +161,20 @@ let remove_stop (v:t) stop =
 
 let calc_car_pos (v:t) car = ()
 
+(* Cycles used to update integer speed up to index=12
+   Note that each step has one more active bit
+ *)
+let update_cycle_array = [| 0; 1; 0x41; 0x111; 0x249; 0x8A5; 0x555; 0x5AD; 0x6DB; 0x777; 0x7DF; 0x7FF; 0xFFF |]
+
+let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
+  (* Check accelerate *)
+  let speed_diff = max 12 @@ v.target_speed - v.speed in
+  if (cycle mod cycle_check) = 0 && v.speed > 1 &&
+     (update_cycle_array.(speed_diff) land cycle_bit) <> 0 then begin
+      v.speed <- succ v.speed
+  end;
+  (* Check decelerate *)
+  if cycle mod 8 = 0 && v.target_speed < v.speed then begin
+    v.speed <- pred v.speed
+  end
 
