@@ -36,6 +36,13 @@ type t = {
   priority: stop option;
 } [@@deriving yojson]
 
+let get_dest v = 
+  let stop = match v.priority with
+    | Some stop -> stop
+    | None -> List.nth v.route v.target_stop
+  in
+  (stop.x, stop.y)
+
 let freight_of_cars cars =
   (* Freight goes by the highest level *)
   List.fold_left (fun freight car ->

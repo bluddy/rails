@@ -15,14 +15,15 @@ module Edge = struct
     id: int;
     nodes: xy_dir * xy_dir;
     dist: int;
+    mutable block: bool;
   } [@@ deriving yojson]
 
-  let default = {id=0; nodes=((0,0,Dir.Up),(0,0,Dir.Up)); dist=0}
+  let default = {id=0; nodes=((0,0,Dir.Up),(0,0,Dir.Up)); dist=0; block=false}
   let equal x y = x.id = y.id
   let compare x y = x.id - y.id
   let make id x1 y1 dir1 x2 y2 dir2 dist =
     let nodes = ((x1,y1,dir1),(x2,y2,dir2)) in
-    {id; nodes; dist}
+    {id; nodes; dist; block=false}
 
   let eq_xydir x1 y1 dir1 (x2,y2,dir2) =
     x1 = x2 && y1 = y2 && Dir.equal dir1 dir2
@@ -79,15 +80,9 @@ module Weight = struct
   type edge = Node.t * Edge.t * Node.t
   type t = int
 
-  (* Allows us to block computation of distance for a certain edge *)
-  let block_id = ref None
-
-  let set_block_id i = block_id := Some i
-  let clear_block_id () = block_id := None
   let weight (_,e,_) =
-    match !block_id with
-    | Some id when id = e.Edge.id -> 100000
-    | _ -> e.dist
+    if e.Edge.block then 100000
+    else e.dist
   let compare = Int.compare
   let add = (+)
   let zero = 0
@@ -146,14 +141,19 @@ let iter_succ_ixns f v ~ixn = G.iter_succ f v.graph ixn
   (* Find the shortest path branch from an ixn given a from_dir entering the ixn,
      which is excluded *)
 let shortest_path_branch ~ixn ~dir ~dest v =
-  (* First get dir_from and disable it *)
   let x, y = ixn in
-  let rev_dir = Dir.opposite dir in
-  G.iter_succ_e (fun (_,e,_) ->
-    if Edge.has_xydir x y rev_dir e then Weight.set_block_id e.id)
-    v.graph ixn;
+  (* Block all dirs that aren't within 90 degrees of initial dir *)
+  G.iter_succ_e
+    (fun (_,e,_) ->
+      match Edge.dir_of_xy x y e with
+      | Some dir2 when not (Dir.within_90 dir dir2) ->
+          e.block <- true
+      | _ -> ())
+    v.graph
+    ixn;
   let path, _ = ShortestPath.shortest_path v.graph ixn dest in
-  Weight.clear_block_id ();
+  (* Clear block *)
+  G.iter_succ_e (fun (_,e,_) -> e.block <- false) v.graph ixn;
   match path with
   | (_,edge,_)::_ -> Edge.dir_of_xy x y edge
   | _ -> None

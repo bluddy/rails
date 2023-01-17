@@ -546,12 +546,15 @@ let update_all_trains (v:t) =
                         else
                           None
               in
-              if track.ixn then begin
-                ()
-              end;
-              let dir = match find_nearest_dir train.dir track.dirs with
-                | Some dir -> dir
-                | None -> failwith "Cannot find track for train"
+              let dir =
+                if track.ixn then
+                  let dest = Train.get_dest train in
+                  Track_graph.shortest_path_branch v.graph
+                    ~ixn:(tile_x, tile_y) ~dir:train.dir ~dest 
+                    |> Option.get_exn_or "Cannot find route" 
+                else
+                  find_nearest_dir train.dir track.dirs
+                  |> Option.get_exn_or "Cannot find track for train"
               in
               train.dir <- dir
             end;

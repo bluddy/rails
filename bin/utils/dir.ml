@@ -43,6 +43,13 @@ let opposite = function
   | Left -> Right
   | UpLeft -> DownRight
 
+let within_90 dir dir2 =
+  let dir = to_enum dir in
+  let dir2 = to_enum dir2 in
+  let diff = dir2 - dir in
+  let diff = if diff < 0 then diff + 8 else diff in
+  diff <= 2
+
 let is_cardinal = function
   | Up
   | Right
