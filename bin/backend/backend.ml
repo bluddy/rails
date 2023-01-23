@@ -546,6 +546,7 @@ let update_all_trains (v:t) =
                         else
                           None
               in
+              (* Adjust direction *)
               let dir =
                 if track.ixn then
                   let dest = Train.get_dest train in
@@ -556,7 +557,19 @@ let update_all_trains (v:t) =
                   find_nearest_dir train.dir track.dirs
                   |> Option.get_exn_or "Cannot find track for train"
               in
-              train.dir <- dir
+
+              (* Height delta *)
+              let height1 = Tilemap.get_tile_height v.map tile_x tile_y in
+              let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in
+              let height2 = Tilemap.get_tile_height v.map tile_x2 tile_y2 in
+              let d_height = height2 - height1 in
+              let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
+              let d_height = match track.kind with
+                | Tunnel | Bridge _ -> 0
+                | _ -> d_height
+              in
+              let turn_factor = Dir.diff dir train.dir in
+              train.dir <- dir;
             end;
 
             (* Always advance train by single pixel *)

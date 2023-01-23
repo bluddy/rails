@@ -64,6 +64,11 @@ let is_diagonal = function
   | DownLeft -> true
   | _ -> false
 
+let diff dir1 dir2 =
+  let diff = abs(to_enum dir1 - to_enum dir2) in
+  if diff > 4 then 8 - diff else diff
+
+
 module Set = struct
   include Bitset.Make(struct
     type nonrec t=t
@@ -127,6 +132,10 @@ let x_offset =
 let to_offsets dir =
   let i = to_enum dir in
   x_offset.(i), y_offset.(i)
+
+let adjust dir x y =
+  let dx, dy = to_offsets dir in
+  x + dx, y + dy
 
   (* 
      Convolution operator for height 
