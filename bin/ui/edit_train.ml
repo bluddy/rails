@@ -101,7 +101,7 @@ let render win (s:State.t) v : unit =
             x + car_tex.w
           ) x cars
     in
-    draw_cars train.cars ~x:66 ~y:41 fst;
+    draw_cars train.cars ~x:66 ~y:41 Train.Car.good;
     
     write Ega.black ~x:292 ~y:40 "Exit";
 
