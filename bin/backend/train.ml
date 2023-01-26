@@ -19,6 +19,36 @@ type train_type =
   | Limited (* Skips terminals or less *)
   [@@deriving yojson, enum]
 
+module History = struct
+  type elem = {
+    x: int;
+    y: int;
+    dir: Dir.t;
+    speed_factor: int;
+  } [@@deriving yojson]
+
+  let empty =
+    {x=0; y=0; dir=Dir.Up; speed_factor=0}
+
+  type t = {
+    history: elem array;
+    mutable idx: int;
+  } [@@deriving yojson]
+
+  let make () =
+    {
+      history=Array.make Constants.train_max_size empty;
+      idx=0;
+    }
+
+  (* Saves the info about the train over time at midpoints *)
+  let add v x y dir speed_factor =
+    let hist = {x; y; dir; speed_factor} in
+    v.idx <- (succ v.idx) mod Array.length v.history;
+    v.history.(v.idx) <- hist;
+    ()
+end
+
 type t = {
   mutable x: int;
   mutable y: int;
@@ -30,6 +60,7 @@ type t = {
   cars: (Goods.t * int) list; (* good type, amount to 160, /4 = tons *)
   freight: Goods.freight; (* freight class *)
   _type: train_type;
+  history: History.t; (* History of values. Used for cars *)
 
   target_stop: int; (* current stop of route *)
   route: stop list; (* route stops *)
@@ -69,6 +100,7 @@ let make (x, y) engine cars other_station ~dir =
     freight=freight_of_cars cars;
     wait_time=0;
     _type=Local;
+    history=History.make ();
     target_stop=0;
     route;
     priority=None;

@@ -86,6 +86,22 @@ module Set = struct
     mask
 end
 
+(* Find the closest dir to the original direction,
+    allowing up to a 90 degree turn
+  *)
+let find_nearest_in_set dir dirs =
+  let check = Set.mem dirs in
+  if check dir then Some dir else
+  let cwd = cw dir in
+  if check cwd then Some cwd else
+  let ccwd = ccw dir in
+  if check ccwd then Some ccwd else
+  let cwd = cw cwd in
+  if check cwd then Some cwd else
+  let ccwd = ccw ccwd in
+  if check ccwd then Some ccwd else
+  None
+
 (* A swirl of offsets going clockwise starting from closest point
     going outwards: 3x3, 5x5 up to 7x7.
     The corners are skipped and are at the end.
