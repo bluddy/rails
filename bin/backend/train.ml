@@ -234,21 +234,31 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
     v.speed <- pred v.speed
   end
 
-let get_speed_factor_weight v =
-  let speed_factor, weight =
-    List.foldi (fun (speed_factor, weight) i car ->
-      (* NOTE: i/2 is a weird choice. Maybe to reduce effect of long trains *)
-      let freight = Goods.freight_of_goods car.Car.good |> Goods.freight_to_enum in
-      let weight2 = ((car.amount * 4 - 320) / 6 - freight) + 240 in
-      let history = History.get v.history (i/2) in
-      let speed_factor = max speed_factor history.History.speed_factor in
-      (speed_factor, weight + weight2)
-    )
-    (0, 0) 
-    v.cars
-  in
-  speed_factor, weight
+let get_weight v =
+  List.fold_left (fun weight car ->
+    let freight = Goods.freight_of_goods car.Car.good |> Goods.freight_to_enum in
+    let weight2 = ((car.amount * 4 - 320) / 6 - freight) + 240 in
+    weight + weight2)
+  0
+  v.cars
 
+let get_max_speed_factor v =
+  List.foldi (fun speed_factor i _ ->
+    (* NOTE: i/2 is a weird choice. Maybe to reduce effect of long trains *)
+    let history = History.get v.history (i/2) in
+    max speed_factor history.History.speed_factor
+  )
+  0
+  v.cars
+
+let set_target_speed v idx cycle_cnt total_weight max_speed_factor =
+  let a = total_weight / 160 + 1 in
+  let b = (max_speed_factor + 2) * a in
+  let engine_speed = v.engine.Engine.horsepower * 200 / b in
+  let random = (13 * idx + cycle_cnt) mod 64 in
+  let target_speed = ((engine_speed * 8) + random + 80) / 80 in
+  v.target_speed <- target_speed;
+  ()
 
 
 
