@@ -71,7 +71,8 @@ type t = {
   mutable dir: Dir.t;
   mutable speed: int;
   mutable wait_time: int; (* for updating train *)
-  target_speed: int;
+  mutable target_speed: int;
+  fiscal_dist_traveled: (int ref * int ref); (* incremented at mid-tiles *)
   cars: Car.t list;
   freight: Goods.freight; (* freight class *)
   _type: train_type;
@@ -244,21 +245,25 @@ let get_weight v =
 
 let get_max_speed_factor v =
   List.foldi (fun speed_factor i _ ->
-    (* NOTE: i/2 is a weird choice. Maybe to reduce effect of long trains *)
+    (* NOTE: i/2 is a weird choice: indexing into history. Maybe to reduce effect of long trains? *)
     let history = History.get v.history (i/2) in
     max speed_factor history.History.speed_factor
   )
   0
   v.cars
 
-let set_target_speed v idx cycle_cnt total_weight max_speed_factor =
-  let a = total_weight / 160 + 1 in
+let target_speed_from_factors v ~idx ~cycle ~weight ~max_speed_factor =
+  let a = weight / 160 + 1 in
   let b = (max_speed_factor + 2) * a in
   let engine_speed = v.engine.Engine.horsepower * 200 / b in
-  let random = (13 * idx + cycle_cnt) mod 64 in
+  let random = (13 * idx + cycle) mod 64 in
   let target_speed = ((engine_speed * 8) + random + 80) / 80 in
   v.target_speed <- target_speed;
   ()
 
+let add_dist_traveled v dist period =
+  match period, v.fiscal_dist_traveled with
+  | `First, (d,_) -> d := !d + dist
+  | `Second, (_,d) -> d := !d + dist
 
 

@@ -53,6 +53,17 @@ end
 module Vector = struct
   include CCVector
 
+  let foldi f acc v =
+    let rec foldi acc i =
+      if i = v.size then
+        acc
+      else (
+        let x = Array.unsafe_get v.vec i in
+        foldi (f i acc x) (i + 1)
+      )
+    in
+    foldi acc 0
+
   let rw_of_yojson _ = `RW
   let yojson_of_rw _ = `Null
   

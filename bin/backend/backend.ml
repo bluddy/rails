@@ -42,6 +42,7 @@ type t = {
   mutable cycle: int; (* counter used for all sorts of per-tick updates *)
   mutable time: int;  (* In-game time, resets at end of year *)
   mutable year: int;
+  fiscal_period: [`First | `Second];
   climate: Climate.t;
   players: Player.t array;
   region: Region.t;
@@ -52,6 +53,7 @@ type t = {
   cities: Cities.t;
   mutable stations: Station.t Loc_map.t;
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
+  stats: Stats.t;
   options: B_options.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;
@@ -488,13 +490,61 @@ let get_train v idx = Trainmap.get v.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-(* Handle non-fractional acceleration/decelration *)
+let update_train_mid_tile (v:t) (train:Train.t) =
+  let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
+  
+  (* TODO: check for colocated trains *)
 
+  let track = Trackmap.get_exn v.track tile_x tile_y in
+  (* Adjust direction *)
+  let dir =
+    if track.ixn then
+      let dest = Train.get_dest train in
+      Track_graph.shortest_path_branch v.graph
+        ~ixn:(tile_x, tile_y) ~dir:train.dir ~dest 
+        |> Option.get_exn_or "Cannot find route" 
+    else
+      Dir.find_nearest_in_set train.dir track.dirs
+      |> Option.get_exn_or "Cannot find track for train"
+  in
+
+  (* Speed factor computation *)
+  let height1 = Tilemap.get_tile_height v.map tile_x tile_y in
+  let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in
+  let track2 = Trackmap.get_exn v.track tile_x2 tile_y2 in
+  let height2 = Tilemap.get_tile_height v.map tile_x2 tile_y2 in
+  let d_height = max 0 (height2 - height1) in
+  let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
+  let height_factor = match track.kind, track2.kind with
+    | Bridge _ , _ -> 0
+    | _, Tunnel -> 0
+    | _ -> d_height
+  in
+  let turn_factor = Dir.diff dir train.dir in
+  let speed_factor = (height_factor * height_factor / 144) + turn_factor in
+  train.dir <- dir;
+
+  Train.History.add train.history train.x train.y train.dir speed_factor;
+  let weight = Train.get_weight train in
+  let max_speed_factor = Train.get_max_speed_factor train in
+  Train.target_speed_from_factors train ~idx ~cycle ~weight ~max_speed_factor;
+  begin match Tilemap.get_tile v.map tile_x tile_y with
+  | Ocean _ | Harbor _ ->
+      train.target_speed <- 1;
+      train.speed <- 1;
+  | _ -> ()
+  end;
+  let dist = if Dir.is_diagonal dir then 2 else 3 in
+  Train.add_dist_traveled train dist v.fiscal_period;
+  v.stats.dist_traveled <- succ v.stats.dist_traveled;
+  ()
+
+  (* Run every cycle, updating every train's position and speed *)
 let update_all_trains (v:t) =
   let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl ((v.cycle / 16) mod 12) in
 
-  Trainmap.fold (fun max_priority (train:Train.t) ->
+  Trainmap.foldi (fun idx max_priority (train:Train.t) ->
     let priority = (Goods.freight_to_enum train.freight) * 3 -
                    (Train.train_type_to_enum train._type) + 2 in
     if priority <= max_priority && train.wait_time > 0 && train.speed > 0 then begin
@@ -515,47 +565,18 @@ let update_all_trains (v:t) =
           in
           let speed = speed / region_div |> Utils.clip ~min:1 ~max:99 in
 
-          let handle_mid_tile () =
-            let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
-            
-            (* TODO: check for colocated trains *)
-
-            let track = Trackmap.get_exn v.track tile_x tile_y in
-            (* Adjust direction *)
-            let dir =
-              if track.ixn then
-                let dest = Train.get_dest train in
-                Track_graph.shortest_path_branch v.graph
-                  ~ixn:(tile_x, tile_y) ~dir:train.dir ~dest 
-                  |> Option.get_exn_or "Cannot find route" 
-              else
-                Dir.find_nearest_in_set train.dir track.dirs
-                |> Option.get_exn_or "Cannot find track for train"
-            in
-
-            (* Speed factor computation *)
-            let height1 = Tilemap.get_tile_height v.map tile_x tile_y in
-            let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in
-            let height2 = Tilemap.get_tile_height v.map tile_x2 tile_y2 in
-            let d_height = max 0 (height2 - height1) in
-            let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
-            let height_factor = match track.kind with
-              | Tunnel | Bridge _ -> 0
-              | _ -> d_height
-            in
-            let turn_factor = Dir.diff dir train.dir in
-            let speed_factor = (height_factor * height_factor / 144) + turn_factor in
-            train.dir <- dir;
-
-            Train.History.add train.history train.x train.y train.dir speed_factor
+          let mid_tile_check () =
+            train.x mod C.tile_w = C.tile_w / 2 &&
+            train.y mod C.tile_h = C.tile_h / 2
           in
 
           if Train.update_cycle_array.(speed) land cycle_bit <> 0 then begin
-            (* Check if we're in the middle of a tile *)
-            if train.x mod C.tile_w = C.tile_w / 2 &&
-               train.y mod C.tile_h = C.tile_h / 2 then begin
-                 handle_mid_tile ()
-               end;
+            (* Check if we're in the middle of a tile.
+               This is where the advanced processing happens.
+             *)
+            if mid_tile_check () then (
+               update_train_mid_tile v train;
+            );
 
             (* Always advance train by single pixel *)
             let dx, dy = Dir.to_offsets train.dir in
