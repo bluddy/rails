@@ -80,6 +80,7 @@ type t = {
   name: string;
   info: info option;
   player: int;
+  segments: (Dir.t * int ref) list; (* Semaphores between stations *)
 } [@@deriving yojson]
 
 let kind_str v =
@@ -115,7 +116,7 @@ let make ~x ~y ~year ~name ~kind ~player ~first =
         rate_war=false;
       } |> Option.some
   in
-  { x; y; year; name; info; player}
+  { x; y; year; name; info; player; segments=[]}
 
 let add_upgrade v upgrade player =
   if v.player <> player then v else

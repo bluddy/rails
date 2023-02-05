@@ -52,6 +52,7 @@ type t = {
   trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station.t Loc_map.t;
+  segments: Segments.t;
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
   stats: Stats.t;
   options: B_options.t;
@@ -87,6 +88,7 @@ let default region resources ~random ~seed =
     cycle=0;
     last_tick=0;
     year;
+    fiscal_period=`First;
     climate=Moderation;
     players;
     map;
@@ -94,13 +96,16 @@ let default region resources ~random ~seed =
     cities;
     trains;
     track;
+    segments=Segments.make ();
     graph;
     stations;
     priority=None;
     options;
     ui_msgs = [];
     random;
-    seed
+    seed;
+
+    stats=Stats.default;
   }
 
 let modify_player v ~player f =
@@ -490,7 +495,7 @@ let get_train v idx = Trainmap.get v.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-let update_train_mid_tile (v:t) (train:Train.t) =
+let update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
   
   (* TODO: check for colocated trains *)
@@ -575,7 +580,7 @@ let update_all_trains (v:t) =
                This is where the advanced processing happens.
              *)
             if mid_tile_check () then (
-               update_train_mid_tile v train;
+               update_train_mid_tile ~idx ~cycle:v.cycle v train;
             );
 
             (* Always advance train by single pixel *)

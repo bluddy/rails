@@ -72,12 +72,11 @@ type t = {
   mutable speed: int;
   mutable wait_time: int; (* for updating train *)
   mutable target_speed: int;
-  fiscal_dist_traveled: (int ref * int ref); (* incremented at mid-tiles *)
+  fiscal_dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
   cars: Car.t list;
   freight: Goods.freight; (* freight class *)
   _type: train_type;
   history: History.t; (* History of values. Used for cars *)
-
   target_stop: int; (* current stop of route *)
   route: stop list; (* route stops *)
   priority: stop option;
@@ -120,6 +119,7 @@ let make (x, y) engine cars other_station ~dir =
     target_stop=0;
     route;
     priority=None;
+    fiscal_dist_traveled=(ref 0, ref 0);
   }
 
 let get_route v = v.route

@@ -53,12 +53,12 @@ end
 module Vector = struct
   include CCVector
 
-  let foldi f acc v =
+  let foldi f acc (v:'a vector) =
     let rec foldi acc i =
-      if i = v.size then
+      if i = Vector.length v then
         acc
       else (
-        let x = Array.unsafe_get v.vec i in
+        let x = Array.unsafe_get (unsafe_get_array v) i in
         foldi (f i acc x) (i + 1)
       )
     in
