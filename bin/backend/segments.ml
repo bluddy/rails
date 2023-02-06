@@ -13,3 +13,6 @@ let get v =
   v.last <- succ v.last;
   ret
 
+let incr v idx = Hashtbl.incr v.map idx
+let decr v idx = Hashtbl.decr v.map idx
+

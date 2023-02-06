@@ -52,7 +52,7 @@ type t = {
   trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station.t Loc_map.t;
-  segments: Segments.t;
+  segments: Segments.t; (* map segments btw stations *)
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
   stats: Stats.t;
   options: B_options.t;
@@ -464,12 +464,23 @@ let _remove_all_stop_cars v ~train ~stop =
   in
   if trains =!= v.trains then {v with trains} else v
 
-  (* Get stations directly connected to a particular ixn or station *)
-let find_connected_stations v ixn =
+  (* Get stations directly connected to a particular ixn or station
+     search_dir: start searching in a given direction
+   *)
+let find_connected_stations ?search_dir v ixn =
   let stations = Hashtbl.create 10 in
-  let start_ixns = Hashtbl.create 1 in
-  Hashtbl.replace start_ixns ixn ();
+  let start_ixns = Hashtbl.create 5 in
+  let seen_ixns = Hashtbl.create 5 in
+  begin match search_dir with
+  | Some dir ->
+      let ixn2 = Track_graph.find_ixn_from_ixn_dir v.graph ~ixn ~dir in
+      Hashtbl.replace start_ixns ixn2 ();
+  | None ->
+      Hashtbl.replace start_ixns ixn ();
+  end;
+  Hashtbl.replace seen_ixns ixn ();
 
+  (* TODO: fix. Seen ixns *)
   let rec loop ixns =
     let ixns2 = Hashtbl.create 10 in
     Hashtbl.iter (fun ixn _ ->

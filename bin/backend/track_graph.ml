@@ -138,8 +138,17 @@ let remove_segment v ~x ~y ~dir =
 let fold_succ_ixns f v ~ixn ~init = G.fold_succ f v.graph ixn init
 let iter_succ_ixns f v ~ixn = G.iter_succ f v.graph ixn
 
+(* Follow an ixn in a given dir *)
+let find_ixn_from_ixn_dir v ~ixn ~dir =
+  let x, y = ixn in
+  G.fold_succ_e (fun (_,e,ixn2) acc ->
+    if Edge.has_xydir x y dir then Some ixn2 else acc)
+  v.graph ixn None
+
   (* Find the shortest path branch from an ixn given a from_dir entering the ixn,
-     which is excluded *)
+     which is excluded
+     TODO: improve. e.g. iterate over direct branches and do multiple shortest path
+     *)
 let shortest_path_branch ~ixn ~dir ~dest v =
   let x, y = ixn in
   (* Block all dirs that aren't within 90 degrees of initial dir *)
