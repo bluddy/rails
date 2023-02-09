@@ -1,8 +1,12 @@
 open Containers
 
+type id = private int
+
+module Map = struct
+
 type t = {
   mutable last: int;
-  map: (int, int) Utils.Hashtbl.t;
+  map: (id, int) Utils.Hashtbl.t; (* segment id to count *)
 }[@@deriving yojson]
 
 let make () = { last=0; map=Hashtbl.create 10; }
@@ -16,3 +20,4 @@ let get v =
 let incr v idx = Hashtbl.incr v.map idx
 let decr v idx = Hashtbl.decr v.map idx
 
+end

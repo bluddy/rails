@@ -305,6 +305,48 @@ let _build_tunnel v ~x ~y ~dir ~player ~length =
   if v.graph =!= graph then v.graph <- graph;
   v
 
+  (* Get stations directly connected to a particular ixn or station
+     search_dir: start searching in a given direction
+   *)
+let find_connected_stations ?search_dir v ixn =
+  let stations = Hashtbl.create 10 in
+  let start_ixns = Hashtbl.create 5 in
+  (* Prevent loops *)
+  let seen_ixns = Hashtbl.create 5 in
+  begin match search_dir with
+  | Some dir ->
+      let ixn2 = Track_graph.find_ixn_from_ixn_dir v.graph ~ixn ~dir in
+      Hashtbl.replace start_ixns ixn2 ();
+      (* Avoid going back to original ixn *)
+      Hashtbl.replace seen_ixns ixn ();
+  | None ->
+      Hashtbl.replace start_ixns ixn ()
+  end;
+
+  let rec loop ixns =
+    let ixns2 = Hashtbl.create 10 in
+    Hashtbl.iter (fun ixn _ ->
+      if Hashtbl.mem seen_ixns ixn then ()
+      else begin Track_graph.iter_succ_ixns
+        (fun ((x,y) as ixn) ->
+          let dest_hash = 
+            if Loc_map.mem v.stations x y then stations else ixns2
+          in
+          Hashtbl.replace dest_hash ixn ())
+        ~ixn
+        v.graph
+      end;
+      Hashtbl.replace seen_ixns ixn)
+      ixns;
+    (* Check if done *)
+    if Hashtbl.empty ixns2 then begin
+      Hashtbl.remove stations ixn;
+      Hashtbl.to_list stations |> List.map fst
+    end else loop ixns2
+  in
+  loop start_ixns
+
+
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with
   | `Ok -> Tilemap.check_build_station v.map ~x ~y
@@ -316,6 +358,17 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let scan2 = TS.scan v.track ~x ~y ~player in
   let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
+  (* Add segment counters *)
+  Dir.Set.iter (fun dir ->
+    let stations = find_connected_stations ~search_dir:dir v (x,y) in
+    Iter.find (fun (station, dir) -> Station.get_segment station dir)
+      stations
+
+
+    )
+
+  ) v.track.dirs
+
 
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   (* Check for first city: first one has engine shop *)
@@ -464,42 +517,6 @@ let _remove_all_stop_cars v ~train ~stop =
   in
   if trains =!= v.trains then {v with trains} else v
 
-  (* Get stations directly connected to a particular ixn or station
-     search_dir: start searching in a given direction
-   *)
-let find_connected_stations ?search_dir v ixn =
-  let stations = Hashtbl.create 10 in
-  let start_ixns = Hashtbl.create 5 in
-  let seen_ixns = Hashtbl.create 5 in
-  begin match search_dir with
-  | Some dir ->
-      let ixn2 = Track_graph.find_ixn_from_ixn_dir v.graph ~ixn ~dir in
-      Hashtbl.replace start_ixns ixn2 ();
-  | None ->
-      Hashtbl.replace start_ixns ixn ();
-  end;
-  Hashtbl.replace seen_ixns ixn ();
-
-  (* TODO: fix. Seen ixns *)
-  let rec loop ixns =
-    let ixns2 = Hashtbl.create 10 in
-    Hashtbl.iter (fun ixn _ ->
-      Track_graph.iter_succ_ixns
-        (fun ((x,y) as ixn) ->
-          if Loc_map.mem v.stations x y then
-            Hashtbl.replace stations ixn ()
-          else
-            Hashtbl.replace ixns2 ixn ())
-        ~ixn
-        v.graph)
-      ixns;
-    if Hashtbl.length ixns2 = 0 then (
-      Hashtbl.remove stations ixn;
-      Hashtbl.to_iter stations |> Iter.map fst
-    ) else loop ixns2
-  in
-  loop start_ixns
-
 let get_num_trains v = Trainmap.size v.trains
 
 let get_train v idx = Trainmap.get v.trains idx
@@ -523,7 +540,6 @@ let update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       Dir.find_nearest_in_set train.dir track.dirs
       |> Option.get_exn_or "Cannot find track for train"
   in
-
   (* Speed factor computation *)
   let height1 = Tilemap.get_tile_height v.map tile_x tile_y in
   let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in

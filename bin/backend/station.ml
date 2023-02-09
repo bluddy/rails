@@ -80,7 +80,7 @@ type t = {
   name: string;
   info: info option;
   player: int;
-  segments: (Dir.t * int ref) list; (* Semaphores between stations *)
+  segments: (Dir.t * Segment.id) * (Dir.t * Segment.id); (* Semaphores between stations *)
 } [@@deriving yojson]
 
 let kind_str v =
@@ -100,6 +100,11 @@ let get_upgrades v = match v.info with
 let has_upgrade v ~upgrade =
   let upgrades = get_upgrades v in
   Upgrades.mem upgrades upgrade
+
+let get_segment v dir = match v.segments with
+  | (dir2, seg), _ when Dir.equal dir dir2 -> seg
+  | _, (dir2, seg) when Dir.equal dir dir2 -> seg
+  | _ -> assert false
 
 let make ~x ~y ~year ~name ~kind ~player ~first =
   let info =
