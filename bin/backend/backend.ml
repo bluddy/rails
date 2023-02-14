@@ -298,7 +298,7 @@ end
 let _build_tunnel v ~x ~y ~dir ~player ~length =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
-  let scan2 = TS.scan v.track ~x ~y ~player in
+  let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_track v scan1 scan2 in
   modify_player v ~player (Player.add_track ~length);
   if v.track =!= track then v.track <- track;
@@ -356,13 +356,15 @@ let check_build_station v ~x ~y ~player station_type =
 let _build_station v ~x ~y station_type ~player =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
-  let scan2 = TS.scan v.track ~x ~y ~player in
+  let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
+
   (* Add segment counters *)
-  Dir.Set.iter (fun dir ->
-    let stations = find_connected_stations ~search_dir:dir v (x,y) in
-    Iter.find (fun (station, dir) -> Station.get_segment station dir)
-      stations
+  Dir.Set.fold (fun acc dir ->
+    match find_connected_stations ~search_dir:dir v (x,y) with
+    | station::_ ->
+      let segment = Station.get_segment station dir in
+
 
 
     )
@@ -406,7 +408,7 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   modify_player v ~player (Player.add_track ~length:2);
-  let scan2 = TS.scan v.track ~x ~y ~player in
+  let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_track v scan1 scan2 in
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
@@ -417,7 +419,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   modify_player v ~player (Player.add_track ~length:1);
-  let scan2 = TS.scan v.track ~x ~y ~player in
+  let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_track_complex v ~x ~y scan1 scan2 in
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
@@ -436,7 +438,7 @@ let _build_ferry v ~x ~y ~dir ~player =
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   modify_player v ~player (Player.add_track ~length:1);
-  let scan2 = TS.scan v.track ~x ~y ~player in
+  let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_track v scan1 scan2 in
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
@@ -448,7 +450,7 @@ let check_remove_track v ~x ~y ~dir ~player=
 let _remove_track v ~x ~y ~dir ~player =
   let scan1 = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
-  let scan2 = TS.scan v.track ~x ~y ~player in
+  let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_remove_track v ~x ~y scan1 scan2 in
   modify_player v ~player (Player.add_track ~length:(-1));
   if v.track =!= track then v.track <- track;

@@ -104,7 +104,7 @@ let has_upgrade v ~upgrade =
 let get_segment v dir = match v.segments with
   | (dir2, seg), _ when Dir.equal dir dir2 -> seg
   | _, (dir2, seg) when Dir.equal dir dir2 -> seg
-  | _ -> assert false
+  | _ -> failwith "No matching direction found"
 
 let make ~x ~y ~year ~name ~kind ~player ~first =
   let info =
