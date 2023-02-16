@@ -308,7 +308,7 @@ let _build_tunnel v ~x ~y ~dir ~player ~length =
   (* Get stations directly connected to a particular ixn or station
      search_dir: start searching in a given direction
    *)
-let find_connected_stations ?search_dir v ixn =
+let find_connected_stations_dirs ?search_dir v ixn =
   let stations = Hashtbl.create 10 in
   let start_ixns = Hashtbl.create 5 in
   (* Prevent loops *)
@@ -343,7 +343,7 @@ let find_connected_stations ?search_dir v ixn =
     (* Check if done: no more ixns to examine *)
     if Hashtbl.length ixns2 = 0 then begin
       Hashtbl.remove stations ixn;
-      Hashtbl.to_list stations
+      Hashtbl.to_iter stations
     end else loop ixns2
   in
   loop start_ixns
@@ -364,12 +364,12 @@ let _build_station v ~x ~y station_type ~player =
   let segments =
     let tile = Trackmap.get_exn track x y in
     Dir.Set.fold (fun acc dir ->
-      match find_connected_stations ~search_dir:dir v (x,y) with
-      | ((x, y), station_dir)::_ ->
+      match find_connected_stations_dirs ~search_dir:dir v (x,y) |> Iter.head with
+      | Some ((x,y), station_dir) ->
           let station = Loc_map.get_exn v.stations x y in
           let seg = Station.get_segment station station_dir in
           (dir, seg)::acc
-      | [] ->
+      | None ->
           let seg = Segment.Map.get_id v.segments in
           (dir, seg)::acc)
      []
