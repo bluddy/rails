@@ -101,7 +101,7 @@ let has_upgrade v ~upgrade =
   let upgrades = get_upgrades v in
   Upgrades.mem upgrades upgrade
 
-let get_segment v dir = match v.segments with
+let get_segment (v:t) dir = match v.segments with
   | (dir2, seg), _ when Dir.equal dir dir2 -> seg
   | _, (dir2, seg) when Dir.equal dir dir2 -> seg
   | _ -> failwith "No matching direction found"
@@ -122,7 +122,7 @@ let make ~x ~y ~year ~name ~kind ~player ~first ~segments =
       } |> Option.some
   in
   let segments = match segments with
-    | [(seg1, dir1); (seg2, dir2)] -> ((seg1, dir2), (seg2, dir2))
+    | [(x, y); (z, w)] -> ((x, y), (z, w))
     | _ -> failwith "Incorrect number of segments"
   in
   { x; y; year; name; info; player; segments}

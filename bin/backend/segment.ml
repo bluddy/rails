@@ -1,6 +1,7 @@
 open Containers
 
-type id = private int
+type id = int
+[@@deriving yojson]
 
 module Map = struct
 

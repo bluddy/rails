@@ -141,8 +141,8 @@ let iter_succ_ixns f v ~ixn = G.iter_succ f v.graph ixn
 (* Iterate over successors of ixn, with ixns and matching dirs *)
 let iter_succ_ixn_dirs f v ~ixn =
   G.iter_succ_e (fun (ixn1, e, ixn2) ->
-    let other_ixn = if Utils.eq_xy ixn ixn1 then ixn2 else ixn1 in
-    let other_dir = Edge.dir_of_xy other_ixn e in
+    let other_ixn = if Node.equal ixn ixn1 then ixn2 else ixn1 in
+    let other_dir = Edge.dir_of_xy other_ixn e |> Option.get_exn_or "Missing dir" in
     f other_ixn other_dir)
   v.graph
   ixn
@@ -151,7 +151,7 @@ let iter_succ_ixn_dirs f v ~ixn =
 let find_ixn_from_ixn_dir v ~ixn ~dir =
   let x, y = ixn in
   G.fold_succ_e (fun (_,e,ixn2) acc ->
-    if Edge.has_xydir x y dir then Some ixn2 else acc)
+    if Edge.has_xydir x y dir e then Some ixn2 else acc)
   v.graph ixn None
 
   (* Find the shortest path branch from an ixn given a from_dir entering the ixn,

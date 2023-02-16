@@ -52,7 +52,7 @@ type t = {
   trains: Trainmap.t;
   cities: Cities.t;
   mutable stations: Station.t Loc_map.t;
-  segments: Segments.t; (* map segments btw stations *)
+  segments: Segment.Map.t; (* map segments btw stations *)
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
   stats: Stats.t;
   options: B_options.t;
@@ -96,7 +96,7 @@ let default region resources ~random ~seed =
     cities;
     trains;
     track;
-    segments=Segments.make ();
+    segments=Segment.Map.make ();
     graph;
     stations;
     priority=None;
@@ -315,8 +315,11 @@ let find_connected_stations ?search_dir v ixn =
   let seen_ixns = Hashtbl.create 5 in
   begin match search_dir with
   | Some dir ->
-      let ixn2 = Track_graph.find_ixn_from_ixn_dir v.graph ~ixn ~dir in
-      Hashtbl.replace start_ixns ixn2 ();
+      begin match Track_graph.find_ixn_from_ixn_dir v.graph ~ixn ~dir with
+      | Some ixn2 ->
+          Hashtbl.replace start_ixns ixn2 ()
+      | None -> ()
+      end;
       (* Avoid going back to original ixn *)
       Hashtbl.replace seen_ixns ixn ();
   | None ->
@@ -328,17 +331,17 @@ let find_connected_stations ?search_dir v ixn =
       if Hashtbl.mem seen_ixns ixn then ()
       else begin 
         Track_graph.iter_succ_ixn_dirs (fun ((x,y) as ixn) dir ->
-          let dest_hash = 
-            if Loc_map.mem v.stations x y then stations else ixns2
-          in
-          Hashtbl.replace dest_hash ixn dir)
+          if Loc_map.mem v.stations x y then 
+            Hashtbl.replace stations ixn dir
+          else 
+            Hashtbl.replace ixns2 ixn ())
         ~ixn
         v.graph
       end;
       Hashtbl.replace seen_ixns ixn ())
       ixns;
-    (* Check if done *)
-    if Hashtbl.empty ixns2 then begin
+    (* Check if done: no more ixns to examine *)
+    if Hashtbl.length ixns2 = 0 then begin
       Hashtbl.remove stations ixn;
       Hashtbl.to_list stations
     end else loop ixns2
@@ -359,16 +362,18 @@ let _build_station v ~x ~y station_type ~player =
   let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
   (* Add segment counters *)
   let segments =
+    let tile = Trackmap.get_exn track x y in
     Dir.Set.fold (fun acc dir ->
       match find_connected_stations ~search_dir:dir v (x,y) with
-      | (station, station_dir)::_ ->
+      | ((x, y), station_dir)::_ ->
+          let station = Loc_map.get_exn v.stations x y in
           let seg = Station.get_segment station station_dir in
-          (seg, dir)::acc
+          (dir, seg)::acc
       | [] ->
           let seg = Segment.Map.get_id v.segments in
-          (seg, dir)::acc)
+          (dir, seg)::acc)
      []
-     v.track.dirs
+     tile.dirs
   in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   (* Check for first city: first one has engine shop *)
