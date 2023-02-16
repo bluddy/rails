@@ -360,8 +360,7 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
-  (* Add segment counters *)
-  let segments =
+  let add_segment_ids track x y =
     let tile = Trackmap.get_exn track x y in
     Dir.Set.fold (fun acc dir ->
       match find_connected_stations_dirs ~search_dir:dir v (x,y) |> Iter.head with
@@ -375,14 +374,16 @@ let _build_station v ~x ~y station_type ~player =
      []
      tile.dirs
   in
+  let segments = add_segment_ids track x y in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
-  (* Check for first city: first one has engine shop *)
-  let first =
+  let check_for_first_city () =
+    (* first one has engine shop *)
     match
       Loc_map.filter v.stations (Station.has_upgrade ~upgrade:Station.EngineShop)
       |> Iter.head
     with Some _ -> false | None -> true
   in
+  let first = check_for_first_city () in
   let station =
     Station.make ~x ~y
       ~year:v.year
