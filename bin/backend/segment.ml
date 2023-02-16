@@ -11,13 +11,13 @@ type t = {
 
 let make () = { last=0; map=Hashtbl.create 10; }
 
-let get v =
+let get_id v =
   Hashtbl.replace v.map v.last 0;
   let ret = v.last in
   v.last <- succ v.last;
   ret
 
-let incr v idx = Hashtbl.incr v.map idx
-let decr v idx = Hashtbl.decr v.map idx
+let incr_train v idx = Hashtbl.incr v.map idx
+let decr_train v idx = Hashtbl.decr v.map idx
 
 end

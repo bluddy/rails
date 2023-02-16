@@ -322,26 +322,25 @@ let find_connected_stations ?search_dir v ixn =
   | None ->
       Hashtbl.replace start_ixns ixn ()
   end;
-
   let rec loop ixns =
     let ixns2 = Hashtbl.create 10 in
     Hashtbl.iter (fun ixn _ ->
       if Hashtbl.mem seen_ixns ixn then ()
-      else begin Track_graph.iter_succ_ixns
-        (fun ((x,y) as ixn) ->
+      else begin 
+        Track_graph.iter_succ_ixn_dirs (fun ((x,y) as ixn) dir ->
           let dest_hash = 
             if Loc_map.mem v.stations x y then stations else ixns2
           in
-          Hashtbl.replace dest_hash ixn ())
+          Hashtbl.replace dest_hash ixn dir)
         ~ixn
         v.graph
       end;
-      Hashtbl.replace seen_ixns ixn)
+      Hashtbl.replace seen_ixns ixn ())
       ixns;
     (* Check if done *)
     if Hashtbl.empty ixns2 then begin
       Hashtbl.remove stations ixn;
-      Hashtbl.to_list stations |> List.map fst
+      Hashtbl.to_list stations
     end else loop ixns2
   in
   loop start_ixns
@@ -358,20 +357,19 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
-
   (* Add segment counters *)
-  Dir.Set.fold (fun acc dir ->
-    match find_connected_stations ~search_dir:dir v (x,y) with
-    | station::_ ->
-      let segment = Station.get_segment station dir in
-
-
-
-    )
-
-  ) v.track.dirs
-
-
+  let segments =
+    Dir.Set.fold (fun acc dir ->
+      match find_connected_stations ~search_dir:dir v (x,y) with
+      | (station, station_dir)::_ ->
+          let seg = Station.get_segment station station_dir in
+          (seg, dir)::acc
+      | [] ->
+          let seg = Segment.Map.get_id v.segments in
+          (seg, dir)::acc)
+     []
+     v.track.dirs
+  in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   (* Check for first city: first one has engine shop *)
   let first =
@@ -381,7 +379,14 @@ let _build_station v ~x ~y station_type ~player =
     with Some _ -> false | None -> true
   in
   let station =
-    Station.make ~x ~y ~year:v.year ~name:city ~kind:station_type ~player ~first in
+    Station.make ~x ~y
+      ~year:v.year
+      ~name:city
+      ~kind:station_type
+      ~player
+      ~first
+      ~segments
+  in
   let stations = Loc_map.add v.stations x y station in
   if build_new_track then (
     modify_player v ~player @@ Player.add_track ~length:1

@@ -34,7 +34,7 @@ module Edge = struct
     eq_xydir x y dir d1 || eq_xydir x y dir d2
 
     (* Return matching dir for ixn x, y *)
-  let dir_of_xy x y v = match v.nodes with
+  let dir_of_xy (x,y) v = match v.nodes with
     | ((x1,y1,dir1),_) when x=x1 && y=y1 -> Some dir1
     | (_,(x2,y2,dir2)) when x=x2 && y=y2 -> Some dir2
     | _ -> None
@@ -138,6 +138,15 @@ let remove_segment v ~x ~y ~dir =
 let fold_succ_ixns f v ~ixn ~init = G.fold_succ f v.graph ixn init
 let iter_succ_ixns f v ~ixn = G.iter_succ f v.graph ixn
 
+(* Iterate over successors of ixn, with ixns and matching dirs *)
+let iter_succ_ixn_dirs f v ~ixn =
+  G.iter_succ_e (fun (ixn1, e, ixn2) ->
+    let other_ixn = if Utils.eq_xy ixn ixn1 then ixn2 else ixn1 in
+    let other_dir = Edge.dir_of_xy other_ixn e in
+    f other_ixn other_dir)
+  v.graph
+  ixn
+
 (* Follow an ixn in a given dir *)
 let find_ixn_from_ixn_dir v ~ixn ~dir =
   let x, y = ixn in
@@ -150,11 +159,10 @@ let find_ixn_from_ixn_dir v ~ixn ~dir =
      TODO: improve. e.g. iterate over direct branches and do multiple shortest path
      *)
 let shortest_path_branch ~ixn ~dir ~dest v =
-  let x, y = ixn in
   (* Block all dirs that aren't within 90 degrees of initial dir *)
   G.iter_succ_e
     (fun (_,e,_) ->
-      match Edge.dir_of_xy x y e with
+      match Edge.dir_of_xy ixn e with
       | Some dir2 when not (Dir.within_90 dir dir2) ->
           e.block <- true
       | _ -> ())
@@ -164,7 +172,7 @@ let shortest_path_branch ~ixn ~dir ~dest v =
   (* Clear block *)
   G.iter_succ_e (fun (_,e,_) -> e.block <- false) v.graph ixn;
   match path with
-  | (_,edge,_)::_ -> Edge.dir_of_xy x y edge
+  | (_,edge,_)::_ -> Edge.dir_of_xy ixn edge
   | _ -> None
 
 

@@ -106,7 +106,7 @@ let get_segment v dir = match v.segments with
   | _, (dir2, seg) when Dir.equal dir dir2 -> seg
   | _ -> failwith "No matching direction found"
 
-let make ~x ~y ~year ~name ~kind ~player ~first =
+let make ~x ~y ~year ~name ~kind ~player ~first ~segments =
   let info =
     match kind with
     | `SignalTower -> None
@@ -121,7 +121,11 @@ let make ~x ~y ~year ~name ~kind ~player ~first =
         rate_war=false;
       } |> Option.some
   in
-  { x; y; year; name; info; player; segments=[]}
+  let segments = match segments with
+    | [(seg1, dir1); (seg2, dir2)] -> ((seg1, dir2), (seg2, dir2))
+    | _ -> failwith "Incorrect number of segments"
+  in
+  { x; y; year; name; info; player; segments}
 
 let add_upgrade v upgrade player =
   if v.player <> player then v else
