@@ -282,6 +282,8 @@ module Search = struct
     let x2, y2 = move_dir ~x ~y ~dir in
     loop_to_node x2 y2 dir 1
 
+    (* Ixn/Station/Track: what we're pointing at.
+       List: what we're connected to *)
   type scan =
     | NoResult
     | Ixn of t list

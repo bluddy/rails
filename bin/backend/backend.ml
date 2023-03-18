@@ -198,7 +198,9 @@ module Graph = struct
       | _ -> v.graph
 
   (* Handle graph management for building track.
-      Complicated because we can have ixns everywhere *)
+      Complicated because we can have ixns everywhere. 
+      TODO: check this for Station *)
+    
   let handle_build_track_complex v ~x ~y scan1 scan2 =
     match scan1, scan2 with
         (* Unfinished edge. Connect an intersection.
@@ -296,14 +298,15 @@ module Graph = struct
     (* Get stations directly connected to a particular ixn or station
        using the track graph.
        search_dir: start searching in a given direction
+       exclude_ixns: exclude these ixns from the search
      *)
-  let connected_stations_dirs ?search_dir v ixn =
+  let connected_stations_dirs ?search_dir ?exclude_ixns v ixn =
     let stations = Hashtbl.create 10 in
     let start_ixns = Hashtbl.create 5 in
     (* Prevent loops *)
     let seen_ixns = Hashtbl.create 5 in
-    begin match search_dir with
-    | Some dir ->
+    begin match search_dir, exclude_ixns with
+    | Some dir, _ ->
         begin match Track_graph.find_ixn_from_ixn_dir v.graph ~ixn ~dir with
         | Some ixn2 ->
             Hashtbl.replace start_ixns ixn2 ()
@@ -311,7 +314,11 @@ module Graph = struct
         end;
         (* Avoid going back to original ixn *)
         Hashtbl.replace seen_ixns ixn ();
-    | None ->
+    | _, Some exclude_ixns ->
+        (* Exclude some ixns and start from given ixn *)
+        List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
+        Hashtbl.replace start_ixns ixn ()
+    | None, None ->
         Hashtbl.replace start_ixns ixn ()
     end;
     let rec loop ixns =
@@ -340,7 +347,7 @@ end
 
 module StationSegments = struct
 
-  let handle_new_station v track x y =
+  let build_station_get_segments v track x y =
     let tile = Trackmap.get_exn track x y in
     Dir.Set.fold (fun acc dir ->
       match Graph.connected_stations_dirs ~search_dir:dir v (x,y) |> Iter.head with
@@ -353,6 +360,51 @@ module StationSegments = struct
           (dir, seg)::acc)
      []
      tile.dirs
+
+  let build_track_join_segments (v:t) track x y (scan1:TS.scan) (scan2:TS.scan) =
+    (* We only care about connecting to a new piece of track that could lead
+    to a station. ixns and stations are the same for this *)
+    let join_ixns = match scan1, scan2 with
+      (* Add an attached ixn: make the two have the same segment *)
+      | Track [ixn1], Track [ixn2; ixn3] -> Some (ixn2, ixn3)
+      (* Add an ixn to a 2-ixn. Make them all have same segment *)
+      | Track ([ixn1; ixn2] as l), Ixn [ixn3; ixn4; ixn5] ->
+          if not (List.mem ~eq:TS.eq ixn3 l) then Some (ixn1, ixn3)
+          else if not (List.mem ~eq:TS.eq ixn4 l) then Some (ixn1, ixn4)
+          else Some (ixn1, ixn5)
+      | _ -> None
+    in
+    match join_ixns with
+    | None -> ()
+    | Some (ixn1, ixn2) ->
+        let ixn1 = (ixn1.x, ixn1.y) in
+        let ixn2 = (ixn2.x, ixn2.y) in
+        let (x1, y1), dir1 =
+          Graph.connected_stations_dirs v ixn1 ~exclude_ixns:[ixn2]
+          |> Iter.head_exn
+        in
+        let station1 = Loc_map.get_exn v.stations x1 y1 in
+        let seg1 = Station.get_segment station1 dir1 in
+        let stations =
+          Graph.connected_stations_dirs v ixn2 ~exclude_ixns:[ixn1]
+          |> Iter.to_list
+        in
+        let (x2, y2), dir2 = List.hd stations in
+        let station2 = Loc_map.get_exn v.stations x2 y2 in
+        let seg2 = Station.get_segment station2 dir2 in
+        (* Assign seg1 to all connected stations that had seg2 *)
+        List.iter (fun ((x, y) as ixn, _) ->
+            Loc_map.update v.stations x y @@
+              (Option.map (fun station -> Station.modify_segment station seg2 seg1)))
+          stations;
+        (* Update segment map *)
+        Segment.Map.merge v.segments seg1 seg2;
+        ()
+
+  let remove_track_split_segment v track x y scan1 scan2 =
+    match scan1, scan2 with
+    | Track [ixn1; ixn2], Track [ixn3] -> ()
+    | Station _, (Track _ | NoResult) -> ()
 
 end
 
@@ -376,7 +428,7 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let scan2 = TS.scan track ~x ~y ~player in
   let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
-  let segments = StationSegments.handle_new_station v track x y in
+  let segments = StationSegments.build_station_get_segments v track x y in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let check_for_first_city () =
     (* first one has engine shop *)

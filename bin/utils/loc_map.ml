@@ -36,6 +36,10 @@ let find f v =
 
 let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
+let update v x y f =
+  Hashtbl.update v.map ~k:(Utils.calc_offset v.width x y)
+    ~f:(fun _ v -> f v)
+
 let mem v x y = Hashtbl.mem v.map (Utils.calc_offset v.width x y)
 
 let get_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)

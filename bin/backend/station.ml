@@ -106,6 +106,22 @@ let get_segment (v:t) dir = match v.segments with
   | _, (dir2, seg) when Dir.equal dir dir2 -> seg
   | _ -> failwith "No matching direction found"
 
+let set_segment (v:t) dir seg =
+  let segments = match v.segments with
+    | (dir2, _), x when Dir.equal dir dir2 -> (dir2, seg), x
+    | x, (dir2, _) when Dir.equal dir dir2 -> x, (dir2, seg)
+    | _ -> failwith "No matching direction found"
+  in
+  {v with segments}
+
+let modify_segment (v:t) seg_old seg_new =
+  let segments = match v.segments with
+    | (d, seg2), x when Segment.equal_id seg_old seg2 -> (d, seg_new), x
+    | x, (d, seg2) when Segment.equal_id seg_old seg2 -> x, (d, seg_new)
+    | _ -> v.segments
+  in
+  {v with segments}
+
 let make ~x ~y ~year ~name ~kind ~player ~first ~segments =
   let info =
     match kind with
