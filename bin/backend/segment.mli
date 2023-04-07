@@ -8,4 +8,5 @@ module Map : sig
   val incr_train: t -> id -> unit
   val decr_train: t -> id -> unit
   val merge: t -> id -> id -> unit
+  val reset: t -> id -> unit
 end

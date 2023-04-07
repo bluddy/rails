@@ -347,7 +347,8 @@ end
 
 module StationSegments = struct
   (* Module to handle the connections between stations (segments). We use these
-     to make sure the 'semaphore' for the track is taken when a train is on it. *)
+     to make sure the 'semaphore' for the track has the right number of trains on it.
+   *)
 
   (* When we build a station, we create new station segments on both ends of the station *)
   let build_station_get_segments v track x y =
@@ -371,10 +372,10 @@ module StationSegments = struct
       (* Add an attached ixn: make the two have the same segment *)
       | Track [ixn1], Track [ixn2; ixn3] -> Some (ixn2, ixn3)
       (* Add an ixn to a 2-ixn. Make them all have same segment *)
-      | Track ([ixn1; ixn2] as l1), Ixn ([ixn3; ixn4; ixn5] as l2) ->
-          begin match Utils.find_mismatch ~eq:TS.eq ~big:l2 ~small:l1 with
-          | Some (ixn3, ixn1)
-          | None -> assert false
+      | Track (ixn1::_ as l1), Ixn l2 ->
+          begin match Utils.find_mismatch ~eq:TS.eq ~left:l2 ~right:l1 with
+          | Some ixn2 -> Some (ixn1, ixn2)
+          | None -> None
           end
       | _ -> None
     in
@@ -409,26 +410,44 @@ module StationSegments = struct
        keep track of the segment's semaphore value unless we scan the whole segment for
        trains.
        We're too lazy to do that so we'll just set all segment values to 0.
+       NOTE: This can cause train crashes.
      *)
-  let remove_track_split_segment v track x y (scan1:TS.scan) (scan2:TS.scan) =
-    let separate_pair =
-      match scan1, scan2 with
-      (* Disconnecting a track *)
+  let remove_track_split_segment v track x y (before:TS.scan) (after:TS.scan) =
+    let separate_pair = match before, after with
+      (* Disconnecting a track leading to 2 ixns *)
       | Track [ixn1; ixn2], Track [_] -> Some(ixn1, ixn2)
       (* Disconnecting an ixn *)
-      | Ixn ([_; _; _] as l1), Track ([ixn2; _] as l2) ->
-          begin match Utils.find_mismatch ~eq:TS.eq ~big:l1 ~small:l2 with
+      | Ixn l1, Track ((ixn2::_) as l2) ->
+          begin match Utils.find_mismatch ~eq:TS.eq ~left:l1 ~right:l2 with
           | Some ixn1 -> Some (ixn1, ixn2)
           | None -> assert false
           end
       (* Removing a station *)
-      | Station [ixn1; ixn2], (Track _ | NoResult) ->
-          Some (ixn1, ixn2)
+      | Station [ixn1; ixn2], _ -> Some (ixn1, ixn2)
       | _ -> None
     in
     match separate_pair with
     | None -> ()
-    | Some ixn1, ixn2 ->
+    | Some (ixn1, ixn2) ->
+        let ixn1 = (ixn1.x, ixn1.y) in
+        let ixn2 = (ixn2.x, ixn2.y) in
+        let (x1, y1), dir1 =
+          Graph.connected_stations_dirs v ixn1 |> Iter.head_exn
+        in
+        let station1 = Loc_map.get_exn v.stations x1 y1 in
+        let seg1 = Station.get_segment station1 dir1 in
+        (* Set value of segment to 0 *)
+        Segment.Map.reset v.segments seg1;
+        (* Create a new segment for the split segment *)
+        let seg2 = Segment.Map.get_id v.segments in
+
+        let stations = Graph.connected_stations_dirs v ixn2 in
+        (* Assign seg2 to these stations *)
+        Iter.iter (fun ((x, y), _) ->
+            Loc_map.update v.stations x y @@
+              (Option.map (fun station -> Station.modify_segment station seg1 seg2)))
+          stations;
+        ()
 
 end
 

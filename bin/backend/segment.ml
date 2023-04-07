@@ -20,6 +20,7 @@ module Map = struct
 
   let incr_train v idx = Hashtbl.incr v.map idx
   let decr_train v idx = Hashtbl.decr v.map idx
+  let reset v idx = Hashtbl.replace v.map idx 0
 
   (* Merge segments so seg2 joins seg1 *)
   let merge v seg1 seg2 =

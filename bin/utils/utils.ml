@@ -224,7 +224,11 @@ let classic_dist dx dy =
   let big, small = if dx > dy then dx, dy else dy, dx in
   big + small / 2
 
-let find_mismatch ~eq ~big ~small =
+(* Compare two lists of things, one left and one right. 
+   Find an element from the left list that doesn't exist in the right list 
+*)
+let find_mismatch ~eq ~left ~right =
   List.find_map (fun x ->
-    if List.find (fun y -> eq x y) small then None else Some x)
-  big
+    if List.mem ~eq x right then None else Some x)
+  left
+
