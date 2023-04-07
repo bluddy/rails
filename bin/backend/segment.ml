@@ -3,6 +3,10 @@ open Containers
 let src = Logs.Src.create "segments" ~doc:"Segments"
 module Log = (val Logs.src_log src: Logs.LOG)
 
+  (* Module to handle the connections between stations (segments). We use these
+     to make sure the 'semaphore' for the track has the right number of trains on it.
+   *)
+
 type id = int
 [@@deriving yojson, eq]
 
@@ -35,3 +39,5 @@ module Map = struct
     Hashtbl.remove v.map seg2
 
 end
+
+

@@ -63,7 +63,7 @@ module AddCars = struct
     else if v.train_done && (Event.pressed_esc event || Event.is_left_click event) then
       let station = v.anim.station in
       let other_station =
-        Backend.Graph.connected_stations_dirs s.backend.graph s.backend.stations station
+        Track_graph.connected_stations_dirs s.backend.graph s.backend.stations station
         |> Iter.head
         |> Option.map fst
       in
