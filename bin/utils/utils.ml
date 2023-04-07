@@ -224,4 +224,7 @@ let classic_dist dx dy =
   let big, small = if dx > dy then dx, dy else dy, dx in
   big + small / 2
 
-
+let find_mismatch ~eq ~big ~small =
+  List.find_map (fun x ->
+    if List.find (fun y -> eq x y) small then None else Some x)
+  big

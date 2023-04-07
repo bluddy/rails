@@ -235,10 +235,11 @@ let remove_track v ~x ~y ~dir ~player =
   v
 
 module Search = struct
-  (* For searching for stations and ixns.
-     For updating the graph
+  (* Module for searching the trackmap for stations and ixns.
+     For updating the graph and the station segment connectivity
    *)
-  type t = {
+  (* This is our return type representing an ixn. Will be used to introspect *)
+  type ixn = {
     x: int;
     y: int;
     dist: int;
@@ -250,7 +251,7 @@ module Search = struct
   let eq res1 res2 = res1.x = res2.x && res1.y = res2.y
   let neq res1 res2 = not (res1 = res2)
 
-  let make x y dist dir search_dir station =
+  let _make_ixn x y dist dir search_dir station =
     {x; y; dist; dir; search_dir; station}
 
     (* Scan for a new segment ending in a station or ixn *)
@@ -262,9 +263,9 @@ module Search = struct
       let oppo_dir = Dir.opposite dir in
       match get v x y with
       | Some {ixn = true; player; _} when player = player2 ->
-          Some (make x y dist oppo_dir search_dir false) 
+          Some (_make_ixn x y dist oppo_dir search_dir false) 
       | Some {kind = Station _; player; _} when player = player2 ->
-          Some (make x y dist oppo_dir search_dir true)
+          Some (_make_ixn x y dist oppo_dir search_dir true)
       | Some {dirs; player; _} when player = player2 ->
           (* Find other dir and follow it *)
           let other_dirs = Dir.Set.remove dirs oppo_dir in
@@ -283,12 +284,12 @@ module Search = struct
     loop_to_node x2 y2 dir 1
 
     (* Ixn/Station/Track: what we're pointing at.
-       List: what we're connected to *)
+       List: what we're connected to. *)
   type scan =
     | NoResult
-    | Ixn of t list
-    | Station of t list
-    | Track of t list
+    | Ixn of ixn list (* 0/1/2 ixns *)
+    | Station of ixn list  (* 0/1 ixns *)
+    | Track of ixn list (* 0/1 ixns *)
           
   (* Return a query about the segment from a particular tile
      Get back a list of directions and result pairs
