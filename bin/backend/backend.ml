@@ -300,14 +300,14 @@ module Graph = struct
        search_dir: start searching in a given direction
        exclude_ixns: exclude these ixns from the search
      *)
-  let connected_stations_dirs ?search_dir ?exclude_ixns v ixn =
+  let connected_stations_dirs ?search_dir ?exclude_ixns graph station_map ixn =
     let stations = Hashtbl.create 10 in
     let start_ixns = Hashtbl.create 5 in
     (* Prevent loops *)
     let seen_ixns = Hashtbl.create 5 in
     begin match search_dir, exclude_ixns with
     | Some dir, _ ->
-        begin match Track_graph.find_ixn_from_ixn_dir v.graph ~ixn ~dir with
+        begin match Track_graph.find_ixn_from_ixn_dir graph ~ixn ~dir with
         | Some ixn2 ->
             Hashtbl.replace start_ixns ixn2 ()
         | None -> ()
@@ -327,12 +327,12 @@ module Graph = struct
         if Hashtbl.mem seen_ixns ixn then ()
         else begin 
           Track_graph.iter_succ_ixn_dirs (fun ((x,y) as ixn) dir ->
-            if Loc_map.mem v.stations x y then 
+            if Loc_map.mem station_map x y then 
               Hashtbl.replace stations ixn dir
             else 
               Hashtbl.replace ixns2 ixn ())
           ~ixn
-          v.graph
+          graph
         end;
         Hashtbl.replace seen_ixns ixn ())
         ixns;
@@ -354,7 +354,7 @@ module StationSegments = struct
   let build_station_get_segments v track x y =
     let tile = Trackmap.get_exn track x y in
     Dir.Set.fold (fun acc dir ->
-      match Graph.connected_stations_dirs ~search_dir:dir v (x,y) |> Iter.head with
+      match Graph.connected_stations_dirs ~search_dir:dir v.graph v.stations (x,y) |> Iter.head with
       | Some ((x,y), station_dir) ->
           let station = Loc_map.get_exn v.stations x y in
           let seg = Station.get_segment station station_dir in
@@ -385,13 +385,13 @@ module StationSegments = struct
         let ixn1 = (ixn1.x, ixn1.y) in
         let ixn2 = (ixn2.x, ixn2.y) in
         let (x1, y1), dir1 =
-          Graph.connected_stations_dirs v ixn1 ~exclude_ixns:[ixn2]
+          Graph.connected_stations_dirs v.graph v.stations ixn1 ~exclude_ixns:[ixn2]
           |> Iter.head_exn
         in
         let station1 = Loc_map.get_exn v.stations x1 y1 in
         let seg1 = Station.get_segment station1 dir1 in
         let stations =
-          Graph.connected_stations_dirs v ixn2 ~exclude_ixns:[ixn1]
+          Graph.connected_stations_dirs v.graph v.stations ixn2 ~exclude_ixns:[ixn1]
           |> Iter.to_list
         in
         let (x2, y2), dir2 = List.hd stations in
@@ -432,7 +432,7 @@ module StationSegments = struct
         let ixn1 = (ixn1.x, ixn1.y) in
         let ixn2 = (ixn2.x, ixn2.y) in
         let (x1, y1), dir1 =
-          Graph.connected_stations_dirs v ixn1 |> Iter.head_exn
+          Graph.connected_stations_dirs v.graph v.stations ixn1 |> Iter.head_exn
         in
         let station1 = Loc_map.get_exn v.stations x1 y1 in
         let seg1 = Station.get_segment station1 dir1 in
@@ -441,7 +441,7 @@ module StationSegments = struct
         (* Create a new segment for the split segment *)
         let seg2 = Segment.Map.get_id v.segments in
 
-        let stations = Graph.connected_stations_dirs v ixn2 in
+        let stations = Graph.connected_stations_dirs v.graph v.stations ixn2 in
         (* Assign seg2 to these stations *)
         Iter.iter (fun ((x, y), _) ->
             Loc_map.update v.stations x y @@
