@@ -467,10 +467,10 @@ let check_build_station v ~x ~y ~player station_type =
   | x -> x
 
 let _build_station v ~x ~y station_type ~player =
-  let scan1 = TS.scan v.track ~x ~y ~player in
+  let before = TS.scan v.track ~x ~y ~player in
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
-  let scan2 = TS.scan track ~x ~y ~player in
-  let graph = Graph.handle_build_station v ~x ~y scan1 scan2 in
+  let after = TS.scan track ~x ~y ~player in
+  let graph = Graph.handle_build_station v ~x ~y before after in
   let segments = StationSegments.build_station_get_segments v track x y in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let check_for_first_city () =

@@ -147,12 +147,14 @@ let iter_succ_ixn_dirs f v ~ixn =
   v.graph
   ixn
 
-(* Follow an ixn in a given dir *)
+(* Follow an ixn in a given dir to get the next ixn *)
 let find_ixn_from_ixn_dir v ~ixn ~dir =
   let x, y = ixn in
-  G.fold_succ_e (fun (_,e,ixn2) acc ->
-    if Edge.has_xydir x y dir e then Some ixn2 else acc)
-  v.graph ixn None
+  try
+    G.fold_succ_e (fun (_,e,ixn2) acc ->
+      if Edge.has_xydir x y dir e then Some ixn2 else acc)
+    v.graph ixn None
+  with Invalid_argument _ -> None
 
   (* Find the shortest path branch from an ixn given a from_dir entering the ixn,
      which is excluded
