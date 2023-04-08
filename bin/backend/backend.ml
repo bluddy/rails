@@ -169,7 +169,7 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_station v.graph ~x ~y before after in
-  let segments = Backend_low.build_station_get_segments v.graph v.stations v.segments track x y in
+  let segments = Backend_low.Segments.build_station_get_segments v.graph v.stations v.segments track x y in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let check_for_first_city () =
     (* first one has engine shop *)

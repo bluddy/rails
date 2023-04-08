@@ -7,6 +7,8 @@ module C = Constants
 
 (* Low-level backend module. Deals with multiple modules at a time *)
 
+module Segments = struct
+
 (* When we build a station, we create new station segments on both ends of the station *)
 let build_station_get_segments graph stations segments track x y =
   let tile = Trackmap.get_exn track x y in
@@ -108,6 +110,8 @@ let remove_track_split_segment graph station_map segments track x y (before:TS.s
             (Option.map (fun station -> Station.modify_segment station seg1 seg2)))
         stations;
       ()
+
+end
 
 module Graph = struct
   open TS
