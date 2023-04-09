@@ -180,30 +180,27 @@ let shortest_path_branch ~ixn ~dir ~dest v =
 
   (* Get stations directly connected to a particular ixn or station
      using the track graph.
-     search_dir: start searching in a given direction
+     exclude_dir: exclude searching in a given direction
      exclude_ixns: exclude these ixns from the search
    *)
-let connected_stations_dirs ?search_dir ?exclude_ixns graph station_map ixn =
+let connected_stations_dirs ?exclude_dir ?exclude_ixns graph station_map ixn =
   let stations = Hashtbl.create 10 in
   let start_ixns = Hashtbl.create 5 in
   (* Prevent loops *)
   let seen_ixns = Hashtbl.create 5 in
-  begin match search_dir, exclude_ixns with
-  | Some dir, _ ->
-      begin match find_ixn_from_ixn_dir graph ~ixn ~dir with
+  begin match exclude_dir, exclude_ixns with
+  | Some exclude_dir, _ ->
+      begin match find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir with
       | Some ixn2 ->
-          Hashtbl.replace start_ixns ixn2 ()
-      | None -> ()
+          Hashtbl.replace seen_ixns ixn2 ()
+      | _ -> ()
       end;
-      (* Avoid going back to original ixn *)
-      Hashtbl.replace seen_ixns ixn ();
   | _, Some exclude_ixns ->
       (* Exclude some ixns and start from given ixn *)
       List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
-      Hashtbl.replace start_ixns ixn ()
-  | None, None ->
-      Hashtbl.replace start_ixns ixn ()
+  | _ -> ()
   end;
+  Hashtbl.replace start_ixns ixn ();
   let rec loop ixns =
     let ixns2 = Hashtbl.create 10 in
     Hashtbl.iter (fun ixn _ ->

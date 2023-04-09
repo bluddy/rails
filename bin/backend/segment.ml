@@ -19,7 +19,7 @@ module Map = struct
 
   let make () = { last=0; map=Hashtbl.create 10; }
 
-  let get_id v =
+  let new_id v =
     Hashtbl.replace v.map v.last 0;
     let ret = v.last in
     v.last <- succ v.last;
