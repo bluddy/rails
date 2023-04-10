@@ -13,6 +13,7 @@ module C = Constants
 module Segments = struct
 
   (* When we build a station, we create new station segments on both ends of the station *)
+  (* TODO: for upgrade, need to compare before and after *)
   let build_station_get_segments graph stations segments trackmap x y after =
     let ixns = match after with
       | TS.Station ixns -> ixns
@@ -41,21 +42,20 @@ module Segments = struct
         (* Assert only 2 dirs *)
         Dir.Set.to_list track.dirs 
         |> List.map (fun dir -> dir, Segment.Map.new_id segments)
-    | [(dir, seg)] as x -> 
+    | [(dir, _)] as x -> 
         (Dir.opposite dir, Segment.Map.new_id segments)::x
     | _ -> dir_segs
 
   (* We only care about connecting to a new piece of track that could lead
   to a station. ixns and stations are the same for this
-  TODO: use this function
   *)
-  let build_track_join_segments graph station_map segments track x y (scan1:TS.scan) (scan2:TS.scan) =
-    let join_ixns = match scan1, scan2 with
+  let build_track_join_segments graph station_map segments before after =
+    let join_ixns = match before, after with
       (* Add an attached ixn: make the two have the same segment *)
-      | Track [ixn1], Track [ixn2; ixn3] -> Some (ixn2, ixn3)
+      | TS.Track [_], TS.Track [ixn2; ixn3] -> Some (ixn2, ixn3)
       (* Add an ixn to a 2-ixn. Make them all have same segment *)
       | Track (ixn1::_ as l1), Ixn l2 ->
-          begin match Utils.find_mismatch ~eq:TS.eq ~left:l2 ~right:l1 with
+          begin match Utils.find_mismatch ~eq:TS.equal_ixn ~left:l2 ~right:l1 with
           | Some ixn2 -> Some (ixn1, ixn2)
           | None -> None
           end
@@ -92,21 +92,20 @@ module Segments = struct
        keep track of the segment's semaphore value unless we scan the whole segment for
        trains.
        We're too lazy to do that so we'll just set all segment values to 0.
-       NOTE: This can cause train crashes.
-       TODO: use this function
+       NOTE: This can cause train crashes. Implement with mapping to trains.
      *)
-  let remove_track_split_segment graph station_map segments track x y (before:TS.scan) (after:TS.scan) =
+  let remove_track_split_segment graph station_map segments (before:TS.scan) (after:TS.scan) =
     let separate_pair = match before, after with
       (* Disconnecting a track leading to 2 ixns *)
       | Track [ixn1; ixn2], Track [_] -> Some(ixn1, ixn2)
       (* Disconnecting an ixn *)
       | Ixn l1, Track ((ixn2::_) as l2) ->
-          begin match Utils.find_mismatch ~eq:TS.eq ~left:l1 ~right:l2 with
+          begin match Utils.find_mismatch ~eq:TS.equal_ixn ~left:l1 ~right:l2 with
           | Some ixn1 -> Some (ixn1, ixn2)
           | None -> assert false
           end
       (* Removing a station *)
-      | Station [ixn1; ixn2], _ -> Some (ixn1, ixn2)
+      | Station [ixn1; ixn2], (Track _ | NoResult) -> Some (ixn1, ixn2)
       | _ -> None
     in
     match separate_pair with
@@ -123,7 +122,6 @@ module Segments = struct
         Segment.Map.reset segments seg1;
         (* Create a new segment for the split segment *)
         let seg2 = Segment.Map.new_id segments in
-
         let stations = Track_graph.connected_stations_dirs graph station_map ixn2 in
         (* Assign seg2 to these stations *)
         Iter.iter (fun ((x, y), _) ->
@@ -153,7 +151,7 @@ module Graph = struct
     match scan1, scan2 with
       (* Unfinished edge. Connect a station here.
           x---       ->    x---s *)
-    | Track [ixn1], Station [ixn2] when TS.(eq ixn1 ixn2) ->
+    | Track [ixn1], Station [ixn2] when TS.(equal_ixn ixn1 ixn2) ->
         G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
                       ~x2:x ~y2:y ~dir2:ixn2.search_dir ~dist:ixn2.dist
                       graph
@@ -163,10 +161,10 @@ module Graph = struct
       Remove the edge and rebuild it to the new station.
     *)
     | Track [ixn1; ixn2], Station [ixn3; ixn4]
-        when TS.(eq ixn1 ixn3 && eq ixn2 ixn4) ->
+        when TS.(equal_ixn ixn1 ixn3 && equal_ixn ixn2 ixn4) ->
         add_to_edge ixn1 ixn2 ixn3 ixn4
     | Track [ixn1; ixn2], Station [ixn4; ixn3]
-        when TS.(eq ixn1 ixn3 && eq ixn2 ixn4) ->
+        when TS.(equal_ixn ixn1 ixn3 && equal_ixn ixn2 ixn4) ->
         add_to_edge ixn1 ixn2 ixn3 ixn4
     | _, _ -> graph
 
@@ -174,7 +172,7 @@ module Graph = struct
   let handle_build_track graph scan1 scan2 =
     match scan1, scan2 with
       | Track [ixn1], Track [ixn2; ixn3]
-          when TS.(eq ixn1 ixn2 || eq ixn1 ixn3) ->
+          when TS.(equal_ixn ixn1 ixn2 || equal_ixn ixn1 ixn3) ->
           (* Only case: unfinished edge. Connect an intersection.
               x---       ->    x---x *)
           G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
@@ -192,14 +190,14 @@ module Graph = struct
         (* Unfinished edge. Connect an intersection.
           x---       ->    x---x *)
       | Track [ixn1], Track [ixn2; ixn3]
-          when TS.(eq ixn1 ixn2 || TS.eq ixn1 ixn3) ->
+          when TS.(equal_ixn ixn1 ixn2 || equal_ixn ixn1 ixn3) ->
             G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
                           ~x2:ixn3.x ~y2:ixn3.y ~dir2:ixn3.dir
                           ~dist:(ixn2.dist+ixn3.dist)
                           graph
         (* Unfinished edge. Create an intersection.
           x---       ->    x--+ *)
-      | Track [ixn1], Ixn [ixn2] when TS.eq ixn1 ixn2 ->
+      | Track [ixn1], Ixn [ixn2] when TS.equal_ixn ixn1 ixn2 ->
           G.add_segment ~x1:ixn2.x ~y1:ixn2.y ~dir1:ixn2.dir
                         ~x2:x ~y2:y ~dir2:ixn2.search_dir
                         ~dist:ixn2.dist
@@ -207,7 +205,7 @@ module Graph = struct
         (* Regular edge. We add an intersection in the middle.
           x-----x    ->    x--+--x *)
       | Track [ixn1; ixn2], Ixn [ixn3; ixn4]
-        when TS.(eq ixn1 ixn3 && eq ixn2 ixn4 || eq ixn1 ixn4 && eq ixn2 ixn3) ->
+        when TS.(equal_ixn ixn1 ixn3 && equal_ixn ixn2 ixn4 || equal_ixn ixn1 ixn4 && equal_ixn ixn2 ixn3) ->
           graph
           |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
           |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
@@ -224,9 +222,9 @@ module Graph = struct
             |                |
           x-----x    ->    x--+--x *)
       | Track [ixn1; ixn2], Ixn [ixn3; ixn4; ixn5]
-        when TS.((eq ixn1 ixn3 && (eq ixn2 ixn4 || eq ixn2 ixn5))
-          || (eq ixn1 ixn4 && (eq ixn2 ixn3 || eq ixn2 ixn5))
-          || (eq ixn1 ixn5 && (eq ixn2 ixn3 || eq ixn2 ixn4))) ->
+        when TS.((equal_ixn ixn1 ixn3 && (equal_ixn ixn2 ixn4 || equal_ixn ixn2 ixn5))
+          || (equal_ixn ixn1 ixn4 && (equal_ixn ixn2 ixn3 || equal_ixn ixn2 ixn5))
+          || (equal_ixn ixn1 ixn5 && (equal_ixn ixn2 ixn3 || equal_ixn ixn2 ixn4))) ->
           graph
           |> G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir
           |> G.add_segment ~x1:ixn3.x ~y1:ixn3.y ~dir1:ixn3.dir
@@ -246,7 +244,7 @@ module Graph = struct
         (* Was edge. Now disconnected
           x---x       ->    x- -x *)
       | Track [ixn1; ixn2], Track [ixn3]
-          when TS.(eq ixn2 ixn3 || TS.eq ixn1 ixn3) ->
+          when TS.(equal_ixn ixn2 ixn3 || equal_ixn ixn1 ixn3) ->
             G.remove_segment ~x:ixn1.x ~y:ixn1.y ~dir:ixn1.dir graph
 
         (* Was station. Now station gone.

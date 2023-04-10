@@ -248,8 +248,8 @@ module Search = struct
     station: bool;
   }
 
-  let eq res1 res2 = res1.x = res2.x && res1.y = res2.y
-  let neq res1 res2 = not (res1 = res2)
+  let equal_ixn res1 res2 = res1.x = res2.x && res1.y = res2.y
+  let nequal_ixn res1 res2 = not (res1 = res2)
 
   let _make_ixn x y dist dir search_dir station =
     {x; y; dist; dir; search_dir; station}
@@ -290,6 +290,7 @@ module Search = struct
     | Ixn of ixn list (* 0/1/2 ixns *)
     | Station of ixn list  (* 0/1 ixns *)
     | Track of ixn list (* 0/1 ixns *)
+    [@@deriving eq]
           
   (* Return a query about the segment from a particular tile
      Get back a list of directions and result pairs

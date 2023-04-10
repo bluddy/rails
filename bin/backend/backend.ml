@@ -150,13 +150,14 @@ let get_money v ~player = Player.get_money v.players.(player)
 
 
 let _build_tunnel v ~x ~y ~dir ~player ~length =
-  let scan1 = TS.scan v.track ~x ~y ~player in
+  let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
-  let scan2 = TS.scan track ~x ~y ~player in
-  let graph = Backend_low.Graph.handle_build_track v.graph scan1 scan2 in
+  let after = TS.scan track ~x ~y ~player in
+  let graph = Backend_low.Graph.handle_build_track v.graph before after in
+  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
   modify_player v ~player (Player.add_track ~length);
-  if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
+  if v.track =!= track then v.track <- track;
   v
 
 let check_build_station v ~x ~y ~player station_type =
@@ -169,7 +170,7 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_station v.graph ~x ~y before after in
-  let dir_segments = Backend_low.Segments.build_station_get_segments v.graph v.stations v.segments track x y after in
+  let dir_segments = Backend_low.Segments.build_station_get_segments graph v.stations v.segments track x y after in
   let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
   let check_for_first_city () =
     (* first one has engine shop *)
@@ -192,7 +193,6 @@ let _build_station v ~x ~y station_type ~player =
   if build_new_track then (
     modify_player v ~player @@ Player.add_track ~length:1
   );
-
   (* Initialize supply and demand *)
   let simple_economy =
     not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
@@ -211,28 +211,30 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | _ -> `Illegal
 
 let _build_bridge v ~x ~y ~dir ~player ~kind =
-  let scan1 = TS.scan v.track ~x ~y ~player in
+  let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   modify_player v ~player (Player.add_track ~length:2);
-  let scan2 = TS.scan track ~x ~y ~player in
-  let graph = Backend_low.Graph.handle_build_track v.graph scan1 scan2 in
+  let after = TS.scan track ~x ~y ~player in
+  let graph = Backend_low.Graph.handle_build_track v.graph before after in
+  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
 
 let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
-  let scan1 = TS.scan v.track ~x ~y ~player in
+  let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   modify_player v ~player (Player.add_track ~length:1);
-  let scan2 = TS.scan track ~x ~y ~player in
-  let graph = Backend_low.Graph.handle_build_track_complex v.graph ~x ~y scan1 scan2 in
+  let after = TS.scan track ~x ~y ~player in
+  let graph = Backend_low.Graph.handle_build_track_complex v.graph ~x ~y before after in
+  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
 
 let _build_ferry v ~x ~y ~dir ~player =
-  let scan1 = TS.scan v.track ~x ~y ~player in
+  let before = TS.scan v.track ~x ~y ~player in
   let tile1 = get_tile v x y in
   let dx, dy = Dir.to_offsets dir in
   let tile2 = get_tile v (x+dx) (y+dy) in
@@ -244,8 +246,9 @@ let _build_ferry v ~x ~y ~dir ~player =
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   modify_player v ~player (Player.add_track ~length:1);
-  let scan2 = TS.scan track ~x ~y ~player in
-  let graph = Backend_low.Graph.handle_build_track v.graph scan1 scan2 in
+  let after = TS.scan track ~x ~y ~player in
+  let graph = Backend_low.Graph.handle_build_track v.graph before after in
+  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
@@ -254,10 +257,11 @@ let check_remove_track v ~x ~y ~dir ~player=
   Trackmap.check_remove_track v.track ~x ~y ~dir ~player
 
 let _remove_track v ~x ~y ~dir ~player =
-  let scan1 = TS.scan v.track ~x ~y ~player in
+  let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
-  let scan2 = TS.scan track ~x ~y ~player in
-  let graph = Backend_low.Graph.handle_remove_track v.graph ~x ~y scan1 scan2 in
+  let after = TS.scan track ~x ~y ~player in
+  let graph = Backend_low.Graph.handle_remove_track v.graph ~x ~y before after in
+  Backend_low.Segments.remove_track_split_segment graph v.stations v.segments before after;
   modify_player v ~player (Player.add_track ~length:(-1));
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
