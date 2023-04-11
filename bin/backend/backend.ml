@@ -398,23 +398,23 @@ let update_all_trains (v:t) =
 
         (* TODO: fiscal period update stuff *)
 
+        (* Train update loop *)
         let rec loop speed_bound =
           if speed_bound >= train.speed then ()
           else
-            let speed = train.speed in
             let speed =
-              if Dir.is_diagonal train.dir then ((speed * 2) + 1) / 3
-              else speed
+              if Dir.is_diagonal train.dir then ((train.speed * 2) + 1) / 3
+              else train.speed
             in
-            let speed =
+            let update_val =
               if speed > 12 then 
-                if speed_bound = 0 then 12
-                else speed - 12
+                if speed_bound = 0 then 12 else speed - 12
               else speed
             in
-            let speed = speed / region_div |> Utils.clip ~min:1 ~max:99 in
+            (* BUGFIX: original code allowed sampling from random memory *)
+            let update_val = update_val / region_div |> min Train.update_array_length in
             (* NOTE: This is unsafe, as the speed could potentially exceed the size of the array *)
-            if Train.update_cycle_array.(speed) land cycle_bit <> 0 then begin
+            if Train.update_cycle_array.(update_val) land cycle_bit <> 0 then begin
               (* Check if we're in the middle of a tile.
                  This is where the advanced processing happens.
                *)
@@ -429,13 +429,13 @@ let update_all_trains (v:t) =
               let dx, dy = Dir.to_offsets train.dir in
               train.x <- train.x + dx;
               train.y <- train.y + dy;
+              train.pixels_from_midtile <- succ train.pixels_from_midtile;
             end;
             loop (speed_bound + 12)
         in
         loop 0;
        end)
-    v.trains
-    ~init:0) @@
+    v.trains) @@
   Iter.(0 -- 23)
 
   (** Most time-based work happens here **)

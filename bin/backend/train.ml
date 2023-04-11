@@ -68,6 +68,7 @@ type t = {
   mutable x: int;
   mutable y: int;
   engine: Engine.t;
+  mutable pixels_from_midtile: int;
   mutable dir: Dir.t;
   mutable speed: int;
   mutable wait_time: int; (* for updating train *)
@@ -108,6 +109,7 @@ let make (x,y) engine cars other_station ~dir =
     x=x * Constants.tile_w;
     y=y * Constants.tile_h;
     engine;
+    pixels_from_midtile=0;
     dir;
     speed=0;
     target_speed=0;
@@ -221,6 +223,8 @@ let calc_car_pos (v:t) car = ()
  *)
 let update_cycle_array =
   [| 0; 1; 0x41; 0x111; 0x249; 0x8A5; 0x555; 0x5AD; 0x6DB; 0x777; 0x7DF; 0x7FF; 0xFFF |]
+
+let update_array_length = Array.length update_cycle_array
 
 let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
   (* Update current train speed based on target speed and cycle *)
