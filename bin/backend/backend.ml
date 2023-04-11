@@ -407,7 +407,7 @@ let _update_all_trains (v:t) =
         (* TODO: fiscal period update stuff *)
 
         (* Train update loop *)
-        let rec loop speed_bound =
+        let rec train_update_loop speed_bound =
           if speed_bound >= train.speed then ()
           else
             let speed =
@@ -435,22 +435,24 @@ let _update_all_trains (v:t) =
               train.y <- train.y + dy;
               train.pixels_from_midtile <- succ train.pixels_from_midtile;
             );
-            loop (speed_bound + 12)
+            train_update_loop (speed_bound + 12)
         in
-        loop 0;
+        train_update_loop 0;
        end)
     v.trains) @@
   Iter.(0 -- 23)
 
   (** Most time-based work happens here **)
-let handle_cycle v =
+let _handle_cycle v =
   v.cycle <- v.cycle + 1;
+
+  _update_all_trains v;
 
   (* TODO: ai_routines *)
 
   let demand_msgs =
     if v.cycle mod cycles_station_supply_demand = 0 then (
-      Printf.printf "handle_cycle%!\n";
+      Printf.printf "_handle_cycle%!\n";
       let difficulty = v.options.difficulty in
       let climate = v.climate in
       let simple_economy =
@@ -494,7 +496,7 @@ let handle_tick v cur_time =
 
   if cur_time >= new_time then (
     v.last_tick <- cur_time;
-    let v, misc_msgs = handle_cycle v in
+    let v, misc_msgs = _handle_cycle v in
     v, ui_msgs @ misc_msgs
   )
   else

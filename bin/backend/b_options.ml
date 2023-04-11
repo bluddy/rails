@@ -9,7 +9,7 @@ type speed =
 
   (* multiplier for speed, relationship between rates *)
 let delay_mult_of_speed = function
-  | `Frozen -> 1000000 (* frozen *)
+  | `Frozen -> 10000000 (* frozen *)
   | `Slow -> 30
   | `Moderate -> 9
   | `Fast -> 3
