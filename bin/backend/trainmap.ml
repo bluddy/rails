@@ -26,6 +26,8 @@ let last v =
 
 let iter f v = Utils.Vector.iter f v
 
+let iteri f v = Utils.Vector.iteri f v
+
 let fold f v ~init = Utils.Vector.fold f init v
 
 let foldi f v ~init = Utils.Vector.foldi f init v

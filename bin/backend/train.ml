@@ -98,7 +98,7 @@ let freight_of_cars cars =
   Goods.FreightMail
   cars
 
-let make (x, y) engine cars other_station ~dir =
+let make (x,y) engine cars other_station ~dir =
   let route = [make_stop x y None] in
   let route = match other_station with
     | Some (x,y) -> route @ [make_stop x y None]
@@ -224,16 +224,20 @@ let update_cycle_array =
 
 let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
   (* Update current train speed based on target speed and cycle *)
-  (* Check accelerate *)
-  let speed_diff = max 12 @@ v.target_speed - v.speed in
-  if (cycle mod cycle_check) = 0 && v.speed > 1 &&
-     (update_cycle_array.(speed_diff) land cycle_bit) <> 0 then begin
-      v.speed <- succ v.speed
-  end;
-  (* Check decelerate *)
-  if cycle mod 8 = 0 && v.target_speed < v.speed then begin
-    v.speed <- pred v.speed
-  end
+  if v.target_speed >= v.speed then (
+    (* accelerate *)
+    let speed_diff = min 12 (v.target_speed - v.speed) in
+    if v.speed <= 1 ||
+       (cycle mod cycle_check = 0 &&
+       (update_cycle_array.(speed_diff) land cycle_bit) <> 0) then begin
+        v.speed <- succ v.speed
+    end;
+  ) else (
+  (* decelerate *)
+    if cycle mod 8 = 0 then begin
+      v.speed <- pred v.speed
+    end
+  )
 
 let get_weight v =
   List.fold_left (fun weight car ->

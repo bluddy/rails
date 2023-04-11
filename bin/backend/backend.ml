@@ -387,54 +387,56 @@ let update_all_trains (v:t) =
   let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl ((v.cycle / 16) mod 12) in
 
-  Trainmap.foldi (fun idx max_priority (train:Train.t) ->
-    let priority = (Goods.freight_to_enum train.freight) * 3 -
-                   (Train.train_type_to_enum train._type) + 2 in
-    if priority <= max_priority && train.wait_time > 0 && train.speed > 0 then begin
-      Train.update_speed train ~cycle:v.cycle ~cycle_check ~cycle_bit;
+  (* We update the high priority trains more than the low priority *)
+  Iter.iter (fun max_priority ->
+    Trainmap.iteri (fun idx (train:Train.t) ->
+      let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in
+      if priority <= max_priority &&
+         train.wait_time = 0 || train.speed > 0 then begin
 
-      (* Todo: fiscal period update stuff *)
+        Train.update_speed train ~cycle:v.cycle ~cycle_check ~cycle_bit;
 
-      (* Adjust location based on speed / 12 *)
-      let rec loop mult_12 =
-        if mult_12 * 12 >= train.speed then ()
-        else
-          let speed =
-            if Dir.is_diagonal train.dir then ((train.speed * 2) + 1) / 3
-            else train.speed
-          in
-          let speed =
-            if speed > 12 then if mult_12 = 0 then 12 else speed - 12 else speed
-          in
-          let speed = speed / region_div |> Utils.clip ~min:1 ~max:99 in
+        (* TODO: fiscal period update stuff *)
 
-          let mid_tile_check () =
-            train.x mod C.tile_w = C.tile_w / 2 &&
-            train.y mod C.tile_h = C.tile_h / 2
-          in
-
-          if Train.update_cycle_array.(speed) land cycle_bit <> 0 then begin
-            (* Check if we're in the middle of a tile.
-               This is where the advanced processing happens.
-             *)
-            if mid_tile_check () then (
-               update_train_mid_tile ~idx ~cycle:v.cycle v train;
-            );
-
-            (* Always advance train by single pixel *)
-            let dx, dy = Dir.to_offsets train.dir in
-            train.x <- train.x + dx;
-            train.y <- train.y + dy;
-          end;
-
-          loop (mult_12 + 1)
-      in
-      loop 0;
-      priority
-    end else
-      priority)
-  v.trains
-  ~init:0
+        let rec loop speed_bound =
+          if speed_bound >= train.speed then ()
+          else
+            let speed = train.speed in
+            let speed =
+              if Dir.is_diagonal train.dir then ((speed * 2) + 1) / 3
+              else speed
+            in
+            let speed =
+              if speed > 12 then 
+                if speed_bound = 0 then 12
+                else speed - 12
+              else speed
+            in
+            let speed = speed / region_div |> Utils.clip ~min:1 ~max:99 in
+            (* NOTE: This is unsafe, as the speed could potentially exceed the size of the array *)
+            if Train.update_cycle_array.(speed) land cycle_bit <> 0 then begin
+              (* Check if we're in the middle of a tile.
+                 This is where the advanced processing happens.
+               *)
+              let mid_tile_check () =
+                (train.x mod C.tile_w) = C.tile_w / 2 &&
+                (train.y mod C.tile_h) = C.tile_h / 2
+              in
+              if mid_tile_check () then (
+                 update_train_mid_tile ~idx ~cycle:v.cycle v train;
+              );
+              (* Always advance train by single pixel *)
+              let dx, dy = Dir.to_offsets train.dir in
+              train.x <- train.x + dx;
+              train.y <- train.y + dy;
+            end;
+            loop (speed_bound + 12)
+        in
+        loop 0;
+       end)
+    v.trains
+    ~init:0) @@
+  Iter.(0 -- 23)
 
   (** Most time-based work happens here **)
 let handle_cycle v =
