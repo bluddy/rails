@@ -334,24 +334,28 @@ let get_train v idx = Trainmap.get v.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-let update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
+let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
   
-  (* TODO: check for colocated trains *)
+  (* TODO: check for colocated trains (accidents/stop a train) *)
 
   let track = Trackmap.get_exn v.track tile_x tile_y in
-  (* Adjust direction *)
+  (* Adjust direction as needed *)
   let dir =
-    if track.ixn then
+    if track.ixn &&
+      Dir.Set.num_adjacent train.dir track.dirs > 1 then
       let dest = Train.get_dest train in
       Track_graph.shortest_path_branch v.graph
         ~ixn:(tile_x, tile_y) ~dir:train.dir ~dest 
-        |> Option.get_exn_or "Cannot find route" 
+        |> Option.get_exn_or "Cannot find route for train" 
     else
-      Dir.find_nearest_in_set train.dir track.dirs
+      Dir.Set.find_nearest train.dir track.dirs
       |> Option.get_exn_or "Cannot find track for train"
   in
-  (* Speed factor computation *)
+
+  (* TODO: handle entering station *)
+
+  (* Speed factor computation from height delta and turn *)
   let height1 = Tilemap.get_tile_height v.map tile_x tile_y in
   let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in
   let track2 = Trackmap.get_exn v.track tile_x2 tile_y2 in
@@ -366,24 +370,28 @@ let update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   let turn_factor = Dir.diff dir train.dir in
   let speed_factor = (height_factor * height_factor / 144) + turn_factor in
   train.dir <- dir;
+  train.pixels_from_midtile <- 0;
 
+  (* History lets us reuse the engine orientation for the cars as they cross *)
   Train.History.add train.history train.x train.y train.dir speed_factor;
-  let weight = Train.get_weight train in
-  let max_speed_factor = Train.get_max_speed_factor train in
-  Train.target_speed_from_factors train ~idx ~cycle ~weight ~max_speed_factor;
+
+  (* Compute and set target speed *)
   begin match Tilemap.get_tile v.map tile_x tile_y with
   | Ocean _ | Harbor _ ->
-      train.target_speed <- 1;
-      train.speed <- 1;
-  | _ -> ()
+      Train.set_target_speed train 1;
+      Train.set_speed train 1;
+  | _ ->
+      let target_speed = Train.compute_target_speed train ~idx ~cycle in
+      Train.set_target_speed train target_speed;
   end;
+  (* Bookkeeping *)
   let dist = if Dir.is_diagonal dir then 2 else 3 in
   Train.add_dist_traveled train dist v.fiscal_period;
-  v.stats.dist_traveled <- succ v.stats.dist_traveled;
+  v.stats.dist_traveled <- v.stats.dist_traveled + dist;
   ()
 
   (* Run every cycle, updating every train's position and speed *)
-let update_all_trains (v:t) =
+let _update_all_trains (v:t) =
   let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl ((v.cycle / 16) mod 12) in
 
@@ -413,24 +421,20 @@ let update_all_trains (v:t) =
             in
             (* BUGFIX: original code allowed sampling from random memory *)
             let update_val = update_val / region_div |> min Train.update_array_length in
-            (* NOTE: This is unsafe, as the speed could potentially exceed the size of the array *)
-            if Train.update_cycle_array.(update_val) land cycle_bit <> 0 then begin
-              (* Check if we're in the middle of a tile.
-                 This is where the advanced processing happens.
-               *)
+            if Train.update_cycle_array.(update_val) land cycle_bit <> 0 then (
               let mid_tile_check () =
                 (train.x mod C.tile_w) = C.tile_w / 2 &&
                 (train.y mod C.tile_h) = C.tile_h / 2
               in
               if mid_tile_check () then (
-                 update_train_mid_tile ~idx ~cycle:v.cycle v train;
+                 _update_train_mid_tile ~idx ~cycle:v.cycle v train;
               );
               (* Always advance train by single pixel *)
               let dx, dy = Dir.to_offsets train.dir in
               train.x <- train.x + dx;
               train.y <- train.y + dy;
               train.pixels_from_midtile <- succ train.pixels_from_midtile;
-            end;
+            );
             loop (speed_bound + 12)
         in
         loop 0;

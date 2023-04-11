@@ -83,6 +83,9 @@ type t = {
   priority: stop option;
 } [@@deriving yojson]
 
+let set_target_speed v speed = v.target_speed <- speed  
+let set_speed v speed = v.speed <- speed
+
 let get_dest v = 
   let stop = match v.priority with
     | Some stop -> stop
@@ -246,28 +249,28 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
 let get_weight v =
   List.fold_left (fun weight car ->
     let freight = Goods.freight_of_goods car.Car.good |> Goods.freight_to_enum in
-    let weight2 = ((car.amount * 4 - 320) / 6 - freight) + 240 in
+    let weight2 = (car.amount * 4 - 320) / (6 - freight) + 240 in
     weight + weight2)
   0
   v.cars
 
 let get_max_speed_factor v =
   List.foldi (fun speed_factor i _ ->
-    (* NOTE: i/2 is a weird choice: indexing into history. Maybe to reduce effect of long trains? *)
-    let history = History.get v.history (i/2) in
-    max speed_factor history.History.speed_factor
-  )
+    (* BUGFIX: i/2 is a weird choice: indexing into history. Maybe to reduce effect of long trains? *)
+    let history = History.get v.history i in
+    max speed_factor history.History.speed_factor)
   0
   v.cars
 
-let target_speed_from_factors v ~idx ~cycle ~weight ~max_speed_factor =
+let compute_target_speed v ~idx ~cycle =
+  let weight = get_weight v in
+  let max_speed_factor = get_max_speed_factor v in
   let a = weight / 160 + 1 in
   let b = (max_speed_factor + 2) * a in
   let engine_speed = v.engine.Engine.horsepower * 200 / b in
   let random = (13 * idx + cycle) mod 64 in
-  let target_speed = ((engine_speed * 8) + random + 80) / 80 in
-  v.target_speed <- target_speed;
-  ()
+  ((engine_speed * 8) + random + 80) / 80
+  |> Utils.clip ~min:0 ~max:v.engine.max_speed
 
 let add_dist_traveled v dist period =
   match period, v.fiscal_dist_traveled with

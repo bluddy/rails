@@ -84,23 +84,32 @@ module Set = struct
       else acc)
     empty
     mask
+
+  (* Number of near options, including original dir *)
+  let num_adjacent dir dirs =
+    let ret = 0 in
+    let ret = if mem dirs dir then ret + 1 else ret in
+    let ret = if mem dirs (cw dir) then ret + 1 else ret in
+    let ret = if mem dirs (ccw dir) then ret + 1 else ret in
+    ret
+
+  (* Find the closest dir to the original direction,
+      allowing up to a 90 degree turn
+    *)
+  let find_nearest dir dirs =
+    let check = mem dirs in
+    if check dir then Some dir else
+    let cwd = cw dir in
+    if check cwd then Some cwd else
+    let ccwd = ccw dir in
+    if check ccwd then Some ccwd else
+    let cwd = cw cwd in
+    if check cwd then Some cwd else
+    let ccwd = ccw ccwd in
+    if check ccwd then Some ccwd else
+    None
 end
 
-(* Find the closest dir to the original direction,
-    allowing up to a 90 degree turn
-  *)
-let find_nearest_in_set dir dirs =
-  let check = Set.mem dirs in
-  if check dir then Some dir else
-  let cwd = cw dir in
-  if check cwd then Some cwd else
-  let ccwd = ccw dir in
-  if check ccwd then Some ccwd else
-  let cwd = cw cwd in
-  if check cwd then Some cwd else
-  let ccwd = ccw ccwd in
-  if check ccwd then Some ccwd else
-  None
 
 (* A swirl of offsets going clockwise starting from closest point
     going outwards: 3x3, 5x5 up to 7x7.
