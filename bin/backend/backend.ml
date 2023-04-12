@@ -397,9 +397,9 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
 
   (* Run every cycle, updating every train's position and speed *)
 let _update_all_trains (v:t) =
-  (* Log.debug (fun f -> f "update_all_trains"); *)
+  Log.debug (fun f -> f "update_all_trains");
   let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
-  let cycle_bit = 1 lsl ((v.cycle / 16) mod 12) in
+  let cycle_bit = 1 lsl (v.cycle mod 12) in
 
   (* We update the high priority trains more than the low priority *)
   Iter.iter (fun max_priority ->
@@ -427,7 +427,9 @@ let _update_all_trains (v:t) =
             in
             (* BUGFIX: original code allowed sampling from random memory *)
             let update_val = update_val / region_div |> min Train.update_array_length in
-            if Train.update_cycle_array.(update_val) land cycle_bit <> 0 then (
+            Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit);
+            if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then (
+              Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit);
               let mid_tile_check () =
                 (train.x mod C.tile_w) = C.tile_w / 2 &&
                 (train.y mod C.tile_h) = C.tile_h / 2
