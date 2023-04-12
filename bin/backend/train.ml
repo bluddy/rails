@@ -108,7 +108,7 @@ let freight_of_cars cars =
 let make (x,y) engine cars other_station ~dir =
   let route = [make_stop x y None] in
   let route = match other_station with
-    | Some (x,y) -> route @ [make_stop x y None]
+    | Some (x,y) -> [make_stop x y None] @ route
     | None -> route
   in
   let v = {
