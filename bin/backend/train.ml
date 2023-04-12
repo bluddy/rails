@@ -1,6 +1,9 @@
 open Containers
 open Utils.Infix
 
+let src = Logs.Src.create "train" ~doc:"Train"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 let max_stops = 4
 
 (* A stop of a route *)
@@ -70,7 +73,7 @@ type t = {
   engine: Engine.t;
   mutable pixels_from_midtile: int;
   mutable dir: Dir.t;
-  mutable speed: int;
+  mutable speed: int; (* x5 to get real speed *)
   mutable wait_time: int; (* for updating train *)
   mutable target_speed: int;
   fiscal_dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
@@ -114,8 +117,8 @@ let make (x,y) engine cars other_station ~dir =
     engine;
     pixels_from_midtile=0;
     dir;
-    speed=0;
-    target_speed=0;
+    speed=10;
+    target_speed=10;
     cars=List.map (fun good -> Car.make good 0 None) cars;
     freight=freight_of_cars cars;
     wait_time=0;
@@ -126,7 +129,9 @@ let make (x,y) engine cars other_station ~dir =
     priority=None;
     fiscal_dist_traveled=(ref 0, ref 0);
   }
-  in v
+  in
+  Log.debug (fun f -> f "Train: new train at (%d,%d)" x y);
+  v
 
 let get_route v = v.route
 
@@ -238,12 +243,14 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
     if v.speed <= 1 ||
        (cycle mod cycle_check = 0 &&
        (update_cycle_array.(speed_diff) land cycle_bit) <> 0) then begin
-        v.speed <- succ v.speed
+         v.speed <- succ v.speed;
+         Log.debug (fun f -> f "Train accelerate");
     end;
   ) else (
   (* decelerate *)
     if cycle mod 8 = 0 then begin
-      v.speed <- pred v.speed
+      v.speed <- pred v.speed;
+      Log.debug (fun f -> f "Train accelerate");
     end
   )
 

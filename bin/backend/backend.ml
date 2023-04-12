@@ -1,6 +1,9 @@
 open Containers
 open Utils.Infix
 
+let src = Logs.Src.create "backend" ~doc:"Backend"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 module TS = Trackmap.Search
 module G = Track_graph
 module C = Constants
@@ -336,6 +339,8 @@ let trackmap_iter v f = Trackmap.iter v.track f
 
 let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
+
+  Log.debug (fun f -> f "_update_train_mid_tile");
   
   (* TODO: check for colocated trains (accidents/stop a train) *)
 
