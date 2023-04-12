@@ -108,7 +108,7 @@ let make (x,y) engine cars other_station ~dir =
     | Some (x,y) -> route @ [make_stop x y None]
     | None -> route
   in
-  {
+  let v = {
     x=x * Constants.tile_w;
     y=y * Constants.tile_h;
     engine;
@@ -126,6 +126,7 @@ let make (x,y) engine cars other_station ~dir =
     priority=None;
     fiscal_dist_traveled=(ref 0, ref 0);
   }
+  in v
 
 let get_route v = v.route
 
