@@ -131,9 +131,9 @@ module ChooseEngine = struct
     let font = Fonts.get_font s.fonts 4 in
     let _ =
       List.fold_left (fun y engine ->
-        let price = Utils.string_of_num engine.Engine.price in
+        let price = Utils.string_of_num (engine.Engine.price * 1000) in
         let str = Printf.sprintf "%s\n%d mph %dhp $%s"
-          engine.name engine.max_speed engine.horsepower price
+          engine.name (engine.max_speed * 5) (engine.horsepower * 500) price
         in
         Fonts.Font.write win font ~color:Ega.cyan str ~x:164 ~y;
         y + engine_each_y)

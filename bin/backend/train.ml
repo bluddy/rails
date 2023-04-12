@@ -117,8 +117,8 @@ let make (x,y) engine cars other_station ~dir =
     engine;
     pixels_from_midtile=0;
     dir;
-    speed=10;
-    target_speed=10;
+    speed=1;
+    target_speed=1;
     cars=List.map (fun good -> Car.make good 0 None) cars;
     freight=freight_of_cars cars;
     wait_time=0;

@@ -41,14 +41,18 @@ type t = {
   make: make;
   _type: _type;
   name: string;
-  max_speed: int;
-  horsepower: int;
-  price: int;
+  max_speed: int;   (* in 5s *)
+  horsepower: int; (* in 500s *)
+  price: int; (* In 1000s *)
   year: int;
 } [@@deriving yojson]
 
 let make make _type name max_speed horsepower price year =
-  { make; _type; name; max_speed; horsepower; price; year }
+  { make; _type; name;
+  max_speed=max_speed/5; (* To fit the original *)
+  horsepower=horsepower/500;
+  price=price/1000;
+  year }
 
 let us_engines = 
   (* US *)

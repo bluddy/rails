@@ -173,7 +173,6 @@ let render win (s:State.t) v : unit =
 
     (* Menu bar - last so we draw over all else *)
     Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
-
     ()
 
 let handle_event (s:State.t) v (event:Event.t) =
