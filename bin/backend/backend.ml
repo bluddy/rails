@@ -397,6 +397,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
 
   (* Run every cycle, updating every train's position and speed *)
 let _update_all_trains (v:t) =
+  (* Log.debug (fun f -> f "update_all_trains"); *)
   let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl ((v.cycle / 16) mod 12) in
 
@@ -439,6 +440,7 @@ let _update_all_trains (v:t) =
               train.x <- train.x + dx;
               train.y <- train.y + dy;
               train.pixels_from_midtile <- succ train.pixels_from_midtile;
+              Log.debug (fun f -> f "Train at (%d, %d)" train.x train.y);
             );
             train_update_loop (speed_bound + 12)
         in
@@ -490,6 +492,9 @@ let _handle_cycle v =
     else v
   in
   v, demand_msgs
+
+let reset_tick v =
+  v.last_tick <- 0
 
 let handle_tick v cur_time =
   let delay_mult = B_options.delay_mult_of_speed v.options.speed in
