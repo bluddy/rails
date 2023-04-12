@@ -283,7 +283,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
 
 let _build_train v ((x, y) as station) engine cars other_station =
   let engine_t = Engine.t_of_make v.region engine in
-  (* Temporary solution for getting track dir *)
+  (* TODO: Temporary solution for getting track dir *)
   let track = Trackmap.get v.track x y |> Option.get_exn in
   let dir, _ = Dir.Set.pop track.dirs in
   let train = Train.make station engine_t cars other_station ~dir in
