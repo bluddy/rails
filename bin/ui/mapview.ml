@@ -335,7 +335,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_trains_zoom4 () =
     (* For now, draw only the engine *)
     let open Textures.CarsTop in
-    let offset_x, offset_y = -4, 7 in
+    let offset_x, offset_y = (-Constants.tile_w/2) - 2, -1 in
     Trainmap.iter (fun (train:Train.t) ->
       let tex = Hashtbl.find s.textures.cars_top (Engine train.engine._type, train.dir) in
       let start_x_px = start_x * Constants.tile_w in

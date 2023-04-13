@@ -112,8 +112,8 @@ let make (x,y) engine cars other_station ~dir =
     | None -> route
   in
   let v = {
-    x=x * Constants.tile_w;
-    y=y * Constants.tile_h;
+    x=x * Constants.tile_w + Constants.tile_w / 2;
+    y=y * Constants.tile_h + Constants.tile_h / 2;
     engine;
     pixels_from_midtile=0;
     dir;
