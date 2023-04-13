@@ -401,12 +401,10 @@ let _update_all_trains (v:t) =
   let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl (v.cycle mod 12) in
 
-  (* We update the high priority trains more than the low priority *)
-  Iter.iter (fun max_priority ->
+  (* TODO: We update the high priority trains before the low priority *)
     Trainmap.iteri (fun idx (train:Train.t) ->
-      let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in
-      if priority <= max_priority &&
-         train.wait_time = 0 || train.speed > 0 then begin
+      (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in *)
+      if train.wait_time = 0 || train.speed > 0 then begin
 
         Train.update_speed train ~cycle:v.cycle ~cycle_check ~cycle_bit;
 
@@ -448,8 +446,7 @@ let _update_all_trains (v:t) =
         in
         train_update_loop 0;
        end)
-    v.trains) @@
-  Iter.(0 -- 23)
+    v.trains
 
   (** Most time-based work happens here **)
 let _handle_cycle v =
