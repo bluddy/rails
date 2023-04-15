@@ -73,6 +73,9 @@ type info = {
   rate_war: bool;
 } [@@deriving yojson]
 
+type signal = ManualProceed of bool | Auto
+            [@@deriving yojson, eq]
+
 type t = {
   x: int;
   y: int;
@@ -81,6 +84,7 @@ type t = {
   info: info option;
   player: int;
   segments: (Dir.t * Segment.id) * (Dir.t * Segment.id); (* Semaphores between stations *)
+  signals: (Dir.t * signal) * (Dir.t * signal);
 } [@@deriving yojson]
 
 let kind_str v =
@@ -102,8 +106,8 @@ let has_upgrade v ~upgrade =
   Upgrades.mem upgrades upgrade
 
 let get_segment (v:t) dir = match v.segments with
-  | (dir2, seg), _ when Dir.equal dir dir2 -> seg
-  | _, (dir2, seg) when Dir.equal dir dir2 -> seg
+  | (dir2, x), _ when Dir.equal dir dir2 -> x
+  | _, (dir2, x) when Dir.equal dir dir2 -> x
   | _ -> failwith "No matching direction found"
 
 let set_segment (v:t) dir seg =
@@ -113,6 +117,19 @@ let set_segment (v:t) dir seg =
     | _ -> failwith "No matching direction found"
   in
   {v with segments}
+
+let get_signal (v:t) dir = match v.signals with
+  | (dir2, x), _ when Dir.equal dir dir2 -> x
+  | _, (dir2, x) when Dir.equal dir dir2 -> x
+  | _ -> failwith "No matching direction found"
+
+let set_signal (v:t) dir signal =
+  let signals = match v.signals with
+    | (dir2, _), x when Dir.equal dir dir2 -> (dir2, signal), x
+    | x, (dir2, _) when Dir.equal dir dir2 -> x, (dir2, signal)
+    | _ -> failwith "No matching direction found"
+  in
+  {v with signals}
 
 let modify_segment (v:t) seg_old seg_new =
   let segments = match v.segments with

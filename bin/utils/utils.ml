@@ -220,7 +220,8 @@ let string_of_num num =
   |> String.map (function '_' -> ',' | x -> x)
 
   (* The way the original game approximates distance *)
-let classic_dist dx dy =
+let classic_dist (x1,y1) (x2,y2) =
+  let dx, dy = abs(x1-x2), abs(y1-y2) in
   let big, small = if dx > dy then dx, dy else dy, dx in
   big + small / 2
 

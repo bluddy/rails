@@ -170,7 +170,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     let selected_station =
       Loc_map.fold (fun (station:Station.t) closest ->
         let x, y = scale_xy v station.x station.y in
-        let dist = Utils.classic_dist (abs(mouse.x - x)) (abs(mouse.y - y)) in
+        let dist = Utils.classic_dist (x,y) (mouse.x,mouse.y) in
         match closest with
         | None when Station.is_proper_station station && dist < selection_dist ->
             Some ((station.x, station.y), dist)

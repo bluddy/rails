@@ -337,34 +337,12 @@ let get_train v idx = Trainmap.get v.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
-  let tile_x, tile_y = train.x / C.tile_w, train.y / C.tile_h in
-
-  Log.debug (fun f -> f "_update_train_mid_tile");
-  
-  (* TODO: check for colocated trains (accidents/stop a train) *)
-
-  let track = Trackmap.get_exn v.track tile_x tile_y in
-  (* Adjust direction as needed *)
-  let dir =
-    if track.ixn &&
-      Dir.Set.num_adjacent train.dir track.dirs > 1 then
-      let dest = Train.get_dest train in
-      Track_graph.shortest_path_branch v.graph
-        ~ixn:(tile_x, tile_y) ~dir:train.dir ~dest 
-        |> Option.get_exn_or "Cannot find route for train" 
-    else
-      Dir.Set.find_nearest train.dir track.dirs
-      |> Option.get_exn_or "Cannot find track for train"
-  in
-
-  (* TODO: handle entering station *)
-
+let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle ~x ~y ~dir =
   (* Speed factor computation from height delta and turn *)
-  let height1 = Tilemap.get_tile_height v.map tile_x tile_y in
-  let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in
-  let track2 = Trackmap.get_exn v.track tile_x2 tile_y2 in
-  let height2 = Tilemap.get_tile_height v.map tile_x2 tile_y2 in
+  let height1 = Tilemap.get_tile_height v.map x y in
+  let x2, y2 = Dir.adjust dir x y in
+  let track2 = Trackmap.get_exn v.track x2 y2 in
+  let height2 = Tilemap.get_tile_height v.map x2 y2 in
   let d_height = max 0 (height2 - height1) in
   let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
   let height_factor = match track.kind, track2.kind with
@@ -374,26 +352,91 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   in
   let turn_factor = Dir.diff dir train.dir in
   let speed_factor = (height_factor * height_factor / 144) + turn_factor in
-  train.dir <- dir;
-  train.pixels_from_midtile <- 0;
 
   (* History lets us reuse the engine orientation for the cars as they cross *)
   Train.History.add train.history train.x train.y train.dir speed_factor;
 
   (* Compute and set target speed *)
-  begin match Tilemap.get_tile v.map tile_x tile_y with
-  | Ocean _ | Harbor _ ->
-      Train.set_target_speed train 1;
-      Train.set_speed train 1;
-  | _ ->
-      let target_speed = Train.compute_target_speed train ~idx ~cycle in
-      Train.set_target_speed train target_speed;
-  end;
+  let target_speed, speed =
+    match Tilemap.get_tile v.map x y with
+    | Ocean _ | Harbor _ -> 1, 1
+    | _ -> Train.compute_target_speed train ~idx ~cycle, train.speed
+  in
+  train.pixels_from_midtile <- 0;
+  if dir =!= train.dir then train.dir <- dir;
+  if target_speed =!= train.target_speed then train.target_speed <- target_speed;
+  if speed =!= train.speed then train.speed <- speed;
   (* Bookkeeping *)
   let dist = if Dir.is_diagonal dir then 2 else 3 in
   Train.add_dist_traveled train dist v.fiscal_period;
   v.stats.dist_traveled <- v.stats.dist_traveled + dist;
-  ()
+  Train.advance train
+
+let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
+  (* All major computation happens mid-tile *)
+  let x, y = train.x / C.tile_w, train.y / C.tile_h in
+
+  Log.debug (fun f -> f "_update_train_mid_tile");
+  
+  (* TODO: check for colocated trains (accidents/stop a train) *)
+
+  let track = Trackmap.get_exn v.track x y in
+  match track.kind with
+  | Station _ ->
+    let dir = 
+      Dir.Set.find_nearest train.dir track.dirs
+      |> Option.get_exn_or "Cannot find track for train"
+    in
+    (* Trains can be stopped by 3 things:
+      1. R-click: told to stop at next stop
+         Don't process train arrival
+      2. Wait timer from first arrival
+      3. Prevent from leaving via signal
+    *)
+    begin match train.segment with
+    | Some segment ->
+        (* exit segment *)
+        Segment.Map.decr_train v.segments segment;
+        train.segment <- None;
+    | _ -> ()
+    end;
+
+    let station = Loc_map.get_exn v.stations x y in
+    if Station.is_proper_station station then begin
+      (* TODO: let wait_timer = handle_enter_station. *)
+      train.last_station <- (x,y);
+      let priority, next_stop = Train.check_increment_stop train (x,y) in
+    end;
+
+    (* Can we leave? *)
+    if train.wait_time = 0 && not train.stop_at_station then begin
+      let dir =
+        match Track_graph.shortest_path ~src:ixn ~dest:next_stop with
+        | Some dir -> dir
+        | None -> dir (* TODO: Impossible route message *)
+      in
+      let segment = Station.get_segment station dir in
+      Segment.Map.incr_train v.segments segment;
+      train.segment <- segment;
+      (* TODO Check signal for exit dir *)
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
+    end;
+
+  | Track when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
+      let dir =
+        let dest = Train.get_dest train in
+        Track_graph.shortest_path_branch v.graph
+          ~ixn:(x,y) ~dir:train.dir ~dest 
+          |> Option.get_exn_or "Cannot find route for train" 
+      in
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+
+  | _ -> (* All other track and non-deicsion ixns *)
+      let dir = 
+        Dir.Set.find_nearest train.dir track.dirs
+        |> Option.get_exn_or "Cannot find track for train"
+      in
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
 
   (* Run every cycle, updating every train's position and speed *)
 let _update_all_trains (v:t) =
@@ -434,13 +477,9 @@ let _update_all_trains (v:t) =
               in
               if mid_tile_check () then (
                  _update_train_mid_tile ~idx ~cycle:v.cycle v train;
-              );
-              (* Always advance train by single pixel *)
-              let dx, dy = Dir.to_offsets train.dir in
-              train.x <- train.x + dx;
-              train.y <- train.y + dy;
-              train.pixels_from_midtile <- succ train.pixels_from_midtile;
-              Log.debug (fun f -> f "Train at (%d, %d)" train.x train.y);
+              ) else (
+                Train.advance train
+              )
             );
             train_update_loop (speed_bound + 12)
         in

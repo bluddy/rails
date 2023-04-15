@@ -67,23 +67,33 @@ module Car = struct
   let good v = v.good
 end
 
+type state =
+  | Normal
+  | ManualStop
+  | StopAtSignal
+
+
 type t = {
   mutable x: int;
   mutable y: int;
-  engine: Engine.t;
   mutable pixels_from_midtile: int;
   mutable dir: Dir.t;
   mutable speed: int; (* x5 to get real speed *)
-  mutable wait_time: int; (* for updating train *)
   mutable target_speed: int;
+  mutable wait_time: int; (* for updating train *)
+  mutable segment: Segment.id option;
+  mutable last_station: Station.id;
+  mutable stay_at_station: bool;
+  mutable stop_at_next_station: bool;
+  engine: Engine.t;
   fiscal_dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
   cars: Car.t list;
   freight: Goods.freight; (* freight class *)
   _type: train_type;
   history: History.t; (* History of values. Used for cars *)
-  target_stop: int; (* current stop of route *)
-  route: stop list; (* route stops *)
-  priority: stop option;
+  stop: int; (* current stop of route *)
+  route: stop array; (* route stops *)
+  mutable priority: stop option;
 } [@@deriving yojson]
 
 let set_target_speed v speed = v.target_speed <- speed  
@@ -105,7 +115,7 @@ let freight_of_cars cars =
   Goods.FreightMail
   cars
 
-let make (x,y) engine cars other_station ~dir =
+let make ((x,y) as station) engine cars other_station ~dir =
   let route = [make_stop x y None] in
   let route = match other_station with
     | Some (x,y) -> [make_stop x y None] @ route
@@ -126,6 +136,10 @@ let make (x,y) engine cars other_station ~dir =
     history=History.make ();
     target_stop=0;
     route;
+    segment=None;
+    last_station=station;
+    at_station=false;
+    stop_at_next_station=false;
     priority=None;
     fiscal_dist_traveled=(ref 0, ref 0);
   }
@@ -285,4 +299,28 @@ let add_dist_traveled v dist period =
   | `First, (d,_) -> d := !d + dist
   | `Second, (_,d) -> d := !d + dist
 
+let advance (v:t) =
+  (* Always advance train by single pixel *)
+  let dx, dy = Dir.to_offsets v.dir in
+  v.x <- v.x + dx;
+  v.y <- v.y + dy;
+  v.pixels_from_midtile <- succ v.pixels_from_midtile;
+  Log.debug (fun f -> f "Train at (%d, %d)" v.x v.y);
+
+let check_increment_stop v (x,y) =
+  match v.priority, v.route.(v.stop) with
+  | Some stop when stop.x = x && stop.y = y, _ ->
+      (* When exiting priority mode, we go to the closest station *)
+      let min_stop_idx =
+        List.foldi (fun ((min_dist,_) as acc) i stop ->
+          let dist = Utils.classic_dist (stop.x, stop.y) (x,y) in
+          if dist < min_dist then (dist, i) else acc)
+          train.route
+          (9999, 0)
+        |> snd
+      in
+      None, min_stop_idx
+  | _, stop when stop.x = x and stop.y = y ->
+      None, (stop + 1) mod Array.length v.route
+  | _ -> v.priority, v.stop
 

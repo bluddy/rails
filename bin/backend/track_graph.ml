@@ -160,12 +160,12 @@ let find_ixn_from_ixn_dir v ~ixn ~dir =
      which is excluded
      TODO: improve. e.g. iterate over direct branches and do multiple shortest path
      *)
-let shortest_path_branch ~ixn ~dir ~dest v =
+let shortest_path_branch ~ixn ~cur_dir ~dest v =
   (* Block all dirs that aren't within 90 degrees of initial dir *)
   G.iter_succ_e
     (fun (_,e,_) ->
       match Edge.dir_of_xy ixn e with
-      | Some dir2 when not (Dir.within_90 dir dir2) ->
+      | Some dir2 when not (Dir.within_90 cur_dir dir2) ->
           e.block <- true
       | _ -> ())
     v.graph
@@ -177,6 +177,11 @@ let shortest_path_branch ~ixn ~dir ~dest v =
   | (_,edge,_)::_ -> Edge.dir_of_xy ixn edge
   | _ -> None
 
+let shortest_path ~src ~dest v =
+  let path, _ = ShortestPath.shortest_path v.graph src dest in
+  match path with
+  | (_,edge,_)::_ -> Edge.dir_of_xy src edge
+  | _ -> None
 
   (* Get stations directly connected to a particular ixn or station
      using the track graph.
