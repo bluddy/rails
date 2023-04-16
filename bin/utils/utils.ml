@@ -64,6 +64,10 @@ module Vector = struct
     in
     foldi acc 0
 
+  let modify_at_idx (v:'a vector) i f =
+    let x = get v i |> f in
+    set v i x
+
   let rw_of_yojson _ = `RW
   let yojson_of_rw _ = `Null
   

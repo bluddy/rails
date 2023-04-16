@@ -4,6 +4,8 @@ open Utils.Infix
 let src = Logs.Src.create "train" ~doc:"Train"
 module Log = (val Logs.src_log src: Logs.LOG)
 
+module Vector = Utils.Vector
+
 let max_stops = 4
 
 (* A stop of a route *)
@@ -86,20 +88,20 @@ type t = {
   _type: train_type;
   history: History.t; (* History of values. Used for cars *)
   stop: int; (* current stop of route *)
-  route: stop list * int; (* route stops, length *)
+  route: (stop, Utils.Vector.rw) Utils.Vector.t; (* route stops *)
   priority: stop option;
 } [@@deriving yojson]
 
 let set_target_speed v speed = v.target_speed <- speed  
 let set_speed v speed = v.speed <- speed
 
-let get_route_length v = v.route |> snd
-let get_route v = v.route |> fst
+let get_route_length v = Vector.length v.route
+let get_route v = v.route
 
 let get_dest v = 
   let stop = match v.priority with
     | Some stop -> stop
-    | None -> List.nth (fst v.route) v.stop
+    | None -> Vector.get v.route v.stop
   in
   (stop.x, stop.y)
 
@@ -118,6 +120,7 @@ let make ((x,y) as station) engine cars other_station ~dir =
     | Some (x,y) -> [make_stop x y None] @ route
     | None -> route
   in
+  let route = Vector.of_list route in
   let v = {
     x=x * Constants.tile_w + Constants.tile_w / 2;
     y=y * Constants.tile_h + Constants.tile_h / 2;
@@ -132,7 +135,7 @@ let make ((x,y) as station) engine cars other_station ~dir =
     _type=Local;
     history=History.make ();
     stop=0;
-    route=(route, List.length route);
+    route;
     segment=None;
     last_station=station;
     stop_at_station=false;
@@ -159,9 +162,9 @@ let remove_stop_car (v:t) stop car =
     {stop with cars}
   in
   match stop with
-  | `Stop stop ->
-      let route = Utils.List.modify_at_idx stop remove_car (fst v.route) in
-      {v with route=(route, snd v.route)}
+  | `Stop stop_idx ->
+      Vector.modify_at_idx v.route stop_idx remove_car;
+      v
   | `Priority ->
       let priority = Option.map remove_car v.priority in
       {v with priority}
@@ -175,9 +178,9 @@ let add_stop_car (v:t) stop car =
     {stop with cars}
   in
   match stop with
-  | `Stop stop ->
-      let route = Utils.List.modify_at_idx stop add_car (fst v.route) in
-      {v with route=(route, snd v.route)}
+  | `Stop stop_idx ->
+      Vector.modify_at_idx v.route stop_idx add_car;
+      v
   | `Priority ->
       let priority = Option.map add_car v.priority in
       {v with priority}
@@ -185,9 +188,9 @@ let add_stop_car (v:t) stop car =
 let remove_all_stop_cars (v:t) stop =
   let remove_all_cars (stop:stop) = {stop with cars = Some []} in
   match stop with
-  | `Stop stop ->
-      let route = Utils.List.modify_at_idx stop remove_all_cars (fst v.route) in
-      {v with route=(route, snd v.route)}
+  | `Stop stop_idx ->
+      Vector.modify_at_idx v.route stop_idx remove_all_cars;
+      v
   | `Priority ->
       let priority = Option.map remove_all_cars v.priority in
       {v with priority}
@@ -195,7 +198,7 @@ let remove_all_stop_cars (v:t) stop =
 let check_stop_station (v:t) stop (x,y) =
   (* Don't allow setting the station if the previous or next station
      is the same station already *)
-  let len = snd v.route in
+  let len = Vector.length v.route in
   let prev, next = match stop with
     | 0 when len >= 2 -> None, Some 1
     | 0 -> None, None
@@ -204,7 +207,7 @@ let check_stop_station (v:t) stop (x,y) =
   in
   let check = function
     | Some i ->
-        let stop = List.nth (fst v.route) i in
+        let stop = Vector.get v.route i in
         Utils.eq_xy x y stop.x stop.y
     | None -> false
   in
@@ -213,18 +216,13 @@ let check_stop_station (v:t) stop (x,y) =
 let set_stop_station (v:t) stop (x,y) =
   match stop with
   | `Stop i ->
-    let route =
       (* Check for lengthening *)
-      if snd v.route = i then
-        ((fst v.route) @ [make_stop x y None], snd v.route + 1)
-      else
-        let route =
-          Utils.List.modify_at_idx i (fun (stop:stop) -> {stop with x; y})
-          (fst v.route)
-        in
-        (route, snd v.route)
-    in
-    {v with route}
+      if (Vector.length v.route) = i then begin
+        Vector.push v.route (make_stop x y None)
+      end else begin
+        Vector.modify_at_idx v.route i (fun (stop:stop) -> {stop with x; y})
+      end;
+      v
   | `Priority ->
       let stop = match v.priority with
         | None -> make_stop x y None
@@ -235,8 +233,8 @@ let set_stop_station (v:t) stop (x,y) =
 let remove_stop (v:t) stop =
   match stop with
   | `Stop i ->
-    let route = List.remove_at_idx i (fst v.route) in
-    {v with route=(route, List.length route)}
+      Vector.remove_and_shift v.route i;
+      v
   | `Priority -> {v with priority=None}
 
 let calc_car_pos (v:t) car = ()
@@ -309,20 +307,20 @@ let advance (v:t) =
   ()
 
 let check_increment_stop v (x,y) =
-  match v.priority, List.nth (fst v.route) v.stop with
+  match v.priority, Vector.get v.route v.stop with
   | Some stop, _ when stop.x = x && stop.y = y ->
       (* When exiting priority mode, we go to the closest station *)
       let min_stop_idx =
-        List.foldi (fun ((min_dist,_) as acc) i (stop:stop) ->
+        Vector.foldi (fun i ((min_dist,_) as acc) (stop:stop) ->
           let dist = Utils.classic_dist (stop.x, stop.y) (x,y) in
           if dist < min_dist then (dist, i) else acc)
           (9999, 0)
-          (fst v.route)
+          (v.route)
         |> snd
       in
       None, min_stop_idx
   | _, stop when stop.x = x && stop.y = y ->
-      None, (stop + 1) mod (snd v.route)
+      None, (v.stop + 1) mod (Vector.length v.route)
   | _ ->
       v.priority, v.stop
 
