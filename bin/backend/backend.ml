@@ -374,53 +374,65 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
 
 let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   (* All major computation happens mid-tile *)
-  let x, y = train.x / C.tile_w, train.y / C.tile_h in
+  let (x,y) as ixn = train.x / C.tile_w, train.y / C.tile_h in
 
   Log.debug (fun f -> f "_update_train_mid_tile");
   
   (* TODO: check for colocated trains (accidents/stop a train) *)
+  (* Trains can be stopped by 3 things:
+    1. R-click: told to stop at next stop
+       Don't process train arrival
+    2. Wait timer from first arrival
+    3. Prevent from leaving via manual signal hold
+  *)
 
   let track = Trackmap.get_exn v.track x y in
   match track.kind with
   | Station _ ->
-    let dir = 
-      Dir.Set.find_nearest train.dir track.dirs
-      |> Option.get_exn_or "Cannot find track for train"
-    in
-    (* Trains can be stopped by 3 things:
-      1. R-click: told to stop at next stop
-         Don't process train arrival
-      2. Wait timer from first arrival
-      3. Prevent from leaving via signal
-    *)
-    begin match train.segment with
-    | Some segment ->
-        (* exit segment *)
-        Segment.Map.decr_train v.segments segment;
-        train.segment <- None;
-    | _ -> ()
-    end;
-
-    let station = Loc_map.get_exn v.stations x y in
-    if Station.is_proper_station station then begin
-      (* TODO: let wait_timer = handle_enter_station. *)
-      train.last_station <- (x,y);
-      let priority, next_stop = Train.check_increment_stop train (x,y) in
-    end;
-
-    (* Can we leave? *)
-    if train.wait_time = 0 && not train.stop_at_station then begin
-      let dir =
-        match Track_graph.shortest_path ~src:ixn ~dest:next_stop with
-        | Some dir -> dir
-        | None -> dir (* TODO: Impossible route message *)
+      let enter train =
+        begin match train.segment with
+        | Some segment ->
+            (* exit segment *)
+            Segment.Map.decr_train v.segments segment
+        | _ -> ()
+        end;
+        let station = Loc_map.get_exn v.stations x y in
+        let last_station, priority, stop =
+          if Station.is_proper_station station then (
+            (* TODO: let wait_timer = handle_enter_station. *)
+            let priority, stop = Train.check_increment_stop train ixn in
+            ixn, priority, stop
+          ) else (
+            train.last_station, train.priority, train.stop
+          )
+        in
+        {train with segment=None; last_station; priority; stop; station_state=`Entered}
       in
-      let segment = Station.get_segment station dir in
-      Segment.Map.incr_train v.segments segment;
-      train.segment <- segment;
-      (* TODO Check signal for exit dir *)
-      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
-    end;
+      let exit train =
+        (* Can we leave? *)
+        if train.wait_time = 0 && not train.stop_at_station then (
+          let dir =
+            match Track_graph.shortest_path ~src:ixn ~dest:next_stop with
+            | Some dir -> dir
+            | None -> (* TODO: Impossible route message *)
+              Dir.Set.find_nearest train.dir track.dirs
+              |> Option.get_exn_or "Cannot find track for train"
+          in
+          let segment = Station.get_segment station dir in
+          Segment.Map.incr_train v.segments segment;
+          (* TODO Check signal for exit dir *)
+          _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
+          {train with segment; station_state=`Traveling}
+        ) else
+          train
+      in
+      begin match train.station_state with
+      | `Traveling ->
+          let train = enter train in
+          exit train 
+      | `Entered ->
+          exit train
+      end
 
   | Track when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
       let dir =
@@ -429,14 +441,16 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
           ~ixn:(x,y) ~dir:train.dir ~dest 
           |> Option.get_exn_or "Cannot find route for train" 
       in
-      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
+      train
 
   | _ -> (* All other track and non-deicsion ixns *)
       let dir = 
         Dir.Set.find_nearest train.dir track.dirs
         |> Option.get_exn_or "Cannot find track for train"
       in
-      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
+      train
 
   (* Run every cycle, updating every train's position and speed *)
 let _update_all_trains (v:t) =

@@ -158,7 +158,11 @@ let make ~x ~y ~year ~name ~kind ~player ~first ~segments =
     | [(x, y); (z, w)] -> ((x, y), (z, w))
     | _ -> failwith "Incorrect number of segments"
   in
-  { x; y; year; name; info; player; segments}
+  let signals = 
+    let (dir1, _), (dir2, _) = segments in
+    (dir1, Auto), (dir2, Auto)
+  in
+  { x; y; year; name; info; player; segments; signals}
 
 let add_upgrade v upgrade player =
   if v.player <> player then v else
