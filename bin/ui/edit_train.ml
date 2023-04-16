@@ -3,6 +3,7 @@ module R = Renderer
 module B = Backend
 open Edit_train_d
 open Utils.Infix
+module Vector = Utils.Vector
 
 open Station_map_ui
 
@@ -112,7 +113,7 @@ let render win (s:State.t) v : unit =
       let color = match i with
         | Some i ->
             write Ega.gray ~x:8 ~y @@ Printf.sprintf "%d." (i+1);
-            if i = train.target_stop then Ega.black else Ega.gray
+            if i = train.stop then Ega.black else Ega.gray
         | None ->
             Ega.black
       in
@@ -148,7 +149,7 @@ let render win (s:State.t) v : unit =
 
     (* Write stop names *)
     let n, y =
-      List.fold_left (fun (i, y) (stop:Train.stop) ->
+      Vector.fold (fun (i, y) (stop:Train.stop) ->
         write_station stop ~i:(Some i) ~y;
         draw_cars_option stop ~y;
         R.draw_line win ~color:Ega.black ~x1:160 ~y1:(y+9) ~x2:312 ~y2:(y+9);
@@ -248,7 +249,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                 | None when y <= ystart + i * line_h -> Some i
                 | x -> x)
               None
-              Iter.(0 -- List.length(train.route))
+              Iter.(0 -- Vector.length (train.route))
             in
             begin match res with
             | Some i ->
@@ -271,7 +272,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
             let ystart = 167 in
             let msg =
-              List.foldi (fun acc i (stop:Train.stop) -> match acc with
+              Vector.foldi (fun i acc (stop:Train.stop) ->
+                match acc with
                 | `None when y < ystart + i * line_h ->
                     begin match stop.cars with
                     | None -> `AddCarMenu (`Stop i)  (* currently "No Change" *)

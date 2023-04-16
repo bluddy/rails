@@ -284,7 +284,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
 let _build_train v ((x, y) as station) engine cars other_station =
   let engine_t = Engine.t_of_make v.region engine in
   (* TODO: Temporary solution for getting track dir *)
-  let track = Trackmap.get v.track x y |> Option.get_exn in
+  let track = Trackmap.get v.track x y |> Option.get_exn_or "trackmap" in
   let dir, _ = Dir.Set.pop track.dirs in
   let train = Train.make station engine_t cars other_station ~dir in
   let trains = Trainmap.add v.trains train in
@@ -375,9 +375,7 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
 let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   (* All major computation happens mid-tile *)
   let (x,y) as ixn = train.x / C.tile_w, train.y / C.tile_h in
-
   Log.debug (fun f -> f "_update_train_mid_tile");
-  
   (* TODO: check for colocated trains (accidents/stop a train) *)
   (* Trains can be stopped by 3 things:
     1. R-click: told to stop at next stop
@@ -385,18 +383,17 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
     2. Wait timer from first arrival
     3. Prevent from leaving via manual signal hold
   *)
-
   let track = Trackmap.get_exn v.track x y in
   match track.kind with
   | Station _ ->
+      let station = Loc_map.get_exn v.stations x y in
       let enter train =
-        begin match train.segment with
+        begin match train.Train.segment with
         | Some segment ->
             (* exit segment *)
             Segment.Map.decr_train v.segments segment
         | _ -> ()
         end;
-        let station = Loc_map.get_exn v.stations x y in
         let last_station, priority, stop =
           if Station.is_proper_station station then (
             (* TODO: let wait_timer = handle_enter_station. *)
@@ -410,9 +407,10 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       in
       let exit train =
         (* Can we leave? *)
-        if train.wait_time = 0 && not train.stop_at_station then (
+        if train.Train.wait_time = 0 && not train.stop_at_station then (
+          let dest = Train.get_dest train in
           let dir =
-            match Track_graph.shortest_path ~src:ixn ~dest:next_stop with
+            match Track_graph.shortest_path v.graph ~src:ixn ~dest with
             | Some dir -> dir
             | None -> (* TODO: Impossible route message *)
               Dir.Set.find_nearest train.dir track.dirs
@@ -421,8 +419,10 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
           let segment = Station.get_segment station dir in
           Segment.Map.incr_train v.segments segment;
           (* TODO Check signal for exit dir *)
-          _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
-          {train with segment; station_state=`Traveling}
+          let train =
+            _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+          in
+          {train with segment=Some segment; station_state=`Traveling}
         ) else
           train
       in
@@ -438,19 +438,18 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       let dir =
         let dest = Train.get_dest train in
         Track_graph.shortest_path_branch v.graph
-          ~ixn:(x,y) ~dir:train.dir ~dest 
+          ~ixn:(x,y) ~cur_dir:train.dir ~dest 
           |> Option.get_exn_or "Cannot find route for train" 
       in
-      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
-      train
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
 
   | _ -> (* All other track and non-deicsion ixns *)
       let dir = 
         Dir.Set.find_nearest train.dir track.dirs
         |> Option.get_exn_or "Cannot find track for train"
       in
-      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir;
-      train
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+  
 
   (* Run every cycle, updating every train's position and speed *)
 let _update_all_trains (v:t) =
@@ -459,56 +458,56 @@ let _update_all_trains (v:t) =
   let cycle_bit = 1 lsl (v.cycle mod 12) in
 
   (* TODO: We update the high priority trains before the low priority *)
-    Trainmap.iteri (fun idx (train:Train.t) ->
-      (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in *)
-      if train.wait_time = 0 || train.speed > 0 then begin
-
-        Train.update_speed train ~cycle:v.cycle ~cycle_check ~cycle_bit;
-
-        (* TODO: fiscal period update stuff *)
-
-        (* Train update loop *)
-        let rec train_update_loop speed_bound =
-          if speed_bound >= train.speed then ()
-          else
-            let speed =
-              if Dir.is_diagonal train.dir then ((train.speed * 2) + 1) / 3
-              else train.speed
-            in
-            let update_val =
-              if speed > 12 then 
-                if speed_bound = 0 then 12 else speed - 12
-              else speed
-            in
-            (* BUGFIX: original code allowed sampling from random memory *)
-            let update_val = update_val / region_div |> min Train.update_array_length in
-            Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit);
+  let update_train idx (train:Train.t) =
+    (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in *)
+    if train.wait_time = 0 || train.speed > 0 then (
+      let train = Train.update_speed train ~cycle:v.cycle ~cycle_check ~cycle_bit in
+      (* TODO: fiscal period update stuff *)
+      let rec train_update_loop train speed_bound =
+        if speed_bound >= train.Train.speed then train
+        else begin
+          let speed =
+            if Dir.is_diagonal train.dir then (train.speed * 2 + 1) / 3
+            else train.speed
+          in
+          let update_val =
+            if speed > 12 then 
+              if speed_bound = 0 then 12 else speed - 12
+            else speed
+          in
+          (* BUGFIX: original code allowed sampling from random memory *)
+          let update_val =
+            update_val / region_div |> min Train.update_array_length
+          in
+          Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit);
+          let train =
             if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then (
               Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit);
-              let mid_tile_check () =
+              let is_mid_tile =
                 (train.x mod C.tile_w) = C.tile_w / 2 &&
                 (train.y mod C.tile_h) = C.tile_h / 2
               in
-              if mid_tile_check () then (
-                 _update_train_mid_tile ~idx ~cycle:v.cycle v train;
-              ) else (
-                Train.advance train
-              )
-            );
-            train_update_loop (speed_bound + 12)
-        in
-        train_update_loop 0;
-       end)
-    v.trains
+              if is_mid_tile then
+                 _update_train_mid_tile ~idx ~cycle:v.cycle v train
+              else
+                Train.advance train)
+            else
+              train
+          in
+          train_update_loop train (speed_bound + 12)
+        end
+      in
+      train_update_loop train 0)
+    else
+      train
+  in
+  Trainmap.mapi_in_place update_train v.trains
 
   (** Most time-based work happens here **)
 let _handle_cycle v =
   v.cycle <- v.cycle + 1;
-
   _update_all_trains v;
-
   (* TODO: ai_routines *)
-
   let demand_msgs =
     if v.cycle mod cycles_station_supply_demand = 0 then (
       Printf.printf "_handle_cycle%!\n";

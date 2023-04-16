@@ -1,33 +1,38 @@
 open Containers
+open Utils.Infix
+module Vector = Utils.Vector
 
-type t = (Train.t, Utils.Vector.rw) Utils.Vector.t
+type t = (Train.t, Vector.rw) Vector.t
 [@@deriving yojson]
 
-let empty () = Utils.Vector.create ()
+let empty () = Vector.create ()
 
 let add v train =
-  CCVector.push v train; v
+  Vector.push v train; v
 
 let delete v idx =
-  CCVector.remove_and_shift v idx; v
+  Vector.remove_and_shift v idx; v
 
-let get v idx = CCVector.get v idx
+let get v idx = Vector.get v idx
 
 let update v idx f =
   let train = get v idx in
-  CCVector.set v idx (f train);
+  Vector.set v idx (f train);
   v
 
-let size v = CCVector.size v
+let size v = Vector.size v
 
 let last v =
   let size = size v in
   get v (size - 1)
 
-let iter f v = Utils.Vector.iter f v
+let iter f v = Vector.iter f v
 
-let iteri f v = Utils.Vector.iteri f v
+let iteri f v = Vector.iteri f v
 
-let fold f v ~init = Utils.Vector.fold f init v
+let fold f v ~init = Vector.fold f init v
 
-let foldi f v ~init = Utils.Vector.foldi f init v
+let foldi f v ~init = Vector.foldi f init v
+
+let mapi_in_place f v = Vector.mapi_in_place f v
+

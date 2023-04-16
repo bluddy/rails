@@ -97,6 +97,7 @@ let set_speed v speed = v.speed <- speed
 
 let get_route_length v = Vector.length v.route
 let get_route v = v.route
+let get_route_stop v i = Vector.get v.route i
 
 let get_dest v = 
   let stop = match v.priority with
@@ -264,7 +265,8 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
       v.speed <- pred v.speed;
       Log.debug (fun f -> f "Train decelerate. New speed %d" v.speed);
     end
-  ) else ()
+  );
+  v
 
 let get_weight v =
   List.fold_left (fun weight car ->
@@ -304,7 +306,7 @@ let advance (v:t) =
   v.y <- v.y + dy;
   v.pixels_from_midtile <- succ v.pixels_from_midtile;
   Log.debug (fun f -> f "Train at (%d, %d)" v.x v.y);
-  ()
+  v
 
 let check_increment_stop v (x,y) =
   match v.priority, Vector.get v.route v.stop with

@@ -9,6 +9,11 @@ module type OrderedType = sig
   val yojson_of_t : t -> Yojson.Safe.t
 end
 
+module Infix = struct
+  let (===) = Stdlib.(==)
+  let (=!=) = Stdlib.(!=)
+end
+
 module Random = struct
   (* Expand Random to serialize the state *)
   include Random
@@ -51,11 +56,12 @@ module Hashtbl = struct
 end
 
 module Vector = struct
+  open Infix
   include CCVector
 
   let foldi f acc (v:'a vector) =
     let rec foldi acc i =
-      if i = Vector.length v then
+      if i = length v then
         acc
       else (
         let x = Array.unsafe_get (unsafe_get_array v) i in
@@ -64,9 +70,21 @@ module Vector = struct
     in
     foldi acc 0
 
+  let mapi_in_place f v =
+    for i=0 to length v do
+      let x = get v i in
+      let x' = f i x in
+      if x =!= x' then (
+        set v i x'
+      );
+    done
+
   let modify_at_idx (v:'a vector) i f =
-    let x = get v i |> f in
-    set v i x
+    let x = get v i in
+    let x' = f x in
+    if x =!= x' then (
+      set v i x
+    )
 
   let rw_of_yojson _ = `RW
   let yojson_of_rw _ = `Null
@@ -77,11 +95,6 @@ module Vector = struct
   let yojson_of_t conv _ v =
     CCVector.to_list v |> yojson_of_list conv
 
-end
-
-module Infix = struct
-  let (===) = Stdlib.(==)
-  let (=!=) = Stdlib.(!=)
 end
 
 type rect = {

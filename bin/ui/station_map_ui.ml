@@ -62,7 +62,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   (* Write stop text *)
   let train = Trainmap.get s.backend.trains v.train in
   let route = Train.get_route train in
-  List.iteri (fun i (stop:Train.stop) ->
+  Vector.iteri (fun i (stop:Train.stop) ->
     let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
     let name = Printf.sprintf "%d.%s" (i+1) (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
