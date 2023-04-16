@@ -453,7 +453,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
 
   (* Run every cycle, updating every train's position and speed *)
 let _update_all_trains (v:t) =
-  Log.debug (fun f -> f "update_all_trains");
+  (* Log.debug (fun f -> f "update_all_trains"); *)
   let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl (v.cycle mod 12) in
 
