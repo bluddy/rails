@@ -372,6 +372,33 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   v.stats.dist_traveled <- v.stats.dist_traveled + dist;
   Train.advance train
 
+let _train_stops_at station train = 
+  let train = Train.train_type_to_enum train._type in
+  let station = Station.kind_to_enum station.kind in
+  station > train
+
+let _train_enter_station (v:t) loc (station:Station.t) (train:Train.t) =
+  match station.info with
+  | Some info ->
+      let maintained =
+        if Station.Upgrades.mem info.upgrades EngineShop ||
+           Station.Upgrades.mem info.upgrades MaintenanceShop then True
+        else train.maintained
+      in
+      (* TODO: deal with priority shipment *)
+      let stop_here =
+        _train_stops_at station train || 
+        Utils.eq_xy (Train.get_route_dest train) loc
+      in
+      let dist = Utils.classic_dist loc train.last_station in
+        
+
+
+
+
+
+  | None -> 0
+
 let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   (* All major computation happens mid-tile *)
   let (x,y) as ixn = train.x / C.tile_w, train.y / C.tile_h in
@@ -396,7 +423,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
         end;
         let last_station, priority, stop =
           if Station.is_proper_station station then (
-            (* TODO: let wait_timer = handle_enter_station. *)
+            (* TODO: let wait_timer = _train_enter_station *)
             let priority, stop = Train.check_increment_stop train ixn in
             ixn, priority, stop
           ) else (

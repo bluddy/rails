@@ -82,7 +82,6 @@ type t = {
   stop_at_station: bool;
   station_state: [`Traveling | `Entered ];
   engine: Engine.t;
-  fiscal_dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
   cars: Car.t list;
   freight: Goods.freight; (* freight class *)
   _type: train_type;
@@ -90,6 +89,9 @@ type t = {
   stop: int; (* current stop of route *)
   route: (stop, Utils.Vector.rw) Utils.Vector.t; (* route stops *)
   priority: stop option;
+  had_maintenance: bool;
+  dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
+  dist_shipped_cargo: int * int; (* also by fin period *)
 } [@@deriving yojson]
 
 let set_target_speed v speed = v.target_speed <- speed  
@@ -99,10 +101,11 @@ let get_route_length v = Vector.length v.route
 let get_route v = v.route
 let get_route_stop v i = Vector.get v.route i
 
+let get_route_dest v = Vector.get v.route v.stop
 let get_dest v = 
   let stop = match v.priority with
     | Some stop -> stop
-    | None -> Vector.get v.route v.stop
+    | None -> get_route_dest v
   in
   (stop.x, stop.y)
 
@@ -142,7 +145,8 @@ let make ((x,y) as station) engine cars other_station ~dir =
     stop_at_station=false;
     station_state=`Traveling;
     priority=None;
-    fiscal_dist_traveled=(ref 0, ref 0);
+    dist_traveled=(ref 0, ref 0);
+    dist_cargo_moved=(0, 0);
   }
   in
   Log.debug (fun f -> f "Train: new train at (%d,%d) speed:%d targer_speed:%d" v.x v.y v.speed v.target_speed);
@@ -295,9 +299,14 @@ let compute_target_speed v ~idx ~cycle =
   |> Utils.clip ~min:0 ~max:v.engine.max_speed
 
 let add_dist_traveled v dist period =
-  match period, v.fiscal_dist_traveled with
+  match period, v.dist_traveled with
   | `First, (d,_) -> d := !d + dist
   | `Second, (_,d) -> d := !d + dist
+
+let add_dist_shipped_cargo v dist period =
+  match period, v.dist_shipped_cargo with
+  | `First, (d,x) -> (d + dist, x)
+  | `Second, (x,d) -> (x, d + dist)
 
 let advance (v:t) =
   (* Always advance train by single pixel *)
