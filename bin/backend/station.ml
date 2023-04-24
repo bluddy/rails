@@ -64,17 +64,22 @@ module Upgrades = Bitset.Make(struct
 end)
 
 type info = {
-  mutable demand: Goods.Set.t; (* Goods with sufficient demand *)
-  mutable min_demand: Goods.Set.t; (* Minimally accepted goods *)
+  mutable demand: Goods.Set.t; (* sufficient demand *)
+  mutable convert_demand: Goods.Set.t; (* minimum for conversion *)
   supply: (Goods.t, int) Utils.Hashtbl.t; (* val is in terms of Goods.full_car *)
   lost_supply: (Goods.t, int) Utils.Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
   rate_war: bool;
+  rates: [`Normal | `Double | `Half];
 } [@@deriving yojson]
+
+let has_demand_for v good = Goods.Set.mem good v.demand
 
 type signal = ManualProceed of bool | Auto
             [@@deriving yojson, eq]
+
+type id = int * int
 
 type t = {
   x: int;
@@ -86,6 +91,8 @@ type t = {
   segments: (Dir.t * Segment.id) * (Dir.t * Segment.id); (* Semaphores between stations *)
   signals: (Dir.t * signal) * (Dir.t * signal);
 } [@@deriving yojson]
+
+let get_age v year = year - v.year
 
 let kind_str v =
   match v.info with
@@ -101,7 +108,7 @@ let get_upgrades v = match v.info with
   | Some {upgrades;_} -> upgrades
   | None -> Upgrades.empty
 
-let has_upgrade v ~upgrade =
+let has_upgrade v upgrade =
   let upgrades = get_upgrades v in
   Upgrades.mem upgrades upgrade
 
@@ -262,7 +269,7 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
       (info.demand, [])
     in
     let msgs = if simple_economy then [] else msgs in
-    let min_demand2 =
+    let convert_demand =
       Hashtbl.fold (fun goods amount demand ->
         let f = if amount > 0 then Goods.Set.add else Goods.Set.remove in
         f goods demand)
@@ -270,7 +277,9 @@ let update_supply_demand v tilemap ~climate ~simple_economy =
       info.demand
     in
     if info.demand =!= demand2 then info.demand <- demand2;
-    if info.min_demand =!= min_demand2 then info.min_demand <- min_demand2;
+    if info.convert_demand =!= convert_demand then (
+      info.convert_demand <- convert_demand;
+    );
     msgs
 
     (** Lose supplies. Less supplies lost if we have the right upgrade *)

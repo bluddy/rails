@@ -58,15 +58,29 @@ module History = struct
 end
 
 module Car = struct
+  type load = {
+    amount: int; (* 160 is full (40 tons) *)
+    source: Station.id;
+    cycle: int;
+  } [@@ deriving yojson]
+
   type t = {
     good: Goods.t;
-    amount: int;
-    source: (int * int) option;
+    load: load option;
   } [@@deriving yojson]
 
-  let make good amount source = { good; amount; source }
-
+  let make good = {good; load=None}
   let good v = v.good
+  let get_age v cycle = match v.load with
+    | Some load -> cycle - load.cycle
+    | None -> assert false
+  let get_source v = match v.load with
+    | Some {source;_} -> source
+    | None -> assert false
+  let get_amount v = match v.load with
+    | Some load -> load.amount
+    | None -> 0
+
 end
 
 type t = {

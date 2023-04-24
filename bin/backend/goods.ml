@@ -95,6 +95,8 @@ type freight =
   | FreightBulk
   [@@deriving enum, ord, yojson]
 
+let num_freight = (freight_to_enum FreightBulk) + 1
+
 let show_freight = function
   | FreightMail -> "Mail"
   | FreightPassenger -> "Passenger"
@@ -168,6 +170,7 @@ let convert region goods =
   Hashtbl.find_opt tbl goods
 
 module Set = struct
+  (* Use a regular set because we don't know how many goods we'll have *)
   include Utils.Set.Make(struct
     type nonrec t = t 
     let compare = compare

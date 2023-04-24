@@ -17,3 +17,7 @@ let is_us = function
   | WestUS -> true
   | Britain
   | Europe -> false
+
+let is_west_us = function
+  | WestUS -> true
+  | _ -> false

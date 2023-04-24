@@ -27,8 +27,8 @@ module RealityLevels = Bitset.Make(struct
 end)
 
 type difficulty =
-  [ `Diff25 | `Diff50 | `Diff75 | `Diff100 ]
-  [@@deriving yojson]
+  [ `Investor | `Financier | `Mogul | `Tycoon ]
+  [@@deriving yojson, enum]
 
 type t = {
   speed: speed;
@@ -41,7 +41,7 @@ let default =
     speed=`Moderate;
     reality_levels=RealityLevels.of_list
       [`DispatcherOps; `ComplexEconomy; `CutthroatCompetition];
-    difficulty=`Diff100;
+    difficulty=`Tycoon;
   }
 
 
