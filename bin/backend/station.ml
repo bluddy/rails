@@ -85,7 +85,7 @@ let convert v good region =
 type signal = ManualProceed of bool | Auto
             [@@deriving yojson, eq]
 
-type id = int * int
+type id = int * int [@@deriving yojson, eq]
 
 type t = {
   x: int;
@@ -117,6 +117,12 @@ let get_upgrades v = match v.info with
 let has_upgrade v upgrade =
   let upgrades = get_upgrades v in
   Upgrades.mem upgrades upgrade
+
+let can_maintain v =
+  has_upgrade v EngineShop || has_upgrade v MaintenanceShop
+let can_build_train v = has_upgrade v EngineShop
+let has_restaurant v = has_upgrade v Restaurant
+let has_hotel v = has_upgrade v Hotel
 
 let get_segment (v:t) dir = match v.segments with
   | (dir2, x), _ when Dir.equal dir dir2 -> x
@@ -159,12 +165,13 @@ let make ~x ~y ~year ~name ~kind ~player ~first ~segments =
     | `Depot | `Station | `Terminal as k ->
       {
         demand=Goods.Set.empty;
-        min_demand=Goods.Set.empty;
+        convert_demand=Goods.Set.empty;
         supply=Hashtbl.create 10;
         lost_supply=Hashtbl.create 10;
         kind=k;
         upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
         rate_war=false;
+        rates=`Normal;
       } |> Option.some
   in
   let segments = match segments with
@@ -214,10 +221,10 @@ let check_rate_war_lose_supplies v ~difficulty =
   match v.info with
   | Some info when info.rate_war ->
       let div = match difficulty with
-        | `Diff100 -> 1
-        | `Diff75 -> 2
-        | `Diff50 -> 3
-        | `Diff25 -> 4
+        | `Investor -> 1
+        | `Financier -> 2
+        | `Mogul -> 3
+        | `Tycoon -> 4
       in
       Hashtbl.filter_map_inplace (fun good amount ->
         let amount_lost = amount / div in

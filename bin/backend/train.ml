@@ -6,6 +6,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
+module C = Constants
 
 let max_stops = 4
 
@@ -42,7 +43,7 @@ module History = struct
   } [@@deriving yojson]
 
   let make () = {
-    history=Array.make Constants.train_max_size empty;
+    history=Array.make C.train_max_size empty;
     idx=0;
   }
 
@@ -85,39 +86,6 @@ module Car = struct
 
   let empty v = {v with load=None}
 
-  let calc_arrival_money ~train ~car ~rates ~region ~west_us_route_done ~difficulty ~year ~year_start ~cycle =
-      let calc_dist =
-        Utils.classic_dist loc (get_source car) * mult
-      in
-      let car_age = get_age car cycle in
-      let reward = calc_dist * 16 / (car_age / 24) in
-      let calc_dist =
-        if Region.is_west_us region && not west_us_route_done then
-          let dx = abs(train.last_station.x - x) in
-          let dy = abs(train.last_station.y - y) in
-          dx * 3 / 2 + dy / 2
-        else calc_dist
-      in
-      let freight = Goods.freight_of_goods @@ get_freight car in
-      let v1 = (calc_dist * (5 - freight) + 40 * freight + 40) / 8 in
-      let fp2 = freight * freight * 2 in
-      let v3 = (year - 1790) / 10 + fp2 in
-      let v6 = amount/2 * (reward + fp2) * v1 / v3 in
-      let v12 = v6 / (year - year_start/3 - 1170) in
-      let money = (7 - B_options.difficulty_to_enum difficulty) * v12 / 3 in
-      let money = match rates with
-        | `Normal -> money
-        | `Double -> 2 * money
-        | `Half -> money / 2
-      in
-      let money = Utils.clip money ~min:2 ~max:9999 in 
-      let money = match car.good with
-        | Goods.Mail -> money * 5 / 4
-        | Passengers -> money * 3 / 2
-        | _ -> money
-      in 
-      money / 2 (* Seems like it's divided in the end *)
-
 end
 
 type t = {
@@ -130,7 +98,7 @@ type t = {
   mutable wait_time: int; (* for updating train *)
   segment: Segment.id option;
   name: string option;
-  last_station: int * int;
+  last_station: Station.id;
   stop_at_station: bool;
   station_state: [`Traveling | `Entered ];
   engine: Engine.t;
@@ -154,25 +122,26 @@ let get_route v = v.route
 let get_route_stop v i = Vector.get v.route i
 
 let get_route_dest v = Vector.get v.route v.stop
+let get_stop v =
+  match v.priority with
+  | Some stop -> stop
+  | None -> get_route_dest v
 let get_dest v = 
-  let stop = match v.priority with
-    | Some stop -> stop
-    | None -> get_route_dest v
-  in
+  let stop = get_stop v in
   (stop.x, stop.y)
 
 let freight_of_cars cars =
   (* Freight goes by the highest level *)
   List.fold_left (fun freight car ->
-    let freight2 = Goods.freight_of_goods car in
+    let freight2 = Car.get_freight car in
     if Goods.compare_freight freight2 freight > 0
     then freight2 else freight)
   Goods.FreightMail
   cars
 
 let get_car_goods_count cars =
-  let h = Hashtbl.make 10 in
-  List.iter (fun car -> Hashtbl.incr ~by:1 h car.good) cars;
+  let h = Hashtbl.create 10 in
+  List.iter (fun car -> Hashtbl.incr ~by:1 h car.Car.good) cars;
   h
 
 let make ((x,y) as station) engine cars other_station ~dir =
@@ -182,15 +151,16 @@ let make ((x,y) as station) engine cars other_station ~dir =
     | None -> route
   in
   let route = Vector.of_list route in
+  let cars = List.map Car.make cars in
   let v = {
-    x=x * Constants.tile_w + Constants.tile_w / 2;
-    y=y * Constants.tile_h + Constants.tile_h / 2;
+    x=x * C.tile_w + C.tile_w / 2;
+    y=y * C.tile_h + C.tile_h / 2;
     engine;
     pixels_from_midtile=0;
     dir;
     speed=1;
     target_speed=1;
-    cars=List.map (fun good -> Car.make good 0 None) cars;
+    cars;
     freight=freight_of_cars cars;
     wait_time=0;
     _type=Local;
@@ -198,23 +168,20 @@ let make ((x,y) as station) engine cars other_station ~dir =
     stop=0;
     route;
     segment=None;
+    name=None;
     last_station=station;
+    had_maintenance=false;
     stop_at_station=false;
     station_state=`Traveling;
     priority=None;
     dist_traveled=(ref 0, ref 0);
-    dist_cargo_moved=(0, 0);
+    dist_shipped_cargo=(0, 0);
   }
   in
   Log.debug (fun f -> f "Train: new train at (%d,%d) speed:%d targer_speed:%d" v.x v.y v.speed v.target_speed);
   v
 
 let get_route v = v.route
-
-let get_stop (v:t) =
-  match v.priority with
-  | Some stop -> stop
-  | _ -> v.route.(v.stop)
 
 let remove_stop_car (v:t) stop car =
   let remove_car (stop:stop) =
@@ -262,7 +229,7 @@ let remove_all_stop_cars (v:t) stop =
       let priority = Option.map remove_all_cars v.priority in
       {v with priority}
 
-let check_stop_station (v:t) stop (x,y) =
+let check_stop_station (v:t) stop loc =
   (* Don't allow setting the station if the previous or next station
      is the same station already *)
   let len = Vector.length v.route in
@@ -275,7 +242,7 @@ let check_stop_station (v:t) stop (x,y) =
   let check = function
     | Some i ->
         let stop = Vector.get v.route i in
-        Utils.eq_xy x y stop.x stop.y
+        Utils.eq_xy loc (stop.x,stop.y)
     | None -> false
   in
   not (check prev || check next)
@@ -303,8 +270,6 @@ let remove_stop (v:t) stop =
       Vector.remove_and_shift v.route i;
       v
   | `Priority -> {v with priority=None}
-
-let calc_car_pos (v:t) car = ()
 
 (* Cycles used to update integer speed up to index=12
    Note that each step has one more active bit
@@ -337,7 +302,7 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
 let get_weight v =
   List.fold_left (fun weight car ->
     let freight = Goods.freight_of_goods car.Car.good |> Goods.freight_to_enum in
-    let weight2 = (car.amount * 4 - 320) / (6 - freight) + 240 in
+    let weight2 = (Car.get_amount car * 4 - 320) / (6 - freight) + 240 in
     weight + weight2)
   0
   v.cars
@@ -397,6 +362,39 @@ let check_increment_stop v (x,y) =
   | _ ->
       v.priority, v.stop
 
+let calc_arrival_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~difficulty ~year ~year_start ~cycle =
+  let mult = if Region.is_us region then 1 else 2 in
+  let calc_dist =
+    Utils.classic_dist loc (Car.get_source car) * mult
+  in
+  let car_age = Car.get_age car cycle in
+  let reward = calc_dist * 16 / (car_age / 24) in
+  let calc_dist =
+    if Region.is_west_us region && not west_us_route_done then
+      let dx, dy = Utils.dxdy train.last_station loc in
+      dx * 3 / 2 + dy / 2
+    else calc_dist
+  in
+  let freight = Goods.freight_to_enum @@ Car.get_freight car in
+  let v1 = (calc_dist * (5 - freight) + 40 * freight + 40) / 8 in
+  let fp2 = freight * freight * 2 in
+  let v3 = (year - 1790) / 10 + fp2 in
+  let v6 = (Car.get_amount car)/2 * (reward + fp2) * v1 / v3 in
+  let v12 = v6 / (year - year_start/3 - 1170) in
+  let money = (7 - B_options.difficulty_to_enum difficulty) * v12 / 3 in
+  let money = match rates with
+    | `Normal -> money
+    | `Double -> 2 * money
+    | `Half -> money / 2
+  in
+  let money = Utils.clip money ~min:2 ~max:9999 in 
+  let money = match car.good with
+    | Goods.Mail -> money * 5 / 4
+    | Passengers -> money * 3 / 2
+    | _ -> money
+  in 
+  money / 2 (* Seems like it's divided in the end *)
+
 let dump_unused_cars_to_station (v:t) station_supply =
   (* dump unused goods at the station at this stage *)
   (* return time for changing cars *)
@@ -404,69 +402,77 @@ let dump_unused_cars_to_station (v:t) station_supply =
   let stop = get_stop v in
   match stop.cars with
   | None -> (* No adjustment *)
-      0, 0, train.cars, station_supply
+      0, 0, v.cars, station_supply
   | Some stop_cars ->
       let train_cars_by_good = 
         let h = Hashtbl.create 10 in
-        List.iter (fun car -> Hashtbl.add_list h car.good car)
+        List.iter (fun car -> Hashtbl.add_list h (Car.get_good car) car)
         v.cars;
         h
       in
       (* Create the new cars for the train using old cars if possible *)
       let added_cars, train_cars =
-        List.fold_map (fun cnt stop_car ->
-          match Hashtbl.get train_cars_by_good stop_car.good with
+        List.fold_map (fun cnt good ->
+          match Hashtbl.get train_cars_by_good good with
           | Some (car::cars) ->
-              Hashtbl.replace train_cars_by_good stop_car.good cars;
+              Hashtbl.replace train_cars_by_good good cars;
               cnt, car
           | _ ->
-              let car = Car.make stop_car.good in
+              let car = Car.make good in
               cnt + 1, car)
         0
         stop_cars
       in
       (* Remaining cars are added to the station supply *)
       let removed_cars =
-        Hashtbl.fold (fun good car cnt ->
-          Hashtbl.incr ~by:(Car.get_amount car) station_supply good)
+        Hashtbl.fold (fun good cars cnt ->
+          List.fold_left (fun cnt car ->
+            Hashtbl.incr ~by:(Car.get_amount car) station_supply good;
+            cnt + 1)
+          cnt
+          cars)
         train_cars_by_good
         0
       in
-      let expense = (removed_cars - added_cars) * Constants.car_cost in
+      let expense = (removed_cars - added_cars) * C.car_cost in
       let work_done = removed_cars + added_cars in
       work_done, expense, train_cars, station_supply
                            
-let fill_train_from_station cars station_supply =
+let fill_train_from_station cars source cycle station_supply =
   let pickup_amount = 
     List.map (fun car ->
       let car_amount, good = Car.get_amount car, Car.get_good car in
-      let station_amount = Hashtbl.get_or station_supply good 0 in
+      let station_amount = Hashtbl.get_or station_supply good ~default:0 in
       Utils.clip station_amount ~min:0 ~max:(C.car_amount - car_amount)
     )
     cars
   in
   let cars =
-    List.map2 (fun car new_amount ->
-      let car_amount = Car.get_amount car in
-      let amount = car_amount + new_amount in
-      if car_amount < new_amount then
-        {car with load={car.load with amount; source=loc; cycle=v.cycle}}
-      else
-        {car with load={car.load with amount}})
+    List.map2 (fun (car:Car.t) add_amount ->
+      match car.load with
+      | Some load ->
+        let amount = load.amount + add_amount in
+        if load.amount < add_amount then
+          let load = Some {Car.amount; source; cycle} in
+          {car with load}
+        else
+          {car with load=Some {load with amount}}
+      | None ->
+          {car with load=Some {amount=add_amount; source; cycle}})
     cars
     pickup_amount
   in
   let time_pickup =
     List.fold_left2 (fun time amt car ->
-      let freight = Goods.freight_of_goods car.goods |> Goods.freight_to_enum in
-      time + (amt * car.freight / 32))
+      let freight = Car.get_freight car |> Goods.freight_to_enum in
+      time + (amt * freight / 32))
       0
       pickup_amount
       cars
   in
   let station_supply =
     List.iter2 (fun car amount ->
-      Hashtbl.decr station_supply car.good ~by:amount)
+      Hashtbl.decr station_supply (Car.get_good car) ~by:amount)
     cars
     pickup_amount
   in

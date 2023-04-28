@@ -22,7 +22,7 @@ module AddCars = struct
     let station =
       try
         Loc_map.filter s.backend.stations
-        (fun station -> Station.has_upgrade station ~upgrade:Station.EngineShop)
+        (fun station -> Station.can_build_train station)
         |> Iter.head_exn
       with Invalid_argument _ -> invalid_arg "No station with engine found"
     in

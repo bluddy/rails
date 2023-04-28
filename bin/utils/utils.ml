@@ -48,13 +48,6 @@ end
 module Hashtbl = struct
   include Hashtbl
 
-  (* Compute difference count between dict1 - dict2 *) 
-  let subtract dict1 dict2 =
-    let h = Hashtbl.make 10 in
-    Hashtbl.iter (fun a x -> Hashtbl.incr ~by:x h a) dict1;
-    Hashtbl.iter (fun a x -> Hashtbl.decr ~by:x h a) dict2;
-    h
-
   let t_of_yojson conva convb json =
     hashtbl_of_yojson conva convb json
 
@@ -142,7 +135,7 @@ let x_y_of_offset width offset =
   let x = offset mod width in
   x, y
 
-let eq_xy x1 y1 x2 y2 = x1 = x2 && y1 = y2
+let eq_xy (x1,y1) (x2,y2) = x1 = x2 && y1 = y2
 
 
 module List = struct
@@ -243,11 +236,15 @@ let string_of_num num =
   Printf.sprintf "%#d" num
   |> String.map (function '_' -> ',' | x -> x)
 
+let dxdy (x1,y1) (x2,y2) =
+  abs(x1-x2), abs(y1-y2)
+
   (* The way the original game approximates distance *)
-let classic_dist (x1,y1) (x2,y2) =
-  let dx, dy = abs(x1-x2), abs(y1-y2) in
+let classic_dist loc1 loc2 =
+  let dx, dy = dxdy loc1 loc2 in
   let big, small = if dx > dy then dx, dy else dy, dx in
   big + small / 2
+
 
 (* Compare two lists of things, one left and one right. 
    Find an element from the left list that doesn't exist in the right list 
@@ -257,6 +254,6 @@ let find_mismatch ~eq ~left ~right =
     if List.mem ~eq x right then None else Some x)
   left
 
-
+let sum l = List.fold_left (+) 0 l
 
 

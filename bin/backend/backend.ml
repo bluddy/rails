@@ -98,6 +98,7 @@ let default region resources ~random ~seed =
     cycle=0;
     last_tick=0;
     year;
+    year_start=year;
     fiscal_period=`First;
     climate=Moderation;
     players;
@@ -115,6 +116,7 @@ let default region resources ~random ~seed =
     random;
     seed;
     stats=Stats.default;
+    west_us_route_done=false;
   }
 
 let modify_player v ~player f =
@@ -184,7 +186,8 @@ let _build_station v ~x ~y station_type ~player =
   let check_for_first_city () =
     (* first one has engine shop *)
     match
-      Loc_map.filter v.stations (Station.has_upgrade ~upgrade:Station.EngineShop)
+      Loc_map.filter v.stations 
+        (fun v -> Station.has_upgrade v Station.EngineShop)
       |> Iter.head
     with Some _ -> false | None -> true
   in
@@ -378,32 +381,31 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   v.stats.dist_traveled <- v.stats.dist_traveled + dist;
   Train.advance train
 
-let _train_class_stops_at station train = 
-  let train = Train.train_type_to_enum train._type in
-  let station = Station.kind_to_enum station.kind in
+let _train_class_stops_at station_info train = 
+  let train = Train.train_type_to_enum train.Train._type in
+  let station = Station.kind_to_enum station_info.Station.kind in
   station > train
 
-let _train_stops_at station train =
-  _train_class_stops_at station train &&
-  Utils.eq_xy (Train.get_dest train) (station.x, station.y)
+let _train_stops_at (station:Station.t) train =
+  match station.info with
+  | Some station_info ->
+    _train_class_stops_at station_info train &&
+    Utils.eq_xy (Train.get_dest train) (station.x, station.y)
+  | None -> false
 
 let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t) =
-  let handle station_info =
-    let maintained =
-      let open Station.Upgrades in
-      if mem station_info.upgrades EngineShop ||
-         mem station_info.upgrades MaintenanceShop then true
-      else train.maintained
+  let handle_stop station_info =
+    let had_maintenance =
+      if Station.can_maintain station then true
+      else train.had_maintenance
     in
     (* TODO: deal with priority shipment *)
-    let stop_here = _train_stops_at station train in
-    let dist = Utils.classic_dist loc train.last_station in
-    let num_cars = List.length train.cars in
-    let total_dist = dist * num_cars in
     let dist_shipped_cargo =
-      Train.add_dist_shipped_cargo train total_dist v.period
+      let dist = Utils.classic_dist loc train.last_station in
+      let num_cars = List.length train.cars in
+      let total_dist = dist * num_cars in
+      Train.add_dist_shipped_cargo train total_dist v.fiscal_period
     in
-    let mult = if Region.is_us v.region then 1 else 2 in
     let cars = train.cars in
     let cars_delivered =
       List.map (fun car -> 
@@ -414,24 +416,27 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
     let money_from_goods =
       List.map2 (fun car delivered ->
         if delivered then
-          Train.Car.calc_arrival_money ~train ~car ~rates:station_info.rates ~region:v.region
+          Train.calc_arrival_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
           ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
-          ~difficulty:v.difficulty ~cycle:v.cycle
+          ~difficulty:v.options.difficulty ~cycle:v.cycle
         else 0)
       cars
       cars_delivered
     in
     let other_income =
-      let has_rest = has_upgrade station Station.Restaurant in
-      let has_hotel = has_upgrade station Station.Hotel in
-      List.fold_left2 (fun acc car delivered -> match car.goods with
+      let has_rest = Station.has_restaurant station in
+      let has_hotel = Station.has_hotel station in
+      List.fold_left2 (fun acc car delivered -> 
+        let amount, good = Train.Car.get_amount car, Train.Car.get_good car in
+        match good with
         | Passengers when delivered && has_rest && has_hotel ->
-            acc + car.amount/32 + car.amount/16
+            acc + amount/32 + amount/16
         | Passengers when delivered && has_rest ->
-            acc + car.amount / 32
+            acc + amount / 32
         | Passengers when delivered && has_hotel ->
-            acc + car.amount / 16
+            acc + amount / 16
         | _ -> acc)
+      0
       cars
       cars_delivered
     in
@@ -439,7 +444,10 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
     let conversion_goods =
       List.map2 (fun car delivered -> 
         if delivered then 
-          match Station.convert station car.good region with
+          let conv_good =
+            Station.convert station_info (Train.Car.get_good car) v.region
+          in
+          match conv_good with
           | Some good -> Some (good, Train.Car.get_amount car)
           | _ -> None
         else None)
@@ -447,14 +455,15 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
       cars_delivered
     in
     List.iter (function
-      | Some (good, amount) -> Hashtbl.incr station_supply good ~by:amount
+      | Some (good, amount) ->
+          Hashtbl.incr station_supply good ~by:amount
       | _ -> ()
     )
     conversion_goods;
     let time_for_sold_goods =
       List.fold_left2 (fun acc car delivered ->
         if delivered then 
-          let freight = Goods.freight_of_goods @@ Train.Car.get_freight car in
+          let freight = Train.Car.get_freight car |> Goods.freight_to_enum in
           acc + (freight * (Train.Car.get_amount car) / 32)
         else
           acc)
@@ -462,7 +471,10 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
       cars
       cars_delivered
     in
-    let cars = List.map2 (fun car delivered -> if delivered then Car.empty car else car) cars cars_delivered in
+    let cars = List.map2 (fun car delivered ->
+      if delivered then Train.Car.empty car else car)
+      cars cars_delivered
+    in
     let car_change_work, car_change_expense, cars, station_supply =
       Train.dump_unused_cars_to_station train station_supply
     in
@@ -471,10 +483,19 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
       car_change_work * multiplier
     in
     let freight = Train.freight_of_cars cars in
-    let time_pickup, cars, station_supply = Train.fill_train_from_station cars station_supply in
+    let time_pickup, cars, station_supply =
+      Train.fill_train_from_station cars loc v.cycle station_supply in
     let time = time_for_sold_goods + time_for_car_change + time_pickup in
-    let income = money_from_goods + other_income + car_change_expense in
-    time, income, {train with cars; maintained}, station
+    let income = (Utils.sum money_from_goods) + other_income + car_change_expense in
+    time, income, {train with cars; had_maintenance}, station
+  in
+  match station.info with
+  | Some station_info when _train_stops_at station train ->
+      handle_stop station_info
+  | Some station_info when not train.had_maintenance &&
+                           Station.can_maintain station ->
+      0, 0, {train with had_maintenance=true}, station
+  | _ -> 0, 0, train, station
 
     (* TODO: young_station_reached if age <= 20 *)
     (* add income/2 to other_income type *)
@@ -501,8 +522,7 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
        first pickup of goods (only >2 difficulty)
        record reward for delivery
        delivery to station, print revenue
-       *)
-    (* *)
+     *)
 
 let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   (* All major computation happens mid-tile *)
