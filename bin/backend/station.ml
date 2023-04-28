@@ -1,5 +1,6 @@
 open Containers
 open Utils.Infix
+module Hashtbl = Utils.Hashtbl
 
 (* minimum level to be real demand *)
 let min_demand = Goods.full_car
@@ -66,8 +67,8 @@ end)
 type info = {
   mutable demand: Goods.Set.t; (* sufficient demand *)
   mutable convert_demand: Goods.Set.t; (* minimum for conversion *)
-  supply: (Goods.t, int) Utils.Hashtbl.t; (* val is in terms of Goods.full_car *)
-  lost_supply: (Goods.t, int) Utils.Hashtbl.t;
+  supply: (Goods.t, int) Hashtbl.t; (* val is in terms of Goods.full_car *)
+  lost_supply: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
   rate_war: bool;
@@ -75,6 +76,11 @@ type info = {
 } [@@deriving yojson]
 
 let has_demand_for v good = Goods.Set.mem good v.demand
+let convert v good region =
+  if Goods.Set.mem good v.convert_demand then
+    Goods.convert region good
+  else
+    None
 
 type signal = ManualProceed of bool | Auto
             [@@deriving yojson, eq]

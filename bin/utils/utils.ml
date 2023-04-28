@@ -48,6 +48,13 @@ end
 module Hashtbl = struct
   include Hashtbl
 
+  (* Compute difference count between dict1 - dict2 *) 
+  let subtract dict1 dict2 =
+    let h = Hashtbl.make 10 in
+    Hashtbl.iter (fun a x -> Hashtbl.incr ~by:x h a) dict1;
+    Hashtbl.iter (fun a x -> Hashtbl.decr ~by:x h a) dict2;
+    h
+
   let t_of_yojson conva convb json =
     hashtbl_of_yojson conva convb json
 
@@ -249,4 +256,7 @@ let find_mismatch ~eq ~left ~right =
   List.find_map (fun x ->
     if List.mem ~eq x right then None else Some x)
   left
+
+
+
 

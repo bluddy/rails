@@ -5,6 +5,7 @@ let src = Logs.Src.create "train" ~doc:"Train"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 module Vector = Utils.Vector
+module Hashtbl = Utils.Hashtbl
 
 let max_stops = 4
 
@@ -70,7 +71,8 @@ module Car = struct
   } [@@deriving yojson]
 
   let make good = {good; load=None}
-  let good v = v.good
+  let get_good v = v.good
+  let get_freight v = Goods.freight_of_goods @@ get_good v
   let get_age v cycle = match v.load with
     | Some load -> cycle - load.cycle
     | None -> assert false
@@ -80,6 +82,39 @@ module Car = struct
   let get_amount v = match v.load with
     | Some load -> load.amount
     | None -> 0
+
+  let _calc_arrival_money ~train ~car ~rates ~region ~west_us_route_done ~difficulty ~year ~year_start ~cycle =
+      let calc_dist =
+        Utils.classic_dist loc (get_source car) * mult
+      in
+      let car_age = get_age car cycle in
+      let reward = calc_dist * 16 / (car_age / 24) in
+      let calc_dist =
+        if Region.is_west_us region && not west_us_route_done then
+          let dx = abs(train.last_station.x - x) in
+          let dy = abs(train.last_station.y - y) in
+          dx * 3 / 2 + dy / 2
+        else calc_dist
+      in
+      let freight = Goods.freight_of_goods @@ get_freight car in
+      let v1 = (calc_dist * (5 - freight) + 40 * freight + 40) / 8 in
+      let fp2 = freight * freight * 2 in
+      let v3 = (year - 1790) / 10 + fp2 in
+      let v6 = amount/2 * (reward + fp2) * v1 / v3 in
+      let v12 = v6 / (year - year_start/3 - 1170) in
+      let money = (7 - B_options.difficulty_to_enum difficulty) * v12 / 3 in
+      let money = match rates with
+        | `Normal -> money
+        | `Double -> 2 * money
+        | `Half -> money / 2
+      in
+      let money = Utils.clip money ~min:2 ~max:9999 in 
+      let money = match car.good with
+        | Goods.Mail -> money * 5 / 4
+        | Passengers -> money * 3 / 2
+        | _ -> money
+      in 
+      money / 2 (* Seems like it's divided in the end *)
 
 end
 
@@ -92,6 +127,7 @@ type t = {
   mutable target_speed: int;
   mutable wait_time: int; (* for updating train *)
   segment: Segment.id option;
+  name: string option;
   last_station: int * int;
   stop_at_station: bool;
   station_state: [`Traveling | `Entered ];
@@ -132,6 +168,11 @@ let freight_of_cars cars =
   Goods.FreightMail
   cars
 
+let get_car_goods_count cars =
+  let h = Hashtbl.make 10 in
+  List.iter (fun car -> Hashtbl.incr ~by:1 h car.good) cars;
+  h
+
 let make ((x,y) as station) engine cars other_station ~dir =
   let route = [make_stop x y None] in
   let route = match other_station with
@@ -167,6 +208,11 @@ let make ((x,y) as station) engine cars other_station ~dir =
   v
 
 let get_route v = v.route
+
+let get_stop (v:t) =
+  match v.priority with
+  | Some stop -> stop
+  | _ -> v.route.(v.stop)
 
 let remove_stop_car (v:t) stop car =
   let remove_car (stop:stop) =
@@ -348,4 +394,45 @@ let check_increment_stop v (x,y) =
       None, (v.stop + 1) mod (Vector.length v.route)
   | _ ->
       v.priority, v.stop
+
+let adjust_cars_for_station (v:t) (x,y) =
+  (* dump unused goods at the station at this stage *)
+  (* return time for changing cars *)
+  (* TODO: clear priority route cars *)
+  let stop = get_stop v in
+  if stop.x = x && stop.y = y then
+    match stop.cars with
+    | None -> 0
+    | Some stop_cars ->
+        let train_cars_by_good = 
+          let h = Hashtbl.create 10 in
+          List.iter (fun car -> Hashtbl.add_list h car.good car)
+          v.cars;
+          h
+        in
+        (* Create the new cars for the train using old cars if possible *)
+        let added_cars, train_cars =
+          List.fold_map (fun cnt stop_car ->
+            match Hashtbl.get train_cars_by_good stop_car.good with
+            | Some (car::cars) ->
+                Hashtbl.replace train_cars_by_good stop_car.good cars;
+                cnt, car
+            | _ ->
+                let car = Car.make stop_car.good in
+                cnt + 1, car)
+          0
+          stop_cars
+        in
+        (* Remaining cars are added to the station supply *)
+        let station_supply = Hashtbl.create 10 in
+        let removed_cars =
+          Hashtbl.fold (fun good car cnt ->
+            Hashtbl.incr ~by:(Car.get_amount car) station_supply good)
+          train_cars_by_good
+          0
+        in
+        let expense = (removed_cars - added_cars) * Constants.car_cost in
+        expense, train_cars, station_supply
+                           
+
 
