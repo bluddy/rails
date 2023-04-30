@@ -47,8 +47,10 @@ type t = {
   year: int;
 } [@@deriving yojson]
 
-let make make _type name max_speed horsepower price year =
-  { make; _type; name;
+let make make _type name max_speed horsepower price year = {
+  make;
+  _type;
+  name;
   max_speed=max_speed/5; (* To fit the original *)
   horsepower=horsepower/500;
   price=price/1000;
@@ -105,7 +107,15 @@ let of_region = function
   | Britain -> en_engines
   | Europe -> eu_engines
 
-let t_of_make region make =
-  let engines = of_region region in
+let randomize rand engines =
+  List.mapi (fun i engine ->
+    match i with
+    | 0 -> engine
+    | 1 -> {engine with year = engine.year - Random.int 4 rand}
+    | _ -> {engine with year = engine.year + 4 - Random.int 8 rand}
+  )
+  engines
+
+let t_of_make engines make =
   List.find (fun engine -> equal_make engine.make make) engines
   

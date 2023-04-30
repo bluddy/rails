@@ -56,6 +56,7 @@ type t = {
   mutable graph: Track_graph.t;
   trains: Trainmap.t;
   cities: Cities.t;
+  engines: Engine.t list;
   mutable stations: Station.t Loc_map.t;
   segments: Segment.Map.t; (* map segments btw stations *)
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
@@ -93,6 +94,7 @@ let default region resources ~random ~seed =
   in
   let trains = Trainmap.empty () in
   let graph = Track_graph.make () in
+  let engines = Engine.of_region region |> Engine.randomize random in
   {
     time=0;
     cycle=0;
@@ -110,6 +112,7 @@ let default region resources ~random ~seed =
     segments=Segment.Map.make ();
     graph;
     stations;
+    engines;
     priority=None;
     options;
     ui_msgs = [];
@@ -291,7 +294,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
   v
 
 let _build_train v ((x, y) as station) engine cars other_station =
-  let engine_t = Engine.t_of_make v.region engine in
+  let engine_t = Engine.t_of_make v.engines engine in
   (* TODO: Temporary solution for getting track dir *)
   let track = Trackmap.get v.track x y |> Option.get_exn_or "trackmap" in
   let dir, _ = Dir.Set.pop track.dirs in

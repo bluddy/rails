@@ -100,12 +100,11 @@ module ChooseEngine = struct
   let engine_start_y = 24
   let engine_each_y = 25
 
-  let get_engines_before region year =
-    Engine.of_region region
-    |> List.filter (fun engine -> engine.Engine.year <= year)
+  let get_engines_before engines year =
+    List.filter (fun engine -> engine.Engine.year <= year) engines
 
-  let render win (s:State.t) ~region ~year =
-    let engines = get_engines_before region year in
+  let render win (s:State.t) ~engines ~year =
+    let engines = get_engines_before engines year in
     let engine_anims =
       List.map (fun engine ->
         Hashtbl.find s.textures.Textures.engine_anim engine.Engine.make)
@@ -142,10 +141,10 @@ module ChooseEngine = struct
     in
     ()
 
-  let handle_event (event:Event.t) ~region ~year =
+  let handle_event (event:Event.t) engines ~year =
     match event with
     | MouseButton {y; _} when Event.is_left_click event ->
-      let engines = get_engines_before region year in
+      let engines = get_engines_before engines year in
       if y <= 24 then List.nth engines 0 |> Option.some else
         let click_idx = ((y - engine_start_y) / engine_each_y) + 1 in
         if click_idx >= List.length engines then None
@@ -158,8 +157,11 @@ let nobaction = Backend.Action.NoAction
 
 let handle_event (s:State.t) v (event:Event.t) = match v with
   | `ChooseEngine ->
-      begin match ChooseEngine.handle_event event ~region:s.backend.region
-                                                  ~year:s.backend.year with
+      let engine_opt =
+        ChooseEngine.handle_event event s.backend.engines ~year:s.backend.year
+      in
+      begin match engine_opt with
+                                                  
       | Some engine ->
           (* We chose an engine *)
           let state = AddCars.init s ~engine in
