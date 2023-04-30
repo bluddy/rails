@@ -84,7 +84,7 @@ let default region resources ~random ~seed =
   let track = Trackmap.empty width height in
   let options = B_options.default in
   let stations = Loc_map.create width in
-  let players = Array.make num_players Player.default in
+  let players = Array.make num_players (Player.default options.difficulty) in
   let year = match region with
     | EastUS -> 1830
     | WestUS -> 1866
