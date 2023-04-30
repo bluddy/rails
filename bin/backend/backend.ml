@@ -68,11 +68,6 @@ type t = {
 } [@@deriving yojson]
 
 let default region resources ~random ~seed = 
-  (* TODO: randomize engine years  
-     2nd engine: sub up to 3 
-     above: +- 4 years 
-     TODO: init values based on mapgen
-     *)
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
   let map = Tilemap.of_ndarray ~region ~seed map in
   let width, height = Tilemap.get_width map, Tilemap.get_height map in
