@@ -636,10 +636,10 @@ let _update_all_trains (v:t) =
           let update_val =
             update_val / region_div |> min Train.update_array_length
           in
-          Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit);
+          (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
           let train =
             if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then (
-              Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit);
+              (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
               let is_mid_tile =
                 (train.x mod C.tile_w) = C.tile_w / 2 &&
                 (train.y mod C.tile_h) = C.tile_h / 2
@@ -667,7 +667,7 @@ let _handle_cycle v =
   (* TODO: ai_routines *)
   let demand_msgs =
     if v.cycle mod cycles_station_supply_demand = 0 then (
-      Printf.printf "_handle_cycle%!\n";
+      (* Printf.printf "_handle_cycle%!\n"; *)
       let difficulty = v.options.difficulty in
       let climate = v.climate in
       let simple_economy =
