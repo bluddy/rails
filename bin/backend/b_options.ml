@@ -44,4 +44,7 @@ let default =
     difficulty=`Tycoon;
   }
 
+let easy = function
+  | `Investor | `Financier -> true
+  | `Mogul | `Tycoon -> false
 

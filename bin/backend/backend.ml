@@ -148,7 +148,7 @@ let find_close_city v x y ~range = Cities.find_close v.cities x y ~range
 
 let check_build_track v ~x ~y ~dir ~player =
   (* First check the tilemap, then the trackmap *)
-  match Tilemap.check_build_track v.map ~x ~y ~dir with
+  match Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.options.difficulty with
   | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
   | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
   | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
@@ -352,6 +352,7 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   let height2 = Tilemap.get_tile_height v.map x2 y2 in
   let d_height = max 0 (height2 - height1) in
   let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
+  let d_height = if B_options.easy v.options.difficulty then d_height/2 else d_height in 
   let height_factor = match track.kind, track2.kind with
     | Bridge _ , _ -> 0
     | _, Tunnel -> 0
@@ -490,7 +491,7 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
   match station.info with
   | Some station_info when _train_stops_at station train ->
       handle_stop station_info
-  | Some station_info when not train.had_maintenance && Station.can_maintain station ->
+  | Some _ when not train.had_maintenance && Station.can_maintain station ->
        {train with had_maintenance=true}, 0, []
   | _ -> train, 0, []
 
