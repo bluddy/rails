@@ -71,7 +71,7 @@ module Vector = struct
     foldi acc 0
 
   let mapi_in_place f v =
-    for i=0 to length v - 1 do
+    for i=0 to (length v) - 1 do
       let x = get v i in
       let x' = f i x in
       if x =!= x' then (

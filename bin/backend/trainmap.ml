@@ -34,5 +34,6 @@ let fold f v ~init = Vector.fold f init v
 
 let foldi f v ~init = Vector.foldi f init v
 
-let mapi_in_place f v = Vector.mapi_in_place f v
+let mapi_in_place f v = 
+  Vector.mapi_in_place f v
 

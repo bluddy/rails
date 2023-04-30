@@ -485,17 +485,16 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
     let freight = Train.freight_of_cars cars in
     let time_pickup, cars, station_supply =
       Train.fill_train_from_station cars loc v.cycle station_supply in
-    let time = time_for_sold_goods + time_for_car_change + time_pickup in
+    let wait_time = time_for_sold_goods + time_for_car_change + time_pickup in
     let income = (Utils.sum money_from_goods) + other_income + car_change_expense in
-    time, income, {train with cars; had_maintenance}, station
+    {train with cars; had_maintenance; wait_time; freight}, income, []
   in
   match station.info with
   | Some station_info when _train_stops_at station train ->
       handle_stop station_info
-  | Some station_info when not train.had_maintenance &&
-                           Station.can_maintain station ->
-      0, 0, {train with had_maintenance=true}, station
-  | _ -> 0, 0, train, station
+  | Some station_info when not train.had_maintenance && Station.can_maintain station ->
+       {train with had_maintenance=true}, 0, []
+  | _ -> train, 0, []
 
     (* TODO: young_station_reached if age <= 20 *)
     (* add income/2 to other_income type *)
@@ -546,13 +545,13 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
             Segment.Map.decr_train v.segments segment
         | _ -> ()
         end;
-        let last_station, priority, stop =
+        let last_station, priority, stop, train, income, ui_msgs =
           if Station.is_proper_station station then (
-            (* TODO: let wait_timer = _train_enter_station *)
+            let train, income, ui_msgs = _train_enter_station v ixn station train in
             let priority, stop = Train.check_increment_stop train ixn in
-            ixn, priority, stop
+            ixn, priority, stop, train, income, ui_msgs
           ) else (
-            train.last_station, train.priority, train.stop
+            train.last_station, train.priority, train.stop, train, 0, []
           )
         in
         {train with segment=None; last_station; priority; stop; station_state=`Entered}
@@ -582,6 +581,9 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       | `Traveling ->
           let train = enter train in
           exit train 
+      | `Entered when train.wait_time > 0 ->
+          train.wait_time <- train.wait_time - 1;
+          train
       | `Entered ->
           exit train
       end
