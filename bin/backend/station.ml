@@ -64,7 +64,23 @@ module Upgrades = Bitset.Make(struct
   let last = Hotel
 end)
 
+type suffix =
+  | Junction
+  | Crossing
+  | Central
+  | Annex
+  | Transfer
+  | Valley
+  | Hills
+  | Woods
+  [@@deriving yojson, show, enum]
+
+let num_suffix = (suffix_to_enum Woods) + 1
+
 type info = {
+  name: string;
+  city: int * int;
+  suffix: suffix option;
   mutable demand: Goods.Set.t; (* sufficient demand *)
   mutable convert_demand: Goods.Set.t; (* minimum for conversion *)
   supply: (Goods.t, int) Hashtbl.t; (* val is in terms of Goods.full_car *)
@@ -91,12 +107,15 @@ type t = {
   x: int;
   y: int;
   year: int;
-  name: string;
   info: info option;
   player: int;
   segments: (Dir.t * Segment.id) * (Dir.t * Segment.id); (* Semaphores between stations *)
   signals: (Dir.t * signal) * (Dir.t * signal);
 } [@@deriving yojson]
+
+let with_info v f = match v.info with
+  | Some x -> Some (f x)
+  | _ -> None
 
 let get_age v year = year - v.year
 
@@ -158,22 +177,7 @@ let modify_segment (v:t) seg_old seg_new =
   in
   {v with segments}
 
-let make ~x ~y ~year ~name ~kind ~player ~first ~segments =
-  let info =
-    match kind with
-    | `SignalTower -> None
-    | `Depot | `Station | `Terminal as k ->
-      {
-        demand=Goods.Set.empty;
-        convert_demand=Goods.Set.empty;
-        supply=Hashtbl.create 10;
-        lost_supply=Hashtbl.create 10;
-        kind=k;
-        upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
-        rate_war=false;
-        rates=`Normal;
-      } |> Option.some
-  in
+let make_segments_and_signals segments =
   let segments = match segments with
     | [(x, y); (z, w)] -> ((x, y), (z, w))
     | _ -> failwith "Incorrect number of segments"
@@ -182,7 +186,36 @@ let make ~x ~y ~year ~name ~kind ~player ~first ~segments =
     let (dir1, _), (dir2, _) = segments in
     (dir1, Auto), (dir2, Auto)
   in
-  { x; y; year; name; info; player; segments; signals}
+  segments, signals
+
+let make_signaltower ~x ~y ~year ~player ~segments =
+  let segments, signals = make_segments_and_signals segments in
+  { x; y; year; info=None; player; segments; signals}
+
+let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first ~segments =
+  let name = match suffix with
+    | Some suffix -> city_name^" "^show_suffix suffix
+    | None -> city_name
+  in
+  let info = match kind with
+    | `SignalTower -> None
+    | `Depot | `Station | `Terminal as k ->
+      {
+        demand=Goods.Set.empty;
+        convert_demand=Goods.Set.empty;
+        supply=Hashtbl.create 10;
+        lost_supply=Hashtbl.create 10;
+        kind=k;
+        name;
+        city=city_xy;
+        suffix;
+        upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
+        rate_war=false;
+        rates=`Normal;
+      } |> Option.some
+  in
+  let segments, signals = make_segments_and_signals segments in
+  { x; y; year; info; player; segments; signals}
 
 let add_upgrade v upgrade player =
   if v.player <> player then v else
@@ -195,18 +228,13 @@ let add_upgrade v upgrade player =
   in
   {v with info}
 
-let suffixes = [
-  "Junction";
-  "Crossing";
-  "Central";
-  "Annex";
-  "Transfer";
-  "Valley";
-  "Hills";
-  "Woods";
-]
+let get_name v = match v.info with
+  | Some info -> info.name
+  | _ -> ""
 
-let get_name v = v.name
+let get_city v = match v.info with
+  | Some info -> Some(info.city)
+  | _ -> None
 
 let get_supply_exn v = match v.info with
   | Some info -> info.supply

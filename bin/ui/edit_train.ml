@@ -117,7 +117,7 @@ let render win (s:State.t) v : unit =
         | None ->
             Ega.black
       in
-      write color ~x:24 ~y station.name
+      write color ~x:24 ~y (Station.get_name station)
     in
 
     let draw_cars_option (stop:Train.stop) ~y =

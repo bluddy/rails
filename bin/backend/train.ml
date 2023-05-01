@@ -118,7 +118,6 @@ let set_target_speed v speed = v.target_speed <- speed
 let set_speed v speed = v.speed <- speed
 
 let get_route_length v = Vector.length v.route
-let get_route v = v.route
 let get_route_stop v i = Vector.get v.route i
 
 let get_route_dest v = Vector.get v.route v.stop

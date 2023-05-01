@@ -74,7 +74,9 @@ let default region resources ~random ~seed =
   let cities =
     let h = Hashtbl.create 100 in
     List.assoc ~eq:(Stdlib.(=)) region resources.res_cities
-    |> List.iter (fun (name,x,y) -> Hashtbl.replace h (y * width + x) name);
+    |> List.iter (fun (name, x, y) ->
+        Hashtbl.replace h (y * width + x) (name, Random.int Station.num_suffix random)
+      );
     Cities.make h width height
   in
   let track = Trackmap.empty width height in
@@ -180,20 +182,44 @@ let _build_station v ~x ~y station_type ~player =
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_station v.graph ~x ~y before after in
   let dir_segments = Backend_low.Segments.build_station_get_segments graph v.stations v.segments track x y after in
-  let city = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
-  let check_for_first_city () =
-    (* first one has engine shop *)
-    match
-      Loc_map.filter v.stations 
-        (fun v -> Station.has_upgrade v Station.EngineShop)
-      |> Iter.head
-    with Some _ -> false | None -> true
-  in
-  let first = check_for_first_city () in
-  let station =
+  let station = match station_type with
+  | `SignalTower ->
+    Station.make_signaltower ~x ~y ~year:v.year ~player ~segments:dir_segments
+  | _ ->
+    let city_xy = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
+    let check_for_first_city () =
+      (* first one has engine shop *)
+      match
+        Loc_map.filter v.stations 
+          (fun v -> Station.has_upgrade v Station.EngineShop)
+        |> Iter.head
+      with Some _ -> false | None -> true
+    in
+    let first = check_for_first_city () in
+    (* Get suffix if needed *)
+    let city_name, suffix =
+      let (x,y) = city_xy in
+      let name, offset = Cities.find_exn v.cities x y in
+      let count =
+        Loc_map.fold (fun station count ->
+          match Station.get_city station with
+          | Some (city_x, city_y) ->
+            if city_x = x && city_y = y then count + 1
+            else count
+          | _ -> count)
+        v.stations
+        ~init:0
+      in
+      if count = 0 then name, None
+      else
+        let suffix_n = (offset + count) mod Station.num_suffix in
+        name, Station.suffix_of_enum suffix_n
+    in
     Station.make ~x ~y
       ~year:v.year
-      ~name:city
+      ~city_xy
+      ~suffix
+      ~city_name
       ~kind:station_type
       ~player
       ~first

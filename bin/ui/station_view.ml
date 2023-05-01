@@ -135,7 +135,7 @@ let render win (s:State.t) (x, y) ~show_demand =
   let font = Fonts.get_font s.fonts 4 in
 
   let write_name ~x ~y ~color =
-    Printf.sprintf "%s (%s)\nBuilt in %d" station.name (Station.kind_str station) station.year
+    Printf.sprintf "%s (%s)\nBuilt in %d" (Station.get_name station) (Station.kind_str station) station.year
     |> Fonts.Font.write win font ~x ~y ~color
   in
 

@@ -414,7 +414,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             let tilename = match tile with
             | City | Village ->
                 begin match B.find_close_city s.backend x y ~range:4 with
-                | Some city ->
+                | Some (x,y) ->
+                    let city, _ = Cities.find_exn s.backend.cities x y in
                     Printf.sprintf "%s (%s)" (Tile.show tile) city
                 | None -> Tile.show tile
                 end
