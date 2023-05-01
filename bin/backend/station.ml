@@ -73,7 +73,17 @@ type suffix =
   | Valley
   | Hills
   | Woods
-  [@@deriving yojson, show, enum]
+  [@@deriving yojson, enum]
+
+let show_suffix = function
+  | Junction -> "Junction"
+  | Crossing -> "Crossing"
+  | Central -> "Central"
+  | Annex -> "Annex"
+  | Transfer -> "Transfer"
+  | Valley -> "Valley"
+  | Hills -> "Hills"
+  | Woods -> "Woods"
 
 let num_suffix = (suffix_to_enum Woods) + 1
 
