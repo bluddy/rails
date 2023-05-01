@@ -276,6 +276,7 @@ let default ?options ?view win fonts =
     menu;
     view;
     options;
+    train_ui_start=0;
     mode=Normal;
   }
 
@@ -565,6 +566,25 @@ let handle_tick s v time = match v.mode with
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
 
+let draw_ui_trains win (s:State.t) v =
+  let train_h = 5 in
+  let dims = v.dims in
+  let max_fit_trains = dims.train_ui.h / train_h in
+  let max_draw_trains = min max_fit_trains @@
+    (Trainmap.size s.backend.trains) - v.train_ui_start
+  in
+  Iter.iter (fun i ->
+    let idx = v.train_ui_start + i in
+    let train = Trainmap.get s.backend.trains idx in
+    let x1 = v.dims.train_ui.x + 1 in
+    let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
+    let y1 = v.dims.train_ui.y + 6 + i * train_h in 
+    R.draw_line win ~x1 ~y1 ~x2 ~y2:y1 ~color:Ega.dgray;
+    let x1 = x2 - train.speed * 2 in
+    R.draw_line win ~x1 ~y1 ~x2 ~y2:y1 ~color:Ega.bgreen;
+  )
+  Iter.(0 -- (max_draw_trains - 1))
+
 let render_main win (s:State.t) v =
   let dims = v.dims in
   (* Render main view *)
@@ -612,6 +632,7 @@ let render_main win (s:State.t) v =
   (* Train area *)
   let y = y + dims.infobar.h in
   R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
+  draw_ui_trains win s v;
 
   (* Menu bar *)
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:dims.menu.h;

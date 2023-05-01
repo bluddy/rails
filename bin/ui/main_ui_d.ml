@@ -102,6 +102,7 @@ type 'state t = {
   options: options;
   menu: (menu_action, 'state) Menu.Global.t;
   mode: 'state mode; (* determines mode of operation *)
+  train_ui_start: int; (* which train we start showing in the UI *)
   mutable view: Mapview_d.t;
 }
 
