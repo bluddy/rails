@@ -117,7 +117,6 @@ let set_survey v b = {v with survey=b}
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
   let handle_mouse_button v x y button =
-
     match v.zoom with
       | Zoom1 ->
           let y = y - v.dims.y in

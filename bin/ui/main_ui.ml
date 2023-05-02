@@ -256,6 +256,7 @@ let default ?options ?view win fonts =
       minimap;
       infobar;
       train_ui;
+      train_ui_train_h=5;
     }
   in
   let options = match options with
@@ -327,6 +328,42 @@ let build_tunnel_menu fonts ~grade ~tunnel =
   in
   make ~fonts ~heading ~x:176 ~y:16 entries
 
+  (* Iterate over trains in right UI *)
+let ui_train_iter (s:State.t) v f =
+  let train_h = v.dims.train_ui_train_h in
+  let max_fit_trains = v.dims.train_ui.h / train_h in
+  let max_draw_trains = min max_fit_trains @@
+    (Trainmap.size s.backend.trains) - v.train_ui_start
+  in
+  Iter.iter (fun i ->
+    f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
+  )
+  Iter.(0 -- (max_draw_trains - 1))
+
+let ui_train_find (s:State.t) v f =
+  let train_h = v.dims.train_ui_train_h in
+  let max_fit_trains = v.dims.train_ui.h / train_h in
+  let max_draw_trains = min max_fit_trains @@
+    (Trainmap.size s.backend.trains) - v.train_ui_start
+  in
+  Iter.find (fun i ->
+    f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
+  )
+  Iter.(0 -- (max_draw_trains - 1))
+
+let handle_ui_train_event (s:State.t) v = function
+  | Event.MouseButton {x; y; button=`Left; down=true; _} when
+      x > v.dims.train_ui.x && y > v.dims.train_ui.y ->
+        let res =
+          ui_train_find s v (fun y_bot train_idx ->
+            if y < y_bot then Some (v, `EditTrain train_idx)
+            else None)
+        in
+        Option.get_or ~default:(v, `NoAction) res
+  | _ -> v, `NoAction
+
+let nobaction = B.Action.NoAction
+
 let handle_event (s:State.t) v (event:Event.t) =
   (* Handle most stuff for regular menus *)
   let handle_modal_menu_events =
@@ -348,23 +385,21 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _ -> {v with mode=build_fn {modal with menu}}, B.Action.NoAction
       end
   in
-  let nobaction = B.Action.NoAction in
-
   match v.mode with
   | Normal ->
     (* Main gameplay view *)
     let menu, menu_action, event = Menu.Global.update s v.menu event in
     let v = if menu =!= v.menu then {v with menu} else v in
-
-    let view =
-      match menu_action with
+    let view = match menu_action with
       | On(`Survey)  -> Mapview.set_survey v.view true
       | Off(`Survey) -> Mapview.set_survey v.view false
       | _ -> v.view
     in
-
+    let v, view_action = handle_ui_train_event s v event in
     let view, view_action =
-      Mapview.handle_event s view event ~minimap:v.dims.minimap
+      match view_action with
+      | `NoAction -> Mapview.handle_event s view event ~minimap:v.dims.minimap
+      | _ -> view, view_action
     in
     if v.view =!= view then v.view <- view;
 
@@ -372,6 +407,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       match menu_action, view_action with
       | On `Build_train, _ ->
           {v with mode=BuildTrain(`ChooseEngine)}, nobaction
+      | _, `EditTrain train_idx ->
+          {v with mode=EditTrain(Edit_train.make s train_idx)}, nobaction
       | On `Build_station, _ ->
           let menu = build_station_menu s.fonts |> Menu.MsgBox.do_open_menu s in
           let modal = {menu; data=(); last=Normal} in
@@ -569,19 +606,13 @@ let handle_tick s v time = match v.mode with
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
 
 let draw_ui_trains win (s:State.t) v =
-  let train_h = 5 in
-  let dims = v.dims in
-  let max_fit_trains = dims.train_ui.h / train_h in
-  let max_draw_trains = min max_fit_trains @@
-    (Trainmap.size s.backend.trains) - v.train_ui_start
-  in
-  Iter.iter (fun i ->
-    let idx = v.train_ui_start + i in
+  ui_train_iter s v
+  (fun y_bot idx ->
     let train = Trainmap.get s.backend.trains idx in
     (* Speed line *)
     let x = v.dims.train_ui.x + 1 in
     let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
-    let y = v.dims.train_ui.y + 6 + i * train_h in 
+    let y = y_bot in
     R.draw_line win ~x1:x ~y1:y ~x2 ~y2:y ~color:Ega.dgray;
     let x1 = x2 - train.speed * 2 in
     R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
@@ -612,7 +643,6 @@ let draw_ui_trains win (s:State.t) v =
     Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3
       short_name ~x:(x2-11) ~y:(y-4);
   )
-  Iter.(0 -- (max_draw_trains - 1))
 
 let render_main win (s:State.t) v =
   let dims = v.dims in

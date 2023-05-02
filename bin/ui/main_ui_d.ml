@@ -7,6 +7,7 @@ type dims = {
   minimap: Utils.rect;
   infobar: Utils.rect;
   train_ui: Utils.rect;
+  train_ui_train_h: int;
 } [@@deriving yojson]
 
 type message_speed =
