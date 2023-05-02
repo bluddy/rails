@@ -93,10 +93,10 @@ type t = {
   mutable y: int;
   mutable pixels_from_midtile: int;
   mutable dir: Dir.t;
-  mutable speed: int; (* x5 to get real speed *)
+  mutable speed: int; (* *5 to get real speed *)
   mutable target_speed: int;
-  mutable wait_time: int; (* for updating train *)
-  segment: Segment.id option;
+  mutable wait_time: int; (* for loading/unloading train *)
+  segment: Segment.id option; (* for track semaphores *)
   name: string option;
   last_station: Station.id;
   stop_at_station: bool;

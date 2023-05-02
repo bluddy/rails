@@ -95,6 +95,18 @@ type freight =
   | FreightBulk
   [@@deriving enum, ord, yojson]
 
+let freight_to_color freight ~full = match freight, full with
+  | FreightMail, true -> Ega.white
+  | FreightMail, false -> Ega.gray
+  | FreightPassenger, true -> Ega.bcyan
+  | FreightPassenger, false -> Ega.cyan
+  | FreightFast, true -> Ega.yellow
+  | FreightFast, false -> Ega.bgreen
+  | FreightSlow, true -> Ega.bred
+  | FreightSlow, false -> Ega.red
+  | FreightBulk, true -> Ega.black
+  | FreightBulk, false -> Ega.dgray
+
 let num_freight = (freight_to_enum FreightBulk) + 1
 
 let show_freight = function

@@ -4,6 +4,7 @@ open Main_ui_d
 
 module R = Renderer
 module B = Backend
+module C = Constants
 
 let save_game (state:State.t) =
   let s1 = Backend.yojson_of_t state.backend |> Yojson.Safe.to_string in
@@ -578,18 +579,38 @@ let draw_ui_trains win (s:State.t) v =
     let idx = v.train_ui_start + i in
     let train = Trainmap.get s.backend.trains idx in
     (* Speed line *)
-    let x1 = v.dims.train_ui.x + 1 in
+    let x = v.dims.train_ui.x + 1 in
     let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
     let y = v.dims.train_ui.y + 6 + i * train_h in 
-    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.dgray;
+    R.draw_line win ~x1:x ~y1:y ~x2 ~y2:y ~color:Ega.dgray;
     let x1 = x2 - train.speed * 2 in
     R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
 
+    (* Draw UI train *)
+    (* draw engine *)
+    (* TODO: priority on board -> green *)
+    let color = Ega.black in
+    R.draw_line win ~x1:(x+3) ~y1:(y-3) ~x2:(x+3) ~y2:y ~color;
+    R.draw_line win ~x1:(x+4) ~y1:(y-2) ~x2:(x+4) ~y2:(y-1) ~color;
+    R.draw_rect win ~x:(x+5) ~y:(y-3) ~w:2 ~h:4 ~color ~fill:true;
+    (* draw cars *)
+    let _ =
+      List.fold_left (fun x car ->
+        let full = Train.Car.get_amount car > C.car_amount / 2 in
+        let color = Train.Car.get_freight car |> Goods.freight_to_color ~full in
+        R.draw_rect win ~x ~y:(y-2) ~w:4 ~h:2 ~color ~fill:true;
+        R.draw_point win ~x ~y ~color:Ega.black;
+        R.draw_point win ~x:(x+3) ~y ~color:Ega.black;
+        x + 5)
+      (x + 6)
+      train.cars
+    in
+    (* Draw destination *)
     let (dest_x, dest_y) = Train.get_dest train in
     let station = Loc_map.get_exn s.backend.stations dest_x dest_y in
     let short_name = Station.get_short_name station in
     Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3
-      short_name ~x:(x2-11) ~y:(y-5)
+      short_name ~x:(x2-11) ~y:(y-4);
   )
   Iter.(0 -- (max_draw_trains - 1))
 
