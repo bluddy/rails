@@ -577,12 +577,19 @@ let draw_ui_trains win (s:State.t) v =
   Iter.iter (fun i ->
     let idx = v.train_ui_start + i in
     let train = Trainmap.get s.backend.trains idx in
+    (* Speed line *)
     let x1 = v.dims.train_ui.x + 1 in
     let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
-    let y1 = v.dims.train_ui.y + 6 + i * train_h in 
-    R.draw_line win ~x1 ~y1 ~x2 ~y2:y1 ~color:Ega.dgray;
+    let y = v.dims.train_ui.y + 6 + i * train_h in 
+    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.dgray;
     let x1 = x2 - train.speed * 2 in
-    R.draw_line win ~x1 ~y1 ~x2 ~y2:y1 ~color:Ega.bgreen;
+    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
+
+    let (dest_x, dest_y) = Train.get_dest train in
+    let station = Loc_map.get_exn s.backend.stations dest_x dest_y in
+    let short_name = Station.get_short_name station in
+    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3
+      short_name ~x:(x2-11) ~y:(y-5)
   )
   Iter.(0 -- (max_draw_trains - 1))
 

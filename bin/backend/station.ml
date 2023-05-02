@@ -89,6 +89,7 @@ let num_suffix = (suffix_to_enum Woods) + 1
 
 type info = {
   name: string;
+  short_name: string;
   city: int * int;
   suffix: suffix option;
   mutable demand: Goods.Set.t; (* sufficient demand *)
@@ -207,6 +208,14 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first ~segments 
     | Some suffix -> city_name^" "^show_suffix suffix
     | None -> city_name
   in
+  let short_name = match suffix with
+    | Some Crossing ->
+        String.sub city_name 0 2 ^ "X"
+    | Some suffix ->
+        let suffix_s = show_suffix suffix in
+        String.sub city_name 0 2 ^ String.sub suffix_s 0 1
+    | None -> String.sub city_name 0 3
+  in
   let info = match kind with
     | `SignalTower -> None
     | `Depot | `Station | `Terminal as k ->
@@ -217,6 +226,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first ~segments 
         lost_supply=Hashtbl.create 10;
         kind=k;
         name;
+        short_name;
         city=city_xy;
         suffix;
         upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
@@ -240,6 +250,10 @@ let add_upgrade v upgrade player =
 
 let get_name v = match v.info with
   | Some info -> info.name
+  | _ -> ""
+
+let get_short_name v = match v.info with
+  | Some info -> info.short_name
   | _ -> ""
 
 let get_city v = match v.info with
