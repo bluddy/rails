@@ -114,7 +114,7 @@ type msg = {
   y: int;
   dir: Dir.t;
   player: int;
-}
+} [@@deriving show]
 
 let clip v ~min ~max =
   if v >= min then 

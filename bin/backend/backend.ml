@@ -551,7 +551,7 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
 let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   (* All major computation happens mid-tile *)
   let (x,y) as ixn = train.x / C.tile_w, train.y / C.tile_h in
-  Log.debug (fun f -> f "_update_train_mid_tile");
+  (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
   (* TODO: check for colocated trains (accidents/stop a train) *)
   (* Trains can be stopped by 3 things:
     1. R-click: told to stop at next stop
@@ -746,7 +746,7 @@ let _month_of_time time = (time / month_ticks) mod 12
 let get_date v = _month_of_time v.time, v.year
 
 module Action = struct
-  type stop = [`Stop of int | `Priority]
+  type stop = [`Stop of int | `Priority] [@@deriving show]
   type t =
     | NoAction
     | BuildTrack of Utils.msg
@@ -763,8 +763,13 @@ module Action = struct
     | AddStopCar of {train: int; stop: stop; car: Goods.t}
     | RemoveStopCar of {train: int; stop: stop; car: int}
     | RemoveAllStopCars of {train: int; stop: stop}
+    [@@deriving show]
 
-  let run backend = function
+  let has_action = function NoAction -> false | _ -> true
+
+  let run backend msg =
+    if has_action msg then Log.debug (fun f -> f "Received msg %s" (show msg));
+    match msg with
     | BuildTrack {x; y; dir; player} ->
         _build_track backend ~x ~y ~dir ~player
     | BuildFerry {x; y; dir; player} ->

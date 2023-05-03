@@ -31,7 +31,7 @@ type make =
   | V200BB
   | BoBoBo
   | TGV
-  [@@deriving yojson, eq]
+  [@@deriving yojson, eq, show]
 
 type _type =
   SteamSmall | SteamBig | Diesel
