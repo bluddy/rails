@@ -633,7 +633,7 @@ let draw_ui_trains win (s:State.t) v =
         R.draw_point win ~x ~y ~color:Ega.black;
         R.draw_point win ~x:(x+3) ~y ~color:Ega.black;
         x + 5)
-      (x + 6)
+      (x + 8)
       train.cars
     in
     (* Draw destination *)

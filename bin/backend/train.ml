@@ -340,7 +340,7 @@ let advance (v:t) =
   v.x <- v.x + dx;
   v.y <- v.y + dy;
   v.pixels_from_midtile <- succ v.pixels_from_midtile;
-  Log.debug (fun f -> f "Train at (%d, %d)" v.x v.y);
+  (* Log.debug (fun f -> f "Train at (%d, %d)" v.x v.y); *)
   v
 
 let check_increment_stop v (x,y) =
