@@ -83,7 +83,7 @@ module Vector = struct
     let x = get v i in
     let x' = f x in
     if x =!= x' then (
-      set v i x
+      set v i x'
     )
 
   let rw_of_yojson _ = `RW
