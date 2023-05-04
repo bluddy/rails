@@ -261,4 +261,7 @@ let find_mismatch ~eq ~left ~right =
 
 let sum l = List.fold_left (+) 0 l
 
+let modulo x y = 
+  let res = x mod y in
+  if res >= 0 then res else res + y
 

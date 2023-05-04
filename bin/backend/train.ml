@@ -55,7 +55,7 @@ module History = struct
     ()
 
   let get v i =
-    let idx = (v.idx - i) mod Array.length v.history in
+    let idx = Utils.modulo (v.idx - i) @@ Array.length v.history in
     v.history.(idx)
 end
 
