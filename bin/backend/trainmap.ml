@@ -2,7 +2,7 @@ open Containers
 open Utils.Infix
 module Vector = Utils.Vector
 
-type t = (Train.t, Vector.rw) Vector.t
+type t = Train.t Vector.vector
 [@@deriving yojson]
 
 let empty () = Vector.create ()

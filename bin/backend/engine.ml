@@ -35,7 +35,7 @@ type make =
 
 type _type =
   SteamSmall | SteamBig | Diesel
-  [@@deriving yojson]
+  [@@deriving yojson, show]
 
 type t = {
   make: make;
@@ -45,7 +45,7 @@ type t = {
   horsepower: int; (* in 500s *)
   price: int; (* In 1000s *)
   year: int;
-} [@@deriving yojson]
+} [@@deriving yojson, show]
 
 let make make _type name max_speed horsepower price year = {
   make;

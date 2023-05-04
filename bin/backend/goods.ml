@@ -93,7 +93,7 @@ type freight =
   | FreightFast
   | FreightSlow
   | FreightBulk
-  [@@deriving enum, ord, yojson]
+  [@@deriving enum, ord, yojson, show]
 
 let freight_to_color freight ~full = match freight, full with
   | FreightMail, true -> Ega.white

@@ -1,5 +1,5 @@
 type id
-[@@deriving yojson, eq]
+[@@deriving yojson, eq, show]
 
 module Map : sig
   type t [@@deriving yojson]

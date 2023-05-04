@@ -8,7 +8,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
    *)
 
 type id = int
-[@@deriving yojson, eq]
+[@@deriving yojson, eq, show]
 
 module Map = struct
 

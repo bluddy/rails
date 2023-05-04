@@ -89,11 +89,16 @@ module Vector = struct
   let rw_of_yojson _ = `RW
   let yojson_of_rw _ = `Null
   
-  let t_of_yojson conv _ (json:Yojson.Safe.t) =
+  let vector_of_yojson conv (json:Yojson.Safe.t) =
     list_of_yojson conv json |> CCVector.of_list
 
-  let yojson_of_t conv _ v =
+  let yojson_of_vector conv v =
     CCVector.to_list v |> yojson_of_list conv
+
+  (* let pp_rw _ _ _ = () *)
+
+  let pp_vector ?pp_start ?pp_stop ?pp_sep pp_item fmt (v:'a vector) =
+    pp ?pp_start ?pp_stop ?pp_sep pp_item fmt v
 
 end
 

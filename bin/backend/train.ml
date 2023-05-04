@@ -15,7 +15,7 @@ type stop = {
   x: int;
   y: int;
   cars: (Goods.t list) option; (* change of cars. None -> "No Change" *)
-} [@@deriving yojson]
+} [@@deriving yojson, show]
 
 let make_stop x y cars = {x; y; cars}
 
@@ -24,7 +24,7 @@ type train_type =
   | Through (* Skips depots *)
   | Express (* Skips stations or less *)
   | Limited (* Skips terminals or less *)
-  [@@deriving yojson, enum]
+  [@@deriving yojson, enum, show]
 
 module History = struct
   type elem = {
@@ -32,7 +32,7 @@ module History = struct
     y: int;
     dir: Dir.t;
     speed_factor: int;
-  } [@@deriving yojson]
+  } [@@deriving yojson, show]
 
   let empty =
     {x=0; y=0; dir=Dir.Up; speed_factor=0}
@@ -40,7 +40,7 @@ module History = struct
   type t = {
     history: elem array;
     mutable idx: int;
-  } [@@deriving yojson]
+  } [@@deriving yojson, show]
 
   let make () = {
     history=Array.make C.train_max_size empty;
@@ -64,12 +64,12 @@ module Car = struct
     amount: int; (* 160 is full (40 tons) *)
     source: Station.id;
     cycle: int;
-  } [@@ deriving yojson]
+  } [@@ deriving yojson, show]
 
   type t = {
     good: Goods.t;
     load: load option;
-  } [@@deriving yojson]
+  } [@@deriving yojson, show]
 
   let make good = {good; load=None}
   let get_good v = v.good
@@ -107,12 +107,12 @@ type t = {
   _type: train_type;
   history: History.t; (* History of values. Used for cars *)
   stop: int; (* current stop of route *)
-  route: (stop, Utils.Vector.rw) Utils.Vector.t; (* route stops *)
+  route: stop Utils.Vector.vector; (* route stops *)
   priority: stop option;
   had_maintenance: bool;
   dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
   dist_shipped_cargo: int * int; (* also by fin period *)
-} [@@deriving yojson]
+} [@@deriving yojson, show]
 
 let set_target_speed v speed = v.target_speed <- speed  
 let set_speed v speed = v.speed <- speed

@@ -112,7 +112,7 @@ let convert v good region =
 type signal = ManualProceed of bool | Auto
             [@@deriving yojson, eq]
 
-type id = int * int [@@deriving yojson, eq]
+type id = int * int [@@deriving yojson, eq, show]
 
 type t = {
   x: int;
