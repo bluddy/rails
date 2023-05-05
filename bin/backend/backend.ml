@@ -607,7 +607,6 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
           let train = enter train in
           exit train 
       | `Entered when train.wait_time > 0 ->
-          train.wait_time <- train.wait_time - 1;
           train
       | `Entered ->
           exit train
@@ -646,7 +645,8 @@ let _update_all_trains (v:t) =
         if speed_bound >= train.Train.speed then train
         else begin
           let speed =
-            if Dir.is_diagonal train.dir then (train.speed * 2 + 1) / 3
+            if train.speed > 1 && Dir.is_diagonal train.dir then
+              (train.speed * 2 + 1) / 3
             else train.speed
           in
           let update_val =
@@ -677,8 +677,9 @@ let _update_all_trains (v:t) =
         end
       in
       train_update_loop train 0)
-    else
-      train
+    else (* wait time *) (
+      Train.wait_time <- Train.wait_time - 1;
+      Train.set_target_speed train 4)
   in
   Trainmap.mapi_in_place update_train v.trains
 
