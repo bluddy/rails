@@ -482,9 +482,8 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
     List.iter (function
       | Some (good, amount) ->
           Hashtbl.incr station_supply good ~by:amount
-      | _ -> ()
-    )
-    conversion_goods;
+      | _ -> ())
+      conversion_goods;
     let time_for_sold_goods =
       List.fold_left2 (fun acc car delivered ->
         if delivered then 
@@ -550,7 +549,7 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
 
 let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
   (* All major computation happens mid-tile *)
-  let (x,y) as ixn = train.x / C.tile_w, train.y / C.tile_h in
+  let (x,y) as loc = train.x / C.tile_w, train.y / C.tile_h in
   (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
   (* TODO: check for colocated trains (accidents/stop a train) *)
   (* Trains can be stopped by 3 things:
@@ -572,9 +571,9 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
         end;
         let last_station, priority, stop, train, income, ui_msgs =
           if Station.is_proper_station station then (
-            let train, income, ui_msgs = _train_enter_station v ixn station train in
-            let priority, stop = Train.check_increment_stop train ixn in
-            ixn, priority, stop, train, income, ui_msgs
+            let train, income, ui_msgs = _train_enter_station v loc station train in
+            let priority, stop = Train.check_increment_stop train loc in
+            loc, priority, stop, train, income, ui_msgs
           ) else (
             train.last_station, train.priority, train.stop, train, 0, []
           )
@@ -586,7 +585,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
         if train.Train.wait_time = 0 && not train.stop_at_station then (
           let dest = Train.get_dest train in
           let dir =
-            match Track_graph.shortest_path v.graph ~src:ixn ~dest with
+            match Track_graph.shortest_path v.graph ~src:loc ~dest with
             | Some dir -> dir
             | None -> (* TODO: Impossible route message *)
               Dir.Set.find_nearest train.dir track.dirs
@@ -598,8 +597,8 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
           let train =
             _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
           in
-          {train with segment=Some segment; station_state=`Traveling}
-        ) else
+          {train with segment=Some segment; station_state=`Traveling}) 
+        else
           train
       in
       begin match train.station_state with
@@ -616,7 +615,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       let dir =
         let dest = Train.get_dest train in
         Track_graph.shortest_path_branch v.graph
-          ~ixn:(x,y) ~cur_dir:train.dir ~dest 
+          ~ixn:loc ~cur_dir:train.dir ~dest 
           |> Option.get_exn_or "Cannot find route for train" 
       in
       _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
@@ -642,12 +641,14 @@ let _update_all_trains (v:t) =
       let train = Train.update_speed train ~cycle:v.cycle ~cycle_check ~cycle_bit in
       (* TODO: fiscal period update stuff *)
       let rec train_update_loop train speed_bound =
-        if speed_bound >= train.Train.speed then train
-        else begin
+        if speed_bound >= train.Train.speed then
+          train
+        else (
           let speed =
             if train.speed > 1 && Dir.is_diagonal train.dir then
               (train.speed * 2 + 1) / 3
-            else train.speed
+            else
+              train.speed
           in
           let update_val =
             if speed > 12 then 
@@ -674,12 +675,14 @@ let _update_all_trains (v:t) =
               train
           in
           train_update_loop train (speed_bound + 12)
-        end
+        )
       in
       train_update_loop train 0)
-    else (* wait time *) (
-      Train.wait_time <- Train.wait_time - 1;
-      Train.set_target_speed train 4)
+    else ( (* wait time > 0 *)
+      Train.decr_wait_time train;
+      Train.set_target_speed train 4;
+      train
+    )
   in
   Trainmap.mapi_in_place update_train v.trains
 
@@ -710,11 +713,9 @@ let _handle_cycle v =
           in
           msgs @ old_msgs)
       v.stations
-      ~init:[]
-    )
+      ~init:[])
     else []
   in
-
   (* adjust time *)
   v.time <- v.time + 1;
   let v = 

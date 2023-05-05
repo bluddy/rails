@@ -116,6 +116,7 @@ type t = {
 
 let set_target_speed v speed = v.target_speed <- speed  
 let set_speed v speed = v.speed <- speed
+let decr_wait_time v = v.wait_time <- v.wait_time - 1
 
 let get_route_length v = Vector.length v.route
 let get_route_stop v i = Vector.get v.route i
