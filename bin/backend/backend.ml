@@ -606,9 +606,9 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       | `Traveling ->
           let train = enter train in
           if train.wait_time > 0 || train.stop_at_station then
-            exit train 
-          else
             train
+          else
+            exit train
       | `Entered ->
           exit train
       end
