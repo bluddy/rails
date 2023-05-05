@@ -511,7 +511,12 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
       Train.fill_train_from_station cars loc v.cycle station_supply in
     let wait_time = time_for_sold_goods + time_for_car_change + time_pickup in
     let income = (Utils.sum money_from_goods) + other_income + car_change_expense in
-    {train with cars; had_maintenance; wait_time; freight}, income, []
+    let speed, target_speed =
+      if wait_time > 0 || train.stop_at_station then 0, 0
+      else train.speed, train.target_speed
+    in
+    Log.debug (fun f -> f "wait_time(%d)" wait_time);
+    {train with cars; had_maintenance; wait_time; freight; speed; target_speed}, income, []
   in
   match station.info with
   | Some station_info when _train_stops_at station train ->
@@ -600,11 +605,10 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       begin match train.station_state with
       | `Traveling ->
           let train = enter train in
-          exit train 
-      | `Entered when train.wait_time > 0 || train.stop_at_station ->
-          Train.set_speed train 0;
-          Train.set_target_speed train 0;
-          train
+          if train.wait_time > 0 || train.stop_at_station then
+            exit train 
+          else
+            train
       | `Entered ->
           exit train
       end
