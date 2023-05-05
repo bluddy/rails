@@ -581,31 +581,29 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
         {train with segment=None; last_station; priority; stop; station_state=`Entered}
       in
       let exit train =
-        (* Can we leave? *)
-        if train.Train.wait_time = 0 && not train.stop_at_station then (
-          let dest = Train.get_dest train in
-          let dir =
-            match Track_graph.shortest_path v.graph ~src:loc ~dest with
-            | Some dir -> dir
-            | None -> (* TODO: Impossible route message *)
-              Dir.Set.find_nearest train.dir track.dirs
-              |> Option.get_exn_or "Cannot find track for train"
-          in
-          let segment = Station.get_segment station dir in
-          Segment.Map.incr_train v.segments segment;
-          (* TODO Check signal for exit dir *)
-          let train =
-            _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
-          in
-          {train with segment=Some segment; station_state=`Traveling}) 
-        else
-          train
+        let dest = Train.get_dest train in
+        let dir =
+          match Track_graph.shortest_path v.graph ~src:loc ~dest with
+          | Some dir -> dir
+          | None -> (* TODO: Impossible route message *)
+            Dir.Set.find_nearest train.dir track.dirs
+            |> Option.get_exn_or "Cannot find track for train"
+        in
+        let segment = Station.get_segment station dir in
+        Segment.Map.incr_train v.segments segment;
+        (* TODO Check signal for exit dir *)
+        let train =
+          _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+        in
+        {train with segment=Some segment; station_state=`Traveling}
       in
       begin match train.station_state with
       | `Traveling ->
           let train = enter train in
           exit train 
-      | `Entered when train.wait_time > 0 ->
+      | `Entered when train.wait_time > 0 || train.stop_at_station ->
+          Train.set_speed train 0;
+          Train.set_target_speed train 0;
           train
       | `Entered ->
           exit train
