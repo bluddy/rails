@@ -614,7 +614,7 @@ let draw_ui_trains win (s:State.t) v =
     let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
     let y = y_bot in
     R.draw_line win ~x1:x ~y1:y ~x2 ~y2:y ~color:Ega.dgray;
-    let x1 = x2 - train.speed * 2 in
+    let x1 = x2 - (Train.get_speed train) * 2 in
     R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
 
     (* Draw UI train *)

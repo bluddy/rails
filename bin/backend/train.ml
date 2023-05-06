@@ -88,19 +88,22 @@ module Car = struct
 
 end
 
+type state =
+  | Traveling of { mutable speed: int; (* *5 to get real speed *)
+                   mutable target_speed: int}
+  | WaitingAtStation of {mutable wait_time: int}
+  [@@deriving yojson, show]
+
 type t = {
   mutable x: int;
   mutable y: int;
+  state: state;
   mutable pixels_from_midtile: int;
   mutable dir: Dir.t;
-  mutable speed: int; (* *5 to get real speed *)
-  mutable target_speed: int;
-  mutable wait_time: int; (* for loading/unloading train *)
   segment: Segment.id option; (* for track semaphores *)
   name: string option;
   last_station: Station.id;
   stop_at_station: bool;
-  station_state: [`Traveling | `Entered ];
   engine: Engine.t;
   cars: Car.t list;
   freight: Goods.freight; (* freight class *)
@@ -114,12 +117,12 @@ type t = {
   dist_shipped_cargo: int * int; (* also by fin period *)
 } [@@deriving yojson, show]
 
-let set_target_speed v speed = v.target_speed <- speed  
-let set_speed v speed = v.speed <- speed
-let decr_wait_time v = v.wait_time <- v.wait_time - 1
-
 let get_route_length v = Vector.length v.route
 let get_route_stop v i = Vector.get v.route i
+
+let get_speed v = match v.state with
+  | Traveling s -> s.speed
+  | WaitingAtStation _ -> 0
 
 let get_route_dest v = Vector.get v.route v.stop
 let get_stop v =
@@ -158,11 +161,9 @@ let make ((x,y) as station) engine cars other_station ~dir =
     engine;
     pixels_from_midtile=0;
     dir;
-    speed=1;
-    target_speed=1;
+    state=Traveling {speed=1; target_speed=1};
     cars;
     freight=freight_of_cars cars;
-    wait_time=0;
     _type=Local;
     history=History.make ();
     stop=0;
@@ -172,13 +173,12 @@ let make ((x,y) as station) engine cars other_station ~dir =
     last_station=station;
     had_maintenance=false;
     stop_at_station=false;
-    station_state=`Traveling;
     priority=None;
     dist_traveled=(ref 0, ref 0);
     dist_shipped_cargo=(0, 0);
   }
   in
-  Log.debug (fun f -> f "Train: new train at (%d,%d) speed:%d targer_speed:%d" v.x v.y v.speed v.target_speed);
+  Log.debug (fun f -> f "Train: new train at (%d,%d)" v.x v.y);
   v
 
 let get_route v = v.route
@@ -278,26 +278,6 @@ let update_cycle_array =
   [| 0; 1; 0x41; 0x111; 0x249; 0x8A5; 0x555; 0x5AD; 0x6DB; 0x777; 0x7DF; 0x7FF; 0xFFF |]
 
 let update_array_length = Array.length update_cycle_array
-
-let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
-  (* Update current train speed based on target speed and cycle *)
-  if v.target_speed > v.speed then (
-    (* accelerate *)
-    let speed_diff = min 12 (v.target_speed - v.speed) in
-    if v.speed <= 1 ||
-       (cycle mod cycle_check = 0 &&
-       (update_cycle_array.(speed_diff) land cycle_bit) <> 0) then begin
-         v.speed <- succ v.speed;
-         Log.debug (fun f -> f "Train accelerate. New speed %d" v.speed);
-    end;
-  ) else if v.target_speed < v.speed then (
-  (* decelerate *)
-    if cycle mod 8 = 0 then begin
-      v.speed <- pred v.speed;
-      Log.debug (fun f -> f "Train decelerate. New speed %d" v.speed);
-    end
-  );
-  v
 
 let get_weight v =
   List.fold_left (fun weight car ->
@@ -477,4 +457,77 @@ let fill_train_from_station cars source cycle station_supply =
     pickup_amount
   in
   time_pickup, cars, station_supply
+
+let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
+  (* Update current train speed based on target speed and cycle *)
+  match v.state with
+  | Traveling s ->
+    if s.target_speed > s.speed then (
+      (* accelerate *)
+      let speed_diff = min 12 (s.target_speed - s.speed) in
+      if s.speed <= 1 ||
+         (cycle mod cycle_check = 0 &&
+         (update_cycle_array.(speed_diff) land cycle_bit) <> 0) then (
+           s.speed <- succ s.speed;
+           Log.debug (fun f -> f "Train accelerate. New speed %d" s.speed);
+      );
+    ) else if s.target_speed < s.speed then (
+    (* decelerate *)
+      if cycle mod 8 = 0 then (
+        s.speed <- s.speed - 1;
+        Log.debug (fun f -> f "Train decelerate. New speed %d" s.speed);
+      )
+    );
+    v
+  | _ -> v
+
+let update_train idx (train:t) ~cycle ~cycle_check
+    ~cycle_bit ~region_div ~update_mid_tile =
+  (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in *)
+  match train.state with
+  | Traveling _ ->
+    let train = update_speed train ~cycle ~cycle_check ~cycle_bit in
+    (* TODO: fiscal period update stuff *)
+    let rec train_update_loop train speed_bound =
+      let speed = get_speed train in
+      if speed_bound >= speed then train
+      else (
+        let speed =
+          if speed > 1 && Dir.is_diagonal train.dir then (speed * 2 + 1) / 3
+          else speed
+        in
+        let update_val =
+          if speed > 12 then 
+            if speed_bound = 0 then 12 else speed - 12
+          else speed
+        in
+        (* BUGFIX: original code allowed sampling from random memory *)
+        let update_val = update_val / region_div
+          |> min update_array_length
+        in
+        (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
+        let train =
+          if (update_cycle_array.(update_val) land cycle_bit) <> 0 then (
+            (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
+            let is_mid_tile =
+              (train.x mod C.tile_w) = C.tile_w / 2 &&
+              (train.y mod C.tile_h) = C.tile_h / 2
+            in
+            if is_mid_tile then
+              update_mid_tile train
+            else
+              advance train)
+          else
+            train
+        in
+        train_update_loop train (speed_bound + 12)
+      )
+    in
+    train_update_loop train 0
+  | WaitingAtStation s when s.wait_time > 0 ->
+      s.wait_time <- s.wait_time - 1;
+      train
+  | WaitingAtStation _ ->
+      (* Actual exiting comes in the train station function *)
+      train
 
