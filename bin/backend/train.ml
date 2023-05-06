@@ -318,10 +318,10 @@ let get_max_speed_factor v =
 let compute_target_speed v ~idx ~cycle =
   let weight = get_weight v in
   let max_speed_factor = get_max_speed_factor v in
-  let a = weight / 160 + 1 in
-  let b = (max_speed_factor + 2) * a in
-  let engine_speed = v.engine.Engine.horsepower * 200 / b in
+  let b = (max_speed_factor + 2) * (weight/160 + 1) in
+  let engine_speed = (v.engine.Engine.horsepower * 200) / b in
   let random = (13 * idx + cycle) mod 64 in
+  Log.debug (fun f -> f "max_sf(%d) weight(%d) random(%d) engine_speed(%d)" max_speed_factor weight random engine_speed);
   ((engine_speed * 8) + random + 80) / 80
   |> Utils.clip ~min:0 ~max:v.engine.max_speed
 

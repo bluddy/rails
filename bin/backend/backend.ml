@@ -386,16 +386,16 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   in
   let turn_factor = Dir.diff dir train.dir in
   let speed_factor = (height_factor * height_factor / 144) + turn_factor in
-
+  Log.debug (fun f -> f "height_factor(%d), turn_factor(%d), speed_factor(%d)" height_factor turn_factor speed_factor);
   (* History lets us reuse the engine orientation for the cars as they cross *)
   Train.History.add train.history train.x train.y train.dir speed_factor;
-
   (* Compute and set target speed *)
   let target_speed, speed =
     match Tilemap.get_tile v.map x y with
-    | Ocean _ | Harbor _ -> 1, 1
+    | Ocean _ | Harbor _ -> 1, 1 
     | _ -> Train.compute_target_speed train ~idx ~cycle, train.speed
   in
+  (* updates *)
   train.pixels_from_midtile <- 0;
   if dir =!= train.dir then train.dir <- dir;
   if target_speed =!= train.target_speed then train.target_speed <- target_speed;
@@ -622,7 +622,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       in
       _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
 
-  | _ -> (* All other track and non-deicsion ixns *)
+  | _ -> (* All other track and non-decision ixns *)
       let dir = 
         Dir.Set.find_nearest train.dir track.dirs
         |> Option.get_exn_or "Cannot find track for train"
