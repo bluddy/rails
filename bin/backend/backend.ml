@@ -722,7 +722,7 @@ let _handle_cycle v =
   v.time <- v.time + 1;
   let v = 
     if v.time >= year_ticks then
-      {v with year=v.year + 1}
+      {v with year=v.year + 1; time=0}
     else v
   in
   v, demand_msgs
