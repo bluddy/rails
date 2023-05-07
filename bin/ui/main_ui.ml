@@ -340,22 +340,23 @@ let ui_train_iter (s:State.t) v f =
   )
   Iter.(0 -- (max_draw_trains - 1))
 
-let ui_train_find (s:State.t) v f =
-  let train_h = v.dims.train_ui_train_h in
-  let max_fit_trains = v.dims.train_ui.h / train_h in
-  let max_draw_trains = min max_fit_trains @@
-    (Trainmap.size s.backend.trains) - v.train_ui_start
+let handle_ui_train_event (s:State.t) v event =
+  let ui_train_find f =
+    let train_h = v.dims.train_ui_train_h in
+    let max_fit_trains = v.dims.train_ui.h / train_h in
+    let max_draw_trains = min max_fit_trains @@
+      (Trainmap.size s.backend.trains) - v.train_ui_start
+    in
+    Iter.find (fun i ->
+      f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
+    )
+    Iter.(0 -- (max_draw_trains - 1))
   in
-  Iter.find (fun i ->
-    f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
-  )
-  Iter.(0 -- (max_draw_trains - 1))
-
-let handle_ui_train_event (s:State.t) v = function
+  match event with
   | Event.MouseButton {x; y; button=`Left; down=true; _} when
       x > v.dims.train_ui.x && y > v.dims.train_ui.y ->
         let res =
-          ui_train_find s v (fun y_bot train_idx ->
+          ui_train_find (fun y_bot train_idx ->
             if y < y_bot then Some (v, `EditTrain train_idx)
             else None)
         in
