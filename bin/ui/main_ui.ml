@@ -386,201 +386,217 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _ -> {v with mode=build_fn {modal with menu}}, B.Action.NoAction
       end
   in
-  match v.mode with
-  | Normal ->
-    (* Main gameplay view *)
-    let menu, menu_action, event = Menu.Global.update s v.menu event in
-    let v = if menu =!= v.menu then {v with menu} else v in
-    let view = match menu_action with
-      | On(`Survey)  -> Mapview.set_survey v.view true
-      | Off(`Survey) -> Mapview.set_survey v.view false
-      | _ -> v.view
-    in
-    let v, view_action = handle_ui_train_event s v event in
-    let view, view_action =
-      match view_action with
-      | `NoAction -> Mapview.handle_event s view event ~minimap:v.dims.minimap
-      | _ -> view, view_action
-    in
-    if v.view =!= view then v.view <- view;
+  let old_mode, old_menu = v.mode, v.menu in
+  let v, backend_msg =
+    match v.mode with
+    | Normal ->
+      (* Main gameplay view *)
+      let menu, menu_action, event = Menu.Global.update s v.menu event in
+      let v = if menu =!= v.menu then {v with menu} else v in
+      let view = match menu_action with
+        | On(`Survey)  -> Mapview.set_survey v.view true
+        | Off(`Survey) -> Mapview.set_survey v.view false
+        | _ -> v.view
+      in
+      let v, view_action = handle_ui_train_event s v event in
+      let view, view_action =
+        match view_action with
+        | `NoAction -> Mapview.handle_event s view event ~minimap:v.dims.minimap
+        | _ -> view, view_action
+      in
+      if v.view =!= view then v.view <- view;
 
-    let v, backend_action =
-      match menu_action, view_action with
-      | On `Build_train, _ ->
-          {v with mode=BuildTrain(`ChooseEngine)}, nobaction
-      | _, `EditTrain train_idx ->
-          {v with mode=EditTrain(Edit_train.make s train_idx)}, nobaction
-      | On `Build_station, _ ->
-          let menu = build_station_menu s.fonts |> Menu.MsgBox.do_open_menu s in
-          let modal = {menu; data=(); last=Normal} in
-          {v with mode=BuildStation modal}, nobaction
-      | On `BuildTrack, _ ->
-          {v with view=Mapview.set_build_mode v.view true}, nobaction 
-      | On `RemoveTrack, _ ->
-          {v with view=Mapview.set_build_mode v.view false}, nobaction 
-      | On `ImproveStation upgrade, _ ->
-          let x, y = Mapview.get_cursor_pos v.view in
-          {v with mode=StationView(x, y)}, ImproveStation{x; y; player=0; upgrade}
-      | On `Save_game, _ ->
-          save_game s;
-          v, nobaction
-      | On (`Speed speed), _ -> v, B.Action.SetSpeed speed
-      | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
-      | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
-      | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
-      | _, `BuildBridge msg ->
-          let menu = build_bridge_menu s.fonts |> Menu.MsgBox.do_open_menu s in
-          let modal = {menu; data=msg; last=Normal} in
-          {v with mode=BuildBridge modal}, nobaction
-      | _, `HighGradeTrack(msg, grade) ->
-          let menu = build_tunnel_menu ~grade ~tunnel:false s.fonts
-            |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
-          in
-          let modal = {menu; data=(msg,0); last=Normal} in
-          {v with mode=BuildTunnel modal}, nobaction
-      | _, `BuildTunnel(msg, length, grade) ->
-          let menu =
-            build_tunnel_menu ~grade ~tunnel:true s.fonts
-            |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
-          in
-          let modal = {menu; data=(msg,length); last=Normal} in
-          {v with mode=BuildTunnel modal}, nobaction
-      | _, `ShowTileInfo (x, y, tile) ->
-          let info = Tile.Info.get (B.get_region s.backend) tile in
-          let open Menu.MsgBox in
-          let money_sym = Region.money_symbol s.backend.region in
-          let entries =
-            let tilename = match tile with
-            | City | Village ->
-                begin match B.find_close_city s.backend x y ~range:4 with
-                | Some (x,y) ->
-                    let city, _ = Cities.find_exn s.backend.cities x y in
-                    Printf.sprintf "%s (%s)" (Tile.show tile) city
-                | None -> Tile.show tile
-                end
-            | _ -> Tile.show tile
+      let v, backend_action =
+        match menu_action, view_action with
+        | On `Build_train, _ ->
+            {v with mode=BuildTrain(`ChooseEngine)}, nobaction
+        | _, `EditTrain train_idx ->
+            {v with mode=EditTrain(Edit_train.make s train_idx)}, nobaction
+        | On `Build_station, _ ->
+            let menu = build_station_menu s.fonts |> Menu.MsgBox.do_open_menu s in
+            let modal = {menu; data=(); last=Normal} in
+            {v with mode=BuildStation modal}, nobaction
+        | On `BuildTrack, _ ->
+            {v with view=Mapview.set_build_mode v.view true}, nobaction 
+        | On `RemoveTrack, _ ->
+            {v with view=Mapview.set_build_mode v.view false}, nobaction 
+        | On `ImproveStation upgrade, _ ->
+            let x, y = Mapview.get_cursor_pos v.view in
+            {v with mode=StationView(x, y)}, ImproveStation{x; y; player=0; upgrade}
+        | On `Save_game, _ ->
+            save_game s;
+            v, nobaction
+        | On (`Speed speed), _ -> v, B.Action.SetSpeed speed
+        | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
+        | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
+        | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
+        | _, `BuildBridge msg ->
+            let menu = build_bridge_menu s.fonts |> Menu.MsgBox.do_open_menu s in
+            let modal = {menu; data=msg; last=Normal} in
+            {v with mode=BuildBridge modal}, nobaction
+        | _, `HighGradeTrack(msg, grade) ->
+            let menu = build_tunnel_menu ~grade ~tunnel:false s.fonts
+              |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
             in
+            let modal = {menu; data=(msg,0); last=Normal} in
+            {v with mode=BuildTunnel modal}, nobaction
+        | _, `BuildTunnel(msg, length, grade) ->
+            let menu =
+              build_tunnel_menu ~grade ~tunnel:true s.fonts
+              |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
+            in
+            let modal = {menu; data=(msg,length); last=Normal} in
+            {v with mode=BuildTunnel modal}, nobaction
+        | _, `ShowTileInfo (x, y, tile) ->
+            let info = Tile.Info.get (B.get_region s.backend) tile in
+            let open Menu.MsgBox in
+            let money_sym = Region.money_symbol s.backend.region in
             let entries =
-            [
-              static_entry ~color:Ega.white tilename;
-              static_entry ~color:Ega.white "Right-of-Way costs";
-              static_entry ~color:Ega.white @@ Printf.sprintf "%s%d,000 per mile" money_sym info.cost;
-            ]
+              let tilename = match tile with
+              | City | Village ->
+                  begin match B.find_close_city s.backend x y ~range:4 with
+                  | Some (x,y) ->
+                      let city, _ = Cities.find_exn s.backend.cities x y in
+                      Printf.sprintf "%s (%s)" (Tile.show tile) city
+                  | None -> Tile.show tile
+                  end
+              | _ -> Tile.show tile
+              in
+              let entries =
+              [
+                static_entry ~color:Ega.white tilename;
+                static_entry ~color:Ega.white "Right-of-Way costs";
+                static_entry ~color:Ega.white @@ Printf.sprintf "%s%d,000 per mile" money_sym info.cost;
+              ]
+              in
+              let demand = match info.demand with
+                | [] -> []
+                | demand ->
+                    static_entry ~color:Ega.bcyan " Demands" ::
+                    List.map (fun (good, amount) ->
+                      let prefix = match amount with
+                        | 8  -> " 1/8 "
+                        | 16 -> " 1/4 "
+                        | 32 -> " 1/2 "
+                        | _ -> " "
+                      in
+                      static_entry ~color:Ega.black @@ prefix ^ Goods.show good
+                    )
+                    demand
+              in
+              let supply = match info.supply with
+                | [] -> []
+                | supply ->
+                    static_entry ~color:Ega.bcyan " Supplies" ::
+                    List.map (fun (good, _) ->
+                      static_entry ~color:Ega.black @@ " "^Goods.show good)
+                      supply
+              in
+              let convert =
+                List.filter_map (fun (good, _) ->
+                  match Goods.convert s.backend.region good with
+                  | None -> None
+                  | Some good ->
+                    static_entry ~color:Ega.black @@ " ("^Goods.show good^")"
+                    |> Option.some
+                )
+                info.demand
+              in
+              entries @ demand @ supply @ convert
             in
-            let demand = match info.demand with
-              | [] -> []
-              | demand ->
-                  static_entry ~color:Ega.bcyan " Demands" ::
-                  List.map (fun (good, amount) ->
-                    let prefix = match amount with
-                      | 8  -> " 1/8 "
-                      | 16 -> " 1/4 "
-                      | 32 -> " 1/2 "
-                      | _ -> " "
-                    in
-                    static_entry ~color:Ega.black @@ prefix ^ Goods.show good
-                  )
-                  demand
+            let menu =
+              Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:4
+              |> Menu.MsgBox.do_open_menu s
             in
-            let supply = match info.supply with
-              | [] -> []
-              | supply ->
-                  static_entry ~color:Ega.bcyan " Supplies" ::
-                  List.map (fun (good, _) ->
-                    static_entry ~color:Ega.black @@ " "^Goods.show good)
-                    supply
-            in
-            let convert =
-              List.filter_map (fun (good, _) ->
-                match Goods.convert s.backend.region good with
-                | None -> None
-                | Some good ->
-                  static_entry ~color:Ega.black @@ " ("^Goods.show good^")"
-                  |> Option.some
-              )
-              info.demand
-            in
-            entries @ demand @ supply @ convert
-          in
-          let menu =
-            Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:4
-            |> Menu.MsgBox.do_open_menu s
-          in
-          let mode = ModalMsgbox {menu; data=(); last=Normal} in
-          {v with mode}, nobaction
+            let mode = ModalMsgbox {menu; data=(); last=Normal} in
+            {v with mode}, nobaction
 
-      | _, `StationView(x, y) ->
-          {v with mode=StationView(x, y)}, nobaction
+        | _, `StationView(x, y) ->
+            {v with mode=StationView(x, y)}, nobaction
 
-      | _ ->
+        | _ ->
+            v, nobaction
+      in
+      v, backend_action
+
+    | ModalMsgbox menu ->
+        handle_modal_menu_events ~is_msgbox:true menu (fun x -> ModalMsgbox x)
+        (fun _ () -> v, nobaction)
+
+    | BuildStation build_menu ->
+        handle_modal_menu_events build_menu (fun x -> BuildStation x)
+        (fun modal station_kind ->
+            let exit_mode () = {v with mode=modal.last}, nobaction in
+            let x, y = Mapview.get_cursor_pos v.view in
+            match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
+            | `Ok ->
+                let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player=0} in
+                {v with mode=modal.last}, backend_action
+                (* TODO: handle other cases *)
+            | _ -> exit_mode ()
+            )
+
+    | BuildBridge build_menu ->
+        handle_modal_menu_events build_menu (fun x -> BuildBridge x)
+        (fun modal bridge_kind ->
+            let msg = modal.data in
+            let x, y, dir, player = msg.x, msg.y, msg.dir, msg.player in
+            match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
+            | `Ok -> 
+                let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
+                let view = Mapview.move_cursor v.view dir 2 in
+                {v with mode=modal.last; view}, backend_action
+            | _ ->
+                {v with mode=modal.last}, nobaction
+            )
+
+    | BuildTunnel build_menu ->
+        handle_modal_menu_events build_menu (fun x -> BuildTunnel x)
+        (fun ({data=(msg,length);_} as modal) action ->
+          match action with
+          | `Track ->
+              let view = Mapview.move_cursor v.view msg.dir 1 in
+              {v with mode=modal.last; view}, B.Action.BuildTrack msg
+          | `Tunnel ->
+              let view = Mapview.move_cursor v.view msg.dir length in
+              {v with mode=modal.last; view}, B.Action.BuildTunnel(msg, length)
+          )
+
+    | StationView _ ->
+        if Event.is_left_click event || Event.key_modal_dismiss event then
+          {v with mode=Normal}, nobaction
+        else
           v, nobaction
-    in
-    v, backend_action
 
-  | ModalMsgbox menu ->
-      handle_modal_menu_events ~is_msgbox:true menu (fun x -> ModalMsgbox x)
-      (fun _ () -> v, nobaction)
+    | BuildTrain state ->
+        let state2, action = Build_train.handle_event s state event in
+        let v = 
+          if state2 =!= state then {v with mode=BuildTrain(state2)} else v
+        in
+        v, action
 
-  | BuildStation build_menu ->
-      handle_modal_menu_events build_menu (fun x -> BuildStation x)
-      (fun modal station_kind ->
-          let exit_mode () = {v with mode=modal.last}, nobaction in
-          let x, y = Mapview.get_cursor_pos v.view in
-          match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
-          | `Ok ->
-              let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player=0} in
-              {v with mode=modal.last}, backend_action
-              (* TODO: handle other cases *)
-          | _ -> exit_mode ()
-          )
-
-  | BuildBridge build_menu ->
-      handle_modal_menu_events build_menu (fun x -> BuildBridge x)
-      (fun modal bridge_kind ->
-          let msg = modal.data in
-          let x, y, dir, player = msg.x, msg.y, msg.dir, msg.player in
-          match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
-          | `Ok -> 
-              let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
-              let view = Mapview.move_cursor v.view dir 2 in
-              {v with mode=modal.last; view}, backend_action
-          | _ ->
-              {v with mode=modal.last}, nobaction
-          )
-
-  | BuildTunnel build_menu ->
-      handle_modal_menu_events build_menu (fun x -> BuildTunnel x)
-      (fun ({data=(msg,length);_} as modal) action ->
-        match action with
-        | `Track ->
-            let view = Mapview.move_cursor v.view msg.dir 1 in
-            {v with mode=modal.last; view}, B.Action.BuildTrack msg
-        | `Tunnel ->
-            let view = Mapview.move_cursor v.view msg.dir length in
-            {v with mode=modal.last; view}, B.Action.BuildTunnel(msg, length)
-        )
-
-  | StationView _ ->
-      if Event.is_left_click event || Event.key_modal_dismiss event then
-        {v with mode=Normal}, nobaction
-      else
-        v, nobaction
-
-  | BuildTrain state ->
-      let state2, action = Build_train.handle_event s state event in
-      let v = 
-        if state2 =!= state then {v with mode=BuildTrain(state2)} else v
-      in
-      v, action
-
-  | EditTrain state ->
-      let exit_state, state2, action = Edit_train.handle_event s state event in
-      let v =
-        if exit_state then {v with mode=Normal}
-        else if state =!= state2 then {v with mode=EditTrain state2}
-        else v
-      in
-      v, action
+    | EditTrain state ->
+        let exit_state, state2, action = Edit_train.handle_event s state event in
+        let v =
+          if exit_state then {v with mode=Normal}
+          else if state =!= state2 then {v with mode=EditTrain state2}
+          else v
+        in
+        v, action
+  in
+  let check_pause old _new = match old,_new with
+    | true, false -> `Pause
+    | false, true -> `Unpause
+    | _ -> `DoNothing
+  in
+  let mode_pause = check_pause (is_normal_mode old_mode) (is_normal_mode v.mode) in
+  let menu_pause = check_pause (Menu.Global.is_closed old_menu) (Menu.Global.is_closed v.menu) in
+  let backend_msgs = match mode_pause, menu_pause with
+   | `Pause, _ | _, `Pause -> [backend_msg; B.Action.Pause]
+   | `Unpause, _ | _, `Unpause -> [backend_msg; B.Action.Unpause]
+   | _ -> [backend_msg]
+  in
+  v, backend_msgs
 
 (* Handle incoming messages from backend *)
 let handle_msgs (s:State.t) v ui_msgs =

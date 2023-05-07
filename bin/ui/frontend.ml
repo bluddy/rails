@@ -61,8 +61,8 @@ let handle_event (s:State.t) (event:Event.t) =
         end
 
     | Screen.MapView ->
-        let ui, backend_msg = Main_ui.handle_event s s.ui event in
-        let backend = Backend.Action.run s.backend backend_msg in
+        let ui, backend_msgs = Main_ui.handle_event s s.ui event in
+        let backend = Backend.Action.run s.backend backend_msgs in
         if s.ui =!= ui then s.ui <- ui;
         if s.backend =!= backend then s.backend <- backend;
         s

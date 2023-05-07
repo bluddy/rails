@@ -98,6 +98,10 @@ and 'a mode =
   ]
   | EditTrain of 'a Edit_train_d.t
 
+let is_normal_mode = function
+  | Normal -> true
+  | _ -> false
+
 type 'state t = {
   dims: dims;
   options: options;

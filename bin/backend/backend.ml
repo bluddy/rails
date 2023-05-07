@@ -45,6 +45,7 @@ type t = {
   mutable cycle: int; (* counter used for all sorts of per-tick updates *)
   mutable time: int;  (* In-game time, resets at end of year *)
   mutable year: int;
+  pause: bool;  (* pause the backend. Do not advance time *)
   year_start: int;
   fiscal_period: [`First | `Second];
   climate: Climate.t;
@@ -117,6 +118,7 @@ let default region resources ~random ~seed =
     seed;
     stats=Stats.default;
     west_us_route_done=false;
+    pause=false;
   }
 
 let modify_player v ~player f =
@@ -649,42 +651,45 @@ let _update_all_trains (v:t) =
 
   (** Most time-based work happens here **)
 let _handle_cycle v =
-  v.cycle <- v.cycle + 1;
-  _update_all_trains v;
-  (* TODO: ai_routines *)
-  let demand_msgs =
-    if v.cycle mod cycles_station_supply_demand = 0 then (
-      (* Printf.printf "_handle_cycle%!\n"; *)
-      let difficulty = v.options.difficulty in
-      let climate = v.climate in
-      let simple_economy =
-        not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
-      in
-      Loc_map.fold 
-        (fun station old_msgs ->
-          Station.check_rate_war_lose_supplies station ~difficulty;
-          let msgs =
-            Station.update_supply_demand station v.map ~climate ~simple_economy
-          in
-          Station.lose_supplies station;
-          let msgs =
-            List.map (fun (good, add) ->
-                DemandChanged {x=station.x; y=station.y; good; add})
-              msgs
-          in
-          msgs @ old_msgs)
-      v.stations
-      ~init:[])
-    else []
+  let time_step () =
+    v.cycle <- v.cycle + 1;
+    _update_all_trains v;
+    (* TODO: ai_routines *)
+    let demand_msgs =
+      if v.cycle mod cycles_station_supply_demand = 0 then (
+        (* Printf.printf "_handle_cycle%!\n"; *)
+        let difficulty = v.options.difficulty in
+        let climate = v.climate in
+        let simple_economy =
+          not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
+        in
+        Loc_map.fold 
+          (fun station old_msgs ->
+            Station.check_rate_war_lose_supplies station ~difficulty;
+            let msgs =
+              Station.update_supply_demand station v.map ~climate ~simple_economy
+            in
+            Station.lose_supplies station;
+            let msgs =
+              List.map (fun (good, add) ->
+                  DemandChanged {x=station.x; y=station.y; good; add})
+                msgs
+            in
+            msgs @ old_msgs)
+        v.stations
+        ~init:[])
+      else []
+    in
+    (* adjust time *)
+    v.time <- v.time + 1;
+    let v = 
+      if v.time >= year_ticks then
+        {v with year=v.year + 1; time=0}
+      else v
+    in
+    v, demand_msgs
   in
-  (* adjust time *)
-  v.time <- v.time + 1;
-  let v = 
-    if v.time >= year_ticks then
-      {v with year=v.year + 1; time=0}
-    else v
-  in
-  v, demand_msgs
+  if not v.pause then time_step () else v, []
 
 let reset_tick v =
   v.last_tick <- 0
@@ -712,6 +717,8 @@ module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
   type t =
     | NoAction
+    | Pause
+    | Unpause
     | BuildTrack of Utils.msg
     | BuildFerry of Utils.msg
     | BuildStation of {x: int; y: int; kind: Station.kind; player: int}
@@ -730,39 +737,43 @@ module Action = struct
 
   let has_action = function NoAction -> false | _ -> true
 
-  let run backend msg =
-    if has_action msg then Log.debug (fun f -> f "Received msg %s" (show msg));
-    match msg with
-    | BuildTrack {x; y; dir; player} ->
-        _build_track backend ~x ~y ~dir ~player
-    | BuildFerry {x; y; dir; player} ->
-        _build_ferry backend ~x ~y ~dir ~player
-    | BuildStation {x; y; kind; player} ->
-        _build_station backend ~x ~y kind ~player
-    | BuildBridge({x; y; dir; player}, kind) ->
-        _build_bridge backend ~x ~y ~dir ~kind ~player
-    | BuildTunnel({x; y; dir; player}, length) ->
-        _build_tunnel backend ~x ~y ~dir ~player ~length
-    | RemoveTrack {x; y; dir; player} ->
-        _remove_track backend ~x ~y ~dir ~player
-    | ImproveStation {x; y; player; upgrade} ->
-        _improve_station backend ~x ~y ~player ~upgrade
-    | SetSpeed speed ->
-        _set_speed backend speed
-    | BuildTrain {engine; cars; station; other_station} ->
-        _build_train backend station engine cars other_station
-    | RemoveStopCar {train; stop; car} ->
-        _remove_stop_car backend ~train ~stop ~car
-    | SetStopStation {train; stop; station} ->
-        _set_stop_station backend ~train ~stop ~station
-    | RemoveStop {train; stop} ->
-        _remove_stop backend ~train ~stop
-    | RemoveAllStopCars {train; stop} ->
-        _remove_all_stop_cars backend ~train ~stop
-    | AddStopCar {train; stop; car} ->
-        _add_stop_car backend ~train ~stop ~car
-    | NoAction -> backend
-
+  let run backend msgs =
+    let run_single backend msg =
+      if has_action msg then Log.debug (fun f -> f "Received msg %s" (show msg));
+      match msg with
+      | BuildTrack {x; y; dir; player} ->
+          _build_track backend ~x ~y ~dir ~player
+      | BuildFerry {x; y; dir; player} ->
+          _build_ferry backend ~x ~y ~dir ~player
+      | BuildStation {x; y; kind; player} ->
+          _build_station backend ~x ~y kind ~player
+      | BuildBridge({x; y; dir; player}, kind) ->
+          _build_bridge backend ~x ~y ~dir ~kind ~player
+      | BuildTunnel({x; y; dir; player}, length) ->
+          _build_tunnel backend ~x ~y ~dir ~player ~length
+      | RemoveTrack {x; y; dir; player} ->
+          _remove_track backend ~x ~y ~dir ~player
+      | ImproveStation {x; y; player; upgrade} ->
+          _improve_station backend ~x ~y ~player ~upgrade
+      | SetSpeed speed ->
+          _set_speed backend speed
+      | BuildTrain {engine; cars; station; other_station} ->
+          _build_train backend station engine cars other_station
+      | RemoveStopCar {train; stop; car} ->
+          _remove_stop_car backend ~train ~stop ~car
+      | SetStopStation {train; stop; station} ->
+          _set_stop_station backend ~train ~stop ~station
+      | RemoveStop {train; stop} ->
+          _remove_stop backend ~train ~stop
+      | RemoveAllStopCars {train; stop} ->
+          _remove_all_stop_cars backend ~train ~stop
+      | AddStopCar {train; stop; car} ->
+          _add_stop_car backend ~train ~stop ~car
+      | Pause -> {backend with pause=true}
+      | Unpause -> {backend with pause=false}
+      | NoAction -> backend
+    in
+    List.fold_left run_single backend msgs
 end
 
 
