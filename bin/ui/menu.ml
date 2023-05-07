@@ -502,7 +502,8 @@ module Global = struct
     let _x = x in
     y > v.menu_h && Option.is_none v.open_menu
 
-  let is_open v = Option.is_none v.open_menu
+  let is_open v = Option.is_some v.open_menu
+  let is_closed v = Option.is_none v.open_menu
 
   let close v =
     let menus =
@@ -514,7 +515,7 @@ module Global = struct
 
   let handle_click s v ~x ~y = 
     (* Check for closed menu *)
-      if is_not_clicked v ~x ~y && not @@ is_open v then
+      if is_not_clicked v ~x ~y && is_closed v then
         (v, NoAction)
       else (
         (* Handle a top menu click first *)
