@@ -398,7 +398,7 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
     | _ -> Train.compute_target_speed train ~idx ~cycle, Train.get_speed train
   in
   (* updates *)
-  train.pixels_from_midtile <- 0;
+  Train.reset_pixels_from_midtile train;
   if dir =!= train.dir then train.dir <- dir;
   begin match train.state with
   | Traveling s ->

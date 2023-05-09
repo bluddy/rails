@@ -2,6 +2,9 @@ open Containers
 open Mapview_d
 module B = Backend
 
+let src = Logs.Src.create "mapview" ~doc:"Mapview"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 (* Mapview:
   The mapview changes fairly slowly and can thefore be mutated functionally
   Also, it should not change any game logic: it only handles viewing a window into the world
@@ -351,6 +354,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       (* Cars *)
       List.iteri (fun i car ->
         let car_x, car_y, car_dir = Train.get_car_loc train i in
+        if i = 0 then
+          Log.debug (fun f -> f "car_loc(%d, %d)" car_x car_y);
+
         if car_x >= start_x_px - 4 && car_y >= start_y_px - 4 &&
            car_x <= end_x_px + 4 && car_y <= end_y_px + 4 then (
           let freight = Goods.freight_of_goods car.Train.Car.good in

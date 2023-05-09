@@ -124,6 +124,9 @@ let get_speed v = match v.state with
   | Traveling s -> s.speed
   | WaitingAtStation _ -> 0
 
+let reset_pixels_from_midtile train =
+  train.pixels_from_midtile <- 0
+
 let get_route_dest v = Vector.get v.route v.stop
 let get_stop v =
   match v.priority with
@@ -549,9 +552,11 @@ let get_car_loc (v:t) car_idx =
     move_back v.x v.y v.dir ~total_pixels ~move_pixels:v.pixels_from_midtile
   in
   let rec loop x y total_pixels i =
-    let hist = History.get v.history i in
-    if total_pixels <= 0 then x, y, hist.dir
+    if total_pixels <= 0 then 
+      let hist = History.get v.history (i+1) in
+      x, y, hist.dir
     else
+      let hist = History.get v.history i in
       (* Move to center *)
       let x, y = x land 0xF0 + 8, y land 0xF0 + 8 in
       let x, y, total_pixels =
