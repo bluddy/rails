@@ -335,19 +335,31 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     (* For now, draw only the engine *)
     let open Textures.CarsTop in
     let offset_x, offset_y = (-Constants.tile_w/2) - 2, -2 in
+    let start_x_px = start_x * Constants.tile_w in
+    let start_y_px = start_y * Constants.tile_h in
+    let end_x_px = end_x * Constants.tile_w in
+    let end_y_px = end_y * Constants.tile_h in
     Trainmap.iter (fun (train:Train.t) ->
-      let tex = Hashtbl.find s.textures.cars_top (Engine train.engine._type, train.dir) in
-      let start_x_px = start_x * Constants.tile_w in
-      let start_y_px = start_y * Constants.tile_h in
-      let end_x_px = end_x * Constants.tile_w in
-      let end_y_px = end_y * Constants.tile_h in
-      if train.x > start_x_px && train.y > start_y_px &&
-         train.x < end_x_px && train.y < end_y_px then
+      (* Engine *)
+      if train.x >= start_x_px - 4 && train.y >= start_y_px - 4 &&
+         train.x <= end_x_px + 4 && train.y <= end_y_px + 4 then (
+        let tex = Hashtbl.find s.textures.cars_top (Engine train.engine._type, train.dir) in
         let x = train.x - start_x_px + offset_x in
         let y = train.y - start_y_px + offset_y in
         R.Texture.render win tex ~x ~y
-      else
-        ()
+      );
+      (* Cars *)
+      List.iteri (fun i car ->
+        let car_x, car_y, car_dir = Train.get_car_loc train i in
+        if car_x >= start_x_px - 4 && car_y >= start_y_px - 4 &&
+           car_x <= end_x_px + 4 && car_y <= end_y_px + 4 then (
+          let freight = Goods.freight_of_goods car.Train.Car.good in
+          let tex = Hashtbl.find s.textures.cars_top (Car freight, car_dir) in
+          let x = car_x - start_x_px + offset_x in
+          let y = car_y - start_y_px + offset_y in
+          R.Texture.render win tex ~x ~y
+        );
+      ) train.cars;
     )
     s.backend.trains
   in

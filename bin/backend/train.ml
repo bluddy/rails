@@ -531,3 +531,35 @@ let update_train idx (train:t) ~cycle ~cycle_check
       (* Actual exiting comes in the train station function *)
       train
 
+let get_car_loc (v:t) car_idx =
+  let total_pixels = 12 * (car_idx + 1) in
+  let move_back x y dir ~total_pixels ~move_pixels =
+    let diag = Dir.is_diagonal dir in
+    let move_pixels = if diag then move_pixels * 3 / 2 else move_pixels in
+    (* This is critical *)
+    let move_pixels = min move_pixels total_pixels in
+    let dx, dy = Dir.to_offsets dir in
+    let dx, dy = dx * move_pixels, dy * move_pixels in
+    let dx, dy = if diag then dx * 2 / 3, dy * 2 / 3 else dx, dy in
+    let x, y = x - dx, y - dy in
+    let total_pixels = total_pixels - move_pixels in
+    x, y, total_pixels
+  in
+  let x, y, total_pixels =
+    move_back v.x v.y v.dir ~total_pixels ~move_pixels:v.pixels_from_midtile
+  in
+  let rec loop x y total_pixels i =
+    let hist = History.get v.history i in
+    if total_pixels <= 0 then x, y, hist.dir
+    else
+      (* Move to center *)
+      let x, y = x land 0xF0 + 8, y land 0xF0 + 8 in
+      let x, y, total_pixels =
+        move_back x y hist.dir ~total_pixels ~move_pixels:16
+      in
+      loop x y total_pixels (i+1)
+  in
+  (* TODO: double tracks *)
+  loop x y total_pixels 0
+
+  
