@@ -570,8 +570,8 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
     3. Prevent from leaving via manual signal hold
   *)
   let track = Trackmap.get_exn v.track x y in
-  match track.kind with
-  | Station _ ->
+  match track.kind, train.state with
+  | Station _, Traveling t when Utils.neq_xy t.last_stop loc ->
       let station = Loc_map.get_exn v.stations x y in
       let enter train =
         begin match train.Train.segment with
@@ -604,7 +604,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
         Segment.Map.incr_train v.segments segment;
         (* TODO Check signal for exit dir *)
         let train = 
-          {train with segment=Some segment; state=Train.Traveling {speed=0; target_speed=0}}
+          {train with segment=Some segment; state=Train.Traveling {speed=0; target_speed=0; last_stop=loc}}
         in
         _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
       in
@@ -619,7 +619,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       in
       train
 
-  | Track when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
+  | Track, _ when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
       (* IXN *)
       let dir =
         let dest = Train.get_dest train in

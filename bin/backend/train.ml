@@ -90,7 +90,9 @@ end
 
 type state =
   | Traveling of { mutable speed: int; (* *5 to get real speed *)
-                   mutable target_speed: int}
+                   mutable target_speed: int;
+                   last_stop: int * int; (* To prevent double processing *)
+                }
   | WaitingAtStation of {mutable wait_time: int}
   [@@deriving yojson, show]
 
@@ -164,7 +166,7 @@ let make ((x,y) as station) engine cars other_station ~dir =
     engine;
     pixels_from_midtile=0;
     dir;
-    state=Traveling {speed=1; target_speed=1};
+    state=Traveling {speed=1; target_speed=1; last_stop=(0,0)};
     cars;
     freight=freight_of_cars cars;
     _type=Local;
@@ -549,22 +551,28 @@ let get_car_loc (v:t) car_idx =
     x, y, total_pixels
   in
   let x, y, total_pixels =
+    Log.debug (fun f -> f "pixels(%d) car_idx(%d)" v.pixels_from_midtile car_idx);
     move_back v.x v.y v.dir ~total_pixels ~move_pixels:v.pixels_from_midtile
   in
-  let rec loop x y total_pixels i =
-    if total_pixels <= 0 then 
-      let hist = History.get v.history (i+1) in
-      x, y, hist.dir
-    else
+  if total_pixels <= 0 then (
+    Log.debug(fun f -> f "here");
+    let hist = History.get v.history 1 in
+    x, y, hist.dir)
+  else
+    let rec loop x y total_pixels i =
       let hist = History.get v.history i in
       (* Move to center *)
-      let x, y = x land 0xF0 + 8, y land 0xF0 + 8 in
+      let x, y = x / 16 * 16 + 8, y / 16 * 16 + 8 in
       let x, y, total_pixels =
         move_back x y hist.dir ~total_pixels ~move_pixels:16
       in
-      loop x y total_pixels (i+1)
-  in
-  (* TODO: double tracks *)
-  loop x y total_pixels 0
+      if total_pixels <= 0 then 
+        let hist = History.get v.history i in
+        x, y, hist.dir
+      else
+        loop x y total_pixels (i+1)
+    in
+    (* TODO: double tracks *)
+    loop x y total_pixels 0
 
   

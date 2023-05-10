@@ -142,6 +142,7 @@ let x_y_of_offset width offset =
 
 let eq_xy (x1,y1) (x2,y2) = x1 = x2 && y1 = y2
 
+let neq_xy x y = not @@ eq_xy x y
 
 module List = struct
   include List
