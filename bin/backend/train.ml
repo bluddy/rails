@@ -52,6 +52,7 @@ module History = struct
     let hist = {x; y; dir; speed_factor} in
     v.idx <- (succ v.idx) mod Array.length v.history;
     v.history.(v.idx) <- hist;
+    Log.debug (fun f -> f "Add: %s" (show v));
     ()
 
   let get v i =
@@ -551,12 +552,11 @@ let get_car_loc (v:t) car_idx =
     x, y, total_pixels
   in
   let x, y, total_pixels =
-    Log.debug (fun f -> f "pixels(%d) car_idx(%d)" v.pixels_from_midtile car_idx);
+    (* Log.debug (fun f -> f "pixels(%d) car_idx(%d)" v.pixels_from_midtile car_idx); *)
     move_back v.x v.y v.dir ~total_pixels ~move_pixels:v.pixels_from_midtile
   in
   if total_pixels <= 0 then (
-    Log.debug(fun f -> f "here");
-    let hist = History.get v.history 1 in
+    let hist = History.get v.history 0 in
     x, y, hist.dir)
   else
     let rec loop x y total_pixels i =
@@ -567,7 +567,7 @@ let get_car_loc (v:t) car_idx =
         move_back x y hist.dir ~total_pixels ~move_pixels:16
       in
       if total_pixels <= 0 then 
-        let hist = History.get v.history i in
+        let hist = History.get v.history (i+1) in
         x, y, hist.dir
       else
         loop x y total_pixels (i+1)
