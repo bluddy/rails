@@ -353,7 +353,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       );
       (* Cars *)
       List.iteri (fun i car ->
-        let car_x, car_y, car_dir = Train.get_car_loc train i in
+        let car_x, car_y, car_dir = Train.get_car_loc ~car_pixels:12 train i in
         (* let car_dir = Train.get_car_dir train i in *)
         (* if i = 0 then *)
         (*   Log.debug (fun f -> f "car_loc(%d, %d)" car_x car_y); *)

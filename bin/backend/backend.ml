@@ -558,9 +558,9 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
        delivery to station, print revenue
      *)
 
-let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
+let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
   (* All major computation happens mid-tile *)
-  let (x,y) as loc = train.x / C.tile_w, train.y / C.tile_h in
+  let (x,y) = loc in
   (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
   (* TODO: check for colocated trains (accidents/stop a train) *)
   (* Trains can be stopped by 3 things:
@@ -570,8 +570,8 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
     3. Prevent from leaving via manual signal hold
   *)
   let track = Trackmap.get_exn v.track x y in
-  match track.kind, train.state with
-  | Station _, Traveling t when Utils.neq_xy t.last_stop loc ->
+  match track.kind with
+  | Station _ ->
       let station = Loc_map.get_exn v.stations x y in
       let enter train =
         begin match train.Train.segment with
@@ -604,7 +604,8 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
         Segment.Map.incr_train v.segments segment;
         (* TODO Check signal for exit dir *)
         let train = 
-          {train with segment=Some segment; state=Train.Traveling {speed=0; target_speed=0; last_stop=loc}}
+          {train with segment=Some segment;
+           state=Train.Traveling {speed=0; target_speed=0; last_stop=loc}}
         in
         _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
       in
@@ -619,7 +620,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) =
       in
       train
 
-  | Track, _ when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
+  | Track when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
       (* IXN *)
       let dir =
         let dest = Train.get_dest train in

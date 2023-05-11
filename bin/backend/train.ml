@@ -491,7 +491,7 @@ let update_train idx (train:t) ~cycle ~cycle_check
     ~cycle_bit ~region_div ~update_mid_tile =
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in *)
   match train.state with
-  | Traveling _ ->
+  | Traveling travel_state ->
     let train = update_speed train ~cycle ~cycle_check ~cycle_bit in
     (* TODO: fiscal period update stuff *)
     let rec train_update_loop train speed_bound =
@@ -519,8 +519,9 @@ let update_train idx (train:t) ~cycle ~cycle_check
               (train.x mod C.tile_w) = C.tile_w / 2 &&
               (train.y mod C.tile_h) = C.tile_h / 2
             in
-            if is_mid_tile then
-              update_mid_tile train
+            let loc = train.x / C.tile_w, train.y / C.tile_h in
+            if is_mid_tile && Utils.neq_xy travel_state.last_stop loc then
+              update_mid_tile train loc
             else
               advance train)
           else
