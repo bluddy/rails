@@ -353,7 +353,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       );
       (* Cars *)
       List.iteri (fun i car ->
-        let car_x, car_y, car_dir = Train.get_car_loc train i in
+        let car_x, car_y, _ = Train.get_car_loc train i in
+        let car_dir = Train.get_car_dir train i in
         (* if i = 0 then *)
         (*   Log.debug (fun f -> f "car_loc(%d, %d)" car_x car_y); *)
         if car_x >= start_x_px - 4 && car_y >= start_y_px - 4 &&

@@ -390,7 +390,7 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   let speed_factor = (height_factor * height_factor / 144) + turn_factor in
   Log.debug (fun f -> f "height_factor(%d), turn_factor(%d), speed_factor(%d)" height_factor turn_factor speed_factor);
   (* History lets us reuse the engine orientation for the cars as they cross *)
-  Train.History.add train.history train.x train.y train.dir speed_factor;
+  Train.History.add train.history train.x train.y dir speed_factor;
   (* Compute and set target speed *)
   let target_speed, speed =
     match Tilemap.get_tile v.map x y with

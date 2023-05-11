@@ -52,7 +52,7 @@ module History = struct
     let hist = {x; y; dir; speed_factor} in
     v.idx <- (succ v.idx) mod Array.length v.history;
     v.history.(v.idx) <- hist;
-    Log.debug (fun f -> f "Add: %s" (show v));
+    (* Log.debug (fun f -> f "Add: %s" (show v)); *)
     ()
 
   let get v i =
@@ -577,6 +577,8 @@ let get_car_loc (v:t) car_idx =
         loop x y total_pixels (i+1)
     in
     (* TODO: double tracks *)
-    loop x y total_pixels 0
+    loop x y total_pixels 1
 
+let get_car_dir (v:t) i =
+  (History.get v.history (i+1)).dir
   
