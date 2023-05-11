@@ -537,8 +537,15 @@ let update_train idx (train:t) ~cycle ~cycle_check
       (* Actual exiting comes in the train station function *)
       train
 
-let get_car_loc (v:t) car_idx =
-  let total_pixels = 12 * (car_idx + 1) in
+  (* The algorithm works in segments.
+     The length of the full train is car_idx * car_pixels.
+     We jump in segments of 16 pixels, which are the length between two 
+     mid-tiles. The first car will be the same orientation as the engine,
+     if there's sufficient space for it. Otherwise it'll be in the next
+     segment, and use that segment's direction history slot.
+   *)
+let get_car_loc (v:t) car_idx ~car_pixels =
+  let total_pixels = car_pixels * (car_idx + 1) in
 
   let move_back x y dir ~total_pixels ~move_pixels =
     let diag = Dir.is_diagonal dir in
@@ -565,7 +572,7 @@ let get_car_loc (v:t) car_idx =
     if total_pixels <= 0 then 
       x, y, hist.dir
     else
-      segment_loop x y (i+1) ~total_pixels ~move_pixels:16
+      segment_loop x y (i+1) ~total_pixels ~move_pixels:C.tile_w
   in
   (* TODO: double tracks *)
   segment_loop v.x v.y 0 ~total_pixels ~move_pixels:v.pixels_from_midtile
