@@ -499,7 +499,7 @@ let update_train idx (train:t) ~cycle ~cycle_check
       if speed_bound >= speed then train
       else (
         let speed =
-          if speed > 1 && Dir.is_diagonal train.dir then (speed * 2 + 1) / 3
+          if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3
           else speed
         in
         let update_val =
@@ -535,8 +535,8 @@ let update_train idx (train:t) ~cycle ~cycle_check
       s.wait_time <- s.wait_time - 1;
       train
   | WaitingAtStation _ ->
-      (* Actual exiting comes in the train station function *)
-      train
+      let loc = train.x / C.tile_w, train.y / C.tile_h in
+      update_mid_tile train loc
 
   (* The algorithm works in segments.
      The length of the full train is car_idx * car_pixels.

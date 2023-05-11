@@ -605,7 +605,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
         (* TODO Check signal for exit dir *)
         let train = 
           {train with segment=Some segment;
-           state=Train.Traveling {speed=0; target_speed=0; last_stop=loc}}
+           state=Train.Traveling {speed=0; target_speed=4; last_stop=loc}}
         in
         _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
       in
