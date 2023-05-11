@@ -101,7 +101,7 @@ type t = {
   mutable x: int;
   mutable y: int;
   state: state;
-  mutable pixels_from_midtile: int;
+  mutable pixels_from_midtile: int; (* 0-16 *)
   mutable dir: Dir.t;
   segment: Segment.id option; (* for track semaphores *)
   name: string option;
@@ -539,8 +539,13 @@ let update_train idx (train:t) ~cycle ~cycle_check
 
 let get_car_loc (v:t) car_idx =
   let total_pixels = 12 * (car_idx + 1) in
+
   let move_back x y dir ~total_pixels ~move_pixels =
     let diag = Dir.is_diagonal dir in
+    let x, y = match move_pixels with
+      | 16 -> x / 16 * 16 + 8, y / 16 * 16 + 8
+      | _ -> x, y
+    in
     let move_pixels = if diag then move_pixels * 3 / 2 else move_pixels in
     (* This is critical *)
     let move_pixels = min move_pixels total_pixels in
@@ -562,7 +567,6 @@ let get_car_loc (v:t) car_idx =
     let rec loop x y total_pixels i =
       let hist = History.get v.history i in
       (* Move to center *)
-      let x, y = x / 16 * 16 + 8, y / 16 * 16 + 8 in
       let x, y, total_pixels =
         move_back x y hist.dir ~total_pixels ~move_pixels:16
       in
