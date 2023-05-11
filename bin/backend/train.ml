@@ -43,7 +43,7 @@ module History = struct
   } [@@deriving yojson, show]
 
   let make () = {
-    history=Array.make C.train_max_size empty;
+    history=Array.make (C.train_max_size + 1) empty;
     idx=0;
   }
 
@@ -556,28 +556,19 @@ let get_car_loc (v:t) car_idx =
     let total_pixels = total_pixels - move_pixels in
     x, y, total_pixels
   in
-  let x, y, total_pixels =
-    (* Log.debug (fun f -> f "pixels(%d) car_idx(%d)" v.pixels_from_midtile car_idx); *)
-    move_back v.x v.y v.dir ~total_pixels ~move_pixels:v.pixels_from_midtile
-  in
-  if total_pixels <= 0 then (
-    let hist = History.get v.history 0 in
-    x, y, hist.dir)
-  else
-    let rec loop x y total_pixels i =
-      let hist = History.get v.history i in
-      (* Move to center *)
-      let x, y, total_pixels =
-        move_back x y hist.dir ~total_pixels ~move_pixels:16
-      in
-      if total_pixels <= 0 then 
-        let hist = History.get v.history (i+1) in
-        x, y, hist.dir
-      else
-        loop x y total_pixels (i+1)
+  let rec segment_loop x y i ~total_pixels ~move_pixels =
+    let hist = History.get v.history i in
+    (* Move to center *)
+    let x, y, total_pixels =
+      move_back x y hist.dir ~total_pixels ~move_pixels
     in
-    (* TODO: double tracks *)
-    loop x y total_pixels 1
+    if total_pixels <= 0 then 
+      x, y, hist.dir
+    else
+      segment_loop x y (i+1) ~total_pixels ~move_pixels:16
+  in
+  (* TODO: double tracks *)
+  segment_loop v.x v.y 0 ~total_pixels ~move_pixels:v.pixels_from_midtile
 
 let get_car_dir (v:t) i =
   (History.get v.history (i+1)).dir
