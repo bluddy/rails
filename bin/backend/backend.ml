@@ -618,6 +618,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
         | WaitingAtStation s when s.wait_time > 0 -> train
         | WaitingAtStation _ -> exit train
       in
+      Log.debug (fun f -> f "Station: %s" (Train.show_state train.state));
       train
 
   | Track when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
