@@ -5,3 +5,5 @@ let train_max_size = 8
 
 let car_amount = 160
 let car_cost = 5 (* cost of adding a car *)
+
+let speed_mult = 5 (* multiply speed by this *)
