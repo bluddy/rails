@@ -54,14 +54,9 @@ let open_car_menu (s:State.t) stop =
 let make (s:State.t) train_idx =
   let menu = make_menu s.fonts in
   let train = Backend.get_train s.backend train_idx in
-  let near_city =
-    Backend.find_close_city s.backend (train.x/C.tile_w) (train.y/C.tile_h) ~range:200
-    |> Option.get_exn_or "No near city found"
-  in
   {
     train=train_idx;
     menu;
-    near_city;
     car_menu=None;
     screen=Normal;
   }
@@ -84,25 +79,34 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     (* TODO: make these things dynamic *)
     let open Printf in
-    let line1 = sprintf "Train #%d: %s %s\n"
+    let train_info_s = sprintf "Train #%d: %s %s\n"
       v.train
       (Goods.show_freight train.freight) 
       (Train.show_train_type train._type)
     in
-    let line2 = sprintf "near %s (%s/%s)\n"
-       (let x, y = v.near_city in
-        Cities.find_exn s.backend.cities x y |> fst)
-       train.engine.name
-       (* TODO *)
-       "$4,000" 
+    let train_loc = (train.x, train.y) in
+    let train_loc_s = match train.state with
+      | WaitingAtStation _ ->
+          let station = Loc_map.get_exn s.backend.stations train.x train.y in
+          sprintf ("at %s") (Station.get_name station)
+      | Traveling _ ->
+          let station = Station_map.find_nearest s.backend.stations train_loc
+            |> Option.get_exn_or "must have station"
+          in
+          "near "^Station.get_name station
     in
-    let line3 = sprintf "Speed: %d mph, bound for %s"
-      (Train.get_speed train)
-      (let x, y = Train.get_dest train in
-       Loc_map.get_exn s.backend.stations x y
-       |> Station.get_name)
+    (* TODO: maintenance cost *)
+    let engine_data_s = sprintf "(%s/%s)" train.engine.name ("$0,000") in
+    let status_s = match train.state with
+      | WaitingAtStation _ -> "unloading/loading"
+      | Traveling _ ->
+          sprintf "Speed: %d mph, bound for %s"
+          (5 * Train.get_speed train)
+          (let x, y = Train.get_dest train in
+           Loc_map.get_exn s.backend.stations x y |> Station.get_name)
     in
-    write Ega.black ~x:8 ~y:12 (line1^line2^line3);
+    let str = sprintf "%s\n%s  %s\n%s" train_info_s train_loc_s engine_data_s status_s in
+    write Ega.black ~x:8 ~y:12 str;
 
     (* Draw current train engine *)
     let engine_tex = Hashtbl.find s.textures.route_engine @@ train.engine.make in

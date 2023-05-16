@@ -24,7 +24,7 @@ type train_type =
   | Through (* Skips depots *)
   | Express (* Skips stations or less *)
   | Limited (* Skips terminals or less *)
-  [@@deriving yojson, enum, show]
+  [@@deriving yojson, enum, show {with_path = false}]
 
 module History = struct
   type elem = {
@@ -96,6 +96,14 @@ type state =
                 }
   | WaitingAtStation of {mutable wait_time: int}
   [@@deriving yojson, show]
+
+  (* TODO: 
+    other states:
+      holding
+      Waiting for full load
+      waiting at siding
+      stopped at signal
+    *)
 
 type t = {
   mutable x: int;
