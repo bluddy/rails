@@ -266,3 +266,14 @@ let modulo x y =
   let res = x mod y in
   if res >= 0 then res else res + y
 
+let show_money ?(spaces=0) _region money =
+  let b = Buffer.create 20 in
+  Buffer.add_char b '$';
+  for i=0 to spaces-1 do
+    Buffer.add_char b ' ';
+  done;
+  Buffer.add_string b @@ string_of_int money;
+  Buffer.add_string b ",000";
+  Buffer.contents b
+
+

@@ -77,10 +77,12 @@ let render win (s:State.t) (v:State.t t) : unit =
     R.draw_line win ~color:Ega.black ~x1:0 ~y1:116 ~x2:319 ~y2:116;
 
     let open Printf in
-    let train_info_s = sprintf "Train #%d: %s %s"
-      (v.train + 1)
-      (Goods.show_freight train.freight) 
-      (Train.show_train_type train._type)
+    let train_info_s = match train.name with
+      | Some name -> sprintf "Train #%d: %s" (v.train + 1) name
+      | _ -> sprintf "Train #%d: %s %s"
+        (v.train + 1)
+        (Goods.show_freight train.freight) 
+        (Train.show_train_type train._type)
     in
     let train_loc = (train.x, train.y) in
     let train_loc_s = match train.state with
@@ -93,12 +95,13 @@ let render win (s:State.t) (v:State.t t) : unit =
           in
           "near "^Station.get_name station
     in
-    let engine_data_s = sprintf "(%s/%s)" train.engine.name ("$0,000") in
+    let maintenance = Train.display_maintenance train |> Utils.show_money s.backend.region in
+    let engine_data_s = sprintf "(%s/%s)" train.engine.name maintenance in
     let status_s = match train.state with
       | WaitingAtStation _ -> "Speed: unloading/loading"
       | Traveling _ ->
           sprintf "Speed: %d mph, bound for %s"
-          (C.speed_mult * Train.get_speed train)
+          (Train.display_speed train)
           (let x, y = Train.get_dest train in
            Loc_map.get_exn s.backend.stations x y |> Station.get_name)
     in

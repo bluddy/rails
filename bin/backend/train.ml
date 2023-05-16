@@ -124,6 +124,7 @@ type t = {
   route: stop Utils.Vector.vector; (* route stops *)
   priority: stop option;
   had_maintenance: bool;
+  maintenance_cost: int; (* per fin period *)
   dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
   dist_shipped_cargo: int * int; (* also by fin period *)
 } [@@deriving yojson, show]
@@ -134,6 +135,11 @@ let get_route_stop v i = Vector.get v.route i
 let get_speed v = match v.state with
   | Traveling s -> s.speed
   | WaitingAtStation _ -> 0
+
+let display_speed v = C.speed_mult * get_speed v
+
+let display_maintenance v =
+  v.maintenance_cost / 2 + List.length v.cars + C.min_maintenance_cost
 
 let reset_pixels_from_midtile train =
   train.pixels_from_midtile <- 0
@@ -190,6 +196,7 @@ let make ((x,y) as station) engine cars other_station ~dir =
     priority=None;
     dist_traveled=(ref 0, ref 0);
     dist_shipped_cargo=(0, 0);
+    maintenance_cost=0;
   }
   in
   Log.debug (fun f -> f "Train: new train at (%d,%d)" v.x v.y);
