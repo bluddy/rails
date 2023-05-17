@@ -87,6 +87,11 @@ module Car = struct
 
   let empty v = {v with load=None}
 
+  let get_load v = match v.load with
+    | None -> None
+    | Some load ->
+      Some (v.good, load.amount, load.source)
+
 end
 
 type state =

@@ -134,6 +134,22 @@ let render win (s:State.t) (v:State.t t) : unit =
     
     write Ega.black ~x:292 ~y:40 "Exit";
 
+    (* Write contents of cars *)
+    let car_desc_s =
+      List.fold_left (fun acc_s car ->
+        match Train.Car.get_load car with
+        | Some (good, amount, (loc_x,loc_y)) when amount >= 4 ->
+            let s1 = Goods.descr_of good amount in
+            let s2 = Loc_map.get_exn s.backend.stations loc_x loc_y
+              |> Station.get_name 
+            in
+            Printf.sprintf "%s%s from %s\n" acc_s s1 s2
+        | _ -> acc_s)
+        ""
+        train.cars
+    in
+    write Ega.black ~x:7 ~y:51 car_desc_s;
+
     write Ega.black ~x:105 ~y:118 "TRAIN ORDERS";
 
     let write_station (stop:Train.stop) ~i ~y =

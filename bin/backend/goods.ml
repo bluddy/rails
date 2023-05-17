@@ -61,6 +61,14 @@ let car_str_of x =
   in
   (show x)^s
 
+let group_of = function
+  | Mail -> " sacks of "
+  | Passengers -> " "
+  | _ -> " tons of "
+
+let descr_of good amount =
+  Printf.sprintf "%d%s%s" (amount/4) (group_of good) (show good)
+
 let us = [
   Mail; Passengers; Food;
   Livestock; MfgGoods; Grain;
