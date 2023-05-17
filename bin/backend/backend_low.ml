@@ -29,7 +29,7 @@ module Segments = struct
         match station with
         | Some ((x,y), station_dir) ->
             Log.debug (fun f -> f "Segments: found existing station at (%d,%d)" x y);
-            let station = Loc_map.get_exn stations x y in
+            let station = Station_map.get_exn stations x y in
             let seg = Station.get_segment station station_dir in
             Some (ixn.search_dir, seg)
         | _ -> None)
@@ -70,18 +70,18 @@ module Segments = struct
           Track_graph.connected_stations_dirs graph station_map ixn1 ~exclude_ixns:[ixn2]
           |> Iter.head_exn
         in
-        let station1 = Loc_map.get_exn station_map x1 y1 in
+        let station1 = Station_map.get_exn station_map x1 y1 in
         let seg1 = Station.get_segment station1 dir1 in
         let stations =
           Track_graph.connected_stations_dirs graph station_map ixn2 ~exclude_ixns:[ixn1]
           |> Iter.to_list
         in
         let (x2, y2), dir2 = List.hd stations in
-        let station2 = Loc_map.get_exn station_map x2 y2 in
+        let station2 = Station_map.get_exn station_map x2 y2 in
         let seg2 = Station.get_segment station2 dir2 in
         (* Assign seg1 to all connected stations that had seg2 *)
         List.iter (fun ((x, y), _) ->
-            Loc_map.update station_map x y @@
+            Station_map.update station_map x y @@
               (Option.map (fun station -> Station.modify_segment station seg2 seg1)))
           stations;
         (* Update segment map *)
@@ -116,7 +116,7 @@ module Segments = struct
         let (x1, y1), dir1 =
           Track_graph.connected_stations_dirs graph station_map ixn1 |> Iter.head_exn
         in
-        let station1 = Loc_map.get_exn station_map x1 y1 in
+        let station1 = Station_map.get_exn station_map x1 y1 in
         let seg1 = Station.get_segment station1 dir1 in
         (* Set value of segment to 0 *)
         Segment.Map.reset segments seg1;
@@ -125,7 +125,7 @@ module Segments = struct
         let stations = Track_graph.connected_stations_dirs graph station_map ixn2 in
         (* Assign seg2 to these stations *)
         Iter.iter (fun ((x, y), _) ->
-            Loc_map.update station_map x y @@
+            Station_map.update station_map x y @@
               (Option.map (fun station -> Station.modify_segment station seg1 seg2)))
           stations;
         ()

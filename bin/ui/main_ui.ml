@@ -655,7 +655,7 @@ let draw_ui_trains win (s:State.t) v =
     in
     (* Draw destination *)
     let (dest_x, dest_y) = Train.get_dest train in
-    let station = Loc_map.get_exn s.backend.stations dest_x dest_y in
+    let station = Station_map.get_exn s.backend.stations dest_x dest_y in
     let short_name = Station.get_short_name station in
     Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3
       short_name ~x:(x2-11) ~y:(y-4);

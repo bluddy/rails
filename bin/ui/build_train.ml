@@ -21,7 +21,7 @@ module AddCars = struct
     (* Find station with engine shop *)
     let station =
       try
-        Loc_map.filter s.backend.stations
+        Station_map.filter s.backend.stations
         (fun station -> Station.can_build_train station)
         |> Iter.head_exn
       with Invalid_argument _ -> invalid_arg "No station with engine found"

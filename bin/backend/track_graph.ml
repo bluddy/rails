@@ -212,7 +212,7 @@ let connected_stations_dirs ?exclude_dir ?exclude_ixns graph station_map ixn =
       if Hashtbl.mem seen_ixns ixn then ()
       else begin 
         iter_succ_ixn_dirs (fun ((x,y) as ixn) dir ->
-          if Loc_map.mem station_map x y then 
+          if Station_map.mem station_map x y then 
             Hashtbl.replace stations ixn dir
           else 
             Hashtbl.replace ixns2 ixn ())

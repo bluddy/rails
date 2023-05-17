@@ -63,7 +63,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   let train = Trainmap.get s.backend.trains v.train in
   let route = Train.get_route train in
   Vector.iteri (fun i (stop:Train.stop) ->
-    let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
+    let station = Station_map.get_exn s.backend.stations stop.x stop.y in
     let name = Printf.sprintf "%d.%s" (i+1) (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
     write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
@@ -72,7 +72,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   (* Priority stop *)
   begin match train.priority with
   | Some stop -> 
-    let station = Loc_map.get_exn s.backend.stations stop.x stop.y in
+    let station = Station_map.get_exn s.backend.stations stop.x stop.y in
     let name = Printf.sprintf "P:%s" (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
     write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
@@ -80,7 +80,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   end;
 
   (* Draw station boxes *)
-  Loc_map.iter (fun (station:Station.t) ->
+  Station_map.iter (fun (station:Station.t) ->
     if Station.is_proper_station station then
       let color =
         match v.selected_station, s.backend.priority with
@@ -108,7 +108,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   begin match v.selected_station with
   | Some (x,y) ->
       let write = write ~idx:4 in
-      let station = Loc_map.get_exn s.backend.stations x y in
+      let station = Station_map.get_exn s.backend.stations x y in
       let demand = Station.get_demand_exn station in
       write ~x:258 ~y:1 @@ Station.get_name station;
       write ~x:258 ~y:13 @@ Printf.sprintf "(%s)" @@ Station.kind_str station;
@@ -168,7 +168,7 @@ let handle_event (s:State.t) v (event:Event.t) =
   match event, v.selected_station, v.state with
   | Event.MouseMotion mouse, _, _ ->
     let selected_station =
-      Loc_map.fold (fun (station:Station.t) closest ->
+      Station_map.fold (fun (station:Station.t) closest ->
         let x, y = scale_xy v station.x station.y in
         let dist = Utils.classic_dist (x,y) (mouse.x,mouse.y) in
         match closest with

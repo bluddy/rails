@@ -58,7 +58,7 @@ type t = {
   trains: Trainmap.t;
   cities: Cities.t;
   engines: Engine.t list;
-  mutable stations: Station.t Loc_map.t;
+  mutable stations: Station_map.t;
   segments: Segment.Map.t; (* map segments btw stations *)
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
   stats: Stats.t;
@@ -82,7 +82,7 @@ let default region resources ~random ~seed =
   in
   let track = Trackmap.empty width height in
   let options = B_options.default in
-  let stations = Loc_map.create width in
+  let stations = Station_map.create width in
   let players = Array.make num_players (Player.default options.difficulty) in
   let year = match region with
     | EastUS -> 1830
@@ -138,7 +138,7 @@ let get_track v x y = Trackmap.get v.track x y
 
 let get_cities v = Cities.to_list v.cities
 
-let get_station v x y = Loc_map.get v.stations x y
+let get_station v x y = Station_map.get v.stations x y
 
 let get_region v = v.region
 
@@ -192,7 +192,7 @@ let _build_station v ~x ~y station_type ~player =
     let check_for_first_city () =
       (* first one has engine shop *)
       match
-        Loc_map.filter v.stations 
+        Station_map.filter v.stations 
           (fun v -> Station.has_upgrade v Station.EngineShop)
         |> Iter.head
       with Some _ -> false | None -> true
@@ -203,7 +203,7 @@ let _build_station v ~x ~y station_type ~player =
       let (x,y) = city_xy in
       let name, offset = Cities.find_exn v.cities x y in
       let count =
-        Loc_map.fold (fun station count ->
+        Station_map.fold (fun station count ->
           match Station.get_city station with
           | Some (city_x, city_y) ->
             if city_x = x && city_y = y then count + 1
@@ -227,7 +227,7 @@ let _build_station v ~x ~y station_type ~player =
       ~first
       ~segments:dir_segments
   in
-  let stations = Loc_map.add v.stations x y station in
+  let stations = Station_map.add v.stations x y station in
   if build_new_track then (
     modify_player v ~player @@ Player.add_track ~length:1
   );
@@ -310,7 +310,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
     match get_station v x y with
     | Some station ->
         let station = Station.add_upgrade station upgrade player in
-        Loc_map.add v.stations x y station
+        Station_map.add v.stations x y station
     | None -> v.stations
   in
   if v.stations =!= stations then v.stations <- stations;
@@ -572,7 +572,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
   let track = Trackmap.get_exn v.track x y in
   match track.kind with
   | Station _ ->
-      let station = Loc_map.get_exn v.stations x y in
+      let station = Station_map.get_exn v.stations x y in
       let enter train =
         begin match train.Train.segment with
         | Some segment ->
@@ -665,7 +665,7 @@ let _handle_cycle v =
         let simple_economy =
           not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
         in
-        Loc_map.fold 
+        Station_map.fold 
           (fun station old_msgs ->
             Station.check_rate_war_lose_supplies station ~difficulty;
             let msgs =

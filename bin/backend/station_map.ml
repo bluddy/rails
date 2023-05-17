@@ -1,7 +1,12 @@
 open Containers
 
+include Loc_map
+
+type t = Station.t Loc_map.t
+  [@@deriving yojson]
+
 let find_nearest v loc =
-  Loc_map.fold (fun (station:Station.t) acc ->
+  fold (fun (station:Station.t) acc ->
     let station_loc = (station.x, station.y) in
     let dist = Utils.classic_dist loc station_loc in
     match acc with
