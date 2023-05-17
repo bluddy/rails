@@ -435,7 +435,7 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
       let dist = Utils.classic_dist loc train.last_station in
       let num_cars = List.length train.cars in
       let total_dist = dist * num_cars in
-      Train.add_dist_shipped_cargo train total_dist v.fiscal_period
+      Train.add_ton_miles train total_dist v.fiscal_period
     in
     let cars = train.cars in
     let cars_delivered =

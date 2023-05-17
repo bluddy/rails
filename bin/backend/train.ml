@@ -109,6 +109,11 @@ type state =
       waiting at siding
       stopped at signal
     *)
+type periodic = {
+  mutable dist_traveled: int;
+  mutable ton_miles: int;
+  revenue: int;
+} [@@deriving yojson, show]
 
 type t = {
   mutable x: int;
@@ -130,8 +135,7 @@ type t = {
   priority: stop option;
   had_maintenance: bool;
   maintenance_cost: int; (* per fin period *)
-  dist_traveled: (int ref * int ref); (* by period. Incremented at mid-tiles *)
-  dist_shipped_cargo: int * int; (* also by fin period *)
+  periodic: periodic * periodic;
 } [@@deriving yojson, show]
 
 let get_route_length v = Vector.length v.route
@@ -180,6 +184,12 @@ let make ((x,y) as station) engine cars other_station ~dir =
   in
   let route = Vector.of_list route in
   let cars = List.map Car.make cars in
+  let make_periodic () = {
+      dist_traveled=0;
+      ton_miles=0;
+      revenue=0;
+    }
+  in
   let v = {
     x=x * C.tile_w + C.tile_w / 2;
     y=y * C.tile_h + C.tile_h / 2;
@@ -199,9 +209,8 @@ let make ((x,y) as station) engine cars other_station ~dir =
     had_maintenance=false;
     stop_at_station=false;
     priority=None;
-    dist_traveled=(ref 0, ref 0);
-    dist_shipped_cargo=(0, 0);
     maintenance_cost=0;
+    periodic=(make_periodic (), make_periodic ());
   }
   in
   Log.debug (fun f -> f "Train: new train at (%d,%d)" v.x v.y);
@@ -331,15 +340,21 @@ let compute_target_speed v ~idx ~cycle =
   ((engine_speed * 8) + random + 80) / 80
   |> Utils.clip ~min:0 ~max:v.engine.max_speed
 
-let add_dist_traveled v dist period =
-  match period, v.dist_traveled with
-  | `First, (d,_) -> d := !d + dist
-  | `Second, (_,d) -> d := !d + dist
+let get_period v period = match period, v.periodic with
+  | `First, (p, _) -> p
+  | `Second, (_, p) -> p
 
-let add_dist_shipped_cargo v dist period =
-  match period, v.dist_shipped_cargo with
-  | `First, (d,x) -> (d + dist, x)
-  | `Second, (x,d) -> (x, d + dist)
+let update_period v period f = match period, v.periodic with
+  | `First,  (p, x) -> {v with periodic=(f p, x)}
+  | `Second, (x, p) -> {v with periodic=(x, f p)}
+
+let add_dist_traveled v add period =
+  let period = get_period v period in
+  period.dist_traveled <- period.dist_traveled + add
+
+let add_ton_miles v add period =
+  let period = get_period v period in
+  period.ton_miles <- period.ton_miles + add
 
 let advance (v:t) =
   (* Always advance train by single pixel *)
