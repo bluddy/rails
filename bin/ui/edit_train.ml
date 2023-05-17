@@ -150,6 +150,15 @@ let render win (s:State.t) (v:State.t t) : unit =
     in
     write Ega.black ~x:7 ~y:51 car_desc_s;
 
+    let rev period =
+      Train.get_revenue train period
+      |> Utils.show_money ~spaces:6 s.backend.region
+    in
+    let rev_l = rev s.backend.fiscal_period in
+    let rev_r = rev @@ Utils.other_period s.backend.fiscal_period in
+    write Ega.green ~x:7 ~y:118 rev_l;
+    write Ega.green ~x:256 ~y:118 rev_r;
+
     write Ega.black ~x:105 ~y:118 "TRAIN ORDERS";
 
     let write_station (stop:Train.stop) ~i ~y =

@@ -344,6 +344,10 @@ let get_period v period = match period, v.periodic with
   | `First, (p, _) -> p
   | `Second, (_, p) -> p
 
+let get_revenue v period = 
+  let period = get_period v period in
+  period.revenue
+
 let update_period v period f = match period, v.periodic with
   | `First,  (p, x) -> {v with periodic=(f p, x)}
   | `Second, (x, p) -> {v with periodic=(x, f p)}

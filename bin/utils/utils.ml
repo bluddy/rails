@@ -269,11 +269,16 @@ let modulo x y =
 let show_money ?(spaces=0) _region money =
   let b = Buffer.create 20 in
   Buffer.add_char b '$';
-  for i=0 to spaces-1 do
+  let money_s = string_of_int money in
+  let len = String.length money_s in
+  for i=0 to spaces-1-len do
     Buffer.add_char b ' ';
   done;
-  Buffer.add_string b @@ string_of_int money;
+  Buffer.add_string b money_s;
   Buffer.add_string b ",000";
   Buffer.contents b
 
+let other_period = function
+  | `First -> `Second
+  | `Second -> `First
 
