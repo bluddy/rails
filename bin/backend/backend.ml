@@ -413,7 +413,7 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   Train.advance train
 
 let _train_class_stops_at station_info train = 
-  let train = Train.train_type_to_enum train.Train._type in
+  let train = Train.train_type_to_enum train.Train.typ in
   let station = Station.kind_to_enum station_info.Station.kind in
   station > train
 
@@ -693,6 +693,12 @@ let _handle_cycle v =
   in
   if not v.pause then time_step () else v, []
 
+let _train_set_type v ~train ~typ =
+  let trains =
+    Trainmap.update v.trains train (fun train -> Train.set_type train typ)
+  in
+  if v.trains =!= trains then {v with trains} else v
+
 let reset_tick v =
   v.last_tick <- 0
 
@@ -735,6 +741,7 @@ module Action = struct
     | AddStopCar of {train: int; stop: stop; car: Goods.t}
     | RemoveStopCar of {train: int; stop: stop; car: int}
     | RemoveAllStopCars of {train: int; stop: stop}
+    | TrainSetType of {train: int; typ: Train.train_type}
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -771,6 +778,8 @@ module Action = struct
           _remove_all_stop_cars backend ~train ~stop
       | AddStopCar {train; stop; car} ->
           _add_stop_car backend ~train ~stop ~car
+      | TrainSetType {train; typ} ->
+          _train_set_type backend ~train ~typ
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

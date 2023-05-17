@@ -5,6 +5,7 @@ open Edit_train_d
 open Utils.Infix
 module Vector = Utils.Vector
 module C = Constants
+module T = Train
 
 open Station_map_ui
 
@@ -14,7 +15,7 @@ let nobaction = B.Action.NoAction
 
 let menu_h = 8
 
-let make_menu fonts =
+let make_menu fonts train_idx =
   let open Menu in
   let engine_menu =
     let open MsgBox in
@@ -23,15 +24,26 @@ let make_menu fonts =
       make_entry "Dummy" @@ `Action `ShowMap;
     ]
     in
-  let train_type_menu = engine_menu in
+  let train_type_menu =
+    let open MsgBox in
+    let check_type typ (s:State.t) =
+      let train = Trainmap.get s.backend.trains train_idx in
+      Train.equal_train_type typ train.typ
+    in
+    make ~fonts ~x:100 ~y:8 [
+      make_entry "&Local" @@ `Checkbox(`Type T.Local, check_type T.Local);
+      make_entry "&Through" @@ `Checkbox(`Type T.Through, check_type T.Through);
+      make_entry "&Express" @@ `Checkbox(`Type T.Express, check_type T.Express);
+      make_entry "&Limited" @@ `Checkbox(`Type T.Limited, check_type T.Limited);
+    ]
+  in
   let route_map_menu =
     let open MsgBox in
     make ~fonts ~x:160 ~y:8 [
       make_entry "Dummy" @@ `Action `ShowMap;
       make_entry "Dummy" @@ `Action `ShowMap;
     ]
-    in
-
+  in
   let titles =
     let open Menu.Title in
     [
@@ -52,7 +64,7 @@ let open_car_menu (s:State.t) stop =
   Some(menu, stop)
 
 let make (s:State.t) train_idx =
-  let menu = make_menu s.fonts in
+  let menu = make_menu s.fonts train_idx in
   {
     train=train_idx;
     menu;
@@ -82,7 +94,7 @@ let render win (s:State.t) (v:State.t t) : unit =
       | _ -> sprintf "Train #%d: %s %s"
         (v.train + 1)
         (Goods.show_freight train.freight) 
-        (Train.show_train_type train._type)
+        (Train.show_train_type train.typ)
     in
     let train_loc = (train.x, train.y) in
     let train_loc_s = match train.state with
@@ -286,6 +298,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         | Menu.On(`ShowMap), _ ->
             let screen = StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute) in
             screen, None, nobaction
+
+        | Menu.On(`Type typ), _ ->
+            v.screen, None, B.Action.TrainSetType{train=v.train; typ}
 
           (* Click on priority stop -> open route map *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->

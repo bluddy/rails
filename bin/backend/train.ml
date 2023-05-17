@@ -24,7 +24,7 @@ type train_type =
   | Through (* Skips depots *)
   | Express (* Skips stations or less *)
   | Limited (* Skips terminals or less *)
-  [@@deriving yojson, enum, show {with_path = false}]
+  [@@deriving yojson, enum, eq, show {with_path = false}]
 
 module History = struct
   type elem = {
@@ -128,7 +128,7 @@ type t = {
   engine: Engine.t;
   cars: Car.t list;
   freight: Goods.freight; (* freight class *)
-  _type: train_type;
+  typ: train_type;
   history: History.t; (* History of values. Used for cars *)
   stop: int; (* current stop of route *)
   route: stop Utils.Vector.vector; (* route stops *)
@@ -144,6 +144,8 @@ let get_route_stop v i = Vector.get v.route i
 let get_speed v = match v.state with
   | Traveling s -> s.speed
   | WaitingAtStation _ -> 0
+
+let set_type v typ = {v with typ}
 
 let display_speed v = C.speed_mult * get_speed v
 
@@ -199,7 +201,7 @@ let make ((x,y) as station) engine cars other_station ~dir =
     state=Traveling {speed=1; target_speed=1; last_stop=(0,0)};
     cars;
     freight=freight_of_cars cars;
-    _type=Local;
+    typ=Local;
     history=History.make ();
     stop=0;
     route;
@@ -528,7 +530,7 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
 
 let update_train idx (train:t) ~cycle ~cycle_check
     ~cycle_bit ~region_div ~update_mid_tile =
-  (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train._type) + 2 in *)
+  (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   match train.state with
   | Traveling travel_state ->
     let train = update_speed train ~cycle ~cycle_check ~cycle_bit in

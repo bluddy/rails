@@ -1,6 +1,7 @@
 
 type msg =
   [ `ShowMap
+  | `Type of Train.train_type
   ]
 
 type station_map = {
