@@ -1,6 +1,7 @@
 open Containers
 
 type make =
+  (* One to one mapping between Engine.make and Engine.t *)
   (* US engines *)
   | Grasshopper
   | Norris
@@ -107,7 +108,8 @@ let of_region = function
   | Britain -> en_engines
   | Europe -> eu_engines
 
-let randomize rand engines =
+
+let randomize_year rand engines =
   List.mapi (fun i engine ->
     match i with
     | 0 -> engine
@@ -119,3 +121,5 @@ let randomize rand engines =
 let t_of_make engines make =
   List.find (fun engine -> equal_make engine.make make) engines
   
+let available_at_year engines ~year =
+  List.filter (fun engine -> engine.year <= year && year - engine.year <= 50) engines

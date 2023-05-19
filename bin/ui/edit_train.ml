@@ -15,13 +15,23 @@ let nobaction = B.Action.NoAction
 
 let menu_h = 8
 
-let make_menu fonts train_idx =
+let make_menu fonts train_idx ~engine_make ~engines ~year =
   let open Menu in
   let engine_menu =
     let open MsgBox in
-    make ~fonts [
-      make_entry "Dummy" @@ `Action `ShowMap;
-      make_entry "Dummy" @@ `Action `ShowMap;
+    let engine_info_menu =
+      let engine_options =
+        Engine.available_at_year engines ~year
+        |> List.map (fun (engine:Engine.t) -> make_entry engine.name @@ `Action (`EngineInfo engine.make))
+      in
+      make ~fonts ~x:25 ~y:12 @@
+      (make_entry "This Engine" @@ `Action(`EngineInfo engine_make))
+      ::engine_options
+    in
+    make ~fonts ~x:20 ~y:8 [
+      make_entry "&Engine Info" @@ `MsgBox engine_info_menu; 
+      make_entry "&Replace Engine" @@ `Action `ReplaceEngine;
+      make_entry "&Retire Train" @@ `Action `RetireTrain;
     ]
     in
   let train_type_menu =
@@ -40,8 +50,7 @@ let make_menu fonts train_idx =
   let route_map_menu =
     let open MsgBox in
     make ~fonts ~x:160 ~y:8 [
-      make_entry "Dummy" @@ `Action `ShowMap;
-      make_entry "Dummy" @@ `Action `ShowMap;
+      make_entry "Show map" @@ `Action `ShowMap;
     ]
   in
   let titles =
@@ -64,7 +73,8 @@ let open_car_menu (s:State.t) stop =
   Some(menu, stop)
 
 let make (s:State.t) train_idx =
-  let menu = make_menu s.fonts train_idx in
+  let train = Trainmap.get s.backend.trains train_idx in
+  let menu = make_menu s.fonts train_idx ~engines:s.backend.engines ~year:s.backend.year ~engine_make:train.engine.make in
   {
     train=train_idx;
     menu;

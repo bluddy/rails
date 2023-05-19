@@ -92,7 +92,7 @@ let default region resources ~random ~seed =
   in
   let trains = Trainmap.empty () in
   let graph = Track_graph.make () in
-  let engines = Engine.of_region region |> Engine.randomize random in
+  let engines = Engine.of_region region |> Engine.randomize_year random in
   {
     time=0;
     cycle=0;

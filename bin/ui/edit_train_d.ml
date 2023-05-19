@@ -1,7 +1,10 @@
 
 type msg =
-  [ `ShowMap
-  | `Type of Train.train_type
+  [   `ShowMap
+    | `Type of Train.train_type
+    | `RetireTrain
+    | `ReplaceEngine 
+    | `EngineInfo of Engine.make
   ]
 
 type station_map = {

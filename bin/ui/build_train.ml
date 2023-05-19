@@ -104,7 +104,7 @@ module ChooseEngine = struct
     List.filter (fun engine -> engine.Engine.year <= year) engines
 
   let render win (s:State.t) ~engines ~year =
-    let engines = get_engines_before engines year in
+    let engines = Engine.available_at_year engines ~year in
     let engine_anims =
       List.map (fun engine ->
         Hashtbl.find s.textures.Textures.engine_anim engine.Engine.make)
