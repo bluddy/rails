@@ -7,6 +7,7 @@ type msg =
     | `EngineInfo of Engine.make
   ]
 
+(* Place this here to avoid circular dependency or an extra file *)
 type station_map = {
   train: int;
   state: [`ShowRoute | `EditPriority | `EditStop of int];
@@ -18,9 +19,11 @@ type station_map = {
   mutable flash_on: bool;  (* flashing state *)
 }
 
+
 type screen =
   | Normal
   | StationMap of station_map
+  | EngineInfo of Engine_info.t
 
 type 'state t = {
   train: int;

@@ -477,7 +477,8 @@ module EngineDetail = struct
 
     let tex key y name =
       let ndarray = Hashtbl.find res.Resources.res_pics name in
-      let tex = Ndarray.get_slice [[y; y + 50 - 1]; [0; 319]] ndarray |> R.Texture.make win in
+      let tex = Ndarray.get_slice [[y; y + 50 - 1]; [0; 319]] ndarray
+        |> R.Texture.make win in
       Hashtbl.replace hash key tex
     in
     let open Engine in

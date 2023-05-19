@@ -12,9 +12,8 @@ let map_names =
   ]
 
 let load_pics () =
-  let load_ndarray s = Pic.img_of_file @@ dir ^ s in
-  let images = Hashtbl.create 20 in
-  let filenames = [
+  let load_ndarray ~transparent s = Pic.img_of_file ~transparent (dir ^ s) in
+  let transparent = [
     (* E and C versions are for England and Europe *)
     "SPRITES.PIC"; "CSPRITES.PIC"; "ESPRITES.PIC"; "SPRITES_extra.png";
     "TRACKS.PIC"; "TRACKS_extra.png"; "STATION.PIC"; "ESTATION.PIC";
@@ -25,14 +24,21 @@ let load_pics () =
     "PAGE0.PIC"; "PAGE1.PIC"; "PAGE2.PIC"; "PAGE3.PIC"; "PAGE4.PIC";
     "PAGE5.PIC"; "PAGE6.PIC"; "PAGE7.PIC"; "PAGE8.PIC"; "PAGE9.PIC";
     "LOCOS.PIC"; "CLOCOS.PIC"; "CLOCOSM.PIC"; "ELOCOS.PIC";
-    "ELOCOS0.PIC"; "ELOCOS1.PIC"; "ELOCOS2.PIC"; "ELOCOS3.PIC"; "ELOCOSM.PIC";
-    "LOCOS0.PIC"; "LOCOS1.PIC"; "LOCOS2.PIC"; "LOCOSM.PIC";
-  ]
-  in
+    "ELOCOSM.PIC"; "LOCOSM.PIC";
+  ] in
+  let nontransparent = [
+    "ELOCOS0.PIC"; "ELOCOS1.PIC"; "ELOCOS2.PIC"; "ELOCOS3.PIC"; 
+    "LOCOS0.PIC"; "LOCOS1.PIC"; "LOCOS2.PIC";
+  ] in
+  let images = Hashtbl.create 20 in
   List.iter (fun s ->
-    let ndarray = load_ndarray s in
+    let ndarray = load_ndarray ~transparent:true s in
     Hashtbl.replace images (Filename.chop_extension s) ndarray)
-  filenames;
+  transparent;
+  List.iter (fun s ->
+    let ndarray = load_ndarray ~transparent:false s in
+    Hashtbl.replace images (Filename.chop_extension s) ndarray)
+  nontransparent;
   images
 
 module Ndarray = Owl_base_dense_ndarray.Generic

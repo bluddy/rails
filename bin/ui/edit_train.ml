@@ -87,6 +87,9 @@ let render win (s:State.t) (v:State.t t) : unit =
   | StationMap station_map ->
       Station_map_ui.render win s station_map
 
+  | EngineInfo state ->
+      Engine_info.render win state ~fonts:s.fonts ~textures:s.textures
+
   | Normal ->
     let train = Backend.get_train s.backend v.train in
     let write color = Fonts.Render.write win s.fonts ~color ~idx:4 in
@@ -259,6 +262,13 @@ let handle_event (s:State.t) v (event:Event.t) =
       let v = if exit then {v with screen=Normal} else v in
       false, v, b_action
 
+  | EngineInfo state, _ ->
+    let v = match Engine_info.handle_event event with
+      | `Exit -> {v with screen=Normal}
+      | _ -> v
+    in
+    false, v, nobaction
+
   | Normal, (Some(car_menu, stop) as current) ->
       (* Car menu selection open *)
       let car_menu2, action = Menu.MsgBox.update s car_menu event in
@@ -311,6 +321,11 @@ let handle_event (s:State.t) v (event:Event.t) =
 
         | Menu.On(`Type typ), _ ->
             v.screen, None, B.Action.TrainSetType{train=v.train; typ}
+
+        | Menu.On(`EngineInfo engine_make), _ ->
+            let engine = Engine.t_of_make s.backend.engines engine_make in
+            let screen = EngineInfo (Engine_info.make engine) in
+            screen, None, nobaction
 
           (* Click on priority stop -> open route map *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->

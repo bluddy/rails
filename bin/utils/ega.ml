@@ -24,12 +24,13 @@ let palette =
   (* returns color and opacity
      debug: view transparency as magenta
    *)
-let get_color ?(debug=false) i =
+let get_color ?(transparent=true) ?(debug=false) i =
   if i >= Array.length palette then
     failwith @@ Printf.sprintf "Ega.get_color: Color %d is invalid" i
   else
     match i with
-    | 0 -> (if debug then magenta else palette.(i)), 0x0
+    | 0 when debug -> magenta, 0xFF
+    | 0 when transparent -> palette.(i), 0x0
     | _ -> palette.(i), 0xFF
 
 let get_rgba ?debug i =
