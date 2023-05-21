@@ -118,3 +118,9 @@ let handle_event (s:State.t) v (event:Event.t) = match v with
       else
         v, action
 
+let render win (s:State.t) v = match v with
+  | `ChooseEngine ->
+        Choose_engine.render win s ~engines:s.backend.engines ~year:s.backend.year
+  | `AddCars state ->
+        AddCars.render win s state 
+

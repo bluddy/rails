@@ -733,10 +733,8 @@ let render (win:R.window) (s:State.t) v =
         Menu.MsgBox.render win s modal.menu
     | StationView(x, y) ->
         Station_view.render win s (x,y) ~show_demand:true
-    | BuildTrain(`ChooseEngine) ->
-        Choose_engine.render win s ~engines:s.backend.engines ~year:s.backend.year
-    | BuildTrain(`AddCars state) ->
-        Build_train.AddCars.render win s state 
+    | BuildTrain(state) ->
+        Build_train.render win s state
     | EditTrain state ->
         Edit_train.render win s state
   in
