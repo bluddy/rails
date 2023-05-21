@@ -304,35 +304,39 @@ let handle_event (s:State.t) v (event:Event.t) =
       in
       let handle_car_msg = function
         | `AddCarMenu stop ->
-            v.screen, open_car_menu s stop, nobaction
+            false, v.screen, open_car_menu s stop, nobaction
         | `DeleteCar (stop, car) ->
             let b_action = Backend.Action.RemoveStopCar{train=v.train; stop; car} in
-            v.screen, None, b_action
+            false, v.screen, None, b_action
         | `None ->
-            v.screen, None, nobaction
+            false, v.screen, None, nobaction
       in
 
-      let screen, car_menu, bk_action =
+      let exit, screen, car_menu, bk_action =
         match action, event with
           (* Global menu choice: route map view *)
         | Menu.On(`ShowMap), _ ->
             let screen = StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute) in
-            screen, None, nobaction
+            false, screen, None, nobaction
 
         | Menu.On(`Type typ), _ ->
-            v.screen, None, B.Action.TrainSetType{train=v.train; typ}
+            false, v.screen, None, B.Action.TrainSetType{train=v.train; typ}
 
         | Menu.On(`EngineInfo engine_make), _ ->
             let engine = Engine.t_of_make s.backend.engines engine_make in
             let screen = EngineInfo (Engine_info.make engine) in
-            screen, None, nobaction
+            false, screen, None, nobaction
+
+        | Menu.On(`RetireTrain), _ ->
+            true, v.screen, None, B.Action.RemoveTrain v.train
+          
 
           (* Click on priority stop -> open route map *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->
             let screen = 
               StationMap (Station_map_ui.make s.backend.graph v.train `EditPriority)
             in
-            screen, None, nobaction
+            false, screen, None, nobaction
 
           (* Click on a stop -> open route map *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 158 ->
@@ -349,8 +353,8 @@ let handle_event (s:State.t) v (event:Event.t) =
                 let screen =
                   StationMap (Station_map_ui.make s.backend.graph v.train @@ `EditStop i)
                 in
-                screen, None, nobaction
-            | _ -> v.screen, None, nobaction
+                false, screen, None, nobaction
+            | _ -> false, v.screen, None, nobaction
             end
 
           (* Click on car to delete, or space in priority stop to open the menu *)
@@ -379,13 +383,14 @@ let handle_event (s:State.t) v (event:Event.t) =
             in
             handle_car_msg msg
 
-        | _ -> v.screen, None, nobaction
+        | _ ->
+          false, v.screen, None, nobaction
       in
       let v =
         if menu =!= v.menu || screen =!= v.screen || car_menu =!= v.car_menu then
           {v with menu; screen; car_menu} else v
       in
-      let exit = Event.pressed_esc event in
+      let exit = Event.pressed_esc event || exit in
       exit, v, bk_action
 
 let handle_tick v time =

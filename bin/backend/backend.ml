@@ -699,6 +699,15 @@ let _train_set_type v ~train ~typ =
   in
   if v.trains =!= trains then {v with trains} else v
 
+let _remove_train v idx =
+  let train = Trainmap.get v.trains idx in
+  (match train.segment with
+  | Some segment_id ->
+      Segment.Map.decr_train v.segments segment_id
+  | _ -> ());
+  let trains = Trainmap.delete v.trains idx in
+  if trains =!= v.trains then {v with trains} else v
+
 let reset_tick v =
   v.last_tick <- 0
 
@@ -742,6 +751,7 @@ module Action = struct
     | RemoveStopCar of {train: int; stop: stop; car: int}
     | RemoveAllStopCars of {train: int; stop: stop}
     | TrainSetType of {train: int; typ: Train.train_type}
+    | RemoveTrain of int
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -780,6 +790,8 @@ module Action = struct
           _add_stop_car backend ~train ~stop ~car
       | TrainSetType {train; typ} ->
           _train_set_type backend ~train ~typ
+      | RemoveTrain idx ->
+          _remove_train backend idx
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend
