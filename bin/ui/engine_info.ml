@@ -11,6 +11,7 @@ let make engine =
 
 let render win v ~fonts ~textures ~region =
   R.paint_screen win ~color:Ega.white;
+  R.draw_rect win ~x:2 ~y:2 ~w:315 ~h:195 ~color:Ega.dgray ~fill:false;
   (* center name *)
   let x = 160 - 7 * String.length v.engine.name in
   Fonts.Render.write win fonts ~color:Ega.black ~idx:2 v.engine.name ~x ~y:4;
@@ -24,7 +25,7 @@ let render win v ~fonts ~textures ~region =
   let price = sprintf "Price: %s" (Utils.show_money region v.engine.price) in
   let str = sprintf "%s\n%s\n%s" spd_str hp_str price in
   write ~x:80 ~y:88 str;
-  write ~x:80 ~y:120 "Rated Train Speed / %%Grade:";
+  write ~x:80 ~y:120 "Rated Train Speed / %Grade:";
 
   let rec loop cars y =
     let weight = cars * 160 * 2 in
