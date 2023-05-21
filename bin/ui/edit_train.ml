@@ -88,7 +88,7 @@ let render win (s:State.t) (v:State.t t) : unit =
       Station_map_ui.render win s station_map
 
   | EngineInfo state ->
-      Engine_info.render win state ~fonts:s.fonts ~textures:s.textures
+      Engine_info.render win state ~fonts:s.fonts ~textures:s.textures ~region:s.backend.region
 
   | Normal ->
     let train = Backend.get_train s.backend v.train in
@@ -262,7 +262,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       let v = if exit then {v with screen=Normal} else v in
       false, v, b_action
 
-  | EngineInfo state, _ ->
+  | EngineInfo _, _ ->
     let v = match Engine_info.handle_event event with
       | `Exit -> {v with screen=Normal}
       | _ -> v
