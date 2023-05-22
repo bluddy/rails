@@ -24,6 +24,8 @@ let default difficulty = {
 }
 
 let get_money v = v.money
+let decr_money v x = {v with money = v.money - x}
+let incr_money v x = {v with money = v.money + x}
 
 let track_length v = v.track_length
 

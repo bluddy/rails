@@ -146,6 +146,7 @@ let get_speed v = match v.state with
   | WaitingAtStation _ -> 0
 
 let set_type v typ = {v with typ}
+let replace_engine v engine = {v with engine; maintenance_cost=0}
 
 let display_speed v = C.speed_mult * get_speed v
 

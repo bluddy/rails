@@ -699,6 +699,14 @@ let _train_set_type v ~train ~typ =
   in
   if v.trains =!= trains then {v with trains} else v
 
+let _train_replace_engine v ~train ~engine =
+  let engine = Engine.t_of_make v.engines engine in
+  let trains =
+    Trainmap.update v.trains train
+      (fun train -> Train.replace_engine train engine)
+  in
+  if v.trains =!= trains then {v with trains} else v
+
 let _remove_train v idx =
   let train = Trainmap.get v.trains idx in
   (match train.segment with
@@ -752,6 +760,7 @@ module Action = struct
     | RemoveAllStopCars of {train: int; stop: stop}
     | TrainSetType of {train: int; typ: Train.train_type}
     | RemoveTrain of int
+    | TrainReplaceEngine of {train: int; engine: Engine.make}
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -792,6 +801,8 @@ module Action = struct
           _train_set_type backend ~train ~typ
       | RemoveTrain idx ->
           _remove_train backend idx
+      | TrainReplaceEngine {train; engine} ->
+          _train_replace_engine backend ~train ~engine
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

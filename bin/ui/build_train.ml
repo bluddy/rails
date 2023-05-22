@@ -103,9 +103,7 @@ let handle_event (s:State.t) v (event:Event.t) = match v with
         Choose_engine.handle_event event s.backend.engines ~year:s.backend.year
       in
       begin match engine_opt with
-                                                  
       | Some engine ->
-          (* We chose an engine *)
           let state = AddCars.init s ~engine in
           `AddCars state, nobaction
       | None ->

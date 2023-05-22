@@ -24,6 +24,7 @@ type screen =
   | Normal
   | StationMap of station_map
   | EngineInfo of Engine_info.t
+  | ChooseEngine
 
 type 'state t = {
   train: int;

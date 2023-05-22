@@ -88,7 +88,12 @@ let render win (s:State.t) (v:State.t t) : unit =
       Station_map_ui.render win s station_map
 
   | EngineInfo state ->
-      Engine_info.render win state ~fonts:s.fonts ~textures:s.textures ~region:s.backend.region
+      Engine_info.render win state ~fonts:s.fonts ~textures:s.textures
+        ~region:s.backend.region
+
+  | ChooseEngine ->
+      Choose_engine.render win s ~engines:s.backend.engines
+        ~year:s.backend.year
 
   | Normal ->
     let train = Backend.get_train s.backend v.train in
@@ -269,6 +274,20 @@ let handle_event (s:State.t) v (event:Event.t) =
     in
     false, v, nobaction
 
+  | ChooseEngine, _ ->
+    begin match Choose_engine.handle_event event s.backend.engines ~year:s.backend.year with
+    | Some engine ->
+      let menu =
+        make_menu s.fonts v.train ~engines:s.backend.engines ~year:s.backend.year ~engine_make:engine.make
+      in
+      let baction =
+        B.Action.TrainReplaceEngine {train=v.train; engine=engine.make}
+      in
+      false, {v with screen=Normal; menu}, baction
+    | _ -> 
+      false, v, nobaction
+    end
+
   | Normal, (Some(car_menu, stop) as current) ->
       (* Car menu selection open *)
       let car_menu2, action = Menu.MsgBox.update s car_menu event in
@@ -329,7 +348,9 @@ let handle_event (s:State.t) v (event:Event.t) =
 
         | Menu.On(`RetireTrain), _ ->
             true, v.screen, None, B.Action.RemoveTrain v.train
-          
+
+        | Menu.On(`ReplaceEngine), _ ->
+            false, ChooseEngine, None, nobaction
 
           (* Click on priority stop -> open route map *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->
