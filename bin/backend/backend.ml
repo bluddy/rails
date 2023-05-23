@@ -50,7 +50,7 @@ type t = {
   fiscal_period: [`First | `Second];
   climate: Climate.t;
   west_us_route_done: bool;
-  players: Player.t array;
+  players: Player.t array; (* stats, money *)
   region: Region.t;
   map : Tilemap.t;
   mutable track: Trackmap.t;
@@ -61,7 +61,6 @@ type t = {
   mutable stations: Station_map.t;
   segments: Segment.Map.t; (* map segments btw stations *)
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
-  stats: Stats.t;
   options: B_options.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;
@@ -116,13 +115,16 @@ let default region resources ~random ~seed =
     ui_msgs = [];
     random;
     seed;
-    stats=Stats.default;
     west_us_route_done=false;
     pause=false;
   }
 
-let modify_player v ~player f =
-  v.players.(player) <- f (v.players.(player))
+let modify_player v player f =
+  let p = v.players.(player) in
+  let p' = f p in
+  if p =!= p' then
+    v.players.(player) <- p';
+  ()
 
 let get_speed v = v.options.speed
 
@@ -168,7 +170,7 @@ let _build_tunnel v ~x ~y ~dir ~player ~length =
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
-  modify_player v ~player (Player.add_track ~length);
+  modify_player v player (Player.add_track ~length);
   if v.graph =!= graph then v.graph <- graph;
   if v.track =!= track then v.track <- track;
   v
@@ -229,7 +231,7 @@ let _build_station v ~x ~y station_type ~player =
   in
   let stations = Station_map.add v.stations x y station in
   if build_new_track then (
-    modify_player v ~player @@ Player.add_track ~length:1
+    modify_player v player @@ Player.add_track ~length:1
   );
   (* Initialize supply and demand *)
   let simple_economy =
@@ -251,7 +253,7 @@ let check_build_bridge v ~x ~y ~dir ~player =
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
-  modify_player v ~player (Player.add_track ~length:2);
+  modify_player v player (Player.add_track ~length:2);
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
@@ -263,7 +265,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
-  modify_player v ~player (Player.add_track ~length:1);
+  modify_player v player (Player.add_track ~length:1);
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track_complex v.graph ~x ~y before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
@@ -283,7 +285,7 @@ let _build_ferry v ~x ~y ~dir ~player =
     | _ -> assert false
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
-  modify_player v ~player (Player.add_track ~length:1);
+  modify_player v player (Player.add_track ~length:1);
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
@@ -300,7 +302,7 @@ let _remove_track v ~x ~y ~dir ~player =
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_remove_track v.graph ~x ~y before after in
   Backend_low.Segments.remove_track_split_segment graph v.stations v.segments before after;
-  modify_player v ~player (Player.add_track ~length:(-1));
+  modify_player v player (Player.add_track ~length:(-1));
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
@@ -409,7 +411,7 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   (* Bookkeeping *)
   let dist = if Dir.is_diagonal dir then 2 else 3 in
   Train.add_dist_traveled train dist v.fiscal_period;
-  v.stats.dist_traveled <- v.stats.dist_traveled + dist;
+  modify_player v 0 (Player.incr_dist_traveled ~dist);
   Train.advance train
 
 let _train_class_stops_at station_info train = 
