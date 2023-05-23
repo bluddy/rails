@@ -1,6 +1,15 @@
 open Containers
 module Hashtbl = Utils.Hashtbl
 
+type expense = [
+  | `LandExpense
+  | `TrackExpense
+  | `TrainExpense
+  | `InterestExpense
+  | `StationExpense
+  ] [@@deriving yojson]
+
+
 type monetary = {
   money: int; (* x1000 *)
   bonds: int;
@@ -8,6 +17,7 @@ type monetary = {
   net_worth: int;
   freight_income: (Goods.freight, int) Hashtbl.t;
   other_income: int;
+  expenses: (expense, int) Hashtbl.t;
 } [@@deriving yojson]
 
 type t = {
@@ -30,6 +40,7 @@ let default difficulty = {
     net_worth=50;
     freight_income=Hashtbl.create 10;
     other_income=0;
+    expenses=Hashtbl.create 10;
   };
   owned_shares=0;
   shares=100;
@@ -50,6 +61,11 @@ let decr_money ~money v =
 let incr_money ~money v =
   let m = {v.m with money = v.m.money - money} in
   {v with m}
+
+let spend_money expense money v =
+  Hashtbl.incr ~by:money v.m.expenses expense;
+  decr_money ~money v
+
 
 let track_length v = v.track_length
 

@@ -416,11 +416,11 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_city_names ();
       if v.survey && not build_station then
         draw_survey_zoom4 ();
-      draw_minimap ~minimap;
       if build_station then
         draw_buildstation_mode ();
       draw_track_zoom4 ();
       draw_trains_zoom4 ();
+      draw_minimap ~minimap;
       draw_cursor_zoom4 ();
   end;
   s
