@@ -117,7 +117,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
 
         let fonts = Fonts.load win in
 
-        let ui = Main_ui.default ?options:ui_options ?view:ui_view win fonts in
+        let ui = Main_ui.default ?options:ui_options ?view:ui_view win fonts region in
 
         {
           map_tex;

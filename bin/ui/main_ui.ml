@@ -15,7 +15,7 @@ let save_game (state:State.t) =
   print_endline "Saved Game"
 
 (* Create menu *)
-let main_menu fonts menu_h =
+let main_menu fonts menu_h region =
   let open Menu in
   let game_speed =
     let check_speed speed (s:State.t) =
@@ -126,8 +126,8 @@ let main_menu fonts menu_h =
     let module S = Station in
     let entry str upgrade =
       let price_s =
-        Station.get_price upgrade
-        |> Printf.sprintf " ($%d)"
+        let money = Station.get_price upgrade in
+        Printf.sprintf " (%s)" (Utils.show_money region money)
       in
       make_entry (str^price_s) ~test_enabled:(check_upgrade ~flip:true upgrade)
         (`Checkbox(`ImproveStation upgrade, check_upgrade upgrade))
@@ -197,7 +197,7 @@ let main_menu fonts menu_h =
   in
   Menu.Global.make ~menu_h titles
 
-let default ?options ?view win fonts =
+let default ?options ?view win fonts region =
   let screen = Utils.{
     w = R.width win;
     h = R.height win;
@@ -272,7 +272,7 @@ let default ?options ?view win fonts =
     | Some view -> view
     | None -> Mapview.default dims.mapview
   in
-  let menu = main_menu fonts dims.menu.h in
+  let menu = main_menu fonts dims.menu.h region in
   {
     dims;
     menu;
