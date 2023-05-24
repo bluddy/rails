@@ -9,8 +9,8 @@ type t =
 let regions = [EastUS; WestUS; Britain; Europe]
 
 let money_symbol = function
-  | EastUS | WestUS -> "$"
-  | Britain | Europe -> "#" 
+  | EastUS | WestUS -> '$'
+  | Britain | Europe -> '#' 
 
 let is_us = function
   | EastUS

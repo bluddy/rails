@@ -266,10 +266,12 @@ let modulo x y =
   let res = x mod y in
   if res >= 0 then res else res + y
 
-let show_money ?(spaces=0) _region money =
+let show_money ?(spaces=0) region money =
   let b = Buffer.create 20 in
-  Buffer.add_char b '$';
-  let money_s = string_of_int money in
+  Buffer.add_char b (Region.money_symbol region);
+  let money_s = Printf.sprintf "%#d" money
+    |> String.map (function '_' -> ',' | x -> x)
+  in
   let len = String.length money_s in
   for i=0 to spaces-1-len do
     Buffer.add_char b ' ';

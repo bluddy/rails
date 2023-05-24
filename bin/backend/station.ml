@@ -29,6 +29,12 @@ let to_range = function
   | `Station -> 2
   | `Terminal -> 3
 
+let price_of_kind = function
+  | `SignalTower -> 25
+  | `Depot -> 50
+  | `Station -> 100
+  | `Terminal -> 200
+
 type upgrade =
   | MaintenanceShop
   | EngineShop (* higher than MaintenanceShop to hide it *)

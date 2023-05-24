@@ -287,16 +287,21 @@ let default ?options ?view win fonts region =
 (*   let view = Mapview.load default.view sexp in *)
 (*   {default with options; view} *)
 
-let build_station_menu fonts =
+let build_station_menu fonts region =
   let open Menu in
   let open MsgBox in
+  let open Printf in
+  let price station =
+    Station.price_of_kind station
+    |> Utils.show_money region 
+  in
   make ~fonts ~heading:"Type of facility?" ~x:176 ~y:16
   [
     make_entry "&CANCEL" @@ `Action(None);
-    make_entry "Si&gnal Tower ($25,000)" @@ `Action(Some `SignalTower);
-    make_entry "&Depot ($50,000)" @@ `Action(Some `Depot);
-    make_entry "&Station ($100,000)" @@ `Action(Some `Station);
-    make_entry "&Terminal ($200,000)" @@ `Action(Some `Terminal);
+    make_entry (sprintf "Si&gnal Tower (%s)" @@ price `SignalTower) @@ `Action(Some `SignalTower);
+    make_entry (sprintf "&Depot (%s)" @@ price `Depot) @@ `Action(Some `Depot);
+    make_entry (sprintf "&Station (%s)" @@ price `Station) @@ `Action(Some `Station);
+    make_entry (sprintf "&Terminal (%s)" @@ price `Terminal) @@ `Action(Some `Terminal);
   ]
 
 let build_bridge_menu fonts =
@@ -413,7 +418,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, `EditTrain train_idx ->
             {v with mode=EditTrain(Edit_train.make s train_idx)}, nobaction
         | On `Build_station, _ ->
-            let menu = build_station_menu s.fonts |> Menu.MsgBox.do_open_menu s in
+            let menu = build_station_menu s.fonts s.backend.region |> Menu.MsgBox.do_open_menu s in
             let modal = {menu; data=(); last=Normal} in
             {v with mode=BuildStation modal}, nobaction
         | On `BuildTrack, _ ->
@@ -450,7 +455,6 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, `ShowTileInfo (x, y, tile) ->
             let info = Tile.Info.get (B.get_region s.backend) tile in
             let open Menu.MsgBox in
-            let money_sym = Region.money_symbol s.backend.region in
             let entries =
               let tilename = match tile with
               | City | Village ->
@@ -466,7 +470,8 @@ let handle_event (s:State.t) v (event:Event.t) =
               [
                 static_entry ~color:Ega.white tilename;
                 static_entry ~color:Ega.white "Right-of-Way costs";
-                static_entry ~color:Ega.white @@ Printf.sprintf "%s%d,000 per mile" money_sym info.cost;
+                static_entry ~color:Ega.white @@
+                  Printf.sprintf "%s per mile" (Utils.show_money s.backend.region info.cost);
               ]
               in
               let demand = match info.demand with
@@ -696,9 +701,7 @@ let render_main win (s:State.t) v =
   R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
 
   let money = B.get_money s.backend ~player:0 in
-  let money_s = Printf.sprintf "$%#6d,000" money |>
-      String.map (function '_' -> ',' | x -> x)
-  in
+  let money_s = Utils.show_money ~spaces:6 s.backend.region money in
   Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:66 money_s;
 
   let month, year = B.get_date s.backend in
