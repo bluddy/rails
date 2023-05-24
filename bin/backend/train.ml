@@ -136,6 +136,7 @@ type t = {
   had_maintenance: bool;
   maintenance_cost: int; (* per fin period *)
   periodic: periodic * periodic;
+  player: int;
 } [@@deriving yojson, show]
 
 let get_route_length v = Vector.length v.route
@@ -179,7 +180,7 @@ let get_car_goods_count cars =
   List.iter (fun car -> Hashtbl.incr ~by:1 h car.Car.good) cars;
   h
 
-let make ((x,y) as station) engine cars other_station ~dir =
+let make ((x,y) as station) engine cars other_station ~dir ~player =
   let route = [make_stop x y None] in
   let route = match other_station with
     | Some (x,y) -> [make_stop x y None] @ route
@@ -214,6 +215,7 @@ let make ((x,y) as station) engine cars other_station ~dir =
     priority=None;
     maintenance_cost=0;
     periodic=(make_periodic (), make_periodic ());
+    player;
   }
   in
   Log.debug (fun f -> f "Train: new train at (%d,%d)" v.x v.y);

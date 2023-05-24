@@ -1,13 +1,13 @@
 open Containers
 module Hashtbl = Utils.Hashtbl
 
-type expense = [
-  | `LandExpense
-  | `TrackExpense
-  | `TrainExpense
-  | `InterestExpense
-  | `StationExpense
-  ] [@@deriving yojson]
+type expense =
+  | LandExpense
+  | TrackExpense
+  | TrainExpense
+  | InterestExpense
+  | StationExpense
+  [@@deriving yojson]
 
 
 type monetary = {
@@ -62,10 +62,9 @@ let incr_money ~money v =
   let m = {v.m with money = v.m.money - money} in
   {v with m}
 
-let spend_money expense money v =
+let pay expense money v =
   Hashtbl.incr ~by:money v.m.expenses expense;
   decr_money ~money v
-
 
 let track_length v = v.track_length
 

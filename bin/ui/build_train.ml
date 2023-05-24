@@ -69,7 +69,9 @@ module AddCars = struct
       in
       v, Backend.Action.BuildTrain{engine=v.anim.engine;
                                    cars=v.anim.cars;
-                                   station; other_station}
+                                   station;
+                                   other_station;
+                                   player=0}
     else
       v, nobaction
 

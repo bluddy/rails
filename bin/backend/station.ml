@@ -29,7 +29,7 @@ let to_range = function
   | `Station -> 2
   | `Terminal -> 3
 
-let price_of_kind = function
+let price_of = function
   | `SignalTower -> 25
   | `Depot -> 50
   | `Station -> 100
@@ -49,7 +49,7 @@ type upgrade =
   | Hotel
   [@@deriving enum, show, yojson]
 
-let get_price upgrade =
+let price_of_upgrade upgrade =
   let p = match upgrade with
   | MaintenanceShop -> 25
   | EngineShop -> 100 (* ? *)

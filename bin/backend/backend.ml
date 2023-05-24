@@ -240,6 +240,9 @@ let _build_station v ~x ~y station_type ~player =
   let climate = v.climate in
   ignore @@ Station.update_supply_demand station v.map ~climate ~simple_economy;
 
+  update_player v player @@
+    Player.pay Player.StationExpense (Station.price_of station_type);
+
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   if v.stations =!= stations then v.stations <- stations;
@@ -250,13 +253,18 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | `Bridge -> `Ok
   | _ -> `Illegal
 
+let _player_add_track v ~len ~dir ~player =
+  let length = if Dir.is_diagonal dir then 3 * len else 2 * len in
+  update_player v player (Player.add_track ~length)
+
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
-  update_player v player (Player.add_track ~length:2);
+  _player_add_track v ~len:2 ~dir ~player;
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
@@ -265,7 +273,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
-  update_player v player (Player.add_track ~length:1);
+  _player_add_track v ~len:1 ~dir ~player;
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track_complex v.graph ~x ~y before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
@@ -315,16 +323,19 @@ let _improve_station v ~x ~y ~player ~upgrade =
         Station_map.add v.stations x y station
     | None -> v.stations
   in
+  update_player v player @@
+    Player.(pay StationExpense @@ Station.price_of_upgrade upgrade);
   if v.stations =!= stations then v.stations <- stations;
   v
 
-let _build_train v ((x, y) as station) engine cars other_station =
+let _build_train v ((x, y) as station) engine cars other_station ~player =
   let engine_t = Engine.t_of_make v.engines engine in
   (* TODO: Temporary solution for getting track dir *)
   let track = Trackmap.get v.track x y |> Option.get_exn_or "trackmap" in
   let dir, _ = Dir.Set.pop track.dirs in
-  let train = Train.make station engine_t cars other_station ~dir in
+  let train = Train.make station engine_t cars other_station ~dir ~player in
   let trains = Trainmap.add v.trains train in
+  update_player v player (Player.pay Player.TrainExpense engine_t.price);
   let msg = TrainBuilt (Trainmap.size v.trains - 1) in
   v.ui_msgs <- msg::v.ui_msgs;
   if trains === v.trains then v else {v with trains}
@@ -411,7 +422,7 @@ let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle
   (* Bookkeeping *)
   let dist = if Dir.is_diagonal dir then 2 else 3 in
   Train.add_dist_traveled train dist v.fiscal_period;
-  update_player v 0 (Player.incr_dist_traveled ~dist);
+  update_player v train.player (Player.incr_dist_traveled ~dist);
   Train.advance train
 
 let _train_class_stops_at station_info train = 
@@ -701,13 +712,13 @@ let _train_set_type v ~train ~typ =
   in
   if v.trains =!= trains then {v with trains} else v
 
-let _train_replace_engine v ~train ~engine =
+let _train_replace_engine v ~train ~engine ~player =
   let engine = Engine.t_of_make v.engines engine in
   let trains =
     Trainmap.update v.trains train
       (fun train -> Train.replace_engine train engine)
   in
-  update_player v 0 (Player.spend_money `TrainExpense engine.price);
+  update_player v player (Player.pay Player.TrainExpense engine.price);
   if v.trains =!= trains then {v with trains} else v
 
 let _remove_train v idx =
@@ -755,7 +766,12 @@ module Action = struct
     | RemoveTrack of Utils.msg
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
-    | BuildTrain of {engine: Engine.make; cars: Goods.t list; station: int * int; other_station: (int * int) option} 
+    | BuildTrain of {engine: Engine.make;
+                     cars: Goods.t list;
+                     station: int * int;
+                     other_station: (int * int) option;
+                     player: int;
+                    } 
     | SetStopStation of {train: int; stop: stop; station: int * int}
     | RemoveStop of {train: int; stop: stop}
     | AddStopCar of {train: int; stop: stop; car: Goods.t}
@@ -788,8 +804,8 @@ module Action = struct
           _improve_station backend ~x ~y ~player ~upgrade
       | SetSpeed speed ->
           _set_speed backend speed
-      | BuildTrain {engine; cars; station; other_station} ->
-          _build_train backend station engine cars other_station
+      | BuildTrain {engine; cars; station; other_station; player} ->
+          _build_train backend station engine cars other_station ~player
       | RemoveStopCar {train; stop; car} ->
           _remove_stop_car backend ~train ~stop ~car
       | SetStopStation {train; stop; station} ->
@@ -805,7 +821,7 @@ module Action = struct
       | RemoveTrain idx ->
           _remove_train backend idx
       | TrainReplaceEngine {train; engine} ->
-          _train_replace_engine backend ~train ~engine
+          _train_replace_engine backend ~train ~engine ~player:0
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

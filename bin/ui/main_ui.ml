@@ -126,7 +126,7 @@ let main_menu fonts menu_h region =
     let module S = Station in
     let entry str upgrade =
       let price_s =
-        let money = Station.get_price upgrade in
+        let money = Station.price_of_upgrade upgrade in
         Printf.sprintf " (%s)" (Utils.show_money region money)
       in
       make_entry (str^price_s) ~test_enabled:(check_upgrade ~flip:true upgrade)
@@ -291,10 +291,7 @@ let build_station_menu fonts region =
   let open Menu in
   let open MsgBox in
   let open Printf in
-  let price station =
-    Station.price_of_kind station
-    |> Utils.show_money region 
-  in
+  let price station = Station.price_of station |> Utils.show_money region in
   make ~fonts ~heading:"Type of facility?" ~x:176 ~y:16
   [
     make_entry "&CANCEL" @@ `Action(None);
