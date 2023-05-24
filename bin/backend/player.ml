@@ -55,11 +55,11 @@ let default difficulty = {
 let get_money v = v.m.money
 
 let decr_money ~money v =
-  let m = {v.m with money = v.m.money + money} in
+  let m = {v.m with money = v.m.money - money} in
   {v with m}
 
 let incr_money ~money v =
-  let m = {v.m with money = v.m.money - money} in
+  let m = {v.m with money = v.m.money + money} in
   {v with m}
 
 let pay expense money v =

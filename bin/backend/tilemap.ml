@@ -428,4 +428,21 @@ let collect_demand_supply v ~x ~y ~range =
     (demand_h, supply_h)
   )
 
-
+ (* track_cost already includes economic climate *) 
+let track_land_expense v ~track_expense ~x ~y ~dir ~len =
+  let calc_cost x y =
+    let tile = get_tile v x y in
+    let info = Tile.Info.get v.region tile in
+    info.cost * track_expense / 3
+  in
+  let _, _, expense =
+    Iter.fold (fun (x, y, expense) _ ->
+      let cost1 = calc_cost x y in
+      let x2, y2 = Dir.adjust dir x y in
+      let cost2 = calc_cost x2 y2 in
+      (x2, y2, expense + cost1 + cost2)
+    )
+    (x, y, 0)
+    Iter.(0 -- (len-1))
+  in
+  expense

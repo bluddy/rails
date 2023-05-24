@@ -152,6 +152,19 @@ let iter_cities f v = Cities.iter f v.cities
 
 let find_close_city v x y ~range = Cities.find_close v.cities x y ~range
 
+let _player_pay_for_track v ~x ~y ~len ~dir ~player =
+  let base_length = if Dir.is_diagonal dir then 3 else 2 in
+  (* includes climate, for one piece of track *)
+  let track_expense = (base_length * 2 * ((Climate.to_enum v.climate) + 4)) / 4 in
+  let land_expense =
+    Tilemap.track_land_expense v.map ~track_expense ~x ~y ~dir ~len
+  in
+  let open Player in
+  update_player v player @@ add_track ~length:(len * base_length);
+  update_player v player @@ pay TrackExpense (track_expense * len);
+  update_player v player @@ pay LandExpense land_expense;
+  ()
+
 let check_build_track v ~x ~y ~dir ~player =
   (* First check the tilemap, then the trackmap *)
   match Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.options.difficulty with
@@ -163,14 +176,14 @@ let check_build_track v ~x ~y ~dir ~player =
 
 let get_money v ~player = Player.get_money v.players.(player)
 
-
 let _build_tunnel v ~x ~y ~dir ~player ~length =
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
-  update_player v player (Player.add_track ~length);
+  (* TODO: find real tunnel cost *)
+  _player_pay_for_track v ~x ~y ~dir ~player ~len:length;
   if v.graph =!= graph then v.graph <- graph;
   if v.track =!= track then v.track <- track;
   v
@@ -253,17 +266,13 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | `Bridge -> `Ok
   | _ -> `Illegal
 
-let _player_add_track v ~len ~dir ~player =
-  let length = if Dir.is_diagonal dir then 3 * len else 2 * len in
-  update_player v player (Player.add_track ~length)
-
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
-  _player_add_track v ~len:2 ~dir ~player;
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
@@ -273,10 +282,10 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
-  _player_add_track v ~len:1 ~dir ~player;
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track_complex v.graph ~x ~y before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
@@ -293,10 +302,10 @@ let _build_ferry v ~x ~y ~dir ~player =
     | _ -> assert false
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
-  update_player v player (Player.add_track ~length:1);
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
   Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
