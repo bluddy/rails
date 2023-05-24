@@ -304,15 +304,21 @@ let build_station_menu fonts region =
     make_entry (sprintf "&Terminal (%s)" @@ price `Terminal) @@ `Action(Some `Terminal);
   ]
 
-let build_bridge_menu fonts =
+let build_bridge_menu fonts region =
   let open Menu in
   let open MsgBox in
+  let open Bridge in
+  let open Printf in
+  let price bridge =
+    Bridge.price_of bridge
+    |> Utils.show_money region 
+  in
   make ~fonts ~heading:"Type of bridge?" ~x:176 ~y:16
   [
     make_entry "&CANCEL" @@ `Action(None);
-    make_entry "&Wooden Trestle ($50,000)" @@ `Action(Some Bridge.Wood);
-    make_entry "&Stone Masonry ($400,000)" @@ `Action(Some Bridge.Stone);
-    make_entry "&Iron Girder ($200,000)" @@ `Action(Some Bridge.Iron);
+    make_entry (sprintf "&Wooden Trestle (%s)" @@ price Wood) @@ `Action(Some Wood);
+    make_entry (sprintf "&Stone Masonry (%s)" @@ price Stone) @@ `Action(Some Stone);
+    make_entry (sprintf "&Iron Girder (%s)" @@ price Iron) @@ `Action(Some Iron);
   ]
 
 let build_tunnel_menu fonts ~grade ~tunnel =
@@ -436,7 +442,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
         | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
         | _, `BuildBridge msg ->
-            let menu = build_bridge_menu s.fonts |> Menu.MsgBox.do_open_menu s in
+            let menu = build_bridge_menu s.fonts s.backend.region
+              |> Menu.MsgBox.do_open_menu s in
             let modal = {menu; data=msg; last=Normal} in
             {v with mode=BuildBridge modal}, nobaction
         | _, `HighGradeTrack(msg, grade) ->
