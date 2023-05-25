@@ -165,28 +165,7 @@ let _player_pay_for_track v ~x ~y ~len ~dir ~player =
   update_player v player @@ pay LandExpense land_expense;
   ()
 
-let check_build_track v ~x ~y ~dir ~player =
-  (* First check the tilemap, then the trackmap *)
-  match Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.options.difficulty with
-  | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
-  | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
-  | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
-  | (`Ok | `Ferry) as ret when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
-  | _ -> `Illegal
-
 let get_money v ~player = Player.get_money v.players.(player)
-
-let _build_tunnel v ~x ~y ~dir ~player ~length =
-  let before = TS.scan v.track ~x ~y ~player in
-  let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
-  let after = TS.scan track ~x ~y ~player in
-  let graph = Backend_low.Graph.handle_build_track v.graph before after in
-  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
-  (* TODO: find real tunnel cost *)
-  _player_pay_for_track v ~x ~y ~dir ~player ~len:length;
-  if v.graph =!= graph then v.graph <- graph;
-  if v.track =!= track then v.track <- track;
-  v
 
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with
@@ -266,6 +245,18 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | `Bridge -> `Ok
   | _ -> `Illegal
 
+let _build_tunnel v ~x ~y ~dir ~player ~length =
+  let before = TS.scan v.track ~x ~y ~player in
+  let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
+  let after = TS.scan track ~x ~y ~player in
+  let graph = Backend_low.Graph.handle_build_track v.graph before after in
+  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  (* TODO: find real tunnel cost *)
+  _player_pay_for_track v ~x ~y ~dir ~player ~len:length;
+  if v.graph =!= graph then v.graph <- graph;
+  if v.track =!= track then v.track <- track;
+  v
+
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
@@ -277,6 +268,15 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
+
+let check_build_track v ~x ~y ~dir ~player =
+  (* First check the tilemap, then the trackmap *)
+  match Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.options.difficulty with
+  | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
+  | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
+  | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
+  | (`Ok | `Ferry) as ret when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
+  | _ -> `Illegal
 
 let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
