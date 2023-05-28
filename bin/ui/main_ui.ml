@@ -402,7 +402,8 @@ let make_msgbox ?x ?y s v ~fonts text =
       150 - 5 * len / 2 
   in
   let entry = static_entry ~color:Ega.white text in
-  let menu = Menu.MsgBox.make ~x ~y ~fonts [entry] ~font_idx:4
+  let menu =
+    Menu.MsgBox.make ~x ~y ~fonts [entry] ~font_idx:4
     |> Menu.MsgBox.do_open_menu s
   in
   let mode = ModalMsgbox {menu; data=(); last=Normal} in
@@ -459,7 +460,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, `EditTrain train_idx ->
             {v with mode=EditTrain(Edit_train.make s train_idx)}, nobaction
         | On `Build_station, _ ->
-            let menu = build_station_menu s.fonts s.backend.region |> Menu.MsgBox.do_open_menu s in
+            let menu =
+              build_station_menu s.fonts s.backend.region
+              |> Menu.MsgBox.do_open_menu s in
             let modal = {menu; data=(); last=Normal} in
             {v with mode=BuildStation modal}, nobaction
         | On `BuildTrack, _ ->
@@ -605,19 +608,24 @@ let handle_event (s:State.t) v (event:Event.t) =
           | `BuildTunnel ->
               match B.check_build_tunnel s.backend ~x ~y ~player ~dir with
               | `Tunnel(length, cost) ->
-                  let menu = build_tunnel_menu ~length ~cost ~region:s.backend.region s.fonts
+                  let menu =
+                    build_tunnel_menu ~length ~cost ~region:s.backend.region s.fonts
                     |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
                   in
                   let modal = {menu; data=(msg, length); last=Normal} in
                   {v with mode=BuildTunnel modal}, nobaction
               | `HitWater ->
-                  make_msgbox s v ~fonts "Can't tunnel under water!"
+                  make_msgbox s v ~fonts "hi4"
+                  (* make_msgbox s v ~fonts "Can't tunnel under water!" *)
               | `HitsTrack ->
-                  make_msgbox s v ~fonts "Tunnel can't cross\nexisting track!"
+                  make_msgbox s v ~fonts "hi3"
+                  (* make_msgbox s v ~fonts "Tunnel can't cross\nexisting track!" *)
               | `OutOfBounds ->
-                  make_msgbox s v ~fonts "Can't tunnel off map."
+                  make_msgbox s v ~fonts "hi2"
+                  (* make_msgbox s v ~fonts "Can't tunnel off map." *)
               | `TooLong ->
-                  make_msgbox s v ~fonts "Tunnel too long."
+                  make_msgbox s v ~fonts "hi"
+                  (* make_msgbox s v ~fonts "Tunnel too long." *)
         )
 
     | BuildTunnel build_menu ->
@@ -626,7 +634,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> BuildTunnel x)
         (fun {data=(msg, length);_} -> function
           | true ->
-              let view = Mapview.move_cursor v.view msg.dir length in
+              let n = if Dir.is_diagonal msg.dir then length / 3 else length / 2 in
+              let view = Mapview.move_cursor v.view msg.dir n in
               {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)
           | _ -> {v with mode=Normal}, nobaction
         )

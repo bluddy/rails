@@ -31,7 +31,7 @@ let render win v ~fonts ~textures ~region =
     let weight = cars * 160 * 2 in
     write ~x:6 ~y @@ sprintf "%d cars:" cars;
     let _, speed =
-      Iter.fold (fun (x, speed) grade ->
+      Iter.fold (fun (x, _) grade ->
         let grade = grade * 2 in
         let a = weight/160 + 1 in
         let b = a * (grade + 2) in

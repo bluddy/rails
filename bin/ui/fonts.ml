@@ -1,6 +1,9 @@
 open Containers
 open Iter.Infix
 
+let src = Logs.Src.create "font" ~doc:"Font"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 let debug = false
 
 module Font = struct
@@ -69,7 +72,11 @@ let get_letter font c =
   pixels
 
 let get_letter_width font c =
-  Hashtbl.find font.char_widths c
+  try
+    Hashtbl.find font.char_widths c
+  with Not_found ->
+    Log.debug (fun f -> f "Character \"%c\" not found in font" c);
+    7
 
 let get_str_w_h ?(skip_amp=false) font str =
   let x = 
