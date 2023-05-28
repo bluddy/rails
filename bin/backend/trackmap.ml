@@ -180,8 +180,7 @@ let build_bridge v ~x ~y ~dir ~player ~kind =
   build_stretch v ~x ~y ~dir ~player ~n:2 ~kind:(Track.Bridge kind)
 
 let build_tunnel v ~x ~y ~dir ~player ~length =
-  let n = if Dir.is_diagonal dir then length / 3 else length / 2 in
-  build_stretch v ~x ~y ~dir ~player ~n ~kind:Track.Tunnel
+  build_stretch v ~x ~y ~dir ~player ~n:length ~kind:Track.Tunnel
    
   (* Can work for all kinds of constructs *)
 let check_remove_track v ~x ~y ~dir ~player =

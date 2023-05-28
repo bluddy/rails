@@ -243,7 +243,7 @@ let _build_station v ~x ~y station_type ~player =
 let check_build_tunnel v ~x ~y ~dir ~player =
   let check length = Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length in
   match Tilemap.check_build_tunnel v.map ~x ~y ~dir with
-  | `Tunnel(length, _) when not(check length) -> `HitsTrack
+  | `Tunnel(length, _, _) when not(check length) -> `HitsTrack
   | x -> x
 
 let _build_tunnel v ~x ~y ~dir ~player ~length =

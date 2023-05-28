@@ -607,9 +607,10 @@ let handle_event (s:State.t) v (event:Event.t) =
               {v with mode=modal.last; view}, B.Action.BuildTrack msg
           | `BuildTunnel ->
               match B.check_build_tunnel s.backend ~x ~y ~player ~dir with
-              | `Tunnel(length, cost) ->
+              | `Tunnel(length, disp_length, cost) ->
                   let menu =
-                    build_tunnel_menu ~length ~cost ~region:s.backend.region s.fonts
+                    build_tunnel_menu ~length:disp_length ~cost
+                      ~region:s.backend.region s.fonts
                     |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
                   in
                   let modal = {menu; data=(msg, length); last=Normal} in
@@ -630,8 +631,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> BuildTunnel x)
         (fun {data=(msg, length);_} -> function
           | true ->
-              let n = if Dir.is_diagonal msg.dir then length / 3 else length / 2 in
-              let view = Mapview.move_cursor v.view msg.dir n in
+              let view = Mapview.move_cursor v.view msg.dir length in
               {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)
           | _ -> {v with mode=Normal}, nobaction
         )
