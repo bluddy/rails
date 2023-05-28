@@ -131,7 +131,6 @@ let check_build_stretch v ~x ~y ~dir ~player ~length =
         | None ->
             loop (x+dx) (y+dy) (i-1)
     in
-
     let test_track x y dir =
       match get v x y with
       | Some track when track.player = player ->
@@ -181,7 +180,8 @@ let build_bridge v ~x ~y ~dir ~player ~kind =
   build_stretch v ~x ~y ~dir ~player ~n:2 ~kind:(Track.Bridge kind)
 
 let build_tunnel v ~x ~y ~dir ~player ~length =
-  build_stretch v ~x ~y ~dir ~player ~n:length ~kind:Track.Tunnel
+  let n = if Dir.is_diagonal dir then length / 3 else length / 2 in
+  build_stretch v ~x ~y ~dir ~player ~n ~kind:Track.Tunnel
    
   (* Can work for all kinds of constructs *)
 let check_remove_track v ~x ~y ~dir ~player =

@@ -318,7 +318,7 @@ let build_bridge_menu fonts region =
     make_entry (sprintf "&Iron Girder (%s)" @@ price Iron) @@ `Action(Some Iron);
   ]
 
-let build_tunnel_menu fonts ~grade ~tunnel =
+let build_high_grade_menu fonts ~grade ~tunnel =
   let open Menu in
   let open MsgBox in
   let pct1 = grade / 8 in
@@ -326,15 +326,31 @@ let build_tunnel_menu fonts ~grade ~tunnel =
   let heading = Printf.sprintf "WARNING: %d.%d%% grade" pct1 pct2 in
   let entries =
   [
-    make_entry "Build &Track" @@ `Action(Some `Track);
+    make_entry "&Build Track" @@ `Action(Some `BuildTrack);
     make_entry "&CANCEL" @@ `Action(None);
   ]
   in
   let entries =
-    if tunnel then entries @ [make_entry "Build T&unnel" @@ `Action(Some `Tunnel)]
+    if tunnel then entries @ [make_entry "Build &Tunnel" @@ `Action(Some `BuildTunnel)]
     else entries
   in
   make ~fonts ~heading ~x:176 ~y:16 entries
+
+let build_tunnel_menu fonts ~length ~cost ~region =
+  let open Menu in
+  let open MsgBox in
+  let heading =
+    Printf.sprintf "%d mile tunnel required.\nCost: %s"
+      length
+      (Utils.show_money region cost)
+  in
+  let entries =
+  [
+    make_entry "&Build Tunnel" @@ `Action(Some true);
+    make_entry "&Never Mind" @@ `Action None;
+  ]
+  in
+  make ~fonts ~heading ~x:176 ~y:50 entries
 
   (* Iterate over trains in right UI *)
 let ui_train_iter (s:State.t) v f =
@@ -373,8 +389,30 @@ let handle_ui_train_event (s:State.t) v event =
 
 let nobaction = B.Action.NoAction
 
+let make_msgbox ?x ?y s v ~fonts text =
+  let open Menu in
+  let open MsgBox in
+  let y = Option.get_or ~default:100 y in
+  let x = match x with
+    | Some x -> x
+    | None ->
+      let len = String.index_opt text '\n'
+        |> Option.get_or ~default:(String.length text)
+      in
+      150 - 5 * len / 2 
+  in
+  let entry = static_entry ~color:Ega.white text in
+  let menu = Menu.MsgBox.make ~x ~y ~fonts [entry] ~font_idx:4
+    |> Menu.MsgBox.do_open_menu s
+  in
+  let mode = ModalMsgbox {menu; data=(); last=Normal} in
+  {v with mode}, nobaction
+
 let handle_event (s:State.t) v (event:Event.t) =
-  (* Handle most stuff for regular menus *)
+  (* Handle most stuff for regular menus and msgboxes
+     process_fn: main processing on choice
+     build_fn: rebuild: new state
+   *)
   let handle_modal_menu_events =
       fun (type b) (type c)
           ?(is_msgbox=false)
@@ -443,19 +481,12 @@ let handle_event (s:State.t) v (event:Event.t) =
               |> Menu.MsgBox.do_open_menu s in
             let modal = {menu; data=msg; last=Normal} in
             {v with mode=BuildBridge modal}, nobaction
-        | _, `HighGradeTrack(msg, grade) ->
-            let menu = build_tunnel_menu ~grade ~tunnel:false s.fonts
+        | _, `HighGradeTrack(msg, grade, tunnel) ->
+            let menu = build_high_grade_menu ~grade ~tunnel s.fonts
               |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
             in
-            let modal = {menu; data=(msg,0); last=Normal} in
-            {v with mode=BuildTunnel modal}, nobaction
-        | _, `BuildTunnel(msg, length, grade) ->
-            let menu =
-              build_tunnel_menu ~grade ~tunnel:true s.fonts
-              |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
-            in
-            let modal = {menu; data=(msg,length); last=Normal} in
-            {v with mode=BuildTunnel modal}, nobaction
+            let modal = {menu; data=msg; last=Normal} in
+            {v with mode=BuildHighGrade modal}, nobaction
         | _, `ShowTileInfo (x, y, tile) ->
             let info = Tile.Info.get (B.get_region s.backend) tile in
             let open Menu.MsgBox in
@@ -529,11 +560,13 @@ let handle_event (s:State.t) v (event:Event.t) =
       v, backend_action
 
     | ModalMsgbox menu ->
-        handle_modal_menu_events ~is_msgbox:true menu (fun x -> ModalMsgbox x)
+        handle_modal_menu_events ~is_msgbox:true menu
+        (fun x -> ModalMsgbox x)
         (fun _ () -> v, nobaction)
 
     | BuildStation build_menu ->
-        handle_modal_menu_events build_menu (fun x -> BuildStation x)
+        handle_modal_menu_events build_menu
+        (fun x -> BuildStation x)
         (fun modal station_kind ->
             let exit_mode () = {v with mode=modal.last}, nobaction in
             let x, y = Mapview.get_cursor_pos v.view in
@@ -546,7 +579,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             )
 
     | BuildBridge build_menu ->
-        handle_modal_menu_events build_menu (fun x -> BuildBridge x)
+        handle_modal_menu_events build_menu
+        (fun x -> BuildBridge x)
         (fun modal bridge_kind ->
             let msg = modal.data in
             let x, y, dir, player = msg.x, msg.y, msg.dir, msg.player in
@@ -559,17 +593,43 @@ let handle_event (s:State.t) v (event:Event.t) =
                 {v with mode=modal.last}, nobaction
             )
 
-    | BuildTunnel build_menu ->
-        handle_modal_menu_events build_menu (fun x -> BuildTunnel x)
-        (fun ({data=(msg,length);_} as modal) action ->
-          match action with
-          | `Track ->
-              let view = Mapview.move_cursor v.view msg.dir 1 in
+    | BuildHighGrade build_menu ->
+        let fonts = s.fonts in
+        handle_modal_menu_events
+        build_menu
+        (fun x -> BuildHighGrade x)
+        (fun ({data={x;y;dir;player} as msg;_} as modal) -> function
+          | `BuildTrack ->
+              let view = Mapview.move_cursor v.view dir 1 in
               {v with mode=modal.last; view}, B.Action.BuildTrack msg
-          | `Tunnel ->
+          | `BuildTunnel ->
+              match B.check_build_tunnel s.backend ~x ~y ~player ~dir with
+              | `Tunnel(length, cost) ->
+                  let menu = build_tunnel_menu ~length ~cost ~region:s.backend.region s.fonts
+                    |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
+                  in
+                  let modal = {menu; data=(msg, length); last=Normal} in
+                  {v with mode=BuildTunnel modal}, nobaction
+              | `HitWater ->
+                  make_msgbox s v ~fonts "Can't tunnel under water!"
+              | `HitsTrack ->
+                  make_msgbox s v ~fonts "Tunnel can't cross\nexisting track!"
+              | `OutOfBounds ->
+                  make_msgbox s v ~fonts "Can't tunnel off map."
+              | `TooLong ->
+                  make_msgbox s v ~fonts "Tunnel too long."
+        )
+
+    | BuildTunnel build_menu ->
+      handle_modal_menu_events
+      build_menu
+        (fun x -> BuildTunnel x)
+        (fun {data=(msg, length);_} -> function
+          | true ->
               let view = Mapview.move_cursor v.view msg.dir length in
-              {v with mode=modal.last; view}, B.Action.BuildTunnel(msg, length)
-          )
+              {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)
+          | _ -> {v with mode=Normal}, nobaction
+        )
 
     | StationView _ ->
         if Event.is_left_click event || Event.key_modal_dismiss event then
@@ -733,6 +793,9 @@ let render (win:R.window) (s:State.t) v =
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | BuildBridge modal ->
+        render_main win s v;
+        Menu.MsgBox.render win s modal.menu
+    | BuildHighGrade modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | BuildTunnel modal ->

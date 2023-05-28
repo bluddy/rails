@@ -240,10 +240,11 @@ let _build_station v ~x ~y station_type ~player =
   if v.stations =!= stations then v.stations <- stations;
   v
 
-let check_build_bridge v ~x ~y ~dir ~player =
-  match check_build_track v ~x ~y ~dir ~player with
-  | `Bridge -> `Ok
-  | _ -> `Illegal
+let check_build_tunnel v ~x ~y ~dir ~player =
+  let check length = Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length in
+  match Tilemap.check_build_tunnel v.map ~x ~y ~dir with
+  | `Tunnel(length, _) when not(check length) -> `HitsTrack
+  | x -> x
 
 let _build_tunnel v ~x ~y ~dir ~player ~length =
   let before = TS.scan v.track ~x ~y ~player in
@@ -271,11 +272,15 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
 
 let check_build_track v ~x ~y ~dir ~player =
   (* First check the tilemap, then the trackmap *)
-  match Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.options.difficulty with
+  let ret = Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.options.difficulty in
+  match ret with
   | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
-  | `Tunnel(length, _) as tun when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length -> tun
-  | (`Tunnel(_,g) | `HighGrade g) when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> `HighGrade g
-  | (`Ok | `Ferry) as ret when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
+  | `Ok | `Ferry | `Tunnel _ | `HighGrade _ when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
+  | _ -> `Illegal
+
+let check_build_bridge v ~x ~y ~dir ~player =
+  match check_build_track v ~x ~y ~dir ~player with
+  | `Bridge -> `Ok
   | _ -> `Illegal
 
 let _build_track (v:t) ~x ~y ~dir ~player =
@@ -771,7 +776,7 @@ module Action = struct
     | BuildFerry of Utils.msg
     | BuildStation of {x: int; y: int; kind: Station.kind; player: int}
     | BuildBridge of Utils.msg * Bridge.t
-    | BuildTunnel of Utils.msg * int (* length *)
+    | BuildTunnel of Utils.msg * int (* length: 3 or 2 * length *)
     | RemoveTrack of Utils.msg
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed

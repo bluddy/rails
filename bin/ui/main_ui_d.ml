@@ -75,11 +75,11 @@ type menu_action =
     [@@deriving show, yojson]
 
     (* modalmenu type used for factoring *)
-type ('a, 'b, 'c) modalmenu =
+type ('state, 'menu_options, 'payload) modalmenu =
   {
-    menu: ('b option, 'a) Menu.MsgBox.t;
-    data: 'c;
-    last: 'a mode;
+    menu: ('menu_options option, 'state) Menu.MsgBox.t;
+    data: 'payload;
+    last: 'state mode;
   }
     (* Main modes of operation of the mapview.
        Any special menu needs a mode.
@@ -90,7 +90,8 @@ and 'a mode =
   | ModalMsgbox of ('a, unit, unit) modalmenu
   | BuildStation of ('a, Station.kind, unit) modalmenu
   | BuildBridge of ('a, Bridge.t, Utils.msg) modalmenu
-  | BuildTunnel of ('a, [`Tunnel | `Track], (Utils.msg * int)) modalmenu
+  | BuildHighGrade of ('a, [`BuildTunnel | `BuildTrack], Utils.msg) modalmenu
+  | BuildTunnel of ('a, bool, Utils.msg * int) modalmenu
   | StationView of int * int (* x, y *)
   | BuildTrain of [
     | `ChooseEngine

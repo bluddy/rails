@@ -198,9 +198,9 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             match B.check_build_track s.backend ~x:v.cursor_x ~y:v.cursor_y ~dir ~player:0 with
             | `Ok -> move 1, `BuildTrack(msg ())
             | `Ferry -> move 1, `BuildFerry(msg ())
-            | `HighGrade g -> v, `HighGradeTrack(msg (), g)
+            | `HighGrade g -> v, `HighGradeTrack(msg (), g, false)
             | `Bridge -> v, `BuildBridge(msg ()) 
-            | `Tunnel(len, g) -> v, `BuildTunnel(msg (), len, g)
+            | `Tunnel g -> v, `HighGradeTrack(msg (), g, true)
             | `Illegal -> v, `NoAction
           else
             (* Remove Track *)
