@@ -79,17 +79,16 @@ let get_letter_width font c =
     7
 
 let get_str_w_h ?(skip_amp=false) font str =
-  let x = 
-    String.fold (fun x c ->
-      match c with
-      | '&' when skip_amp -> x
-      | _ ->
-        let w = get_letter_width font c in
-        x + w + font.space_x)
-    0
-    str
-  in
-  (x, font.height + font.space_y)
+  String.fold (fun (x, y) c ->
+    match c with
+    | '&' when skip_amp -> x, y
+    | '\n' -> x, y + font.space_y + font.height
+    | _ ->
+      let w = get_letter_width font c in
+      x + w + font.space_x, y
+  )
+  (0, font.height + font.space_y)
+  str
 
   module R = Renderer
 

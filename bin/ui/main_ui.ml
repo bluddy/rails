@@ -615,17 +615,13 @@ let handle_event (s:State.t) v (event:Event.t) =
                   let modal = {menu; data=(msg, length); last=Normal} in
                   {v with mode=BuildTunnel modal}, nobaction
               | `HitWater ->
-                  make_msgbox s v ~fonts "hi4"
-                  (* make_msgbox s v ~fonts "Can't tunnel under water!" *)
+                  make_msgbox s v ~fonts "Can't tunnel under water!"
               | `HitsTrack ->
-                  make_msgbox s v ~fonts "hi3"
-                  (* make_msgbox s v ~fonts "Tunnel can't cross\nexisting track!" *)
+                  make_msgbox s v ~fonts "Tunnel can't cross\nexisting track!"
               | `OutOfBounds ->
-                  make_msgbox s v ~fonts "hi2"
-                  (* make_msgbox s v ~fonts "Can't tunnel off map." *)
+                  make_msgbox s v ~fonts "Can't tunnel off map."
               | `TooLong ->
-                  make_msgbox s v ~fonts "hi"
-                  (* make_msgbox s v ~fonts "Tunnel too long." *)
+                  make_msgbox s v ~fonts "Tunnel too long."
         )
 
     | BuildTunnel build_menu ->
