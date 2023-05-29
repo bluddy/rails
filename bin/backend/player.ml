@@ -4,6 +4,7 @@ module Hashtbl = Utils.Hashtbl
 type expense =
   | LandExpense
   | TrackExpense
+  | TunnelExpense
   | TrainExpense
   | InterestExpense
   | StationExpense

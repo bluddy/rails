@@ -246,17 +246,19 @@ let check_build_tunnel v ~x ~y ~dir ~player =
   | `Tunnel(length, _, _) when not(check length) -> `HitsTrack
   | x -> x
 
-let _build_tunnel v ~x ~y ~dir ~player ~length =
-  let before = TS.scan v.track ~x ~y ~player in
-  let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
-  let after = TS.scan track ~x ~y ~player in
-  let graph = Backend_low.Graph.handle_build_track v.graph before after in
-  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
-  (* TODO: find real tunnel cost *)
-  _player_pay_for_track v ~x ~y ~dir ~player ~len:length;
-  if v.graph =!= graph then v.graph <- graph;
-  if v.track =!= track then v.track <- track;
-  v
+let _build_tunnel v ~x ~y ~dir ~player =
+  match check_build_tunnel v ~x ~y ~dir ~player with
+  | `Tunnel(length, _, cost) ->
+    let before = TS.scan v.track ~x ~y ~player in
+    let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
+    let after = TS.scan track ~x ~y ~player in
+    let graph = Backend_low.Graph.handle_build_track v.graph before after in
+    Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+    update_player v player @@ Player.pay Player.TunnelExpense cost;
+    if v.graph =!= graph then v.graph <- graph;
+    if v.track =!= track then v.track <- track;
+    v
+  | _ -> v
 
 let _build_bridge v ~x ~y ~dir ~player ~kind =
   let before = TS.scan v.track ~x ~y ~player in
@@ -810,8 +812,8 @@ module Action = struct
           _build_station backend ~x ~y kind ~player
       | BuildBridge({x; y; dir; player}, kind) ->
           _build_bridge backend ~x ~y ~dir ~kind ~player
-      | BuildTunnel({x; y; dir; player}, length) ->
-          _build_tunnel backend ~x ~y ~dir ~player ~length
+      | BuildTunnel({x; y; dir; player}, _length) ->
+          _build_tunnel backend ~x ~y ~dir ~player
       | RemoveTrack {x; y; dir; player} ->
           _remove_track backend ~x ~y ~dir ~player
       | ImproveStation {x; y; player; upgrade} ->
