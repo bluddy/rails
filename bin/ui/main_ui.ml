@@ -392,7 +392,7 @@ let nobaction = B.Action.NoAction
 let make_msgbox ?x ?y s v ~fonts text =
   let open Menu in
   let open MsgBox in
-  let y = Option.get_or ~default:100 y in
+  let y = Option.get_or ~default:80 y in
   let x = match x with
     | Some x -> x
     | None ->

@@ -78,7 +78,7 @@ let show = function
   | Vineyard -> "Vineyard"
   | Winery -> "Winery"
   | Fort -> "Fort"
-  | GlassWorks -> "GlassWorks"
+  | GlassWorks -> "Glass Works"
   | SheepFarm -> "Sheep Farm"
 
 let to_enum = function
