@@ -17,6 +17,13 @@ module Options = Bitset.Make(struct
     let last = `Resources
   end)
 
+type smoke_plume = {
+  frame: int;
+  x: int;
+  y: int;
+  dir: Dir.t;
+} [@@deriving yojson]
+
 type t =
   {
     center_x: int; (* in map coordinates *)
@@ -27,6 +34,8 @@ type t =
     dims: Utils.rect;
     build_mode: bool;
     survey: bool;
+    smoke_plumes: smoke_plume list;
     options: Options.t;
   }
   [@@deriving yojson]
+

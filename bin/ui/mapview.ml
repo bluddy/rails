@@ -1,6 +1,7 @@
 open Containers
 open Mapview_d
 module B = Backend
+module C = Constants
 
 let src = Logs.Src.create "mapview" ~doc:"Mapview"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -18,6 +19,7 @@ let default dims =
     dims;
     build_mode=true;
     survey=false;
+    smoke_plumes=[];
     options=Options.of_list [`StationBoxes];
   }
 
@@ -245,7 +247,6 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       done
     done
   in
-
   let tile_render () =
     let tiles = tile_textures_of_zoom s v.zoom in
     iter_screen (fun i j ->
@@ -257,7 +258,6 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.Texture.render win tex ~x ~y;
     )
   in
-
   let draw_city_names () =
     B.iter_cities (fun x y (name,_) ->
       if (x >= start_x && y >= start_y) || (x <= end_x && y <= end_y) then (
@@ -271,13 +271,11 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     )
     s.backend
   in
-
   let draw_track_zoom1 () =
     B.trackmap_iter s.backend (fun x y _ ->
       R.draw_point win ~x ~y:(y + v.dims.y) ~color:Ega.black
     )
   in
-
   let draw_track_zoom2 () =
     iter_screen (fun i j ->
       let map_x, map_y = start_x + j, start_y + i in
@@ -292,7 +290,6 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       | _ -> ()
     )
   in
-
   let draw_minimap ~(minimap:Utils.rect) =
     let from_x, from_y, from_end_x, from_end_y = minimap_bounds v ~minimap in
     R.Texture.render_subtex win s.map_tex ~x:minimap.x ~y:minimap.y
@@ -306,21 +303,18 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         R.draw_point win ~x ~y ~color:Ega.black
       )
     );
-
     (* minimap rectangle *)
     let x = minimap.x + start_x - from_x in
     let y = minimap.y + start_y - from_y in
     R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
       ~fill:false;
   in
-
   let draw_cursor_zoom4 () =
     let x = (v.cursor_x - start_x) * tile_w in
     let y = (v.cursor_y - start_y) * tile_h + v.dims.y in
     let color = if v.build_mode then Ega.white else Ega.red in
     R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color ~fill:false
   in
-
   let draw_track_zoom4 () =
     let track_h = s.State.textures.tracks in
     iter_screen (fun i j ->
@@ -333,32 +327,23 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       | _ -> ()
     )
   in
-
   let draw_trains_zoom4 () =
     (* For now, draw only the engine *)
     let open Textures.CarsTop in
-    let offset_x, offset_y = (-Constants.tile_w/2) - 2, -2 in
-    let start_x_px = start_x * Constants.tile_w in
-    let start_y_px = start_y * Constants.tile_h in
-    let end_x_px = end_x * Constants.tile_w in
-    let end_y_px = end_y * Constants.tile_h in
+    let offset_x, offset_y = (-C.tile_w/2) - 2, -2 in
+    let start_x_px = start_x * C.tile_w in
+    let start_y_px = start_y * C.tile_h in
+    let end_x_px = end_x * C.tile_w in
+    let end_y_px = end_y * C.tile_h in
     Trainmap.iter (fun (train:Train.t) ->
-      (* Engine *)
-      if train.x >= start_x_px - 4 && train.y >= start_y_px - 4 &&
-         train.x <= end_x_px + 4 && train.y <= end_y_px + 4 then (
-        let tex = Hashtbl.find s.textures.cars_top (Engine train.engine._type, train.dir) in
-        let x = train.x - start_x_px + offset_x in
-        let y = train.y - start_y_px + offset_y in
-        R.Texture.render win tex ~x ~y
-      );
       (* Cars *)
       List.iteri (fun i car ->
         let car_x, car_y, car_dir = Train.get_car_loc ~car_pixels:12 train i in
         (* let car_dir = Train.get_car_dir train i in *)
         (* if i = 0 then *)
         (*   Log.debug (fun f -> f "car_loc(%d, %d)" car_x car_y); *)
-        if car_x >= start_x_px - 4 && car_y >= start_y_px - 4 &&
-           car_x <= end_x_px + 4 && car_y <= end_y_px + 4 then (
+        if car_x >= start_x_px - C.draw_margin && car_y >= start_y_px - C.draw_margin &&
+           car_x <= end_x_px + C.draw_margin && car_y <= end_y_px + C.draw_margin then (
           let freight = Goods.freight_of_goods car.Train.Car.good in
           let tex = Hashtbl.find s.textures.cars_top (Car freight, car_dir) in
           let x = car_x - start_x_px + offset_x in
@@ -366,10 +351,18 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           R.Texture.render win tex ~x ~y
         );
       ) train.cars;
+      (* Engine *)
+      if train.x >= start_x_px - 4 && train.y >= start_y_px - 4 &&
+         train.x <= end_x_px + 4 && train.y <= end_y_px + 4 then (
+        let tex = Hashtbl.find s.textures.cars_top
+          (Engine train.engine._type, train.dir) in
+        let x = train.x - start_x_px + offset_x in
+        let y = train.y - start_y_px + offset_y in
+        R.Texture.render win tex ~x ~y
+      )
     )
     s.backend.trains
   in
-
   let draw_survey_zoom4 () =
     iter_screen (fun i j ->
       let map_x, map_y = start_x + j, start_y + i in
@@ -381,7 +374,6 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         Fonts.Render.write win s.fonts height ~idx:3 ~x ~y ~color:Ega.white
     )
   in
-
   let draw_buildstation_mode () =
     let color = Ega.gray in
     let fill = false in
@@ -424,4 +416,49 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_cursor_zoom4 ();
   end;
   s
+
+let handle_tick s v time =
+  begin match v.zoom with
+  | Zoom4 ->
+    (* Only create smoke plumes for the drawn area *)
+    let tile_w, tile_h = tile_size_of_zoom v.zoom in
+    let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
+    let start_x_px = start_x * C.tile_w in
+    let start_y_px = start_y * C.tile_h in
+    let end_x_px = end_x * C.tile_w in
+    let end_y_px = end_y * C.tile_h in
+    (* Create plumes of smoke *)
+    let smoke_plumes =
+      Trainmap.foldi (fun i (train:Train.t) acc ->
+        if Engine.has_steam train &&
+           Train.get_speed train > 0 &&
+           (i * 3 + s.backend.cycle) mod 16 = 0 then
+          let smoke =
+            {frame=0; x=train.x; y=train.y; dir=Dir.cw train.dir}
+          in
+          smoke::acc
+        else
+          acc
+      )
+      v.smoke_plumes
+      s.backend.trains
+    in
+    (* Move smoke *)
+    let smoke_plumes =
+      if s.backend.cycle mod 3 = 0 then
+        List.filter (fun plume ->
+          let x, y = Dir.adjust dir x y in
+          plume.x <- x;
+          plume.y <- y;
+          plume.cycle <- plume.cycle + 1;
+          plume.cycle < 16
+        )
+      else
+        smoke_plumes
+    in
+    if smoke_plumes =!= v.smoke_plumes then v.smoke_plumes <- smoke_plumes;
+  end;
+  s
+
+
 

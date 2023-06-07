@@ -48,6 +48,10 @@ type t = {
   year: int;
 } [@@deriving yojson, show]
 
+let has_steam v = match v._type with
+  | SteamSmall | SteamBig -> true
+  | Diesel -> false
+
 let make make _type name max_speed horsepower price year = {
   make;
   _type;
