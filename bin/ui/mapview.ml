@@ -1,5 +1,6 @@
 open Containers
 open Mapview_d
+open Utils.Infix
 module B = Backend
 module C = Constants
 
@@ -417,7 +418,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   end;
   s
 
-let handle_tick s v time =
+let handle_tick (s:State.t) (v:t) _time =
   begin match v.zoom with
   | Zoom4 ->
     (* Only create smoke plumes for the drawn area *)
@@ -429,10 +430,14 @@ let handle_tick s v time =
     let end_y_px = end_y * C.tile_h in
     (* Create plumes of smoke *)
     let smoke_plumes =
-      Trainmap.foldi (fun i (train:Train.t) acc ->
-        if Engine.has_steam train &&
+      Trainmap.foldi (fun i acc (train:Train.t) ->
+        if Engine.has_steam train.engine &&
            Train.get_speed train > 0 &&
-           (i * 3 + s.backend.cycle) mod 16 = 0 then
+           (i * 3 + s.backend.cycle) mod 16 = 0 &&
+           train.x >= start_x_px - C.draw_margin &&
+           train.x <= end_x_px + C.draw_margin &&
+           train.y >= start_y_px - C.draw_margin &&
+           train.y <= end_y_px + C.draw_margin then
           let smoke =
             {frame=0; x=train.x; y=train.y; dir=Dir.cw train.dir}
           in
@@ -440,25 +445,25 @@ let handle_tick s v time =
         else
           acc
       )
-      v.smoke_plumes
+      ~init:v.smoke_plumes
       s.backend.trains
     in
     (* Move smoke *)
     let smoke_plumes =
       if s.backend.cycle mod 3 = 0 then
         List.filter (fun plume ->
-          let x, y = Dir.adjust dir x y in
+          let x, y = Dir.adjust plume.dir plume.x plume.y in
           plume.x <- x;
           plume.y <- y;
-          plume.cycle <- plume.cycle + 1;
-          plume.cycle < 16
-        )
+          plume.frame <- plume.frame + 1;
+          plume.frame < max_smoke_frame)
+        smoke_plumes
       else
         smoke_plumes
     in
     if smoke_plumes =!= v.smoke_plumes then v.smoke_plumes <- smoke_plumes;
   end;
-  s
+  v
 
 
 

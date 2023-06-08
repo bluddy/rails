@@ -26,13 +26,13 @@ let last v =
   let size = size v in
   get v (size - 1)
 
-let iter f v = Vector.iter f v
+let iter f (v:t) = Vector.iter f v
 
-let iteri f v = Vector.iteri f v
+let iteri f (v:t) = Vector.iteri f v
 
-let fold f v ~init = Vector.fold f init v
+let fold f (v:t) ~init = Vector.fold f init v
 
-let foldi f v ~init = Vector.foldi f init v
+let foldi f (v:t) ~init = Vector.foldi f init v
 
 let mapi_in_place f v = 
   Vector.mapi_in_place f v

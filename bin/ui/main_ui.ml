@@ -693,7 +693,8 @@ let handle_tick s v time = match v.mode with
       let state2 = Edit_train.handle_tick state time in
       if state === state2 then v else {v with mode=EditTrain state2}
   | Normal ->
-      Mapview.handle_tick s v.view time
+      let view = Mapview.handle_tick s v.view time in
+      if view =!= v.view then {v with view} else v
   | _ -> v
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]

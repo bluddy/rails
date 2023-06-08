@@ -18,11 +18,13 @@ module Options = Bitset.Make(struct
   end)
 
 type smoke_plume = {
-  frame: int;
-  x: int;
-  y: int;
+  mutable frame: int;
+  mutable x: int;
+  mutable y: int;
   dir: Dir.t;
 } [@@deriving yojson]
+
+let max_smoke_frame = 16
 
 type t =
   {
@@ -34,7 +36,7 @@ type t =
     dims: Utils.rect;
     build_mode: bool;
     survey: bool;
-    smoke_plumes: smoke_plume list;
+    mutable smoke_plumes: smoke_plume list;
     options: Options.t;
   }
   [@@deriving yojson]
