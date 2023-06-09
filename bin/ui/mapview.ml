@@ -1,6 +1,7 @@
 open Containers
 open Mapview_d
 open Utils.Infix
+module Hashtbl = Utils.Hashtbl
 module B = Backend
 module C = Constants
 
@@ -353,8 +354,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         );
       ) train.cars;
       (* Engine *)
-      if train.x >= start_x_px - 4 && train.y >= start_y_px - 4 &&
-         train.x <= end_x_px + 4 && train.y <= end_y_px + 4 then (
+      if train.x >= start_x_px - C.draw_margin && train.y >= start_y_px - C.draw_margin &&
+         train.x <= end_x_px + C.draw_margin && train.y <= end_y_px + C.draw_margin then (
         let tex = Hashtbl.find s.textures.cars_top
           (Engine train.engine._type, train.dir) in
         let x = train.x - start_x_px + offset_x in
@@ -362,7 +363,17 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         R.Texture.render win tex ~x ~y
       )
     )
-    s.backend.trains
+    s.backend.trains;
+    (* Draw smoke *)
+    let smoke_texs = Hashtbl.find s.textures.Textures.smoke `SmokeTop in
+    List.iter (fun smoke ->
+      if smoke.x >= start_x_px - C.draw_margin && smoke.y >= start_y_px - C.draw_margin &&
+         smoke.x <= end_x_px + C.draw_margin && smoke.y <= end_y_px + C.draw_margin then (
+        let x, y = smoke.x - start_x_px, smoke.y - start_y_px in
+        let tex = smoke_texs.(smoke.frame/4) in
+        R.Texture.render win tex ~x ~y
+      ))
+    v.smoke_plumes
   in
   let draw_survey_zoom4 () =
     iter_screen (fun i j ->
@@ -419,50 +430,53 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   s
 
 let handle_tick (s:State.t) (v:t) _time =
-  begin match v.zoom with
-  | Zoom4 ->
-    (* Only create smoke plumes for the drawn area *)
-    let tile_w, tile_h = tile_size_of_zoom v.zoom in
-    let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-    let start_x_px = start_x * C.tile_w in
-    let start_y_px = start_y * C.tile_h in
-    let end_x_px = end_x * C.tile_w in
-    let end_y_px = end_y * C.tile_h in
-    (* Create plumes of smoke *)
-    let smoke_plumes =
-      Trainmap.foldi (fun i acc (train:Train.t) ->
-        if Engine.has_steam train.engine &&
-           Train.get_speed train > 0 &&
-           (i * 3 + s.backend.cycle) mod 16 = 0 &&
-           train.x >= start_x_px - C.draw_margin &&
-           train.x <= end_x_px + C.draw_margin &&
-           train.y >= start_y_px - C.draw_margin &&
-           train.y <= end_y_px + C.draw_margin then
-          let smoke =
-            {frame=0; x=train.x; y=train.y; dir=Dir.cw train.dir}
-          in
-          smoke::acc
-        else
-          acc
-      )
-      ~init:v.smoke_plumes
-      s.backend.trains
-    in
-    (* Move smoke *)
-    let smoke_plumes =
-      if s.backend.cycle mod 3 = 0 then
-        List.filter (fun plume ->
-          let x, y = Dir.adjust plume.dir plume.x plume.y in
-          plume.x <- x;
-          plume.y <- y;
-          plume.frame <- plume.frame + 1;
-          plume.frame < max_smoke_frame)
-        smoke_plumes
-      else
-        smoke_plumes
-    in
-    if smoke_plumes =!= v.smoke_plumes then v.smoke_plumes <- smoke_plumes;
-  end;
+  (* Move smoke *)
+  let smoke_plumes =
+    if s.backend.cycle mod 3 = 0 then
+      List.filter (fun plume ->
+        let x, y = Dir.adjust plume.dir plume.x plume.y in
+        plume.x <- x;
+        plume.y <- y;
+        plume.frame <- plume.frame + 1;
+        plume.frame < max_smoke_frame)
+      v.smoke_plumes
+    else
+      v.smoke_plumes
+  in
+  let smoke_plumes =
+    match v.zoom with
+    | Zoom4 ->
+      (* Only create smoke plumes for the drawn area *)
+      let tile_w, tile_h = tile_size_of_zoom v.zoom in
+      let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
+      let start_x_px = start_x * C.tile_w in
+      let start_y_px = start_y * C.tile_h in
+      let end_x_px = end_x * C.tile_w in
+      let end_y_px = end_y * C.tile_h in
+      (* Create plumes of smoke *)
+      let smoke_plumes =
+        Trainmap.foldi (fun i acc (train:Train.t) ->
+          if Engine.has_steam train.engine &&
+             Train.get_speed train > 0 &&
+             (i * 3 + s.backend.cycle) mod 16 = 0 &&
+             train.x >= start_x_px - C.draw_margin &&
+             train.x <= end_x_px + C.draw_margin &&
+             train.y >= start_y_px - C.draw_margin &&
+             train.y <= end_y_px + C.draw_margin then
+            let smoke =
+              {frame=0; x=train.x; y=train.y; dir=Dir.cw train.dir}
+            in
+            smoke::acc
+          else
+            acc
+        )
+        ~init:smoke_plumes
+        s.backend.trains
+      in
+      smoke_plumes
+    | _ -> smoke_plumes
+  in
+  if smoke_plumes =!= v.smoke_plumes then v.smoke_plumes <- smoke_plumes;
   v
 
 
