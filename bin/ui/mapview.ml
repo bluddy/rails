@@ -366,10 +366,11 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     s.backend.trains;
     (* Draw smoke *)
     let smoke_texs = Hashtbl.find s.textures.Textures.smoke `SmokeTop in
+    let offset_x, offset_y = (-C.tile_w/2) - 2, -2 in
     List.iter (fun smoke ->
       if smoke.x >= start_x_px - C.draw_margin && smoke.y >= start_y_px - C.draw_margin &&
          smoke.x <= end_x_px + C.draw_margin && smoke.y <= end_y_px + C.draw_margin then (
-        let x, y = smoke.x - start_x_px, smoke.y - start_y_px in
+        let x, y = smoke.x - start_x_px + offset_x, smoke.y - start_y_px + offset_y in
         let tex = smoke_texs.(smoke.frame/4) in
         R.Texture.render win tex ~x ~y
       ))
@@ -432,15 +433,18 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
 let handle_tick (s:State.t) (v:t) _time =
   (* Move smoke *)
   let smoke_plumes =
-    if s.backend.cycle mod 3 = 0 then
-      List.filter (fun plume ->
+    if s.backend.cycle mod 3 = 0 then (
+      List.iter (fun plume ->
         let x, y = Dir.adjust plume.dir plume.x plume.y in
         plume.x <- x;
         plume.y <- y;
         plume.frame <- plume.frame + 1;
+      )
+      v.smoke_plumes;
+      List.filter (fun plume ->
         plume.frame < max_smoke_frame)
       v.smoke_plumes
-    else
+    ) else
       v.smoke_plumes
   in
   let smoke_plumes =
