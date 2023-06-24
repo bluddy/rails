@@ -557,6 +557,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, `StationView(x, y) ->
             {v with mode=StationView(x, y)}, nobaction
 
+        | _, `DoubleTrack(double, x, y) ->
+            v, B.Action.DoubleTrack(double, x, y)
+
         | _ ->
             v, nobaction
       in

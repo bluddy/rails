@@ -15,6 +15,7 @@ end)
 type key =
   | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P
   | Q | R | S | T | U | V | W | X | Y | Z
+  | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 | K9
   | F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | F10 | F11 | F12 | Enter | Space
   | Left | Right | Up | Down | Escape
   [@@deriving show, eq]
@@ -46,6 +47,15 @@ let char_of_key = function
   | X -> 'X'
   | Y -> 'Y'
   | Z -> 'Z'
+  | K1 -> '1'
+  | K2 -> '2'
+  | K3 -> '3'
+  | K4 -> '4'
+  | K5 -> '5'
+  | K6 -> '6'
+  | K7 -> '7'
+  | K8 -> '8'
+  | K9 -> '9'
   | _ -> failwith "Not a letter"
 
 let is_letter = function
@@ -135,6 +145,15 @@ let handle_key event (event_typ:Sdl.Event.enum) =
       | `X -> X
       | `Y -> Y
       | `Z -> Z
+      | `K1 -> K1
+      | `K2 -> K2
+      | `K3 -> K3
+      | `K4 -> K4
+      | `K5 -> K5
+      | `K6 -> K6
+      | `K7 -> K7
+      | `K8 -> K8
+      | `K9 -> K9
       | `F1 -> F1
       | `F2 -> F2
       | `F3 -> F3

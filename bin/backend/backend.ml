@@ -806,6 +806,7 @@ module Action = struct
     | BuildBridge of Utils.msg * Bridge.t
     | BuildTunnel of Utils.msg * int (* length: 3 or 2 * length *)
     | RemoveTrack of Utils.msg
+    | DoubleTrack of bool * int * int
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
     | BuildTrain of {engine: Engine.make;
@@ -842,6 +843,10 @@ module Action = struct
           _build_tunnel backend ~x ~y ~dir ~player
       | RemoveTrack {x; y; dir; player} ->
           _remove_track backend ~x ~y ~dir ~player
+      | DoubleTrack (true, x, y) ->
+          _make_double_track backend ~x ~y
+      | DoubleTrack (false, x, y) ->
+          _make_single_track backend ~x ~y
       | ImproveStation {x; y; player; upgrade} ->
           _improve_station backend ~x ~y ~player ~upgrade
       | SetSpeed speed ->

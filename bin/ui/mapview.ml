@@ -182,18 +182,8 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   in
 
   let handle_key_zoom4 v key ~build =
-    let dir = key_to_dir key in
-    match dir, key with
-    | None, Event.Enter ->
-        begin match B.get_station s.backend v.cursor_x v.cursor_y with
-        | Some station when Station.is_proper_station station ->
-          v, `StationView (v.cursor_x, v.cursor_y)
-        | _ ->
-          let tile = B.get_tile s.backend v.cursor_x v.cursor_y in
-          v, `ShowTileInfo (v.cursor_x, v.cursor_y, tile)
-        end
-    | None, _ -> v, `NoAction
-    | Some dir, _ ->
+    match key_to_dir key with
+    | Some dir ->
         let move i = move_cursor v dir i in
         let msg () = Utils.{x=v.cursor_x; y=v.cursor_y; dir; player=0} in
         if build then (
@@ -214,6 +204,23 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         ) else
           (* Regular movement *)
           move 1, `NoAction
+    | None ->
+      match key with
+      | Event.Enter ->
+          begin match B.get_station s.backend v.cursor_x v.cursor_y with
+          | Some station when Station.is_proper_station station ->
+            v, `StationView (v.cursor_x, v.cursor_y)
+          | _ ->
+            let tile = B.get_tile s.backend v.cursor_x v.cursor_y in
+            v, `ShowTileInfo (v.cursor_x, v.cursor_y, tile)
+          end
+      | Event.K1 when build &&
+            B.check_make_single_track s.backend ~x:v.cursor_x ~y:v.cursor_y ->
+              v, `DoubleTrack(false, v.cursor_x, v.cursor_y)
+      | Event.K2 when build &&
+            B.check_make_double_track s.backend ~x:v.cursor_x ~y:v.cursor_y ->
+              v, `DoubleTrack(true, v.cursor_x, v.cursor_y)
+      | _ -> v, `NoAction
   in
 
   let v, actions =
