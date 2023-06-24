@@ -2,6 +2,7 @@ open Containers
 
 type kind =
   | Track
+  | DoubleTrack
   | Ferry
   | Tunnel
   | Station of Station.kind
@@ -87,14 +88,21 @@ let legal_tracks =
   (* Set of all sets of non-track things. Full straight *)
 let straight_dirs =
   let h = TrackSet.create 10 in
-  _add_to_set h Resources.special_dirs;
+  _add_to_set h Resources.straight_track;
+  h
+
+ (* Set of tracks that can be doubled *) 
+let doubleable_dirs =
+  let h = TrackSet.create 10 in
+  _add_to_set h Resources.straight_track;
+  _add_to_set h Resources.soft_turns;
   h
 
 let is_legal_dirs dirs = TrackSet.mem legal_tracks dirs
 
 let is_legal v =
   match v.kind with
-  | Track -> TrackSet.mem legal_tracks v.dirs
+  | Track | DoubleTrack -> TrackSet.mem legal_tracks v.dirs
   | _ -> TrackSet.mem straight_dirs v.dirs
 
 let is_straight v =
@@ -112,4 +120,7 @@ let straighten v =
     if TrackSet.mem straight_dirs v.dirs then v
     else
       failwith "Unexpected non-straight track"
+
+let is_doubleable v =
+  TrackSet.mem doubleable_dirs v.dirs
 

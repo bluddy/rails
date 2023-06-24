@@ -82,6 +82,11 @@ let track_turns =
     [UpLeft; DownLeft]; [UpLeft; UpRight]]
 
   (* Dirs for non-track stuff *)
-let special_dirs =
+let straight_track =
   [[Dir.Up;Down]; [UpRight; DownLeft]; [Left;Right]; [UpLeft; DownRight]]
 
+let soft_turns =
+  [[Dir.Up; DownRight]; [Up; DownLeft];
+    [Right; UpLeft]; [Right; DownLeft];
+    [Down; UpLeft]; [Down; UpRight];
+    [Left; UpRight]; [Left; DownRight]]

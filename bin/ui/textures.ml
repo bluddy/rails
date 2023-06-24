@@ -218,14 +218,14 @@ module Tracks = struct
     load_textures 0 0 Track all_tracks;
     load_textures ~extra:true 0 0 Ferry all_tracks;
 
-    load_textures 3 0 Tunnel Resources.special_dirs;
-    load_textures 3 4 (Bridge(Bridge.Iron)) Resources.special_dirs;
-    load_textures 3 8 (Bridge(Bridge.Wood)) Resources.special_dirs;
-    load_textures ~extra:true 3 8 (Bridge(Bridge.Stone)) Resources.special_dirs;
-    load_textures 4 0 (Station(`SignalTower)) Resources.special_dirs;
-    load_textures 4 0 (Station(`Depot)) Resources.special_dirs;
-    load_textures 4 4 (Station(`Station)) Resources.special_dirs;
-    load_textures 4 8 (Station(`Terminal)) Resources.special_dirs;
+    load_textures 3 0 Tunnel Resources.straight_track;
+    load_textures 3 4 (Bridge(Bridge.Iron)) Resources.straight_track;
+    load_textures 3 8 (Bridge(Bridge.Wood)) Resources.straight_track;
+    load_textures ~extra:true 3 8 (Bridge(Bridge.Stone)) Resources.straight_track;
+    load_textures 4 0 (Station(`SignalTower)) Resources.straight_track;
+    load_textures 4 0 (Station(`Depot)) Resources.straight_track;
+    load_textures 4 4 (Station(`Station)) Resources.straight_track;
+    load_textures 4 8 (Station(`Terminal)) Resources.straight_track;
     track_dict
 
   let find track_h track =

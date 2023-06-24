@@ -285,6 +285,32 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | `Bridge -> `Ok
   | _ -> `Illegal
 
+let check_make_double_track v ~x ~y =
+  match Trackmap.get v.track x y with
+  | Some ({kind = Track} as track) when Track.is_doubleable track -> true
+  | _ -> false
+
+let check_make_single_track v ~x ~y =
+  match Trackmap.get v.track x y with
+  | Some {kind = DoubleTrack} -> true
+  | _ -> false
+
+let _make_double_track (v:t) ~x ~y =
+  if check_make_double_track v ~x ~y then (
+    let track = Trackmap.get_exn v.track x y in
+    let track = {track with kind=DoubleTrack} in
+    Trackmap.set v.track x y track;
+    v
+  ) else v
+
+let _make_single_track (v:t) ~x ~y =
+  if check_make_single_track v ~x ~y then (
+    let track = Trackmap.get_exn v.track x y in
+    let track = {track with kind=Track} in
+    Trackmap.set v.track x y track;
+    v
+  ) else v
+    
 let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
   let before = TS.scan v.track ~x ~y ~player in
