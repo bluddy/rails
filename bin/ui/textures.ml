@@ -216,6 +216,7 @@ module Tracks = struct
     let all_tracks = Resources.(track_dirs @ illegal_track @ track_turns) in 
     let open Track in
     load_textures 0 0 Track all_tracks;
+    load_textures 0 0 DoubleTrack all_tracks;
     load_textures ~extra:true 0 0 Ferry all_tracks;
 
     load_textures 3 0 Tunnel Resources.straight_track;
