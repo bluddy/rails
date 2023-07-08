@@ -287,18 +287,20 @@ let check_build_bridge v ~x ~y ~dir ~player =
 
 let check_make_double_track v ~x ~y =
   match Trackmap.get v.track x y with
-  | Some ({kind = Track} as track) when Track.is_doubleable track -> true
+  | Some ({kind = Track `Single} as track) when Track.is_doubleable track -> true
+  | Some ({kind = Ferry `Single} as track) when Track.is_doubleable track -> true
   | _ -> false
 
 let check_make_single_track v ~x ~y =
   match Trackmap.get v.track x y with
-  | Some {kind = DoubleTrack} -> true
+  | Some {kind = Track `Double} -> true
+  | Some {kind = Ferry `Double} -> true
   | _ -> false
 
 let _make_double_track (v:t) ~x ~y =
   if check_make_double_track v ~x ~y then (
     let track = Trackmap.get_exn v.track x y in
-    let track = {track with kind=DoubleTrack} in
+    let track = {track with kind=Track `Double} in
     Trackmap.set v.track x y track;
     v
   ) else v
@@ -306,7 +308,11 @@ let _make_double_track (v:t) ~x ~y =
 let _make_single_track (v:t) ~x ~y =
   if check_make_single_track v ~x ~y then (
     let track = Trackmap.get_exn v.track x y in
-    let track = {track with kind=Track} in
+    let track = match track.kind with
+      | Track `Double -> {track with kind=Track `Single}
+      | Ferry `Double -> {track with kind=Ferry `Single}
+      | _ -> assert false
+    in
     Trackmap.set v.track x y track;
     v
   ) else v
@@ -329,9 +335,9 @@ let _build_ferry v ~x ~y ~dir ~player =
   let dx, dy = Dir.to_offsets dir in
   let tile2 = get_tile v (x+dx) (y+dy) in
   let kind1, kind2 = match tile1, tile2 with
-    | Tile.Ocean _ , Ocean _ -> Track.Ferry, Track.Ferry
-    | Ocean _, _ -> Ferry, Track
-    | _, Ocean _ -> Track, Ferry
+    | Tile.Ocean _ , Ocean _ -> Track.Ferry `Single, Track.Ferry `Single
+    | Ocean _, _ -> Ferry `Single, Track `Single
+    | _, Ocean _ -> Track `Single, Ferry `Single
     | _ -> assert false
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
@@ -676,7 +682,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
       Log.debug (fun f -> f "Station: %s" (Train.show_state train.state));
       train
 
-  | Track when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
+  | Track _ when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
       (* IXN *)
       let dir =
         let dest = Train.get_dest train in

@@ -1,9 +1,10 @@
 open Containers
 
+type double_track = [ `Double | `Single ] [@@deriving eq, yojson, hash]
+
 type kind =
-  | Track
-  | DoubleTrack
-  | Ferry
+  | Track of double_track
+  | Ferry of double_track
   | Tunnel
   | Station of Station.kind
   | Bridge of Bridge.t
@@ -92,17 +93,16 @@ let straight_dirs =
   h
 
  (* Set of tracks that can be doubled *) 
-let doubleable_dirs =
+let undoubleable_dirs =
   let h = TrackSet.create 10 in
-  _add_to_set h Resources.straight_track;
-  _add_to_set h Resources.soft_turns;
+  _add_to_set h Resources.track_turns;
   h
 
 let is_legal_dirs dirs = TrackSet.mem legal_tracks dirs
 
 let is_legal v =
   match v.kind with
-  | Track | DoubleTrack -> TrackSet.mem legal_tracks v.dirs
+  | Track _ | Ferry _ -> TrackSet.mem legal_tracks v.dirs
   | _ -> TrackSet.mem straight_dirs v.dirs
 
 let is_straight v =
@@ -122,5 +122,34 @@ let straighten v =
       failwith "Unexpected non-straight track"
 
 let is_doubleable v =
-  TrackSet.mem doubleable_dirs v.dirs
+  not @@ TrackSet.mem undoubleable_dirs v.dirs
+
+let is_double v =
+  match v.kind with
+  | Track `Double -> true
+  | Ferry `Double -> true
+  | _ -> false
+
+let double_track_offsets v =
+  (* A funky algorithm in the original code for determining the offsets of 
+     double tracks
+     returns the offsets in pixels for each side
+   *)
+  let x_offset, y_offset, _ =
+    Iter.fold (fun ((x_offset, y_offset, mult) as acc) dir_idx ->
+      match Dir.of_enum dir_idx with
+      | Some dir ->
+        if Dir.Set.mem v.dirs dir then
+          let dir90 = dir |> Dir.cw |> Dir.cw in
+          let offx, offy = Dir.to_offsets dir90 in
+          (x_offset + offx * mult, y_offset + offy * mult, -mult)
+        else acc
+      | _ -> acc)
+    (0, 0, -1)
+    Iter.((-2) -- 6)
+  in
+  if abs(x_offset) + abs(y_offset) = 4 then
+    (-x_offset - 1, -y_offset), (x_offset/2 - 1, y_offset/2)
+  else
+    (-x_offset, -y_offset), (x_offset, y_offset)
 

@@ -328,11 +328,20 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let track_h = s.State.textures.tracks in
     iter_screen (fun i j ->
       let map_x, map_y = start_x + j, start_y + i in
+      let x, y = j * tile_w, v.dims.y + i * tile_h in
       match B.get_track s.backend map_x map_y with
+      | Some track when Track.is_double track ->
+        let tex = Textures.Tracks.find track_h track in
+        let (x1, y1), (x2, y2) = Track.double_track_offsets track in
+        let xd, yd = x + x1 - 2, y + y1 - 2 in
+        R.Texture.render win tex ~x:xd ~y:yd;
+        let xd, yd = x + x2 - 2, y + y2 - 2 in
+        R.Texture.render win tex ~x:xd ~y:yd
+
       | Some track ->
         let tex = Textures.Tracks.find track_h track in
-        let x, y = j * tile_w, v.dims.y + i * tile_h in
         R.Texture.render win tex ~x:(x-2) ~y:(y-2)
+
       | _ -> ()
     )
   in

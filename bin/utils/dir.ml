@@ -68,7 +68,6 @@ let diff dir1 dir2 =
   let diff = abs(to_enum dir1 - to_enum dir2) in
   if diff > 4 then 8 - diff else diff
 
-
 module Set = struct
   include Bitset.Make(struct
     type nonrec t=t

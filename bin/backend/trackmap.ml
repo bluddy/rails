@@ -17,7 +17,7 @@ let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 let get_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)
 
   (* get, buf if there's nothing, create a track *)
-let get_track_default ?(kind=Track.Track) v x y ~player =
+let get_track_default ?(kind=(Track.Track `Single)) v x y ~player =
   get v x y
   |> Option.get_lazy (fun () -> Track.empty player kind)
 
@@ -79,7 +79,7 @@ let check_build_station v ~x ~y ~player station_type =
   if out_of_bounds v x y then `Illegal
   else match get v x y with
   | None -> `NoTrack
-  | Some ({kind=Track;_} as t) when t.player = player && Track.is_straight t ->
+  | Some ({kind=Track _;_} as t) when t.player = player && Track.is_straight t ->
        let range = Station.to_range station_type in
        let match_fn j i =
          match get v j i with
@@ -100,7 +100,7 @@ let check_build_station v ~x ~y ~player station_type =
    
 let build_station v ~x ~y station_type =
   match get v x y with
-  | Some ({kind=Track; _} as t) ->
+  | Some ({kind=Track _; _} as t) ->
       (* Do we build new track *)
       let build_new_track = Dir.Set.cardinal t.dirs > 1 in
       let track = Track.straighten t in
@@ -213,7 +213,7 @@ let remove_track v ~x ~y ~dir ~player =
   let track1 = get_track_default v x y ~player in
   if track1.player = player then
     begin match track1.kind with
-    | Track | Ferry ->
+    | Track _ | Ferry _ ->
         (* TODO: handle ixn *)
         remove_track_dir v ~x ~y ~dir;
     | Station _ ->
@@ -225,7 +225,7 @@ let remove_track v ~x ~y ~dir ~player =
   else ();
   let track2 = get_track_default v x2 y2 ~player in
   begin match track2.kind with
-  | Track | Ferry when track2.player = player ->
+  | Track _ | Ferry _ when track2.player = player ->
       remove_track_dir v ~x:x2 ~y:y2 ~dir:(Dir.opposite dir);
   | _ ->
       (* All other constructs remain whole with full dirs *)
