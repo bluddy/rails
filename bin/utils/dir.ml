@@ -12,6 +12,7 @@ type t =
   [@@deriving show, eq, ord, enum, yojson]
 
 let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
+let dirlist_left = [Left; UpLeft; Up; UpRight; Right; DownRight; Down; DownLeft]
 
 let cw = function
   | Up -> UpRight

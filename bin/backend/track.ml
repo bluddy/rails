@@ -136,20 +136,18 @@ let double_track_offsets v =
      returns the offsets in pixels for each side
    *)
   let x_offset, y_offset, _ =
-    Iter.fold (fun ((x_offset, y_offset, mult) as acc) dir_idx ->
-      match Dir.of_enum dir_idx with
-      | Some dir ->
-        if Dir.Set.mem v.dirs dir then
-          let dir90 = dir |> Dir.cw |> Dir.cw in
-          let offx, offy = Dir.to_offsets dir90 in
-          (x_offset + offx * mult, y_offset + offy * mult, -mult)
-        else acc
-      | _ -> acc)
+    List.fold_left (fun ((x_offset, y_offset, mult) as acc) dir ->
+      if Dir.Set.mem v.dirs dir then
+        let dir90 = dir |> Dir.cw |> Dir.cw in
+        let offx, offy = Dir.to_offsets dir90 in
+        (x_offset + offx * mult, y_offset + offy * mult, -mult)
+      else acc)
     (0, 0, -1)
-    Iter.((-2) -- 6)
+    Dir.dirlist_left
   in
-  if abs(x_offset) + abs(y_offset) = 4 then
+  Printf.printf "x_off:%d, y_off:%d\n%!" x_offset y_offset;
+  if abs(x_offset) + abs(y_offset) = 4 then (
     (-x_offset - 1, -y_offset), (x_offset/2 - 1, y_offset/2)
-  else
+  ) else
     (-x_offset, -y_offset), (x_offset, y_offset)
 
