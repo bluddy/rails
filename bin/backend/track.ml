@@ -145,7 +145,7 @@ let double_track_offsets v =
     (0, 0, -1)
     Dir.dirlist_left
   in
-  Printf.printf "x_off:%d, y_off:%d\n%!" x_offset y_offset;
+  (* Printf.printf "x_off:%d, y_off:%d\n%!" x_offset y_offset; *)
   if abs(x_offset) + abs(y_offset) = 4 then (
     (-x_offset - 1, -y_offset), (x_offset/2 - 1, y_offset/2)
   ) else
