@@ -1,4 +1,5 @@
 open Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module type Elem = sig
   type t

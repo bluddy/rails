@@ -1,4 +1,5 @@
 open Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type make =
   (* One to one mapping between Engine.make and Engine.t *)

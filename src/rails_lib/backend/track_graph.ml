@@ -1,4 +1,5 @@
 open Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 let src = Logs.Src.create "track_graph" ~doc:"The track graph"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -9,14 +10,14 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module Edge = struct
   type xy_dir = (int * int * Dir.t)
-  [@@ deriving yojson]
+  [@@deriving yojson]
 
   type t = {
     id: int;
     nodes: xy_dir * xy_dir;
     dist: int;
     mutable block: bool;
-  } [@@ deriving yojson]
+  } [@@deriving yojson]
 
   let default = {id=0; nodes=((0,0,Dir.Up),(0,0,Dir.Up)); dist=0; block=false}
   let equal x y = x.id = y.id

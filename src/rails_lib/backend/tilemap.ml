@@ -1,5 +1,6 @@
 module Ndarray = Owl_base_dense_ndarray.Generic
 open Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 
 let map_height_default = 192

@@ -1,5 +1,6 @@
 open Containers
 open Tsdl
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 

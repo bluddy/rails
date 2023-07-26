@@ -1,3 +1,4 @@
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type dims = {
   screen: Utils.rect;

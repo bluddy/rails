@@ -1,3 +1,4 @@
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
   type t = {
     map: (int, string * int) Utils.Hashtbl.t; (* random offset for suffix *)

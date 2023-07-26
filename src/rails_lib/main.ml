@@ -85,7 +85,7 @@ let init_pani win ~filename =
   let handle_event () _ = (), false in
   ((), Mainloop.{handle_tick; render; handle_event})
 
-let () =
+let main () =
   parse arglist (fun _ -> ()) "Usage";
   match !mode with
   | `Font -> Fonts.main !file

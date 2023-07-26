@@ -1,4 +1,5 @@
 open Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 let src = Logs.Src.create "train" ~doc:"Train"
 module Log = (val Logs.src_log src: Logs.LOG)

@@ -11,7 +11,7 @@ doc: "https://url/to/documentation"
 bug-reports: "https://github.com/bluddy/rails/issues"
 depends: [
   "ocaml"
-  "dune" {>= "3.0"}
+  "dune" {>= "3.6"}
   "iter"
   "containers"
   "containers-data"

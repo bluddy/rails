@@ -1,5 +1,6 @@
 open Containers
 open Utils.Infix
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 
 (* minimum level to be real demand *)

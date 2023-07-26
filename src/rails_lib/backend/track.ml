@@ -1,4 +1,5 @@
 open Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type double_track = [ `Double | `Single ] [@@deriving eq, yojson, hash]
 
