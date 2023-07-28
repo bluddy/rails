@@ -1,33 +1,43 @@
-open Containers
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Containers
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Utils
 
 (* This map contains independent tiles of track *)
 
+module TrackMap = Map.Make(struct
+  type t = int [@@deriving yojson]
+  let compare (x:int) y = x - y
+end)
+
 type t = {
-  map: (int, Track.t) Utils.Hashtbl.t;
+  map: Track.t TrackMap.t;
   width: int;
   height: int;
 } [@@deriving yojson]
 
 let empty width height =
-  let map = Hashtbl.create 100 in
+  let map = TrackMap.empty in
   {map; width; height}
 
-let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
+let get v x y = TrackMap.find_opt (Utils.calc_offset v.width x y) v.map
 
-let get_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)
+let get_exn v x y = TrackMap.find (Utils.calc_offset v.width x y) v.map 
 
   (* get, buf if there's nothing, create a track *)
 let get_track_default ?(kind=(Track.Track `Single)) v x y ~player =
   get v x y
   |> Option.get_lazy (fun () -> Track.empty player kind)
 
-let set v x y tile = Hashtbl.replace v.map (Utils.calc_offset v.width x y) tile
+let set v x y tile =
+  let map = TrackMap.add (Utils.calc_offset v.width x y) tile v.map in
+  {v with map}
 
-let remove v x y = Hashtbl.remove v.map (Utils.calc_offset v.width x y)
+let remove v x y =
+  let map = TrackMap.remove (Utils.calc_offset v.width x y) v.map in
+  {v with map}
 
 let iter v f =
-  Hashtbl.iter (fun i track ->
+  TrackMap.iter (fun i track ->
     let x, y = Utils.x_y_of_offset v.width i in
     f x y track)
   v.map
@@ -35,14 +45,9 @@ let iter v f =
 let out_of_bounds v x y =
   x < 0 || y < 0 || x >= v.width || y >= v.height
 
-(* Common function for moving by dir *)
-let move_dir ~x ~y ~dir =
-  let dx, dy = Dir.to_offsets dir in
-  x + dx, y + dy
-
 (* Common function for moving by dir, with bounds check *)
 let move_dir_bounds v ~x ~y ~dir =
-  let x2, y2 = move_dir ~x ~y ~dir in
+  let x2, y2 = Dir.adjust dir x y in
   if out_of_bounds v x2 y2 then None
   else Some(x2, y2)
 
@@ -72,8 +77,8 @@ let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
     let track2 = get_track_default ?kind:kind2 v x2 y2 ~player in
     let track1 = Track.add_dir track1 ~dir in
     let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
-    set v x y track1;
-    set v x2 y2 track2;
+    let v = set v x y track1 in
+    let v = set v x2 y2 track2 in
     v
 
 let check_build_station v ~x ~y ~player station_type =
@@ -106,7 +111,7 @@ let build_station v ~x ~y station_type =
       let build_new_track = Dir.Set.cardinal t.dirs > 1 in
       let track = Track.straighten t in
       let station = {track with kind=Station(station_type)} in
-      set v x y station;
+      let v = set v x y station in
       v, build_new_track
   | _ -> assert false
 
@@ -119,9 +124,7 @@ let check_build_stretch v ~x ~y ~dir ~player ~length =
   let x1, y1 = x, y in
   let x3, y3 = x + dx * length, y + dy * length in
   (* check boundaries *)
-  if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
-    x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then
-      false
+  if out_of_bounds v x y || out_of_bounds v x3 y3 then false
   else (
     (* No track in between *)
     let rec loop x y i =
@@ -154,26 +157,25 @@ let build_stretch v ~x ~y ~dir ~player ~n ~kind =
   let dx, dy = Dir.to_offsets dir in
   let x1, y1 = x, y in
   let x3, y3 = x + dx * n, y + dy * n in
-  if x < 0 || x3 < 0 || y < 0 || y3 < 0 ||
-    x >= v.width || x3 >= v.width || y >= v.height || y3 >= v.height then
-      v (* error *)
+  if out_of_bounds v x y || out_of_bounds v x3 y3 then v (* error *)
   else (
     let track1 = get_track_default v x1 y1 ~player |> Track.add_dir ~dir in
-    set v x1 y1 track1;
+    let v = set v x1 y1 track1 in
     let track2 = Track.empty player kind
       |> Track.add_dir ~dir
       |> Track.add_dir ~dir:(Dir.opposite dir)
     in
-    let rec dig_tunnel ~x ~y i =
-      if i <= 0 then ()
-      else (
-        set v x y track2;
-        dig_tunnel ~x:(x+dx) ~y:(y+dy) (i-1)
-      )
+    let rec dig_tunnel ~x ~y i v =
+      if i <= 0 then v
+      else
+        let v = set v x y track2 in
+        dig_tunnel ~x:(x+dx) ~y:(y+dy) (i-1) v
     in
-    dig_tunnel ~x:(x1+dx) ~y:(y1+dy) (n-1);
-    let track3 = get_track_default v x3 y3 ~player |> Track.add_dir ~dir:(Dir.opposite dir) in
-    set v x3 y3 track3;
+    let v = dig_tunnel ~x:(x1+dx) ~y:(y1+dy) (n-1) v in
+    let track3 =
+      get_track_default v x3 y3 ~player
+      |> Track.add_dir ~dir:(Dir.opposite dir) in
+    let v = set v x3 y3 track3 in
     v
   )
 
@@ -208,31 +210,30 @@ let remove_track v ~x ~y ~dir ~player =
         remove v x y
       else
         set v x y track
-    | None -> ()
+    | None -> v
   in
-  let x2, y2 = move_dir ~x ~y ~dir in
+  let x2, y2 = Dir.adjust dir x y in
   let track1 = get_track_default v x y ~player in
-  if track1.player = player then
-    begin match track1.kind with
-    | Track _ | Ferry _ ->
-        (* TODO: handle ixn *)
-        remove_track_dir v ~x ~y ~dir;
-    | Station _ ->
-        (* TODO: handle station removal *)
-        remove v x y
-    | Bridge _ | Tunnel ->
-        remove v x y
-    end
-  else ();
+  let v =
+    if track1.player = player then
+      match track1.kind with
+      | Track _ | Ferry _ ->
+          (* TODO: handle ixn *)
+          remove_track_dir v ~x ~y ~dir;
+      | Station _ ->
+          (* TODO: handle station removal *)
+          remove v x y
+      | Bridge _ | Tunnel ->
+          remove v x y
+    else v
+  in
   let track2 = get_track_default v x2 y2 ~player in
-  begin match track2.kind with
+  match track2.kind with
   | Track _ | Ferry _ when track2.player = player ->
       remove_track_dir v ~x:x2 ~y:y2 ~dir:(Dir.opposite dir);
   | _ ->
       (* All other constructs remain whole with full dirs *)
-      ()
-  end;
-  v
+      v
 
 module Search = struct
   (* Module for searching the trackmap for stations and ixns.
@@ -280,7 +281,7 @@ module Search = struct
           end
       | _ -> None
     in
-    let x2, y2 = move_dir ~x ~y ~dir in
+    let x2, y2 = Dir.adjust dir x y in
     loop_to_node x2 y2 dir 1
 
     (* Ixn/Station/Track: what we're pointing at.

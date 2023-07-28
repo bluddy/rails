@@ -46,6 +46,32 @@ module Set = struct
   end
 end
 
+module Map = struct
+  module type S = sig
+    include CCMap.S
+    val t_of_yojson : Yojson.Safe.t -> 'a t
+    val yojson_of_t : 'a t -> Yojson.Safe.t
+  end
+  module Make(O:OrderedType) = struct
+    include CCMap.Make(O)
+
+    let to_hashtbl v =
+      let h = Hashtbl.create 10 in
+      iter (fun k v -> Hashtbl.replace h k v) v;
+      h
+
+    let of_hashtbl h =
+      let m = empty in
+      Hashtbl.fold (fun k v m -> add k v m) h m
+
+    let t_of_yojson conv (json:Yojson.Safe.t) =
+      hashtbl_of_yojson O.t_of_yojson conv json |> of_hashtbl
+
+    let yojson_of_t conv v =
+      to_hashtbl v |> yojson_of_hashtbl O.yojson_of_t conv
+  end
+end
+
 module Hashtbl = struct
   include Hashtbl
 

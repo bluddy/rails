@@ -244,22 +244,22 @@ let check_make_single_track v ~x ~y =
 
 let _make_double_track (v:t) ~x ~y =
   if check_make_double_track v ~x ~y then (
-    let track = Trackmap.get_exn v.track x y in
-    let track = {track with kind=Track `Double} in
-    Trackmap.set v.track x y track;
-    v
+    let t = Trackmap.get_exn v.track x y in
+    let t = {t with kind=Track `Double} in
+    let track = Trackmap.set v.track x y t in
+    {v with track}
   ) else v
 
 let _make_single_track (v:t) ~x ~y =
   if check_make_single_track v ~x ~y then (
-    let track = Trackmap.get_exn v.track x y in
-    let track = match track.kind with
-      | Track `Double -> {track with kind=Track `Single}
-      | Ferry `Double -> {track with kind=Ferry `Single}
+    let t = Trackmap.get_exn v.track x y in
+    let t = match t.kind with
+      | Track `Double -> {t with kind=Track `Single}
+      | Ferry `Double -> {t with kind=Ferry `Single}
       | _ -> assert false
     in
-    Trackmap.set v.track x y track;
-    v
+    let track = Trackmap.set v.track x y t in
+    {v with track}
   ) else v
     
 let _build_track (v:t) ~x ~y ~dir ~player =
