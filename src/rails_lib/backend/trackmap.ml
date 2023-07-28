@@ -4,24 +4,19 @@ open! Utils
 
 (* This map contains independent tiles of track *)
 
-module TrackMap = Map.Make(struct
-  type t = int [@@deriving yojson]
-  let compare (x:int) y = x - y
-end)
-
 type t = {
-  map: Track.t TrackMap.t;
+  map: Track.t IntMap.t;
   width: int;
   height: int;
 } [@@deriving yojson]
 
 let empty width height =
-  let map = TrackMap.empty in
+  let map = IntMap.empty in
   {map; width; height}
 
-let get v x y = TrackMap.find_opt (Utils.calc_offset v.width x y) v.map
+let get v x y = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
 
-let get_exn v x y = TrackMap.find (Utils.calc_offset v.width x y) v.map 
+let get_exn v x y = IntMap.find (Utils.calc_offset v.width x y) v.map 
 
   (* get, buf if there's nothing, create a track *)
 let get_track_default ?(kind=(Track.Track `Single)) v x y ~player =
@@ -29,15 +24,15 @@ let get_track_default ?(kind=(Track.Track `Single)) v x y ~player =
   |> Option.get_lazy (fun () -> Track.empty player kind)
 
 let set v x y tile =
-  let map = TrackMap.add (Utils.calc_offset v.width x y) tile v.map in
+  let map = IntMap.add (Utils.calc_offset v.width x y) tile v.map in
   {v with map}
 
 let remove v x y =
-  let map = TrackMap.remove (Utils.calc_offset v.width x y) v.map in
+  let map = IntMap.remove (Utils.calc_offset v.width x y) v.map in
   {v with map}
 
 let iter v f =
-  TrackMap.iter (fun i track ->
+  IntMap.iter (fun i track ->
     let x, y = Utils.x_y_of_offset v.width i in
     f x y track)
   v.map

@@ -72,6 +72,11 @@ module Map = struct
   end
 end
 
+module IntMap = Map.Make(struct
+  type t = int [@@deriving yojson]
+  let compare (x:int) y = x - y
+end)
+
 module Hashtbl = struct
   include Hashtbl
 
