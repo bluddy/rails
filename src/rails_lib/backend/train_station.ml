@@ -6,19 +6,18 @@ module C = Constants
 
 (* Functions concerning combination of trains and stations *)
 
-let dump_unused_cars_to_station v station_supply =
+let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
   (* dump unused goods at the station at this stage *)
   (* return time for changing cars *)
   (* TODO: clear priority route cars *)
-  let stop = T.get_stop v in
   match stop.cars with
   | None -> (* No adjustment *)
-      0, 0, v.cars
+      0, 0, cars
   | Some stop_cars ->
       let train_cars_by_good = 
         let h = Hashtbl.create 10 in
         List.iter (fun car -> Hashtbl.add_list h (T.Car.get_good car) car)
-        v.cars;
+        cars;
         h
       in
       (* Create the new cars for the train using old cars if possible *)
