@@ -65,7 +65,7 @@ let price_of_upgrade upgrade =
   p * 1000
 
 module Upgrades = Bitset.Make(struct
-  type t = upgrade
+  type t = upgrade [@@deriving yojson]
   let to_enum = upgrade_to_enum
   let of_enum = upgrade_of_enum
   let last = Hotel

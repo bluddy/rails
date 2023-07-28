@@ -20,7 +20,7 @@ type news_types =
   [@@deriving enum, eq, show, yojson]
 
 module NewsTypes = Bitset.Make(struct
-  type t = news_types
+  type t = news_types [@@ deriving yojson]
   let to_enum = news_types_to_enum
   let of_enum = news_types_of_enum
   let last = `Local end)
@@ -30,7 +30,7 @@ type features =
   [@@deriving enum, eq, show, yojson]
 
 module Features = Bitset.Make(struct
-  type t = features
+  type t = features [@@ deriving yojson]
   let to_enum = features_to_enum
   let of_enum = features_of_enum
   let last = `Sounds

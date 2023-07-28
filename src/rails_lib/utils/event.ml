@@ -3,10 +3,10 @@ open Tsdl
 
 type mouse_button =
   [ `Left | `Right | `Middle | `X1 | `X2 ]
-  [@@deriving enum, show]
+  [@@deriving enum, show, yojson]
 
 module Buttons = Bitset.Make(struct
-  type t = mouse_button
+  type t = mouse_button [@@deriving yojson]
   let of_enum = mouse_button_of_enum
   let to_enum = mouse_button_to_enum
   let last = `Middle
@@ -65,11 +65,11 @@ let is_letter = function
 
 type modifier =
   [`Shift | `Ctrl | `Alt | `Lshift | `Rshift | `Lctrl | `Rctrl | `Lalt | `Ralt | `Caps]
-  [@@deriving enum]
+  [@@deriving enum, yojson]
 
 module Modifiers = struct
   include Bitset.Make(struct
-    type t = modifier
+    type t = modifier [@@deriving yojson]
     let of_enum = modifier_of_enum
     let to_enum = modifier_to_enum
     let last = `Caps

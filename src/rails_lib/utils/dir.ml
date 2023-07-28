@@ -75,6 +75,8 @@ module Set = struct
     let to_enum = to_enum
     let of_enum = of_enum
     let last = UpLeft
+    let yojson_of_t = yojson_of_t
+    let t_of_yojson = t_of_yojson
   end)
 
   (* Convert bool mask to dir set *)

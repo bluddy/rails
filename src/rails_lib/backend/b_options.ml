@@ -20,7 +20,7 @@ type reality_level =
   [@@deriving enum, eq, show, yojson]
 
 module RealityLevels = Bitset.Make(struct
-  type t = reality_level
+  type t = reality_level [@@deriving yojson]
   let to_enum = reality_level_to_enum
   let of_enum = reality_level_of_enum
   let last = `CutthroatCompetition

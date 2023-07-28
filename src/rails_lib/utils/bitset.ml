@@ -2,7 +2,7 @@ open Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module type Elem = sig
-  type t
+  type t [@@ deriving yojson]
   val of_enum : int -> t option
   val to_enum: t -> int
   val last: t
@@ -12,9 +12,9 @@ module type S = [%import: (module Bitset.S)]
 
 module Make(E: Elem) = struct
 
-  type elt = E.t
+  type elt = E.t [@@ deriving yojson]
 
-  type t = int [@@ deriving yojson]
+  type t = int
 
   let to_int v = v
 
@@ -106,5 +106,9 @@ module Make(E: Elem) = struct
 
   let pp fmt v =
     Format.fprintf fmt "%d" v
+
+  let yojson_of_t v = v |> to_list |> yojson_of_list yojson_of_elt
+
+  let t_of_yojson json = json |> list_of_yojson elt_of_yojson |> of_list
 
 end

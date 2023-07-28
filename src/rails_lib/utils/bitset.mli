@@ -1,7 +1,7 @@
 open Containers
 
 module type Elem = sig
-  type t
+  type t [@@deriving yojson]
   val of_enum : int -> t option
   val to_enum: t -> int
   val last: t
@@ -9,9 +9,9 @@ end
 
 module type S = sig
 
-  type elt
+  type elt [@@deriving yojson]
 
-  type t [@@ deriving yojson]
+  type t [@@deriving yojson]
 
   val empty: t
 

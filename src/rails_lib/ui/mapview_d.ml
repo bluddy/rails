@@ -12,7 +12,7 @@ type options =
   [@@ deriving enum, eq, show, yojson]
 
 module Options = Bitset.Make(struct
-    type t = options
+    type t = options [@@deriving yojson]
     let to_enum = options_to_enum
     let of_enum = options_of_enum
     let last = `Resources
