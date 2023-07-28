@@ -282,10 +282,8 @@ let ndarray_of_file filename =
   let ndarray = Ndarray.get_slice [[0;map_height_default-1]; [0;map_width_default-1]] arr in
   ndarray
 
-let of_ndarray ~region ~seed ndarray =
+let of_ndarray ?(width=256) ?(height=192) ~region ~seed ndarray =
   (* First pass: don't set directions for ocean and river *)
-  let width = 256 in
-  let height = 192 in
   let map = Array.make (width * height) @@ Tile.Ocean(Dir.Set.empty) in
   let heightmap = Array.empty in
   let v = {map; seed; width; height; heightmap; region} in
