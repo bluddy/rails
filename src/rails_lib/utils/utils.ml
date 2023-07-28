@@ -110,6 +110,8 @@ type rect = {
   h: int;
 } [@@deriving yojson]
 
+type loc = int * int [@@deriving eq, yojson]
+
 type point = {
   x: int;
   y: int;

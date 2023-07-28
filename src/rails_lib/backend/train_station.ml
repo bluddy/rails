@@ -88,3 +88,16 @@ let fill_train_and_empty_station cars source cycle station_supply =
     pickup_amount
   in
   time_pickup, cars
+
+let train_class_stops_at station_info train = 
+  let train = Train.train_type_to_enum train.Train.typ in
+  let station = Station.kind_to_enum station_info.Station.kind in
+  station > train
+
+let train_stops_at (station:Station.t) train =
+  match station.info with
+  | Some station_info ->
+    train_class_stops_at station_info train &&
+    Utils.eq_xy (Train.get_dest train) (station.x, station.y)
+  | None -> false
+
