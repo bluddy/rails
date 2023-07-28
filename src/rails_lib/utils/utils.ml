@@ -276,7 +276,7 @@ let show_money ?(spaces=0) region money =
     |> String.map (function '_' -> ',' | x -> x)
   in
   let len = String.length money_s in
-  for i=0 to spaces-1-len do
+  for _=0 to spaces-1-len do
     Buffer.add_char b ' ';
   done;
   Buffer.add_string b money_s;

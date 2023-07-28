@@ -1,5 +1,5 @@
-open Containers
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Containers
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module type Elem = sig
   type t [@@ deriving yojson]
@@ -17,8 +17,6 @@ module Make(E: Elem) = struct
   type t = int
 
   let to_int v = v
-
-  let of_int (v:int) = v
 
   let empty = 0
 

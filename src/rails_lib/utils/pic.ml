@@ -88,7 +88,7 @@ let ndarray_of_file filename : ndarray =
   let stream = My_gen.of_stringi str in
   ndarray_of_stream stream
 
-let translate_ega arr ?transparent ~f ~w ~h =
+let translate_ega ?transparent arr ~f ~w ~h =
   for y=0 to h-1 do
     for x=0 to w-1 do
       let write_color x y index =

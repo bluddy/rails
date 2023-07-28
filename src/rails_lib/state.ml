@@ -1,4 +1,4 @@
-open Containers
+open! Containers
 
 (* All state *)
 type t = {

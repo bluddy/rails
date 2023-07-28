@@ -1,6 +1,5 @@
 open Containers
 open Utils.Infix
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open Backend_d
 
 let src = Logs.Src.create "backend" ~doc:"Backend"
@@ -233,14 +232,14 @@ let check_build_bridge v ~x ~y ~dir ~player =
 
 let check_make_double_track v ~x ~y =
   match Trackmap.get v.track x y with
-  | Some ({kind = Track `Single} as track) when Track.is_doubleable track -> true
-  | Some ({kind = Ferry `Single} as track) when Track.is_doubleable track -> true
+  | Some ({kind = Track `Single; _} as track) when Track.is_doubleable track -> true
+  | Some ({kind = Ferry `Single; _} as track) when Track.is_doubleable track -> true
   | _ -> false
 
 let check_make_single_track v ~x ~y =
   match Trackmap.get v.track x y with
-  | Some {kind = Track `Double} -> true
-  | Some {kind = Ferry `Double} -> true
+  | Some {kind = Track `Double; _} -> true
+  | Some {kind = Ferry `Double; _} -> true
   | _ -> false
 
 let _make_double_track (v:t) ~x ~y =

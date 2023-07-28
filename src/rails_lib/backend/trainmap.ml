@@ -1,5 +1,5 @@
-open Containers
-open Utils.Infix
+open! Containers
+open! Utils.Infix
 module Vector = Utils.Vector
 
 type t = Train.t Vector.vector

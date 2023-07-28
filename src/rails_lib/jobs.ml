@@ -1,4 +1,4 @@
-open Containers
+open! Containers
 
 type t =
   (* Europe *)

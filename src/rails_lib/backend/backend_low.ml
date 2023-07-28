@@ -326,7 +326,7 @@ module Train_update = struct
     Train.advance train
 
 
-  let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t) =
+  let _train_enter_station (v:t) loc (station:Station.t) (train:Train.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
       let had_maintenance =
@@ -334,7 +334,8 @@ module Train_update = struct
         else train.had_maintenance
       in
       (* TODO: deal with priority shipment *)
-      let dist_shipped_cargo =
+      (* TODO: deal with dist_shipped_cargo *)
+      let _dist_shipped_cargo =
         let dist = Utils.classic_dist loc train.last_station in
         let num_cars = List.length train.cars in
         let total_dist = dist * num_cars in

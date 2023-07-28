@@ -8,7 +8,7 @@ let graph () =
 
 let%expect_test "iter_succ_ixn_dirs" =
   let graph = graph () in
-  TG.iter_succ_ixn_dirs (fun ixn dir ->
+  TG.iter_succ_ixn_dirs (fun _ixn dir ->
     print_string @@ Dir.show dir
   ) graph ~ixn:(1,2);
   [%expect {| Dir.Down |}]

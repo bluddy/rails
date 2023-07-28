@@ -36,7 +36,8 @@ let train_end_at_screen_edge (s:State.t) v =
     (* Check if at edge *)
     let train_end =
       List.fold_left (fun x car ->
-        let car_tex_old, car_tex_new = Hashtbl.find s.textures.car_anim car in
+        (* TODO: handle new car texture *)
+        let car_tex_old, _car_tex_new = Hashtbl.find s.textures.car_anim car in
         let w = R.Texture.get_w car_tex_old in
         x - w)
       v.x
