@@ -487,6 +487,7 @@ let _train_stops_at (station:Station.t) train =
   | None -> false
 
 let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t) =
+  (* returns train, income, ui_msgs *)
   let handle_stop station_info =
     let had_maintenance =
       if Station.can_maintain station then true
@@ -567,16 +568,16 @@ let _train_enter_station (v:t) ((x,y) as loc) (station:Station.t) (train:Train.t
       if delivered then Train.Car.empty car else car)
       cars cars_delivered
     in
-    let car_change_work, car_change_expense, cars, station_supply =
-      Train.dump_unused_cars_to_station train station_supply
+    let car_change_work, car_change_expense, cars =
+      Train_station.dump_unused_cars_to_station train station_supply
     in
     let time_for_car_change =
       let multiplier = if Station.has_upgrade station Station.SwitchingYard then 16 else 64 in
       car_change_work * multiplier
     in
     let freight = Train.freight_of_cars cars in
-    let time_pickup, cars, station_supply =
-      Train.fill_train_from_station cars loc v.cycle station_supply in
+    let time_pickup, cars =
+      Train_station.fill_train_and_empty_station cars loc v.cycle station_supply in
     let wait_time = time_for_sold_goods + time_for_car_change + time_pickup in
     let income = (Utils.sum money_from_goods) + other_income + car_change_expense in
     let state =
@@ -642,7 +643,8 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
             Segment.Map.decr_train v.segments segment
         | _ -> ()
         end;
-        let last_station, priority, stop, train, income, ui_msgs =
+        (* TODO: actual UI msg, income handling *)
+        let last_station, priority, stop, train, _income, _ui_msgs =
           if Station.is_proper_station station then (
             let train, income, ui_msgs = _train_enter_station v loc station train in
             let priority, stop = Train.check_increment_stop train loc in
@@ -684,7 +686,7 @@ let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
       train
 
   | Track _ when track.ixn && Dir.Set.num_adjacent train.dir track.dirs > 1 ->
-      (* IXN *)
+      (* ixn *)
       let dir =
         let dest = Train.get_dest train in
         Track_graph.shortest_path_branch v.graph
