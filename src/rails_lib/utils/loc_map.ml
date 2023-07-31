@@ -1,5 +1,5 @@
-open Containers
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Containers
 
 (* A common pattern: a hashtbl from location to a thing *)
 
@@ -54,6 +54,7 @@ let delete v x y =
   v
 
 let filter v f =
-  CCHashtbl.to_iter v.map |> Iter.filter (fun (_,station) -> f station)
+  CCHashtbl.to_iter v.map
+  |> Iter.filter (fun (_,station) -> f station)
   |> Iter.map (fun (_,station) -> station)
 
