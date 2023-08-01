@@ -4,7 +4,7 @@ let graph () =
   TG.make ()
   |> TG.add_ixn ~x:1 ~y:2
   |> TG.add_ixn ~x:3 ~y:4
-  |> TG.add_segment ~x1:1 ~y1:2 ~dir1:Dir.Up ~x2:3 ~y2:4 ~dir2:Down ~dist:5
+  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Down) ~dist:5
 
 let%expect_test "iter_succ_ixn_dirs" =
   let graph = graph () in
@@ -18,8 +18,8 @@ let graph () =
   |> TG.add_ixn ~x:1 ~y:2
   |> TG.add_ixn ~x:3 ~y:4
   |> TG.add_ixn ~x:5 ~y:6
-  |> TG.add_segment ~x1:1 ~y1:2 ~dir1:Dir.Up ~x2:3 ~y2:4 ~dir2:Down ~dist:5
-  |> TG.add_segment ~x1:1 ~y1:2 ~dir1:Dir.UpRight ~x2:5 ~y2:6 ~dir2:DownLeft ~dist:10
+  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Down) ~dist:5
+  |> TG.add_segment ~xyd1:(1,2,Dir.UpRight) ~xyd2:(5,6,DownLeft) ~dist:10
 
 let%expect_test "Graph print" =
   let g = graph () in

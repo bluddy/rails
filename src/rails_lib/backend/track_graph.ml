@@ -112,7 +112,8 @@ let remove_ixn v ~x ~y =
   G.remove_vertex v.graph (x, y);
   v
 
-let add_segment v ~x1 ~y1 ~dir1 ~x2 ~y2 ~dir2 ~dist =
+let add_segment v ~xyd1 ~xyd2 ~dist =
+  let (x1,y1,dir1), (x2,y2,dir2) = xyd1, xyd2 in
   Log.debug (fun f -> f "Graph: Adding path from (%d,%d,%s) to (%d,%d,%s), dist %d"
               x1 y1 (Dir.show dir1) x2 y2 (Dir.show dir2) dist);
   let id = v.last_id in
