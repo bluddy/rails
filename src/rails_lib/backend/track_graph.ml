@@ -122,7 +122,8 @@ let add_segment v ~xyd1 ~xyd2 ~dist =
   G.add_edge_e v.graph ((x1,y1),edge,(x2,y2));
   v
 
-let remove_segment v ~x ~y ~dir =
+let remove_segment v ~xyd =
+  let x, y, dir = xyd in
   Log.debug (fun f -> f "Graph: Remove path from (%d,%d,%s)" x y (Dir.show dir));
   (* Find the edge we want *)
   let edge =
