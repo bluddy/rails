@@ -242,7 +242,7 @@ module Search = struct
     dir: Dir.t; (* out dir from station/ixn *)
     search_dir: Dir.t; (* search dir to get here *)
     station: bool;
-  }
+  } [@@deriving show]
 
   let equal_ixn res1 res2 = res1.x = res2.x && res1.y = res2.y
   let nequal_ixn res1 res2 = not (res1 = res2)
@@ -286,7 +286,7 @@ module Search = struct
     | Ixn of ixn list (* 0/1/2 ixns *)
     | Station of ixn list  (* 0/1 ixns *)
     | Track of ixn list (* 0/1 ixns *)
-    [@@deriving eq]
+    [@@deriving eq,show]
           
   (* Return a query about the segment from a particular tile
      Get back a list of directions and result pairs
