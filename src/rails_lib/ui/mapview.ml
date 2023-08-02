@@ -109,7 +109,7 @@ let cursor_on_station backend v =
 
 let get_station_under_cursor_exn backend v =
   (* get the station the cursor is over *)
-  match B.get_station backend v.cursor_x v.cursor_y with
+  match B.get_station (v.cursor_x, v.cursor_y) backend with
   | Some station -> station
   | None -> failwith "No station under cursor"
 
@@ -207,7 +207,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | None ->
       match key with
       | Event.Enter ->
-          begin match B.get_station s.backend v.cursor_x v.cursor_y with
+          begin match B.get_station (v.cursor_x, v.cursor_y) s.backend with
           | Some station when Station.is_proper_station station ->
             v, `StationView (v.cursor_x, v.cursor_y)
           | _ ->

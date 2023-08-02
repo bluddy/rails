@@ -63,7 +63,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   let train = Trainmap.get s.backend.trains v.train in
   let route = Train.get_route train in
   Vector.iteri (fun i (stop:Train.stop) ->
-    let station = Station_map.get_exn s.backend.stations stop.x stop.y in
+    let station = Station_map.get_exn (stop.x, stop.y) s.backend.stations in
     let name = Printf.sprintf "%d.%s" (i+1) (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
     write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
@@ -72,7 +72,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
   (* Priority stop *)
   begin match train.priority with
   | Some stop -> 
-    let station = Station_map.get_exn s.backend.stations stop.x stop.y in
+    let station = Station_map.get_exn (stop.x, stop.y) s.backend.stations in
     let name = Printf.sprintf "P:%s" (Station.get_name station) in
     let x, y = scale_xy v stop.x stop.y in
     write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
@@ -106,9 +106,9 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
 
   (* Info bar *)
   begin match v.selected_station with
-  | Some (x,y) ->
+  | Some ((x,y) as loc) ->
       let write = write ~idx:4 in
-      let station = Station_map.get_exn s.backend.stations x y in
+      let station = Station_map.get_exn loc s.backend.stations in
       let demand = Station.get_demand_exn station in
       write ~x:258 ~y:1 @@ Station.get_name station;
       write ~x:258 ~y:13 @@ Printf.sprintf "(%s)" @@ Station.kind_str station;

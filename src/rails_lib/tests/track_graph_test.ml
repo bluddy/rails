@@ -59,10 +59,11 @@ let%expect_test "graph shortest path" =
   [%expect {| Some Dir.Up |}]
 
 let%expect_test "connected_stations_dirs" =
-  let map = Loc_map.create 10 in
-  let map = Loc_map.add map 1 2 10 in
-  let map = Loc_map.add map 3 4 11 in
-  let map = Loc_map.add map 5 6 12 in
+  let map = Loc_map.empty
+    |> Loc_map.add (1,2) 10
+    |> Loc_map.add (3,4) 11
+    |> Loc_map.add (5,6) 12
+  in
   let g = graph () in
   let res = TG.connected_stations_dirs g map (1,2) |> Iter.to_list in
   List.pp (Pair.pp (Pair.pp Int.pp Int.pp) Dir.pp) Format.std_formatter res;

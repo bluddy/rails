@@ -1,60 +1,47 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
+open Utils
 
 (* A common pattern: a hashtbl from location to a thing *)
 
-type 'a t = {
-  map: (int, 'a) Utils.Hashtbl.t;
-  width: int;
-} [@@deriving yojson]
+type 'a t = 'a IntIntMap.t [@@deriving yojson]
 
-let create width =
-  let map = Hashtbl.create 10
-  in
-  {
-    map;
-    width;
-  }
+let empty = IntIntMap.empty
 
-let length v =
-  Hashtbl.length v.map
+let length v = IntIntMap.cardinal v
 
-let iter f v =
-  Hashtbl.iter (fun _ station -> f station) v.map
+let iter f v = IntIntMap.iter (fun _ station -> f station) v
 
 let fold f v ~init =
-  Hashtbl.fold (fun _ station acc -> f station acc) v.map init
+  IntIntMap.fold (fun _ station acc -> f station acc) v init
 
 let find f v =
-  let exception Found of int in
+  let exception Found of loc in
   try
-    Hashtbl.iter (fun i station ->
-      if f station then raise_notrace @@ Found i)
-    v.map;
+    IntIntMap.iter (fun k station ->
+      if f station then raise_notrace @@ Found k)
+    v;
     None
   with
-    Found i -> Some(Utils.x_y_of_offset v.width i) 
+    Found k -> Some k
 
-let get v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
+let get loc v = IntIntMap.find_opt loc v
 
-let update v x y f =
-  Hashtbl.update v.map ~k:(Utils.calc_offset v.width x y)
-    ~f:(fun _ v -> f v)
+let update loc f v =
+  IntIntMap.update
+    loc
+    (fun v -> f v)
+    v
 
-let mem v x y = Hashtbl.mem v.map (Utils.calc_offset v.width x y)
+let mem loc v = IntIntMap.mem loc v
 
-let get_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)
+let get_exn loc v = IntIntMap.find loc v
 
-let add v x y station =
-  Hashtbl.replace v.map (Utils.calc_offset v.width x y) station;
-  v
+let add loc value v = IntIntMap.add loc value v
 
-let delete v x y =
-  Hashtbl.remove v.map (Utils.calc_offset v.width x y);
-  v
+let delete loc v = IntIntMap.remove loc v
 
-let filter v f =
-  CCHashtbl.to_iter v.map
-  |> Iter.filter (fun (_,station) -> f station)
-  |> Iter.map (fun (_,station) -> station)
+let filter f v =
+  IntIntMap.to_iter v
+  |> Iter.map snd |> Iter.filter (fun value -> f value)
 

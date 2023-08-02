@@ -77,6 +77,15 @@ module IntMap = Map.Make(struct
   let compare (x:int) y = x - y
 end)
 
+type loc = int * int [@@deriving eq, yojson, show]
+
+module IntIntMap = Map.Make(struct
+  type t = loc [@@deriving yojson]
+  let compare (x1,y1) (x2,y2) =
+    let d = x1 - x2 in
+    if d = 0 then y1 - y2 else d
+end)
+
 module Hashtbl = struct
   include Hashtbl
 
@@ -140,8 +149,6 @@ type rect = {
   w: int;
   h: int;
 } [@@deriving yojson]
-
-type loc = int * int [@@deriving eq, yojson, show]
 
 type point = {
   x: int;

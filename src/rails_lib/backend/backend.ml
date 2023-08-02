@@ -33,7 +33,7 @@ let default region resources ~random ~seed =
   in
   let track = Trackmap.empty width height in
   let options = B_options.default in
-  let stations = Station_map.create width in
+  let stations = Station_map.empty in
   let players = Array.make num_players (Player.default options.difficulty) in
   let year = match region with
     | EastUS -> 1830
@@ -85,7 +85,7 @@ let get_track v x y = Trackmap.get v.track x y
 
 let get_cities v = Cities.to_list v.cities
 
-let get_station v x y = Station_map.get v.stations x y
+let get_station loc v = Station_map.get loc v.stations
 
 let get_region v = v.region
 
@@ -131,8 +131,9 @@ let _build_station v ~x ~y station_type ~player =
     let check_for_first_city () =
       (* first one has engine shop *)
       match
-        Station_map.filter v.stations 
+        Station_map.filter 
           (fun v -> Station.has_upgrade v Station.EngineShop)
+        v.stations 
         |> Iter.head
       with Some _ -> false | None -> true
     in
@@ -166,7 +167,7 @@ let _build_station v ~x ~y station_type ~player =
       ~first
       ~segments:dir_segments
   in
-  let stations = Station_map.add v.stations x y station in
+  let stations = Station_map.add (x,y) station v.stations in
   if build_new_track then (
     update_player v player @@ Player.add_track ~length:1
   );
@@ -198,8 +199,9 @@ let _build_tunnel v ~x ~y ~dir ~player =
     let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
     let after = TS.scan track ~x ~y ~player in
     let graph = Backend_low.Graph.handle_build_track v.graph before after in
-    Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+    let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
     update_player v player @@ Player.pay Player.TunnelExpense cost;
+    if v.stations =!= stations then v.stations <- stations;
     if v.graph =!= graph then v.graph <- graph;
     if v.track =!= track then v.track <- track;
     v
@@ -210,11 +212,12 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
-  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
-  if v.track =!= track then v.track <- track;
+  if v.stations =!= stations then v.stations <- stations;
   if v.graph =!= graph then v.graph <- graph;
+  if v.track =!= track then v.track <- track;
   v
 
 let check_build_track v ~x ~y ~dir ~player =
@@ -268,10 +271,11 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track_complex v.graph ~x ~y before after in
-  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
-  if v.track =!= track then v.track <- track;
+  if v.stations =!= stations then v.stations <- stations;
   if v.graph =!= graph then v.graph <- graph;
+  if v.track =!= track then v.track <- track;
   v
 
 let _build_ferry v ~x ~y ~dir ~player =
@@ -288,10 +292,11 @@ let _build_ferry v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_build_track v.graph before after in
-  Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after;
+  let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
-  if v.track =!= track then v.track <- track;
+  if v.stations =!= stations then v.stations <- stations;
   if v.graph =!= graph then v.graph <- graph;
+  if v.track =!= track then v.track <- track;
   v
 
 let check_remove_track v ~x ~y ~dir ~player=
@@ -302,19 +307,18 @@ let _remove_track v ~x ~y ~dir ~player =
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
   let after = TS.scan track ~x ~y ~player in
   let graph = Backend_low.Graph.handle_remove_track v.graph ~x ~y before after in
-  Backend_low.Segments.remove_track_split_segment graph v.stations v.segments before after;
+  let stations = Backend_low.Segments.remove_track_split_segment graph v.stations v.segments before after in
   update_player v player (Player.add_track ~length:(-1));
+  if v.stations =!= stations then v.stations <- stations;
   if v.track =!= track then v.track <- track;
   if v.graph =!= graph then v.graph <- graph;
   v
 
 let _improve_station v ~x ~y ~player ~upgrade =
   let stations = 
-    match get_station v x y with
-    | Some station ->
-        let station = Station.add_upgrade station upgrade player in
-        Station_map.add v.stations x y station
-    | None -> v.stations
+    Loc_map.update (x,y)
+      (Option.map @@ fun station -> Station.add_upgrade station upgrade player)
+      v.stations
   in
   update_player v player @@
     Player.(pay StationExpense @@ Station.price_of_upgrade upgrade);

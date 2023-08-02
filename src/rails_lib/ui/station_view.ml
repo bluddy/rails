@@ -3,7 +3,7 @@ module R = Renderer
 
 (* Station view screen *)
 
-let render win (s:State.t) (x, y) ~show_demand =
+let render win (s:State.t) ((x, y) as loc) ~show_demand =
   let ground_y = 186 in
   let switchingyard_x = 0 in
   let engineshop_x = 64 in
@@ -48,7 +48,8 @@ let render win (s:State.t) (x, y) ~show_demand =
     R.Texture.render ~x:restaurant_x ~y:(y-h) win tex
   in
 
-  let station = Backend.get_station s.backend x y |> Option.get_exn_or "station" in
+  let station = Backend.get_station loc s.backend
+    |> Option.get_exn_or "station" in
   let info = Option.get_exn_or "Not a real station" station.info in
 
   let goods_and_other () =

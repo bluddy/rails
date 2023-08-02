@@ -21,15 +21,16 @@ module AddCars = struct
     (* Find station with engine shop *)
     let station =
       try
-        Station_map.filter s.backend.stations
+        Station_map.filter 
         (fun station -> Station.can_build_train station)
+        s.backend.stations
         |> Iter.head_exn
       with Invalid_argument _ -> invalid_arg "No station with engine found"
     in
-    let xy = station.x, station.y in
+    let loc = station.x, station.y in
     let anim =
       let engine = engine.Engine.make in
-      Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:xy ~rail:`Back
+      Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:loc ~rail:`Back
     in
     let menu = create_menu ~fonts:s.fonts s.backend.region in
     {

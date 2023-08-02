@@ -29,9 +29,9 @@ module Segments = struct
           |> Iter.head
         in
         match station with
-        | Some ((x,y), station_dir) ->
+        | Some ((x,y) as loc, station_dir) ->
             Log.debug (fun f -> f "Segments: found existing station at (%d,%d)" x y);
-            let station = Station_map.get_exn stations x y in
+            let station = Station_map.get_exn loc stations in
             let seg = Station.get_segment station station_dir in
             Some (ixn.search_dir, seg)
         | _ -> None)
@@ -64,31 +64,35 @@ module Segments = struct
       | _ -> None
     in
     match join_ixns with
-    | None -> ()
+    | None -> station_map
     | Some (ixn1, ixn2) ->
         let ixn1 = (ixn1.x, ixn1.y) in
         let ixn2 = (ixn2.x, ixn2.y) in
-        let (x1, y1), dir1 =
+        let loc, dir1 =
           Track_graph.connected_stations_dirs graph station_map ixn1 ~exclude_ixns:[ixn2]
           |> Iter.head_exn
         in
-        let station1 = Station_map.get_exn station_map x1 y1 in
+        let station1 = Station_map.get_exn loc station_map in
         let seg1 = Station.get_segment station1 dir1 in
         let stations =
           Track_graph.connected_stations_dirs graph station_map ixn2 ~exclude_ixns:[ixn1]
           |> Iter.to_list
         in
-        let (x2, y2), dir2 = List.hd stations in
-        let station2 = Station_map.get_exn station_map x2 y2 in
+        let loc, dir2 = List.hd stations in
+        let station2 = Station_map.get_exn loc station_map in
         let seg2 = Station.get_segment station2 dir2 in
         (* Assign seg1 to all connected stations that had seg2 *)
-        List.iter (fun ((x, y), _) ->
-            Station_map.update station_map x y @@
-              (Option.map (fun station -> Station.modify_segment station seg2 seg1)))
-          stations;
+        let station_map =
+          List.fold_left (fun station_map (loc, _) ->
+              Station_map.update loc 
+                (Option.map (fun station -> Station.modify_segment station seg2 seg1))
+                station_map)
+            station_map
+            stations
+        in
         (* Update segment map *)
         Segment.Map.merge segments seg1 seg2;
-        ()
+        station_map
 
     (* Removing a piece of track can split a segment. Unfortunately we can't
        keep track of the segment's semaphore value unless we scan the whole segment for
@@ -111,14 +115,14 @@ module Segments = struct
       | _ -> None
     in
     match separate_pair with
-    | None -> ()
+    | None -> station_map
     | Some (ixn1, ixn2) ->
         let ixn1 = (ixn1.x, ixn1.y) in
         let ixn2 = (ixn2.x, ixn2.y) in
-        let (x1, y1), dir1 =
+        let loc, dir1 =
           Track_graph.connected_stations_dirs graph station_map ixn1 |> Iter.head_exn
         in
-        let station1 = Station_map.get_exn station_map x1 y1 in
+        let station1 = Station_map.get_exn loc station_map in
         let seg1 = Station.get_segment station1 dir1 in
         (* Set value of segment to 0 *)
         Segment.Map.reset segments seg1;
@@ -126,11 +130,15 @@ module Segments = struct
         let seg2 = Segment.Map.new_id segments in
         let stations = Track_graph.connected_stations_dirs graph station_map ixn2 in
         (* Assign seg2 to these stations *)
-        Iter.iter (fun ((x, y), _) ->
-            Station_map.update station_map x y @@
-              (Option.map (fun station -> Station.modify_segment station seg1 seg2)))
-          stations;
-        ()
+        let station_map =
+          Iter.fold (fun station_map (loc, _) ->
+              Station_map.update loc
+                (Option.map (fun station -> Station.modify_segment station seg1 seg2))
+                station_map)
+            station_map
+            stations
+        in
+        station_map
 
 end
 
@@ -468,7 +476,7 @@ module Train_update = struct
     let track = Trackmap.get_exn v.track x y in
     match track.kind with
     | Station _ ->
-        let station = Station_map.get_exn v.stations x y in
+        let station = Station_map.get_exn loc v.stations in
         let enter train =
           begin match train.Train.segment with
           | Some segment ->

@@ -117,7 +117,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     let train_loc = (train.x, train.y) in
     let train_loc_s = match train.state with
       | WaitingAtStation _ ->
-          let station = Station_map.get_exn s.backend.stations train.x train.y in
+          let station = Station_map.get_exn (train.x, train.y) s.backend.stations in
           sprintf ("at %s") (Station.get_name station)
       | Traveling _ ->
           let station = Station_map.find_nearest s.backend.stations train_loc
@@ -132,8 +132,9 @@ let render win (s:State.t) (v:State.t t) : unit =
       | Traveling _ ->
           sprintf "Speed: %d mph, bound for %s"
           (Train.display_speed train)
-          (let x, y = Train.get_dest train in
-           Station_map.get_exn s.backend.stations x y |> Station.get_name)
+          (let loc = Train.get_dest train in
+           Station_map.get_exn loc s.backend.stations 
+           |> Station.get_name)
     in
     let str = sprintf "%s\n%s  %s\n%s"
       train_info_s train_loc_s engine_data_s status_s
@@ -168,9 +169,9 @@ let render win (s:State.t) (v:State.t t) : unit =
     let car_desc_s =
       List.fold_left (fun acc_s car ->
         match Train.Car.get_load car with
-        | Some (good, amount, (loc_x,loc_y)) when amount >= 4 ->
+        | Some (good, amount, loc) when amount >= 4 ->
             let s1 = Goods.descr_of good amount in
-            let s2 = Station_map.get_exn s.backend.stations loc_x loc_y
+            let s2 = Station_map.get_exn loc s.backend.stations 
               |> Station.get_name 
             in
             Printf.sprintf "%s%s from %s\n" acc_s s1 s2
@@ -192,7 +193,9 @@ let render win (s:State.t) (v:State.t t) : unit =
     write Ega.black ~x:105 ~y:118 "TRAIN ORDERS";
 
     let write_station (stop:Train.stop) ~i ~y =
-      let station = Station_map.get_exn s.backend.stations stop.x stop.y in
+      let station =
+        Station_map.get_exn (stop.x, stop.y) s.backend.stations
+      in
       let color = match i with
         | Some i ->
             write Ega.gray ~x:8 ~y @@ Printf.sprintf "%d." (i+1);
