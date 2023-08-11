@@ -359,8 +359,11 @@ module Track = struct
     match scan1, scan2 with
         (* Was edge. Now disconnected
           x---x       ->    x- -x *)
-      | Track [ixn1; ixn2], Track [ixn3]
+      | Track [ixn1; ixn2], Track [ixn3] 
           when equal_ixn ixn2 ixn3 || equal_ixn ixn1 ixn3 ->
+            remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir) graph
+
+      | Track [ixn1; _], NoResult ->
             remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir) graph
 
         (* Was station. Now station gone.
@@ -390,8 +393,8 @@ module Track = struct
           graph
           |> remove_ixn ~x ~y
           |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir)
-                           ~xyd2:(ixn4.x,ixn4.y,ixn4.dir)
-                           ~dist:(ixn3.dist + ixn4.dist)
+                         ~xyd2:(ixn4.x,ixn4.y,ixn4.dir)
+                         ~dist:(ixn3.dist + ixn4.dist)
       | _ -> graph
         (* All other cases require no graph changes *)
 

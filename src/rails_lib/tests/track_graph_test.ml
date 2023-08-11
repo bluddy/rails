@@ -194,6 +194,24 @@ module Track = struct
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[3,2,["Right"]],[5,2,["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]] |}]
 
+  let%expect_test "build_track create ixn in middle (with stations)" =
+     (* s---s  -> s-x-s *)
+    let map = std_map
+      |> TM.set ~x:1 ~y ~t:(station [Left; Right])
+      |> TM.set ~x:5 ~y ~t:(station [Left; Right])
+    in
+    let scan1 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
+    let scan2 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let g = TG.make ()
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
+    in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}];
+    let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
+    print_graph g;
+    [%expect {| [[[5,2],[3,2],{"nodes":[[3,2,["Right"]],[5,2,["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]] |}]
+
   let%expect_test "build_track create+connect to another ixn" =
      (*    x          x
           /          /
@@ -215,6 +233,116 @@ module Track = struct
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[3,2,["Right"]],[5,2,["Left"]]],"dist":2,"block":false}],[[5,0],[3,2],{"nodes":[[3,2,["UpRight"]],[5,0,["DownLeft"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]] |}]
 
-  let%expect_test "remove_track" = ()
+  let%expect_test "remove_track full" = 
+     (* x---x  -> x- -x *)
+    let map = std_map
+      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
+    in
+    let scan1 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let map = TM.remove map ~x:3 ~y in
+    let scan2 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let g = TG.make ()
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
+    in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}];
+    let g = TG.Track.handle_remove_track g ~x:3 ~y scan1 scan2 in
+    print_graph g;
+    [%expect {| [] |}]
+
+  let%expect_test "remove_track partial" = 
+     (* x---x  -> x- -x *)
+    let map = std_map
+      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
+    in
+    let scan1 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let map = TM.set map ~x:3 ~y ~t:(track [Left]) in
+    let scan2 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let g = TG.make ()
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
+    in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}];
+    let g = TG.Track.handle_remove_track g ~x:3 ~y scan1 scan2 in
+    print_graph g;
+    [%expect {| [] |}]
+
+  let%expect_test "remove station" = 
+     (* x---S  -> x--- *)
+    let map = std_map
+      |> TM.set ~x:5 ~y ~t:(station [Left; Right])
+    in
+    let scan1 = TM.Search.scan map ~x:5 ~y ~player:0 in
+    let map = TM.set map ~x:5 ~y ~t:(track [Left]) in
+    let scan2 = TM.Search.scan map ~x:5 ~y ~player:0 in
+    let g = TG.make ()
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
+    in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}];
+    let g = TG.Track.handle_remove_track g ~x:5 ~y scan1 scan2 in
+    print_graph g;
+    [%expect {| [] |}]
+
+  let%expect_test "remove ixn" = 
+     (* x---x  -> x--- *)
+    let map = std_map
+      |> TM.set ~x:5 ~y ~t:(station [Left; Right; UpRight])
+    in
+    let x = 5 in
+    let scan1 = TM.Search.scan map ~x ~y ~player:0 in
+    let map = TM.set map ~x ~y ~t:(track [Left]) in
+    let scan2 = TM.Search.scan map ~x ~y ~player:0 in
+    let g = TG.make ()
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4
+    in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}];
+    let g = TG.Track.handle_remove_track g ~x ~y scan1 scan2 in
+    print_graph g;
+    [%expect {| [] |}]
+
+  let%expect_test "remove ixn in middle" = 
+     (* x-x-x  -> x---x*)
+    let map = std_map
+      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
+      |> TM.set ~x:3 ~y ~t:(track [Left; Right; UpRight])
+    in
+    let x = 3 in
+    let scan1 = TM.Search.scan map ~x ~y ~player:0 in
+    let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
+    let scan2 = TM.Search.scan map ~x ~y ~player:0 in
+    let g = TG.make ()
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
+      |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2
+    in
+    print_graph g;
+    [%expect {| [[[5,2],[3,2],{"nodes":[[3,2,["Right"]],[5,2,["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]] |}];
+    let g = TG.Track.handle_remove_track g ~x ~y scan1 scan2 in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}]
+
+  let%expect_test "remove ixn in middle" = 
+     (*  x         x
+       x-x-x  -> x---x*)
+    let map = std_map
+      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
+      |> TM.set ~x:3 ~y ~t:(track [Left; Right; UpRight])
+      |> TM.set ~x:4 ~y:(y-1) ~t:(track [DownLeft; Up; UpRight])
+    in
+    let x = 3 in
+    let scan1 = TM.Search.scan map ~x ~y ~player:0 in
+    let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
+    let scan2 = TM.Search.scan map ~x ~y ~player:0 in
+    let g = TG.make ()
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
+      |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2
+      |> TG.add_segment ~xyd1:(3,y,UpRight) ~xyd2:(4,y-1,DownLeft) ~dist:1
+    in
+    print_graph g;
+    [%expect {| [[[4,1],[3,2],{"nodes":[[3,2,["UpRight"]],[4,1,["DownLeft"]]],"dist":1,"block":false}],[[5,2],[3,2],{"nodes":[[3,2,["Right"]],[5,2,["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]] |}];
+    let g = TG.Track.handle_remove_track g ~x ~y scan1 scan2 in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}]
 
 end
