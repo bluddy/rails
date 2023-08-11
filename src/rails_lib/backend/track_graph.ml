@@ -263,15 +263,16 @@ module Track = struct
         add_to_edge ixn1 ixn2 ixn3 ixn4
     | _, _ -> graph
 
-  (* Handle simple building of track graph-wise *)
+  (* Handle simple case of track graph-wise *)
   let handle_build_track_simple graph scan1 scan2 =
     match scan1, scan2 with
       | Track [ixn1], Track [ixn2; ixn3]
           when equal_ixn ixn1 ixn2 || equal_ixn ixn1 ixn3 ->
           (* Only case: unfinished edge. Connect an intersection.
               x---       ->    x---x *)
-          add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(ixn3.x,ixn3.y,ixn3.dir)
-                        ~dist:(ixn2.dist+ixn3.dist) graph
+          add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir)
+                      ~xyd2:(ixn3.x,ixn3.y,ixn3.dir)
+                      ~dist:(ixn2.dist+ixn3.dist) graph
       | _ -> graph
 
   (* Handle graph management for building track.
@@ -282,12 +283,9 @@ module Track = struct
     match scan1, scan2 with
         (* Unfinished edge. Connect an intersection.
           x---       ->    x---x *)
-      | Track [ixn1], Track [ixn2; ixn3]
-          when equal_ixn ixn1 ixn2 || equal_ixn ixn1 ixn3 ->
-            add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir)
-                          ~xyd2:(ixn3.x,ixn3.y,ixn3.dir)
-                          ~dist:(ixn2.dist+ixn3.dist)
-                          graph
+      | Track _, Track _ ->
+          handle_build_track_simple graph scan1 scan2
+
         (* Unfinished edge. Create an intersection.
           x---       ->    x--+ *)
       | Track [ixn1], Ixn [ixn2] when equal_ixn ixn1 ixn2 ->
