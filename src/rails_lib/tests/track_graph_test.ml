@@ -84,18 +84,19 @@ module Track = struct
     Track.make (Dir.Set.of_list dirs) (Station `Station) ~player:0
 
   let dirs = [Dir.Left; Right]
+  (* x---- *)
   let std_map =
     TM.empty 7 7
     |> TM.set ~x:1 ~y:1 ~t:(track @@ UpLeft::dirs)
     |> TM.set ~x:2 ~y:1 ~t:(track dirs)
     |> TM.set ~x:3 ~y:1 ~t:(track dirs)
     |> TM.set ~x:4 ~y:1 ~t:(track dirs)
-    |> TM.set ~x:5 ~y:1 ~t:(track @@ UpRight::dirs)
+    |> TM.set ~x:5 ~y:1 ~t:(track dirs)
 
   let%expect_test "build_station half track" =
-    (* x--- map *)
+    (* x---- map *)
     let map = std_map
-      |> TM.remove ~x:5 ~y:1
+      |> TM.set ~x:5 ~y:1 ~t:(track dirs)
     in
     let scan1 = TM.Search.scan map ~x:5 ~y:1 ~player:0 in
     (* Add station x x---s *)
@@ -109,11 +110,13 @@ module Track = struct
     [%expect {| {"last_id":0,"graph":[]} |}];
     let g = TG.Track.handle_build_station g ~x:5 ~y:1 scan1 scan2 in
     print_graph g;
-    [%expect {| {"last_id":0,"graph":[]} |}]
+    [%expect {| {"last_id":1,"graph":[[[5,1],[1,1],{"id":0,"nodes":[[1,1,["Right"]],[5,1,["Left"]]],"dist":4,"block":false}]]} |}]
 
   let%expect_test "build_station mid track" =
     (* x---x map *)
-    let map = std_map in
+    let map = std_map
+      |> TM.set ~x:5 ~y:1 ~t:(track @@ UpRight::dirs)
+    in
     let scan1 = TM.Search.scan map ~x:3 ~y:1 ~player:0 in
     (* Add station in middle x-s-x *)
     let map = TM.set map ~x:3 ~y:1 ~t:(station dirs) in
