@@ -14,20 +14,20 @@ let empty width height =
   let map = IntMap.empty in
   {map; width; height}
 
-let get v x y = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
+let get v ~x ~y = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
 
-let get_exn v x y = IntMap.find (Utils.calc_offset v.width x y) v.map 
+let get_exn v ~x ~y = IntMap.find (Utils.calc_offset v.width x y) v.map 
 
   (* get, buf if there's nothing, create a track *)
-let get_track_default ?(kind=(Track.Track `Single)) v x y ~player =
-  get v x y
+let get_track_default ?(kind=(Track.Track `Single)) v ~x ~y ~player =
+  get v ~x ~y
   |> Option.get_lazy (fun () -> Track.empty player kind)
 
-let set v x y tile =
-  let map = IntMap.add (Utils.calc_offset v.width x y) tile v.map in
+let set v ~x ~y ~t =
+  let map = IntMap.add (Utils.calc_offset v.width x y) t v.map in
   {v with map}
 
-let remove v x y =
+let remove v ~x ~y =
   let map = IntMap.remove (Utils.calc_offset v.width x y) v.map in
   {v with map}
 
@@ -37,7 +37,7 @@ let iter v f =
     f x y track)
   v.map
 
-let out_of_bounds v x y =
+let out_of_bounds v ~x ~y =
   x < 0 || y < 0 || x >= v.width || y >= v.height
 
 (* Common function for moving by dir, with bounds check *)
@@ -50,8 +50,8 @@ let check_build_track v ~x ~y ~dir ~player =
   match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
   | true, _ | _, None  -> false
   | _, Some (x2, y2) ->
-    let track1 = get_track_default v x y ~player in
-    let track2 = get_track_default v x2 y2 ~player in
+    let track1 = get_track_default v ~x ~y ~player in
+    let track2 = get_track_default v ~x:x2 ~y:y2 ~player in
     let track12 = Track.add_dir track1 ~dir in
     let track22 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
     (* Check that we changed something *)
@@ -68,8 +68,8 @@ let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
   match move_dir_bounds v ~x ~y ~dir with
   | None -> v
   | Some (x2, y2) ->
-    let track1 = get_track_default ?kind:kind1 v x y ~player in
-    let track2 = get_track_default ?kind:kind2 v x2 y2 ~player in
+    let track1 = get_track_default ?kind:kind1 v ~x ~y ~player in
+    let track2 = get_track_default ?kind:kind2 v ~x:x2 ~y:y2 ~player in
     let track1 = Track.add_dir track1 ~dir in
     let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
     let v = set v x y track1 in
@@ -154,8 +154,10 @@ let build_stretch v ~x ~y ~dir ~player ~n ~kind =
   let x3, y3 = x + dx * n, y + dy * n in
   if out_of_bounds v x y || out_of_bounds v x3 y3 then v (* error *)
   else (
-    let track1 = get_track_default v x1 y1 ~player |> Track.add_dir ~dir in
-    let v = set v x1 y1 track1 in
+    let track1 = get_track_default v ~x:x1 ~y:y1 ~player
+      |> Track.add_dir ~dir
+    in
+    let v = set v ~x:x1 ~y:y1 ~t:track1 in
     let track2 = Track.empty player kind
       |> Track.add_dir ~dir
       |> Track.add_dir ~dir:(Dir.opposite dir)
@@ -168,9 +170,9 @@ let build_stretch v ~x ~y ~dir ~player ~n ~kind =
     in
     let v = dig_tunnel ~x:(x1+dx) ~y:(y1+dy) (n-1) v in
     let track3 =
-      get_track_default v x3 y3 ~player
+      get_track_default v ~x:x3 ~y:y3 ~player
       |> Track.add_dir ~dir:(Dir.opposite dir) in
-    let v = set v x3 y3 track3 in
+    let v = set v ~x:x3 ~y:y3 ~t:track3 in
     v
   )
 
@@ -185,8 +187,8 @@ let check_remove_track v ~x ~y ~dir ~player =
   match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
   | true, _ | _, None  -> false
   | _, Some (x2, y2) ->
-    let track1 = get_track_default v x y ~player in
-    let track2 = get_track_default v x2 y2 ~player in
+    let track1 = get_track_default v ~x ~y ~player in
+    let track2 = get_track_default v ~x:x2 ~y:y2 ~player in
     if track1.player <> player || track2.player <> player then false
     else
       match track1.kind, track2.kind with
@@ -208,7 +210,7 @@ let remove_track v ~x ~y ~dir ~player =
     | None -> v
   in
   let x2, y2 = Dir.adjust dir x y in
-  let track1 = get_track_default v x y ~player in
+  let track1 = get_track_default v ~x ~y ~player in
   let v =
     if track1.player = player then
       match track1.kind with
@@ -222,7 +224,7 @@ let remove_track v ~x ~y ~dir ~player =
           remove v x y
     else v
   in
-  let track2 = get_track_default v x2 y2 ~player in
+  let track2 = get_track_default v ~x:x2 ~y:y2 ~player in
   match track2.kind with
   | Track _ | Ferry _ when track2.player = player ->
       remove_track_dir v ~x:x2 ~y:y2 ~dir:(Dir.opposite dir);

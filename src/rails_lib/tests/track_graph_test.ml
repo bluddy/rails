@@ -83,18 +83,40 @@ module Track = struct
   let station dirs = 
     Track.make (Dir.Set.of_list dirs) (Station `Station) ~player:0
 
-  let%expect_test "handle_build_station" =
-    (* Create x---x map *)
-    let map = TM.empty 7 7 in
-    let dirs = [Dir.Left; Right] in
-    let map = TM.set map 1 1 @@ track (UpLeft::dirs) in
-    let map = TM.set map 2 1 @@ track dirs in
-    let map = TM.set map 3 1 @@ track dirs in
-    let map = TM.set map 4 1 @@ track dirs in
-    let map = TM.set map 5 1 @@ track (UpRight::dirs) in
+  let dirs = [Dir.Left; Right]
+  let std_map =
+    TM.empty 7 7
+    |> TM.set ~x:1 ~y:1 ~t:(track @@ UpLeft::dirs)
+    |> TM.set ~x:2 ~y:1 ~t:(track dirs)
+    |> TM.set ~x:3 ~y:1 ~t:(track dirs)
+    |> TM.set ~x:4 ~y:1 ~t:(track dirs)
+    |> TM.set ~x:5 ~y:1 ~t:(track @@ UpRight::dirs)
+
+  let%expect_test "build_station half track" =
+    (* x--- map *)
+    let map = std_map
+      |> TM.remove ~x:5 ~y:1
+    in
+    let scan1 = TM.Search.scan map ~x:5 ~y:1 ~player:0 in
+    (* Add station x x---s *)
+    let map = TM.set map ~x:5 ~y:1 ~t:(station dirs) in
+    let scan2 = TM.Search.scan map ~x:5 ~y:1 ~player:0 in
+    (* Corresponding graph *)
+    let g = TG.make ()
+      |> TG.add_ixn ~x:1 ~y:1
+    in
+    print_graph g;
+    [%expect {| {"last_id":0,"graph":[]} |}];
+    let g = TG.Track.handle_build_station g ~x:5 ~y:1 scan1 scan2 in
+    print_graph g;
+    [%expect {| {"last_id":0,"graph":[]} |}]
+
+  let%expect_test "build_station mid track" =
+    (* x---x map *)
+    let map = std_map in
     let scan1 = TM.Search.scan map ~x:3 ~y:1 ~player:0 in
     (* Add station in middle x-s-x *)
-    let map = TM.set map 3 1 @@ station dirs in
+    let map = TM.set map ~x:3 ~y:1 ~t:(station dirs) in
     let scan2 = TM.Search.scan map ~x:3 ~y:1 ~player:0 in
     (* Corresponding graph *)
     let g = TG.make ()
@@ -102,6 +124,8 @@ module Track = struct
       |> TG.add_ixn ~x:4 ~y:1
       |> TG.add_segment ~xyd1:(1,1,Right) ~xyd2:(5,1,Left) ~dist:5
     in
+    print_graph g;
+    [%expect {| {"last_id":1,"graph":[[[5,1],[1,1],{"id":0,"nodes":[[1,1,["Right"]],[5,1,["Left"]]],"dist":5,"block":false}]]} |}];
     let g = TG.Track.handle_build_station g ~x:3 ~y:1 scan1 scan2 in
     print_graph g;
     [%expect {| {"last_id":3,"graph":[[[3,1],[1,1],{"id":1,"nodes":[[1,1,["Right"]],[3,1,["Left"]]],"dist":2,"block":false}],[[5,1],[3,1],{"id":2,"nodes":[[5,1,["Left"]],[3,1,["Right"]]],"dist":2,"block":false}]]} |}]

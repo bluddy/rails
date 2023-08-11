@@ -81,7 +81,7 @@ let map_width v = Tilemap.get_width v.map
 
 let get_tile v x y = Tilemap.get_tile v.map x y
 
-let get_track v x y = Trackmap.get v.track x y
+let get_track v x y = Trackmap.get v.track ~x ~y
 
 let get_cities v = Cities.to_list v.cities
 
@@ -234,34 +234,34 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | _ -> `Illegal
 
 let check_make_double_track v ~x ~y =
-  match Trackmap.get v.track x y with
+  match Trackmap.get v.track ~x ~y with
   | Some ({kind = Track `Single; _} as track) when Track.is_doubleable track -> true
   | Some ({kind = Ferry `Single; _} as track) when Track.is_doubleable track -> true
   | _ -> false
 
 let check_make_single_track v ~x ~y =
-  match Trackmap.get v.track x y with
+  match Trackmap.get v.track ~x ~y with
   | Some {kind = Track `Double; _} -> true
   | Some {kind = Ferry `Double; _} -> true
   | _ -> false
 
 let _make_double_track (v:t) ~x ~y =
   if check_make_double_track v ~x ~y then (
-    let t = Trackmap.get_exn v.track x y in
+    let t = Trackmap.get_exn v.track ~x ~y in
     let t = {t with kind=Track `Double} in
-    let track = Trackmap.set v.track x y t in
+    let track = Trackmap.set v.track ~x ~y ~t in
     {v with track}
   ) else v
 
 let _make_single_track (v:t) ~x ~y =
   if check_make_single_track v ~x ~y then (
-    let t = Trackmap.get_exn v.track x y in
+    let t = Trackmap.get_exn v.track ~x ~y in
     let t = match t.kind with
       | Track `Double -> {t with kind=Track `Single}
       | Ferry `Double -> {t with kind=Ferry `Single}
       | _ -> assert false
     in
-    let track = Trackmap.set v.track x y t in
+    let track = Trackmap.set v.track ~x ~y ~t in
     {v with track}
   ) else v
     
@@ -328,7 +328,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
 let _build_train v ((x, y) as station) engine cars other_station ~player =
   let engine_t = Engine.t_of_make v.engines engine in
   (* TODO: Temporary solution for getting track dir *)
-  let track = Trackmap.get v.track x y |> Option.get_exn_or "trackmap" in
+  let track = Trackmap.get v.track ~x ~y |> Option.get_exn_or "trackmap" in
   let dir, _ = Dir.Set.pop track.dirs in
   let train = Train.make station engine_t cars other_station ~dir ~player in
   let trains = Trainmap.add v.trains train in
