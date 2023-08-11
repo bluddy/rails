@@ -181,9 +181,9 @@ let _build_station v ~x ~y station_type ~player =
   update_player v player @@
     Player.pay Player.StationExpense (Station.price_of station_type);
 
-  if v.track =!= track then v.track <- track;
-  if v.graph =!= graph then v.graph <- graph;
-  if v.stations =!= stations then v.stations <- stations;
+  [%upf v.stations <- stations];
+  [%upf v.graph <- graph];
+  [%upf v.track <- track];
   v
 
 let check_build_tunnel v ~x ~y ~dir ~player =
@@ -201,9 +201,9 @@ let _build_tunnel v ~x ~y ~dir ~player =
     let graph = G.Track.handle_build_track v.graph before after in
     let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
     update_player v player @@ Player.pay Player.TunnelExpense cost;
-    if v.stations =!= stations then v.stations <- stations;
-    if v.graph =!= graph then v.graph <- graph;
-    if v.track =!= track then v.track <- track;
+  [%upf v.stations <- stations];
+  [%upf v.graph <- graph];
+  [%upf v.track <- track];
     v
   | _ -> v
 
@@ -215,9 +215,9 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
-  if v.stations =!= stations then v.stations <- stations;
-  if v.graph =!= graph then v.graph <- graph;
-  if v.track =!= track then v.track <- track;
+  [%upf v.stations <- stations];
+  [%upf v.graph <- graph];
+  [%upf v.track <- track];
   v
 
 let check_build_track v ~x ~y ~dir ~player =
@@ -273,9 +273,9 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let graph = G.Track.handle_build_track_complex v.graph ~x ~y before after in
   let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
-  if v.stations =!= stations then v.stations <- stations;
-  if v.graph =!= graph then v.graph <- graph;
-  if v.track =!= track then v.track <- track;
+  [%upf v.stations <- stations];
+  [%upf v.graph <- graph];
+  [%upf v.track <- track];
   v
 
 let _build_ferry v ~x ~y ~dir ~player =
@@ -294,9 +294,9 @@ let _build_ferry v ~x ~y ~dir ~player =
   let graph = G.Track.handle_build_track v.graph before after in
   let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
-  if v.stations =!= stations then v.stations <- stations;
-  if v.graph =!= graph then v.graph <- graph;
-  if v.track =!= track then v.track <- track;
+  [%upf v.stations <- stations];
+  [%upf v.graph <- graph];
+  [%upf v.track <- track];
   v
 
 let check_remove_track v ~x ~y ~dir ~player=
@@ -309,9 +309,9 @@ let _remove_track v ~x ~y ~dir ~player =
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
   let stations = Backend_low.Segments.remove_track_split_segment graph v.stations v.segments before after in
   update_player v player (Player.add_track ~length:(-1));
-  if v.stations =!= stations then v.stations <- stations;
-  if v.track =!= track then v.track <- track;
-  if v.graph =!= graph then v.graph <- graph;
+  [%upf v.stations <- stations];
+  [%upf v.track <- track];
+  [%upf v.graph <- graph];
   v
 
 let _improve_station v ~x ~y ~player ~upgrade =
@@ -322,7 +322,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
   in
   update_player v player @@
     Player.(pay StationExpense @@ Station.price_of_upgrade upgrade);
-  if v.stations =!= stations then v.stations <- stations;
+  [%upf v.stations <- stations];
   v
 
 let _build_train v ((x, y) as station) engine cars other_station ~player =
@@ -342,7 +342,7 @@ let _remove_stop_car v ~train ~stop ~car =
     Trainmap.update v.trains train
       (fun train -> Train.remove_stop_car train stop car)
   in
-  if trains =!= v.trains then {v with trains} else v
+  [%up {v with trains}]
 
 let check_stop_station v ~train ~stop ~station =
   let train = Trainmap.get v.trains train in
@@ -353,28 +353,28 @@ let _set_stop_station v ~train ~stop ~station =
     Trainmap.update v.trains train
       (fun train -> Train.set_stop_station train stop station)
   in
-  if trains =!= v.trains then {v with trains} else v
+  [%up {v with trains}]
 
 let _remove_stop v ~train ~stop =
   let trains =
     Trainmap.update v.trains train
       (fun train -> Train.remove_stop train stop)
   in
-  if trains =!= v.trains then {v with trains} else v
+  [%up {v with trains}]
 
 let _add_stop_car v ~train ~stop ~car =
   let trains =
     Trainmap.update v.trains train
       (fun train -> Train.add_stop_car train stop car)
   in
-  if trains =!= v.trains then {v with trains} else v
+  [%up {v with trains}]
 
 let _remove_all_stop_cars v ~train ~stop =
   let trains =
     Trainmap.update v.trains train
       (fun train -> Train.remove_all_stop_cars train stop)
   in
-  if trains =!= v.trains then {v with trains} else v
+  [%up {v with trains}]
 
 let get_num_trains v = Trainmap.size v.trains
 
@@ -386,7 +386,7 @@ let _train_set_type v ~train ~typ =
   let trains =
     Trainmap.update v.trains train (fun train -> Train.set_type train typ)
   in
-  if v.trains =!= trains then {v with trains} else v
+  [%up {v with trains}]
 
 let _train_replace_engine v ~train ~engine ~player =
   let engine = Engine.t_of_make v.engines engine in
@@ -395,7 +395,7 @@ let _train_replace_engine v ~train ~engine ~player =
       (fun train -> Train.replace_engine train engine)
   in
   update_player v player (Player.pay Player.TrainExpense engine.price);
-  if v.trains =!= trains then {v with trains} else v
+  [%up {v with trains}]
 
 let _remove_train v idx =
   let train = Trainmap.get v.trains idx in
@@ -404,7 +404,7 @@ let _remove_train v idx =
       Segment.Map.decr_train v.segments segment_id
   | _ -> ());
   let trains = Trainmap.delete v.trains idx in
-  if trains =!= v.trains then {v with trains} else v
+  [%up {v with trains}]
 
 let reset_tick v =
   v.last_tick <- 0
