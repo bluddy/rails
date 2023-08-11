@@ -106,7 +106,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
 
   (* Info bar *)
   begin match v.selected_station with
-  | Some ((x,y) as loc) ->
+  | Some loc ->
       let write = write ~idx:4 in
       let station = Station_map.get_exn loc s.backend.stations in
       let demand = Station.get_demand_exn station in

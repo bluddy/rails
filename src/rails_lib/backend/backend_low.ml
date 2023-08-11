@@ -210,11 +210,11 @@ module Graph = struct
         when TS.(equal_ixn ixn1 ixn3 && equal_ixn ixn2 ixn4 || equal_ixn ixn1 ixn4 && equal_ixn ixn2 ixn3) ->
           graph
           |> G.remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir)
-          |> G.add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir)
-                           ~xyd2:(x,y,ixn3.search_dir)
+          |> G.add_segment ~xyd1:(ixn3.x, ixn3.y, ixn3.dir)
+                           ~xyd2:(x, y, ixn3.search_dir)
                            ~dist:ixn3.dist
-          |> G.add_segment ~xyd1:(ixn4.x,ixn4.y,ixn4.dir)
-                           ~xyd2:(x,y,ixn4.search_dir)
+          |> G.add_segment ~xyd1:(ixn4.x, ixn4.y, ixn4.dir)
+                           ~xyd2:(x, y, ixn4.search_dir)
                            ~dist:ixn4.dist
                           
 

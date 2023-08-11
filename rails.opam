@@ -25,7 +25,9 @@ depends: [
   "ppx_deriving"
   "ppx_hash"
   "ppx_yojson_conv"
-  "lens"
+  "ppx_expect"
+  "ppx_inline_test"
+  "ppx_update"
   "odoc" {with-doc}
 ]
 build: [
