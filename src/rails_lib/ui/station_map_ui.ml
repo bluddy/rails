@@ -16,7 +16,7 @@ let make graph train state : Edit_train_d.station_map =
       let max_x = max x max_x in
       let max_y = max y max_y in
       (min_x, min_y, max_x, max_y))
-    graph.Track_graph.graph
+    graph
     (10000, 10000, 0, 0)
   in
   let dy = max_y - min_y in
@@ -57,7 +57,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
     let x1, y1 = scale_xy v x1 y1 in
     let x2, y2 = scale_xy v x2 y2 in
     R.draw_line win ~x1 ~y1 ~x2 ~y2 ~color:Ega.gray)
-    s.backend.graph.graph;
+    s.backend.graph;
 
   (* Write stop text *)
   let train = Trainmap.get s.backend.trains v.train in

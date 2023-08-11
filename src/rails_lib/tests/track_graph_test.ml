@@ -30,14 +30,14 @@ let print_graph g =
 let%expect_test "graph print" =
   let g = graph () in
   print_graph g;
-  [%expect {| {"last_id":3,"graph":[[[3,4],[1,2],{"id":0,"nodes":[[1,2,["Up"]],[3,4,["Right"]]],"dist":5,"block":false}],[[5,6],[1,2],{"id":1,"nodes":[[1,2,["UpRight"]],[5,6,["Left"]]],"dist":10,"block":false}],[[7,8],[5,6],{"id":2,"nodes":[[5,6,["UpRight"]],[7,8,["DownLeft"]]],"dist":3,"block":false}]]} |}]
+  [%expect {| [[[3,4],[1,2],{"nodes":[[1,2,["Up"]],[3,4,["Right"]]],"dist":5,"block":false}],[[5,6],[1,2],{"nodes":[[1,2,["UpRight"]],[5,6,["Left"]]],"dist":10,"block":false}],[[7,8],[5,6],{"nodes":[[5,6,["UpRight"]],[7,8,["DownLeft"]]],"dist":3,"block":false}]] |}]
 
 let%expect_test "graph remove segment" =
   let g = graph ()
     |> TG.remove_segment ~xyd:(1,2,Dir.Up)
   in
   print_graph g;
-  [%expect {| {"last_id":3,"graph":[[[5,6],[1,2],{"id":1,"nodes":[[1,2,["UpRight"]],[5,6,["Left"]]],"dist":10,"block":false}],[[7,8],[5,6],{"id":2,"nodes":[[5,6,["UpRight"]],[7,8,["DownLeft"]]],"dist":3,"block":false}]]} |}]
+  [%expect {| [[[5,6],[1,2],{"nodes":[[1,2,["UpRight"]],[5,6,["Left"]]],"dist":10,"block":false}],[[7,8],[5,6],{"nodes":[[5,6,["UpRight"]],[7,8,["DownLeft"]]],"dist":3,"block":false}]] |}]
 
 let%expect_test "graph find ixn from ixn" =
   let g = graph () in
@@ -106,10 +106,10 @@ module Track = struct
       |> TG.add_ixn ~x:1 ~y
     in
     print_graph g;
-    [%expect {| {"last_id":0,"graph":[]} |}];
+    [%expect {| [] |}];
     let g = TG.Track.handle_build_station g ~x:5 ~y scan1 scan2 in
     print_graph g;
-    [%expect {| {"last_id":1,"graph":[[[5,2],[1,2],{"id":0,"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]]} |}]
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}]
 
   let%expect_test "build_station mid track" =
     (* x---x map *)
@@ -127,10 +127,10 @@ module Track = struct
       |> TG.add_segment ~xyd1:(1,1,Right) ~xyd2:(5,1,Left) ~dist:5
     in
     print_graph g;
-    [%expect {| {"last_id":1,"graph":[[[5,1],[1,1],{"id":0,"nodes":[[1,1,["Right"]],[5,1,["Left"]]],"dist":5,"block":false}]]} |}];
+    [%expect {| [[[5,1],[1,1],{"nodes":[[1,1,["Right"]],[5,1,["Left"]]],"dist":5,"block":false}]] |}];
     let g = TG.Track.handle_build_station g ~x:3 ~y scan1 scan2 in
     print_graph g;
-    [%expect {| {"last_id":3,"graph":[[[5,2],[3,2],{"id":2,"nodes":[[5,2,["Left"]],[3,2,["Right"]]],"dist":2,"block":false}],[[5,1],[1,1],{"id":0,"nodes":[[1,1,["Right"]],[5,1,["Left"]]],"dist":5,"block":false}],[[3,2],[1,2],{"id":1,"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]]} |}]
+    [%expect {| [[[5,2],[3,2],{"nodes":[[3,2,["Right"]],[5,2,["Left"]]],"dist":2,"block":false}],[[5,1],[1,1],{"nodes":[[1,1,["Right"]],[5,1,["Left"]]],"dist":5,"block":false}],[[3,2],[1,2],{"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]] |}]
 
   let%expect_test "build_track_simple" =
     (* x--- x -> x---x *)
@@ -145,10 +145,10 @@ module Track = struct
     (* Corresponding graph *)
     let g = TG.make () in
     print_graph g;
-    [%expect {| {"last_id":0,"graph":[]} |}];
+    [%expect {| [] |}];
     let g = TG.Track.handle_build_track_simple g scan1 scan2 in
     print_graph g;
-    [%expect {| {"last_id":1,"graph":[[[5,2],[1,2],{"id":0,"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]]} |}]
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}]
 
     (* same as above, just handle_build_track *)
   let%expect_test "build_track connect ixn" =
@@ -164,10 +164,10 @@ module Track = struct
     (* Corresponding graph *)
     let g = TG.make () in
     print_graph g;
-    [%expect {| {"last_id":0,"graph":[]} |}];
+    [%expect {| [] |}];
     let g = TG.Track.handle_build_track g ~x:4 ~y scan1 scan2 in
     print_graph g;
-    [%expect {| {"last_id":1,"graph":[[[5,2],[1,2],{"id":0,"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]]} |}]
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}]
 
   let%expect_test "build_track create ixn" =
     (* x----  -> x---x *)
@@ -178,10 +178,10 @@ module Track = struct
     (* Corresponding graph *)
     let g = TG.make () in
     print_graph g;
-    [%expect {| {"last_id":0,"graph":[]} |}];
+    [%expect {| [] |}];
     let g = TG.Track.handle_build_track g ~x:5 ~y scan1 scan2 in
     print_graph g;
-    [%expect {| {"last_id":1,"graph":[[[5,2],[1,2],{"id":0,"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]]} |}]
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}]
 
   let%expect_test "build_track create+connect to another ixn" =
      (*    x          x
@@ -200,10 +200,10 @@ module Track = struct
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
-    [%expect {| {"last_id":1,"graph":[[[5,2],[1,2],{"id":0,"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]]} |}];
+    [%expect {| [[[5,2],[1,2],{"nodes":[[1,2,["Right"]],[5,2,["Left"]]],"dist":4,"block":false}]] |}];
     let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
     print_graph g;
-    [%expect {| {"last_id":4,"graph":[[[5,2],[3,2],{"id":2,"nodes":[[5,2,["Left"]],[3,2,["Right"]]],"dist":2,"block":false}],[[5,0],[3,2],{"id":3,"nodes":[[5,0,["DownLeft"]],[3,2,["UpRight"]]],"dist":2,"block":false}],[[3,2],[1,2],{"id":1,"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]]} |}]
+    [%expect {| [[[5,2],[3,2],{"nodes":[[3,2,["Right"]],[5,2,["Left"]]],"dist":2,"block":false}],[[5,0],[3,2],{"nodes":[[3,2,["UpRight"]],[5,0,["DownLeft"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[1,2,["Right"]],[3,2,["Left"]]],"dist":2,"block":false}]] |}]
 
   let%expect_test "remove_track" = ()
 

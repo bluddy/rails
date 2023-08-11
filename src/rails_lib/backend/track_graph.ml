@@ -8,37 +8,70 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 (* NOTE: must be per player! *)
 
-module Edge = struct
-  type xy_dir = (int * int * Dir.t)
-  [@@deriving yojson]
+module Edge : sig 
+    type xy_dir = int * int * Dir.t
+    [@@deriving eq, ord, yojson]
 
-  type t = {
-    id: int;
-    nodes: xy_dir * xy_dir;
-    dist: int;
-    mutable block: bool;
-  } [@@deriving yojson]
+    type t = private {
+      nodes: xy_dir * xy_dir;
+      dist: int;
+      mutable block: bool;
+    } [@@deriving yojson]
 
-  let default = {id=0; nodes=((0,0,Dir.Up),(0,0,Dir.Up)); dist=0; block=false}
-  let equal x y = x.id = y.id
-  let compare x y = x.id - y.id
-  let make id x1 y1 dir1 x2 y2 dir2 dist =
-    let nodes = ((x1,y1,dir1),(x2,y2,dir2)) in
-    {id; nodes; dist; block=false}
+    val default: t
+    val equal : t -> t -> bool
+    val compare: t -> t -> int
+    val make: int -> int -> Dir.t -> int -> int -> Dir.t -> int -> t
+    val has_xydir: int -> int -> Dir.t -> t -> bool
+    val dir_of_xy: int * int -> t -> Dir.t option
+    val set_block: bool -> t -> unit
+  end
+= struct
+    type xy_dir = int * int * Dir.t
+    [@@deriving eq, ord, yojson]
 
-  let eq_xydir x1 y1 dir1 (x2,y2,dir2) =
-    x1 = x2 && y1 = y2 && Dir.equal dir1 dir2
+    type t = {
+      nodes: xy_dir * xy_dir;
+      dist: int;
+      mutable block: bool;
+    } [@@deriving yojson]
 
-    (* Either node can match *)
-  let has_xydir x y dir v =
-    let d1, d2 = v.nodes in
-    eq_xydir x y dir d1 || eq_xydir x y dir d2
+    let canonical v =
+       let xyd1, xyd2 = v.nodes in
+       if compare_xy_dir xyd1 xyd2 > 0 then {v with nodes=(xyd2, xyd1)}
+       else v
 
-    (* Return matching dir for ixn x, y *)
-  let dir_of_xy (x,y) v = match v.nodes with
-    | ((x1,y1,dir1),_) when x=x1 && y=y1 -> Some dir1
-    | (_,(x2,y2,dir2)) when x=x2 && y=y2 -> Some dir2
-    | _ -> None
+    (* Assume we're operating on canonical values *)
+    let equal x y =
+      equal_xy_dir (fst x.nodes) (fst y.nodes)
+      && equal_xy_dir (snd x.nodes) (snd y.nodes)
+
+    let compare x y =
+      let cmp1 = compare_xy_dir (fst x.nodes) (fst y.nodes) in
+      if cmp1 = 0 then
+        compare_xy_dir (snd x.nodes) (snd y.nodes)
+      else
+        cmp1
+
+    (* We always make sure we're canonical *)
+    let make x1 y1 dir1 x2 y2 dir2 dist =
+      let nodes = (x1,y1,dir1), (x2,y2,dir2) in
+      canonical {nodes; dist; block=false}
+
+    let default = make 0 0 Dir.Up 0 0 Dir.Up 0
+
+      (* Either node can match *)
+    let has_xydir x y dir v =
+      let d1, d2 = v.nodes in
+      equal_xy_dir (x,y,dir) d1 || equal_xy_dir (x,y,dir) d2
+
+      (* Return matching dir for ixn x, y *)
+    let dir_of_xy (x,y) v = match v.nodes with
+      | ((x1,y1,dir1),_) when x=x1 && y=y1 -> Some dir1
+      | (_,(x2,y2,dir2)) when x=x2 && y=y2 -> Some dir2
+      | _ -> None
+
+    let set_block b v = v.block <- b
 end
 
 module Node = struct
@@ -89,37 +122,28 @@ module Weight = struct
   let zero = 0
 end
 
-
 module ShortestPath = Graph.Path.Dijkstra(G)(Weight)
 
-type t = {
-  mutable last_id: int;
-  graph: G.t;
-} [@@deriving yojson]
+type t = G.t [@@deriving yojson]
 
-let make () = {
-  last_id=0;
-  graph=G.create ();
-}
+let make () = G.create ()
 
 let add_ixn v ~x ~y =
   Log.debug (fun f -> f "Graph: Adding ixn at (%d,%d)" x y);
-  G.add_vertex v.graph (x, y);
+  G.add_vertex v (x, y);
   v
 
 let remove_ixn v ~x ~y =
   Log.debug (fun f -> f "Graph: Removing ixn at (%d,%d)" x y);
-  G.remove_vertex v.graph (x, y);
+  G.remove_vertex v (x, y);
   v
 
 let add_segment v ~xyd1 ~xyd2 ~dist =
   let (x1,y1,dir1), (x2,y2,dir2) = xyd1, xyd2 in
   Log.debug (fun f -> f "Graph: Adding path from (%d,%d,%s) to (%d,%d,%s), dist %d"
               x1 y1 (Dir.show dir1) x2 y2 (Dir.show dir2) dist);
-  let id = v.last_id in
-  v.last_id <- succ v.last_id;
-  let edge = Edge.make id x1 y1 dir1 x2 y2 dir2 dist in
-  G.add_edge_e v.graph ((x1,y1),edge,(x2,y2));
+  let edge = Edge.make x1 y1 dir1 x2 y2 dir2 dist in
+  G.add_edge_e v ((x1,y1),edge,(x2,y2));
   v
 
 let remove_segment v ~xyd =
@@ -130,16 +154,16 @@ let remove_segment v ~xyd =
     G.fold_succ_e (fun ((_,e,_) as edge) acc ->
       if Edge.has_xydir x y dir e then Some edge
       else acc
-    ) v.graph (x,y) None
+    ) v (x,y) None
   in
   match edge with
   | None -> v 
   | Some edge ->
-      G.remove_edge_e v.graph edge;
+      G.remove_edge_e v edge;
       v
 
-let fold_succ_ixns f v ~ixn ~init = G.fold_succ f v.graph ixn init
-let iter_succ_ixns f v ~ixn = G.iter_succ f v.graph ixn
+let fold_succ_ixns f v ~ixn ~init = G.fold_succ f v ixn init
+let iter_succ_ixns f v ~ixn = G.iter_succ f v ixn
 
 (* Iterate over successors of ixn, with ixns and matching dirs *)
 let iter_succ_ixn_dirs f v ~ixn =
@@ -147,7 +171,7 @@ let iter_succ_ixn_dirs f v ~ixn =
     let other_ixn = if Node.equal ixn ixn1 then ixn2 else ixn1 in
     let other_dir = Edge.dir_of_xy other_ixn e |> Option.get_exn_or "Missing dir" in
     f other_ixn other_dir)
-  v.graph
+  v
   ixn
 
 (* Follow an ixn in a given dir to get the next ixn *)
@@ -156,7 +180,7 @@ let find_ixn_from_ixn_dir v ~ixn ~dir =
   try
     G.fold_succ_e (fun (_,e,ixn2) acc ->
       if Edge.has_xydir x y dir e then Some ixn2 else acc)
-    v.graph ixn None
+    v ixn None
   with Invalid_argument _ -> None
 
   (* Find the shortest path branch from an ixn given a from_dir entering the ixn,
@@ -169,19 +193,19 @@ let shortest_path_branch ~ixn ~cur_dir ~dest v =
     (fun (_,e,_) ->
       match Edge.dir_of_xy ixn e with
       | Some dir2 when not (Dir.within_90 cur_dir dir2) ->
-          e.block <- true
+          Edge.set_block true e
       | _ -> ())
-    v.graph
+    v
     ixn;
-  let path, _ = ShortestPath.shortest_path v.graph ixn dest in
+  let path, _ = ShortestPath.shortest_path v ixn dest in
   (* Clear block *)
-  G.iter_succ_e (fun (_,e,_) -> e.block <- false) v.graph ixn;
+  G.iter_succ_e (fun (_,e,_) -> Edge.set_block false e) v ixn;
   match path with
   | (_,edge,_)::_ -> Edge.dir_of_xy ixn edge
   | _ -> None
 
 let shortest_path ~src ~dest v =
-  let path, _ = ShortestPath.shortest_path v.graph src dest in
+  let path, _ = ShortestPath.shortest_path v src dest in
   match path with
   | (_,edge,_)::_ -> Edge.dir_of_xy src edge
   | _ -> None
