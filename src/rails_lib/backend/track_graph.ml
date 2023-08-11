@@ -264,7 +264,7 @@ module Track = struct
     | _, _ -> graph
 
   (* Handle simple building of track graph-wise *)
-  let handle_build_track graph scan1 scan2 =
+  let handle_build_track_simple graph scan1 scan2 =
     match scan1, scan2 with
       | Track [ixn1], Track [ixn2; ixn3]
           when equal_ixn ixn1 ixn2 || equal_ixn ixn1 ixn3 ->
@@ -278,7 +278,7 @@ module Track = struct
       Complicated because we can have ixns everywhere. 
       TODO: check this for Station *)
     
-  let handle_build_track_complex graph ~x ~y scan1 scan2 =
+  let handle_build_track graph ~x ~y scan1 scan2 =
     match scan1, scan2 with
         (* Unfinished edge. Connect an intersection.
           x---       ->    x---x *)

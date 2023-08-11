@@ -91,13 +91,11 @@ module Track = struct
     |> TM.set ~x:2 ~y:1 ~t:(track dirs)
     |> TM.set ~x:3 ~y:1 ~t:(track dirs)
     |> TM.set ~x:4 ~y:1 ~t:(track dirs)
-    |> TM.set ~x:5 ~y:1 ~t:(track dirs)
+    |> TM.set ~x:5 ~y:1 ~t:(track [Left])
 
-  let%expect_test "build_station half track" =
+  let%expect_test "build_station at end of track" =
     (* x---- map *)
-    let map = std_map
-      |> TM.set ~x:5 ~y:1 ~t:(track dirs)
-    in
+    let map = std_map in
     let scan1 = TM.Search.scan map ~x:5 ~y:1 ~player:0 in
     (* Add station x x---s *)
     let map = TM.set map ~x:5 ~y:1 ~t:(station dirs) in
@@ -133,7 +131,24 @@ module Track = struct
     print_graph g;
     [%expect {| {"last_id":3,"graph":[[[3,1],[1,1],{"id":1,"nodes":[[1,1,["Right"]],[3,1,["Left"]]],"dist":2,"block":false}],[[5,1],[3,1],{"id":2,"nodes":[[5,1,["Left"]],[3,1,["Right"]]],"dist":2,"block":false}]]} |}]
 
-  let%expect_test "build_track" = ()
+  let%expect_test "build_track_simple" =
+    (* x--- x -> x---x *)
+    let map = std_map
+      |> TM.set ~x:4 ~y:1 ~t:(track [Left])
+      |> TM.set ~x:5 ~y:1 ~t:(track [Left; Right; UpRight])
+    in
+    let scan1 = TM.Search.scan map ~x:4 ~y:1 ~player:0 in
+    (* Add station in middle x-s-x *)
+    let map = TM.set map ~x:4 ~y:1 ~t:(track [Left;Right]) in
+    let scan2 = TM.Search.scan map ~x:4 ~y:1 ~player:0 in
+    (* Corresponding graph *)
+    let g = TG.make () in
+    print_graph g;
+    [%expect {| {"last_id":0,"graph":[]} |}];
+    let g = TG.Track.handle_build_track_simple g scan1 scan2 in
+    print_graph g;
+    [%expect {| {"last_id":1,"graph":[[[5,1],[1,1],{"id":0,"nodes":[[1,1,["Right"]],[5,1,["Left"]]],"dist":4,"block":false}]]} |}]
+
   let%expect_test "build_track_complex" = ()
   let%expect_test "remove_track" = ()
 

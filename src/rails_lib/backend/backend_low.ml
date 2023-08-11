@@ -40,7 +40,7 @@ module Segments = struct
     (* Fill in with new segments as needed *)
     match dir_segs with
     | [] ->
-        let track = Trackmap.get_exn trackmap x y in
+        let track = Trackmap.get_exn trackmap ~x ~y in
         (* Assert only 2 dirs *)
         Dir.Set.to_list track.dirs 
         |> List.map (fun dir -> dir, Segment.Map.new_id segments)
@@ -148,7 +148,7 @@ module Train_update = struct
     (* Speed factor computation from height delta and turn *)
     let height1 = Tilemap.get_tile_height v.map x y in
     let x2, y2 = Dir.adjust dir x y in
-    let track2 = Trackmap.get_exn v.track x2 y2 in
+    let track2 = Trackmap.get_exn v.track ~x:x2 ~y:y2 in
     let height2 = Tilemap.get_tile_height v.map x2 y2 in
     let d_height = max 0 (height2 - height1) in
     let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
@@ -332,7 +332,7 @@ module Train_update = struct
       2. Wait timer from first arrival
       3. Prevent from leaving via manual signal hold
     *)
-    let track = Trackmap.get_exn v.track x y in
+    let track = Trackmap.get_exn v.track ~x ~y in
     match track.kind with
     | Station _ ->
         let station = Station_map.get_exn loc v.stations in
