@@ -24,16 +24,19 @@ let graph () =
   |> TG.add_segment ~xyd1:(1,2,Dir.UpRight) ~xyd2:(5,6,Left) ~dist:10
   |> TG.add_segment ~xyd1:(5,6,Dir.UpRight) ~xyd2:(7,8,DownLeft) ~dist:3
 
+let print_graph g =
+  TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
+
 let%expect_test "graph print" =
   let g = graph () in
-  TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string;
+  print_graph g;
   [%expect {| {"last_id":3,"graph":[[[3,4],[1,2],{"id":0,"nodes":[[1,2,["Up"]],[3,4,["Right"]]],"dist":5,"block":false}],[[5,6],[1,2],{"id":1,"nodes":[[1,2,["UpRight"]],[5,6,["Left"]]],"dist":10,"block":false}],[[7,8],[5,6],{"id":2,"nodes":[[5,6,["UpRight"]],[7,8,["DownLeft"]]],"dist":3,"block":false}]]} |}]
 
 let%expect_test "graph remove segment" =
   let g = graph ()
     |> TG.remove_segment ~xyd:(1,2,Dir.Up)
   in
-  TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string;
+  print_graph g;
   [%expect {| {"last_id":3,"graph":[[[5,6],[1,2],{"id":1,"nodes":[[1,2,["UpRight"]],[5,6,["Left"]]],"dist":10,"block":false}],[[7,8],[5,6],{"id":2,"nodes":[[5,6,["UpRight"]],[7,8,["DownLeft"]]],"dist":3,"block":false}]]} |}]
 
 let%expect_test "graph find ixn from ixn" =
@@ -71,3 +74,40 @@ let%expect_test "connected_stations_dirs" =
     3, 4, Dir.Right, 5, 6,
     Dir.Left |}]
 
+module Track = struct
+  module TM = Trackmap
+
+  let track dirs = 
+    Track.make (Dir.Set.of_list dirs) (Track `Single) ~player:0
+
+  let station dirs = 
+    Track.make (Dir.Set.of_list dirs) (Station `Station) ~player:0
+
+  let%expect_test "handle_build_station" =
+    (* Create x---x map *)
+    let map = TM.empty 7 7 in
+    let dirs = [Dir.Left; Right] in
+    let map = TM.set map 1 1 @@ track (UpLeft::dirs) in
+    let map = TM.set map 2 1 @@ track dirs in
+    let map = TM.set map 3 1 @@ track dirs in
+    let map = TM.set map 4 1 @@ track dirs in
+    let map = TM.set map 5 1 @@ track (UpRight::dirs) in
+    let scan1 = TM.Search.scan map ~x:3 ~y:1 ~player:0 in
+    (* Add station in middle x-s-x *)
+    let map = TM.set map 3 1 @@ station dirs in
+    let scan2 = TM.Search.scan map ~x:3 ~y:1 ~player:0 in
+    (* Corresponding graph *)
+    let g = TG.make ()
+      |> TG.add_ixn ~x:1 ~y:1
+      |> TG.add_ixn ~x:4 ~y:1
+      |> TG.add_segment ~xyd1:(1,1,Right) ~xyd2:(5,1,Left) ~dist:5
+    in
+    let g = TG.Track.handle_build_station g ~x:3 ~y:1 scan1 scan2 in
+    print_graph g;
+    [%expect {| {"last_id":3,"graph":[[[3,1],[1,1],{"id":1,"nodes":[[1,1,["Right"]],[3,1,["Left"]]],"dist":2,"block":false}],[[5,1],[3,1],{"id":2,"nodes":[[5,1,["Left"]],[3,1,["Right"]]],"dist":2,"block":false}]]} |}]
+
+  let%expect_test "build_track" = ()
+  let%expect_test "build_track_complex" = ()
+  let%expect_test "remove_track" = ()
+
+end
