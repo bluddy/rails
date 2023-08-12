@@ -43,11 +43,11 @@ let out_of_bounds v ~x ~y =
 (* Common function for moving by dir, with bounds check *)
 let move_dir_bounds v ~x ~y ~dir =
   let x2, y2 = Dir.adjust dir x y in
-  if out_of_bounds v x2 y2 then None
+  if out_of_bounds v ~x:x2 ~y:y2 then None
   else Some(x2, y2)
 
 let check_build_track v ~x ~y ~dir ~player =
-  match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
+  match out_of_bounds v ~x ~y, move_dir_bounds v ~x ~y ~dir with
   | true, _ | _, None  -> false
   | _, Some (x2, y2) ->
     let track1 = get_track_default v ~x ~y ~player in
@@ -72,18 +72,18 @@ let build_track ?kind1 ?kind2 v ~x ~y ~dir ~player =
     let track2 = get_track_default ?kind:kind2 v ~x:x2 ~y:y2 ~player in
     let track1 = Track.add_dir track1 ~dir in
     let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
-    let v = set v x y track1 in
-    let v = set v x2 y2 track2 in
+    let v = set v ~x ~y ~t:track1 in
+    let v = set v ~x:x2 ~y:y2 ~t:track2 in
     v
 
 let check_build_station v ~x ~y ~player station_type =
-  if out_of_bounds v x y then `Illegal
-  else match get v x y with
+  if out_of_bounds v ~x ~y then `Illegal
+  else match get v ~x ~y with
   | None -> `NoTrack
   | Some ({kind=Track _;_} as t) when t.player = player && Track.is_straight t ->
        let range = Station.to_range station_type in
        let match_fn j i =
-         match get v j i with
+         match get v ~x:j ~y:i with
          | Some {kind=Station(st);_} ->
              let range2 = Station.to_range st in
              let range = range + range2 in
@@ -100,13 +100,13 @@ let check_build_station v ~x ~y ~player station_type =
   | _ -> `Illegal
    
 let build_station v ~x ~y station_type =
-  match get v x y with
+  match get v ~x ~y with
   | Some ({kind=Track _; _} as t) ->
       (* Do we build new track *)
       let build_new_track = Dir.Set.cardinal t.dirs > 1 in
       let track = Track.straighten t in
       let station = {track with kind=Station(station_type)} in
-      let v = set v x y station in
+      let v = set v ~x ~y ~t:station in
       v, build_new_track
   | _ -> assert false
 
@@ -119,19 +119,19 @@ let check_build_stretch v ~x ~y ~dir ~player ~length =
   let x1, y1 = x, y in
   let x3, y3 = x + dx * length, y + dy * length in
   (* check boundaries *)
-  if out_of_bounds v x y || out_of_bounds v x3 y3 then false
+  if out_of_bounds v ~x ~y || out_of_bounds v ~x:x3 ~y:y3 then false
   else (
     (* No track in between *)
     let rec loop x y i =
       if i <= 0 then true
       else
-        match get v x y with
+        match get v ~x ~y with
         | Some _ -> false
         | None ->
             loop (x+dx) (y+dy) (i-1)
     in
     let test_track x y dir =
-      match get v x y with
+      match get v ~x ~y with
       | Some track when track.player = player ->
           let track = Track.add_dir track ~dir in
           Track.is_legal track
@@ -152,7 +152,7 @@ let build_stretch v ~x ~y ~dir ~player ~n ~kind =
   let dx, dy = Dir.to_offsets dir in
   let x1, y1 = x, y in
   let x3, y3 = x + dx * n, y + dy * n in
-  if out_of_bounds v x y || out_of_bounds v x3 y3 then v (* error *)
+  if out_of_bounds v ~x ~y || out_of_bounds v ~x:x3 ~y:y3 then v (* error *)
   else (
     let track1 = get_track_default v ~x:x1 ~y:y1 ~player
       |> Track.add_dir ~dir
@@ -165,7 +165,7 @@ let build_stretch v ~x ~y ~dir ~player ~n ~kind =
     let rec dig_tunnel ~x ~y i v =
       if i <= 0 then v
       else
-        let v = set v x y track2 in
+        let v = set v ~x ~y ~t:track2 in
         dig_tunnel ~x:(x+dx) ~y:(y+dy) (i-1) v
     in
     let v = dig_tunnel ~x:(x1+dx) ~y:(y1+dy) (n-1) v in
@@ -184,7 +184,7 @@ let build_tunnel v ~x ~y ~dir ~player ~length =
    
   (* Can work for all kinds of constructs *)
 let check_remove_track v ~x ~y ~dir ~player =
-  match out_of_bounds v x y, move_dir_bounds v ~x ~y ~dir with
+  match out_of_bounds v ~x ~y, move_dir_bounds v ~x ~y ~dir with
   | true, _ | _, None  -> false
   | _, Some (x2, y2) ->
     let track1 = get_track_default v ~x ~y ~player in
@@ -200,13 +200,13 @@ let check_remove_track v ~x ~y ~dir ~player =
 
 let remove_track v ~x ~y ~dir ~player =
   let remove_track_dir v ~x ~y ~dir =
-    match get v x y with
+    match get v ~x ~y with
     | Some track ->
       let track = Track.remove_dir track ~dir in
       if Track.is_empty track then
-        remove v x y
+        remove v ~x ~y
       else
-        set v x y track
+        set v ~x ~y ~t:track
     | None -> v
   in
   let x2, y2 = Dir.adjust dir x y in
@@ -219,9 +219,9 @@ let remove_track v ~x ~y ~dir ~player =
           remove_track_dir v ~x ~y ~dir;
       | Station _ ->
           (* TODO: handle station removal *)
-          remove v x y
+          remove v ~x ~y
       | Bridge _ | Tunnel ->
-          remove v x y
+          remove v ~x ~y
     else v
   in
   let track2 = get_track_default v ~x:x2 ~y:y2 ~player in
@@ -259,7 +259,7 @@ module Search = struct
     let player2 = player in
     let rec loop_to_node x y dir dist =
       let oppo_dir = Dir.opposite dir in
-      match get v x y with
+      match get v ~x ~y with
       | Some {ixn = true; player; _} when player = player2 ->
           Some (_make_ixn x y dist oppo_dir search_dir false) 
       | Some {kind = Station _; player; _} when player = player2 ->
@@ -295,7 +295,7 @@ module Search = struct
    *)
   let scan v ~x ~y ~player =
     let player2 = player in
-    match get v x y with
+    match get v ~x ~y with
     | None -> NoResult
     | Some {player; _} when player <> player2 -> NoResult
     | Some track ->

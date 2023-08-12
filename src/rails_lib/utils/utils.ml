@@ -77,7 +77,18 @@ module IntMap = Map.Make(struct
   let compare (x:int) y = x - y
 end)
 
-type loc = int * int [@@deriving eq, yojson, show]
+type loc = int * int
+  [@@deriving eq, yojson, show]
+
+type locd = int * int * Dir.t
+  [@@deriving eq, ord, yojson]
+
+type locdpair = locd * locd
+  [@@deriving eq, ord, yojson]
+
+  (* A canonical order for locdp *)
+let canonical_locdpair ((locd1, locd2) as p) =
+   if compare_locd locd1 locd2 > 0 then locd2, locd1 else p
 
 module IntIntMap = Map.Make(struct
   type t = loc [@@deriving yojson]

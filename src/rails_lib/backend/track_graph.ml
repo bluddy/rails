@@ -1,5 +1,6 @@
 open Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open Utils
 
 let src = Logs.Src.create "track_graph" ~doc:"The track graph"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -9,11 +10,8 @@ module Log = (val Logs.src_log src: Logs.LOG)
 (* NOTE: must be per player! *)
 
 module Edge : sig 
-    type xy_dir = int * int * Dir.t
-    [@@deriving eq, ord, yojson]
-
     type t = private {
-      nodes: xy_dir * xy_dir;
+      nodes: locdpair;
       dist: int;
       mutable block: bool;
     } [@@deriving yojson]
@@ -23,35 +21,24 @@ module Edge : sig
     val compare: t -> t -> int
     val make: int -> int -> Dir.t -> int -> int -> Dir.t -> int -> t
     val has_xydir: int -> int -> Dir.t -> t -> bool
-    val dir_of_xy: int * int -> t -> Dir.t option
+    val dir_of_xy: loc -> t -> Dir.t option
     val set_block: bool -> t -> unit
   end
 = struct
-    type xy_dir = int * int * Dir.t
-    [@@deriving eq, ord, yojson]
-
     type t = {
-      nodes: xy_dir * xy_dir;
+      nodes: locdpair;
       dist: int;
       mutable block: bool;
     } [@@deriving yojson]
 
     let canonical v =
-       let xyd1, xyd2 = v.nodes in
-       if compare_xy_dir xyd1 xyd2 > 0 then {v with nodes=(xyd2, xyd1)}
-       else v
+      let nodes = canonical_locdpair v.nodes in 
+      [%up {v with nodes}]
 
     (* Assume we're operating on canonical values *)
-    let equal x y =
-      equal_xy_dir (fst x.nodes) (fst y.nodes)
-      && equal_xy_dir (snd x.nodes) (snd y.nodes)
+    let equal x y = equal_locdpair x.nodes y.nodes
 
-    let compare x y =
-      let cmp1 = compare_xy_dir (fst x.nodes) (fst y.nodes) in
-      if cmp1 = 0 then
-        compare_xy_dir (snd x.nodes) (snd y.nodes)
-      else
-        cmp1
+    let compare x y = compare_locdpair x.nodes y.nodes
 
     (* We always make sure we're canonical *)
     let make x1 y1 dir1 x2 y2 dir2 dist =
@@ -63,7 +50,7 @@ module Edge : sig
       (* Either node can match *)
     let has_xydir x y dir v =
       let d1, d2 = v.nodes in
-      equal_xy_dir (x,y,dir) d1 || equal_xy_dir (x,y,dir) d2
+      equal_locd (x,y,dir) d1 || equal_locd (x,y,dir) d2
 
       (* Return matching dir for ixn x, y *)
     let dir_of_xy (x,y) v = match v.nodes with
