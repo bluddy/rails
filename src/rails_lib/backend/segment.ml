@@ -1,11 +1,12 @@
-open Containers
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Containers
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 let src = Logs.Src.create "segments" ~doc:"Segments"
 module Log = (val Logs.src_log src: Logs.LOG)
 
   (* Module to handle the connections between stations (segments). We use these
      to make sure the 'semaphore' for the track has the right number of trains on it.
+     Note: these segments can connect between >2 stations!
    *)
 
 type id = int

@@ -336,3 +336,17 @@ let other_period = function
   | `First -> `Second
   | `Second -> `First
 
+let sort3 ~geq x y z =
+  let x, y = if geq y x then x, y else y, x in
+  if geq z y then x, y, z
+  else if geq z x then x, z ,y
+  else z, x, y
+
+let sort4 ~geq x y z w =
+  let x, y, z = sort3 ~geq x y z in
+  if geq w z then x, y, z, w
+  else if geq w y then x, y, w, z
+  else if geq w x then x, w, y, z
+  else w, x, y, z
+
+  

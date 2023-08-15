@@ -23,11 +23,11 @@ module Make(E: Elem) = struct
   let is_empty v =
     v = 0
 
-  let mem v elem =
+  let mem elem v =
     let i = E.to_enum elem in
     v land (1 lsl i) <> 0
 
-  let remove v elem =
+  let remove elem v =
     let i = E.to_enum elem in
     v land (lnot (1 lsl i))
 
@@ -49,7 +49,7 @@ module Make(E: Elem) = struct
     with
     Not_found -> None
 
-  let add v elem =
+  let add elem v =
     let i = E.to_enum elem in
     v lor (1 lsl i)
 

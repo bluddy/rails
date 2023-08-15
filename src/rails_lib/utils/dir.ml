@@ -11,6 +11,13 @@ type t =
   | UpLeft
   [@@deriving show, eq, ord, enum, yojson]
 
+let (=) x y = equal x y
+let (<>) x y = not(equal x y)
+let (<) x y = compare x y < 0
+let (>) x y = compare x y > 0
+let (>=) x y = compare x y >= 0
+let (<=) x y = compare x y <= 0
+
 let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
 let dirlist_left = [Left; UpLeft; Up; UpRight; Right; DownRight; Down; DownLeft]
 
