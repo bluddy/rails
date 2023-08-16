@@ -28,24 +28,25 @@ let is_ixn v = match v.kind with
 let is_station v = match v.kind with
   | Station _ -> true | _ -> false
 
-let canonical v =
-  let open Dir in
+let canonical kind =
+  let open Dir.Infix in
   match kind with
   | Track2(d, dir, dir2) when dir > dir2 -> Track2(d, dir2, dir)
   | Ferry2(d, dir, dir2) when dir > dir2 -> Ferry2(d, dir2, dir)
   | Ixn3(d, dir, dir2, dir3) as x ->
       let ddir, ddir2, ddir3 = Utils.sort3 ~geq:(>=) dir dir2 dir3 in
-      if d = ddir && dir2 = ddir2 && dir3 = ddir3 then x
+      if dir = ddir && dir2 = ddir2 && dir3 = ddir3 then
+        x
       else
         Ixn3(d, ddir, ddir2, ddir3)
-  | Ixn4(d, dir, dir2, dir3, dir4) as x ->
+  | Ixn4(dir, dir2, dir3, dir4) as x ->
       let ddir, ddir2, ddir3, ddir4 = Utils.sort4 ~geq:(>=) dir dir2 dir3 dir4 in
-      if d = ddir && dir2 = ddir2 && dir3 = ddir3 && dir4 = ddir4 then x
+      if dir = ddir && dir2 = ddir2 && dir3 = ddir3 && dir4 = ddir4 then x
       else 
-        Ixn4(d, ddir, ddir2, ddir3, ddir4)
+        Ixn4(ddir, ddir2, ddir3, ddir4)
   | x -> x
 
-let make kind ~player = {canonical kind; player}
+let make kind ~player = {kind=canonical kind; player}
 
 let add_dir v ~dir =
   let open Dir in
@@ -156,7 +157,7 @@ let is_straight v =
 
   (* Convert a single dir to a straight track *)
 let straighten v =
-  let open Dir in
+  let open Dir.Infix in
   let kind = match v.kind with
   | Track(d, dir) -> canonical @@ Track2(d, dir, Dir.opposite dir)
   | Ferry(d, dir) -> canonical @@ Ferry2(d, dir, Dir.opposite dir)

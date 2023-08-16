@@ -153,7 +153,7 @@ let get_upgrades v = match v.info with
 
 let has_upgrade v upgrade =
   let upgrades = get_upgrades v in
-  Upgrades.mem upgrades upgrade
+  Upgrades.mem upgrade upgrades 
 
 let can_maintain v =
   has_upgrade v EngineShop || has_upgrade v MaintenanceShop
@@ -249,7 +249,7 @@ let add_upgrade v upgrade player =
   let info =
     match v.info with
     | Some ({upgrades;_} as info) ->
-        let upgrades = Upgrades.add upgrades upgrade in
+        let upgrades = Upgrades.add upgrade upgrades in
         {info with upgrades} |> Option.some
     | None -> None
   in
@@ -365,7 +365,7 @@ let lose_supplies v =
 
         let open Goods in
         let amount2 =
-          let has x = Upgrades.mem info.upgrades x in
+          let has x = Upgrades.mem x info.upgrades in
           match good with
           | Mail when has PostOffice  -> amount2
           | Passengers when has Hotel -> amount2

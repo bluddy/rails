@@ -9,14 +9,16 @@ type t =
   | DownLeft
   | Left
   | UpLeft
-  [@@deriving show, eq, ord, enum, yojson]
+  [@@deriving show, eq, ord, enum, hash, yojson]
 
-let (=) x y = equal x y
-let (<>) x y = not(equal x y)
-let (<) x y = compare x y < 0
-let (>) x y = compare x y > 0
-let (>=) x y = compare x y >= 0
-let (<=) x y = compare x y <= 0
+module Infix = struct
+  let (=) x y = equal x y
+  let (<>) x y = not(equal x y)
+  let (<) x y = compare x y < 0
+  let (>) x y = compare x y > 0
+  let (>=) x y = compare x y >= 0
+  let (<=) x y = compare x y <= 0
+end
 
 let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
 let dirlist_left = [Left; UpLeft; Up; UpRight; Right; DownRight; Down; DownLeft]
@@ -89,7 +91,8 @@ module Set = struct
   (* Convert bool mask to dir set *)
   let of_mask mask =
     Iter.foldi (fun acc i v ->
-      if v then add acc (of_enum i |> Option.get_exn_or "dir")
+      if v then
+        add (of_enum i |> Option.get_exn_or "dir") acc
       else acc)
     empty
     mask
@@ -97,16 +100,16 @@ module Set = struct
   (* Number of near options, including original dir *)
   let num_adjacent dir dirs =
     let ret = 0 in
-    let ret = if mem dirs dir then ret + 1 else ret in
-    let ret = if mem dirs (cw dir) then ret + 1 else ret in
-    let ret = if mem dirs (ccw dir) then ret + 1 else ret in
+    let ret = if mem dir dirs then ret + 1 else ret in
+    let ret = if mem (cw dir) dirs then ret + 1 else ret in
+    let ret = if mem (ccw dir) dirs then ret + 1 else ret in
     ret
 
   (* Find the closest dir to the original direction,
       allowing up to a 90 degree turn
     *)
   let find_nearest dir dirs =
-    let check = mem dirs in
+    let check = fun d -> mem d dirs in
     if check dir then Some dir else
     let cwd = cw dir in
     if check cwd then Some cwd else

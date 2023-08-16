@@ -75,7 +75,7 @@ module Modifiers = struct
     let last = `Caps
   end)
 
-  let shift v = mem v `Shift
+  let shift v = mem `Shift v
 end
 
 type t =
@@ -95,7 +95,7 @@ let handle_key event (event_typ:Sdl.Event.enum) =
   let repeat = get event keyboard_repeat in
   let keymod = get event keyboard_keymod in
   let mod_set test v set =
-    if ((test land keymod) <> 0) then Modifiers.add set v else set
+    if ((test land keymod) <> 0) then Modifiers.add v set else set
   in
   let modifiers =
     Modifiers.empty
@@ -189,7 +189,7 @@ let mouse_motion event ~zoom =
   let state = get event mouse_motion_state in
   let state =
     let mod_set test v set =
-      if Int32.((test land state) <> 0l) then Buttons.add set v else set
+      if Int32.((test land state) <> 0l) then Buttons.add v set else set
     in
     Buttons.empty
     |> mod_set Sdl.Button.lmask `Left
