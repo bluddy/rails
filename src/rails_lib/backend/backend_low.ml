@@ -85,7 +85,8 @@ module Segments = struct
         let station_map =
           List.fold_left (fun station_map (loc, _) ->
               Station_map.update loc 
-                (Option.map (fun station -> Station.modify_segment station seg2 seg1))
+                (Option.map (fun station ->
+                    Station.replace_segment station seg2 seg1))
                 station_map)
             station_map
             stations
@@ -133,7 +134,8 @@ module Segments = struct
         let station_map =
           Iter.fold (fun station_map (loc, _) ->
               Station_map.update loc
-                (Option.map (fun station -> Station.modify_segment station seg1 seg2))
+                (Option.map @@
+                  fun station -> Station.replace_segment station seg1 seg2)
                 station_map)
             station_map
             stations

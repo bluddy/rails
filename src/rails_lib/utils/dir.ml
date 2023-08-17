@@ -14,6 +14,19 @@ type t =
 let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
 let dirlist_left = [Left; UpLeft; Up; UpRight; Right; DownRight; Down; DownLeft]
 
+module Infix = struct
+  let (<) x y = compare x y < 0
+  let (<=) x y = compare x y <= 0
+  let (>=) x y = compare x y >= 0
+  let (>) x y = compare x y > 0
+  let (=) x y = equal x y
+  let (<>) x y = compare x y <> 0
+end
+
+(* Helps us catalog directions *)
+let lower x = Infix.(x <= DownRight)
+let upper x = Infix.(x >= Down)
+
 let cw = function
   | Up -> UpRight
   | UpRight -> Right

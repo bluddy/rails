@@ -127,8 +127,8 @@ type t = {
   year: int;
   info: info option;
   player: int;
-  segments: (Dir.t * Segment.id) * (Dir.t * Segment.id); (* Semaphores between stations *)
-  signals: (Dir.t * signal) * (Dir.t * signal);
+  segments: Segment.id * Segment.id; (* Semaphores between stations. Lower then upper *)
+  signals: signal * signal; (* lower then upper *)
 } [@@deriving yojson]
 
 let with_info v f = match v.info with
@@ -162,48 +162,42 @@ let has_restaurant v = has_upgrade v Restaurant
 let has_hotel v = has_upgrade v Hotel
 
 let get_segment (v:t) dir = match v.segments with
-  | (dir2, x), _ when Dir.equal dir dir2 -> x
-  | _, (dir2, x) when Dir.equal dir dir2 -> x
-  | _ -> failwith "No matching direction found"
+  | x, _ when Dir.lower dir -> x
+  | _, x -> x
 
 let set_segment (v:t) dir seg =
   let segments = match v.segments with
-    | (dir2, _), x when Dir.equal dir dir2 -> (dir2, seg), x
-    | x, (dir2, _) when Dir.equal dir dir2 -> x, (dir2, seg)
-    | _ -> failwith "No matching direction found"
+    | _, x when Dir.lower dir -> seg, x
+    | x, _ -> x, seg
   in
   {v with segments}
 
 let get_signal (v:t) dir = match v.signals with
-  | (dir2, x), _ when Dir.equal dir dir2 -> x
-  | _, (dir2, x) when Dir.equal dir dir2 -> x
-  | _ -> failwith "No matching direction found"
+  | x, _ when Dir.lower dir -> x
+  | _, x -> x
 
 let set_signal (v:t) dir signal =
   let signals = match v.signals with
-    | (dir2, _), x when Dir.equal dir dir2 -> (dir2, signal), x
-    | x, (dir2, _) when Dir.equal dir dir2 -> x, (dir2, signal)
-    | _ -> failwith "No matching direction found"
+    | _, x when Dir.lower dir -> signal, x
+    | x, _ -> x, signal
   in
   {v with signals}
 
-let modify_segment (v:t) seg_old seg_new =
+let replace_segment (v:t) seg_old seg_new =
   let segments = match v.segments with
-    | (d, seg2), x when Segment.equal_id seg_old seg2 -> (d, seg_new), x
-    | x, (d, seg2) when Segment.equal_id seg_old seg2 -> x, (d, seg_new)
+    | seg2, x when Segment.equal_id seg_old seg2 -> seg_new, x
+    | x, seg2 when Segment.equal_id seg_old seg2 -> x, seg_new
     | _ -> v.segments
   in
-  {v with segments}
+  [%up {v with segments}]
 
 let make_segments_and_signals segments =
   let segments = match segments with
-    | [(x, y); (z, w)] -> ((x, y), (z, w))
+    | [d1, seg1; _, seg2] when Dir.lower d1 -> (seg1, seg2)
+    | [_, seg1; _, seg2] -> (seg2, seg1)
     | _ -> failwith "Incorrect number of segments"
   in
-  let signals = 
-    let (dir1, _), (dir2, _) = segments in
-    (dir1, Auto), (dir2, Auto)
-  in
+  let signals = Auto, Auto in
   segments, signals
 
 let make_signaltower ~x ~y ~year ~player ~segments =
