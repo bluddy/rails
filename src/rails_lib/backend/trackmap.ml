@@ -232,6 +232,11 @@ let remove_track v ~x ~y ~dir ~player =
       (* All other constructs remain whole with full dirs *)
       v
 
+let has_station (x,y) v =
+  match get ~x ~y v with
+  | Some t -> Track.is_station t
+  | None -> false
+
 module Search = struct
   (* Module for searching the trackmap for stations and ixns.
      For updating the graph and the station segment connectivity

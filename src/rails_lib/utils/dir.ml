@@ -24,8 +24,11 @@ module Infix = struct
 end
 
 (* Helps us catalog directions *)
-let lower x = Infix.(x <= DownRight)
-let upper x = Infix.(x >= Down)
+let catalog x =
+  let open Infix in
+  if x <= DownRight then `Lower else `Upper
+let lower x = match catalog x with `Lower -> true | _ -> false
+let upper x = not (lower x)
 
 let cw = function
   | Up -> UpRight

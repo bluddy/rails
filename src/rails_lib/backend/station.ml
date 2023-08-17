@@ -127,7 +127,6 @@ type t = {
   year: int;
   info: info option;
   player: int;
-  segments: Segment.id * Segment.id; (* Semaphores between stations. Lower then upper *)
   signals: signal * signal; (* lower then upper *)
 } [@@deriving yojson]
 
@@ -161,6 +160,7 @@ let can_build_train v = has_upgrade v EngineShop
 let has_restaurant v = has_upgrade v Restaurant
 let has_hotel v = has_upgrade v Hotel
 
+(*
 let get_segment (v:t) dir = match v.segments with
   | x, _ when Dir.lower dir -> x
   | _, x -> x
@@ -171,6 +171,7 @@ let set_segment (v:t) dir seg =
     | x, _ -> x, seg
   in
   {v with segments}
+*)
 
 let get_signal (v:t) dir = match v.signals with
   | x, _ when Dir.lower dir -> x
@@ -183,6 +184,7 @@ let set_signal (v:t) dir signal =
   in
   {v with signals}
 
+(*
 let replace_segment (v:t) seg_old seg_new =
   let segments = match v.segments with
     | seg2, x when Segment.equal_id seg_old seg2 -> seg_new, x
@@ -199,12 +201,13 @@ let make_segments_and_signals segments =
   in
   let signals = Auto, Auto in
   segments, signals
+  *)
 
-let make_signaltower ~x ~y ~year ~player ~segments =
-  let segments, signals = make_segments_and_signals segments in
-  { x; y; year; info=None; player; segments; signals}
+let make_signaltower ~x ~y ~year ~player =
+  let signals = Auto, Auto in
+  { x; y; year; info=None; player; signals}
 
-let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first ~segments =
+let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
   let name = match suffix with
     | Some suffix -> city_name^" "^show_suffix suffix
     | None -> city_name
@@ -235,8 +238,8 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first ~segments 
         rates=`Normal;
       } |> Option.some
   in
-  let segments, signals = make_segments_and_signals segments in
-  { x; y; year; info; player; segments; signals}
+  let signals = Auto, Auto in
+  { x; y; year; info; player; signals}
 
 let add_upgrade v upgrade player =
   if v.player <> player then v else

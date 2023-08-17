@@ -62,10 +62,11 @@ let%expect_test "graph shortest path" =
   [%expect {| Some Dir.Up |}]
 
 let%expect_test "connected_stations_dirs" =
-  let map = Loc_map.empty
-    |> Loc_map.add (1,2) 10
-    |> Loc_map.add (3,4) 11
-    |> Loc_map.add (5,6) 12
+  let t = Track.make Dir.Set.empty (Station `Station) ~player:0 in
+  let map = Trackmap.empty 10 10
+    |> Trackmap.set ~x:1 ~y:2 ~t
+    |> Trackmap.set ~x:3 ~y:4 ~t
+    |> Trackmap.set ~x:5 ~y:6 ~t
   in
   let g = graph () in
   let res = TG.connected_stations_dirs g map (1,2) |> Iter.to_list in

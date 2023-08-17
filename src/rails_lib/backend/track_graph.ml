@@ -202,7 +202,7 @@ let shortest_path ~src ~dest v =
      exclude_dir: exclude searching in a given direction
      exclude_ixns: exclude these ixns from the search
    *)
-let connected_stations_dirs ?exclude_dir ?exclude_ixns graph station_map ixn =
+let connected_stations_dirs ?exclude_dir ?exclude_ixns graph trackmap ixn =
   let stations = Hashtbl.create 10 in
   let start_ixns = Hashtbl.create 5 in
   (* Prevent loops *)
@@ -226,7 +226,7 @@ let connected_stations_dirs ?exclude_dir ?exclude_ixns graph station_map ixn =
       if Hashtbl.mem seen_ixns ixn then ()
       else begin 
         iter_succ_ixn_dirs (fun ixn dir ->
-          if Station_map.mem ixn station_map then 
+          if Trackmap.has_station ixn trackmap then 
             Hashtbl.replace stations ixn dir
           else 
             Hashtbl.replace ixns2 ixn ())

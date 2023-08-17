@@ -121,7 +121,7 @@ type t = {
   state: state;
   mutable pixels_from_midtile: int; (* 0-16 *)
   mutable dir: Dir.t;
-  segment: Segment.id option; (* for track semaphores *)
+  segment: Segment_map.id option; (* for track semaphores *)
   name: string option;
   last_station: Station.id;
   stop_at_station: bool;
