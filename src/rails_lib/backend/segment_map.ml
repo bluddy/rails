@@ -1,5 +1,6 @@
-open Containers
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Containers
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Utils
 
 let src = Logs.Src.create "segments" ~doc:"Segments"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -13,9 +14,12 @@ type id = int
 
 module Map = struct
 
+  type upper = bool
+
   type t = {
     mutable last: int;
-    map: (id, int) Utils.Hashtbl.t; (* segment id to count *)
+    counts: (id, int) Hashtbl.t;
+    stations: (int * int * upper, id) Hashtbl.t; (* x,y,upper to id *)
   }[@@deriving yojson]
 
   let make () = { last=0; map=Hashtbl.create 10; }
