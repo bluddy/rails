@@ -12,37 +12,38 @@ module Log = (val Logs.src_log src: Logs.LOG)
 type id = int
 [@@deriving yojson, eq, show]
 
-module Map = struct
+type upper = bool
 
-  type upper = bool
+type t = {
+  mutable last: int;
+  counts: (id, int) Hashtbl.t;
+  stations: (int * int * upper, id) Hashtbl.t; (* x,y,upper to id *)
+}[@@deriving yojson]
 
-  type t = {
-    mutable last: int;
-    counts: (id, int) Hashtbl.t;
-    stations: (int * int * upper, id) Hashtbl.t; (* x,y,upper to id *)
-  }[@@deriving yojson]
+let make () = {
+  last=0;
+  counts=Hashtbl.create 10;
+  stations=Hashtbl.create 10;
+}
 
-  let make () = { last=0; map=Hashtbl.create 10; }
+let new_id v =
+  Hashtbl.replace v.counts v.last 0;
+  let ret = v.last in
+  v.last <- succ v.last;
+  Log.debug (fun f -> f "Segment: Get new id %d" ret);
+  ret
 
-  let new_id v =
-    Hashtbl.replace v.map v.last 0;
-    let ret = v.last in
-    v.last <- succ v.last;
-    Log.debug (fun f -> f "Segment: Get new id %d" ret);
-    ret
+let incr_train v idx = Hashtbl.incr v.counts idx
+let decr_train v idx = Hashtbl.decr v.counts idx
+let reset v idx = Hashtbl.replace v.counts idx 0
 
-  let incr_train v idx = Hashtbl.incr v.map idx
-  let decr_train v idx = Hashtbl.decr v.map idx
-  let reset v idx = Hashtbl.replace v.map idx 0
+(* Merge segments so seg2 joins seg1 *)
+let merge v seg1 seg2 =
+  Log.debug (fun f -> f "Segment: Merge ids %s, %s" (show seg1) (show seg2));
+  let v2 = Hashtbl.find v.counts seg2 in
+  Hashtbl.incr v.counts seg1 ~by:v2;
+  Hashtbl.remove v.counts seg2;
+  v
 
-  (* Merge segments so seg2 joins seg1 *)
-  let merge v seg1 seg2 =
-    Log.debug (fun f -> f "Segment: Merge ids %d, %d" seg1 seg2);
-    let v1 = Hashtbl.find v.map seg1 in
-    let v2 = Hashtbl.find v.map seg2 in
-    Hashtbl.replace v.map seg1 (v1 + v2);
-    Hashtbl.remove v.map seg2
-
-end
 
 
