@@ -97,7 +97,7 @@ end
 type state =
   | Traveling of { mutable speed: int; (* *5 to get real speed *)
                    mutable target_speed: int;
-                   last_stop: (int * int) option; (* To prevent double processing *)
+                   last_stop_dir: ((int * int) * Dir.t) option; (* To prevent double processing *)
                 }
   | WaitingAtStation of {mutable wait_time: int}
   [@@deriving yojson, show]
@@ -199,7 +199,7 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
     engine;
     pixels_from_midtile=0;
     dir;
-    state=Traveling {speed=1; target_speed=1; last_stop=None};
+    state=Traveling {speed=1; target_speed=1; last_stop_dir=None};
     cars;
     freight=freight_of_cars cars;
     typ=Local;
@@ -479,11 +479,12 @@ let update_train _idx (train:t) ~cycle ~cycle_check
               (train.y mod C.tile_h) = C.tile_h / 2
             in
             let loc = train.x / C.tile_w, train.y / C.tile_h in
-            match travel_state.last_stop with
-            | Some last_stop when is_mid_tile && Utils.neq_xy last_stop loc ->
-                update_mid_tile train loc
+            match travel_state.last_stop_dir with
+            | Some (last_stop, _) when is_mid_tile && Utils.neq_xy last_stop loc ->
+              (* Avoid double update *)
+              update_mid_tile train loc
             | None when is_mid_tile ->
-                update_mid_tile train loc
+              update_mid_tile train loc
             | _ ->
               advance train)
           else

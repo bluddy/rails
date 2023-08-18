@@ -394,11 +394,10 @@ let _train_replace_engine v ~train ~engine ~player =
 
 let _remove_train v idx =
   let train = Trainmap.get v.trains idx in
-  (* TODO: XXX Handle train removal *)
-  (match train.segment with
-  | Some segment_id ->
-      Segment.Map.decr_train v.segments segment_id
-  | _ -> ());
+  (match train.state with
+    | Traveling {last_stop_dir=Some locd;_} ->
+      Segment_map.decr_train locd v.segments
+    | _ -> ());
   let trains = Trainmap.delete v.trains idx in
   [%up {v with trains}]
 

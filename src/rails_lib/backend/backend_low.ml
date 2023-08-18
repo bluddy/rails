@@ -232,17 +232,18 @@ module Train_update = struct
               |> Option.get_exn_or "Cannot find track for train"
           in
           (* enter segment *)
-          Segment_map.incr_train (loc,dir) v.segments;
+          let locd = (loc, dir) in
+          Segment_map.incr_train locd v.segments;
           (* TODO Check signal for exit dir *)
           let train = 
             {train with
-              state=Train.Traveling {speed=0; target_speed=4; last_stop=Some loc}}
+              state=Train.Traveling {speed=0; target_speed=4; last_stop_dir=Some locd}}
           in
           _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
         in
         let train = match train.state with
           | Traveling s ->
-              let train = enter train (Option.is_none s.last_stop) in
+              let train = enter train (Option.is_none s.last_stop_dir) in
               (match train.state with
               | WaitingAtStation s when s.wait_time > 0 -> train
               | _ -> exit train)
