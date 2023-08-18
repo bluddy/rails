@@ -18,7 +18,7 @@ type upper = [`Upper | `Lower]
 type t = {
   mutable last: int;
   counts: (id, int) Hashtbl.t;
-  stations: (int * int * upper, id) Hashtbl.t; (* x,y,upper to id *)
+  stations: (loc * upper, id) Hashtbl.t;
 } [@@deriving yojson]
 
 let make () = {
@@ -34,30 +34,31 @@ let new_id v =
   Log.debug (fun f -> f "Segment: Get new id %d" ret);
   ret
 
-let add locu id v =
-  Hashtbl.replace v.stations locu id
+let add (loc, d) id v =
+  let upper = Dir.catalog d in
+  Hashtbl.replace v.stations (loc, upper) id
 
 let incr_train v idx = Hashtbl.incr v.counts idx
 let decr_train v idx = Hashtbl.decr v.counts idx
-let reset v idx = Hashtbl.replace v.counts idx 0
-let get_id (x,y,d) v = Hashtbl.find v.stations (x, y, Dir.catalog d)
+let reset idx v = Hashtbl.replace v.counts idx 0
+let get_id (loc,d) v = Hashtbl.find v.stations (loc, Dir.catalog d)
 
 (* Merge segments so seg2 joins seg1 *)
-let merge v seg1 seg2 =
-  Log.debug (fun f -> f "Segment: Merge ids %s, %s" (show_id seg1) (show_id seg2));
-  let v2 = Hashtbl.find v.counts seg2 in
+let merge seg1 ~remove_seg v =
+  Log.debug (fun f -> f "Segment: Merge ids %s, %s" (show_id seg1) (show_id remove_seg));
+  let v2 = Hashtbl.find v.counts remove_seg in
   Hashtbl.incr v.counts seg1 ~by:v2;
-  Hashtbl.remove v.counts seg2;
+  Hashtbl.remove v.counts remove_seg;
   ()
 
 module TS = Trackmap.Search
 
 (* When we build a station, we create new station segments on both ends of the station *)
 (* TODO: for upgrade, need to compare before and after *)
-let build_station_get_segments graph v trackmap ((x,y) as loc) after =
+let build_station_get_segments graph v trackmap loc after =
   (* Connected ixns *)
   let ixns = match after with
-    | TS.Station ixns -> ixns
+    | TS.Station ixns -> ixns  (* 0/1/2 *)
     | _ -> assert false
   in
   let dir_segs =
@@ -70,37 +71,36 @@ let build_station_get_segments graph v trackmap ((x,y) as loc) after =
       in
       match station with
       (* Found a station facing us *)
-      | Some ((x,y), facing_us_dir) ->
+      | Some ((x,y) as loc, facing_us_dir) ->
           Log.debug (fun f -> f "Segments: found existing station at (%d,%d)" x y);
           (* Get its id *)
-          let id = get_id (x, y, facing_us_dir) v in
+          let id = get_id (loc, facing_us_dir) v in
           Some (ixn.search_dir, id)
       | _ -> None)
     ixns
   in
-  (* Only care about having one result from each station direction *)
-  let dir_segs = List.sort_uniq ~cmp:(fun (d1,_) (d2,_) -> Dir.compare d1 d2) dir_segs in
+  (* We get at most 2: one per direction *)
   (* Fill in with new segments as needed *)
   match dir_segs with
   | [] -> (* No connected id found: add new ids to both ends *)
       let id = new_id v in
       let id2 = new_id v in
-      add (x,y,`Upper) id v;
-      add (x,y,`Lower) id v;
+      add (loc, Dir.Up) id v;
+      add (loc, Dir.Down) id2 v;
       v
 
     (* Found only one id. Add one new one and add to both ends *)
   | [dir, id] -> 
-      add (x, y, Dir.catalog dir) id v;
+      add (loc, dir) id v;
       let id2 = new_id v in
-      add (x, y, Dir.catalog @@ Dir.opposite dir) id2 v;
+      add (loc, Dir.opposite dir) id2 v;
       v
 
     (* Found both dirs *)
   | [dir, id; dir2, id2] ->
       assert Dir.(equal (opposite dir) dir2);
-      add (x, y, Dir.catalog dir) id v;
-      add (x, y, Dir.catalog dir2) id2 v;
+      add (loc, dir) id v;
+      add (loc, dir2) id2 v;
       v
 
   | _ -> failwith "Found too many directions"
@@ -109,49 +109,44 @@ let build_station_get_segments graph v trackmap ((x,y) as loc) after =
   (* We only care about connecting to a new piece of track that could lead
   to a station. ixns and stations are the same for this
   *)
-  let build_track_join_segments graph station_map segments before after =
+  let build_track_join_segments graph trackmap segments before after =
     let join_ixns = match before, after with
       (* Add an attached ixn: make the two have the same segment *)
       | TS.Track [_], TS.Track [ixn2; ixn3] -> Some (ixn2, ixn3)
+
       (* Add an ixn to a 2-ixn. Make them all have same segment *)
       | Track (ixn1::_ as l1), Ixn l2 ->
-          begin match Utils.find_mismatch ~eq:TS.equal_ixn ~left:l2 ~right:l1 with
-          | Some ixn2 -> Some (ixn1, ixn2)
-          | None -> None
-          end
+          (* Find an ixn they don't have in common *)
+          Utils.find_mismatch ~eq:TS.equal_ixn ~left:l2 ~right:l1
+          |> Option.map (fun ixn2 -> (ixn1, ixn2))
+
       | _ -> None
     in
     match join_ixns with
-    | None -> station_map
+    | None -> segments
     | Some (ixn1, ixn2) ->
         let ixn1 = (ixn1.x, ixn1.y) in
         let ixn2 = (ixn2.x, ixn2.y) in
-        let loc, dir1 =
-          Track_graph.connected_stations_dirs graph station_map ixn1 ~exclude_ixns:[ixn2]
-          |> Iter.head_exn
+        let locd1 =
+          Track_graph.connected_stations_dirs graph trackmap ixn1 ~exclude_ixns:[ixn2]
+          |> Iter.head
         in
-        let station1 = Station_map.get_exn loc station_map in
-        let seg1 = Station.get_segment station1 dir1 in
-        let stations =
-          Track_graph.connected_stations_dirs graph station_map ixn2 ~exclude_ixns:[ixn1]
+        let tgt_stations =
+          Track_graph.connected_stations_dirs graph trackmap ixn2 ~exclude_ixns:[ixn1]
           |> Iter.to_list
         in
-        let loc, dir2 = List.hd stations in
-        let station2 = Station_map.get_exn loc station_map in
-        let seg2 = Station.get_segment station2 dir2 in
-        (* Assign seg1 to all connected stations that had seg2 *)
-        let station_map =
-          List.fold_left (fun station_map (loc, _) ->
-              Station_map.update loc 
-                (Option.map (fun station ->
-                    Station.replace_segment station seg2 seg1))
-                station_map)
-            station_map
-            stations
-        in
-        (* Update segment map *)
-        Segment.Map.merge segments seg1 seg2;
-        station_map
+        begin match locd1, tgt_stations with
+        | Some locd1, locd2::_ ->
+          let seg = get_id locd1 segments in
+          let seg2 = get_id locd2 segments in
+          (* Convert and merge *)
+          List.iter (fun locd -> add locd seg segments) tgt_stations;
+          merge seg ~remove_seg:seg2 segments;
+          segments
+        | _ ->
+           (* Do nothing if there's no stations to merge *)
+            segments
+        end
 
     (* Removing a piece of track can split a segment. Unfortunately we can't
        keep track of the segment's semaphore value unless we scan the whole segment for
@@ -159,44 +154,44 @@ let build_station_get_segments graph v trackmap ((x,y) as loc) after =
        We're too lazy to do that so we'll just set all segment values to 0.
        NOTE: This can cause train crashes. Implement with mapping to trains.
      *)
-  let remove_track_split_segment graph station_map segments (before:TS.scan) (after:TS.scan) =
-    let separate_pair = match before, after with
+  let remove_track_split_segment graph trackmap segments (before:TS.scan) (after:TS.scan) =
+    let split_ixns = match before, after with
       (* Disconnecting a track leading to 2 ixns *)
       | Track [ixn1; ixn2], Track [_] -> Some(ixn1, ixn2)
+
       (* Disconnecting an ixn *)
       | Ixn l1, Track ((ixn2::_) as l2) ->
-          begin match Utils.find_mismatch ~eq:TS.equal_ixn ~left:l1 ~right:l2 with
-          | Some ixn1 -> Some (ixn1, ixn2)
-          | None -> assert false
-          end
-      (* Removing a station *)
-      | Station [ixn1; ixn2], (Track _ | NoResult) -> Some (ixn1, ixn2)
+        Utils.find_mismatch ~eq:TS.equal_ixn ~left:l1 ~right:l2
+        |> Option.map (fun ixn1 -> ixn1, ixn2)
+
+      (* Removing a station with connections on both sides *)
+      | Station [ixn1; ixn2], (Track _ | NoResult) ->
+        Some (ixn1, ixn2)
       | _ -> None
     in
-    match separate_pair with
-    | None -> station_map
+    match split_ixns with
+    | None -> segments
     | Some (ixn1, ixn2) ->
         let ixn1 = (ixn1.x, ixn1.y) in
         let ixn2 = (ixn2.x, ixn2.y) in
-        let loc, dir1 =
-          Track_graph.connected_stations_dirs graph station_map ixn1 |> Iter.head_exn
+        (* We need all stations on one side *)
+        let locd =
+          Track_graph.connected_stations_dirs graph trackmap ixn1
+          |> Iter.head
         in
-        let station1 = Station_map.get_exn loc station_map in
-        let seg1 = Station.get_segment station1 dir1 in
-        (* Set value of segment to 0 *)
-        Segment.Map.reset segments seg1;
-        (* Create a new segment for the split segment *)
-        let seg2 = Segment.Map.new_id segments in
-        let stations = Track_graph.connected_stations_dirs graph station_map ixn2 in
-        (* Assign seg2 to these stations *)
-        let station_map =
-          Iter.fold (fun station_map (loc, _) ->
-              Station_map.update loc
-                (Option.map @@
-                  fun station -> Station.replace_segment station seg1 seg2)
-                station_map)
-            station_map
-            stations
+        let tgt_stations =
+          Track_graph.connected_stations_dirs graph trackmap ixn2
+          |> Iter.to_list
         in
-        station_map
+        match locd, tgt_stations with
+        | Some locd, _::_ ->
+          let seg = get_id locd segments in
+          (* We don't know how mnay trains, so set value of segment to 0 *)
+          reset seg segments;
+          (* Create a new segment for the split segment *)
+          let seg2 = new_id segments in
+          (* Assign seg2 to all found stations *)
+          List.iter (fun locd -> add locd seg2 segments) tgt_stations;
+          segments
+        | _ -> segments
 

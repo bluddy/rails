@@ -287,12 +287,15 @@ module Search = struct
     loop_to_node x2 y2 dir 1
 
     (* Ixn/Station/Track: what we're pointing at.
-       List: what we're connected to. *)
+       List: what we're connected to.
+       Scan results center on the current track and give results on both directions
+       up to the next ixns found, if any.
+     *)
   type scan =
     | NoResult
-    | Ixn of ixn list (* 0/1/2 ixns *)
-    | Station of ixn list  (* 0/1 ixns *)
-    | Track of ixn list (* 0/1 ixns *)
+    | Ixn of ixn list (* 0/1/2/3 ixns *)
+    | Station of ixn list  (* 0/1/2 ixns *)
+    | Track of ixn list (* 0/1/2 ixns *)
     [@@deriving eq,show]
           
   (* Return a query about the segment from a particular tile
