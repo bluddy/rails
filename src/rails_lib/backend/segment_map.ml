@@ -161,6 +161,7 @@ let build_station_get_segments graph v trackmap loc after =
        We're too lazy to do that so we'll just set all segment values to 0.
        NOTE: This can cause train crashes. Implement with mapping to trains.
      *)
+    (* TODO: deleting stations with no connections should actually delete the segments *)
   let remove_track_split_segment graph trackmap segments (before:TS.scan) (after:TS.scan) =
     let split_ixns = match before, after with
       (* Disconnecting a track leading to 2 ixns *)
@@ -181,24 +182,35 @@ let build_station_get_segments graph v trackmap loc after =
     | Some (ixn1, ixn2) ->
         let ixn1 = (ixn1.x, ixn1.y) in
         let ixn2 = (ixn2.x, ixn2.y) in
-        (* We need all stations on one side *)
-        let locd =
+        (* We need to find the set differences *)
+        let grp1 =
           Track_graph.connected_stations_dirs graph trackmap ixn1
-          |> Iter.head
+          |> LocdSet.of_iter
         in
-        let tgt_stations =
+        let grp2 =
           Track_graph.connected_stations_dirs graph trackmap ixn2
-          |> Iter.to_list
+          |> LocdSet.of_iter
         in
-        match locd, tgt_stations with
-        | Some locd, _::_ ->
-          let seg = get_id locd segments in
-          (* We don't know how mnay trains, so set value of segment to 0 *)
-          reset seg segments;
-          (* Create a new segment for the split segment *)
-          let seg2 = new_id segments in
-          (* Assign seg2 to all found stations *)
-          List.iter (fun locd -> add locd seg2 segments) tgt_stations;
-          segments
-        | _ -> segments
+        (* Nothing to do if we have any empty station sets *)
+        if LocdSet.is_empty grp1 || LocdSet.is_empty grp2 then segments
+          (* Delete the empty segment if we're deleting a station *)
+        else
+          let diff1 = LocdSet.diff grp1 grp2 in
+          let diff2 = LocdSet.diff grp2 grp1 in
+          (* Nothing to do if sets are the same *)
+          if LocdSet.is_empty diff1 && LocdSet.is_empty diff2 then segments
+          else
+            let grp1, grp2 =
+              if LocdSet.is_empty diff1 then diff2, grp1 else diff1, grp2
+            in
+            let mem_g1 = LocdSet.choose grp1 in
+            let seg1 = get_id mem_g1 segments in
+            (* We don't know how mnay trains, so set value of segment to 0 *)
+            (* TODO: find how many trains per new set *)
+            reset seg1 segments;
+            (* Create a new segment for the split segment *)
+            let seg2 = new_id segments in
+            (* Assign seg2 to all grp2 stations *)
+            LocdSet.iter (fun locd -> add locd seg2 segments) grp2;
+            segments
 

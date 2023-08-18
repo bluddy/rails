@@ -42,7 +42,7 @@ module Edge : sig
 
     (* We always make sure we're canonical *)
     let make x1 y1 dir1 x2 y2 dir2 dist =
-      let nodes = (x1,y1,dir1), (x2,y2,dir2) in
+      let nodes = ((x1,y1),dir1), ((x2,y2),dir2) in
       canonical {nodes; dist; block=false}
 
     let default = make 0 0 Dir.Up 0 0 Dir.Up 0
@@ -50,12 +50,12 @@ module Edge : sig
       (* Either node can match *)
     let has_xydir x y dir v =
       let d1, d2 = v.nodes in
-      equal_locd (x,y,dir) d1 || equal_locd (x,y,dir) d2
+      equal_locd ((x,y),dir) d1 || equal_locd ((x,y),dir) d2
 
       (* Return matching dir for ixn x, y *)
     let dir_of_xy (x,y) v = match v.nodes with
-      | ((x1,y1,dir1),_) when x=x1 && y=y1 -> Some dir1
-      | (_,(x2,y2,dir2)) when x=x2 && y=y2 -> Some dir2
+      | ((x1,y1),dir1),_ when x=x1 && y=y1 -> Some dir1
+      | _,((x2,y2),dir2) when x=x2 && y=y2 -> Some dir2
       | _ -> None
 
     let set_block b v = v.block <- b

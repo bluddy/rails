@@ -78,13 +78,18 @@ module IntMap = Map.Make(struct
 end)
 
 type loc = int * int
-  [@@deriving eq, yojson, show]
+  [@@deriving eq, ord, yojson, show]
 
-type locd = int * int * Dir.t
+type locd = loc * Dir.t
   [@@deriving eq, ord, yojson]
 
 type locdpair = locd * locd
   [@@deriving eq, ord, yojson]
+
+module LocdSet = Set.Make(struct
+  type t = locd [@@deriving yojson]
+  let compare = compare_locd
+end)
 
   (* A canonical order for locdp *)
 let canonical_locdpair ((locd1, locd2) as p) =
@@ -92,9 +97,7 @@ let canonical_locdpair ((locd1, locd2) as p) =
 
 module IntIntMap = Map.Make(struct
   type t = loc [@@deriving yojson]
-  let compare (x1,y1) (x2,y2) =
-    let d = x1 - x2 in
-    if d = 0 then y1 - y2 else d
+  let compare = compare_loc
 end)
 
 module Hashtbl = struct
