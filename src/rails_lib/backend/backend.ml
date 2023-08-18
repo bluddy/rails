@@ -58,7 +58,7 @@ let default region resources ~random ~seed =
     cities;
     trains;
     track;
-    segments=Segment.Map.make ();
+    segments=Segment_map.make ();
     graph;
     stations;
     engines;
@@ -122,10 +122,10 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let after = TS.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_station v.graph ~x ~y before after in
-  let dir_segments = Backend_low.Segments.build_station_get_segments graph v.stations v.segments track x y after in
+  let _ = Segment_map.build_station_get_segments graph v.segments track (x,y) after in
   let station = match station_type with
   | `SignalTower ->
-    Station.make_signaltower ~x ~y ~year:v.year ~player ~segments:dir_segments
+    Station.make_signaltower ~x ~y ~year:v.year ~player
   | _ ->
     let city_xy = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
     let check_for_first_city () =
@@ -165,7 +165,6 @@ let _build_station v ~x ~y station_type ~player =
       ~kind:station_type
       ~player
       ~first
-      ~segments:dir_segments
   in
   let stations = Station_map.add (x,y) station v.stations in
   if build_new_track then (
@@ -199,9 +198,8 @@ let _build_tunnel v ~x ~y ~dir ~player =
     let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
     let after = TS.scan track ~x ~y ~player in
     let graph = G.Track.handle_build_track_simple v.graph before after in
-    let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
+    let _ = Segment_map.build_track_join_segments graph v.track v.segments before after in
     update_player v player @@ Player.pay Player.TunnelExpense cost;
-  [%upf v.stations <- stations];
   [%upf v.graph <- graph];
   [%upf v.track <- track];
     v
@@ -212,10 +210,9 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   let after = TS.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
+  let _ = Segment_map.build_track_join_segments graph v.track v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
-  [%upf v.stations <- stations];
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   v
@@ -271,9 +268,8 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   let after = TS.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track v.graph ~x ~y before after in
-  let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
+  let _ = Segment_map.build_track_join_segments graph v.track v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
-  [%upf v.stations <- stations];
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   v
@@ -292,9 +288,8 @@ let _build_ferry v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   let after = TS.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let stations = Backend_low.Segments.build_track_join_segments graph v.stations v.segments before after in
+  let _ = Segment_map.build_track_join_segments graph v.track v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
-  [%upf v.stations <- stations];
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   v
@@ -302,14 +297,14 @@ let _build_ferry v ~x ~y ~dir ~player =
 let check_remove_track v ~x ~y ~dir ~player=
   Trackmap.check_remove_track v.track ~x ~y ~dir ~player
 
+  (* TODO: handle removal of station *)
 let _remove_track v ~x ~y ~dir ~player =
   let before = TS.scan v.track ~x ~y ~player in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
   let after = TS.scan track ~x ~y ~player in
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
-  let stations = Backend_low.Segments.remove_track_split_segment graph v.stations v.segments before after in
+  let _ = Segment_map.remove_track_split_segment graph v.track v.segments before after in
   update_player v player (Player.add_track ~length:(-1));
-  [%upf v.stations <- stations];
   [%upf v.track <- track];
   [%upf v.graph <- graph];
   v
@@ -399,6 +394,7 @@ let _train_replace_engine v ~train ~engine ~player =
 
 let _remove_train v idx =
   let train = Trainmap.get v.trains idx in
+  (* TODO: XXX Handle train removal *)
   (match train.segment with
   | Some segment_id ->
       Segment.Map.decr_train v.segments segment_id

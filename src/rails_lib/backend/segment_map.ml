@@ -38,10 +38,17 @@ let add (loc, d) id v =
   let upper = Dir.catalog d in
   Hashtbl.replace v.stations (loc, upper) id
 
-let incr_train v idx = Hashtbl.incr v.counts idx
-let decr_train v idx = Hashtbl.decr v.counts idx
 let reset idx v = Hashtbl.replace v.counts idx 0
 let get_id (loc,d) v = Hashtbl.find v.stations (loc, Dir.catalog d)
+
+let incr_train locd v =
+  let id = get_id locd v in
+  Hashtbl.incr v.counts id
+
+let decr_train locd v =
+  let id = get_id locd v in
+  if Hashtbl.find v.counts id > 0 then
+    Hashtbl.decr v.counts id
 
 (* Merge segments so seg2 joins seg1 *)
 let merge seg1 ~remove_seg v =

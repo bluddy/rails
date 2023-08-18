@@ -206,13 +206,10 @@ module Train_update = struct
     match track.kind with
     | Station _ ->
         let station = Station_map.get_exn loc v.stations in
-        let enter train =
-          begin match train.Train.segment with
-          | Some segment ->
-              (* exit segment *)
-              Segment.Map.decr_train v.segments segment
-          | _ -> ()
-          end;
+        let enter train is_new =
+          if not is_new then
+            (* exit segment *)
+            Segment_map.decr_train (loc, Dir.opposite train.Train.dir) v.segments;
           (* TODO: actual UI msg, income handling *)
           let last_station, priority, stop, train, _income, _ui_msgs =
             if Station.is_proper_station station then (
@@ -223,7 +220,7 @@ module Train_update = struct
               train.last_station, train.priority, train.stop, train, 0, []
             )
           in
-          {train with segment=None; last_station; priority; stop}
+          {train with last_station; priority; stop}
         in
         let exit train =
           let dest = Train.get_dest train in
@@ -234,18 +231,18 @@ module Train_update = struct
               Dir.Set.find_nearest train.dir track.dirs
               |> Option.get_exn_or "Cannot find track for train"
           in
-          let segment = Station.get_segment station dir in
-          Segment.Map.incr_train v.segments segment;
+          (* enter segment *)
+          Segment_map.incr_train (loc,dir) v.segments;
           (* TODO Check signal for exit dir *)
           let train = 
-            {train with segment=Some segment;
-             state=Train.Traveling {speed=0; target_speed=4; last_stop=loc}}
+            {train with
+              state=Train.Traveling {speed=0; target_speed=4; last_stop=Some loc}}
           in
           _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
         in
         let train = match train.state with
-          | Traveling _ ->
-              let train = enter train in
+          | Traveling s ->
+              let train = enter train (Option.is_none s.last_stop) in
               (match train.state with
               | WaitingAtStation s when s.wait_time > 0 -> train
               | _ -> exit train)

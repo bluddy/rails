@@ -97,7 +97,7 @@ end
 type state =
   | Traveling of { mutable speed: int; (* *5 to get real speed *)
                    mutable target_speed: int;
-                   last_stop: int * int; (* To prevent double processing *)
+                   last_stop: (int * int) option; (* To prevent double processing *)
                 }
   | WaitingAtStation of {mutable wait_time: int}
   [@@deriving yojson, show]
@@ -121,9 +121,8 @@ type t = {
   state: state;
   mutable pixels_from_midtile: int; (* 0-16 *)
   mutable dir: Dir.t;
-  segment: Segment_map.id option; (* for track semaphores *)
   name: string option;
-  last_station: Station.id;
+  last_station: Station.id; (* Could be far away due to express *)
   stop_at_station: bool;
   engine: Engine.t;
   cars: Car.t list;
@@ -200,14 +199,13 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
     engine;
     pixels_from_midtile=0;
     dir;
-    state=Traveling {speed=1; target_speed=1; last_stop=(0,0)};
+    state=Traveling {speed=1; target_speed=1; last_stop=None};
     cars;
     freight=freight_of_cars cars;
     typ=Local;
     history=History.make ();
     stop=0;
     route;
-    segment=None;
     name=None;
     last_station=station;
     had_maintenance=false;
@@ -481,9 +479,12 @@ let update_train _idx (train:t) ~cycle ~cycle_check
               (train.y mod C.tile_h) = C.tile_h / 2
             in
             let loc = train.x / C.tile_w, train.y / C.tile_h in
-            if is_mid_tile && Utils.neq_xy travel_state.last_stop loc then
-              update_mid_tile train loc
-            else
+            match travel_state.last_stop with
+            | Some last_stop when is_mid_tile && Utils.neq_xy last_stop loc ->
+                update_mid_tile train loc
+            | None when is_mid_tile ->
+                update_mid_tile train loc
+            | _ ->
               advance train)
           else
             train
@@ -497,7 +498,7 @@ let update_train _idx (train:t) ~cycle ~cycle_check
       train
   | WaitingAtStation _ ->
       let loc = train.x / C.tile_w, train.y / C.tile_h in
-      update_mid_tile train loc
+      update_mid_tile train loc (* TODO: Check *)
 
   (* The algorithm works in segments.
      The length of the full train is car_idx * car_pixels.
