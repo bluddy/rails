@@ -122,6 +122,7 @@ let build_station_get_segments graph v trackmap loc after =
       | TS.Track [_], TS.Track [ixn2; ixn3] -> Some (ixn2, ixn3)
 
       (* Add an ixn to a 2-ixn. Make them all have same segment *)
+      (* TODO: what if these are stations? *)
       | Track (ixn1::_ as l1), Ixn l2 ->
           (* Find an ixn they don't have in common *)
           Utils.find_mismatch ~eq:TS.equal_ixn ~left:l2 ~right:l1
@@ -175,42 +176,53 @@ let build_station_get_segments graph v trackmap loc after =
       (* Removing a station with connections on both sides *)
       | Station [ixn1; ixn2], (Track _ | NoResult) ->
         Some (ixn1, ixn2)
+
       | _ -> None
     in
-    match split_ixns with
-    | None -> segments
-    | Some (ixn1, ixn2) ->
-        let ixn1 = (ixn1.x, ixn1.y) in
-        let ixn2 = (ixn2.x, ixn2.y) in
-        (* We need to find the set differences *)
-        let grp1 =
-          Track_graph.connected_stations_dirs graph trackmap ixn1
-          |> LocdSet.of_iter
-        in
-        let grp2 =
-          Track_graph.connected_stations_dirs graph trackmap ixn2
-          |> LocdSet.of_iter
-        in
-        (* Nothing to do if we have any empty station sets *)
-        if LocdSet.is_empty grp1 || LocdSet.is_empty grp2 then segments
-          (* Delete the empty segment if we're deleting a station *)
-        else
-          let diff1 = LocdSet.diff grp1 grp2 in
-          let diff2 = LocdSet.diff grp2 grp1 in
-          (* Nothing to do if sets are the same *)
-          if LocdSet.is_empty diff1 && LocdSet.is_empty diff2 then segments
+    let segments =
+      match split_ixns with
+      | None -> segments
+      | Some (ixn1, ixn2) ->
+          let ixn1 = (ixn1.x, ixn1.y) in
+          let ixn2 = (ixn2.x, ixn2.y) in
+          (* We need to find the set differences *)
+          let grp1 =
+            Track_graph.connected_stations_dirs graph trackmap ixn1
+            |> LocdSet.of_iter
+          in
+          let grp2 =
+            Track_graph.connected_stations_dirs graph trackmap ixn2
+            |> LocdSet.of_iter
+          in
+          (* Nothing to do if we have any empty station sets *)
+          if LocdSet.is_empty grp1 || LocdSet.is_empty grp2 then segments
+            (* Delete the empty segment if we're deleting a station *)
           else
-            let grp1, grp2 =
-              if LocdSet.is_empty diff1 then diff2, grp1 else diff1, grp2
-            in
-            let mem_g1 = LocdSet.choose grp1 in
-            let seg1 = get_id mem_g1 segments in
-            (* We don't know how mnay trains, so set value of segment to 0 *)
-            (* TODO: find how many trains per new set *)
-            reset seg1 segments;
-            (* Create a new segment for the split segment *)
-            let seg2 = new_id segments in
-            (* Assign seg2 to all grp2 stations *)
-            LocdSet.iter (fun locd -> add locd seg2 segments) grp2;
-            segments
+            let diff1 = LocdSet.diff grp1 grp2 in
+            let diff2 = LocdSet.diff grp2 grp1 in
+            (* Nothing to do if sets are the same *)
+            if LocdSet.is_empty diff1 && LocdSet.is_empty diff2 then segments
+            else
+              let grp1, grp2 =
+                if LocdSet.is_empty diff1 then diff2, grp1 else diff1, grp2
+              in
+              let mem_g1 = LocdSet.choose grp1 in
+              let seg1 = get_id mem_g1 segments in
+              (* We don't know how mnay trains, so set value of segment to 0 *)
+              (* TODO: find how many trains per new set *)
+              reset seg1 segments;
+              (* Create a new segment for the split segment *)
+              let seg2 = new_id segments in
+              (* Assign seg2 to all grp2 stations *)
+              LocdSet.iter (fun locd -> add locd seg2 segments) grp2;
+              segments
+  in
+  (* Remove single stations *)
+  match before with
+    (* Removing a station with connections on both sides *)
+    | Station [ixn1; ixn2], (Track _ | NoResult) ->
+      Some (ixn1, ixn2)
+
+    | _ -> None
+
 

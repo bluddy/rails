@@ -1,6 +1,6 @@
-open Containers
-open Ppx_yojson_conv_lib.Yojson_conv.Primitives
-open Utils
+open! Containers
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open! Utils
 
 let src = Logs.Src.create "track_graph" ~doc:"The track graph"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -62,7 +62,7 @@ module Edge : sig
 end
 
 module Node = struct
-  type t = int * int
+  type t = loc
     [@@deriving eq, ord, yojson]
 
   let hash = Hashtbl.hash
