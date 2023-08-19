@@ -132,25 +132,37 @@ let build_station_get_segments graph v trackmap loc after =
     in
     match join_ixns with
     | None -> segments
-    | Some (ixn1, ixn2) ->
-        let ixn1 = (ixn1.x, ixn1.y) in
-        let ixn2 = (ixn2.x, ixn2.y) in
+    | Some (ixn1d, ixn2d) ->
+        let ixn1 = (ixn1d.x, ixn1d.y) in
+        let ixn2 = (ixn2d.x, ixn2d.y) in
         let locd1 =
-          Track_graph.connected_stations_dirs graph trackmap ixn1 ~exclude_ixns:[ixn2]
-          |> Iter.head
+          if Trackmap.has_station ixn1 trackmap then
+            (* Handle case where ixn is station *)
+            Some (ixn1, ixn1d.dir)
+          else
+            Track_graph.connected_stations_dirs graph trackmap ixn1 ~exclude_ixns:[ixn2]
+            |> Iter.head
         in
         let tgt_stations =
-          Track_graph.connected_stations_dirs graph trackmap ixn2 ~exclude_ixns:[ixn1]
-          |> Iter.to_list
+          if Trackmap.has_station ixn2 trackmap then
+            (* Handle case where ixn is station *)
+            [ixn2, ixn2d.dir]
+          else
+            Track_graph.connected_stations_dirs graph trackmap ixn2 ~exclude_ixns:[ixn1]
+            |> Iter.to_list
         in
         begin match locd1, tgt_stations with
         | Some locd1, locd2::_ ->
           let seg = get_id locd1 segments in
           let seg2 = get_id locd2 segments in
-          (* Convert and merge *)
-          List.iter (fun locd -> add locd seg segments) tgt_stations;
-          merge seg ~remove_seg:seg2 segments;
-          segments
+          if seg = seg2 then
+            segments
+          else (
+            (* Convert and merge *)
+            List.iter (fun locd -> add locd seg segments) tgt_stations;
+            merge seg ~remove_seg:seg2 segments;
+            segments
+          )
         | _ ->
            (* Do nothing if there's no stations to merge *)
             segments
