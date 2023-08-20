@@ -34,9 +34,14 @@ let new_id v =
   Log.debug (fun f -> f "Segment: Get new id %d" ret);
   ret
 
+let remove_id id v =
+  Hashtbl.remove v.counts id
+
 let add (loc, d) id v =
-  let upper = Dir.catalog d in
-  Hashtbl.replace v.stations (loc, upper) id
+  Hashtbl.replace v.stations (loc, Dir.catalog d) id
+
+let remove (loc, d) v =
+  Hashtbl.remove v.stations (loc, Dir.catalog d)
 
 let reset idx v = Hashtbl.replace v.counts idx 0
 let get_id (loc,d) v = Hashtbl.find v.stations (loc, Dir.catalog d)
@@ -95,21 +100,18 @@ let build_station_get_segments graph v trackmap loc after =
       add (loc, Dir.Up) id v;
       add (loc, Dir.Down) id2 v;
       v
-
     (* Found only one id. Add one new one and add to both ends *)
   | [dir, id] -> 
       add (loc, dir) id v;
       let id2 = new_id v in
       add (loc, Dir.opposite dir) id2 v;
       v
-
     (* Found both dirs *)
   | [dir, id; dir2, id2] ->
       assert Dir.(equal (opposite dir) dir2);
       add (loc, dir) id v;
       add (loc, dir2) id2 v;
       v
-
   | _ -> failwith "Found too many directions"
 
 
@@ -238,3 +240,78 @@ let build_station_get_segments graph v trackmap loc after =
     | _ -> None
 
 
+    (* Removing a station. Unfortunately we can't
+       keep track of the segment's semaphore value unless we scan the whole segment for
+       trains.
+       We're too lazy to do that so we'll just set all segment values to 0.
+       NOTE: This can cause train crashes. Implement with mapping to trains.
+     *)
+    (* TODO: deleting stations with no connections should actually delete the segments *)
+  let remove_station graph trackmap v loc (before:TS.scan) =
+    let split_ixns = match before with
+      | Station [ixn1; ixn2] ->
+        `Ixn ((ixn1.x, ixn1.y), ixn1.search_dir), `Ixn ((ixn2.x, ixn2.y), ixn2.search_dir)
+
+      | Station [ixn] ->
+        `Ixn ((ixn.x, ixn.y), ixn.search_dir), `Empty (loc, Dir.opposite ixn.search_dir)
+
+      | Station [] ->
+        `Empty (loc, Dir.Up), `Empty (loc, Dir.Down)
+
+      | _ -> assert false
+    in
+
+          let locd1, locd2 = (loc, Dir.Up), (loc, Dir.Down) in
+          let seg1 = get_id locd1 in
+          let seg2 = get_id locd2 in
+          remove locd1 v;
+          remove locd2 v;
+          remove_id seg1 v;
+          remove_id seg2 v
+
+    in
+    let segments =
+      match split_ixns with
+      | None -> segments
+      | Some (ixn1, ixn2) ->
+          let ixn1 = (ixn1.x, ixn1.y) in
+          let ixn2 = (ixn2.x, ixn2.y) in
+          (* We need to find the set differences *)
+          let grp1 =
+            Track_graph.connected_stations_dirs graph trackmap ixn1
+            |> LocdSet.of_iter
+          in
+          let grp2 =
+            Track_graph.connected_stations_dirs graph trackmap ixn2
+            |> LocdSet.of_iter
+          in
+          (* Nothing to do if we have any empty station sets *)
+          if LocdSet.is_empty grp1 || LocdSet.is_empty grp2 then segments
+            (* Delete the empty segment if we're deleting a station *)
+          else
+            let diff1 = LocdSet.diff grp1 grp2 in
+            let diff2 = LocdSet.diff grp2 grp1 in
+            (* Nothing to do if sets are the same *)
+            if LocdSet.is_empty diff1 && LocdSet.is_empty diff2 then segments
+            else
+              let grp1, grp2 =
+                if LocdSet.is_empty diff1 then diff2, grp1 else diff1, grp2
+              in
+              let mem_g1 = LocdSet.choose grp1 in
+              let seg1 = get_id mem_g1 segments in
+              (* We don't know how mnay trains, so set value of segment to 0 *)
+              (* TODO: find how many trains per new set *)
+              reset seg1 segments;
+              (* Create a new segment for the split segment *)
+              let seg2 = new_id segments in
+              (* Assign seg2 to all grp2 stations *)
+              LocdSet.iter (fun locd -> add locd seg2 segments) grp2;
+              segments
+  in
+  (* Remove single stations *)
+  match before with
+    (* Removing a station with connections on both sides *)
+    | Station [ixn1; ixn2], (Track _ | NoResult) ->
+      Some (ixn1, ixn2)
+
+    | _ -> None
