@@ -307,13 +307,29 @@ let classic_dist loc1 loc2 =
   big + small / 2
 
 
-(* Compare two lists of things, one left and one right. 
-   Find an element from the left list that doesn't exist in the right list 
-*)
-let find_mismatch ~eq ~left ~right =
+(* Find one element from the left list that doesn't exist in the right list *)
+let diff1_l ~eq left right =
   List.find_map (fun x ->
     if List.mem ~eq x right then None else Some x)
   left
+
+(* Find one member that a larger list has that a smaller one doesn't *)
+let diff1 ~eq left right =
+  match diff1_l ~eq left right with
+  | None -> diff1_l ~eq right left
+  | x -> x
+
+(* Return a diff member and an intersection member, if available *)
+let diff_inter1 ~eq left right =
+  match diff1 ~eq left right with
+  | Some diff ->
+    let find_inter l = List.find_opt (fun x -> not @@ eq x diff) l in
+    let inter = Option.or_lazy (find_inter left) ~else_:(fun () -> find_inter right) in
+    begin match inter with
+    | Some inter -> Some (diff, inter)
+    | _ -> None
+    end
+  | None -> None
 
 let sum l = List.fold_left (+) 0 l
 

@@ -125,10 +125,9 @@ let build_station_get_segments graph v trackmap loc after =
 
       (* Add an ixn to a 2-ixn. Make them all have same segment *)
       (* TODO: what if these are stations? *)
-      | Track (ixn1::_ as l1), Ixn l2 ->
+      | Track l1, Ixn l2 ->
           (* Find an ixn they don't have in common *)
-          Utils.find_mismatch ~eq:TS.equal_ixn ~left:l2 ~right:l1
-          |> Option.map (fun ixn2 -> (ixn1, ixn2))
+          Utils.diff_inter1 ~eq:TS.equal_ixn l1 l2
 
       | _ -> None
     in
@@ -179,65 +178,56 @@ let build_station_get_segments graph v trackmap loc after =
     (* TODO: deleting stations with no connections should actually delete the segments *)
   let remove_track_split_segment graph trackmap segments (before:TS.scan) (after:TS.scan) =
     let split_ixns = match before, after with
-      (* Disconnecting a track leading to 2 ixns *)
+      (* Disconnecting a track leading to 2 ixns: if all paths are disconnected, create new segment *)
       | Track [ixn1; ixn2], Track [_] -> Some(ixn1, ixn2)
 
-      (* Disconnecting an ixn *)
-      | Ixn l1, Track ((ixn2::_) as l2) ->
-        Utils.find_mismatch ~eq:TS.equal_ixn ~left:l1 ~right:l2
-        |> Option.map (fun ixn1 -> ixn1, ixn2)
-
-      (* Removing a station with connections on both sides *)
-      | Station [ixn1; ixn2], (Track _ | NoResult) ->
-        Some (ixn1, ixn2)
+      (* Disconnecting an ixn: also check disconnections on the disconnected sides *)
+      | Ixn l1, Track l2 -> Utils.diff_inter1 ~eq:TS.equal_ixn l1 l2
 
       | _ -> None
     in
-    let segments =
-      match split_ixns with
-      | None -> segments
-      | Some (ixn1, ixn2) ->
-          let ixn1 = (ixn1.x, ixn1.y) in
-          let ixn2 = (ixn2.x, ixn2.y) in
-          (* We need to find the set differences *)
-          let grp1 =
-            Track_graph.connected_stations_dirs graph trackmap ixn1
-            |> LocdSet.of_iter
-          in
-          let grp2 =
-            Track_graph.connected_stations_dirs graph trackmap ixn2
-            |> LocdSet.of_iter
-          in
-          (* Nothing to do if we have any empty station sets *)
-          if LocdSet.is_empty grp1 || LocdSet.is_empty grp2 then segments
-            (* Delete the empty segment if we're deleting a station *)
+    (* Find the sets of stations/dirs from each ixn. *)
+    match split_ixns with
+    | None -> segments
+    | Some (ixn1s, ixn2s) ->
+        let get_station_sets (ixns:TS.ixn) =
+          let ixn = (ixns.x, ixns.y) in
+          (* We need to find the set differences. If it's a station, use that *)
+          if Trackmap.has_station ixn trackmap then
+            LocdSet.singleton (ixn, ixns.dir)
           else
-            let diff1 = LocdSet.diff grp1 grp2 in
-            let diff2 = LocdSet.diff grp2 grp1 in
-            (* Nothing to do if sets are the same *)
-            if LocdSet.is_empty diff1 && LocdSet.is_empty diff2 then segments
-            else
-              let grp1, grp2 =
-                if LocdSet.is_empty diff1 then diff2, grp1 else diff1, grp2
-              in
-              let mem_g1 = LocdSet.choose grp1 in
-              let seg1 = get_id mem_g1 segments in
-              (* We don't know how mnay trains, so set value of segment to 0 *)
-              (* TODO: find how many trains per new set *)
-              reset seg1 segments;
-              (* Create a new segment for the split segment *)
-              let seg2 = new_id segments in
-              (* Assign seg2 to all grp2 stations *)
-              LocdSet.iter (fun locd -> add locd seg2 segments) grp2;
-              segments
-  in
-  (* Remove single stations *)
-  match before with
-    (* Removing a station with connections on both sides *)
-    | Station [ixn1; ixn2], (Track _ | NoResult) ->
-      Some (ixn1, ixn2)
+            Track_graph.connected_stations_dirs graph trackmap ixn
+            |> LocdSet.of_iter
+        in
+        let set1 = get_station_sets ixn1s in
+        let set2 = get_station_sets ixn2s in
+        (* Possible situations:
+           No intersection: make sure they're separate
+           Common sets: don't separate
+        *)
+        (* Nothing to do if we have any empty station sets or if they're the same *)
+        if LocdSet.equal set1 set2 then
+          segments
+        else
+          (* Get one member of set1 *)
+          let mem_set1 = LocdSet.choose set1 in
+          let seg1 = get_id mem_set1 segments in
+          let mem_set2 = LocdSet.choose set2 in
+          let seg2 = get_id mem_set2 segments in
+          if not @@ equal_id seg1 seg2 then
+            segments
+          else begin
+            (* seg1 == seg2
+              We don't know how mnay trains, so set value of segment to 0 *)
+            (* TODO: find how many trains per new set *)
+            reset seg1 segments;
+            (* Create a new segment for the split segment *)
+            let seg2 = new_id segments in
+            (* Assign seg2 to all set2 stations *)
+            LocdSet.iter (fun locd -> add locd seg2 segments) set2;
+            segments
+          end
 
-    | _ -> None
 
 
     (* Removing a station. Unfortunately we can't
@@ -247,6 +237,7 @@ let build_station_get_segments graph v trackmap loc after =
        NOTE: This can cause train crashes. Implement with mapping to trains.
      *)
     (* TODO: deleting stations with no connections should actually delete the segments *)
+(*
   let remove_station graph trackmap v loc (before:TS.scan) =
     let split_ixns = match before with
       | Station [ixn1; ixn2] ->
@@ -259,59 +250,4 @@ let build_station_get_segments graph v trackmap loc after =
         `Empty (loc, Dir.Up), `Empty (loc, Dir.Down)
 
       | _ -> assert false
-    in
-
-          let locd1, locd2 = (loc, Dir.Up), (loc, Dir.Down) in
-          let seg1 = get_id locd1 in
-          let seg2 = get_id locd2 in
-          remove locd1 v;
-          remove locd2 v;
-          remove_id seg1 v;
-          remove_id seg2 v
-
-    in
-    let segments =
-      match split_ixns with
-      | None -> segments
-      | Some (ixn1, ixn2) ->
-          let ixn1 = (ixn1.x, ixn1.y) in
-          let ixn2 = (ixn2.x, ixn2.y) in
-          (* We need to find the set differences *)
-          let grp1 =
-            Track_graph.connected_stations_dirs graph trackmap ixn1
-            |> LocdSet.of_iter
-          in
-          let grp2 =
-            Track_graph.connected_stations_dirs graph trackmap ixn2
-            |> LocdSet.of_iter
-          in
-          (* Nothing to do if we have any empty station sets *)
-          if LocdSet.is_empty grp1 || LocdSet.is_empty grp2 then segments
-            (* Delete the empty segment if we're deleting a station *)
-          else
-            let diff1 = LocdSet.diff grp1 grp2 in
-            let diff2 = LocdSet.diff grp2 grp1 in
-            (* Nothing to do if sets are the same *)
-            if LocdSet.is_empty diff1 && LocdSet.is_empty diff2 then segments
-            else
-              let grp1, grp2 =
-                if LocdSet.is_empty diff1 then diff2, grp1 else diff1, grp2
-              in
-              let mem_g1 = LocdSet.choose grp1 in
-              let seg1 = get_id mem_g1 segments in
-              (* We don't know how mnay trains, so set value of segment to 0 *)
-              (* TODO: find how many trains per new set *)
-              reset seg1 segments;
-              (* Create a new segment for the split segment *)
-              let seg2 = new_id segments in
-              (* Assign seg2 to all grp2 stations *)
-              LocdSet.iter (fun locd -> add locd seg2 segments) grp2;
-              segments
-  in
-  (* Remove single stations *)
-  match before with
-    (* Removing a station with connections on both sides *)
-    | Station [ixn1; ixn2], (Track _ | NoResult) ->
-      Some (ixn1, ixn2)
-
-    | _ -> None
+*)
