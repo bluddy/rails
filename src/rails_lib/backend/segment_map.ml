@@ -67,7 +67,7 @@ module TS = Trackmap.Search
 
 (* When we build a station, we create new station segments on both ends of the station *)
 (* TODO: for upgrade, need to compare before and after *)
-let build_station_get_segments graph v trackmap loc after =
+let build_station graph v trackmap loc after =
   (* Connected ixns *)
   let ixns = match after with
     | TS.Station ixns -> ixns  (* 0/1/2 *)
@@ -118,7 +118,7 @@ let build_station_get_segments graph v trackmap loc after =
   (* We only care about connecting to a new piece of track that could lead
   to a station. ixns and stations are the same for this
   *)
-  let build_track_join_segments graph trackmap segments before after =
+  let build_track graph trackmap segments before after =
     let join_ixns = match before, after with
       (* Add an attached ixn: make the two have the same segment *)
       | TS.Track [_], TS.Track [ixn2; ixn3] -> Some (ixn2, ixn3)
@@ -176,7 +176,7 @@ let build_station_get_segments graph v trackmap loc after =
        NOTE: This can cause train crashes. Implement with mapping to trains.
      *)
     (* TODO: deleting stations with no connections should actually delete the segments *)
-  let remove_track_split_segment graph trackmap segments (before:TS.scan) (after:TS.scan) =
+  let remove_track graph trackmap segments (before:TS.scan) (after:TS.scan) =
     let split_ixns = match before, after with
       (* Disconnecting a track leading to 2 ixns: if all paths are disconnected, create new segment *)
       | Track [ixn1; ixn2], Track [_] -> Some(ixn1, ixn2)
@@ -230,24 +230,52 @@ let build_station_get_segments graph v trackmap loc after =
 
 
 
-    (* Removing a station. Unfortunately we can't
-       keep track of the segment's semaphore value unless we scan the whole segment for
-       trains.
-       We're too lazy to do that so we'll just set all segment values to 0.
-       NOTE: This can cause train crashes. Implement with mapping to trains.
-     *)
-    (* TODO: deleting stations with no connections should actually delete the segments *)
-(*
-  let remove_station graph trackmap v loc (before:TS.scan) =
-    let split_ixns = match before with
+    (* Removing a station. *)
+    (* Cases:
+       - No connection: just delete both stations
+       - 1+ connection: for each side, see if you're the only station. If so, delete the segment
+         - For non-station side, delete segment
+    *)
+  let remove_station graph trackmap v station_loc (before:TS.scan) =
+    let x, y = station_loc in
+    let tile = Trackmap.get_exn trackmap ~x ~y in
+    let dirs = tile.Track.dirs |> Dir.Set.to_list in
+    let ixns, empty_dirs = match before with
       | Station [ixn1; ixn2] ->
-        `Ixn ((ixn1.x, ixn1.y), ixn1.search_dir), `Ixn ((ixn2.x, ixn2.y), ixn2.search_dir)
+        [(ixn1.x, ixn1.y), ixn1.search_dir; (ixn2.x, ixn2.y), ixn2.search_dir], []
 
       | Station [ixn] ->
-        `Ixn ((ixn.x, ixn.y), ixn.search_dir), `Empty (loc, Dir.opposite ixn.search_dir)
+        [(ixn.x, ixn.y), ixn.search_dir], [Dir.opposite ixn.search_dir]
 
       | Station [] ->
-        `Empty (loc, Dir.Up), `Empty (loc, Dir.Down)
-
+        (* Both sides need to be deleted *)
+        [], dirs
+      
       | _ -> assert false
-*)
+    in
+    (* delete segment for station no matter what *)
+    List.iter (fun dir ->
+      remove (station_loc, dir) v;
+    ) dirs;
+    (* Check if we have more empty dirs, i.e. no stations *)
+    let empty_dirs =
+      List.fold_left (fun acc (loc, search_dir) ->
+        if Trackmap.has_station loc trackmap then acc
+        else
+          let station_connected =
+            Track_graph.connected_stations_dirs graph trackmap loc ~exclude_ixns:[station_loc]
+            |> Iter.head
+          in
+          match station_connected with
+          | None -> search_dir::acc
+          | _ -> acc)
+      empty_dirs
+      ixns
+    in
+    (* GC: delete segments with no other stations *)
+    List.iter (fun dir ->
+      let seg1 = get_id (station_loc, dir) v in
+      remove_id seg1 v;
+    )
+    empty_dirs;
+    v

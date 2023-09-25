@@ -10,7 +10,8 @@ val incr_train: (loc * Dir.t) -> t -> unit
 val decr_train: (loc * Dir.t) -> t -> unit
 val reset: id -> t -> unit
 
-val build_track_join_segments: Track_graph.t -> Trackmap.t -> t -> TS.scan -> TS.scan -> t
-val remove_track_split_segment: Track_graph.t -> Trackmap.t -> t -> TS.scan -> TS.scan -> t
-val build_station_get_segments: Track_graph.t -> t -> Trackmap.t -> Track_graph.Node.t -> TS.scan -> t
+val build_track: Track_graph.t -> Trackmap.t -> t -> TS.scan -> TS.scan -> t
+val remove_track: Track_graph.t -> Trackmap.t -> t -> TS.scan -> TS.scan -> t
+val remove_station: Track_graph.t -> Trackmap.t -> t -> loc -> TS.scan -> t
+val build_station: Track_graph.t -> t -> Trackmap.t -> Track_graph.Node.t -> TS.scan -> t
 
