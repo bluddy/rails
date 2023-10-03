@@ -66,7 +66,6 @@ let merge seg1 ~remove_seg v =
 module TS = Trackmap.Search
 
 (* When we build a station, we create new station segments on both ends of the station *)
-(* TODO: for upgrade, need to compare before and after *)
 let build_station graph v trackmap loc after =
   (* Connected ixns *)
   let ixns = match after with
@@ -106,7 +105,8 @@ let build_station graph v trackmap loc after =
       let id2 = new_id v in
       add (loc, Dir.opposite dir) id2 v;
       v
-    (* Found both dirs *)
+    (* Found both dirs.
+       Need to split: new id on one end, assign to all stations on that end *)
   | [dir, id; dir2, id2] ->
       assert Dir.(equal (opposite dir) dir2);
       add (loc, dir) id v;
