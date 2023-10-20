@@ -1,4 +1,4 @@
-open Containers
+open! Containers
 open Track
 module TM = Trackmap
 module SM = Segment_map
@@ -13,19 +13,19 @@ let tmap = TM.empty 20 20
 let build_road start end_ map =
   Iter.fold
     (fun acc x -> TM.set acc ~x ~y:10 ~t:(make_tm [Left;Right]))
-    tmap @@
+    map @@
     Iter.(start -- end_)
 
 let print (segments:SM.t) = SM.yojson_of_t segments |> Yojson.Safe.to_string |> print_string
 
 let player = 0
 
-let build_track (x,y) tmap ~graph ~dirs =
+let build_track (x,y) (tmap, graph) ~dirs =
   let before = TS.scan tmap ~x ~y ~player in
   let tmap = TM.set ~x ~y ~t:(make_tm dirs) tmap in
   let after = TS.scan tmap ~x ~y ~player in
   let graph = TG.Track.handle_build_track graph ~x ~y before after in
-  tmap
+  tmap, graph
 
 let build_station (x,y) tmap ~graph ~dirs =
   let before = TS.scan tmap ~x ~y ~player in
@@ -51,10 +51,13 @@ let%expect_test "build station" =
 let%expect_test "build station between ixns" =
   let x, y = 10, 10 in
   let graph, segments = TG.make (), SM.make () in
-  let tmap, after = build_road 5 15 tmap
-    |> build_track (5,10) ~graph ~dirs:[Left;Right;UpLeft]
-    |> build_track (15,10) ~graph ~dirs:[Left;Right;UpRight]
-    |> build_station (x, y) ~graph ~dirs:[Left;Right]
+  let tmap, after =
+    let tmap = build_road 5 15 tmap in
+    let tmap, graph = 
+      build_track (5,10) ~dirs:[Left;Right;UpLeft] (tmap, graph)
+      |> build_track (15,10) ~dirs:[Left;Right;UpRight]
+    in
+    build_station (x, y) ~dirs:[Left;Right] tmap ~graph
   in
   let segments = SM.build_station graph segments tmap (x,y) after in
   print segments;
@@ -101,6 +104,7 @@ let%expect_test "build 2 stations and then one in the middle" =
   in
   print segments;
   [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
+  (* Now the middle station *)
   let _, segments =
     build_station_seg (10,10) ~graph ~dirs (tmap, segments) in
   print segments;
