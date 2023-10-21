@@ -72,47 +72,61 @@ let build_station graph v trackmap loc after =
     | TS.Station ixns -> ixns  (* 0/1/2 *)
     | _ -> assert false
   in
-  let dir_segs =
+  (* Get list of (dir, stations iter on both sides) *)
+  let dir_stations =
     List.filter_map (fun ixn ->
-      let station =
-        let exclude_dir = Dir.opposite ixn.TS.dir in
-        (* We only need one connected station *)
+      let exclude_dir = Dir.opposite ixn.TS.dir in
+      let stations =
         Track_graph.connected_stations_dirs ~exclude_dir graph trackmap loc
-        |> Iter.head
+        |> Iter.to_list
       in
-      match station with
-      (* Found a station facing us *)
-      | Some ((x,y) as loc, facing_us_dir) ->
-          Log.debug (fun f -> f "Segments: found existing station at (%d,%d)" x y);
-          (* Get its id *)
-          let id = get_id (loc, facing_us_dir) v in
-          Some (ixn.search_dir, id)
-      | _ -> None)
+      match stations with
+      | [] -> None
+      | _  -> Some(ixn.search_dir, stations))
     ixns
   in
+  (* let dir_segs = *)
+  (*     match station with *)
+  (*     (* Found a station facing us *) *)
+  (*     | Some ((x,y) as loc, facing_us_dir) -> *)
+  (*         Log.debug (fun f -> f "Segments: found existing station at (%d,%d)" x y); *)
+  (*         (* Get its id *) *)
+  (*         let id = get_id (loc, facing_us_dir) v in *)
+  (*         Some (ixn.search_dir, id) *)
+  (*     | _ -> None) *)
+  (*   ixns *)
+  (* in *)
   (* We get at most 2: one per direction *)
   (* Fill in with new segments as needed *)
-  match dir_segs with
-  | [] -> (* No connected id found: add new ids to both ends *)
+  match dir_stations with
+  | [] -> (* No connected stations found: add new ids to both ends *)
       let id = new_id v in
       let id2 = new_id v in
       add (loc, Dir.Up) id v;
       add (loc, Dir.Down) id2 v;
       v
     (* Found only one id. Add one new one and add to both ends *)
-  | [dir, id] -> 
+  | [dir, loc_dir::_] -> 
+      let id = get_id loc_dir v in
       add (loc, dir) id v;
       let id2 = new_id v in
       add (loc, Dir.opposite dir) id2 v;
       v
     (* Found both dirs.
-       Need to split: new id on one end, assign to all stations on that end *)
-  | [dir, id; dir2, id2] ->
+       TODO: Need to split: new id on one end, assign to all stations on that end *)
+  | [dir, loc_dirs; dir2, loc_dir2::_] ->
       assert Dir.(equal (opposite dir) dir2);
-      add (loc, dir) id v;
+      (* On one end, add id to our station *)
+      let id2 = get_id loc_dir2 v in
       add (loc, dir2) id2 v;
+      (* On the other end, we need to create a new id and apply it to all stations *)
+      let id = new_id v in
+      add (loc, dir) id v;
+      List.iter(fun loc_dir ->
+        add loc_dir id v
+      ) loc_dirs;
       v
-  | _ -> failwith "Found too many directions"
+  | _ -> failwith "Found too many directions or ill-formed data"
 
 
   (* We only care about connecting to a new piece of track that could lead

@@ -108,7 +108,7 @@ let%expect_test "build 2 stations and then one in the middle" =
   let _, segments =
     build_station_seg (10,10) ~graph ~dirs (tmap, segments) in
   print segments;
-  [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[10,10],["Upper"]],0],[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[10,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
+  [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[10,10],["Upper"]],3],[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],3],[[[10,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
 
 (* build 2 stations separated by ixn *)
 let%expect_test "build 2 stations separated by ixn" =
