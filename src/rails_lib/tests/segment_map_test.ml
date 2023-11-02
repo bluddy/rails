@@ -126,20 +126,25 @@ let%expect_test "build 2 stations separated by ixn" =
 (* Test build_track
    graph trackmap segment_map scan1 scan2
    *)
-(*
-let%expect_test "build second station" =
+let%expect_test "connect 2 station with road" =
   let graph, segments = TG.make (), SM.make () in
-  let tmap, after = build_road 5 15 tmap
+  let tmap = build_road 5 15 tmap
     |> TM.remove_track ~x:10 ~y:10 ~dir:Right ~player:0
-    |> build_station (5, 10) ~graph ~dirs:[Left;Right]
-    |> build_station (5, 15) ~graph ~dirs:[Left;Right]
   in
-  let segments = SM.build_station graph segments tmap (10,10) after in
-  let tmap, after = build_station (5, 10) ~graph ~dirs:[Left;Right] tmap in
-  let segments = SM.build_station graph segments tmap (5,10) after in
+  let tmap, graph, segments =
+    (tmap, graph, segments)
+    |> build_station_seg (5, 10) ~dirs:[Left;Right]
+    |> build_station_seg (5, 15) ~dirs:[Left;Right]
+  in
   print segments;
-  [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],2],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],0]]} |}]
-  *)
+  [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[5,15],["Lower"]],2],[[[5,15],["Upper"]],3]]} |}];
+  let _, _, segments =
+    build_track (10, 10) (tmap, graph, segments) ~dirs:[Left;Right]
+  in
+  print segments;
+  (* TODO: bug. They should now share a segment *)
+  [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[5,15],["Lower"]],2],[[[5,15],["Upper"]],3]]} |}]
+
 
 (* Test remove_track
    graph trackmap segment_map scan1 scan2
