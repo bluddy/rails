@@ -194,11 +194,10 @@ let build_station graph v trackmap loc after =
        We're too lazy to do that so we'll just set all segment values to 0.
        NOTE: This can cause train crashes. Implement with mapping to trains.
      *)
-    (* TODO: deleting stations with no connections should actually delete the segments *)
   let remove_track graph trackmap segments (before:TS.scan) (after:TS.scan) =
     let split_ixns = match before, after with
       (* Disconnecting a track leading to 2 ixns: if all paths are disconnected, create new segment *)
-      | Track [ixn1; ixn2], Track [_] -> Some(ixn1, ixn2)
+      | Track [ixn1; ixn2], _ -> Some(ixn1, ixn2)
 
       (* Disconnecting an ixn: also check disconnections on the disconnected sides *)
       | Ixn l1, Track l2 -> Utils.diff_inter1 ~eq:TS.equal_ixn l1 l2
@@ -225,7 +224,7 @@ let build_station graph v trackmap loc after =
            Common sets: don't separate
         *)
         (* Nothing to do if we have any empty station sets or if they're the same *)
-        if LocdSet.equal set1 set2 then
+        if LocdSet.equal set1 set2 || LocdSet.is_empty set1 || LocdSet.is_empty set2 then
           segments
         else
           (* Get one member of set1 *)
@@ -246,8 +245,6 @@ let build_station graph v trackmap loc after =
             LocdSet.iter (fun locd -> add locd seg2 segments) set2;
             segments
           end
-
-
 
     (* Removing a station. *)
     (* Cases:

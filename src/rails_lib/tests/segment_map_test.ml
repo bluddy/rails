@@ -170,7 +170,7 @@ let%expect_test "2 connected stations, disconnect road" =
   let _, _, segments = remove_track (10, 10) (tmap, graph, segments) in
   print segments;
   (* TODO: another bug. Need to split *)
-  [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
+  [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
 
 (* Test remove_station
    graph trackmap segment_map loc scan1 scan2
