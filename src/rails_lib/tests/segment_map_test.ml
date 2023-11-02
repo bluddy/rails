@@ -28,6 +28,14 @@ let build_track (x,y) (tmap, graph, segments) ~dirs =
   let segments = SM.build_track graph tmap segments before after in
   tmap, graph, segments
 
+let remove_track (x,y) (tmap, graph, segments) =
+  let before = TS.scan tmap ~x ~y ~player in
+  let tmap = TM.remove ~x ~y tmap in
+  let after = TS.scan tmap ~x ~y ~player in
+  let graph = TG.Track.handle_remove_track graph ~x ~y before after in
+  let segments = SM.remove_track graph tmap segments before after in
+  tmap, graph, segments
+
 let build_station_seg loc ~dirs (tmap, graph, segments) =
   let build_station_inner (x,y) tmap ~graph ~dirs =
     let before = TS.scan tmap ~x ~y ~player in
@@ -149,6 +157,20 @@ let%expect_test "connect 2 station with road" =
 (* Test remove_track
    graph trackmap segment_map scan1 scan2
    *)
+let%expect_test "2 connected stations, disconnect road" =
+  let graph, segments = TG.make (), SM.make () in
+  let tmap = build_road 5 15 tmap in
+  let tmap, graph, segments =
+    (tmap, graph, segments)
+    |> build_station_seg (5, 10) ~dirs:[Left; Right]
+    |> build_station_seg (15, 10) ~dirs:[Left; Right]
+  in
+  print segments;
+  [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
+  let _, _, segments = remove_track (10, 10) (tmap, graph, segments) in
+  print segments;
+  (* TODO: another bug. Need to split *)
+  [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
 
 (* Test remove_station
    graph trackmap segment_map loc scan1 scan2
