@@ -25,17 +25,18 @@ let build_track (x,y) (tmap, graph, segments) ~dirs =
   let tmap = TM.set ~x ~y ~t:(make_tm dirs) tmap in
   let after = TS.scan tmap ~x ~y ~player in
   let graph = TG.Track.handle_build_track graph ~x ~y before after in
+  let segments = SM.build_track graph tmap segments before after in
   tmap, graph, segments
 
-let build_station (x,y) tmap ~graph ~dirs =
-  let before = TS.scan tmap ~x ~y ~player in
-  let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
-  let after = TS.scan tmap ~x ~y ~player in
-  let graph = TG.Track.handle_build_station graph ~x ~y before after in
-  tmap, graph, after
-
 let build_station_seg loc ~dirs (tmap, graph, segments) =
-  let tmap, graph, after = build_station loc ~graph ~dirs tmap in
+  let build_station_inner (x,y) tmap ~graph ~dirs =
+    let before = TS.scan tmap ~x ~y ~player in
+    let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
+    let after = TS.scan tmap ~x ~y ~player in
+    let graph = TG.Track.handle_build_station graph ~x ~y before after in
+    tmap, graph, after
+  in
+  let tmap, graph, after = build_station_inner loc ~graph ~dirs tmap in
   let segments = SM.build_station graph segments tmap loc after in
   tmap, graph, segments
 
@@ -133,17 +134,16 @@ let%expect_test "connect 2 station with road" =
   in
   let tmap, graph, segments =
     (tmap, graph, segments)
-    |> build_station_seg (5, 10) ~dirs:[Left;Right]
-    |> build_station_seg (5, 15) ~dirs:[Left;Right]
+    |> build_station_seg (5, 10) ~dirs:[Left; Right]
+    |> build_station_seg (15, 10) ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[5,15],["Lower"]],2],[[[5,15],["Upper"]],3]]} |}];
+  [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}];
   let _, _, segments =
     build_track (10, 10) (tmap, graph, segments) ~dirs:[Left;Right]
   in
   print segments;
-  (* TODO: bug. They should now share a segment *)
-  [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[5,15],["Lower"]],2],[[[5,15],["Upper"]],3]]} |}]
+  [%expect {| {"last":4,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
 
 
 (* Test remove_track

@@ -43,8 +43,11 @@ let add (loc, d) id v =
 let remove (loc, d) v =
   Hashtbl.remove v.stations (loc, Dir.catalog d)
 
-let reset idx v = Hashtbl.replace v.counts idx 0
-let get_id (loc,d) v = Hashtbl.find v.stations (loc, Dir.catalog d)
+let reset idx v =
+  Hashtbl.replace v.counts idx 0
+
+let get_id (loc,d) v =
+  Hashtbl.find v.stations (loc, Dir.catalog d)
 
 let incr_train locd v =
   let id = get_id locd v in
@@ -59,7 +62,9 @@ let decr_train locd v =
 let merge seg1 ~remove_seg v =
   Log.debug (fun f -> f "Segment: Merge ids %s, %s" (show_id seg1) (show_id remove_seg));
   let v2 = Hashtbl.find v.counts remove_seg in
-  Hashtbl.incr v.counts seg1 ~by:v2;
+  (* Because of the logic of incr, we need to not do this if we add 0 *)
+  if v2 > 0 then
+    Hashtbl.incr v.counts seg1 ~by:v2;
   Hashtbl.remove v.counts remove_seg;
   ()
 
@@ -140,7 +145,7 @@ let build_station graph v trackmap loc after =
       (* Add an ixn to a 2-ixn. Make them all have same segment *)
       (* TODO: what if these are stations? *)
       | Track l1, Ixn l2 ->
-          (* Find an ixn they don't have in common *)
+          (* Find an ixn they don't have in common and one they do *)
           Utils.diff_inter1 ~eq:TS.equal_ixn l1 l2
 
       | _ -> None
@@ -168,14 +173,14 @@ let build_station graph v trackmap loc after =
         in
         begin match locd1, tgt_stations with
         | Some locd1, locd2::_ ->
-          let seg = get_id locd1 segments in
+          let seg1 = get_id locd1 segments in
           let seg2 = get_id locd2 segments in
-          if seg = seg2 then
+          if seg1 = seg2 then
             segments
           else (
-            (* Convert and merge *)
-            List.iter (fun locd -> add locd seg segments) tgt_stations;
-            merge seg ~remove_seg:seg2 segments;
+            (* Convert all stations and merge *)
+            List.iter (fun locd -> add locd seg1 segments) tgt_stations;
+            merge seg1 ~remove_seg:seg2 segments;
             segments
           )
         | _ ->
