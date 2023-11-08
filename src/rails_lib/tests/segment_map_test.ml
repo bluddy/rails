@@ -36,7 +36,7 @@ let remove_track (x,y) (tmap, graph, segments) =
   let segments = SM.remove_track graph tmap segments before after in
   tmap, graph, segments
 
-let build_station_seg loc ~dirs (tmap, graph, segments) =
+let build_station loc ~dirs (tmap, graph, segments) =
   let build_station_inner (x,y) tmap ~graph ~dirs =
     let before = TS.scan tmap ~x ~y ~player in
     let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
@@ -48,6 +48,13 @@ let build_station_seg loc ~dirs (tmap, graph, segments) =
   let segments = SM.build_station graph segments tmap loc after in
   tmap, graph, segments
 
+let remove_station (x,y) (tmap, graph, segments) =
+  let before = TS.scan tmap ~x ~y ~player in
+  let segments = SM.remove_station graph tmap segments (x,y) before in
+  let tmap = TM.remove ~x ~y tmap in
+  let after = TS.scan tmap ~x ~y ~player in
+  let graph = TG.Track.handle_remove_track graph ~x ~y before after in
+  tmap, graph, segments
 
 (* Test build_station
    graph segment_map trackmap loc scan2
@@ -58,7 +65,7 @@ let%expect_test "build station" =
   let graph, segments = TG.make (), SM.make () in
   let (_, _, segments) =
     build_track loc (tmap, graph, segments) ~dirs:[Left; Right]
-    |> build_station_seg loc ~dirs:[Left; Right]
+    |> build_station loc ~dirs:[Left; Right]
   in
   print segments;
   [%expect {| {"last":2,"counts":[[1,0],[0,0]],"stations":[[[[10,10],["Upper"]],1],[[[10,10],["Lower"]],0]]} |}]
@@ -70,7 +77,7 @@ let%expect_test "build station between ixns" =
     (tmap, graph, segments)
     |> build_track (5,10) ~dirs:[Left;Right;UpLeft]
     |> build_track (15,10) ~dirs:[Left;Right;UpRight]
-    |> build_station_seg (10, 10) ~dirs:[Left;Right]
+    |> build_station (10, 10) ~dirs:[Left;Right]
   in
   print segments;
   [%expect {| {"last":2,"counts":[[1,0],[0,0]],"stations":[[[[10,10],["Upper"]],1],[[[10,10],["Lower"]],0]]} |}]
@@ -81,8 +88,8 @@ let%expect_test "build second station" =
   let tmap = build_road 5 15 tmap in
   let _, _, segments =
     (tmap, graph, segments)
-    |> build_station_seg (10, 10) ~dirs
-    |> build_station_seg (5, 10) ~dirs
+    |> build_station (10, 10) ~dirs
+    |> build_station (5, 10) ~dirs
   in
   print segments;
   [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],2],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],0]]} |}]
@@ -93,9 +100,9 @@ let%expect_test "build 3 stations left to right " =
   let tmap = build_road 5 15 tmap in
   let _, _, segments =
     (tmap, graph, segments)
-    |> build_station_seg (5,10) ~dirs
-    |> build_station_seg (10,10) ~dirs
-    |> build_station_seg (15,10) ~dirs
+    |> build_station (5,10) ~dirs
+    |> build_station (10,10) ~dirs
+    |> build_station (15,10) ~dirs
   in
   print segments;
   [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[10,10],["Upper"]],0],[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[10,10],["Lower"]],2],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],2]]} |}]
@@ -106,14 +113,14 @@ let%expect_test "build 2 stations and then one in the middle" =
   let tmap = build_road 5 15 tmap in
   let tgs =
     (tmap, graph, segments)
-    |> build_station_seg (5,10) ~dirs
-    |> build_station_seg (15,10) ~dirs
+    |> build_station (5,10) ~dirs
+    |> build_station (15,10) ~dirs
   in
   print segments;
   [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
   (* Now the middle station *)
   let _, _, segments =
-    build_station_seg (10,10) ~dirs tgs in
+    build_station (10,10) ~dirs tgs in
   print segments;
   [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[10,10],["Upper"]],3],[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],3],[[[10,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
 
@@ -124,8 +131,8 @@ let%expect_test "build 2 stations separated by ixn" =
   let tmap = build_road 5 15 tmap in
   let _, _, segments =
     (tmap, graph, segments)
-    |> build_station_seg (5,10) ~dirs
-    |> build_station_seg (15,10) ~dirs
+    |> build_station (5,10) ~dirs
+    |> build_station (15,10) ~dirs
     |> build_track (10,10) ~dirs:[Left;Right;UpRight]
   in
   print segments;
@@ -142,8 +149,8 @@ let%expect_test "connect 2 station with road" =
   in
   let tmap, graph, segments =
     (tmap, graph, segments)
-    |> build_station_seg (5, 10) ~dirs:[Left; Right]
-    |> build_station_seg (15, 10) ~dirs:[Left; Right]
+    |> build_station (5, 10) ~dirs:[Left; Right]
+    |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
   [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}];
@@ -162,16 +169,30 @@ let%expect_test "2 connected stations, disconnect road" =
   let tmap = build_road 5 15 tmap in
   let tmap, graph, segments =
     (tmap, graph, segments)
-    |> build_station_seg (5, 10) ~dirs:[Left; Right]
-    |> build_station_seg (15, 10) ~dirs:[Left; Right]
+    |> build_station (5, 10) ~dirs:[Left; Right]
+    |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
   [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
   let _, _, segments = remove_track (10, 10) (tmap, graph, segments) in
   print segments;
-  (* TODO: another bug. Need to split *)
   [%expect {| {"last":4,"counts":[[1,0],[0,0],[3,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
 
 (* Test remove_station
    graph trackmap segment_map loc scan1 scan2
    *)
+let%expect_test "2 connected stations, disconnect one" =
+  let graph, segments = TG.make (), SM.make () in
+  let tmap = build_road 5 15 tmap in
+  let tmap, graph, segments =
+    (tmap, graph, segments)
+    |> build_station (5, 10) ~dirs:[Left; Right]
+    |> build_station (15, 10) ~dirs:[Left; Right]
+  in
+  print segments;
+  [%expect {| {"last":3,"counts":[[1,0],[0,0],[2,0]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
+  let _, _, segments =
+    remove_station (5, 10) (tmap, graph, segments) in
+  print segments;
+  [%expect {| {"last":3,"counts":[[0,0],[2,0]],"stations":[[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
+

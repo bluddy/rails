@@ -269,13 +269,10 @@ let build_station graph v trackmap loc after =
       
       | _ -> assert false
     in
-    (* delete segment for station no matter what *)
-    List.iter (fun dir ->
-      remove (station_loc, dir) v;
-    ) dirs;
     (* Check if we have more empty dirs, i.e. no stations *)
     let empty_dirs =
       List.fold_left (fun acc (loc, search_dir) ->
+        (* Get either station here or connected stations *)
         if Trackmap.has_station loc trackmap then acc
         else
           let station_connected =
@@ -294,4 +291,8 @@ let build_station graph v trackmap loc after =
       remove_id seg1 v;
     )
     empty_dirs;
+    (* Finally, delete entries for station no matter what *)
+    List.iter (fun dir ->
+      remove (station_loc, dir) v;
+    ) dirs;
     v
