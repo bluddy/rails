@@ -302,14 +302,19 @@ let _remove_track v ~x ~y ~dir ~player =
   let loc = (x,y) in
   let is_station = Trackmap.has_station loc v.track in
   let before = TS.scan v.track ~x ~y ~player in
+  (* Have to be careful with order here or we'll mess up state *)
+  let segments =
+    if is_station then
+      Segment_map.remove_station v.graph v.track v.segments loc before
+    else v.segments
+  in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
   let after = TS.scan track ~x ~y ~player in
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
   let segments =
-    if is_station then
+    if not is_station then
       Segment_map.remove_track graph v.track v.segments before after
-    else
-      Segment_map.remove_station graph v.track v.segments loc before
+    else segments
   in
   update_player v player (Player.add_track ~length:(-1));
   [%upf v.segments <- segments];
