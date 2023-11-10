@@ -16,23 +16,27 @@ type upper = [`Upper | `Lower]
   [@@deriving yojson]
 
 type t = {
-  mutable last: int;
   counts: (id, int) Hashtbl.t;
   stations: (loc * upper, id) Hashtbl.t;
 } [@@deriving yojson]
 
 let make () = {
-  last=0;
   counts=Hashtbl.create 10;
   stations=Hashtbl.create 10;
 }
 
 let new_id v =
-  Hashtbl.replace v.counts v.last 0;
-  let ret = v.last in
-  v.last <- succ v.last;
-  Log.debug (fun f -> f "Segment: Get new id %d" ret);
-  ret
+  (* Find a missing id to use *)
+  let id =
+    let rec loop i =
+      if Hashtbl.mem v.counts i then loop (i + 1)
+      else i
+    in
+    loop 0
+  in
+  Hashtbl.replace v.counts id 0;
+  Log.debug (fun f -> f "Segment: Get new id %d" id);
+  id
 
 let remove_id id v =
   Hashtbl.remove v.counts id
