@@ -94,19 +94,6 @@ let build_station graph v trackmap loc after =
       | _  -> Some(ixn.search_dir, stations))
     ixns
   in
-  (* let dir_segs = *)
-  (*     match station with *)
-  (*     (* Found a station facing us *) *)
-  (*     | Some ((x,y) as loc, facing_us_dir) -> *)
-  (*         Log.debug (fun f -> f "Segments: found existing station at (%d,%d)" x y); *)
-  (*         (* Get its id *) *)
-  (*         let id = get_id (loc, facing_us_dir) v in *)
-  (*         Some (ixn.search_dir, id) *)
-  (*     | _ -> None) *)
-  (*   ixns *)
-  (* in *)
-  (* We get at most 2: one per direction *)
-  (* Fill in with new segments as needed *)
   match dir_stations with
   | [] -> (* No connected stations found: add new ids to both ends *)
       let id = new_id v in
