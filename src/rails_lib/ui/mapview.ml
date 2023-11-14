@@ -354,9 +354,11 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let end_x_px = end_x * C.tile_w in
     let end_y_px = end_y * C.tile_h in
     Trainmap.iter (fun (train:Train.t) ->
-      (* Cars *)
+      (* Draw cars *)
       List.iteri (fun i car ->
-        let car_x, car_y, car_dir = Train.get_car_loc ~car_pixels:12 train i in
+        let car_x, car_y, car_dir =
+          Train.calc_car_loc ~car_pixels:12 train s.backend.track i
+        in
         (* let car_dir = Train.get_car_dir train i in *)
         (* if i = 0 then *)
         (*   Log.debug (fun f -> f "car_loc(%d, %d)" car_x car_y); *)
@@ -369,7 +371,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           R.Texture.render win tex ~x ~y
         );
       ) train.cars;
-      (* Engine *)
+      (* Draw engine *)
       if train.x >= start_x_px - C.draw_margin && train.y >= start_y_px - C.draw_margin &&
          train.x <= end_x_px + C.draw_margin && train.y <= end_y_px + C.draw_margin then (
         let tex = Hashtbl.find s.textures.cars_top

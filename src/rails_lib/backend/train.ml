@@ -508,7 +508,7 @@ let update_train _idx (train:t) ~cycle ~cycle_check
      if there's sufficient space for it. Otherwise it'll be in the next
      segment, and use that segment's direction history slot.
    *)
-let get_car_loc (v:t) car_idx ~car_pixels =
+let calc_car_loc (v:t) trackmap car_idx ~car_pixels =
   let total_pixels = car_pixels * (car_idx + 1) in
 
   let move_back x y dir ~total_pixels ~move_pixels =
@@ -538,9 +538,23 @@ let get_car_loc (v:t) car_idx ~car_pixels =
     else
       segment_loop x y (i+1) ~total_pixels ~move_pixels:C.tile_w
   in
-  (* TODO: double tracks *)
-  segment_loop v.x v.y 0 ~total_pixels ~move_pixels:v.pixels_from_midtile
+  let x, y, dir =
+    segment_loop v.x v.y 0 ~total_pixels ~move_pixels:v.pixels_from_midtile
+  in
+  (* Handle double tracks *)
+  let x, y =
+    if Track.is_double @@ Trackmap.get_exn trackmap ~x:(x/16) ~y:(y/16) then
+      let mult = match dir with
+        | Dir.DownLeft | UpLeft -> 1
+        | _ -> 2
+      in
+      let adjust_dir = dir |> Dir.cw |> Dir.cw in
+      let dx, dy = Dir.to_offsets adjust_dir in
+      x + dx * mult, y + dy * mult
+    else
+      x, y
+  in
+  x, y, dir
 
-let get_car_dir (v:t) i =
-  (History.get v.history (i+1)).dir
+let get_car_dir (v:t) i = (History.get v.history (i+1)).dir
   
