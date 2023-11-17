@@ -1,6 +1,8 @@
 
-let tile_w = 16
-let tile_h = 16
+let tile_dim = 16
+let tile_hdim = tile_dim / 2
+let tile_w = tile_dim
+let tile_h = tile_dim
 let train_max_size = 8
 
 let car_amount = 160

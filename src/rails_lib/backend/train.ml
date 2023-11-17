@@ -516,19 +516,24 @@ let update_train _idx (train:t) ~cycle ~cycle_check
 
   (* The algorithm works in segments.
      The length of the full train is car_idx * car_pixels.
+     This function 'queries' the location of each car by pixel numbers (car_idx * car_pixels).
+     The original function only queries by pixel, which can be faked by giving any
+     number for the car_idx and car_pixels.
      We jump in segments of 16 pixels, which are the length between two 
      mid-tiles. The first car will be the same orientation as the engine,
      if there's sufficient space for it. Otherwise it'll be in the next
-     segment, and use that segment's direction history slot.
+     segment, and use that segment's direction history slot, etc.
    *)
 let calc_car_loc (v:t) trackmap car_idx ~car_pixels =
   let total_pixels = car_pixels * (car_idx + 1) in
 
   let move_back x y dir ~total_pixels ~move_pixels =
     let diag = Dir.is_diagonal dir in
-    let x, y = match move_pixels with
-      | 16 -> x / 16 * 16 + 8, y / 16 * 16 + 8
-      | _ -> x, y
+    let x, y =
+      if move_pixels = C.tile_w then
+        x / C.tile_w * C.tile_w + C.tile_hdim, y / C.tile_h * C.tile_h + C.tile_hdim
+      else
+        x, y
     in
     let move_pixels = if diag then move_pixels * 3 / 2 else move_pixels in
     (* This is critical *)
@@ -543,9 +548,7 @@ let calc_car_loc (v:t) trackmap car_idx ~car_pixels =
   let rec segment_loop x y i ~total_pixels ~move_pixels =
     let hist = History.get v.history i in
     (* Move to center *)
-    let x, y, total_pixels =
-      move_back x y hist.dir ~total_pixels ~move_pixels
-    in
+    let x, y, total_pixels = move_back x y hist.dir ~total_pixels ~move_pixels in
     if total_pixels <= 0 then 
       x, y, hist.dir
     else
