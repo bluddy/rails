@@ -504,7 +504,7 @@ let update_train _idx (train:t) ~cycle ~cycle_check
   let adjust_loc_for_double_track trackmap x y dir =
     (* Handle double tracks *)
     match Trackmap.get trackmap ~x:(x/C.tile_w) ~y:(y/C.tile_h) with 
-    | Some track when Track.is_double track ->
+    | Some track when Track.acts_like_double track ->
         let mult = match dir with
           | Dir.DownLeft | UpLeft -> 1
           | _ -> 2

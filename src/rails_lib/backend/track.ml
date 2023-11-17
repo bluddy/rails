@@ -127,8 +127,18 @@ let is_doubleable v =
 
 let is_double v =
   match v.kind with
-  | Track `Double -> true
+  | Track `Double
   | Ferry `Double -> true
+  | _ -> false
+
+let acts_like_double v =
+  (* Some tracks aren't double per se, but they act that way *)
+  match v.kind with
+  | Track `Double
+  | Ferry `Double
+  | Station _ 
+  | Bridge Iron
+  | Bridge Stone -> true
   | _ -> false
 
 let double_track_offsets v =
