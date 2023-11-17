@@ -501,6 +501,19 @@ let update_train _idx (train:t) ~cycle ~cycle_check
       let loc = train.x / C.tile_w, train.y / C.tile_h in
       update_mid_tile train loc (* TODO: Check *)
 
+  let adjust_loc_for_double_track trackmap x y dir =
+    (* Handle double tracks *)
+    match Trackmap.get trackmap ~x:(x/C.tile_w) ~y:(y/C.tile_h) with 
+    | Some track when Track.is_double track ->
+        let mult = match dir with
+          | Dir.DownLeft | UpLeft -> 1
+          | _ -> 2
+        in
+        let adjust_dir = dir |> Dir.cw |> Dir.cw in
+        let dx, dy = Dir.to_offsets adjust_dir in
+        x + dx * mult, y + dy * mult
+    | _ -> x, y
+
   (* The algorithm works in segments.
      The length of the full train is car_idx * car_pixels.
      We jump in segments of 16 pixels, which are the length between two 
@@ -541,19 +554,7 @@ let calc_car_loc (v:t) trackmap car_idx ~car_pixels =
   let x, y, dir =
     segment_loop v.x v.y 0 ~total_pixels ~move_pixels:v.pixels_from_midtile
   in
-  (* Handle double tracks *)
-  let x, y =
-    if Track.is_double @@ Trackmap.get_exn trackmap ~x:(x/16) ~y:(y/16) then
-      let mult = match dir with
-        | Dir.DownLeft | UpLeft -> 1
-        | _ -> 2
-      in
-      let adjust_dir = dir |> Dir.cw |> Dir.cw in
-      let dx, dy = Dir.to_offsets adjust_dir in
-      x + dx * mult, y + dy * mult
-    else
-      x, y
-  in
+  let x, y = adjust_loc_for_double_track trackmap x y dir in
   x, y, dir
 
 let get_car_dir (v:t) i = (History.get v.history (i+1)).dir

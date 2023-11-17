@@ -375,9 +375,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       if train.x >= start_x_px - C.draw_margin && train.y >= start_y_px - C.draw_margin &&
          train.x <= end_x_px + C.draw_margin && train.y <= end_y_px + C.draw_margin then (
         let tex = Hashtbl.find s.textures.cars_top
-          (Engine train.engine._type, train.dir) in
-        let x = train.x - start_x_px + offset_x in
-        let y = train.y - start_y_px + offset_y in
+          (Engine train.engine._type, train.dir)
+        in
+        let x, y = 
+          Train.adjust_loc_for_double_track s.backend.track train.x train.y train.dir
+        in
+        let x, y = x - start_x_px + offset_x, y - start_y_px + offset_y in
         R.Texture.render win tex ~x ~y
       )
     )
