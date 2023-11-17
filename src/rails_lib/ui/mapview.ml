@@ -280,10 +280,20 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     )
     s.backend
   in
-  let draw_track_zoom1 () =
+  let draw_track_and_trains_zoom1 () =
     B.trackmap_iter s.backend (fun x y _ ->
       R.draw_point win ~x ~y:(y + v.dims.y) ~color:Ega.black
-    )
+    );
+    Trainmap.iter (fun (train:Train.t) ->
+      (* Draw engine *)
+      let x, y = train.x / C.tile_w, train.y / C.tile_h + v.dims.y in
+      R.draw_point win ~color:Ega.white ~x ~y;
+      (* Query the train at 16 pixel length *)
+      let x, y, _ = Train.calc_car_loc train s.backend.track 0 ~car_pixels:16 in
+      let x, y = x / C.tile_w, y / C.tile_h + v.dims.y in
+      (* Is this 2nd point necessary? *)
+      R.draw_point win ~color:Ega.black ~x ~y;
+    ) s.backend.trains
   in
   let draw_track_zoom2 () =
     iter_screen (fun i j ->
@@ -346,13 +356,10 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     )
   in
   let draw_trains_zoom4 () =
-    (* For now, draw only the engine *)
     let open Textures.CarsTop in
     let offset_x, offset_y = (-C.tile_w/2) - 2, -2 in
-    let start_x_px = start_x * C.tile_w in
-    let start_y_px = start_y * C.tile_h in
-    let end_x_px = end_x * C.tile_w in
-    let end_y_px = end_y * C.tile_h in
+    let start_x_px, start_y_px = start_x * C.tile_w, start_y * C.tile_h in
+    let end_x_px, end_y_px = end_x * C.tile_w, end_y * C.tile_h in
     Trainmap.iter (fun (train:Train.t) ->
       (* Draw cars *)
       List.iteri (fun i car ->
@@ -432,11 +439,11 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   begin match v.zoom with
   | Zoom1 ->
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
-      draw_track_zoom1 ()
+      draw_track_and_trains_zoom1 ()
   | Zoom2 | Zoom3 ->
       tile_render ();
       draw_track_zoom2 ();
-      draw_minimap ~minimap;
+      draw_minimap ~minimap
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
