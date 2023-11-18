@@ -103,7 +103,7 @@ type freight =
   | FreightBulk
   [@@deriving enum, ord, yojson, show]
 
-let freight_to_color freight ~full = match freight, full with
+let color_of_freight freight ~full = match freight, full with
   | FreightMail, true -> Ega.white
   | FreightMail, false -> Ega.gray
   | FreightPassenger, true -> Ega.bcyan

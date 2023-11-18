@@ -725,7 +725,7 @@ let draw_ui_trains win (s:State.t) v =
     let _ =
       List.fold_left (fun x car ->
         let full = Train.Car.get_amount car > C.car_amount / 2 in
-        let color = Train.Car.get_freight car |> Goods.freight_to_color ~full in
+        let color = Train.Car.get_freight car |> Goods.color_of_freight ~full in
         R.draw_rect win ~x ~y:(y-2) ~w:4 ~h:2 ~color ~fill:true;
         R.draw_point win ~x ~y ~color:Ega.black;
         R.draw_point win ~x:(x+3) ~y ~color:Ega.black;
