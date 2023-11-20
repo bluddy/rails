@@ -334,7 +334,15 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         let y = (train.y - start_y_map)/tile_div + offset_y in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color:Ega.black ~fill:true
       );
-      List.iteri (fun i car -> ()) train.cars
+      List.iteri (fun i car ->
+        let x, y, _ = Train.calc_car_loc train s.backend.track i ~car_pixels:8 in
+        let color = Train.Car.get_freight car
+          |> Goods.color_of_freight ~full:true
+        in
+        let x = (x - start_x_map)/tile_div + offset_x in
+        let y = (y - start_y_map)/tile_div + offset_y in
+        R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true
+      ) train.cars
     ) s.backend.trains;
   in
   let draw_minimap ~(minimap:Utils.rect) =
