@@ -274,20 +274,20 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_render () =
     let tiles = tile_textures_of_zoom s v.zoom in
     iter_screen (fun i j ->
-      let map_x, map_y = start_x + j, start_y + i in
+      let tile_x, tile_y = start_x + j, start_y + i in
       (* Check for alternate tile *)
-      let alt = ((map_x + map_y) land 1) > 0 in
-      let tile = B.get_tile s.backend map_x map_y in
+      let alt = ((tile_x + tile_y) land 1) > 0 in
+      let tile = B.get_tile s.backend tile_x tile_y in
       let tex = Textures.TileTex.find tiles ~region:(B.get_region s.backend) ~alt tile in
       let x, y = j * tile_w, v.dims.y + i * tile_h in
       R.Texture.render win tex ~x ~y;
     )
   in
   let draw_city_names () =
-    B.iter_cities (fun x y (name,_) ->
-      if (x >= start_x && y >= start_y) || (x <= end_x && y <= end_y) then (
-        let x = (x - start_x) * tile_w in
-        let y = (y - start_y) * tile_h + v.dims.y in
+    B.iter_cities (fun tile_x tile_y (name,_) ->
+      if tile_x >= start_x && tile_y >= start_y && tile_x <= end_x && tile_y <= end_y then (
+        let x = (tile_x - start_x) * tile_w in
+        let y = (tile_y - start_y) * tile_h + v.dims.y in
         let x, y = x + 11, y - 15 in
         Fonts.Render.write win s.fonts name ~idx:4 ~x ~y ~color:Ega.black;
         let x, y = x + 1, y - 1 in
