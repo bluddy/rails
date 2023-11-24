@@ -1,6 +1,5 @@
 open Containers
 open Mapview_d
-open Utils.Infix
 module Hashtbl = Utils.Hashtbl
 module B = Backend
 module C = Constants
@@ -338,9 +337,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       (* Draw cars *)
       List.iteri (fun i car ->
         let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
-        let color = Train.Car.get_freight car
-          |> Goods.color_of_freight ~full:true
-        in
+        let color = Train.Car.get_freight car |> Goods.color_of_freight ~full:true in
         draw_car_or_engine color x y
       ) train.cars;
       (* Draw engine *)
@@ -494,7 +491,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   end;
   s
 
-let handle_tick (s:State.t) (v:t) _time =
+let handle_tick (s:State.t) (v:t) _time is_cycle =
+  if not is_cycle then v
+  else
   (* Move smoke *)
   let smoke_plumes =
     if s.backend.cycle mod 3 = 0 then (
@@ -544,7 +543,7 @@ let handle_tick (s:State.t) (v:t) _time =
       smoke_plumes
     | _ -> smoke_plumes
   in
-  if smoke_plumes =!= v.smoke_plumes then v.smoke_plumes <- smoke_plumes;
+  [%upf v.smoke_plumes <- smoke_plumes];
   v
 
 

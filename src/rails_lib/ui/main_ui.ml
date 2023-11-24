@@ -688,7 +688,7 @@ let handle_msgs (s:State.t) v ui_msgs =
   List.fold_left handle_msg v ui_msgs
 
   (* Mostly animations. *)
-let handle_tick s v time = match v.mode with
+let handle_tick s v time is_cycle = match v.mode with
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
       if state === state2 then v else {v with mode=BuildTrain(`AddCars state2)}
@@ -696,8 +696,8 @@ let handle_tick s v time = match v.mode with
       let state2 = Edit_train.handle_tick state time in
       if state === state2 then v else {v with mode=EditTrain state2}
   | Normal ->
-      let view = Mapview.handle_tick s v.view time in
-      if view =!= v.view then {v with view} else v
+      let view = Mapview.handle_tick s v.view time is_cycle in
+      [%up {v with view}]
   | _ -> v
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]

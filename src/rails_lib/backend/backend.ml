@@ -417,6 +417,7 @@ let _remove_train v idx =
 let reset_tick v =
   v.last_tick <- 0
 
+  (* Returns ui_msgs and whether we have a cycle *)
 let handle_tick v cur_time =
   let delay_mult = B_options.delay_mult_of_speed v.options.speed in
   let tick_delta = delay_mult * tick_ms in
@@ -427,10 +428,9 @@ let handle_tick v cur_time =
   if cur_time >= new_time then (
     v.last_tick <- cur_time;
     let v, misc_msgs = Backend_low.handle_cycle v in
-    v, ui_msgs @ misc_msgs
-  )
+    v, ui_msgs @ misc_msgs, true)
   else
-    v, ui_msgs
+    v, ui_msgs, false
 
 let _month_of_time time = (time / month_ticks) mod 12
 

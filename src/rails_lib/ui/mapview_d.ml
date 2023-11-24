@@ -18,6 +18,7 @@ module Options = Bitset.Make(struct
     let last = `Resources
   end)
 
+(* A smoke plume animation eminating from a smokestack *)
 type smoke_plume = {
   mutable frame: int;
   mutable x: int;

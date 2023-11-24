@@ -35,14 +35,11 @@ let handle_tick win (s:State.t) time =
         {s with backend; screen=Screen.MapGen(Some data)}
 
     | Screen.MapView ->
-        let ui = Main_ui.handle_tick s s.ui time in
-        let backend, ui =
-          let backend, ui_msgs = Backend.handle_tick s.backend time in
-          let ui = Main_ui.handle_msgs s ui ui_msgs in
-          backend, ui
-        in
-        if s.ui =!= ui then s.ui <- ui;
-        if s.backend =!= backend then s.backend <- backend;
+        let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
+        let ui = Main_ui.handle_tick s s.ui time is_cycle in
+        let ui = Main_ui.handle_msgs s ui ui_msgs in
+        [%upf s.ui <- ui];
+        [%upf s.backend <- backend];
         s
 
     | _ -> s
