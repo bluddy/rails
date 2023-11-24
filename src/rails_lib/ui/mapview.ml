@@ -327,22 +327,25 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
   let draw_trains_zoom2 () =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
-    Trainmap.iter (fun (train:Train.t) ->
-      (* Draw engine *)
-      if is_in_view train.x train.y then (
-        let x = (train.x - start_x_map)/tile_div + offset_x in
-        let y = (train.y - start_y_map)/tile_div + offset_y in
-        R.draw_rect win ~x ~y ~w:2 ~h:2 ~color:Ega.black ~fill:true
-      );
-      List.iteri (fun i car ->
-        let x, y, _ = Train.calc_car_loc train s.backend.track i ~car_pixels:8 in
-        let color = Train.Car.get_freight car
-          |> Goods.color_of_freight ~full:true
-        in
+    let draw_car_or_engine color x y =
+      if is_in_view x y then (
         let x = (x - start_x_map)/tile_div + offset_x in
         let y = (y - start_y_map)/tile_div + offset_y in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true
-      ) train.cars
+      )
+    in
+    Trainmap.iter (fun (train:Train.t) ->
+      (* Draw cars *)
+      List.iteri (fun i car ->
+        let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
+        let color = Train.Car.get_freight car
+          |> Goods.color_of_freight ~full:true
+        in
+        draw_car_or_engine color x y
+      ) train.cars;
+      (* Draw engine *)
+      let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track 0 in
+      draw_car_or_engine Ega.black x y;
     ) s.backend.trains;
   in
   let draw_minimap ~(minimap:Utils.rect) =
