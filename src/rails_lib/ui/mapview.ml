@@ -67,11 +67,11 @@ let mapview_bounds v tile_w tile_h =
   start_x, start_y, end_x, end_y
 
 let minimap_bounds v ~(minimap:Utils.rect) =
-  let start_x = Utils.clip (v.center_x - minimap.w/2) ~min:0 ~max:(v.dims.w - minimap.w) in
-  let start_y = Utils.clip (v.center_y - minimap.h/2) ~min:0 ~max:(v.dims.h - minimap.h) in
-  let end_x = start_x + minimap.w in
-  let end_y = start_y + minimap.h in
-  start_x, start_y, end_x, end_y
+  let start_x_tile = Utils.clip (v.center_x - minimap.w/2) ~min:0 ~max:(v.dims.w - minimap.w) in
+  let start_y_tile = Utils.clip (v.center_y - minimap.h/2) ~min:0 ~max:(v.dims.h - minimap.h) in
+  let end_x_tile = start_x_tile + minimap.w in
+  let end_y_tile = start_y_tile + minimap.h in
+  start_x_tile, start_y_tile, end_x_tile, end_y_tile
 
 
 let check_recenter_zoom4 v cursor_x cursor_y =
@@ -295,17 +295,24 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     )
     s.backend
   in
-  let draw_track_and_trains_zoom1 () =
+  let draw_track_and_trains_zoom1 from_x from_y from_x_end from_y_end start_x start_y =
     B.trackmap_iter s.backend (fun x y _ ->
-      R.draw_point win ~x ~y:(y + v.dims.y) ~color:Ega.black
+      if x >= from_x && x <= from_x_end && y >= from_y && y <= from_y_end then (
+        let x, y = start_x + x - from_x, start_y + y - from_y in
+        R.draw_point win ~x ~y ~color:Ega.black
+      )
     );
+    (* Draw train *)
     Trainmap.iter (fun (train:Train.t) ->
-      (* Draw engine *)
-      (* Is the 2nd black point necessary? *)
+      (* NOTE: Is the 2nd black point necessary? *)
       List.iter (fun (pixels, color) ->
-        let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track pixels in
-        let x, y = x / tile_div + v.dims.x, y / tile_div + v.dims.y in
-        R.draw_point win ~color ~x ~y)
+        let x_map, y_map, _ = Train.calc_car_loc_in_pixels train s.backend.track pixels in
+        (* Must use tile_dim: tile_div changes by zoom *)
+        let x_tile, y_tile = x_map / C.tile_dim, y_map / C.tile_dim in
+        if x_tile >= from_x && x_tile <= from_x_end && y_tile >= from_y && y_tile <= from_y_end then (
+          let x, y = start_x + x_tile - from_x, start_y + y_tile - from_y in
+          R.draw_point win ~color ~x ~y
+        ))
       [0, Ega.white; 16, Ega.black]
     ) s.backend.trains
   in
@@ -352,23 +359,10 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     ) s.backend.trains;
   in
   let draw_minimap ~(minimap:Utils.rect) =
-    let from_x, from_y, from_end_x, from_end_y = minimap_bounds v ~minimap in
+    let from_x, from_y, from_x_end, from_y_end = minimap_bounds v ~minimap in
     R.Texture.render_subtex win s.map_tex ~x:minimap.x ~y:minimap.y
       ~from_x ~from_y ~w:minimap.w ~h:minimap.h;
-
-    (* draw track *)
-    B.trackmap_iter s.backend (fun x y _ ->
-      if x >= from_x && x <= from_end_x && y >= from_y && y <= from_end_y then (
-        let x = minimap.x + x - from_x in
-        let y = minimap.y + y - from_y in
-        R.draw_point win ~x ~y ~color:Ega.black
-      )
-    );
-    (* minimap border rectangle *)
-    let x = minimap.x + start_x - from_x in
-    let y = minimap.y + start_y - from_y in
-    R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
-      ~fill:false;
+    draw_track_and_trains_zoom1 from_x from_y from_x_end from_y_end minimap.x minimap.y
   in
   let draw_cursor_zoom4 () =
     let x = (v.cursor_x - start_x) * tile_w in
@@ -472,7 +466,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   begin match v.zoom with
   | Zoom1 ->
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
-      draw_track_and_trains_zoom1 ()
+      draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
   | Zoom2 ->
       draw_track_zoom2 ();
       draw_trains_zoom2 ();
