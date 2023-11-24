@@ -301,13 +301,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     );
     Trainmap.iter (fun (train:Train.t) ->
       (* Draw engine *)
-      let x, y = train.x / tile_div, train.y / tile_div + v.dims.y in
-      R.draw_point win ~color:Ega.white ~x ~y;
-      (* Query the train once at 16 pixel length *)
-      let x, y, _ = Train.calc_car_loc train s.backend.track 0 ~car_pixels:16 in
-      let x, y = x / tile_div, y / tile_div + v.dims.y in
-      (* Is this 2nd point necessary? *)
-      R.draw_point win ~color:Ega.black ~x ~y;
+      (* Is the 2nd black point necessary? *)
+      List.iter (fun (pixels, color) ->
+        let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track pixels in
+        let x, y = x / tile_div + v.dims.x, y / tile_div + v.dims.y in
+        R.draw_point win ~color ~x ~y)
+      [0, Ega.white; 16, Ega.black]
     ) s.backend.trains
   in
   let draw_track_zoom2 () =
@@ -365,7 +364,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         R.draw_point win ~x ~y ~color:Ega.black
       )
     );
-    (* minimap rectangle *)
+    (* minimap border rectangle *)
     let x = minimap.x + start_x - from_x in
     let y = minimap.y + start_y - from_y in
     R.draw_rect win ~x ~y ~w:(end_x - start_x + 1) ~h:(end_y - start_y + 1) ~color:Ega.white
