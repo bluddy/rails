@@ -260,9 +260,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let start_x_map, start_y_map = start_x * C.tile_w, start_y * C.tile_h in
   let end_x_map, end_y_map = end_x * C.tile_w, end_y * C.tile_h in
   let iter_screen f =
-    for i = 0 to v.dims.h/tile_h - 1 do
-      for j = 0 to v.dims.w/tile_w - 1 do
-        f i j
+    for y = 0 to v.dims.h/tile_h - 1 do
+      for x = 0 to v.dims.w/tile_w - 1 do
+        f x y
       done
     done
   in
@@ -272,13 +272,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
   let tile_render () =
     let tiles = tile_textures_of_zoom s v.zoom in
-    iter_screen (fun i j ->
-      let tile_x, tile_y = start_x + j, start_y + i in
+    iter_screen (fun x y ->
+      let tile_x, tile_y = start_x + x, start_y + y in
       (* Check for alternate tile *)
       let alt = ((tile_x + tile_y) land 1) > 0 in
       let tile = B.get_tile s.backend tile_x tile_y in
       let tex = Textures.TileTex.find tiles ~region:(B.get_region s.backend) ~alt tile in
-      let x, y = j * tile_w, v.dims.y + i * tile_h in
+      let x, y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
       R.Texture.render win tex ~x ~y;
     )
   in
@@ -316,12 +316,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       [0, Ega.white; 16, Ega.black]
     ) s.backend.trains
   in
-  let draw_track_zoom2 () =
-    iter_screen (fun i j ->
-      let map_x, map_y = start_x + j, start_y + i in
+  let draw_track_zoom2_3 () =
+    iter_screen (fun x y ->
+      let map_x, map_y = start_x + x, start_y + y in
       match B.get_track s.backend map_x map_y with
       | Some track ->
-        let x, y = j * tile_w + tile_w2, v.dims.y + i * tile_h + tile_h2 in
+        let x, y = x * tile_w + tile_w2, v.dims.y + y * tile_h + tile_h2 in
         Dir.Set.iter (fun dir ->
           let dx, dy = Dir.to_offsets dir in
           R.draw_line win ~color:Ega.white ~x1:x ~y1:y ~x2:(x+dx*tile_w) ~y2:(y+dy*tile_h)
@@ -330,7 +330,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       | _ -> ()
     )
   in
-  let draw_trains_zoom2 () =
+  let draw_trains_zoom2_3 () =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
     let draw_car_or_engine color x y dir =
       if is_in_view x y then (
@@ -372,9 +372,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
   let draw_track_zoom4 () =
     let track_h = s.State.textures.tracks in
-    iter_screen (fun i j ->
-      let map_x, map_y = start_x + j, start_y + i in
-      let x, y = j * tile_w, v.dims.y + i * tile_h in
+    iter_screen (fun x y ->
+      let map_x, map_y = start_x + x, start_y + y in
+      let x, y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
       match B.get_track s.backend map_x map_y with
       | Some track when Track.is_double track ->
         let tex = Textures.Tracks.find track_h track in
@@ -432,13 +432,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     v.smoke_plumes
   in
   let draw_survey_zoom4 () =
-    iter_screen (fun i j ->
-      let map_x, map_y = start_x + j, start_y + i in
+    iter_screen (fun x y ->
+      let map_x, map_y = start_x + x, start_y + y in
       match B.get_tile s.backend map_x map_y with
       | Tile.Ocean _ -> ()
       | _ ->
         let height = (B.get_tile_height s.backend map_x map_y) / 2 |> string_of_int in
-        let x, y = j * tile_w + 4, i * tile_h + 4 + v.dims.y in
+        let x, y = x * tile_w + 4 + v.dims.x, y * tile_h + 4 + v.dims.y in
         Fonts.Render.write win s.fonts height ~idx:3 ~x ~y ~color:Ega.white
     )
   in
@@ -468,13 +468,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
       draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
   | Zoom2 ->
-      draw_track_zoom2 ();
-      draw_trains_zoom2 ();
+      draw_track_zoom2_3 ();
+      draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom3 ->
       tile_render ();
-      draw_track_zoom2 ();
-      draw_trains_zoom2 ();
+      draw_track_zoom2_3 ();
+      draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom4 ->
       tile_render ();
