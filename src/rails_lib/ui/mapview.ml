@@ -318,13 +318,15 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
   let draw_track_zoom2_3 () =
     iter_screen (fun x y ->
-      let map_x, map_y = start_x + x, start_y + y in
-      match B.get_track s.backend map_x map_y with
+      let tile_x, tile_y = start_x + x, start_y + y in
+      match B.get_track s.backend tile_x tile_y with
       | Some track ->
-        let x, y = x * tile_w + tile_w2, v.dims.y + y * tile_h + tile_h2 in
+        let x = v.dims.x + x * tile_w + tile_w2 in
+        let y = v.dims.y + y * tile_h + tile_h2 in
         Dir.Set.iter (fun dir ->
           let dx, dy = Dir.to_offsets dir in
-          R.draw_line win ~color:Ega.white ~x1:x ~y1:y ~x2:(x+dx*tile_w) ~y2:(y+dy*tile_h)
+          R.draw_line win ~color:Ega.white ~x1:x ~y1:y
+            ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2)
         )
         track.dirs
       | _ -> ()
