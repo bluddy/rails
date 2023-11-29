@@ -116,8 +116,12 @@ let convert v good region =
   else
     None
 
-type signal = ManualProceed of bool | Auto
-            [@@deriving yojson, eq]
+type signal = 
+  | Go (* safe to enter *)
+  | Stop (* not safe to enter *)
+  | OverrideProceed (* pass next train and then normal *)
+  | OverrideHold (* stops all trains *)
+  [@@deriving yojson, eq]
 
 type id = int * int [@@deriving yojson, eq, show]
 
@@ -135,6 +139,16 @@ let with_info v f = match v.info with
   | _ -> None
 
 let get_age v year = year - v.year
+
+let color_of_signal = function
+  | Go -> Ega.green
+  | Stop -> Ega.red
+  | OverrideProceed -> Ega.yellow
+  | OverrideHold -> Ega.bred
+
+let frame_color_of_signal = function
+  | Go | Stop -> Ega.black
+  | _ -> Ega.white
 
 let kind_str v =
   match v.info with
@@ -204,7 +218,7 @@ let make_segments_and_signals segments =
   *)
 
 let make_signaltower ~x ~y ~year ~player =
-  let signals = Auto, Auto in
+  let signals = Go, Go in
   { x; y; year; info=None; player; signals}
 
 let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
@@ -238,7 +252,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
         rates=`Normal;
       } |> Option.some
   in
-  let signals = Auto, Auto in
+  let signals = Go, Go in
   { x; y; year; info; player; signals}
 
 let add_upgrade v upgrade player =

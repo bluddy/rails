@@ -317,7 +317,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       [0, Ega.white; 16, Ega.black]
     ) s.backend.trains
   in
-  let draw_track_zoom2_3 () =
+  let draw_track_zoom2_3 mult =
     iter_screen (fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
       match B.get_track s.backend tile_x tile_y with
@@ -330,7 +330,24 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         | Station `Terminal ->
             (* Draw station outline *)
             R.draw_rect win ~color:Ega.white
-              ~x:(x-3) ~y:(y-3) ~w:6 ~h:6 ~fill:true
+              ~x:(x-3) ~y:(y-3) ~w:6 ~h:6 ~fill:true;
+
+            (* Draw signals *)
+            let station = Loc_map.get_exn (tile_x, tile_y) s.backend.stations in
+            let mult = mult + 1 in
+            Dir.Set.iter (fun dir ->
+              let signal = Station.get_signal station dir in
+              let dir = dir |> Dir.cw |> Dir.cw in
+              let dx, dy = Dir.to_offsets dir in
+              let dx, dy = mult * dx, mult * dy in
+              let x, y = x + dx, y + dy in
+              let color = Station.frame_color_of_signal signal in
+              R.draw_rect win ~color ~x:(x-2) ~y:(y-2) ~w:4 ~h:4 ~fill:false;
+              let color = Station.color_of_signal signal in
+              R.draw_rect win ~color ~x:(x-1) ~y:(y-1) ~w:2 ~h:2 ~fill:true
+            )
+            track.dirs
+
         | _ ->
             Dir.Set.iter (fun dir ->
               let dx, dy = Dir.to_offsets dir in
@@ -480,12 +497,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
       draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
   | Zoom2 ->
-      draw_track_zoom2_3 ();
+      draw_track_zoom2_3 1;
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom3 ->
       tile_render ();
-      draw_track_zoom2_3 ();
+      draw_track_zoom2_3 2;
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom4 ->
