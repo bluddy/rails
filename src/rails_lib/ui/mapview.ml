@@ -267,6 +267,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     done
   in
   let is_in_view x y =
+    (* In map coordinates *)
     x >= start_x_map - C.draw_margin && y >= start_y_map - C.draw_margin &&
     x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
   in
@@ -323,12 +324,21 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       | Some track ->
         let x = v.dims.x + x * tile_w + tile_w2 in
         let y = v.dims.y + y * tile_h + tile_h2 in
-        Dir.Set.iter (fun dir ->
-          let dx, dy = Dir.to_offsets dir in
-          R.draw_line win ~color:Ega.white ~x1:x ~y1:y
-            ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2)
-        )
-        track.dirs
+        begin match track.kind with
+        | Station `Depot
+        | Station `Station
+        | Station `Terminal ->
+            (* Draw station outline *)
+            R.draw_rect win ~color:Ega.white
+              ~x:(x-3) ~y:(y-3) ~w:6 ~h:6 ~fill:true
+        | _ ->
+            Dir.Set.iter (fun dir ->
+              let dx, dy = Dir.to_offsets dir in
+              R.draw_line win ~color:Ega.white ~x1:x ~y1:y
+                ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2)
+            )
+            track.dirs
+        end
       | _ -> ()
     )
   in
