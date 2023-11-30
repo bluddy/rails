@@ -1,9 +1,11 @@
 # Tasks
+- Zoom2/3: double track
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc
   - Fix segments
 - Bug:
+  - Clicking in zoom2/3 view causes exception
   - First engines use one-chimney img. Check in code.
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game
