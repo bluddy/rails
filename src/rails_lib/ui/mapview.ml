@@ -318,7 +318,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     ) s.backend.trains
   in
   let draw_track_zoom2_3 mult =
-    iter_screen (fun x y ->
+    iter_screen @@ fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
       match B.get_track s.backend tile_x tile_y with
       | Some track ->
@@ -326,27 +326,27 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         let y = v.dims.y + y * tile_h + tile_h2 in
 
         let draw_signals () =
-            let station = Loc_map.get_exn (tile_x, tile_y) s.backend.stations in
-            let mult = mult + 1 in
-            Dir.Set.iter (fun dir ->
-              (* Only draw signal if we have track in this direction *)
-              let tile_x, tile_y = Dir.adjust dir tile_x tile_y in
-              match B.get_track s.backend tile_x tile_y with
-              | None -> ()
-              | Some _ -> 
-                let signal = Station.get_signal station dir in
-                let dir90 = dir |> Dir.cw |> Dir.cw in
-                let dx, dy = Dir.to_offsets dir90 in
-                let dx, dy = mult * dx, mult * dy in
-                let x, y = x + dx, y + dy in
-                (* draw frame *)
-                let color = Station.frame_color_of_signal signal in
-                R.draw_rect win ~color ~x:(x-2) ~y:(y-2) ~w:4 ~h:4 ~fill:false;
-                (* draw light *)
-                let color = Station.color_of_signal signal in
-                R.draw_rect win ~color ~x:(x-1) ~y:(y-1) ~w:2 ~h:2 ~fill:true
-            )
-            track.dirs
+          let station = Loc_map.get_exn (tile_x, tile_y) s.backend.stations in
+          let mult = mult + 1 in
+          Dir.Set.iter (fun dir ->
+            (* Only draw signal if we have track in this direction *)
+            let tile_x, tile_y = Dir.adjust dir tile_x tile_y in
+            match B.get_track s.backend tile_x tile_y with
+            | None -> ()
+            | Some _ -> 
+              let signal = Station.get_signal station dir in
+              let dir90 = dir |> Dir.cw |> Dir.cw in
+              let dx, dy = Dir.to_offsets dir90 in
+              let dx, dy = mult * dx, mult * dy in
+              let x, y = x + dx, y + dy in
+              (* draw frame *)
+              let color = Station.frame_color_of_signal signal in
+              R.draw_rect win ~color ~x:(x-2) ~y:(y-2) ~w:4 ~h:4 ~fill:false;
+              (* draw light *)
+              let color = Station.color_of_signal signal in
+              R.draw_rect win ~color ~x:(x-1) ~y:(y-1) ~w:2 ~h:2 ~fill:true
+          )
+          track.dirs
         in
         begin match track.kind with
         | Station `Depot
@@ -356,20 +356,26 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
             R.draw_rect win ~color:Ega.white ~x:(x-3) ~y:(y-3) ~w:6 ~h:6 ~fill:true;
             draw_signals ()
 
-        | Station `SignalTower ->
-            draw_signals ()
+        | Station `SignalTower -> draw_signals ()
 
-        | _ ->
-            (* Draw track *)
-            Dir.Set.iter (fun dir ->
+        | _normal_track ->
+            let draw_segment x y dir =
               let dx, dy = Dir.to_offsets dir in
               R.draw_line win ~color:Ega.white ~x1:x ~y1:y
-                ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2)
+                ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2);
+            in
+            let is_double = Track.acts_like_double track in
+            Dir.Set.iter (fun dir ->
+              draw_segment x y dir;
+              if is_double then (
+                let dir_adjust = Dir.double_track_dir dir in
+                let x, y = Dir.adjust dir_adjust x y in
+                draw_segment x y dir
+              )
             )
             track.dirs
         end
       | _ -> ()
-    )
   in
   let draw_trains_zoom2_3 () =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in

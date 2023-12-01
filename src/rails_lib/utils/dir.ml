@@ -198,3 +198,7 @@ let offset_conv_map =
    2; (* top *)
   ]
 
+    (* This is how we adjust for double track in zoom2 or 3 *)
+let double_track_dir = function
+  | Up | Down -> Left
+  | _ -> Down
