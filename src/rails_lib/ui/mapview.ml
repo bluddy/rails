@@ -412,7 +412,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let from_x, from_y, from_x_end, from_y_end = minimap_bounds v ~minimap in
     R.Texture.render_subtex win s.map_tex ~x:minimap.x ~y:minimap.y
       ~from_x ~from_y ~w:minimap.w ~h:minimap.h;
-    draw_track_and_trains_zoom1 from_x from_y from_x_end from_y_end minimap.x minimap.y
+    draw_track_and_trains_zoom1 from_x from_y from_x_end from_y_end minimap.x minimap.y;
+    (* Draw white frame showing visible area. Tile = pixel *)
+    let x = start_x - from_x + minimap.x in
+    let y = start_y - from_y + minimap.y in
+    let w, h = end_x - start_x, end_y - start_y in
+    R.draw_rect win ~x ~y ~w ~h ~color:Ega.white ~fill:false
   in
   let draw_cursor_zoom4 () =
     let x = (v.cursor_x - start_x) * tile_w in
