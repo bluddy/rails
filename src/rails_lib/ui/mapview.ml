@@ -368,7 +368,10 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
             Dir.Set.iter (fun dir ->
               draw_segment x y dir;
               if is_double then (
-                let dir_adjust = Dir.double_track_dir dir in
+                let dir_adjust = match dir with
+                | Dir.Up | Down -> Dir.Left
+                | _ -> Down
+                in
                 let x, y = Dir.adjust dir_adjust x y in
                 draw_segment x y dir
               )
