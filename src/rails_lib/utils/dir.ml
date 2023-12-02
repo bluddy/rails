@@ -172,9 +172,12 @@ let x_offset =
       3;  3; -3; -3;
   |]
 
+let to_offsets_int i =
+  x_offset.(i), y_offset.(i)
+
 let to_offsets dir =
   let i = to_enum dir in
-  x_offset.(i), y_offset.(i)
+  to_offsets_int i
 
 let adjust dir x y =
   let dx, dy = to_offsets dir in
