@@ -417,6 +417,42 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_car_or_engine Ega.black x y dir;
     ) s.backend.trains;
   in
+  let draw_stationboxes mult shift size =
+    let exception NonEmptyException in
+    let num_tiles_x, num_tiles_y = end_x - start_x + 1, end_y - start_y + 1 in
+    let arr = Array.make (num_tiles_x * num_tiles_y) false in
+    iter_screen @@ fun x y ->
+      let (tile_x, tile_y) as loc = start_x + x, start_y + y in
+      match B.get_track s.backend tile_x tile_y with
+      | Some {kind=Station `Depot; _}
+      | Some {kind=Station `Station; _}
+      | Some {kind=Station `Terminal; _} ->
+      let rec search_for_space i =
+        try
+          let x_offset, y_offset = Dir.to_offsets_int i in
+          let x_offset, y_offset = x_offset * mult - shift, y_offset * mult - shift in
+          let tile_x, tile_y = tile_x + x_offset, tile_y + y_offset in
+          if tile_x >= start_x && tile_x < end_x - size &&
+             tile_y >= start_y && tile_y < end_y - size then (
+            for i=0 to size-1 do
+              for j=0 to size-1 do
+                if Option.is_some
+                  (B.get_track s.backend (tile_x+i) (tile_y+j)) ||
+                  arr.(tile_x - start_x + i + (tile_y - start_y + j) * num_tiles_x)
+                then
+                  raise NonEmptyException 
+                else
+                  tile_x, tile_y
+              done
+            done)
+        with
+        | NonEmptyException -> search_for_space (i+1)
+      in
+      let tile_x, tile_y = search_for_space 0 in
+      arr.(tile_x + tile_y * num_tiles_x) <- true;
+      R.draw_rect win ~x ~y ~w:size ~h:size ~fill:true ~color:Ega.blue
+
+  in
   let draw_minimap ~(minimap:Utils.rect) =
     let from_x, from_y, from_x_end, from_y_end = minimap_bounds v ~minimap in
     R.Texture.render_subtex win s.map_tex ~x:minimap.x ~y:minimap.y
@@ -534,12 +570,18 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   | Zoom2 ->
       draw_track_zoom2_3 1;
       draw_trains_zoom2_3 ();
-      draw_minimap ~minimap
+      draw_minimap ~minimap;
+      if Options.mem v.options `StationBoxes then (
+        draw_stationboxes 6 
+      )
   | Zoom3 ->
       tile_render ();
       draw_track_zoom2_3 2;
       draw_trains_zoom2_3 ();
-      draw_minimap ~minimap
+      draw_minimap ~minimap;
+      if Options.mem v.options `StationBoxes then (
+        draw_stationboxes 3
+      )
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
