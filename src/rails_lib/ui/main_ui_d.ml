@@ -37,7 +37,7 @@ module Features = Bitset.Make(struct
 end)
 
 type options = {
-  messages: message_speed;
+  message_speed: message_speed;
   news: NewsTypes.t;
   features: Features.t;
 } [@@deriving yojson]

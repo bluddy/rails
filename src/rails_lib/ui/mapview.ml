@@ -73,7 +73,6 @@ let minimap_bounds v ~(minimap:Utils.rect) =
   let end_y_tile = start_y_tile + minimap.h in
   start_x_tile, start_y_tile, end_x_tile, end_y_tile
 
-
 let check_recenter_zoom4 v cursor_x cursor_y =
   (* recenter in zoom4 if past screen, but only in given direction *)
   let tile_w, tile_h = tile_size_of_zoom Zoom4 in
@@ -127,6 +126,16 @@ let get_build_mode v = v.build_mode
 let get_survey v = v.survey
 
 let set_survey v b = {v with survey=b}
+
+let update_option v option value =
+  let options = 
+    if value then
+      Options.add v.options option
+    else
+      Options.remove v.options option
+  in
+  {v with options}
+
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 

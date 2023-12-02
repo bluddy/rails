@@ -31,7 +31,7 @@ let main_menu fonts menu_h region =
     ]
   in
   let train_messages =
-    let check_message message (s:State.t) = Main_ui_d.equal_message_speed s.ui.options.messages message in
+    let check_message message (s:State.t) = Main_ui_d.equal_message_speed s.ui.options.message_speed message in
     let open MsgBox in
     make ~fonts
     [
@@ -263,7 +263,7 @@ let default ?options ?view win fonts region =
     | Some options -> options
     | None ->
       {
-        messages=`Slow;
+        message_speed=`Slow;
         news=NewsTypes.of_list [`Financial; `Railroad; `Local];
         features=Features.of_list [`Animations; `Sounds];
       }
@@ -476,6 +476,33 @@ let handle_event (s:State.t) v (event:Event.t) =
             save_game s;
             v, nobaction
         | On (`Speed speed), _ -> v, B.Action.SetSpeed speed
+        | On (`Message setting), _ ->
+            let options = {v.options with message_speed=setting} in
+            {v with options}, nobaction
+        | On (`News newstype), _ ->
+            let options = v.options in
+            let news = NewsTypes.add options.news newstype in
+            let options = {options with news} in
+            {v with options}, nobaction
+        | Off (`News newstype), _ ->
+            let options = v.options in
+            let news = NewsTypes.remove options.news newstype in
+            let options = {options with news} in
+            {v with options}, nobaction
+        | On (`Features feature), _ ->
+            let options = v.options in
+            let features = Features.add options.features feature in
+            let options = {options with features} in
+            {v with options}, nobaction
+        | Off (`Features feature), _ ->
+            let options = v.options in
+            let features = Features.remove options.features feature in
+            let options = {options with features} in
+            {v with options}, nobaction
+        | On (`Options option), _ ->
+            {v with view=Mapview.update_option v.view option true}, nobaction
+        | Off (`Options option), _ ->
+            {v with view=Mapview.update_option v.view option false}, nobaction
         | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
         | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
         | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
