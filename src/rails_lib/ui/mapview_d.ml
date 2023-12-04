@@ -39,6 +39,7 @@ type t =
     build_mode: bool;
     survey: bool;
     mutable smoke_plumes: smoke_plume list;
+    tile_buffer: Tilebuffer.t;
     options: Options.t;
   }
   [@@deriving yojson]
