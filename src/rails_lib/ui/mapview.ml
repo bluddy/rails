@@ -418,42 +418,46 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_car_or_engine Ega.black x y dir;
     ) s.backend.trains;
   in
-  let draw_stationboxes mult shift size =
-    (* We need to find an empty screen location to draw the station boxes *)
-    let exception NonEmptyException in
-    let rec search_for_space i =
-      try
-        let x_offset, y_offset = Dir.to_offsets_int i in
-        let x_offset, y_offset = x_offset * mult - shift, y_offset * mult - shift in
-        let tile_x, tile_y = tile_x + x_offset, tile_y + y_offset in
-        if tile_x >= start_x && tile_x < end_x - size &&
-           tile_y >= start_y && tile_y < end_y - size then (
-          for i=0 to size-1 do
-            for j=0 to size-1 do
-              if Option.is_some
-                (B.get_track s.backend (tile_x+i) (tile_y+j)) ||
-                arr.(tile_x - start_x + i + (tile_y - start_y + j) * num_tiles_x)
-              then
-                raise NonEmptyException 
-              else
-                tile_x, tile_y
-            done
-          done)
-      with
-      | NonEmptyException -> search_for_space (i+1)
-    in
-    let num_tiles_x, num_tiles_y = end_x - start_x + 1, end_y - start_y + 1 in
-    let h = Hashtbl.create 10 in
-    iter_screen @@ fun x y ->
-      let (tile_x, tile_y) as loc = start_x + x, start_y + y in
-      match B.get_track s.backend tile_x tile_y with
-      | Some {kind=Station `Depot; _}
-      | Some {kind=Station `Station; _}
-      | Some {kind=Station `Terminal; _} ->
-      let tile_x, tile_y = search_for_space 0 in
-      arr.(tile_x + tile_y * num_tiles_x) <- true;
-      R.draw_rect win ~x ~y ~w:size ~h:size ~fill:true ~color:Ega.blue
+  let draw_stationboxes mult size =
+    (* mult and size are in tiles! *)
+    Tilebuffer.clear v.tile_buffer;
+    let copy_to_tile_buffer () =
+      iter_screen @@ fun x y ->
+        let tile_x, tile_y = start_x + x, start_y + y in
+        if Option.is_some @@ B.get_track s.backend tile_x tile_y then
+          Tilebuffer.set v.tile_buffer x y
+    in copy_to_tile_buffer ();
 
+    (* We need to find an empty screen location to draw the station boxes *)
+    let find_space_and_draw_stationbox tile_x tile_y =
+      (* tile_x/y: visible tiles on screen, not from origin *)
+      let num_tiles_x, num_tiles_y = v.dims.w / tile_w, v.dims.h / tile_h in
+      let rec search_for_box_space i =
+        let x_offset, y_offset = Dir.to_offsets_int i in
+        let x_offset, y_offset = x_offset * mult - (size/2), y_offset * mult - (size/2) in
+        let tile_x, tile_y = tile_x + x_offset, tile_y + y_offset in
+        let tile_x = Utils.clip ~min:0 ~max:(num_tiles_x - size - 1) tile_x in
+        let tile_y = Utils.clip ~min:0 ~max:(num_tiles_y - size - 1) tile_y in
+        if Tilebuffer.is_empty_box v.tile_buffer tile_x tile_y ~w:size ~h:size || i >= 24 then
+          tile_x, tile_y
+        else
+          search_for_box_space (i+1)
+      in
+      let tile_x, tile_y = search_for_box_space 0 in
+      (* Mark box in buffer *)
+      Tilebuffer.set_box v.tile_buffer tile_x tile_y ~w:size ~h:size;
+      let x, y = tile_x * tile_w + v.dims.x, tile_y * tile_w + v.dims.y in
+      let w, h = size * tile_w, size * tile_h in
+      R.draw_rect win ~x ~y ~w ~h ~fill:true ~color:Ega.blue
+    in
+    iter_screen @@ fun x y ->
+      let tile_x, tile_y = start_x + x, start_y + y in
+      if tile_x >= start_x && tile_x < end_x - size &&
+         tile_y >= start_y && tile_y < end_y - size then (
+        B.get_track s.backend tile_x tile_y
+        |> Option.iter (fun track ->
+          if Track.is_big_station track then find_space_and_draw_stationbox x y)
+      )
   in
   let draw_minimap ~(minimap:Utils.rect) =
     let from_x, from_y, from_x_end, from_y_end = minimap_bounds v ~minimap in
@@ -574,7 +578,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap;
       if Options.mem v.options `StationBoxes then (
-        draw_stationboxes 6 
+        draw_stationboxes 6 8
       )
   | Zoom3 ->
       tile_render ();
@@ -582,7 +586,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap;
       if Options.mem v.options `StationBoxes then (
-        draw_stationboxes 3
+        draw_stationboxes 3 8
       )
   | Zoom4 ->
       tile_render ();

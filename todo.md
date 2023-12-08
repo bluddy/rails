@@ -5,7 +5,7 @@
   - Also for station, upgrade etc
   - Fix segments
 - Bug:
-  - Clicking in zoom2/3 view causes exception
+  - Clicking in zoom2/3 view sometimes tries to go to station and causes exception
   - First engines use one-chimney img. Check in code.
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game

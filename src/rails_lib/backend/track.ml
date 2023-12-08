@@ -33,6 +33,10 @@ let is_empty v = Dir.Set.cardinal v.dirs = 0
 let is_station v = match v.kind with
   | Station _ -> true | _ -> false
 
+let is_big_station v = match v.kind with
+  | Station station -> Station.is_big_station station
+  | _ -> false
+
 let is_ixn v = v.ixn
 
 let make dirs kind ~player =

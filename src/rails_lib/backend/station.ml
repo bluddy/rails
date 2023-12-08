@@ -36,6 +36,10 @@ let price_of = function
   | `Station -> 100
   | `Terminal -> 200
 
+let is_big_station (x:kind) = match x with
+  | `SignalTower -> false
+  | _ -> true
+
 type upgrade =
   | MaintenanceShop
   | EngineShop (* higher than MaintenanceShop to hide it *)
