@@ -32,7 +32,7 @@
     try
       for i=y to y+h-1 do 
         for j=x to x+w-1 do
-          if get v i j then raise Stop
+          if get v j i then raise Stop
         done
       done;
       true

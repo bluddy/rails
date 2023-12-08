@@ -427,7 +427,6 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         if Option.is_some @@ B.get_track s.backend tile_x tile_y then
           Tilebuffer.set v.tile_buffer x y
     in copy_to_tile_buffer ();
-
     (* We need to find an empty screen location to draw the station boxes *)
     let find_space_and_draw_stationbox tile_x tile_y =
       (* tile_x/y: visible tiles on screen, not from origin *)
@@ -586,7 +585,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap;
       if Options.mem v.options `StationBoxes then (
-        draw_stationboxes 3 8
+        draw_stationboxes 3 4
       )
   | Zoom4 ->
       tile_render ();
