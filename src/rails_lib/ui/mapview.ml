@@ -442,12 +442,14 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         else
           search_for_box_space (i+1)
       in
+      let station_x, station_y = tile_x * tile_w + v.dims.x + tile_w2, tile_y * tile_h + v.dims.y + tile_w2 in
       let tile_x, tile_y = search_for_box_space 0 in
       (* Mark box in buffer *)
       Tilebuffer.set_box v.tile_buffer tile_x tile_y ~w:size ~h:size;
-      let x, y = tile_x * tile_w + v.dims.x, tile_y * tile_w + v.dims.y in
+      let box_x, box_y = tile_x * tile_w + v.dims.x, tile_y * tile_w + v.dims.y in
       let w, h = size * tile_w, size * tile_h in
-      R.draw_rect win ~x ~y ~w ~h ~fill:true ~color:Ega.blue
+      R.draw_line win ~x1:(box_x+16) ~y1:box_y ~x2:station_x ~y2:station_y ~color:Ega.white;
+      R.draw_rect win ~x:box_x ~y:box_y ~w ~h ~fill:true ~color:Ega.blue
     in
     iter_screen @@ fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
