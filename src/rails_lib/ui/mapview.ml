@@ -428,7 +428,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           Tilebuffer.set v.tile_buffer x y
     in copy_to_tile_buffer ();
     (* We need to find an empty screen location to draw the station boxes *)
-    let find_space_and_draw_stationbox tile_x tile_y =
+    let find_space_for_stationbox tile_x tile_y =
       (* tile_x/y: visible tiles on screen, not from origin *)
       let num_tiles_x, num_tiles_y = v.dims.w / tile_w, v.dims.h / tile_h in
       let rec search_for_box_space i =
@@ -442,23 +442,31 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         else
           search_for_box_space (i+1)
       in
-      let station_x, station_y = tile_x * tile_w + v.dims.x + tile_w2, tile_y * tile_h + v.dims.y + tile_w2 in
-      let tile_x, tile_y = search_for_box_space 0 in
+      search_for_box_space 0
+    in
+    let draw_stationbox revenue s_tile_x s_tile_y tile_x tile_y =
+      (* tile_x/y: in terms of on-screen tiles *)
+      let station_x, station_y = s_tile_x * tile_w + v.dims.x + tile_w2, s_tile_y * tile_h + v.dims.y + tile_w2 in
       (* Mark box in buffer *)
-      Tilebuffer.set_box v.tile_buffer tile_x tile_y ~w:size ~h:size;
       let box_x, box_y = tile_x * tile_w + v.dims.x, tile_y * tile_w + v.dims.y in
       let w, h = size * tile_w, size * tile_h in
       R.draw_line win ~x1:(box_x+16) ~y1:box_y ~x2:station_x ~y2:station_y ~color:Ega.white;
-      R.draw_rect win ~x:box_x ~y:box_y ~w ~h ~fill:true ~color:Ega.blue
+      R.draw_rect win ~x:box_x ~y:box_y ~w ~h ~fill:true ~color:Ega.bblue;
+      R.draw_rect win ~x:box_x ~y:box_y ~w ~h ~fill:false ~color:Ega.white; (* frame *)
     in
     iter_screen @@ fun x y ->
-      let tile_x, tile_y = start_x + x, start_y + y in
+      let (tile_x, tile_y) as loc = start_x + x, start_y + y in
       if tile_x >= start_x && tile_x < end_x - size &&
          tile_y >= start_y && tile_y < end_y - size then (
         B.get_track s.backend tile_x tile_y
         |> Option.iter (fun track ->
-          if Track.is_big_station track then find_space_and_draw_stationbox x y)
-      )
+          if Track.is_big_station track then
+            let station = Station_map.get_exn loc s.backend.stations in
+            let revenue = Station.total_goods_revenue station in
+            let box_x, box_y = find_space_for_stationbox x y in
+            Tilebuffer.set_box v.tile_buffer box_x box_y ~w:size ~h:size;
+            draw_stationbox revenue x y box_x box_y
+      ))
   in
   let draw_minimap ~(minimap:Utils.rect) =
     let from_x, from_y, from_x_end, from_y_end = minimap_bounds v ~minimap in

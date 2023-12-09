@@ -111,6 +111,7 @@ type info = {
   upgrades: Upgrades.t;
   rate_war: bool;
   rates: [`Normal | `Double | `Half];
+  cargo_revenue: int Goods.Map.t; (* revenue for each cargo type at this station *)
 } [@@deriving yojson]
 
 let has_demand_for v good = Goods.Set.mem good v.demand
@@ -254,6 +255,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
         upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
         rate_war=false;
         rates=`Normal;
+        cargo_revenue=Goods.Map.empty;
       } |> Option.some
   in
   let signals = Go, Go in
@@ -400,3 +402,8 @@ let lose_supplies v =
         CCHashtbl.incr info.lost_supply good ~by:(amount - amount2);
       )
 
+  let total_goods_revenue v =
+    match v.info with
+    | Some info ->
+      Goods.Map.fold (fun _ i sum -> sum + i) info.cargo_revenue 0
+    | _ -> 0

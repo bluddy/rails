@@ -199,4 +199,13 @@ module Set = struct
   end) [@@deriving yojson]
 end
 
+module Map = struct
+  include Utils.Map.Make(struct
+    type nonrec t = t
+    let compare = compare
+    let t_of_yojson = t_of_yojson
+    let yojson_of_t = yojson_of_t
+  end) [@@ deriving yojson]
+end
+
 
