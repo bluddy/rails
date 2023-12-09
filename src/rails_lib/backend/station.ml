@@ -233,11 +233,11 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
   in
   let short_name = match suffix with
     | Some Crossing ->
-        String.sub city_name 0 2 ^ "X"
+        String.take 2 city_name ^ "X"
     | Some suffix ->
         let suffix_s = show_suffix suffix in
-        String.sub city_name 0 2 ^ String.sub suffix_s 0 1
-    | None -> String.sub city_name 0 3
+        String.take 2 city_name ^ String.take 1 suffix_s
+    | None -> String.take 3 city_name
   in
   let info = match kind with
     | `SignalTower -> None
