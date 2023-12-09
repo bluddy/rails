@@ -407,3 +407,13 @@ let lose_supplies v =
     | Some info ->
       Goods.Map.fold (fun _ i sum -> sum + i) info.cargo_revenue 0
     | _ -> 0
+
+  let color_of_rates v = match v.info with
+    | Some info -> begin match info.rates with
+      | `Normal -> Ega.white
+      | `Half   -> Ega.bred
+      | `Double -> Ega.gray
+      end
+    | _ -> failwith "Shouldn't get here"
+       
+
