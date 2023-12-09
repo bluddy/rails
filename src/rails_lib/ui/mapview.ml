@@ -445,14 +445,22 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       search_for_box_space 0
     in
     let draw_stationbox revenue s_tile_x s_tile_y tile_x tile_y =
-      (* tile_x/y: in terms of on-screen tiles *)
+      (* tiles in terms of on-screen tiles
+         s_tiles: station tiles
+       *)
       let station_x, station_y = s_tile_x * tile_w + v.dims.x + tile_w2, s_tile_y * tile_h + v.dims.y + tile_w2 in
       (* Mark box in buffer *)
-      let box_x, box_y = tile_x * tile_w + v.dims.x, tile_y * tile_w + v.dims.y in
-      let w, h = size * tile_w, size * tile_h in
-      R.draw_line win ~x1:(box_x+16) ~y1:box_y ~x2:station_x ~y2:station_y ~color:Ega.white;
-      R.draw_rect win ~x:box_x ~y:box_y ~w ~h ~fill:true ~color:Ega.bblue;
-      R.draw_rect win ~x:box_x ~y:box_y ~w ~h ~fill:false ~color:Ega.white; (* frame *)
+      let x, y = tile_x * tile_w + v.dims.x, tile_y * tile_w + v.dims.y in
+      (* draw to halfway point of box *)
+      R.draw_line win ~x1:(x+16) ~y1:(y+16) ~x2:station_x ~y2:station_y ~color:Ega.white;
+      R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:true ~color:Ega.bblue;
+      let revenue = Utils.clip revenue ~min:0 ~max:(64 * 30) in
+      let h = revenue / 64 in
+      R.draw_rect win ~x ~y:(y+32-h) ~w:32 ~h ~fill:true ~color:Ega.bgreen; (* frame *)
+      let y_line = y + 32 - h - 1 in
+      (* Draw final line *)
+      R.draw_line win ~x1:x ~y1:y_line ~x2:(x + revenue mod 32) ~y2:y_line ~color:Ega.bgreen;
+      R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:false ~color:Ega.white; (* frame *)
     in
     iter_screen @@ fun x y ->
       let (tile_x, tile_y) as loc = start_x + x, start_y + y in
