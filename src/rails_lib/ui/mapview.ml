@@ -463,6 +463,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.draw_line win ~x1:x ~y1:y_line ~x2:(x + revenue mod 32) ~y2:y_line ~color:Ega.bgreen;
       let color = Station.color_of_rates station in
       R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:false ~color; (* frame *)
+      let name = Station.get_short_name station in
+      Fonts.Render.write win s.fonts ~color name ~x:(x+7) ~y:(y+2) ~idx:4;
     in
     iter_screen @@ fun x y ->
       let (tile_x, tile_y) as loc = start_x + x, start_y + y in
