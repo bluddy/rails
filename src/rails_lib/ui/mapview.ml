@@ -466,10 +466,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         let n_freight2 = Goods.freight_of_goods good |> Goods.freight_to_enum in
         let n_good = if n_freight2 = n_freight then n_good + 1 else 0 in
         let n_freight = n_freight2 in
-        let x1 = x + n_good * 10 in
-        let y1 = y + n_freight * 5 + 10 in
+        let x = x + n_good * 10 in
+        let y = y + n_freight * 5 + 10 in
         if Goods.Set.mem good demand then (
-          R.draw_line win ~x1 ~y1 ~x2:(x1+10) ~y2:y1 ~color:Ega.gray);
+          R.draw_line win ~x1:x ~y1:y ~x2:(x+10) ~y2:y ~color:Ega.dgray);
+        let y = y - 2 in
+        let x = x + 2 in
         Hashtbl.get supply good
         |> Option.iter (fun amount ->
           let cars = (amount + C.car_amount / 2) / C.car_amount in
