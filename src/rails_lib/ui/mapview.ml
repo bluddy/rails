@@ -138,12 +138,6 @@ let update_option v option value =
   in
   {v with options}
 
-let draw_ui_car win ~x ~y ~full freight =
-  let color = Goods.color_of_freight freight ~full in
-  R.draw_rect win ~x ~y ~w:4 ~h:2 ~color ~fill:true;
-  R.draw_point win ~x ~y:(y+2) ~color:Ega.black;
-  R.draw_point win ~x:(x+3) ~y:(y+2) ~color:Ega.black
-
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
   let handle_mouse_button v x y button =
@@ -465,17 +459,30 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let y_line = y + 32 - h - 1 in
       (* Draw final line *)
       R.draw_line win ~x1:x ~y1:y_line ~x2:(x + revenue mod 32) ~y2:y_line ~color:Ega.bgreen;
-      (* Draw demand lines *)
+      (* Draw demand lines and supply cars *)
       let demand = Station.get_demand_exn station in
       let supply = Station.get_supply_exn station in
       List.fold_left (fun (n_freight, n_good) good ->
         let n_freight2 = Goods.freight_of_goods good |> Goods.freight_to_enum in
-        let n_good2 = if n_freight2 = n_freight then n_good + 1 else 0 in
+        let n_good = if n_freight2 = n_freight then n_good + 1 else 0 in
+        let n_freight = n_freight2 in
+        let x1 = x + n_good * 10 in
+        let y1 = y + n_freight * 5 + 10 in
         if Goods.Set.mem good demand then (
-          let x1 = x + n_good2 * 10 in
-          let y1 = y + n_freight2 * 5 + 10 in
           R.draw_line win ~x1 ~y1 ~x2:(x1+10) ~y2:y1 ~color:Ega.gray);
-        (n_freight2, n_good2))
+        Hashtbl.get supply good
+        |> Option.iter (fun amount ->
+          let cars = (amount + C.car_amount / 2) / C.car_amount in
+          if cars >= 3 then (
+            Ui_common.draw_ui_car win ~x ~y:(y-1) ~full:false good);
+          if cars >= 4 then (
+            Ui_common.draw_ui_car win ~x:(x+5) ~y:(y-1) ~full:false good);
+          if cars >= 1 then (
+            Ui_common.draw_ui_car win ~x ~y ~full:true good);
+          if cars >= 2 then (
+            Ui_common.draw_ui_car win ~x:(x+5) ~y ~full:true good);
+        );
+        (n_freight, n_good))
         (-1, -1) @@
         Goods.of_region s.backend.region
       |> ignore;

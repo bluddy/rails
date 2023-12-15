@@ -1,4 +1,4 @@
-open Containers
+open! Containers
 open Utils.Infix
 open Main_ui_d
 
@@ -752,8 +752,8 @@ let draw_ui_trains win (s:State.t) v =
     let _ =
       List.fold_left (fun x car ->
         let full = Train.Car.get_amount car > C.car_amount / 2 in
-        let freight = Train.Car.get_freight car in
-        Mapview.draw_ui_car win ~x ~y:(y-2) ~full freight;
+        let freight = Train.Car.get_good car in
+        Ui_common.draw_ui_car win ~x ~y:(y-2) ~full freight;
         x + 5)
       (x + 8)
       train.cars
