@@ -3,6 +3,7 @@ open Mapview_d
 module Hashtbl = Utils.Hashtbl
 module B = Backend
 module C = Constants
+module R = Renderer
 
 let src = Logs.Src.create "mapview" ~doc:"Mapview"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -137,6 +138,11 @@ let update_option v option value =
   in
   {v with options}
 
+let draw_ui_car win ~x ~y ~full freight =
+  let color = Goods.color_of_freight freight ~full in
+  R.draw_rect win ~x ~y ~w:4 ~h:2 ~color ~fill:true;
+  R.draw_point win ~x ~y:(y+2) ~color:Ega.black;
+  R.draw_point win ~x:(x+3) ~y:(y+2) ~color:Ega.black
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
 
@@ -258,8 +264,6 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | _ -> v, `NoAction
   in
   v, actions
-
-module R = Renderer
 
 let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
@@ -463,6 +467,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.draw_line win ~x1:x ~y1:y_line ~x2:(x + revenue mod 32) ~y2:y_line ~color:Ega.bgreen;
       (* Draw demand lines *)
       let demand = Station.get_demand_exn station in
+      let supply = Station.get_supply_exn station in
       List.fold_left (fun (n_freight, n_good) good ->
         let n_freight2 = Goods.freight_of_goods good |> Goods.freight_to_enum in
         let n_good2 = if n_freight2 = n_freight then n_good + 1 else 0 in
