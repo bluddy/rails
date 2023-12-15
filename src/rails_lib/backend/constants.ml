@@ -7,6 +7,7 @@ let train_max_size = 8
 
 let car_amount = 160
 let car_cost = 5 (* cost of adding a car *)
+let car_full_demand = 64 
 
 let speed_mult = 5 (* multiply speed by this *)
 let min_maintenance_cost = 2

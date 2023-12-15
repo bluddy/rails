@@ -2,12 +2,13 @@ open Containers
 open Utils.Infix
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
+module C = Constants
 
 (* minimum level to be real demand *)
-let min_demand = Goods.full_car
+let min_demand = C.car_full_demand
 (* minimum level for mail on simple economy mode *)
-let min_demand_mail_simple = Goods.full_car / 2
-let max_supply_with_upgrade = Goods.full_car * 20
+let min_demand_mail_simple = min_demand / 2
+let max_supply_with_upgrade = min_demand * 20
 
 type kind =
   [
@@ -105,7 +106,7 @@ type info = {
   suffix: suffix option;
   mutable demand: Goods.Set.t; (* sufficient demand *)
   mutable convert_demand: Goods.Set.t; (* minimum for conversion *)
-  supply: (Goods.t, int) Hashtbl.t; (* val is in terms of Goods.full_car *)
+  supply: (Goods.t, int) Hashtbl.t;
   lost_supply: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;

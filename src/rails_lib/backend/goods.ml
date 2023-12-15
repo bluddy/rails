@@ -1,7 +1,5 @@
 open Containers
 
-let full_car = 64
-
 type t =
   | Mail       (* 0 *)
   | Passengers (* 3 *)

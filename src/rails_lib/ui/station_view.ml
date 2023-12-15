@@ -1,5 +1,6 @@
 open Containers
 module R = Renderer
+module C = Constants
 
 (* Station view screen *)
 
@@ -150,18 +151,18 @@ let render win (s:State.t) loc ~show_demand =
     Fonts.Font.write win font ~x:32 ~y:1 ~color:Ega.black "Waiting for pickup...";
     let _ =
       List.fold_left (fun y good ->
-        match Hashtbl.find_opt info.supply good with
+        match Hashtbl.get info.supply good with
         | Some amount ->
             Fonts.Font.write win font ~x:2 ~y:(y+1) ~color:Ega.black (Goods.show good);
             let tex = Hashtbl.find s.textures.route_cars @@ `CarOld good in
             let tex_w = R.Texture.get_w tex in
             (* Draw (partial) cars of supply *)
             let rec loop x amount =
-              if amount >= Goods.full_car then (
+              if amount >= C.car_amount then (
                 R.Texture.render win ~x ~y tex;
-                loop (x + tex_w) (amount - Goods.full_car)
+                loop (x + tex_w) (amount - C.car_amount)
               ) else (
-                let frac = (float_of_int amount) /. (float_of_int Goods.full_car) in
+                let frac = (float_of_int amount) /. (float_of_int C.car_amount) in
                 let w_frac = int_of_float @@ frac *. (float_of_int tex_w) in
                 R.Texture.render_subtex win tex ~x ~y ~w:w_frac
               )

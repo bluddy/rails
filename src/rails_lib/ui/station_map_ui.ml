@@ -1,6 +1,7 @@
 open Containers
 
 module R = Renderer
+module C = Constants
 
 open Edit_train_d
 
@@ -119,7 +120,7 @@ let render win (s:State.t) (v:Edit_train_d.station_map) =
         List.fold_left (fun y good ->
           match Hashtbl.find_opt supply good with
           | Some amount ->
-              let cars = amount / Goods.full_car in
+              let cars = amount / C.car_amount in
               if cars > 0 then (
                 let tex = Hashtbl.find s.textures.route_cars @@ `CarOld good in
                 R.Texture.render win ~x:258 ~y tex;
