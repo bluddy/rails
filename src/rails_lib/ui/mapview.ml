@@ -461,8 +461,23 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let y_line = y + 32 - h - 1 in
       (* Draw final line *)
       R.draw_line win ~x1:x ~y1:y_line ~x2:(x + revenue mod 32) ~y2:y_line ~color:Ega.bgreen;
+      (* Draw demand lines *)
+      let demand = Station.get_demand_exn station in
+      List.fold_left (fun (n_freight, n_good) good ->
+        let n_freight2 = Goods.freight_of_goods good |> Goods.freight_to_enum in
+        let n_good2 = if n_freight2 = n_freight then n_good + 1 else 0 in
+        if Goods.Set.mem good demand then (
+          let x1 = x + n_good2 * 10 in
+          let y1 = y + n_freight2 * 5 + 9 in
+          R.draw_line win ~x1 ~y1 ~x2:(x1+10) ~y2:y1 ~color:Ega.gray);
+        (n_freight2, n_good2))
+        (-1, -1) @@
+        Goods.of_region s.backend.region
+      |> ignore;
+      (* frame *)
       let color = Station.color_of_rates station in
-      R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:false ~color; (* frame *)
+      R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:false ~color;
+     (* station name *)
       let name = Station.get_short_name station in
       Fonts.Render.write win s.fonts ~color name ~x:(x+7) ~y:(y+2) ~idx:4;
     in

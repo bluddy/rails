@@ -70,10 +70,10 @@ let descr_of good amount =
   Printf.sprintf "%d%s%s" (amount/4) (group_of good) (show good)
 
 let us = [
-  Mail; Passengers; Food;
-  Livestock; MfgGoods; Grain;
-  Paper; Steel; Petroleum;
-  Wood; Coal
+  Mail; Passengers;
+  Food; Livestock; MfgGoods;
+  Grain; Paper; Steel;
+  Petroleum; Wood; Coal
 ]
 
 let england = [
