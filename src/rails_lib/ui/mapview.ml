@@ -468,7 +468,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         let n_good2 = if n_freight2 = n_freight then n_good + 1 else 0 in
         if Goods.Set.mem good demand then (
           let x1 = x + n_good2 * 10 in
-          let y1 = y + n_freight2 * 5 + 9 in
+          let y1 = y + n_freight2 * 5 + 10 in
           R.draw_line win ~x1 ~y1 ~x2:(x1+10) ~y2:y1 ~color:Ega.gray);
         (n_freight2, n_good2))
         (-1, -1) @@
