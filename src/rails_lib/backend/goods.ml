@@ -85,7 +85,7 @@ let europe = [
   Mail; Passengers;
   Wine; Grapes; Armaments;
   Fertilizer; Textiles; Steel;
-  Nitrates; Wood; Coal;
+  Nitrates; Wool; Coal;
 ]
 
 let of_region = function
@@ -145,6 +145,31 @@ let freight_of_goods = function
   | Wood
   | Nitrates
   | Wool -> FreightBulk
+
+(* Index of good in freight class *)
+let freight_idx_of_good = function
+  | Mail
+  | Passengers
+  | Food
+  | Beer
+  | Fertilizer
+  | Grain
+  | Hops
+  | Chemicals
+  | Petroleum
+  | Nitrates
+  | Wine -> 0
+  | Grapes
+  | Textiles
+  | Paper
+  | Cotton
+  | Wood
+  | Wool
+  | Livestock -> 1
+  | MfgGoods
+  | Steel
+  | Coal
+  | Armaments -> 2
 
 
   (* Conversion tables:

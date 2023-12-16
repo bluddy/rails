@@ -462,10 +462,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       (* Draw demand lines and supply cars *)
       let demand = Station.get_demand_exn station in
       let supply = Station.get_supply_exn station in
-      List.fold_left (fun (n_freight, n_good) good ->
-        let n_freight2 = Goods.freight_of_goods good |> Goods.freight_to_enum in
-        let n_good = if n_freight2 = n_freight then n_good + 1 else 0 in
-        let n_freight = n_freight2 in
+      List.iter (fun good ->
+        let n_freight = Goods.freight_of_goods good |> Goods.freight_to_enum in
+        let n_good = Goods.freight_idx_of_good good in
         let x = x + n_good * 10 in
         let y = y + n_freight * 5 + 10 in
         if Goods.Set.mem good demand then (
@@ -483,9 +482,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
             Ui_common.draw_ui_car win ~x ~y ~full:true good);
           if cars >= 2 then (
             Ui_common.draw_ui_car win ~x:(x+5) ~y ~full:true good);
-        );
-        (n_freight, n_good))
-        (-1, -1) @@
+        )) @@
         Goods.of_region s.backend.region
       |> ignore;
       (* frame *)
