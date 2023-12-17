@@ -19,4 +19,3 @@ let draw_ui_car win ~x ~y ~full good =
     R.draw_line win ~x1:(x+1) ~y1:y ~x2:(x+2) ~y2:y ~color:Ega.bblue
   | _ -> ()
 
-

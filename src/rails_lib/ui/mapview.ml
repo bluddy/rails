@@ -423,7 +423,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       iter_screen @@ fun x y ->
         let tile_x, tile_y = start_x + x, start_y + y in
         if Option.is_some @@ B.get_track s.backend tile_x tile_y then
-          Tilebuffer.set v.tile_buffer x y
+          Tilebuffer.set v.tile_buffer x y ~value:(-1)
     in copy_to_tile_buffer ();
     (* We need to find an empty screen location to draw the station boxes *)
     let find_space_for_stationbox tile_x tile_y =
@@ -501,7 +501,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           if Track.is_big_station track then
             let station = Station_map.get_exn loc s.backend.stations in
             let box_x, box_y = find_space_for_stationbox x y in
-            Tilebuffer.set_box v.tile_buffer box_x box_y ~w:size ~h:size;
+            Tilebuffer.set_box v.tile_buffer ~x:box_x ~y:box_y ~w:size ~h:size x y;
             draw_stationbox station x y box_x box_y
       ))
   in

@@ -1,4 +1,5 @@
   open! Containers
+  module A = Bigarray.Array1
 
 (* Tilebuffer: buffer for keeping track of tiles on screen
    Only a single bool can be stored at each point
@@ -6,49 +7,55 @@
 
   type t = {
     width: int;
-    buffer: CCBV.t
+    buffer: (int, Bigarray.int_elt, Bigarray.c_layout) A.t; 
   }
 
   let create width height =
     {
       width=width;
-      buffer=CCBV.create ~size:(width * height) false
+      buffer=A.(init Int C_layout (width * height) (fun _ -> 0))
     }
 
   let calc_offset v x y = 
     y * v.width + x
 
   let get v x y =
-    CCBV.get v.buffer (calc_offset v x y)
+    A.get v.buffer (calc_offset v x y)
 
-  let set v x y =
-    CCBV.set v.buffer (calc_offset v x y)
+  let get_loc v x y =
+    let d = get v x y in
+    if d > 0 then Some (d mod v.width, d / v.width)
+    else None
 
-  let reset v x y =
-    CCBV.reset v.buffer (calc_offset v x y)
+  let set v x y ~value =
+    A.set v.buffer (calc_offset v x y) value
+
+  (* let reset v x y = *)
+  (*   A.fill v.buffer 0 *)
 
   let is_empty_box v x y ~w ~h =
     let exception Stop in
     try
       for i=y to y+h-1 do 
         for j=x to x+w-1 do
-          if get v j i then raise Stop
+          if get v j i <> 0 then raise Stop
         done
       done;
       true
     with
     | Stop -> false
 
-  let set_box v x y ~w ~h =
+  let set_box v ~x ~y ~w ~h value_x value_y =
     (* Don't mark the whole box - just the corners *)
-    set v x y;
-    set v (x + w - 1) y;
-    set v x (y + h - 1);
-    set v (x + w - 1) (y + h - 1)
-
+    let value = value_y * v.width + value_x in
+    for i=y to y+h-1 do
+      for j=x to x+w-1 do
+        set v j i ~value
+      done
+    done
 
   let clear v =
-    CCBV.clear v.buffer
+    A.fill v.buffer 0
 
   let t_of_yojson x = match x with
     | `Tuple [`Int w; `Int h] -> create w h
@@ -56,7 +63,7 @@
 
   let yojson_of_t v =
     let w = v.width in
-    let h = (CCBV.length v.buffer) / w in
+    let h = (A.dim v.buffer) / w in
     `Tuple [`Int w; `Int h]
 
 
