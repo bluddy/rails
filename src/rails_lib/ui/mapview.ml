@@ -159,8 +159,10 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           (* click in mapview *)
           let tile_w, tile_h = tile_size_of_zoom v.zoom in
           let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
-          let cursor_x = start_x + x/tile_w |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
-          let cursor_y = start_y + (y-v.dims.y)/tile_h |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
+          let screen_tile_x = x / tile_w in
+          let screen_tile_y = (y - v.dims.y) / tile_h in
+          let cursor_x = start_x + screen_tile_x |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
+          let cursor_y = start_y + screen_tile_y |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
           begin match v.zoom, button with
           | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
               (* second click *)
@@ -177,12 +179,17 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
               (* recenter *)
               {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | (Zoom3 | Zoom2), `Left ->
-              if cursor_on_station s.backend v ~cursor_x ~cursor_y then
-                v, `StationView (cursor_x, cursor_y)
-              else
-                (* tile info *)
-                let tile = B.get_tile s.backend cursor_x cursor_y in
-                v, `ShowTileInfo (cursor_x, cursor_y, tile)
+              begin match Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y with
+              | Some (station_x, station_y) ->
+                  let cursor_x, cursor_y = station_x + start_x, station_y + start_y in
+                  v, `StationView (cursor_x, cursor_y)
+              | _ when cursor_on_station s.backend v ~cursor_x ~cursor_y ->
+                  v, `StationView (cursor_x, cursor_y)
+              | _ ->
+                  (* tile info *)
+                  let tile = B.get_tile s.backend cursor_x cursor_y in
+                  v, `ShowTileInfo (cursor_x, cursor_y, tile)
+              end
           | (Zoom3 | Zoom2), `Right ->
               {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | _ -> v, `NoAction
