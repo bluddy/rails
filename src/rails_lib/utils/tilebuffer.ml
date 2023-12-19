@@ -1,8 +1,8 @@
   open! Containers
   module A = Bigarray.Array1
 
-(* Tilebuffer: buffer for keeping track of tiles on screen
-   Only a single bool can be stored at each point
+(* Tilebuffer: buffer for keeping track of tiles and boxes on screen
+   Built for high performance
  *)
 
   type t = {
@@ -23,6 +23,7 @@
     A.get v.buffer (calc_offset v x y)
 
   let get_loc v x y =
+    (* Gets us locations on-screen *)
     let d = get v x y in
     if d > 0 then Some (d mod v.width, d / v.width)
     else None
@@ -57,6 +58,7 @@
   let clear v =
     A.fill v.buffer 0
 
+    (* Don't save the contents of the buffer *)
   let t_of_yojson x = match x with
     | `Tuple [`Int w; `Int h] -> create w h
     | _ -> invalid_arg "Bad json values"
@@ -65,6 +67,5 @@
     let w = v.width in
     let h = (A.dim v.buffer) / w in
     `Tuple [`Int w; `Int h]
-
 
 
