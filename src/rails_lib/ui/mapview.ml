@@ -96,8 +96,10 @@ let move_cursor v dir n =
   {v with cursor_x; cursor_y; center_x; center_y}
 
   (* Used by menu *)
-let cursor_on_woodbridge backend v =
-  match B.get_track backend v.cursor_x v.cursor_y with
+let cursor_on_woodbridge ?cursor_x ?cursor_y backend v =
+  let cursor_x = Option.get_or ~default:v.cursor_x cursor_x in
+  let cursor_y = Option.get_or ~default:v.cursor_y cursor_y in
+  match B.get_track backend cursor_x cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
       | Bridge Wood -> true
@@ -105,9 +107,11 @@ let cursor_on_woodbridge backend v =
       end
   | _ -> false
 
-let cursor_on_station backend v =
+let cursor_on_station ?cursor_x ?cursor_y backend v =
+  let cursor_x = Option.get_or ~default:v.cursor_x cursor_x in
+  let cursor_y = Option.get_or ~default:v.cursor_y cursor_y in
   (* check if we're clicking on a station *)
-  match B.get_track backend v.cursor_x v.cursor_y with
+  match B.get_track backend cursor_x cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
       | Station (`Depot | `Station | `Terminal) -> true
@@ -173,10 +177,10 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
               (* recenter *)
               {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
           | (Zoom3 | Zoom2), `Left ->
-              (* tile info *)
-              if cursor_on_station s.backend v then
+              if cursor_on_station s.backend v ~cursor_x ~cursor_y then
                 v, `StationView (cursor_x, cursor_y)
               else
+                (* tile info *)
                 let tile = B.get_tile s.backend cursor_x cursor_y in
                 v, `ShowTileInfo (cursor_x, cursor_y, tile)
           | (Zoom3 | Zoom2), `Right ->
