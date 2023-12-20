@@ -201,6 +201,15 @@ let neq_xy x y = not @@ eq_xy x y
 
 module List = struct
   include List
+
+  let findi f l =
+    let rec loop i = function
+      | x::_ when f i x -> Some x
+      | _::xs -> loop (i+1) xs
+      | _ -> None
+    in
+    loop 0 l
+        
   let modify_at_idx i f l0 =
     let rec loop i acc = function
       | [] -> l0

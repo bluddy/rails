@@ -143,7 +143,79 @@ let update_option v option value =
   {v with options}
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
-
+  let handle_mapview_button v x y button =
+    let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
+    let tile_w, tile_h = tile_size_of_zoom v.zoom in
+    let tile_div = tile_div_of_zoom v.zoom in
+    let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
+    let start_x_map, start_y_map = start_x * C.tile_w, start_y * C.tile_h in
+    let end_x_map, end_y_map = end_x * C.tile_w, end_y * C.tile_h in
+    let screen_tile_x = x / tile_w in
+    let screen_tile_y = (y - v.dims.y) / tile_h in
+    let cursor_x = start_x + screen_tile_x |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
+    let cursor_y = start_y + screen_tile_y |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
+    let is_in_view x y =
+      (* In map coordinates *)
+      x >= start_x_map - C.draw_margin && y >= start_y_map - C.draw_margin &&
+      x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
+    in
+    let cursor_on_train_zoom2_3 cursor_x cursor_y =
+      (* cursor_x, y in terms of map *)
+      let test_loc x y =
+        if is_in_view x y then
+          let x = (x - start_x_map)/tile_div + offset_x in
+          let y = (y - start_y_map)/tile_div + offset_y in
+          Utils.classic_dist (x, y) (cursor_x, cursor_y) <= C.train_click_dist
+        else
+          false
+      in
+      Trainmap.find_index (fun (train:Train.t) ->
+        (* Test cars *)
+        let on_car = 
+          Utils.List.findi (fun i _ ->
+            let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
+            test_loc x y
+          ) train.cars
+        in
+        let on_engine () =
+          let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track 0 in
+          test_loc x y
+        in
+        Option.is_some on_car || on_engine ()
+      ) s.backend.trains
+    in
+    begin match v.zoom, button with
+    | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
+        (* second click *)
+        if cursor_on_station s.backend v then
+          v, `StationView (cursor_x, cursor_y)
+        else
+          let tile = B.get_tile s.backend cursor_x cursor_y in
+          v, `ShowTileInfo (cursor_x, cursor_y, tile)
+    | Zoom4, `Left ->
+        (* move cursor *)
+        let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
+        {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
+    | Zoom4, `Right ->
+        (* recenter *)
+        {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
+    | (Zoom3 | Zoom2), `Left ->
+        begin match Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y with
+        | Some (station_x, station_y) ->
+            let cursor_x, cursor_y = station_x + start_x, station_y + start_y in
+            v, `StationView (cursor_x, cursor_y)
+        | _ when cursor_on_station s.backend v ~cursor_x ~cursor_y ->
+            v, `StationView (cursor_x, cursor_y)
+        | _ ->
+            (* tile info *)
+            let tile = B.get_tile s.backend cursor_x cursor_y in
+            v, `ShowTileInfo (cursor_x, cursor_y, tile)
+        end
+    | (Zoom3 | Zoom2), `Right ->
+        {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
+    | _ -> v, `NoAction
+    end
+  in
   let handle_mouse_button v x y button =
     match v.zoom with
       | Zoom1 ->
@@ -156,45 +228,8 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           let y = y - minimap.y + start_y in
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}, `NoAction
       | _ when x <= v.dims.x + v.dims.w && y > v.dims.y ->
-          (* click in mapview *)
-          let tile_w, tile_h = tile_size_of_zoom v.zoom in
-          let start_x, start_y, _, _ = mapview_bounds v tile_w tile_h in
-          let screen_tile_x = x / tile_w in
-          let screen_tile_y = (y - v.dims.y) / tile_h in
-          let cursor_x = start_x + screen_tile_x |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
-          let cursor_y = start_y + screen_tile_y |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
-          begin match v.zoom, button with
-          | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
-              (* second click *)
-              if cursor_on_station s.backend v then
-                v, `StationView (cursor_x, cursor_y)
-              else
-                let tile = B.get_tile s.backend cursor_x cursor_y in
-                v, `ShowTileInfo (cursor_x, cursor_y, tile)
-          | Zoom4, `Left ->
-              (* move cursor *)
-              let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
-              {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
-          | Zoom4, `Right ->
-              (* recenter *)
-              {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
-          | (Zoom3 | Zoom2), `Left ->
-              begin match Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y with
-              | Some (station_x, station_y) ->
-                  let cursor_x, cursor_y = station_x + start_x, station_y + start_y in
-                  v, `StationView (cursor_x, cursor_y)
-              | _ when cursor_on_station s.backend v ~cursor_x ~cursor_y ->
-                  v, `StationView (cursor_x, cursor_y)
-              | _ ->
-                  (* tile info *)
-                  let tile = B.get_tile s.backend cursor_x cursor_y in
-                  v, `ShowTileInfo (cursor_x, cursor_y, tile)
-              end
-          | (Zoom3 | Zoom2), `Right ->
-              {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
-          | _ -> v, `NoAction
-          end
-       | _ -> v, `NoAction
+          handle_mapview_button v x y button
+     | _ -> v, `NoAction
   in
 
   let key_to_dir = function

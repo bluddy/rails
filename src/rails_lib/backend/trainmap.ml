@@ -37,3 +37,10 @@ let foldi f (v:t) ~init = Vector.foldi f init v
 let mapi_in_place f v = 
   Vector.mapi_in_place f v
 
+let find_index f (v:t) =
+  let exception Stop of int in
+  try
+    iteri (fun i x -> if f x then raise (Stop i)) v;
+    None
+  with Stop i -> Some i
+
