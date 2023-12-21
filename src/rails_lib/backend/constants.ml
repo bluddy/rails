@@ -17,5 +17,3 @@ let tunnel_max_length = 9
 let tunnel_cost = 20 (* per mile *)
 
 let draw_margin = 4
-
-let train_click_dist = 2

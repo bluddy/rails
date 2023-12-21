@@ -204,9 +204,10 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         (* recenter *)
         {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
     | (Zoom3 | Zoom2), `Left ->
+        let show_stationbox = Options.mem v.options `StationBoxes in
         let stationbox_click = Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y in
         begin match stationbox_click with
-        | Some (station_x, station_y) ->
+        | Some (station_x, station_y) when show_stationbox ->
             let cursor_x, cursor_y = station_x + start_x, station_y + start_y in
             v, `StationView (cursor_x, cursor_y)
         | _ when cursor_on_station s.backend v ~cursor_x ~cursor_y ->
