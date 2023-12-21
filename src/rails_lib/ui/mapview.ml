@@ -676,20 +676,21 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
       draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
   | Zoom2 ->
-      draw_track_zoom2_3 1;
-      draw_trains_zoom2_3 ();
-      draw_minimap ~minimap;
+      R.draw_rect win ~x:0 ~y:v.dims.y ~w:v.dims.w ~h:v.dims.h ~color:Ega.cyan ~fill:true;
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 6 8
-      )
+      );
+      draw_track_zoom2_3 1;
+      draw_trains_zoom2_3 ();
+      draw_minimap ~minimap
   | Zoom3 ->
       tile_render ();
-      draw_track_zoom2_3 2;
-      draw_trains_zoom2_3 ();
-      draw_minimap ~minimap;
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 3 4
-      )
+      );
+      draw_track_zoom2_3 2;
+      draw_trains_zoom2_3 ();
+      draw_minimap ~minimap
   | Zoom4 ->
       tile_render ();
       draw_city_names ();
