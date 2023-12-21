@@ -160,7 +160,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
       x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
     in
     let cursor_on_train_zoom2_3 cursor_x cursor_y =
-      (* cursor_x, y in terms of map *)
+      (* cursor_x, y in terms of screen pixels *)
       let test_loc x y =
         if is_in_view x y then
           let x = (x - start_x_map)/tile_div + offset_x in
@@ -196,23 +196,27 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         (* move cursor *)
         let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
         {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
-    | Zoom4, `Right ->
-        (* recenter *)
+    | (Zoom4 | Zoom3 | Zoom2), `Right -> (* recenter *)
         {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
     | (Zoom3 | Zoom2), `Left ->
-        begin match Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y with
+        let stationbox_click = Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y in
+        begin match stationbox_click with
         | Some (station_x, station_y) ->
             let cursor_x, cursor_y = station_x + start_x, station_y + start_y in
             v, `StationView (cursor_x, cursor_y)
         | _ when cursor_on_station s.backend v ~cursor_x ~cursor_y ->
+            (* station click *)
             v, `StationView (cursor_x, cursor_y)
         | _ ->
-            (* tile info *)
-            let tile = B.get_tile s.backend cursor_x cursor_y in
-            v, `ShowTileInfo (cursor_x, cursor_y, tile)
+            let click_on_train = cursor_on_train_zoom2_3 x y in
+            begin match click_on_train with
+            | Some train_idx -> v, `EditTrain train_idx
+            | _ ->
+              (* tile info *)
+              let tile = B.get_tile s.backend cursor_x cursor_y in
+              v, `ShowTileInfo (cursor_x, cursor_y, tile)
+            end
         end
-    | (Zoom3 | Zoom2), `Right ->
-        {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
     | _ -> v, `NoAction
     end
   in
