@@ -15,13 +15,14 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let default dims = 
   {
-    cursor_x=0; cursor_y=0;
-    center_x=0; center_y=0;
-    zoom=Zoom4;
+    cursor_x = 0; cursor_y = 0;
+    center_x = 0; center_y = 0;
+    zoom = Zoom4;
     dims;
-    build_mode=true;
-    survey=false;
-    smoke_plumes=[];
+    build_mode = true;
+    survey = false;
+    smoke_plumes = [];
+    draw_buffer = Array.make C.draw_buffer_len [];
     tile_buffer=Tilebuffer.create 70 50; (* TODO: remove hardcoding *)
     options=Options.of_list [`StationBoxes];
   }
@@ -80,12 +81,12 @@ let check_recenter_zoom4 v cursor_x cursor_y =
   let tile_w, tile_h = tile_size_of_zoom Zoom4 in
   let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
   if (cursor_y > 0 && cursor_y < start_y + 1)
-      || (cursor_y < v.dims.h - 1 && cursor_y >= end_y - 1)
-      || (cursor_x > 0 && cursor_x < start_x + 1)
-      || (cursor_x < v.dims.w - 1 && cursor_x >= end_x - 1) then
-        cursor_x, cursor_y
+    || (cursor_y < v.dims.h - 1 && cursor_y >= end_y - 1)
+    || (cursor_x > 0 && cursor_x < start_x + 1)
+    || (cursor_x < v.dims.w - 1 && cursor_x >= end_x - 1) then
+      cursor_x, cursor_y
   else
-        v.center_x, v.center_y
+    v.center_x, v.center_y
 
 let move_cursor v dir n =
   let dx, dy = Dir.to_offsets dir in
@@ -141,6 +142,14 @@ let update_option v option value =
       Options.remove v.options option
   in
   {v with options}
+
+let flush_draw_buffer v =
+  (* Called whenever the zoom2/3 view is changed *)
+  (* clear draw buffer *)
+  for i=0 to Array.length v.draw_buffer - 1 do
+    v.draw_buffer.(i) <- []
+  done;
+  ()
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   let handle_mapview_button v x y button =
@@ -202,6 +211,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
     | (Zoom4 | Zoom3 | Zoom2), `Right ->
         (* recenter *)
+        flush_draw_buffer v;
         {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
     | (Zoom3 | Zoom2), `Left ->
         let show_stationbox = Options.mem v.options `StationBoxes in
@@ -236,6 +246,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           let start_x, start_y, _, _ = minimap_bounds v ~minimap in
           let x = x - minimap.x + start_x in
           let y = y - minimap.y + start_y in
+          flush_draw_buffer v;
           {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y}, `NoAction
       | _ when x <= v.dims.x + v.dims.w && y > v.dims.y ->
           handle_mapview_button v x y button
@@ -301,8 +312,10 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | Key {down=true; key=F1; _} ->
         {v with zoom = Zoom1; survey=false}, `NoAction
     | Key {down=true; key=F2; _} ->
+        flush_draw_buffer v;
         {v with zoom = Zoom2; survey=false}, `NoAction
     | Key {down=true; key=F3; _} ->
+        flush_draw_buffer v;
         {v with zoom = Zoom3; survey=false}, `NoAction
     | Key {down=true; key=F4; _} ->
         {v with zoom = Zoom4}, `NoAction
@@ -446,30 +459,36 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
   let draw_trains_zoom2_3 () =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
-    let draw_car_or_engine color x y dir =
+    (* Empty draw buffer, we can fill it *)
+    let fill_buffer = List.length v.draw_buffer.(0) = 0 in
+    let add_to_draw_buffer color x y =
+      v.draw_buffer.(0) <- (x, y, color)::v.draw_buffer.(0)
+    in
+    let draw_car_or_engine color x y =
       if is_in_view x y then (
         let x = (x - start_x_map)/tile_div + offset_x in
         let y = (y - start_y_map)/tile_div + offset_y in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
-        match v.zoom with
-        | Zoom3 ->
-          let dir = Dir.opposite dir in
-          let x, y = Dir.adjust dir x y in
-          R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
-        | _ -> ()
       )
     in
+    (* draw old trains from previous frames *)
+    for i=Array.length v.draw_buffer - 1 downto 1 do
+      List.iter (fun (x, y, color) -> draw_car_or_engine color x y) v.draw_buffer.(i)
+    done;
+
+    (* draw current trains *)
     Trainmap.iter (fun (train:Train.t) ->
       (* Draw cars *)
       List.iteri (fun i car ->
-        let x, y, dir = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
+        let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
         let color = Train.Car.get_freight car |> Goods.color_of_freight ~full:true in
-        let dir = Dir.opposite dir in
-        draw_car_or_engine color x y dir
+        draw_car_or_engine color x y;
+        if fill_buffer then add_to_draw_buffer color x y;
       ) train.cars;
       (* Draw engine *)
-      let x, y, dir = Train.calc_car_loc_in_pixels train s.backend.track 0 in
-      draw_car_or_engine Ega.black x y dir;
+      let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track 0 in
+      draw_car_or_engine Ega.black x y;
+      if fill_buffer then add_to_draw_buffer Ega.black x y;
     ) s.backend.trains;
   in
   let draw_stationboxes mult size =
@@ -707,6 +726,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   s
 
 let handle_tick (s:State.t) (v:t) _time is_cycle =
+ (* We only run by backend cycles *)
   if not is_cycle then v
   else
   (* Move smoke *)
@@ -759,6 +779,16 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
     | _ -> smoke_plumes
   in
   [%upf v.smoke_plumes <- smoke_plumes];
+  let () =
+    match v.zoom with
+    | Zoom2 | Zoom3 ->
+      (* Cycle the draw buffer *)
+      for i=1 to Array.length v.draw_buffer - 1 do
+        v.draw_buffer.(i) <- v.draw_buffer.(i-1)
+      done;
+      v.draw_buffer.(0) <- [];
+    | _ -> ()
+  in
   v
 
 

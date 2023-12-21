@@ -1,3 +1,4 @@
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 let magenta = 0xAA00AA
 
@@ -40,6 +41,8 @@ let get_rgba ?debug i =
 let get_rgb ?debug i =
   let color, _ = get_color ?debug i in
   (color lsr 16, (color lsr 8) land 0xFF, color land 0xFF)
+
+type color = int * int * int * int [@@deriving yojson]
 
 let magenta = get_rgba 0
 let blue = get_rgba 1

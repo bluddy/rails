@@ -17,3 +17,5 @@ let tunnel_max_length = 9
 let tunnel_cost = 20 (* per mile *)
 
 let draw_margin = 4
+
+let draw_buffer_len = 3

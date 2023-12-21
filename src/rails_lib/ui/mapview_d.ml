@@ -39,6 +39,7 @@ type t =
     build_mode: bool;
     survey: bool;
     mutable smoke_plumes: smoke_plume list;
+    draw_buffer: ((int * int * Ega.color) list) array; (* Used to provide the train effect for zoom2/3 *)
     tile_buffer: Tilebuffer.t;
     options: Options.t;
   }
