@@ -22,7 +22,7 @@ let default dims =
     build_mode = true;
     survey = false;
     smoke_plumes = [];
-    draw_buffer = Array.make C.draw_buffer_len [];
+    draw_buffer = Hashtbl.create 10;
     tile_buffer=Tilebuffer.create 70 50; (* TODO: remove hardcoding *)
     options=Options.of_list [`StationBoxes];
   }
@@ -145,10 +145,7 @@ let update_option v option value =
 
 let flush_draw_buffer v =
   (* Called whenever the zoom2/3 view is changed *)
-  (* clear draw buffer *)
-  for i=0 to Array.length v.draw_buffer - 1 do
-    v.draw_buffer.(i) <- []
-  done;
+  Hashtbl.clear v.draw_buffer;
   ()
 
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
@@ -459,11 +456,6 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   in
   let draw_trains_zoom2_3 () =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
-    (* Empty draw buffer, we can fill it *)
-    let fill_buffer = List.length v.draw_buffer.(0) = 0 in
-    let add_to_draw_buffer color x y =
-      v.draw_buffer.(0) <- (x, y, color)::v.draw_buffer.(0)
-    in
     let draw_car_or_engine color x y =
       if is_in_view x y then (
         let x = (x - start_x_map)/tile_div + offset_x in
@@ -472,23 +464,49 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       )
     in
     (* draw old trains from previous frames *)
-    for i=Array.length v.draw_buffer - 1 downto 1 do
-      List.iter (fun (x, y, color) -> draw_car_or_engine color x y) v.draw_buffer.(i)
-    done;
+    Hashtbl.iter (fun _ train_history ->
+      for i=Array.length train_history - 1 downto 1 do
+        List.iter (fun (x, y, color) -> draw_car_or_engine color x y) train_history.(i)
+      done)
+    v.draw_buffer;
 
     (* draw current trains *)
-    Trainmap.iter (fun (train:Train.t) ->
+    Trainmap.iteri (fun train_num (train:Train.t) ->
+      let should_write_to_buffer =
+        match Hashtbl.find_opt v.draw_buffer train_num with
+        | Some history when List.length history.(0) = 0 -> true
+        | None -> true (* create an entry for the train *)
+        | _ -> false
+      in
+      let set_draw_buffer draw_buffer =
+        Hashtbl.update
+        v.draw_buffer
+        ~f:(fun _ arr -> match arr with
+          | Some arr ->
+              arr.(0) <- draw_buffer;
+              Some arr
+          | None ->
+              let arr = Array.make C.draw_buffer_len [] in
+              arr.(0) <- draw_buffer;
+              Some arr)
+        ~k:train_num
+      in
       (* Draw cars *)
-      List.iteri (fun i car ->
-        let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
-        let color = Train.Car.get_freight car |> Goods.color_of_freight ~full:true in
-        draw_car_or_engine color x y;
-        if fill_buffer then add_to_draw_buffer color x y;
-      ) train.cars;
+      let draw_buffer = 
+        List.foldi (fun draw_list i car ->
+          let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
+          let color = Train.Car.get_freight car |> Goods.color_of_freight ~full:true in
+          draw_car_or_engine color x y;
+          if should_write_to_buffer then (x,y,color)::draw_list else []
+        ) [] train.cars
+      in
       (* Draw engine *)
       let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track 0 in
       draw_car_or_engine Ega.black x y;
-      if fill_buffer then add_to_draw_buffer Ega.black x y;
+      let draw_buffer =
+        if should_write_to_buffer then (x,y,Ega.black)::draw_buffer else []
+      in
+      if should_write_to_buffer then set_draw_buffer draw_buffer;
     ) s.backend.trains;
   in
   let draw_stationboxes mult size =
@@ -782,11 +800,16 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
   let () =
     match v.zoom with
     | Zoom2 | Zoom3 ->
-      (* Cycle the draw buffer *)
-      for i=1 to Array.length v.draw_buffer - 1 do
-        v.draw_buffer.(i) <- v.draw_buffer.(i-1)
-      done;
-      v.draw_buffer.(0) <- [];
+      (* Cycle the draw buffer for any trains that have new data *)
+      Hashtbl.iter (fun _ arr ->
+        if not @@ equal_train_history arr.(0) arr.(1) then (
+          (* The order is critical here *)
+          for i=Array.length arr - 1 downto 1 do
+            arr.(i) <- arr.(i-1)
+          done;
+        );
+        arr.(0) <- []
+    ) v.draw_buffer
     | _ -> ()
   in
   v

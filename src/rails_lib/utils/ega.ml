@@ -42,7 +42,7 @@ let get_rgb ?debug i =
   let color, _ = get_color ?debug i in
   (color lsr 16, (color lsr 8) land 0xFF, color land 0xFF)
 
-type color = int * int * int * int [@@deriving yojson]
+type color = int * int * int * int [@@deriving eq, yojson]
 
 let magenta = get_rgba 0
 let blue = get_rgba 1

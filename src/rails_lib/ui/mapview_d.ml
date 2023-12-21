@@ -1,3 +1,4 @@
+open! Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type zoom =
@@ -28,6 +29,9 @@ type smoke_plume = {
 
 let max_smoke_frame = 16
 
+type train_history = (int * int * Ega.color) list
+  [@@deriving eq, yojson]
+
 type t =
   {
     center_x: int; (* in map coordinates *)
@@ -39,7 +43,7 @@ type t =
     build_mode: bool;
     survey: bool;
     mutable smoke_plumes: smoke_plume list;
-    draw_buffer: ((int * int * Ega.color) list) array; (* Used to provide the train effect for zoom2/3 *)
+    draw_buffer: (int, train_history array) Utils.Hashtbl.t; (* Used to provide the train effect for zoom2/3 *)
     tile_buffer: Tilebuffer.t;
     options: Options.t;
   }
