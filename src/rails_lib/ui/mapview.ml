@@ -159,13 +159,13 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
       x >= start_x_map - C.draw_margin && y >= start_y_map - C.draw_margin &&
       x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
     in
-    let cursor_on_train_zoom2_3 cursor_x cursor_y =
+    let cursor_on_train ~car_pixels ~dist cursor_x cursor_y =
       (* cursor_x, y in terms of screen pixels *)
       let test_loc x y =
         if is_in_view x y then
           let x = (x - start_x_map)/tile_div + offset_x in
           let y = (y - start_y_map)/tile_div + offset_y in
-          Utils.classic_dist (x, y) (cursor_x, cursor_y) <= C.train_click_dist
+          Utils.classic_dist (x, y) (cursor_x, cursor_y) <= dist
         else
           false
       in
@@ -173,7 +173,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         (* Test cars *)
         let on_car = 
           Utils.List.findi (fun i _ ->
-            let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
+            let x, y, _ = Train.calc_car_loc train s.backend.track ~car_pixels i in
             test_loc x y
           ) train.cars
         in
@@ -186,17 +186,22 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     in
     begin match v.zoom, button with
     | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
-        (* second click *)
+        (* second click, after focusing the cursor on that tile *)
         if cursor_on_station s.backend v then
           v, `StationView (cursor_x, cursor_y)
-        else
-          let tile = B.get_tile s.backend cursor_x cursor_y in
-          v, `ShowTileInfo (cursor_x, cursor_y, tile)
+        else begin match cursor_on_train x y ~car_pixels:12 ~dist:10 with
+          | Some train_idx -> v, `EditTrain train_idx
+          | _ ->
+            (* tile click *)
+            let tile = B.get_tile s.backend cursor_x cursor_y in
+            v, `ShowTileInfo (cursor_x, cursor_y, tile)
+          end
     | Zoom4, `Left ->
         (* move cursor *)
         let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
         {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
-    | (Zoom4 | Zoom3 | Zoom2), `Right -> (* recenter *)
+    | (Zoom4 | Zoom3 | Zoom2), `Right ->
+        (* recenter *)
         {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
     | (Zoom3 | Zoom2), `Left ->
         let stationbox_click = Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y in
@@ -208,7 +213,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             (* station click *)
             v, `StationView (cursor_x, cursor_y)
         | _ ->
-            let click_on_train = cursor_on_train_zoom2_3 x y in
+            let click_on_train = cursor_on_train x y ~car_pixels:8 ~dist:2 in
             begin match click_on_train with
             | Some train_idx -> v, `EditTrain train_idx
             | _ ->
