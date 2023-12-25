@@ -6,7 +6,7 @@ type zoom =
   | Zoom2
   | Zoom3
   | Zoom4
-  [@@deriving eq, show, yojson]
+  [@@deriving show, yojson]
 
 type options =
   [ `StationBoxes | `Resources]
@@ -43,7 +43,9 @@ type t =
     build_mode: bool;
     survey: bool;
     mutable smoke_plumes: smoke_plume list;
-    draw_buffer: (int, train_history array) Utils.Hashtbl.t; (* Used to provide the train effect for zoom2/3 *)
+   (* Used to provide the train effect for zoom2/3 *)
+    draw_buffer: (int, train_history array) Utils.Hashtbl.t;
+    (* Used for zoom2/3 for stationboxes *)
     tile_buffer: Tilebuffer.t;
     options: Options.t;
   }

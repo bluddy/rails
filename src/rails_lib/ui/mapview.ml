@@ -318,7 +318,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         {v with zoom = Zoom4}, `NoAction
     | MouseButton {down=true; x; y; button; _} ->
         handle_mouse_button v x y button
-    | Key {down=true; key; modifiers; _} when equal_zoom v.zoom Zoom4 ->
+    | Key {down=true; key; modifiers; _} when is_zoom4 v ->
         let build = Event.Modifiers.shift modifiers in
         handle_key_zoom4 v key ~build
     | _ -> v, `NoAction
