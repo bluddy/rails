@@ -36,11 +36,11 @@ type t =
   {
     center_x: int; (* in map coordinates *)
     center_y: int;
-    cursor_x: int;
+    cursor_x: int; (* square cursor for zoom4 *)
     cursor_y: int;
     zoom: zoom;
     dims: Utils.rect;
-    build_mode: bool;
+    build_mode: bool; (* build or remove track *)
     survey: bool;
     mutable smoke_plumes: smoke_plume list;
    (* Used to provide the train effect for zoom2/3 *)
