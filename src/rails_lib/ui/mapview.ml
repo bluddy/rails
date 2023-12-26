@@ -351,7 +351,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     x >= start_x_map - C.draw_margin && y >= start_y_map - C.draw_margin &&
     x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
   in
-  let tile_render () =
+  let draw_tiles () =
     let tiles = tile_textures_of_zoom s v.zoom in
     iter_screen (fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
@@ -727,7 +727,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom3 _ ->
-      tile_render ();
+      draw_tiles ();
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 3 4
       );
@@ -735,7 +735,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom4 ->
-      tile_render ();
+      draw_tiles ();
       draw_city_names ();
       if build_station then (
         draw_buildstation_mode ())
