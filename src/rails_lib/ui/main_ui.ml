@@ -104,8 +104,8 @@ let main_menu fonts menu_h region =
     make ~fonts ~x:56 ~y:8
     [
       make_entry "&Regional Display (F1)" @@ `Action(`Display(Mapview_d.Zoom1));
-      make_entry "&Area Display (F2)" @@ `Action(`Display(Mapview_d.Zoom2));
-      make_entry "&Local Display (F3)" @@ `Action(`Display(Mapview_d.Zoom3));
+      make_entry "&Area Display (F2)" @@ `Action(`Display(Mapview_d.def_zoom2));
+      make_entry "&Local Display (F3)" @@ `Action(`Display(Mapview_d.def_zoom3));
       make_entry "&Detail Display (F4)" @@ `Action(`Display(Mapview_d.Zoom4));
       make_entry "&Options" @@ `MsgBox options;
       make_entry "&Find City" @@ `Action `Find_city;

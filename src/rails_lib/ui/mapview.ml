@@ -27,11 +27,6 @@ let default dims =
     options=Options.of_list [`StationBoxes];
   }
 
-(* let load default sexp = *)
-(*   { default with *)
-(*     cursor_x=int_of_ *)
-(*   } *)
-
 let get_cursor_pos v = (v.cursor_x, v.cursor_y)
 
 let get_zoom v = v.zoom
@@ -40,21 +35,30 @@ let is_zoom4 v = match v.zoom with
   | Zoom4 -> true
   | _ -> false
 
+(* Keep the same zoom *)
+let with_zoom_23 v f =
+  let zoom = match v.zoom with
+    | Zoom2 x -> Zoom2 (f x)
+    | Zoom3 x -> Zoom3 (f x)
+    | x -> x
+  in
+  {v with zoom}
+
 let tile_size_of_zoom = function
   | Zoom1 -> 1, 1
-  | Zoom2 -> 4, 4
-  | Zoom3 -> 8, 8
+  | Zoom2 _ -> 4, 4
+  | Zoom3 _ -> 8, 8
   | Zoom4 -> 16, 16
 
   (* How much we need to divide the normal screen coordinates by *)
 let tile_div_of_zoom = function
   | Zoom1 -> 16
-  | Zoom2 -> 4
-  | Zoom3 -> 2
+  | Zoom2 _ -> 4
+  | Zoom3 _ -> 2
   | Zoom4 -> 1
 
 let tile_textures_of_zoom s = function
-  | Zoom3 | Zoom2 -> s.State.textures.small_tiles
+  | Zoom3 _ | Zoom2 _ -> s.State.textures.small_tiles
   | Zoom4 -> s.textures.tiles
   | Zoom1 -> failwith "tile_textures_of_zoom"
 
@@ -108,7 +112,8 @@ let cursor_on_woodbridge ?cursor_x ?cursor_y backend v =
       end
   | _ -> false
 
-let cursor_on_station ?cursor_x ?cursor_y backend v =
+let cursor_on_station ?cursor_x ?cursor_y ?(all=false) backend v =
+  (* all: all stations, not just Depot and higher *)
   let cursor_x = Option.get_or ~default:v.cursor_x cursor_x in
   let cursor_y = Option.get_or ~default:v.cursor_y cursor_y in
   (* check if we're clicking on a station *)
@@ -116,6 +121,7 @@ let cursor_on_station ?cursor_x ?cursor_y backend v =
   | Some track when track.player = 0 ->
       begin match track.kind with
       | Station (`Depot | `Station | `Terminal) -> true
+      | Station `SignalTower when all -> true
       | _ -> false
       end
   | _ -> false
@@ -206,20 +212,20 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         (* move cursor *)
         let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
         {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
-    | (Zoom4 | Zoom3 | Zoom2), `Right ->
+    | (Zoom4 | Zoom3 _ | Zoom2 _), `Right ->
         (* recenter *)
         flush_draw_buffer v;
         {v with center_x=cursor_x; center_y=cursor_y; cursor_x; cursor_y}, `NoAction
-    | (Zoom3 | Zoom2), `Left ->
+    | (Zoom3 _ | Zoom2 _), `Left ->
         let show_stationbox = Options.mem v.options `StationBoxes in
         let stationbox_click = Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y in
         begin match stationbox_click with
         | Some (station_x, station_y) when show_stationbox ->
             let cursor_x, cursor_y = station_x + start_x, station_y + start_y in
             v, `StationView (cursor_x, cursor_y)
-        | _ when cursor_on_station s.backend v ~cursor_x ~cursor_y ->
+        | _ when cursor_on_station s.backend v ~cursor_x ~cursor_y ~all:true ->
             (* station click *)
-            v, `StationView (cursor_x, cursor_y)
+            with_zoom_23 v (fun _ -> {zoom_station=Some(cursor_x, cursor_y)}), `NoAction
         | _ ->
             let click_on_train = cursor_on_train x y ~car_pixels:8 ~dist:2 in
             begin match click_on_train with
@@ -237,7 +243,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match v.zoom with
       | Zoom1 ->
           let y = y - v.dims.y in
-          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=Zoom2}, `NoAction
+          {v with center_x=x; center_y=y; cursor_x=x; cursor_y=y; zoom=def_zoom2}, `NoAction
       | _ when x > minimap.x && y > minimap.y && y < minimap.y + minimap.h ->
           (* click on minimap *)
           let start_x, start_y, _, _ = minimap_bounds v ~minimap in
@@ -310,10 +316,10 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         {v with zoom = Zoom1; survey=false}, `NoAction
     | Key {down=true; key=F2; _} ->
         flush_draw_buffer v;
-        {v with zoom = Zoom2; survey=false}, `NoAction
+        {v with zoom = def_zoom2; survey=false}, `NoAction
     | Key {down=true; key=F3; _} ->
         flush_draw_buffer v;
-        {v with zoom = Zoom3; survey=false}, `NoAction
+        {v with zoom = def_zoom3; survey=false}, `NoAction
     | Key {down=true; key=F4; _} ->
         {v with zoom = Zoom4}, `NoAction
     | MouseButton {down=true; x; y; button; _} ->
@@ -712,7 +718,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   | Zoom1 ->
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
       draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
-  | Zoom2 ->
+  | Zoom2 _ ->
       R.draw_rect win ~x:0 ~y:v.dims.y ~w:v.dims.w ~h:v.dims.h ~color:Ega.cyan ~fill:true;
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 6 8
@@ -720,7 +726,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_track_zoom2_3 1;
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
-  | Zoom3 ->
+  | Zoom3 _ ->
       tile_render ();
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 3 4
@@ -799,7 +805,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
   [%upf v.smoke_plumes <- smoke_plumes];
   let () =
     match v.zoom with
-    | Zoom2 | Zoom3 ->
+    | Zoom2 _ | Zoom3 _ ->
       (* Cycle the draw buffer for any trains that have new data *)
       Hashtbl.iter (fun _ arr ->
         if not @@ equal_train_history arr.(0) arr.(1) then (

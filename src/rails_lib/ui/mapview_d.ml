@@ -1,12 +1,25 @@
 open! Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open Utils
+
+type zoom23 =
+  {
+    (* View of station for changing lights *)
+    zoom_station: loc option
+  }
+  [@@deriving show, yojson]
+
+let default_zoom23 = { zoom_station=None }
 
 type zoom =
   | Zoom1
-  | Zoom2
-  | Zoom3
+  | Zoom2 of zoom23
+  | Zoom3 of zoom23
   | Zoom4
   [@@deriving show, yojson]
+
+let def_zoom2 = Zoom2 default_zoom23
+let def_zoom3 = Zoom3 default_zoom23
 
 type options =
   [ `StationBoxes | `Resources]
