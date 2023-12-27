@@ -351,8 +351,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     x >= start_x_map - C.draw_margin && y >= start_y_map - C.draw_margin &&
     x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
   in
-  let draw_tile ~tile_x ~tile_y ~screen_x ~screen_y =
-    let tiles = tile_textures_of_zoom s v.zoom in
+  let draw_tile ~tile_x ~tile_y ~screen_x ~screen_y ~zoom =
+    let tiles = tile_textures_of_zoom s zoom in
     (* Check for alternate tile *)
     let alt = ((tile_x + tile_y) land 1) > 0 in
     let tile = B.get_tile s.backend tile_x tile_y in
@@ -363,7 +363,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     iter_screen (fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
       let screen_x, screen_y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
-      draw_tile ~tile_x ~tile_y ~screen_x ~screen_y
+      draw_tile ~tile_x ~tile_y ~screen_x ~screen_y ~zoom:v.zoom
     )
   in
   let draw_city_names () =
@@ -400,7 +400,25 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       [0, Ega.white; 16, Ega.black]
     ) s.backend.trains
   in
-  let draw_track_zoom2_3 mult =
+  let draw_track_zoom4 ~tile_x ~tile_y ~screen_x ~screen_y =
+    (* draw an individual piece of tile *)
+    let track_h = s.State.textures.tracks in
+    match B.get_track s.backend tile_x tile_y with
+    | Some track when Track.is_double track ->
+      let tex = Textures.Tracks.find track_h track in
+      let (x1, y1), (x2, y2) = Track.double_track_offsets track in
+      let xd, yd = screen_x + x1 - 2, screen_y + y1 - 2 in
+      R.Texture.render win tex ~x:xd ~y:yd;
+      let xd, yd = screen_x + x2 - 2, screen_y + y2 - 2 in
+      R.Texture.render win tex ~x:xd ~y:yd
+
+    | Some track ->
+      let tex = Textures.Tracks.find track_h track in
+      R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
+
+    | _ -> ()
+  in
+  let draw_tracks_zoom2_3 mult zoom_station =
     iter_screen @@ fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
       match B.get_track s.backend tile_x tile_y with
@@ -431,15 +449,24 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           )
           track.dirs
         in
+        let draw_zoom4_station () =
+          match zoom_station with
+          | Some (tile_x2, tile_y2) when tile_x = tile_x2 && tile_y = tile_y2 ->
+              draw_tile ~tile_x ~tile_y ~screen_x:(x-8) ~screen_y:(y-8) ~zoom:Zoom4;
+              draw_track_zoom4 ~tile_x ~tile_y ~screen_x:(x-8) ~screen_y:(y-8);
+              R.draw_rect win ~x:(x-9) ~y:(y-9) ~w:18 ~h:18 ~fill:false ~color:Ega.white
+          | _ -> ()
+        in
         begin match track.kind with
-        | Station `Depot
-        | Station `Station
-        | Station `Terminal ->
+        | Station (`Depot | `Station | `Terminal) ->
             (* Draw station outline *)
             R.draw_rect win ~color:Ega.white ~x:(x-3) ~y:(y-3) ~w:6 ~h:6 ~fill:true;
-            draw_signals ()
+            draw_signals ();
+            draw_zoom4_station ()
 
-        | Station `SignalTower -> draw_signals ()
+        | Station `SignalTower ->
+            draw_signals ();
+            draw_zoom4_station ()
 
         | _normal_track ->
             let draw_segment x y dir =
@@ -624,24 +651,6 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let color = if v.build_mode then Ega.white else Ega.red in
     R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color ~fill:false
   in
-  let draw_track_zoom4 ~tile_x ~tile_y ~screen_x ~screen_y =
-    (* draw an individual piece of tile *)
-    let track_h = s.State.textures.tracks in
-    match B.get_track s.backend tile_x tile_y with
-    | Some track when Track.is_double track ->
-      let tex = Textures.Tracks.find track_h track in
-      let (x1, y1), (x2, y2) = Track.double_track_offsets track in
-      let xd, yd = screen_x + x1 - 2, screen_y + y1 - 2 in
-      R.Texture.render win tex ~x:xd ~y:yd;
-      let xd, yd = screen_x + x2 - 2, screen_y + y2 - 2 in
-      R.Texture.render win tex ~x:xd ~y:yd
-
-    | Some track ->
-      let tex = Textures.Tracks.find track_h track in
-      R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
-
-    | _ -> ()
-  in
   let draw_tracks_zoom4 () =
     iter_screen (fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
@@ -725,20 +734,20 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   | Zoom1 ->
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
       draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
-  | Zoom2 _ ->
+  | Zoom2 st ->
       R.draw_rect win ~x:0 ~y:v.dims.y ~w:v.dims.w ~h:v.dims.h ~color:Ega.cyan ~fill:true;
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 6 8
       );
-      draw_track_zoom2_3 1;
+      draw_tracks_zoom2_3 1 st.zoom_station;
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
-  | Zoom3 _ ->
+  | Zoom3 st ->
       draw_tiles ();
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 3 4
       );
-      draw_track_zoom2_3 2;
+      draw_tracks_zoom2_3 2 st.zoom_station;
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom4 ->
