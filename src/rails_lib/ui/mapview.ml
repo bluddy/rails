@@ -351,16 +351,19 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     x >= start_x_map - C.draw_margin && y >= start_y_map - C.draw_margin &&
     x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
   in
-  let draw_tiles () =
+  let draw_tile ~tile_x ~tile_y ~screen_x ~screen_y =
     let tiles = tile_textures_of_zoom s v.zoom in
+    (* Check for alternate tile *)
+    let alt = ((tile_x + tile_y) land 1) > 0 in
+    let tile = B.get_tile s.backend tile_x tile_y in
+    let tex = Textures.TileTex.find tiles ~region:(B.get_region s.backend) ~alt tile in
+    R.Texture.render win tex ~x:screen_x ~y:screen_y
+  in
+  let draw_tiles () =
     iter_screen (fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
-      (* Check for alternate tile *)
-      let alt = ((tile_x + tile_y) land 1) > 0 in
-      let tile = B.get_tile s.backend tile_x tile_y in
-      let tex = Textures.TileTex.find tiles ~region:(B.get_region s.backend) ~alt tile in
-      let x, y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
-      R.Texture.render win tex ~x ~y;
+      let screen_x, screen_y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
+      draw_tile ~tile_x ~tile_y ~screen_x ~screen_y
     )
   in
   let draw_city_names () =
@@ -621,25 +624,29 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let color = if v.build_mode then Ega.white else Ega.red in
     R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color ~fill:false
   in
-  let draw_track_zoom4 () =
+  let draw_track_zoom4 ~tile_x ~tile_y ~screen_x ~screen_y =
+    (* draw an individual piece of tile *)
     let track_h = s.State.textures.tracks in
+    match B.get_track s.backend tile_x tile_y with
+    | Some track when Track.is_double track ->
+      let tex = Textures.Tracks.find track_h track in
+      let (x1, y1), (x2, y2) = Track.double_track_offsets track in
+      let xd, yd = screen_x + x1 - 2, screen_y + y1 - 2 in
+      R.Texture.render win tex ~x:xd ~y:yd;
+      let xd, yd = screen_x + x2 - 2, screen_y + y2 - 2 in
+      R.Texture.render win tex ~x:xd ~y:yd
+
+    | Some track ->
+      let tex = Textures.Tracks.find track_h track in
+      R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
+
+    | _ -> ()
+  in
+  let draw_tracks_zoom4 () =
     iter_screen (fun x y ->
-      let map_x, map_y = start_x + x, start_y + y in
-      let x, y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
-      match B.get_track s.backend map_x map_y with
-      | Some track when Track.is_double track ->
-        let tex = Textures.Tracks.find track_h track in
-        let (x1, y1), (x2, y2) = Track.double_track_offsets track in
-        let xd, yd = x + x1 - 2, y + y1 - 2 in
-        R.Texture.render win tex ~x:xd ~y:yd;
-        let xd, yd = x + x2 - 2, y + y2 - 2 in
-        R.Texture.render win tex ~x:xd ~y:yd
-
-      | Some track ->
-        let tex = Textures.Tracks.find track_h track in
-        R.Texture.render win tex ~x:(x-2) ~y:(y-2)
-
-      | _ -> ()
+      let tile_x, tile_y = start_x + x, start_y + y in
+      let screen_x, screen_y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
+      draw_track_zoom4 ~tile_x ~tile_y ~screen_x ~screen_y
     )
   in
   let draw_trains_zoom4 () =
@@ -742,7 +749,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       else if v.survey then (
         draw_survey_zoom4 ()
       );
-      draw_track_zoom4 ();
+      draw_tracks_zoom4 ();
       draw_trains_zoom4 ();
       draw_minimap ~minimap;
       draw_cursor_zoom4 ();
