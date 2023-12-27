@@ -212,6 +212,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         (* move cursor *)
         let center_x, center_y = check_recenter_zoom4 v cursor_x cursor_y in
         {v with center_x; center_y; cursor_x; cursor_y}, `NoAction
+
+      (* Zoom_station is open *)
+    | (Zoom3 {zoom_station=Some _} | Zoom2 {zoom_station=Some _}), (`Right | `Left) ->
+        with_zoom_23 v (fun _ -> {zoom_station=None}), `NoAction
+
     | (Zoom4 | Zoom3 _ | Zoom2 _), `Right ->
         (* recenter *)
         flush_draw_buffer v;
