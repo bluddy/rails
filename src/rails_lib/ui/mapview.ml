@@ -203,8 +203,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           v, `StationView (cursor_x, cursor_y)
         else begin match cursor_on_train x y ~car_pixels:12 ~dist:10 with
           | Some train_idx -> v, `EditTrain train_idx
-          | _ ->
-            (* tile click *)
+          | _ -> (* tile click *)
             let tile = B.get_tile s.backend cursor_x cursor_y in
             v, `ShowTileInfo (cursor_x, cursor_y, tile)
           end
