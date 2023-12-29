@@ -189,16 +189,17 @@ module Tracks = struct
     let num_j = w / tile_w in
     let track_dict = Track.Htbl.create 100 in
 
-    let get_tex ?(extra=false) i j =
+    let get_tex extra i j =
+      (* Slice an image and turn it into a texture *)
       let x, y = j * tile_w, i * tile_h in
       let ndarr = if extra then extra_ndarray else ndarray in
       let slice = Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarr in
       let tex = R.Texture.make win slice in
       tex
     in
-    let load_textures ?extra start_i start_j kind dirslist =
+    let load_textures ?(extra=false) start_i start_j kind dirslist =
       List.fold_left (fun (i,j) li ->
-        let tex = get_tex ?extra i j in
+        let tex = get_tex extra i j in
         let dirs = Dir.Set.of_list li in
         let track = Track.make dirs kind ~player:0 in
         Track.Htbl.replace track_dict track tex;
@@ -224,6 +225,7 @@ module Tracks = struct
     load_textures 3 4 (Bridge(Bridge.Iron)) Resources.straight_track;
     load_textures 3 8 (Bridge(Bridge.Wood)) Resources.straight_track;
     load_textures ~extra:true 3 8 (Bridge(Bridge.Stone)) Resources.straight_track;
+
     load_textures 4 0 (Station(`SignalTower)) Resources.straight_track;
     load_textures 4 0 (Station(`Depot)) Resources.straight_track;
     load_textures 4 4 (Station(`Station)) Resources.straight_track;
