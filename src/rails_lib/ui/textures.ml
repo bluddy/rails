@@ -237,7 +237,45 @@ module Tracks = struct
 
 end
 
-module Station = struct
+module StationLights = struct
+  let tile_w, tile_h = 20, 20
+
+  let load win res =
+    let ndarray = Hashtbl.find res.Resources.res_pics "TRACKS_extra" in
+    let light_dict = Hashtbl.create 20 in
+
+    let get_tex i j =
+      (* Slice an image and turn it into a texture *)
+      let x, y = j * tile_w, i * tile_h in
+      let slice = Ndarray.get_slice [[y; y + tile_h - 1]; [x; x + tile_w - 1]] ndarray in
+      let tex = R.Texture.make win slice in
+      tex
+    in
+    let row_end = 3 in
+    let load_textures start_i start_j kind =
+      ignore @@ List.fold_left (fun (i,j) dir ->
+        let tex = get_tex (start_i + i) (start_j + j) in
+        Hashtbl.replace light_dict (dir, kind) tex;
+        if j >= row_end then
+          (i + 1, 0)
+        else
+          (i, j + 1)
+      )
+      (0, 0)
+      Dir.dirlist
+    in
+    load_textures 4 0 `SignalTower;
+    load_textures 4 0 `Depot;
+    load_textures 4 4 `Station;
+    load_textures 4 8 `Terminal;
+    light_dict
+
+  let find track_h track =
+    Track.Htbl.find track_h track
+
+end
+
+module StationTex = struct
   type hash =
     [ `Background
     | `Barn
@@ -984,8 +1022,8 @@ type t = {
   tiles: (Tile.t, TileTex.t) Hashtbl.t;
   small_tiles: (Tile.t, TileTex.t) Hashtbl.t;
   tracks: R.Texture.t Track.Htbl.t;
-  station_us: (Station.hash, R.Texture.t) Hashtbl.t;
-  station_en: (Station.hash, R.Texture.t) Hashtbl.t;
+  station_us: (StationTex.hash, R.Texture.t) Hashtbl.t;
+  station_en: (StationTex.hash, R.Texture.t) Hashtbl.t;
   cars_top: (CarsTop.hash * Dir.t, R.Texture.t) Hashtbl.t;
   small_engine: (Engine.make, R.Texture.t) Hashtbl.t;
   route_engine: (Engine.make, R.Texture.t) Hashtbl.t;
@@ -998,6 +1036,7 @@ type t = {
   jobs: (Jobs.t, R.Texture.t) Hashtbl.t;
   misc: (Misc.t, R.Texture.t) Hashtbl.t;
   smoke: (Misc.smoke, R.Texture.t array) Hashtbl.t;
+  station_lights: (Dir.t * Station.kind, R.Texture.t) Hashtbl.t;
 }
 
 let of_resources win res =
@@ -1009,8 +1048,9 @@ let of_resources win res =
   let tiles, small_tiles = TileTex.slice_tiles win res in
   let small_engine, route_engine, route_cars = RouteScreen.load win res in
   let engine_anim, car_anim = TrainAnim.load win res in
-  let station_us, station_en = Station.load win res in
+  let station_us, station_en = StationTex.load win res in
   let misc, smoke = Misc.load win res in
+  let station_lights = StationLights.load win res in
   {
     pics;
     pixel;
@@ -1030,6 +1070,7 @@ let of_resources win res =
     engine_anim;
     car_anim;
     smoke;
+    station_lights;
   }
 
 

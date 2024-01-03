@@ -127,7 +127,7 @@ let render win (s:State.t) loc ~show_demand =
   (Station.get_upgrades station);
 
   (* Draw Station *)
-  let station_kind :> Textures.Station.hash = match station.info with
+  let station_kind :> Textures.StationTex.hash = match station.info with
     | Some {kind;_} -> kind
     | None -> assert false
   in
