@@ -271,7 +271,7 @@ module StationLights = struct
     light_dict
 
   let find track_h track =
-    Track.Htbl.find track_h track
+    Hashtbl.find track_h track
 
 end
 

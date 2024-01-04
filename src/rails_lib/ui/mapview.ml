@@ -416,6 +416,18 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let xd, yd = screen_x + x2 - 2, screen_y + y2 - 2 in
       R.Texture.render win tex ~x:xd ~y:yd
 
+    | Some ({kind=Station station_kind; dirs;_} as track) ->
+      let tex = Textures.Tracks.find track_h track in
+      R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2);
+
+      (* draw lights *)
+      let light_h = s.State.textures.station_lights in
+      let station = Station_map.get_exn (tile_x, tile_y) s.backend.stations in
+      Dir.Set.iter (fun dir ->
+        let tex = Textures.StationLights.find light_h (dir, station_kind) in
+        R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
+      ) dirs
+
     | Some track ->
       let tex = Textures.Tracks.find track_h track in
       R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
