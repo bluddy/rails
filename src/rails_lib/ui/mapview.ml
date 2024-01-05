@@ -424,8 +424,15 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let light_h = s.State.textures.station_lights in
       let station = Station_map.get_exn (tile_x, tile_y) s.backend.stations in
       Dir.Set.iter (fun dir ->
-        let tex = Textures.StationLights.find light_h (dir, station_kind) in
-        R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
+        let has_connection_in_dir = 
+          let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in
+          match B.get_track s.backend tile_x2 tile_y2 with
+          | Some track when Track.has_dir track ~dir:(Dir.opposite dir) -> true
+          | _ -> false
+        in
+        if has_connection_in_dir then (
+          let tex = Textures.StationLights.find light_h (dir, station_kind) in
+          R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2))
       ) dirs
 
     | Some track ->
