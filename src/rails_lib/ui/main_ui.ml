@@ -282,11 +282,6 @@ let default ?options ?view win fonts region =
     mode=Normal;
   }
 
-(* let load default sexp = *)
-(*   let options = options_of_sexp sexp in *)
-(*   let view = Mapview.load default.view sexp in *)
-(*   {default with options; view} *)
-
 let build_station_menu fonts region =
   let open Menu in
   let open MsgBox in
