@@ -147,7 +147,7 @@ let with_info v f = match v.info with
 let get_age v year = year - v.year
 
 let color_of_signal = function
-  | Go -> Ega.green
+  | Go -> Ega.bgreen
   | Stop -> Ega.red
   | OverrideProceed -> Ega.yellow
   | OverrideHold -> Ega.bred

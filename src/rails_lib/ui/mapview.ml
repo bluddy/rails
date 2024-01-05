@@ -420,7 +420,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let tex = Textures.Tracks.find track_h track in
       R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2);
 
-      (* draw lights *)
+      (* draw signals *)
       let light_h = s.State.textures.station_lights in
       let station = Station_map.get_exn (tile_x, tile_y) s.backend.stations in
       Dir.Set.iter (fun dir ->
@@ -431,8 +431,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           | _ -> false
         in
         if has_connection_in_dir then (
+          let color = Station.get_signal station dir |> Station.color_of_signal in
           let tex = Textures.StationLights.find light_h (dir, station_kind) in
-          R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2))
+          R.Texture.render ~color win tex ~x:(screen_x-2) ~y:(screen_y-2))
       ) dirs
 
     | Some track ->
