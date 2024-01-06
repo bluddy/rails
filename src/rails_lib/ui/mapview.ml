@@ -71,7 +71,11 @@ let mapview_bounds v tile_w tile_h =
   let start_y = Utils.clip (v.center_y - y_delta + 1) ~min:0 ~max:(v.dims.h - 1 - 2 * y_delta) in
   let end_x = start_x + 2 * x_delta in
   let end_y = start_y + 2 * y_delta in
-  start_x, start_y, end_x, end_y
+  let start_x_map = start_x * C.tile_w in
+  let start_y_map = start_y * C.tile_h in
+  let end_x_map = end_x * C.tile_w in
+  let end_y_map = end_y * C.tile_h in
+  start_x, start_y, end_x, end_y, start_x_map, start_y_map, end_x_map, end_y_map
 
 let minimap_bounds v ~(minimap:Utils.rect) =
   let start_x_tile = Utils.clip (v.center_x - minimap.w/2) ~min:0 ~max:(v.dims.w - minimap.w) in
@@ -83,7 +87,7 @@ let minimap_bounds v ~(minimap:Utils.rect) =
 let check_recenter_zoom4 v cursor_x cursor_y =
   (* recenter in zoom4 if past screen, but only in given direction *)
   let tile_w, tile_h = tile_size_of_zoom Zoom4 in
-  let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
+  let start_x, start_y, end_x, end_y, _, _, _, _ = mapview_bounds v tile_w tile_h in
   if (cursor_y > 0 && cursor_y < start_y + 1)
     || (cursor_y < v.dims.h - 1 && cursor_y >= end_y - 1)
     || (cursor_x > 0 && cursor_x < start_x + 1)
@@ -159,9 +163,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
     let tile_w, tile_h = tile_size_of_zoom v.zoom in
     let tile_div = tile_div_of_zoom v.zoom in
-    let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-    let start_x_map, start_y_map = start_x * C.tile_w, start_y * C.tile_h in
-    let end_x_map, end_y_map = end_x * C.tile_w, end_y * C.tile_h in
+    let start_x, start_y, end_x, end_y, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
     let screen_tile_x = x / tile_w in
     let screen_tile_y = (y - v.dims.y) / tile_h in
     let cursor_x = start_x + screen_tile_x |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
@@ -340,9 +342,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let tile_div = tile_div_of_zoom v.zoom in
   let tile_w2, tile_h2 = tile_w/2, tile_h/2 in
   (* In tile coordinates: where our view starts *)
-  let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-  let start_x_map, start_y_map = start_x * C.tile_w, start_y * C.tile_h in
-  let end_x_map, end_y_map = end_x * C.tile_w, end_y * C.tile_h in
+  let start_x, start_y, end_x, end_y, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
   let iter_screen f =
     for y = 0 to v.dims.h/tile_h - 1 do
       for x = 0 to v.dims.w/tile_w - 1 do
@@ -814,11 +814,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
     | Zoom4 ->
       (* Only create smoke plumes for the drawn area *)
       let tile_w, tile_h = tile_size_of_zoom v.zoom in
-      let start_x, start_y, end_x, end_y = mapview_bounds v tile_w tile_h in
-      let start_x_map = start_x * C.tile_w in
-      let start_y_map = start_y * C.tile_h in
-      let end_x_map = end_x * C.tile_w in
-      let end_y_map = end_y * C.tile_h in
+      let start_x, start_y, end_x, end_y, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
       (* Create plumes of smoke *)
       let smoke_plumes =
         Trainmap.foldi (fun i acc (train:Train.t) ->
