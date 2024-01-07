@@ -296,6 +296,16 @@ let build_station_menu fonts region =
     make_entry (sprintf "&Terminal (%s)" @@ price `Terminal) @@ `Action(Some `Terminal);
   ]
 
+let build_signal_menu fonts x y =
+  let open Menu in
+  let open MsgBox in
+  make ~fonts ~x ~y
+  [
+    make_entry "NORMAL" @@ `Action(Some `Normal);
+    make_entry "HOLD" @@ `Action(Some `Hold);
+    make_entry "PROCEED" @@ `Action(Some `Proceed);
+  ]
+
 let build_bridge_menu fonts region =
   let open Menu in
   let open MsgBox in
@@ -576,6 +586,14 @@ let handle_event (s:State.t) v (event:Event.t) =
             let mode = ModalMsgbox {menu; data=(); last=Normal} in
             {v with mode}, nobaction
 
+        | _, `SignalMenu(x, y, dir) ->
+            let menu =
+              build_signal_menu s.fonts ((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y)
+              |> Menu.MsgBox.do_open_menu s
+            in
+            let modal = {menu; data=(x, y, dir); last=Normal} in
+            {v with mode=SignalMenu modal}, nobaction
+
         | _, `StationView(x, y) ->
             {v with mode=StationView(x, y)}, nobaction
 
@@ -660,6 +678,13 @@ let handle_event (s:State.t) v (event:Event.t) =
               {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)
           | _ -> {v with mode=Normal}, nobaction
         )
+
+    | SignalMenu signal_menu ->
+      handle_modal_menu_events
+      signal_menu
+        (fun x -> SignalMenu x)
+        (fun {data=(x, y, dir);_} cmd ->
+          {v with mode=Normal}, StationSetSignal{x; y; dir; cmd})
 
     | StationView _ ->
         if Event.is_left_click event || Event.key_modal_dismiss event then
@@ -830,6 +855,9 @@ let render (win:R.window) (s:State.t) v =
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | BuildTunnel modal ->
+        render_main win s v;
+        Menu.MsgBox.render win s modal.menu
+    | SignalMenu modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | StationView(x, y) ->

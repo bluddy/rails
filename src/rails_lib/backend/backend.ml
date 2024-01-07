@@ -405,6 +405,19 @@ let _train_replace_engine v ~train ~engine ~player =
   update_player v player (Player.pay Player.TrainExpense engine.price);
   [%up {v with trains}]
 
+let _station_set_signal v loc dir cmd =
+  (* TODO: fix up proper auto signal *)
+  let signal = match cmd with
+  | `Normal -> Station.Go (* TODO: wrong *)
+  | `Hold -> OverrideHold
+  | `Proceed -> OverrideProceed
+  in
+  let stations = Station_map.update loc 
+    (Option.map (fun station -> Station.set_signal station dir signal))
+    v.stations
+  in
+  [%up {v with stations}]
+  
 let _remove_train v idx =
   let train = Trainmap.get v.trains idx in
   (match train.state with
@@ -465,6 +478,7 @@ module Action = struct
     | TrainSetType of {train: int; typ: Train.train_type}
     | RemoveTrain of int
     | TrainReplaceEngine of {train: int; engine: Engine.make}
+    | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -511,6 +525,8 @@ module Action = struct
           _remove_train backend idx
       | TrainReplaceEngine {train; engine} ->
           _train_replace_engine backend ~train ~engine ~player:0
+      | StationSetSignal {x; y; dir; cmd} ->
+          _station_set_signal backend (x, y) dir cmd
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

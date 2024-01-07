@@ -130,6 +130,25 @@ let cursor_on_station ?cursor_x ?cursor_y ?(all=false) backend v =
       end
   | _ -> false
 
+let cursor_on_signal backend tile_x tile_y delta_x delta_y =
+  (* assumes we are on a station *)
+  (* offsets: delta relative to tile *)
+  let midpoint_x, midpoint_y = 8, 8 in
+  let delta_x, delta_y = delta_x - midpoint_x, delta_y - midpoint_y in
+  match B.get_track backend tile_x tile_y with
+  | Some {kind=Station _; player; dirs; _} when player = 0 ->
+    Dir.Set.find_opt dirs (function
+      | Up when delta_x > 0 && delta_y < 0 -> true
+      | UpRight when delta_x > 0 && delta_y >= -2 && delta_y <= 2 -> true
+      | Right when delta_x > 0 && delta_y > 0 -> true
+      | DownRight when delta_y > 0 && delta_x >= -2 && delta_x <= 2 -> true
+      | Down when delta_y > 0 && delta_x < 0 -> true
+      | DownLeft when delta_x < 0 && delta_y >= -2 && delta_y <= 2 -> true
+      | Left when delta_y < 0 && delta_x < 0 -> true
+      | UpLeft when delta_y < 0 && delta_x >= -2 && delta_x <= 2 -> true
+      | _ -> false)
+  | _ -> None
+
 let get_station_under_cursor_exn backend v =
   (* get the station the cursor is over *)
   match B.get_station (v.cursor_x, v.cursor_y) backend with
@@ -163,8 +182,8 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
     let tile_w, tile_h = tile_size_of_zoom v.zoom in
     let tile_div = tile_div_of_zoom v.zoom in
-    let start_x, start_y, end_x, end_y, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
-    let screen_tile_x = x / tile_w in
+    let start_x, start_y, _, _, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
+    let screen_tile_x = (x - v.dims.x) / tile_w in
     let screen_tile_y = (y - v.dims.y) / tile_h in
     let cursor_x = start_x + screen_tile_x |> Utils.clip ~min:0 ~max:(v.dims.w - 1) in
     let cursor_y = start_y + screen_tile_y |> Utils.clip ~min:0 ~max:(v.dims.h - 1) in
@@ -173,13 +192,18 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
       x >= start_x_map - C.draw_margin && y >= start_y_map - C.draw_margin &&
       x <= end_x_map + C.draw_margin && y <= end_y_map + C.draw_margin
     in
+    let to_screen_pxls x y =
+      (* convert from map pixels to screen pixels *)
+      let x = (x - start_x_map)/tile_div + offset_x in
+      let y = (y - start_y_map)/tile_div + offset_y in
+      x, y
+    in
     let cursor_on_train ~car_pixels ~dist cursor_x cursor_y =
       (* cursor_x, y in terms of screen pixels *)
       let test_loc x y =
         if is_in_view x y then
-          let x = (x - start_x_map)/tile_div + offset_x in
-          let y = (y - start_y_map)/tile_div + offset_y in
-          Utils.classic_dist (x, y) (cursor_x, cursor_y) <= dist
+          let screen_x, screen_y = to_screen_pxls x y in
+          Utils.classic_dist (screen_x, screen_y) (cursor_x, cursor_y) <= dist
         else
           false
       in
@@ -202,7 +226,12 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | Zoom4, `Left when cursor_x = v.cursor_x && cursor_y = v.cursor_y ->
         (* second click, after focusing the cursor on that tile *)
         if cursor_on_station s.backend v then
-          v, `StationView (cursor_x, cursor_y)
+          let screen_x, screen_y = to_screen_pxls cursor_x cursor_y in
+          match cursor_on_signal s.backend cursor_x cursor_y (x - screen_x) (y - screen_y) with
+          | Some dir -> (* signal click *)
+            v, `SignalMenu (cursor_x, cursor_y, dir)
+          | None -> (* station click *)
+            v, `StationView (cursor_x, cursor_y)
         else begin match cursor_on_train x y ~car_pixels:12 ~dist:10 with
           | Some train_idx -> v, `EditTrain train_idx
           | _ -> (* tile click *)
@@ -814,7 +843,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
     | Zoom4 ->
       (* Only create smoke plumes for the drawn area *)
       let tile_w, tile_h = tile_size_of_zoom v.zoom in
-      let start_x, start_y, end_x, end_y, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
+      let _, _, _, _, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
       (* Create plumes of smoke *)
       let smoke_plumes =
         Trainmap.foldi (fun i acc (train:Train.t) ->

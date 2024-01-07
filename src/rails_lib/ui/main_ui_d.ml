@@ -85,6 +85,8 @@ type ('state, 'menu_options, 'payload) modalmenu =
     (* Main modes of operation of the mapview.
        Any special menu needs a mode.
        'a: used to allow recursive modules with the main State.t
+       2nd: type of choices from menu
+       3rd: type of stored data
     *)
 and 'a mode =
   | Normal
@@ -93,6 +95,7 @@ and 'a mode =
   | BuildBridge of ('a, Bridge.t, Utils.msg) modalmenu
   | BuildHighGrade of ('a, [`BuildTunnel | `BuildTrack], Utils.msg) modalmenu
   | BuildTunnel of ('a, bool, Utils.msg * int) modalmenu
+  | SignalMenu of ('a, [`Normal|`Hold|`Proceed], int * int * Dir.t) modalmenu (* x,y,dir *)
   | StationView of int * int (* x, y *)
   | BuildTrain of [
     | `ChooseEngine
