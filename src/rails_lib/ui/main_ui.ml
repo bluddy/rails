@@ -586,9 +586,10 @@ let handle_event (s:State.t) v (event:Event.t) =
             let mode = ModalMsgbox {menu; data=(); last=Normal} in
             {v with mode}, nobaction
 
-        | _, `SignalMenu(x, y, dir) ->
+        | _, `SignalMenu(x, y, dir, screen_x, screen_y) ->
             let menu =
-              build_signal_menu s.fonts ((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y)
+              build_signal_menu s.fonts screen_x screen_y
+              (* build_signal_menu s.fonts 10 10 (*((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y) *) *)
               |> Menu.MsgBox.do_open_menu s
             in
             let modal = {menu; data=(x, y, dir); last=Normal} in

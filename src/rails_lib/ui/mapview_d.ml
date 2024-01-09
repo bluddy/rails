@@ -49,8 +49,8 @@ type t =
   {
     center_x: int; (* in map coordinates *)
     center_y: int;
-    cursor_x: int; (* square cursor for zoom4 *)
-    cursor_y: int;
+    kbd_cursor_x: int; (* square cursor for zoom4 *)
+    kbd_cursor_y: int;
     zoom: zoom;
     dims: Utils.rect;
     build_mode: bool; (* build or remove track *)
