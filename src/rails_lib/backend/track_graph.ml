@@ -5,7 +5,9 @@ open! Utils
 let src = Logs.Src.create "track_graph" ~doc:"The track graph"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-(* Graph for intersections and stations *)
+(* Graph for intersections and stations
+   Navigation must use both intersections and stations
+ *)
 
 (* NOTE: must be per player! *)
 

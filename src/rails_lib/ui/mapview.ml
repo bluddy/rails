@@ -437,7 +437,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     (* draw an individual piece of tile *)
     let track_h = s.State.textures.tracks in
     match B.get_track s.backend tile_x tile_y with
-    | Some track when Track.is_double track ->
+    | Some track when Track.is_visually_double track ->
       let tex = Textures.Tracks.find track_h track in
       let (x1, y1), (x2, y2) = Track.double_track_offsets track in
       let xd, yd = screen_x + x1 - 2, screen_y + y1 - 2 in

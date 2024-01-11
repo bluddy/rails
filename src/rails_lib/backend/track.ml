@@ -129,7 +129,8 @@ let straighten v =
 let is_doubleable v =
   not @@ TrackSet.mem undoubleable_dirs v.dirs
 
-let is_double v =
+let is_visually_double v =
+  (* Tracks that look double i.e. that require doubling in graphics *)
   match v.kind with
   | Track `Double
   | Ferry `Double -> true
