@@ -122,14 +122,28 @@ let convert v good region =
   else
     None
 
-type signal = 
-  | Go (* safe to enter *)
-  | Stop (* not safe to enter *)
+type override =
+  | NoOverride (* no override *)
   | OverrideProceed (* pass next train and then normal *)
   | OverrideHold (* stops all trains *)
   [@@deriving yojson, eq]
 
+type signal = 
+  | Go (* safe to enter *)
+  | Stop (* not safe to enter *)
+  [@@deriving yojson, eq]
+
 type id = int * int [@@deriving yojson, eq, show]
+
+type signals = {
+  lower: signal * override;
+  upper: signal * override;
+} [@@deriving yojson]
+
+let default_signals = {
+  lower=(Go, NoOverride);
+  upper=(Go, NoOverride);
+}
 
 type t = {
   x: int;
@@ -137,7 +151,7 @@ type t = {
   year: int;
   info: info option;
   player: int;
-  signals: signal * signal; (* lower then upper *)
+  signals: signals;
 } [@@deriving yojson]
 
 let with_info v f = match v.info with
@@ -147,14 +161,16 @@ let with_info v f = match v.info with
 let get_age v year = year - v.year
 
 let color_of_signal = function
-  | Go -> Ega.bgreen
-  | Stop -> Ega.red
-  | OverrideProceed -> Ega.yellow
-  | OverrideHold -> Ega.bred
+  | _, OverrideProceed -> Ega.yellow
+  | _, OverrideHold -> Ega.bred
+  | Go, NoOverride -> Ega.bgreen
+  | Stop, NoOverride -> Ega.red
 
 let frame_color_of_signal = function
-  | Go | Stop -> Ega.black
-  | _ -> Ega.white
+  | _, OverrideProceed
+  | _, OverrideHold -> Ega.white
+  | Go, NoOverride
+  | Stop, NoOverride -> Ega.black
 
 let kind_str v =
   match v.info with
@@ -193,14 +209,24 @@ let set_segment (v:t) dir seg =
   {v with segments}
 *)
 
-let get_signal (v:t) dir = match v.signals with
-  | x, _ when Dir.lower dir -> x
-  | _, x -> x
+let get_signal (v:t) dir =
+  if Dir.lower dir then v.signals.lower else v.signals.upper
 
 let set_signal (v:t) dir signal =
-  let signals = match v.signals with
-    | _, x when Dir.lower dir -> signal, x
-    | x, _ -> x, signal
+  let signals =
+    if Dir.lower dir then
+      {v.signals with lower=(signal, snd v.signals.lower)}
+    else
+      {v.signals with upper=(signal, snd v.signals.upper)}
+  in
+  {v with signals}
+
+let set_override (v:t) dir override =
+  let signals =
+    if Dir.lower dir then
+      {v.signals with lower=(fst v.signals.lower, override)}
+    else
+      {v.signals with upper=(fst v.signals.upper, override)}
   in
   {v with signals}
 
@@ -224,8 +250,7 @@ let make_segments_and_signals segments =
   *)
 
 let make_signaltower ~x ~y ~year ~player =
-  let signals = Go, Go in
-  { x; y; year; info=None; player; signals}
+  { x; y; year; info=None; player; signals=default_signals}
 
 let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
   let name = match suffix with
@@ -259,7 +284,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
         cargo_revenue=Goods.Map.empty;
       } |> Option.some
   in
-  let signals = Go, Go in
+  let signals = default_signals in
   { x; y; year; info; player; signals}
 
 let add_upgrade v upgrade player =

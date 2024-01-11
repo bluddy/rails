@@ -406,14 +406,14 @@ let _train_replace_engine v ~train ~engine ~player =
   [%up {v with trains}]
 
 let _station_set_signal v loc dir cmd =
-  (* TODO: fix up proper auto signal *)
+  (* the user can only set the override *)
   let signal = match cmd with
-  | `Normal -> Station.Go (* TODO: wrong *)
+  | `Normal -> Station.NoOverride
   | `Hold -> OverrideHold
   | `Proceed -> OverrideProceed
   in
   let stations = Station_map.update loc 
-    (Option.map (fun station -> Station.set_signal station dir signal))
+    (Option.map (fun station -> Station.set_override station dir signal))
     v.stations
   in
   [%up {v with stations}]

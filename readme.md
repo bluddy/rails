@@ -16,7 +16,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Train/station interaction (pickup/drop-off)
 - [ ] Train/car view on F1,F2,F3
 - [ ] Money tracking
-- [ ] Double tracks
+- [x] Double tracks
 - [ ] Engine info display
 - [ ] Train arrival message (top-right UI)
 - [ ] Messages to the player (record etc)
