@@ -9,6 +9,9 @@ let track ?(double=false) dirs =
   let dbl = if double then `Double else `Single in
   Track.make (Dir.Set.of_list dirs) (Track dbl) ~player:0
 
+let bridge dirs b_type = 
+  Track.make (Dir.Set.of_list dirs) (Bridge b_type) ~player:0
+
 let%expect_test "print map" =
   let dirs = [Left; Right] in
   let map = TM.empty 3 3
@@ -58,6 +61,34 @@ let%expect_test "scan map ixn partial double" =
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
           search_dir = Dir.Right; station = false; double = false }
+         ]) |}]
+
+let%expect_test "scan map ixn partial double woodbridge" =
+  let double = true in
+  let map = TM.empty 5 5
+    |> TM.set ~x:0 ~y:2 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:1 ~y:2 ~t:(bridge [Left;Right] Bridge.Wood)
+    |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
+  in
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show_scan |> print_string;
+  [%expect {|
+    (Trackmap.Search.Track
+       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
+          search_dir = Dir.Right; station = false; double = false }
+         ]) |}]
+
+let%expect_test "scan map ixn partial double stonebridge" =
+  let double = true in
+  let map = TM.empty 5 5
+    |> TM.set ~x:0 ~y:2 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:1 ~y:2 ~t:(bridge [Left;Right] Bridge.Stone)
+    |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
+  in
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show_scan |> print_string;
+  [%expect {|
+    (Trackmap.Search.Track
+       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
+          search_dir = Dir.Right; station = false; double = true }
          ]) |}]
 
 let station dirs =
