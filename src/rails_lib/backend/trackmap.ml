@@ -248,43 +248,40 @@ module Search = struct
     dist: int;
     dir: Dir.t; (* out dir from station/ixn *)
     search_dir: Dir.t; (* search dir to get here *)
-    station: bool;
+    station: bool; (* This ixn is a station *)
+    double: bool; (* Fully double track to this ixn/station *)
   } [@@deriving show]
 
   let equal_ixn res1 res2 = res1.x = res2.x && res1.y = res2.y
   let nequal_ixn res1 res2 = not (res1 = res2)
 
-  let _make_ixn x y dist dir search_dir station =
-    {x; y; dist; dir; search_dir; station}
+  let _make_ixn x y dist dir search_dir ~station ~double =
+    {x; y; dist; dir; search_dir; station; double}
 
     (* Scan for a new segment ending in a station or ixn *)
     (* x, y: before movement *)
   let _scan_for_ixn v ~x ~y ~dir ~player =
     let search_dir = dir in
     let player2 = player in
-    let rec loop_to_node x y dir dist =
+    let rec loop_to_node x y dir double_acc dist =
       let oppo_dir = Dir.opposite dir in
       match get v ~x ~y with
-      | Some {ixn = true; player; _} when player = player2 ->
-          Some (_make_ixn x y dist oppo_dir search_dir false) 
+      | Some ({ixn = true; player; _} as track) when player = player2 ->
+          let double = double_acc && Track.acts_like_double track in
+          Some (_make_ixn x y dist oppo_dir search_dir ~station:false ~double) 
       | Some {kind = Station _; player; _} when player = player2 ->
-          Some (_make_ixn x y dist oppo_dir search_dir true)
-      | Some {dirs; player; _} when player = player2 ->
+          Some (_make_ixn x y dist oppo_dir search_dir ~station:true ~double:double_acc)
+      | Some track when track.player = player2 ->
           (* Find other dir and follow it *)
-          let other_dirs = Dir.Set.remove dirs oppo_dir in
-          begin match Dir.Set.pop_opt other_dirs with
-          | Some (other_dir, _) ->
-            begin match move_dir_bounds v ~x ~y ~dir:other_dir with
-            | None -> None
-            | Some (x2, y2) ->
-                loop_to_node x2 y2 other_dir (dist+1)
-            end
-          | None -> None (* dead end *)
-          end
+          let (let*) = Option.bind in
+          let* other_dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in
+          let* x2, y2 = move_dir_bounds v ~x ~y ~dir:other_dir in
+          let double = double_acc && Track.acts_like_double track in
+          loop_to_node x2 y2 other_dir double (dist + 1)
       | _ -> None
     in
     let x2, y2 = Dir.adjust dir x y in
-    loop_to_node x2 y2 dir 1
+    loop_to_node x2 y2 dir true 1
 
     (* Ixn/Station/Track: what we're pointing at.
        List: what we're connected to.
@@ -299,7 +296,7 @@ module Search = struct
     [@@deriving eq,show]
           
   (* Return a query about the segment from a particular tile
-     Get back a list of directions and result pairs
+     Get back a list of scan results
    *)
   let scan v ~x ~y ~player =
     let player2 = player in

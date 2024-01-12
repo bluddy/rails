@@ -28,7 +28,7 @@ let%expect_test "scan map ixn" =
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = false }
+          search_dir = Dir.Right; station = false; double = false }
          ]) |}]
 
 let station dirs =
@@ -44,7 +44,7 @@ let%expect_test "scan map station" =
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = true }
+          search_dir = Dir.Right; station = true; double = false }
          ]) |}]
 
 let%expect_test "scan map no ixn" =
@@ -66,8 +66,8 @@ let%expect_test "scan map 2 ixns" =
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 0; y = 3; dist = 1; dir = Dir.Right;
-          search_dir = Dir.Left; station = false };
+          search_dir = Dir.Left; station = false; double = false };
          { Trackmap.Search.x = 2; y = 3; dist = 1; dir = Dir.Left;
-           search_dir = Dir.Right; station = false }
+           search_dir = Dir.Right; station = false; double = false }
          ]) |}]
 
