@@ -7,11 +7,13 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
   (* Module to handle the connections between stations (segments). We use these
      to make sure the 'semaphore' for the track has the right number of trains on it.
+     Unlike the graph, we don't concern ourselves with ixns
    *)
 
 type id = int
   [@@deriving yojson, eq, show]
 
+  (* Direction of travel, since stations have only 2 dirs that are opposite. See Dir.catalog *)
 type upper = [`Upper | `Lower]
   [@@deriving yojson]
 
@@ -108,8 +110,7 @@ let build_station graph v trackmap loc after =
       let id2 = new_id v in
       add (loc, Dir.opposite dir) id2 v;
       v
-    (* Found both dirs.
-       TODO: Need to split: new id on one end, assign to all stations on that end *)
+    (* Found both dirs. *)
   | [dir, loc_dirs; dir2, loc_dir2::_] ->
       assert Dir.(equal (opposite dir) dir2);
       (* On one end, add id to our station *)
@@ -126,7 +127,7 @@ let build_station graph v trackmap loc after =
 
 
   (* We only care about connecting to a new piece of track that could lead
-  to a station. ixns and stations are the same for this
+    to a station. ixns and stations are the same for this
   *)
   let build_track graph trackmap segments before after =
     let join_ixns = match before, after with
@@ -239,7 +240,7 @@ let build_station graph v trackmap loc after =
 
     (* Removing a station. *)
     (* Cases:
-       - No connection: just delete both stations
+       - No connection: just delete both segments
        - 1+ connection: for each side, see if you're the only station. If so, delete the segment
          - For non-station side, delete segment
     *)
