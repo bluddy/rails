@@ -260,7 +260,7 @@ module Search = struct
 
     (* Scan for a new segment ending in a station or ixn *)
     (* x, y: before movement *)
-  let _scan_for_ixn v ~x ~y ~dir ~player =
+  let _scan_for_ixn v ~x ~y ~dir ~double ~player =
     let search_dir = dir in
     let player2 = player in
     let rec loop_to_node x y dir double_acc dist =
@@ -281,7 +281,7 @@ module Search = struct
       | _ -> None
     in
     let x2, y2 = Dir.adjust dir x y in
-    loop_to_node x2 y2 dir true 1
+    loop_to_node x2 y2 dir double 1
 
     (* Ixn/Station/Track: what we're pointing at.
        List: what we're connected to.
@@ -305,8 +305,9 @@ module Search = struct
     | Some {player; _} when player <> player2 -> NoResult
     | Some track ->
         let scan =
+          let double = Track.acts_like_double track in
           Dir.Set.fold (fun acc dir ->
-            match _scan_for_ixn v ~x ~y ~player ~dir with
+            match _scan_for_ixn v ~x ~y ~player ~dir ~double with
             | None -> acc
             | Some res -> res::acc)
           [] track.dirs
