@@ -127,7 +127,20 @@ let straighten v =
       failwith "Unexpected non-straight track"
 
 let is_doubleable v =
-  not @@ TrackSet.mem undoubleable_dirs v.dirs
+  match v.kind with
+  | Track _
+  | Ferry _ when not @@ TrackSet.mem undoubleable_dirs v.dirs -> true
+  | _ -> false
+
+let change_to_double v double =
+  let kind = match v.kind with
+    | Track _ when double -> Track `Double
+    | Track _ -> Track `Single
+    | Ferry _ when double -> Ferry `Double
+    | Ferry _ -> Ferry `Single
+    | _ -> v.kind
+  in
+  [%up {v with kind}]
 
 let is_visually_double v =
   (* Tracks that look double i.e. that require doubling in graphics *)

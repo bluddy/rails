@@ -230,36 +230,23 @@ let check_build_bridge v ~x ~y ~dir ~player =
   | `Bridge -> `Ok
   | _ -> `Illegal
 
-let check_make_double_track v ~x ~y =
+let check_change_double_track v ~x ~y ~player double =
   match Trackmap.get v.track ~x ~y with
-  | Some ({kind = Track `Single; _} as track) when Track.is_doubleable track -> true
-  | Some ({kind = Ferry `Single; _} as track) when Track.is_doubleable track -> true
+  | Some track when track.player = player && Track.is_doubleable track ->
+      not @@ Bool.equal double (Track.is_visually_double track)
   | _ -> false
 
-let check_make_single_track v ~x ~y =
-  match Trackmap.get v.track ~x ~y with
-  | Some {kind = Track `Double; _} -> true
-  | Some {kind = Ferry `Double; _} -> true
-  | _ -> false
-
-let _make_double_track (v:t) ~x ~y =
-  if check_make_double_track v ~x ~y then (
+let _change_double_track (v:t) ~x ~y ~player double =
+  if check_change_double_track v ~x ~y ~player double then (
+    let before = TS.scan v.track ~x ~y ~player in
     let t = Trackmap.get_exn v.track ~x ~y in
-    let t = {t with kind=Track `Double} in
+    let t = Track.change_to_double t double in
     let track = Trackmap.set v.track ~x ~y ~t in
-    {v with track}
-  ) else v
-
-let _make_single_track (v:t) ~x ~y =
-  if check_make_single_track v ~x ~y then (
-    let t = Trackmap.get_exn v.track ~x ~y in
-    let t = match t.kind with
-      | Track `Double -> {t with kind=Track `Single}
-      | Ferry `Double -> {t with kind=Ferry `Single}
-      | _ -> assert false
-    in
-    let track = Trackmap.set v.track ~x ~y ~t in
-    {v with track}
+    let after = TS.scan track ~x ~y ~player in
+    let graph = G.Track.handle_change_double_track v.graph before after in
+    [%upf v.graph <- graph];
+    [%upf v.track <- track];
+    v
   ) else v
     
 let _build_track (v:t) ~x ~y ~dir ~player =
@@ -461,7 +448,7 @@ module Action = struct
     | BuildBridge of Utils.msg * Bridge.t
     | BuildTunnel of Utils.msg * int (* length: 3 or 2 * length *)
     | RemoveTrack of Utils.msg
-    | DoubleTrack of bool * int * int
+    | DoubleTrack of {x: int; y: int; double: bool; player: int}
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
     | BuildTrain of {engine: Engine.make;
@@ -499,10 +486,8 @@ module Action = struct
           _build_tunnel backend ~x ~y ~dir ~player
       | RemoveTrack {x; y; dir; player} ->
           _remove_track backend ~x ~y ~dir ~player
-      | DoubleTrack (true, x, y) ->
-          _make_double_track backend ~x ~y
-      | DoubleTrack (false, x, y) ->
-          _make_single_track backend ~x ~y
+      | DoubleTrack {x; y; double; player} ->
+          _change_double_track backend ~x ~y ~player double
       | ImproveStation {x; y; player; upgrade} ->
           _improve_station backend ~x ~y ~player ~upgrade
       | SetSpeed speed ->

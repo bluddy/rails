@@ -337,11 +337,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             v, `ShowTileInfo (v.kbd_cursor_x, v.kbd_cursor_y, tile)
           end
       | Event.K1 when build &&
-            B.check_make_single_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ->
-              v, `DoubleTrack(false, v.kbd_cursor_x, v.kbd_cursor_y)
+            B.check_change_double_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ~player:0 false ->
+              v, `DoubleTrack(false, v.kbd_cursor_x, v.kbd_cursor_y, 0)
       | Event.K2 when build &&
-            B.check_make_double_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ->
-              v, `DoubleTrack(true, v.kbd_cursor_x, v.kbd_cursor_y)
+            B.check_change_double_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ~player:0 true ->
+              v, `DoubleTrack(true, v.kbd_cursor_x, v.kbd_cursor_y, 0)
       | _ -> v, `NoAction
   in
 
