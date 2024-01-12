@@ -5,8 +5,9 @@ module S = Trackmap.Search
 
 let print_map (map:TM.t) = TM.yojson_of_t map |> Yojson.Safe.to_string |> print_string
 
-let track dirs = 
-  Track.make (Dir.Set.of_list dirs) (Track `Single) ~player:0
+let track ?(double=false) dirs = 
+  let dbl = if double then `Double else `Single in
+  Track.make (Dir.Set.of_list dirs) (Track dbl) ~player:0
 
 let%expect_test "print map" =
   let dirs = [Left; Right] in
@@ -31,6 +32,34 @@ let%expect_test "scan map ixn" =
           search_dir = Dir.Right; station = false; double = false }
          ]) |}]
 
+let%expect_test "scan map ixn double" =
+  let double = true in
+  let map = TM.empty 5 5
+    |> TM.set ~x:0 ~y:2 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
+  in
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show_scan |> print_string;
+  [%expect {|
+    (Trackmap.Search.Track
+       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
+          search_dir = Dir.Right; station = false; double = true }
+         ]) |}]
+
+let%expect_test "scan map ixn partial double" =
+  let double = true in
+  let map = TM.empty 5 5
+    |> TM.set ~x:0 ~y:2 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right])
+    |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
+  in
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show_scan |> print_string;
+  [%expect {|
+    (Trackmap.Search.Track
+       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
+          search_dir = Dir.Right; station = false; double = false }
+         ]) |}]
+
 let station dirs =
   Track.make (Dir.Set.of_list dirs) (Station `Terminal) ~player:0
 
@@ -45,6 +74,20 @@ let%expect_test "scan map station" =
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
           search_dir = Dir.Right; station = true; double = false }
+         ]) |}]
+
+let%expect_test "scan map station double" =
+  let double = true in
+  let map = TM.empty 5 5
+    |> TM.set ~x:0 ~y:2 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:2 ~y:2 ~t:(station [Left;Right])
+  in
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show_scan |> print_string;
+  [%expect {|
+    (Trackmap.Search.Track
+       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
+          search_dir = Dir.Right; station = true; double = true }
          ]) |}]
 
 let%expect_test "scan map no ixn" =
@@ -67,6 +110,22 @@ let%expect_test "scan map 2 ixns" =
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 0; y = 3; dist = 1; dir = Dir.Right;
           search_dir = Dir.Left; station = false; double = false };
+         { Trackmap.Search.x = 2; y = 3; dist = 1; dir = Dir.Left;
+           search_dir = Dir.Right; station = false; double = false }
+         ]) |}]
+
+let%expect_test "scan map 2 ixns 1 double" =
+  let double = true in
+  let map = TM.empty 4 7
+    |> TM.set ~x:0 ~y:3 ~t:(track [DownLeft;UpLeft;Right] ~double)
+    |> TM.set ~x:1 ~y:3 ~t:(track [Left;Right] ~double)
+    |> TM.set ~x:2 ~y:3 ~t:(track [Left;UpRight;DownRight])
+  in
+  S.scan map ~x:1 ~y:3 ~player:0 |> S.show_scan |> print_string;
+  [%expect {|
+    (Trackmap.Search.Track
+       [{ Trackmap.Search.x = 0; y = 3; dist = 1; dir = Dir.Right;
+          search_dir = Dir.Left; station = false; double = true };
          { Trackmap.Search.x = 2; y = 3; dist = 1; dir = Dir.Left;
            search_dir = Dir.Right; station = false; double = false }
          ]) |}]
