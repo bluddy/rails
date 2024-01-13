@@ -182,7 +182,7 @@ let iter_succ_ixn_dirs f v ~ixn =
   G.iter_succ_e (fun (ixn1, e, ixn2) ->
     let other_ixn = if Node.equal ixn ixn1 then ixn2 else ixn1 in
     let other_dir = Edge.dir_of_xy other_ixn e |> Option.get_exn_or "Missing dir" in
-    f other_ixn other_dir)
+    f e.double other_ixn other_dir)
   v
   ixn
 
@@ -241,29 +241,33 @@ let connected_stations_dirs ?exclude_dir ?exclude_ixns graph trackmap ixn =
       List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
   | _ -> ()
   end;
-  Hashtbl.replace start_ixns ixn ();
+  let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
+  Hashtbl.replace start_ixns ixn double;
   let rec loop ixns =
     let next_ixns = Hashtbl.create 10 in
-    Hashtbl.iter (fun ixn _ ->
+    Hashtbl.iter (fun ixn double ->
       if Hashtbl.mem seen_ixns ixn then ()
       else begin 
         (* loop over attached ixn/dirs *)
-        iter_succ_ixn_dirs (fun ixn dir ->
+        iter_succ_ixn_dirs (fun ixn_double ixn dir ->
           if Trackmap.has_station ixn trackmap then 
             (* Add to results *)
-            Hashtbl.replace stations ixn dir
+            let double = if double && ixn_double then `Double else `Single in
+            Hashtbl.replace stations (ixn, Dir.catalog dir) double
           else 
             (* To be handled in next iteration *)
-            Hashtbl.replace next_ixns ixn ())
+            Hashtbl.replace next_ixns ixn ixn_double)
         ~ixn
         graph
       end;
+      (* Mark that we saw this ixn *)
       Hashtbl.replace seen_ixns ixn ())
       ixns;
     (* Check if done: no more ixns to examine *)
     if Hashtbl.length next_ixns = 0 then begin
      (* Remove starting ixn which might have snuck in *)
-      Hashtbl.remove stations ixn;
+      Hashtbl.remove stations (ixn, `Upper);
+      Hashtbl.remove stations (ixn, `Lower);
       Hashtbl.to_iter stations
     end else
       loop next_ixns

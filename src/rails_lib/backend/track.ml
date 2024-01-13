@@ -1,11 +1,16 @@
 open Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-type double_track = [ `Double | `Single ] [@@deriving eq, yojson, hash]
+type double = [ `Double | `Single ]
+  [@@deriving eq, yojson, hash, show]
+
+let combine_double x y = match x, y with
+  | `Double, `Double -> `Double
+  | _ -> `Single
 
 type kind =
-  | Track of double_track
-  | Ferry of double_track
+  | Track of double
+  | Ferry of double
   | Tunnel
   | Station of Station.kind
   | Bridge of Bridge.t

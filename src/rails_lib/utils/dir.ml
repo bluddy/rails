@@ -23,10 +23,15 @@ module Infix = struct
   let (<>) x y = compare x y <> 0
 end
 
+  (* Direction of travel, since stations have only 2 dirs that are opposite. *)
+type upper = [`Upper | `Lower]
+  [@@deriving yojson, show]
+
 (* Helps us catalog directions *)
 let catalog x =
   let open Infix in
   if x <= DownRight then `Lower else `Upper
+let opposite_upper = function `Lower -> `Upper | `Upper -> `Lower
 let lower x = match catalog x with `Lower -> true | _ -> false
 let upper x = not (lower x)
 

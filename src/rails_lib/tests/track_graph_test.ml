@@ -9,7 +9,7 @@ let graph () =
 
 let%expect_test "iter_succ_ixn_dirs" =
   let graph = graph () in
-  TG.iter_succ_ixn_dirs (fun _ixn dir ->
+  TG.iter_succ_ixn_dirs (fun _ _ixn dir ->
     print_string @@ Dir.show dir
   ) graph ~ixn:(1,2);
   [%expect {| Dir.Down |}]
@@ -75,7 +75,7 @@ let%expect_test "connected_stations_dirs" =
   in
   let g = graph () in
   let res = TG.connected_stations_dirs g map (1,2) |> Iter.to_list in
-  List.pp (Pair.pp (Pair.pp Int.pp Int.pp) Dir.pp) Format.std_formatter res;
+  List.pp (Pair.pp (Pair.pp (Pair.pp Int.pp Int.pp) Dir.pp_upper) Track.pp_double) Format.std_formatter res;
   [%expect {|
     3, 4, Dir.Right, 5, 6,
     Dir.Left |}]

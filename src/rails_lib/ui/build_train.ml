@@ -65,8 +65,7 @@ module AddCars = struct
       let station = v.anim.station in
       let other_station =
         Track_graph.connected_stations_dirs s.backend.graph s.backend.track station
-        |> Iter.head
-        |> Option.map fst
+        |> Iter.head |> Option.map fst |> Option.map fst
       in
       v, Backend.Action.BuildTrain{engine=v.anim.engine;
                                    cars=v.anim.cars;

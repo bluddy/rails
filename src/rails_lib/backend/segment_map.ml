@@ -13,20 +13,14 @@ module Log = (val Logs.src_log src: Logs.LOG)
 type id = int
   [@@deriving yojson, eq, show]
 
-  (* Direction of travel, since stations have only 2 dirs that are opposite. See Dir.catalog *)
-type upper = [`Upper | `Lower]
-  [@@deriving yojson]
-
 type info = {
   mutable count: int;
-  double: bool;
+  double: Track.double;
 } [@@deriving yojson]
-
-let default_info = {count=0; double=false}
 
 type t = {
   info: (id, info) Hashtbl.t;
-  stations: (loc * upper, id) Hashtbl.t;
+  stations: (loc * Dir.upper, id) Hashtbl.t;
 } [@@deriving yojson]
 
 let make () = {
@@ -34,7 +28,7 @@ let make () = {
   stations=Hashtbl.create 10;
 }
 
-let new_id v =
+let new_id ?(double=`Double) v =
   (* Find a missing id to use *)
   let id =
     let rec loop i =
@@ -43,7 +37,7 @@ let new_id v =
     in
     loop 0
   in
-  Hashtbl.replace v.info id default_info;
+  Hashtbl.replace v.info id {count = 0; double};
   Log.debug (fun f -> f "Segment: Get new id %d" id);
   id
 
@@ -52,20 +46,30 @@ let remove_id id v =
 
 let add (loc, d) id v =
   (* add a station and direction + matching id *)
-  Hashtbl.replace v.stations (loc, Dir.catalog d) id
+  Hashtbl.replace v.stations (loc, d) id
 
 let remove (loc, d) v =
   (* remove a station and direction *)
-  Hashtbl.remove v.stations (loc, Dir.catalog d)
+  Hashtbl.remove v.stations (loc, d)
 
 let reset idx v =
   (* reset the count for a segment id *)
   let info = Hashtbl.find v.info idx in
   info.count <- 0
 
-let get_id (loc,d) v =
+let get_id locd v =
   (* get id for station/dir *)
-  Hashtbl.find v.stations (loc, Dir.catalog d)
+  Hashtbl.find v.stations locd
+
+let get_double id v =
+  let info = Hashtbl.find v.info id in
+  info.double
+
+let update_double id double v =
+  let info = Hashtbl.find v.info id in
+  if not @@ Track.equal_double info.double double then 
+    Hashtbl.replace v.info id {info with double=double}
+  else ()
 
 let incr_train locd v =
   let id = get_id locd v in
@@ -114,26 +118,37 @@ let build_station graph v trackmap loc after =
   | [] -> (* No connected stations found: add new ids to both ends *)
       let id = new_id v in
       let id2 = new_id v in
-      add (loc, Dir.Up) id v;
-      add (loc, Dir.Down) id2 v;
+      add (loc, `Upper) id v;
+      add (loc, `Lower) id2 v;
       v
     (* Found only one id. Add one new one and add to both ends *)
-  | [dir, loc_dir::_] -> 
+  | [dir, (loc_dir, double)::_] -> 
+      (* Add to existing id, update double info *)
       let id = get_id loc_dir v in
-      add (loc, dir) id v;
+      add (loc, Dir.catalog dir) id v;
+      update_double id double v;
+
+      (* New segment for missing end *)
       let id2 = new_id v in
-      add (loc, Dir.opposite dir) id2 v;
+      add (loc, Dir.catalog @@ Dir.opposite dir) id2 v;
       v
-    (* Found both dirs. *)
-  | [dir, loc_dirs; dir2, loc_dir2::_] ->
+    (* Found on both dirs. *)
+  | [dir, (((loc_dir, _)::_) as loc_dirs); dir2, (loc_dir2, double2)::_] ->
       assert Dir.(equal (opposite dir) dir2);
+
       (* On one end, add id to our station *)
       let id2 = get_id loc_dir2 v in
-      add (loc, dir2) id2 v;
-      (* On the other end, we need to create a new id and apply it to all stations *)
-      let id = new_id v in
-      add (loc, dir) id v;
-      List.iter(fun loc_dir ->
+      add (loc, Dir.catalog dir2) id2 v;
+      (* TODO: combine all info from doubles here *)
+      update_double id double2 v;
+
+      (* On the other end, we need to get the old double, create a new id and apply it to all stations *)
+      let old_id = get_id loc_dir v in
+      let old_double = get_double old_id v in
+
+      let id = new_id ~double:(Track.combine_double double2 old_double) v in
+      add (loc, Dir.catalog dir) id v;
+      List.iter (fun (loc_dir, _) ->
         add loc_dir id v
       ) loc_dirs;
       v
