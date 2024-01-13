@@ -366,6 +366,40 @@ module Track = struct
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}]
 
+  let%expect_test "change double track on ixn" = 
+    let double = true in
+     (* X===x  -> X===X *)
+    let map = std_map ~double ()
+      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
+    in
+    let x = 5 in
+    let scan1 = TM.Search.scan map ~x:5 ~y ~player:0 in
+    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:false in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
+    let map = TM.set map ~x:5 ~y ~t:(track ~double [Left; Right; UpRight]) in
+    let scan2 = TM.Search.scan map ~x:5 ~y ~player:0 in
+    let g = TG.Track.handle_change_double_track g scan1 scan2 in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}]
+
+  let%expect_test "change single track on ixn" = 
+    let double = true in
+     (* X===X  -> X===x *)
+    let map = std_map ~double ()
+      |> TM.set ~x:5 ~y ~t:(track ~double [Left; Right; UpRight])
+    in
+    let x = 5 in
+    let scan1 = TM.Search.scan map ~x:5 ~y ~player:0 in
+    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:true in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}];
+    let map = TM.set map ~x:5 ~y ~t:(track [Left; Right; UpRight]) in
+    let scan2 = TM.Search.scan map ~x:5 ~y ~player:0 in
+    let g = TG.Track.handle_change_double_track g scan1 scan2 in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}]
+
   let%expect_test "remove double track" = 
     let double = true in
      (* x===x  -> x=-=x *)
