@@ -348,6 +348,24 @@ module Track = struct
     print_graph g;
     [%expect {| [] |}]
 
+  let%expect_test "change double track" = 
+    let double = true in
+     (* x=-=x  -> x===x *)
+    let map = std_map ~double ()
+      |> TM.set ~x:5 ~y ~t:(track ~double [Left; Right; UpRight])
+      |> TM.set ~x:3 ~y ~t:(track [Left; Right])
+    in
+    let x = 5 in
+    let scan1 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:false in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
+    let map = TM.set map ~x:3 ~y ~t:(track ~double [Left; Right]) in
+    let scan2 = TM.Search.scan map ~x:3 ~y ~player:0 in
+    let g = TG.Track.handle_change_double_track g scan1 scan2 in
+    print_graph g;
+    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}]
+
   let%expect_test "remove double track" = 
     let double = true in
      (* x===x  -> x=-=x *)
