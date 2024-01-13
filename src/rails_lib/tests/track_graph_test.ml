@@ -14,15 +14,15 @@ let%expect_test "iter_succ_ixn_dirs" =
   ) graph ~ixn:(1,2);
   [%expect {| Dir.Down |}]
 
-let graph () =
+let graph ?(double=false) () =
   TG.make ()
   |> TG.add_ixn ~x:1 ~y:2
   |> TG.add_ixn ~x:3 ~y:4
   |> TG.add_ixn ~x:5 ~y:6
   |> TG.add_ixn ~x:7 ~y:8
-  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Right) ~dist:5 ~double:false
-  |> TG.add_segment ~xyd1:(1,2,Dir.UpRight) ~xyd2:(5,6,Left) ~dist:10 ~double:false
-  |> TG.add_segment ~xyd1:(5,6,Dir.UpRight) ~xyd2:(7,8,DownLeft) ~dist:3 ~double:false
+  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Right) ~dist:5 ~double
+  |> TG.add_segment ~xyd1:(1,2,Dir.UpRight) ~xyd2:(5,6,Left) ~dist:10 ~double
+  |> TG.add_segment ~xyd1:(5,6,Dir.UpRight) ~xyd2:(7,8,DownLeft) ~dist:3 ~double
 
 let print_graph g =
   TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
@@ -31,6 +31,11 @@ let%expect_test "graph print" =
   let g = graph () in
   print_graph g;
   [%expect {| [[[3,4],[1,2],{"nodes":[[[1,2],["Up"]],[[3,4],["Right"]]],"dist":5,"double":false,"block":false}],[[5,6],[1,2],{"nodes":[[[1,2],["UpRight"]],[[5,6],["Left"]]],"dist":10,"double":false,"block":false}],[[7,8],[5,6],{"nodes":[[[5,6],["UpRight"]],[[7,8],["DownLeft"]]],"dist":3,"double":false,"block":false}]] |}]
+
+let%expect_test "double graph print" =
+  let g = graph ~double:true () in
+  print_graph g;
+  [%expect {| [[[3,4],[1,2],{"nodes":[[[1,2],["Up"]],[[3,4],["Right"]]],"dist":5,"double":true,"block":false}],[[5,6],[1,2],{"nodes":[[[1,2],["UpRight"]],[[5,6],["Left"]]],"dist":10,"double":true,"block":false}],[[7,8],[5,6],{"nodes":[[[5,6],["UpRight"]],[[7,8],["DownLeft"]]],"dist":3,"double":true,"block":false}]] |}]
 
 let%expect_test "graph remove segment" =
   let g = graph ()
