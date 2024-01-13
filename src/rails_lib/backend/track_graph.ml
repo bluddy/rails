@@ -165,7 +165,7 @@ let remove_segment v ~xyd =
 let change_segment_double v ~xyd ~double =
   match get_edge v xyd with
   | None -> v
-  | Some (_, edge, _) when Edge.is_double edge -> v
+  | Some (_, edge, _) when Bool.equal (Edge.is_double edge) double -> v
   | Some ((v1, edge, v2) as e) ->
       let x,y,dir = xyd in
       Log.debug (fun f -> f "Graph: Change path from (%d,%d,%s) to %s" x y (Dir.show dir) (if double then "double" else "single"));
