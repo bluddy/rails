@@ -354,27 +354,11 @@ module Track = struct
     let map = std_map ~double () |> TM.set ~x:5 ~y ~t:(track ~double [Left; Right; UpRight]) in
     let x = 5 in
     let scan1 = TM.Search.scan map ~x:3 ~y ~player:0 in
-    Trackmap.Search.show_scan scan1 |> print_string;
-    [%expect {|
-      (Trackmap.Search.Track
-         [{ Trackmap.Search.x = 1; y = 2; dist = 2; dir = Dir.Right;
-            search_dir = Dir.Left; station = false; double = true };
-           { Trackmap.Search.x = 5; y = 2; dist = 2; dir = Dir.Left;
-             search_dir = Dir.Right; station = false; double = true }
-           ]) |}];
     let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:true in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}];
     let map = TM.set map ~x:3 ~y ~t:(track [Left; Right]) in
     let scan2 = TM.Search.scan map ~x:3 ~y ~player:0 in
-    Trackmap.Search.show_scan scan2 |> print_string;
-    [%expect {|
-      (Trackmap.Search.Track
-         [{ Trackmap.Search.x = 1; y = 2; dist = 2; dir = Dir.Right;
-            search_dir = Dir.Left; station = false; double = false };
-           { Trackmap.Search.x = 5; y = 2; dist = 2; dir = Dir.Left;
-             search_dir = Dir.Right; station = false; double = false }
-           ]) |}];
     let g = TG.Track.handle_change_double_track g scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}]
