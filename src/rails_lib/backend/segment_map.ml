@@ -17,13 +17,20 @@ type id = int
 type upper = [`Upper | `Lower]
   [@@deriving yojson]
 
+type info = {
+  mutable count: int;
+  double: bool;
+} [@@deriving yojson]
+
+let default_info = {count=0; double=false}
+
 type t = {
-  counts: (id, int) Hashtbl.t;
+  info: (id, info) Hashtbl.t;
   stations: (loc * upper, id) Hashtbl.t;
 } [@@deriving yojson]
 
 let make () = {
-  counts=Hashtbl.create 10;
+  info=Hashtbl.create 10;
   stations=Hashtbl.create 10;
 }
 
@@ -31,48 +38,55 @@ let new_id v =
   (* Find a missing id to use *)
   let id =
     let rec loop i =
-      if Hashtbl.mem v.counts i then loop (i + 1)
+      if Hashtbl.mem v.info i then loop (i + 1)
       else i
     in
     loop 0
   in
-  Hashtbl.replace v.counts id 0;
+  Hashtbl.replace v.info id default_info;
   Log.debug (fun f -> f "Segment: Get new id %d" id);
   id
 
 let remove_id id v =
-  Hashtbl.remove v.counts id
+  Hashtbl.remove v.info id
 
 let add (loc, d) id v =
+  (* add a station and direction + matching id *)
   Hashtbl.replace v.stations (loc, Dir.catalog d) id
 
 let remove (loc, d) v =
+  (* remove a station and direction *)
   Hashtbl.remove v.stations (loc, Dir.catalog d)
 
 let reset idx v =
-  Hashtbl.replace v.counts idx 0
+  (* reset the count for a segment id *)
+  let info = Hashtbl.find v.info idx in
+  info.count <- 0
 
 let get_id (loc,d) v =
+  (* get id for station/dir *)
   Hashtbl.find v.stations (loc, Dir.catalog d)
 
 let incr_train locd v =
   let id = get_id locd v in
-  Hashtbl.incr v.counts id
+  Log.debug (fun f -> f "Segment: incr_train for id %s" (show_id id));
+  let info = Hashtbl.find v.info id in
+  info.count <- info.count + 1
 
 let decr_train locd v =
   let id = get_id locd v in
-  if Hashtbl.find v.counts id > 0 then
-    Hashtbl.decr v.counts id
+  Log.debug (fun f -> f "Segment: decr_train for id %s" (show_id id));
+  let info = Hashtbl.find v.info id in
+  if info.count > 0 then
+    info.count <- info.count - 1
 
-(* Merge segments so seg2 joins seg1 *)
-let merge seg1 ~remove_seg v =
-  Log.debug (fun f -> f "Segment: Merge ids %s, %s" (show_id seg1) (show_id remove_seg));
-  let v2 = Hashtbl.find v.counts remove_seg in
-  (* Because of the logic of incr, we need to not do this if we add 0 *)
-  if v2 > 0 then
-    Hashtbl.incr v.counts seg1 ~by:v2;
-  Hashtbl.remove v.counts remove_seg;
-  ()
+(* Merge segments so seg2 joins seg *)
+let merge seg ~remove_seg v =
+  Log.debug (fun f -> f "Segment: Merge ids %s, %s" (show_id seg) (show_id remove_seg));
+  let info = Hashtbl.find v.info seg in
+  let remove_info = Hashtbl.find v.info remove_seg in
+  info.count <- info.count + remove_info.count;
+  Hashtbl.remove v.info remove_seg
 
 module TS = Trackmap.Search
 
@@ -288,3 +302,4 @@ let build_station graph v trackmap loc after =
       remove (station_loc, dir) v;
     ) dirs;
     v
+

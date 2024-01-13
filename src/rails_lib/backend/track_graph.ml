@@ -190,7 +190,7 @@ let iter_succ_ixn_dirs f v ~ixn =
 let find_ixn_from_ixn_dir v ~ixn ~dir =
   let x, y = ixn in
   try
-    G.fold_succ_e (fun (_,e,ixn2) acc ->
+    G.fold_succ_e (fun (_, e, ixn2) acc ->
       if Edge.has_xydir x y dir e then Some ixn2 else acc)
     v ixn None
   with Invalid_argument _ -> None
@@ -234,11 +234,8 @@ let connected_stations_dirs ?exclude_dir ?exclude_ixns graph trackmap ixn =
   let seen_ixns = Hashtbl.create 5 in
   begin match exclude_dir, exclude_ixns with
   | Some exclude_dir, _ ->
-      begin match find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir with
-      | Some ixn2 ->
-          Hashtbl.replace seen_ixns ixn2 ()
-      | _ -> ()
-      end;
+      find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
+      |> Option.iter (fun ixn2 -> Hashtbl.replace seen_ixns ixn2 ())
   | _, Some exclude_ixns ->
       (* Exclude some ixns and start from given ixn *)
       List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
@@ -246,25 +243,30 @@ let connected_stations_dirs ?exclude_dir ?exclude_ixns graph trackmap ixn =
   end;
   Hashtbl.replace start_ixns ixn ();
   let rec loop ixns =
-    let ixns2 = Hashtbl.create 10 in
+    let next_ixns = Hashtbl.create 10 in
     Hashtbl.iter (fun ixn _ ->
       if Hashtbl.mem seen_ixns ixn then ()
       else begin 
+        (* loop over attached ixn/dirs *)
         iter_succ_ixn_dirs (fun ixn dir ->
           if Trackmap.has_station ixn trackmap then 
+            (* Add to results *)
             Hashtbl.replace stations ixn dir
           else 
-            Hashtbl.replace ixns2 ixn ())
+            (* To be handled in next iteration *)
+            Hashtbl.replace next_ixns ixn ())
         ~ixn
         graph
       end;
       Hashtbl.replace seen_ixns ixn ())
       ixns;
     (* Check if done: no more ixns to examine *)
-    if Hashtbl.length ixns2 = 0 then begin
+    if Hashtbl.length next_ixns = 0 then begin
+     (* Remove starting ixn which might have snuck in *)
       Hashtbl.remove stations ixn;
       Hashtbl.to_iter stations
-    end else loop ixns2
+    end else
+      loop next_ixns
   in
   loop start_ixns
 
