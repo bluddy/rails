@@ -66,6 +66,7 @@ let get_double id v =
   info.double
 
 let update_double id double v =
+  (* Update with new double state *)
   let info = Hashtbl.find v.info id in
   if not @@ Track.equal_double info.double double then 
     Hashtbl.replace v.info id {info with double=double}
@@ -122,10 +123,14 @@ let build_station graph v trackmap loc after =
       add (loc, `Lower) id2 v;
       v
     (* Found only one id. Add one new one and add to both ends *)
-  | [dir, (loc_dir, double)::_] -> 
+  | [dir, ((loc_dir, double)::_) as info] -> 
       (* Add to existing id, update double info *)
       let id = get_id loc_dir v in
       add (loc, Dir.catalog dir) id v;
+      (* Only double if all connections are double *)
+      let double = List.fold_left
+        (fun acc (_, dbl) -> Track.combine_double dbl acc) `Double info
+      in
       update_double id double v;
 
       (* New segment for missing end *)

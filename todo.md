@@ -1,5 +1,7 @@
 # Tasks
-- Double track: also for ixn with gentle turns
+- Make a half-tile-indexed map of trains
+  - Allows searching for trains geographically efficiently
+  - Allows rebuilding segment map after it's broken by deletion
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc
