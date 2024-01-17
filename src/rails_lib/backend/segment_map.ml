@@ -115,6 +115,9 @@ let build_station graph v trackmap loc after =
       | _  -> Some(ixn.search_dir, stations))
     ixns
   in
+  let all_double info =
+    List.fold_left (fun acc (_, dbl) -> Track.combine_double dbl acc) `Double info
+  in
   match dir_stations with
   | [] -> (* No connected stations found: add new ids to both ends *)
       let id = new_id v in
@@ -123,40 +126,44 @@ let build_station graph v trackmap loc after =
       add (loc, `Lower) id2 v;
       v
     (* Found only one id. Add one new one and add to both ends *)
-  | [dir, ((loc_dir, double)::_) as info] -> 
+  | [dir, (((loc_dir, _)::_) as info)] -> 
       (* Add to existing id, update double info *)
       let id = get_id loc_dir v in
       add (loc, Dir.catalog dir) id v;
       (* Only double if all connections are double *)
-      let double = List.fold_left
-        (fun acc (_, dbl) -> Track.combine_double dbl acc) `Double info
-      in
-      update_double id double v;
+      update_double id (all_double info) v;
 
       (* New segment for missing end *)
       let id2 = new_id v in
       add (loc, Dir.catalog @@ Dir.opposite dir) id2 v;
       v
-    (* Found on both dirs. *)
-  | [dir, (((loc_dir, _)::_) as loc_dirs); dir2, (loc_dir2, double2)::_] ->
-      assert Dir.(equal (opposite dir) dir2);
 
-      (* On one end, add id to our station *)
-      let id2 = get_id loc_dir2 v in
-      add (loc, Dir.catalog dir2) id2 v;
-      (* TODO: combine all info from doubles here *)
-      update_double id double2 v;
+    (* Found stations on both dirs. *)
+  | [dir1, ((loc_dir1, _)::_ as info1); dir2, ((loc_dir2, _)::_ as info2)] ->
+      assert Dir.(equal (opposite dir1) dir2);
 
-      (* On the other end, we need to get the old double, create a new id and apply it to all stations *)
-      let old_id = get_id loc_dir v in
+      (* On first end, add existing id to our station and update double *)
+      let id = get_id loc_dir1 v in
+      add (loc, Dir.catalog dir1) id v;
+      let old_double = get_double id v in
+      let double = Track.combine_double old_double @@ all_double info1 in
+      update_double id double v;
+
+      (* On second end, we need to get the old double, create a new id and apply it to all stations *)
+      let old_id = get_id loc_dir2 v in
       let old_double = get_double old_id v in
-
-      let id = new_id ~double:(Track.combine_double double2 old_double) v in
-      add (loc, Dir.catalog dir) id v;
-      List.iter (fun (loc_dir, _) ->
-        add loc_dir id v
-      ) loc_dirs;
+      let double = Track.combine_double old_double @@ all_double info2 in
+      let id = new_id ~double v in
+      add (loc, Dir.catalog dir2) id v;
+      List.iter (fun (loc_dir, _) -> add loc_dir id v) info2;
+      (* GC old id if needed *)
+      let old_id_station_count =
+        Hashtbl.fold (fun _ id num -> if equal_id id old_id then num + 1 else num)
+        v.stations 0
+      in
+      if old_id_station_count = 0 then remove_id old_id v;
       v
+
   | _ -> failwith "Found too many directions or ill-formed data"
 
 
