@@ -227,22 +227,8 @@ let shortest_path ~src ~dest v =
      exclude_dir: exclude searching in a given direction
      exclude_ixns: exclude these ixns from the search
    *)
-let connected_stations_dirs ?exclude_dir ?exclude_ixns graph trackmap ixn =
+let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
   let stations = Hashtbl.create 10 in
-  let start_ixns = Hashtbl.create 5 in
-  (* Prevent loops *)
-  let seen_ixns = Hashtbl.create 5 in
-  begin match exclude_dir, exclude_ixns with
-  | Some exclude_dir, _ ->
-      find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
-      |> Option.iter (fun ixn2 -> Hashtbl.replace seen_ixns ixn2 ())
-  | _, Some exclude_ixns ->
-      (* Exclude some ixns and start from given ixn *)
-      List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
-  | _ -> ()
-  end;
-  let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
-  Hashtbl.replace start_ixns ixn double;
   let rec loop ixns =
     let next_ixns = Hashtbl.create 10 in
     Hashtbl.iter (fun ixn double ->
@@ -264,15 +250,38 @@ let connected_stations_dirs ?exclude_dir ?exclude_ixns graph trackmap ixn =
       Hashtbl.replace seen_ixns ixn ())
       ixns;
     (* Check if done: no more ixns to examine *)
-    if Hashtbl.length next_ixns = 0 then begin
-     (* Remove starting ixn which might have snuck in *)
-      Hashtbl.remove stations (ixn, `Upper);
-      Hashtbl.remove stations (ixn, `Lower);
+    if Hashtbl.length next_ixns = 0 then (
+     (* Remove starting ixns which might have snuck in *)
+      Hashtbl.iter (fun ixn _ ->
+        Hashtbl.remove stations (ixn, `Upper);
+        Hashtbl.remove stations (ixn, `Lower);
+      ) start_ixns;
       Hashtbl.to_iter stations
-    end else
+    ) else
       loop next_ixns
   in
   loop start_ixns
+
+let connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap ixn =
+  let start_ixns = Hashtbl.create 5 in
+  (* Prevent loops *)
+  let seen_ixns = Hashtbl.create 5 in
+  find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
+  |> Option.iter (fun ixn2 -> Hashtbl.replace seen_ixns ixn2 ());
+  let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
+  Hashtbl.replace start_ixns ixn double;
+  _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
+
+let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
+  let start_ixns = Hashtbl.create 5 in
+  (* Prevent loops *)
+  let seen_ixns = Hashtbl.create 5 in
+  List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
+  List.iter (fun ixn ->
+    let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
+    Hashtbl.replace start_ixns ixn double)
+    ixns;
+  _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 module Track = struct
   (* open TS *)

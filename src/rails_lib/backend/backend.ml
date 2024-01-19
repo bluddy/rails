@@ -330,7 +330,7 @@ let _build_train v ((x, y) as station) engine cars other_station ~player =
   update_player v player (Player.pay Player.TrainExpense engine_t.price);
   let msg = TrainBuilt (Trainmap.size v.trains - 1) in
   v.ui_msgs <- msg::v.ui_msgs;
-  if trains === v.trains then v else {v with trains}
+  [%up {v with trains}]
 
 let _remove_stop_car v ~train ~stop ~car =
   let trains =

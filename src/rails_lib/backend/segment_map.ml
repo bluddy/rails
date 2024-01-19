@@ -1,6 +1,5 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
-open! Utils
 
 let src = Logs.Src.create "segments" ~doc:"Segments"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -19,8 +18,8 @@ type info = {
 } [@@deriving yojson]
 
 type t = {
-  info: (id, info) Hashtbl.t;
-  stations: (loc * Dir.upper, id) Hashtbl.t;
+  info: (id, info) Utils.Hashtbl.t;
+  stations: (Utils.loc * Dir.upper, id) Utils.Hashtbl.t;
 } [@@deriving yojson]
 
 let make () = {
@@ -65,7 +64,7 @@ let get_double id v =
   let info = Hashtbl.find v.info id in
   info.double
 
-let update_double id double v =
+let set_double id double v =
   (* Update with new double state *)
   let info = Hashtbl.find v.info id in
   if not @@ Track.equal_double info.double double then 
@@ -85,15 +84,31 @@ let decr_train locd v =
   if info.count > 0 then
     info.count <- info.count - 1
 
-(* Merge segments so seg2 joins seg *)
-let merge seg ~remove_seg v =
-  Log.debug (fun f -> f "Segment: Merge ids %s, %s" (show_id seg) (show_id remove_seg));
-  let info = Hashtbl.find v.info seg in
-  let remove_info = Hashtbl.find v.info remove_seg in
-  info.count <- info.count + remove_info.count;
-  Hashtbl.remove v.info remove_seg
+let remap_station_ids ~from_id to_id v =
+  let stations_to_change = Hashtbl.fold
+    (fun locd id acc -> if equal_id id from_id then locd::acc else acc)
+    v.stations []
+  in
+  List.iter (fun locd -> Hashtbl.replace v.stations locd to_id) stations_to_change
+
+(* Merge segments so seg2 joins seg. All stations must be changed *)
+let merge_ids ~from_id to_id v =
+  Log.debug (fun f -> f "Segment: Merge seg_ids %s, %s" (show_id to_id) (show_id from_id));
+  (* combine counts *)
+  let info = Hashtbl.find v.info to_id in
+  let from_info = Hashtbl.find v.info from_id in
+  info.count <- info.count + from_info.count;
+  remap_station_ids ~from_id to_id v;
+  remove_id from_id v
+
+let get_id_station_count id v =
+  (* O(num_ids) *)
+  Hashtbl.fold (fun _ id2 num -> if equal_id id id2 then num + 1 else num) v.stations 0
 
 module TS = Trackmap.Search
+
+let all_double info =
+  List.fold_left (fun acc (_, dbl) -> Track.combine_double dbl acc) `Double info
 
 (* When we build a station, we create new station segments on both ends of the station *)
 let build_station graph v trackmap loc after =
@@ -106,17 +121,9 @@ let build_station graph v trackmap loc after =
   let dir_stations =
     List.filter_map (fun ixn ->
       let exclude_dir = Dir.opposite ixn.TS.dir in
-      let stations =
-        Track_graph.connected_stations_dirs ~exclude_dir graph trackmap loc
-        |> Iter.to_list
-      in
-      match stations with
-      | [] -> None
-      | _  -> Some(ixn.search_dir, stations))
+      let stations = Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap loc |> Iter.to_list in
+      if List.is_empty stations then None else Some(ixn.search_dir, stations))
     ixns
-  in
-  let all_double info =
-    List.fold_left (fun acc (_, dbl) -> Track.combine_double dbl acc) `Double info
   in
   match dir_stations with
   | [] -> (* No connected stations found: add new ids to both ends *)
@@ -131,7 +138,7 @@ let build_station graph v trackmap loc after =
       let id = get_id loc_dir v in
       add (loc, Dir.catalog dir) id v;
       (* Only double if all connections are double *)
-      update_double id (all_double info) v;
+      set_double id (all_double info) v;
 
       (* New segment for missing end *)
       let id2 = new_id v in
@@ -147,21 +154,17 @@ let build_station graph v trackmap loc after =
       add (loc, Dir.catalog dir1) id v;
       let old_double = get_double id v in
       let double = Track.combine_double old_double @@ all_double info1 in
-      update_double id double v;
+      set_double id double v;
 
       (* On second end, we need to get the old double, create a new id and apply it to all stations *)
+      (* TODO: handle train counts after splitting *)
       let old_id = get_id loc_dir2 v in
-      let old_double = get_double old_id v in
-      let double = Track.combine_double old_double @@ all_double info2 in
+      let double = all_double info2 in
       let id = new_id ~double v in
       add (loc, Dir.catalog dir2) id v;
       List.iter (fun (loc_dir, _) -> add loc_dir id v) info2;
       (* GC old id if needed *)
-      let old_id_station_count =
-        Hashtbl.fold (fun _ id num -> if equal_id id old_id then num + 1 else num)
-        v.stations 0
-      in
-      if old_id_station_count = 0 then remove_id old_id v;
+      if get_id_station_count old_id v = 0 then remove_id old_id v;
       v
 
   | _ -> failwith "Found too many directions or ill-formed data"
@@ -170,56 +173,56 @@ let build_station graph v trackmap loc after =
   (* We only care about connecting to a new piece of track that could lead
     to a station. ixns and stations are the same for this
   *)
-  let build_track graph trackmap segments before after =
+  let build_track graph trackmap v before after =
     let join_ixns = match before, after with
       (* Add an attached ixn: make the two have the same segment *)
       | TS.Track [_], TS.Track [ixn2; ixn3] -> Some (ixn2, ixn3)
 
       (* Add an ixn to a 2-ixn. Make them all have same segment *)
-      (* TODO: what if these are stations? *)
       | Track l1, Ixn l2 ->
           (* Find an ixn they don't have in common and one they do *)
           Utils.diff_inter1 ~eq:TS.equal_ixn l1 l2
 
       | _ -> None
     in
-    match join_ixns with
-    | None -> segments
-    | Some (ixn1d, ixn2d) ->
-        let ixn1 = (ixn1d.x, ixn1d.y) in
-        let ixn2 = (ixn2d.x, ixn2d.y) in
-        let locd1 =
-          if Trackmap.has_station ixn1 trackmap then
-            (* Handle case where ixn is station *)
-            Some (ixn1, ixn1d.dir)
-          else
-            Track_graph.connected_stations_dirs graph trackmap ixn1 ~exclude_ixns:[ixn2]
-            |> Iter.head
-        in
-        let tgt_stations =
-          if Trackmap.has_station ixn2 trackmap then
-            (* Handle case where ixn is station *)
-            [ixn2, ixn2d.dir]
-          else
-            Track_graph.connected_stations_dirs graph trackmap ixn2 ~exclude_ixns:[ixn1]
-            |> Iter.to_list
-        in
-        begin match locd1, tgt_stations with
-        | Some locd1, locd2::_ ->
-          let seg1 = get_id locd1 segments in
-          let seg2 = get_id locd2 segments in
-          if seg1 = seg2 then
-            segments
-          else (
-            (* Convert all stations and merge *)
-            List.iter (fun locd -> add locd seg1 segments) tgt_stations;
-            merge seg1 ~remove_seg:seg2 segments;
-            segments
-          )
-        | _ ->
-           (* Do nothing if there's no stations to merge *)
-            segments
-        end
+    join_ixns |>
+    Option.map_or ~default:v
+    (fun (ixn1_res, ixn2_res) ->
+      let get_stations (ixn:TS.ixn) (exclude_ixn:TS.ixn) = 
+        let loc = (ixn.x, ixn.y) in
+        if Trackmap.has_station loc trackmap then
+          (* Handle case where ixn is station *)
+          [(loc, Dir.catalog ixn.dir), `Double]
+        else
+          (* Gets us potentially only part of the station segment *)
+          Track_graph.connected_stations_dirs graph trackmap [loc] ~exclude_ixns:[(exclude_ixn.x, exclude_ixn.y)] |> Iter.to_list
+      in
+      let stations1 = get_stations ixn1_res ixn2_res in
+      let stations2 = get_stations ixn2_res ixn1_res in
+      let double = Track.combine_double (all_double stations1) (all_double stations2) in
+      match stations1, stations2 with
+      | (locd1, _)::_, (locd2, _)::_ ->
+        (* Update double values: they could come from unseen areas *)
+        let id1 = get_id locd1 v in
+        let double1 = get_double id1 v in
+        let id2 = get_id locd2 v in
+        let double2 = get_double id2 v in
+        set_double id1 (Track.combine_double double @@ Track.combine_double double1 double2) v;
+        if equal_id id1 id2 then v
+        else (
+          merge_ids id1 ~from_id:id2 v;
+          v
+        )
+      | (locd, _)::_, _
+      | _, (locd, _)::_ ->
+        (* Just update double *)
+        let id1 = get_id locd v in
+        let double1 = get_double id1 v in
+        set_double id1 (Track.combine_double double double1) v;
+        v
+      | _ -> v
+         (* Do nothing if there's no stations *)
+      )
 
     (* Removing a piece of track can split a segment. Unfortunately we can't
        keep track of the segment's semaphore value unless we scan the whole segment for
@@ -245,10 +248,10 @@ let build_station graph v trackmap loc after =
           let ixn = (ixns.x, ixns.y) in
           (* We need to find the set differences. If it's a station, use that *)
           if Trackmap.has_station ixn trackmap then
-            LocdSet.singleton (ixn, ixns.dir)
+            Utils.LocdSet.singleton (ixn, ixns.dir)
           else
-            Track_graph.connected_stations_dirs graph trackmap ixn
-            |> LocdSet.of_iter
+          Track_graph.connected_stations_dirs graph trackmap [ixn]
+            |> Utils.LocdSet.of_iter
         in
         let set1 = get_station_sets ixn1s in
         let set2 = get_station_sets ixn2s in
@@ -257,13 +260,13 @@ let build_station graph v trackmap loc after =
            Common sets: don't separate
         *)
         (* Nothing to do if we have any empty station sets or if they're the same *)
-        if LocdSet.equal set1 set2 || LocdSet.is_empty set1 || LocdSet.is_empty set2 then
+        if Utils.LocdSet.equal set1 set2 || Utils.LocdSet.is_empty set1 || Utils.LocdSet.is_empty set2 then
           segments
         else
           (* Get one member of set1 *)
-          let mem_set1 = LocdSet.choose set1 in
+          let mem_set1 = Utils.LocdSet.choose set1 in
           let seg1 = get_id mem_set1 segments in
-          let mem_set2 = LocdSet.choose set2 in
+          let mem_set2 = Utils.LocdSet.choose set2 in
           let seg2 = get_id mem_set2 segments in
           if not @@ equal_id seg1 seg2 then
             segments
@@ -275,7 +278,7 @@ let build_station graph v trackmap loc after =
             (* Create a new segment for the split segment *)
             let seg2 = new_id segments in
             (* Assign seg2 to all set2 stations *)
-            LocdSet.iter (fun locd -> add locd seg2 segments) set2;
+            Utils.LocdSet.iter (fun locd -> add locd seg2 segments) set2;
             segments
           end
 
