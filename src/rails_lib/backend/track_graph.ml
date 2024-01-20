@@ -297,7 +297,7 @@ let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
 module Track = struct
   (* open TS *)
   (* Routines to handle building/tearing down of track graph *)
-  open Trackmap.Search
+  open Scan
 
   let handle_build_station graph ~x ~y scan1 scan2 =
     (* We just don't add stations until they've been hooked up *)

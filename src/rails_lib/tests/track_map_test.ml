@@ -1,7 +1,7 @@
 open! Containers
 open Dir
 module TM = Trackmap
-module S = Trackmap.Search
+module S = Scan
 
 let print_map (map:TM.t) = TM.yojson_of_t map |> Yojson.Safe.to_string |> print_string
 
