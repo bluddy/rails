@@ -8,6 +8,8 @@ module TS = Scan
 let make_tm ?(track=Track `Single) dirs = 
   Track.make (Dir.Set.of_list dirs) track ~player:0
 
+let tm = Trainmap.empty ()
+
 let tmap = TM.empty 20 20
 
 let build_road start end_ map =
@@ -21,26 +23,26 @@ let print (segments:SM.t) = SM.yojson_of_t segments |> Yojson.Safe.to_string |> 
 let player = 0
 
 let build_track (x,y) (tmap, graph, segments) ~dirs =
-  let before = TS.scan tmap ~x ~y ~player in
+  let before = TS.scan tmap tm ~x ~y ~player in
   let tmap = TM.set ~x ~y ~t:(make_tm dirs) tmap in
-  let after = TS.scan tmap ~x ~y ~player in
+  let after = TS.scan tmap tm ~x ~y ~player in
   let graph = TG.Track.handle_build_track graph ~x ~y before after in
   let segments = SM.build_track graph tmap segments before after in
   tmap, graph, segments
 
 let remove_track (x,y) (tmap, graph, segments) =
-  let before = TS.scan tmap ~x ~y ~player in
+  let before = TS.scan tmap tm ~x ~y ~player in
   let tmap = TM.remove ~x ~y tmap in
-  let after = TS.scan tmap ~x ~y ~player in
+  let after = TS.scan tmap tm ~x ~y ~player in
   let graph = TG.Track.handle_remove_track graph ~x ~y before after in
   let segments = SM.remove_track graph tmap segments before after in
   tmap, graph, segments
 
 let build_station loc ~dirs (tmap, graph, segments) =
   let build_station_inner (x,y) tmap ~graph ~dirs =
-    let before = TS.scan tmap ~x ~y ~player in
+    let before = TS.scan tmap tm ~x ~y ~player in
     let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
-    let after = TS.scan tmap ~x ~y ~player in
+    let after = TS.scan tmap tm ~x ~y ~player in
     let graph = TG.Track.handle_build_station graph ~x ~y before after in
     tmap, graph, after
   in
@@ -49,10 +51,10 @@ let build_station loc ~dirs (tmap, graph, segments) =
   tmap, graph, segments
 
 let remove_station (x,y) (tmap, graph, segments) =
-  let before = TS.scan tmap ~x ~y ~player in
+  let before = TS.scan tmap tm ~x ~y ~player in
   let segments = SM.remove_station graph tmap segments (x,y) before in
   let tmap = TM.remove ~x ~y tmap in
-  let after = TS.scan tmap ~x ~y ~player in
+  let after = TS.scan tmap tm ~x ~y ~player in
   let graph = TG.Track.handle_remove_track graph ~x ~y before after in
   tmap, graph, segments
 
