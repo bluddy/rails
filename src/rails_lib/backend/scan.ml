@@ -32,9 +32,9 @@ open! Utils
       match Trackmap.get v ~x ~y with
       | Some ({ixn = true; player; _} as track) when player = player2 ->
           let double = double_acc && Track.acts_like_double track in
-          Some (_make_ixn x y dist oppo_dir search_dir ~station:false ~double) 
+          Some (_make_ixn x y dist oppo_dir search_dir ~station:false ~double ~count:0) 
       | Some {kind = Station _; player; _} when player = player2 ->
-          Some (_make_ixn x y dist oppo_dir search_dir ~station:true ~double:double_acc)
+          Some (_make_ixn x y dist oppo_dir search_dir ~station:true ~double:double_acc ~count:0)
       | Some track when track.player = player2 ->
           (* Find other dir and follow it *)
           let (let*) = Option.bind in
@@ -52,7 +52,7 @@ open! Utils
        Scan results center on the current track and give results on both directions
        up to the next ixns found, if any.
      *)
-  type scan =
+  type t =
     | NoResult
     | Ixn of ixn list (* 0/1/2/3 ixns *)
     | Station of ixn list  (* 0/1/2 ixns *)
@@ -79,3 +79,4 @@ open! Utils
         if Track.is_ixn track then Ixn scan
         else if Track.is_station track then Station scan
         else Track scan
+

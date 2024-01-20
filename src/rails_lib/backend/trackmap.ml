@@ -3,7 +3,6 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Utils
 
 (* This map contains independent tiles of track *)
-
 type t = {
   map: Track.t IntMap.t;
   width: int;

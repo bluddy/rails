@@ -1,4 +1,7 @@
 # Tasks
+- Tracking train counts
+  - In Scan
+  - In track-graph
 - Make a half-tile-indexed map of trains
   - Allows searching for trains geographically efficiently
   - Allows rebuilding segment map after it's broken by deletion

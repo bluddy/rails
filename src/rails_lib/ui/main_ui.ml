@@ -386,7 +386,7 @@ let handle_ui_train_event (s:State.t) v event =
       x > v.dims.train_ui.x && y > v.dims.train_ui.y ->
         let res =
           ui_train_find (fun y_bot train_idx ->
-            if y < y_bot then Some (v, `EditTrain train_idx)
+            if y < y_bot then Some (v, `EditTrain (Trainmap.Id.of_int train_idx))
             else None)
         in
         Option.get_or ~default:(v, `NoAction) res
@@ -753,7 +753,7 @@ let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Se
 let draw_ui_trains win (s:State.t) v =
   ui_train_iter s v
   (fun y_bot idx ->
-    let train = Trainmap.get s.backend.trains idx in
+    let train = Trainmap.get s.backend.trains (Trainmap.Id.of_int idx) in
     (* Speed line *)
     let x = v.dims.train_ui.x + 1 in
     let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in

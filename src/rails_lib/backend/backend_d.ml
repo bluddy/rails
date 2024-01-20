@@ -20,7 +20,7 @@ let cycles_station_supply_demand = cycles_background_update * 32 (* 512 *)
 let cycles_supply_decay = 512
 
 type ui_msg =
-  | TrainBuilt of int
+  | TrainBuilt of Trainmap.Id.t
   | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
   [@@deriving yojson]
 

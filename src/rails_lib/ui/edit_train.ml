@@ -108,9 +108,9 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     let open Printf in
     let train_info_s = match train.name with
-      | Some name -> sprintf "Train #%d: %s" (v.train + 1) name
+      | Some name -> sprintf "Train #%d: %s" (Trainmap.Id.to_int v.train + 1) name
       | _ -> sprintf "Train #%d: %s %s"
-        (v.train + 1)
+        (Trainmap.Id.to_int v.train + 1)
         (Goods.show_freight train.freight) 
         (Train.show_train_type train.typ)
     in

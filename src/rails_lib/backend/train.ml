@@ -446,8 +446,7 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
     v
   | _ -> v
 
-let update_train _idx (train:t) ~cycle ~cycle_check
-    ~cycle_bit ~region_div ~update_mid_tile =
+let update_train _idx (train:t) ~cycle ~cycle_check ~cycle_bit ~region_div ~update_mid_tile =
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   match train.state with
   | Traveling travel_state ->

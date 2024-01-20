@@ -3,7 +3,7 @@ open Track
 module TM = Trackmap
 module SM = Segment_map
 module TG = Track_graph
-module TS = TM.Search
+module TS = Scan
 
 let make_tm ?(track=Track `Single) dirs = 
   Track.make (Dir.Set.of_list dirs) track ~player:0

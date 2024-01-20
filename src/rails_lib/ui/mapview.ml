@@ -207,7 +207,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         else
           false
       in
-      Trainmap.find_index (fun (train:Train.t) ->
+      Trainmap.find_ret_index (fun (train:Train.t) ->
         (* Test cars *)
         let on_car = 
           Utils.List.findi (fun i _ ->

@@ -6,7 +6,6 @@ open Utils.Infix
 let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-module TS = Trackmap.Search
 module G = Track_graph
 module C = Constants
 

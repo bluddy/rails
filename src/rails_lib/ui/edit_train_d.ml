@@ -9,7 +9,7 @@ type msg =
 
 (* Place this here to avoid circular dependency or an extra file *)
 type station_map = {
-  train: int;
+  train: Trainmap.Id.t;
   state: [`ShowRoute | `EditPriority | `EditStop of int];
   selected_station: (int * int) option;
   map_x: int; (* for scaling map *)
@@ -27,7 +27,7 @@ type screen =
   | ChooseEngine
 
 type 'state t = {
-  train: int;
+  train: Trainmap.Id.t;
   menu: (msg, 'state) Menu.Global.t;
   car_menu: (([`AddCar of Goods.t | `Done | `Caboose], 'state) Menu.MsgBox.t * Backend.Action.stop) option; (* stop *)
   screen: screen;

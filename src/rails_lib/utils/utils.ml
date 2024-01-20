@@ -81,7 +81,7 @@ type loc = int * int
   [@@deriving eq, ord, yojson, show]
 
 type locd = loc * Dir.t
-  [@@deriving eq, ord, yojson]
+  [@@deriving eq, ord, yojson, show]
 
 type locdpair = locd * locd
   [@@deriving eq, ord, yojson]
