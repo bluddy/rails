@@ -212,7 +212,7 @@ let build_station graph v trackmap loc after =
         )
       | (locd, _)::_, _
       | _, (locd, _)::_ ->
-        (* Just update double *)
+        (* Only one connection - just update double *)
         let id1 = get_id locd v in
         let double1 = get_double id1 v in
         set_double id1 (Track.combine_double double double1) v;
@@ -329,4 +329,6 @@ let build_station graph v trackmap loc after =
       remove (station_loc, dir) v;
     ) dirs;
     v
+
+  (* TODO: change_double track *)
 

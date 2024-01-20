@@ -105,4 +105,5 @@ let find_ret_index f (v:t) =
   (* Return indices of trains at location *)
 let get_at_loc loc (v:t) =
   Hashtbl.find_opt v.tile_idx loc
+  |> Option.get_or ~default:[]
 
