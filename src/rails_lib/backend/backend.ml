@@ -1,5 +1,5 @@
 open Containers
-open Utils.Infix
+open! Utils.Infix
 open Backend_d
 
 let src = Logs.Src.create "backend" ~doc:"Backend"
