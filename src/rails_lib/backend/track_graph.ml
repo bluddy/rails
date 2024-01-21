@@ -134,18 +134,27 @@ end
 (* Used for pathfinding *)
 module ShortestPath = Graph.Path.Dijkstra(G)(Weight)
 
-type t = G.t [@@deriving yojson]
+type t = {
+  graph: G.t;
+  node_counts: (loc, int) Hashtbl.t; (* For trains parked on node *)
+} [@@deriving yojson]
 
-let make () = G.create ()
+let make () = {
+  graph=G.create ();
+  node_counts=Hashtbl.create 10;
+}
 
 let add_ixn v ~x ~y =
   Log.debug (fun f -> f "Graph: Adding ixn at (%d,%d)" x y);
-  G.add_vertex v (x, y);
+  let loc = x, y in
+  G.add_vertex v.graph loc;
   v
 
 let remove_ixn v ~x ~y =
   Log.debug (fun f -> f "Graph: Removing ixn at (%d,%d)" x y);
-  G.remove_vertex v (x, y);
+  let loc = x, y in
+  G.remove_vertex v.graph loc;
+  Hashtbl.remove v.node_counts loc;
   v
 
 let add_segment v ~xyd1 ~xyd2 ~dist ~double =
@@ -153,7 +162,7 @@ let add_segment v ~xyd1 ~xyd2 ~dist ~double =
   Log.debug (fun f -> f "Graph: Adding path from (%d,%d,%s) to (%d,%d,%s), dist %d, double: %b"
               x1 y1 (Dir.show dir1) x2 y2 (Dir.show dir2) dist double);
   let edge = Edge.make x1 y1 dir1 x2 y2 dir2 dist ~double in
-  G.add_edge_e v ((x1,y1),edge,(x2,y2));
+  G.add_edge_e v ((x1,y1), edge, (x2,y2));
   v
 
 let get_edge v xyd =
@@ -242,10 +251,12 @@ let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
   let stations = Hashtbl.create 10 in
   let rec loop ixns =
     let next_ixns = Hashtbl.create 10 in
-    Hashtbl.iter (fun ixn double ->
+    (* Iterate over ixns we built up *)
+    Hashtbl.iter (fun ixn (double, count) ->
       if Hashtbl.mem seen_ixns ixn then ()
       else begin 
         (* loop over attached ixn/dirs *)
+        (*TODO: XXX here. HAndle count properly *)
         iter_succ_ixn_dirs (fun ixn_double ixn dir ->
           if Trackmap.has_station ixn trackmap then 
             (* Add to results *)
@@ -280,7 +291,8 @@ let connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap ixn =
   find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
   |> Option.iter (fun ixn2 -> Hashtbl.replace seen_ixns ixn2 ());
   let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
-  Hashtbl.replace start_ixns ixn double;
+  let count = Hashtbl.get_or graph.node_counts ixn ~default:0 in
+  Hashtbl.replace start_ixns ixn (double, count);
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
@@ -290,8 +302,9 @@ let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
   List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
   List.iter (fun ixn ->
     let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
-    Hashtbl.replace start_ixns ixn double)
-    ixns;
+    let count = Hashtbl.get_or graph.node_counts ixn ~default:0 in
+    Hashtbl.replace start_ixns ixn (double, count))
+  ixns;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 module Track = struct
