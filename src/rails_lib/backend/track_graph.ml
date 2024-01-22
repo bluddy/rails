@@ -17,19 +17,15 @@ module Edge : sig
       dist: int;
       double: bool;
       mutable block: bool;
-      mutable count: int;
     } [@@deriving yojson]
 
     val default: t
     val equal : t -> t -> bool
     val compare: t -> t -> int
-    val make: ?count:int -> int -> int -> Dir.t -> int -> int -> Dir.t -> int -> double:bool -> t
+    val make: int -> int -> Dir.t -> int -> int -> Dir.t -> int -> double:bool -> t
     val has_xydir: int -> int -> Dir.t -> t -> bool
     val dir_of_xy: loc -> t -> Dir.t option
     val set_block: bool -> t -> unit
-    val set_count: int -> t -> unit
-    val get_count: t -> int
-    val add_count: int -> t -> unit
     val set_double: t -> bool -> t
     val is_double: t -> bool
   end
@@ -39,7 +35,6 @@ module Edge : sig
       dist: int; (* Length of edge *)
       double: bool;  (* Fully double edge *)
       mutable block: bool; (* Temporarily block the edge *)
-      mutable count: int; (* count of trains *)
     } [@@deriving yojson]
 
     let canonical v =
@@ -52,9 +47,9 @@ module Edge : sig
     let compare x y = compare_locdpair x.nodes y.nodes
 
     (* We always make sure we're canonical *)
-    let make ?(count=0) x1 y1 dir1 x2 y2 dir2 dist ~double =
+    let make x1 y1 dir1 x2 y2 dir2 dist ~double =
       let nodes = ((x1,y1),dir1), ((x2,y2),dir2) in
-      canonical {nodes; dist; double; block=false; count}
+      canonical {nodes; dist; double; block=false}
 
     let default = make 0 0 Dir.Up 0 0 Dir.Up 0 ~double:false
 
@@ -70,12 +65,6 @@ module Edge : sig
       | _ -> None
 
     let set_block b v = v.block <- b
-
-    let set_count c v = v.count <- c
-
-    let get_count v = v.count
-
-    let add_count c v = v.count <- v.count + c
 
     let set_double v double = {v with double}
 
@@ -134,27 +123,20 @@ end
 (* Used for pathfinding *)
 module ShortestPath = Graph.Path.Dijkstra(G)(Weight)
 
-type t = {
-  graph: G.t;
-  node_counts: (loc, int) Hashtbl.t; (* For trains parked on node *)
-} [@@deriving yojson]
+type t = G.t [@@deriving yojson]
 
-let make () = {
-  graph=G.create ();
-  node_counts=Hashtbl.create 10;
-}
+let make () = G.create ()
 
 let add_ixn v ~x ~y =
   Log.debug (fun f -> f "Graph: Adding ixn at (%d,%d)" x y);
   let loc = x, y in
-  G.add_vertex v.graph loc;
+  G.add_vertex v loc;
   v
 
 let remove_ixn v ~x ~y =
   Log.debug (fun f -> f "Graph: Removing ixn at (%d,%d)" x y);
   let loc = x, y in
-  G.remove_vertex v.graph loc;
-  Hashtbl.remove v.node_counts loc;
+  G.remove_vertex v loc;
   v
 
 let add_segment v ~xyd1 ~xyd2 ~dist ~double =
@@ -252,11 +234,10 @@ let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
   let rec loop ixns =
     let next_ixns = Hashtbl.create 10 in
     (* Iterate over ixns we built up *)
-    Hashtbl.iter (fun ixn (double, count) ->
+    Hashtbl.iter (fun ixn double ->
       if Hashtbl.mem seen_ixns ixn then ()
       else begin 
         (* loop over attached ixn/dirs *)
-        (*TODO: XXX here. HAndle count properly *)
         iter_succ_ixn_dirs (fun ixn_double ixn dir ->
           if Trackmap.has_station ixn trackmap then 
             (* Add to results *)
@@ -291,8 +272,7 @@ let connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap ixn =
   find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
   |> Option.iter (fun ixn2 -> Hashtbl.replace seen_ixns ixn2 ());
   let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
-  let count = Hashtbl.get_or graph.node_counts ixn ~default:0 in
-  Hashtbl.replace start_ixns ixn (double, count);
+  Hashtbl.replace start_ixns ixn double;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
@@ -302,8 +282,7 @@ let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
   List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
   List.iter (fun ixn ->
     let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
-    let count = Hashtbl.get_or graph.node_counts ixn ~default:0 in
-    Hashtbl.replace start_ixns ixn (double, count))
+    Hashtbl.replace start_ixns ixn double)
   ixns;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 

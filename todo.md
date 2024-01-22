@@ -1,10 +1,8 @@
 # Tasks
 - Tracking train counts
   - In Scan
-  - In track-graph
-- Make a half-tile-indexed map of trains
-  - Allows searching for trains geographically efficiently
-  - Allows rebuilding segment map after it's broken by deletion
+  - Undo: don't track in graph. Just add a scan function that gets train counts by station.
+    - Tracking by ixn adds too many edge cases
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc
