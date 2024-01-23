@@ -117,9 +117,9 @@ let check_build_station v ~x ~y ~player station_type =
   | x -> x
 
 let _build_station v ~x ~y station_type ~player =
-  let before = Scan.scan v.track v.trains ~x ~y ~player in
+  let before = Scan.scan v.track ~x ~y ~player in
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
-  let after = Scan.scan track v.trains ~x ~y ~player in
+  let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_station v.graph ~x ~y before after in
   let _ = Segment_map.build_station graph v.segments track (x,y) after in
   let station = match station_type with
@@ -193,9 +193,9 @@ let check_build_tunnel v ~x ~y ~dir ~player =
 let _build_tunnel v ~x ~y ~dir ~player =
   match check_build_tunnel v ~x ~y ~dir ~player with
   | `Tunnel(length, _, cost) ->
-    let before = Scan.scan v.track v.trains ~x ~y ~player in
+    let before = Scan.scan v.track ~x ~y ~player in
     let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
-    let after = Scan.scan track v.trains ~x ~y ~player in
+    let after = Scan.scan track ~x ~y ~player in
     let graph = G.Track.handle_build_track_simple v.graph before after in
     let _ = Segment_map.build_track graph v.track v.segments before after in
     update_player v player @@ Player.pay Player.TunnelExpense cost;
@@ -205,9 +205,9 @@ let _build_tunnel v ~x ~y ~dir ~player =
   | _ -> v
 
 let _build_bridge v ~x ~y ~dir ~player ~kind =
-  let before = Scan.scan v.track v.trains ~x ~y ~player in
+  let before = Scan.scan v.track ~x ~y ~player in
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
-  let after = Scan.scan track v.trains ~x ~y ~player in
+  let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let _ = Segment_map.build_track graph v.track v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
@@ -237,11 +237,11 @@ let check_change_double_track v ~x ~y ~player double =
 
 let _change_double_track (v:t) ~x ~y ~player double =
   if check_change_double_track v ~x ~y ~player double then (
-    let before = Scan.scan v.track v.trains ~x ~y ~player in
+    let before = Scan.scan v.track ~x ~y ~player in
     let t = Trackmap.get_exn v.track ~x ~y in
     let t = Track.change_to_double t double in
     let track = Trackmap.set v.track ~x ~y ~t in
-    let after = Scan.scan track v.trains ~x ~y ~player in
+    let after = Scan.scan track ~x ~y ~player in
     let graph = G.Track.handle_change_double_track v.graph before after in
     [%upf v.graph <- graph];
     [%upf v.track <- track];
@@ -250,9 +250,9 @@ let _change_double_track (v:t) ~x ~y ~player double =
     
 let _build_track (v:t) ~x ~y ~dir ~player =
   (* Can either create a new edge or a new node (ixn) *)
-  let before = Scan.scan v.track v.trains ~x ~y ~player in
+  let before = Scan.scan v.track ~x ~y ~player in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
-  let after = Scan.scan track v.trains ~x ~y ~player in
+  let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track v.graph ~x ~y before after in
   let _ = Segment_map.build_track graph v.track v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
@@ -261,7 +261,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   v
 
 let _build_ferry v ~x ~y ~dir ~player =
-  let before = Scan.scan v.track v.trains ~x ~y ~player in
+  let before = Scan.scan v.track ~x ~y ~player in
   let tile1 = get_tile v x y in
   let dx, dy = Dir.to_offsets dir in
   let tile2 = get_tile v (x+dx) (y+dy) in
@@ -272,7 +272,7 @@ let _build_ferry v ~x ~y ~dir ~player =
     | _ -> assert false
   in
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
-  let after = Scan.scan track v.trains ~x ~y ~player in
+  let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let _ = Segment_map.build_track graph v.track v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
@@ -287,7 +287,7 @@ let check_remove_track v ~x ~y ~dir ~player=
 let _remove_track v ~x ~y ~dir ~player =
   let loc = (x,y) in
   let is_station = Trackmap.has_station loc v.track in
-  let before = Scan.scan v.track v.trains ~x ~y ~player in
+  let before = Scan.scan v.track ~x ~y ~player in
   (* Have to be careful with order here or we'll mess up state *)
   let segments =
     if is_station then
@@ -295,7 +295,7 @@ let _remove_track v ~x ~y ~dir ~player =
     else v.segments
   in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
-  let after = Scan.scan track v.trains ~x ~y ~player in
+  let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
   let segments =
     if not is_station then

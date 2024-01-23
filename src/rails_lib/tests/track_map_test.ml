@@ -5,8 +5,6 @@ module S = Scan
 
 let print_map (map:TM.t) = TM.yojson_of_t map |> Yojson.Safe.to_string |> print_string
 
-let tm = Trainmap.empty ()
-
 let track ?(double=false) dirs = 
   let dbl = if double then `Double else `Single in
   Track.make (Dir.Set.of_list dirs) (Track dbl) ~player:0
@@ -30,7 +28,7 @@ let%expect_test "scan map ixn" =
     |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right])
     |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight])
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
@@ -44,7 +42,7 @@ let%expect_test "scan map ixn double" =
     |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right] ~double)
     |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
@@ -58,7 +56,7 @@ let%expect_test "scan map ixn partial double" =
     |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right])
     |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
@@ -72,7 +70,7 @@ let%expect_test "scan map ixn partial double woodbridge" =
     |> TM.set ~x:1 ~y:2 ~t:(bridge [Left;Right] Bridge.Wood)
     |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
@@ -86,7 +84,7 @@ let%expect_test "scan map ixn partial double stonebridge" =
     |> TM.set ~x:1 ~y:2 ~t:(bridge [Left;Right] Bridge.Stone)
     |> TM.set ~x:2 ~y:2 ~t:(track [Left;UpRight;DownRight] ~double)
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
@@ -102,7 +100,7 @@ let%expect_test "scan map station" =
     |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right])
     |> TM.set ~x:2 ~y:2 ~t:(station [Left;Right])
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
@@ -116,7 +114,7 @@ let%expect_test "scan map station double" =
     |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right] ~double)
     |> TM.set ~x:2 ~y:2 ~t:(station [Left;Right])
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
@@ -128,7 +126,7 @@ let%expect_test "scan map no ixn" =
     |> TM.set ~x:0 ~y:2 ~t:(track [Left;Right])
     |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right])
   in
-  S.scan map tm ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {| (Trackmap.Search.Track []) |}]
 
 
@@ -138,7 +136,7 @@ let%expect_test "scan map 2 ixns" =
     |> TM.set ~x:1 ~y:3 ~t:(track [Left;Right])
     |> TM.set ~x:2 ~y:3 ~t:(track [Left;UpRight;DownRight])
   in
-  S.scan map tm ~x:1 ~y:3 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:1 ~y:3 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 0; y = 3; dist = 1; dir = Dir.Right;
@@ -154,7 +152,7 @@ let%expect_test "scan map 2 ixns 1 double" =
     |> TM.set ~x:1 ~y:3 ~t:(track [Left;Right] ~double)
     |> TM.set ~x:2 ~y:3 ~t:(track [Left;UpRight;DownRight])
   in
-  S.scan map tm ~x:1 ~y:3 ~player:0 |> S.show |> print_string;
+  S.scan map ~x:1 ~y:3 ~player:0 |> S.show |> print_string;
   [%expect {|
     (Trackmap.Search.Track
        [{ Trackmap.Search.x = 0; y = 3; dist = 1; dir = Dir.Right;
