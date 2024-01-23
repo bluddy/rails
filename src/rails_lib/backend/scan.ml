@@ -121,51 +121,64 @@ let scan_station_segment_for_trains tracks trains ~x ~y dir ~player =
     | Some ({kind = Station _; _} as track) when not_been_here () && track.player = player ->
         Hashtbl.replace seen_ixns loc ();
         (* Found station at edge: count just on incoming track *)
-        _train_count_in_ixn trains train_idxs oppo_dir
+        let count = _train_count_in_ixn trains train_idxs oppo_dir in
+        count, true
 
     | Some ({ixn = true; _} as track) when not_been_here () && track.player = player ->
-        Hashtbl.replace seen_ixns loc ();
         (* Found ixn: iterate over remaining dirs *)
+        Hashtbl.replace seen_ixns loc ();
+        let double = Track.acts_like_double track in
+        let count = List.length train_idxs in
         let other_dirs = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.to_list in
-        List.fold_left (fun acc dir ->
+        List.fold_left (fun ((count, double) as acc) dir ->
           match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
-          | Some (x2, y2) -> acc + loop x2 y2 dir
+          | Some (x2, y2) ->
+            let count2, double2 = loop x2 y2 dir in
+            count + count2, double && double2
           | _ -> acc)
-          (List.length train_idxs)
+          (count, double)
           other_dirs
 
     | Some track when track.player = player ->
         (* Find other dir and follow it *)
-        let count =
+        let double = Track.acts_like_double track in
+        let count = List.length train_idxs in
+        let res =
           let* dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in
           let* x2, y2 = Trackmap.move_dir_bounds tracks ~x ~y ~dir in
           Option.return (loop x2 y2 dir)
         in
-        (List.length train_idxs) + Option.get_or ~default:0 count
+        begin match res with
+        | Some (count2, double2) -> count + count2, double && double2
+        | None -> count, double
+        end
 
-    | _ -> 0
+    | _ -> 0, false
   in
   let loc = x, y in
   match Trackmap.get tracks ~x ~y with
   | Some track when Track.is_station track ->
       let train_idxs = Trainmap.get_at_loc loc trains in
       let count = _train_count_in_ixn trains train_idxs dir in
-      let count2 = match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
+      let count2, double = match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
         | Some (x, y) -> loop x y dir
-        | _ -> 0
+        | _ -> 0, true
       in
-      count + count2
+      count + count2, double
 
   | Some track ->
       (* We don't care about user-provided dir when it's an ixn or track *)
       let count = Trainmap.get_at_loc loc trains |> List.length in
-      Dir.Set.fold (fun count dir ->
+      let double = Track.acts_like_double track in
+      Dir.Set.fold (fun ((count, double) as acc) dir ->
         (* We only want to count in the dir we're going so we don't double-count*)
         match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
-        | Some (x, y) -> count + loop x y dir
-        | _ -> count)
-      count
+        | Some (x, y) ->
+          let count2, double2 = loop x y dir in
+          count + count2, double && double2
+        | _ -> acc)
+      (count, double)
       track.dirs
 
-  | _ -> 0
+  | _ -> 0, false
 
