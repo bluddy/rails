@@ -15,25 +15,21 @@ module Edge : sig
     type t = private {
       nodes: locdpair;
       dist: int;
-      double: bool;
       mutable block: bool;
     } [@@deriving yojson]
 
     val default: t
     val equal : t -> t -> bool
     val compare: t -> t -> int
-    val make: int -> int -> Dir.t -> int -> int -> Dir.t -> int -> double:bool -> t
+    val make: int -> int -> Dir.t -> int -> int -> Dir.t -> int -> t
     val has_xydir: int -> int -> Dir.t -> t -> bool
     val dir_of_xy: loc -> t -> Dir.t option
     val set_block: bool -> t -> unit
-    val set_double: t -> bool -> t
-    val is_double: t -> bool
   end
 = struct
     type t = {
       nodes: locdpair;
       dist: int; (* Length of edge *)
-      double: bool;  (* Fully double edge *)
       mutable block: bool; (* Temporarily block the edge *)
     } [@@deriving yojson]
 
@@ -47,11 +43,11 @@ module Edge : sig
     let compare x y = compare_locdpair x.nodes y.nodes
 
     (* We always make sure we're canonical *)
-    let make x1 y1 dir1 x2 y2 dir2 dist ~double =
+    let make x1 y1 dir1 x2 y2 dir2 dist =
       let nodes = ((x1,y1),dir1), ((x2,y2),dir2) in
-      canonical {nodes; dist; double; block=false}
+      canonical {nodes; dist; block=false}
 
-    let default = make 0 0 Dir.Up 0 0 Dir.Up 0 ~double:false
+    let default = make 0 0 Dir.Up 0 0 Dir.Up 0
 
       (* Either node can match *)
     let has_xydir x y dir v =
@@ -65,10 +61,6 @@ module Edge : sig
       | _ -> None
 
     let set_block b v = v.block <- b
-
-    let set_double v double = {v with double}
-
-    let is_double v = v.double
 end
 
 module Node = struct
@@ -139,11 +131,11 @@ let remove_ixn v ~x ~y =
   G.remove_vertex v loc;
   v
 
-let add_segment v ~xyd1 ~xyd2 ~dist ~double =
+let add_segment v ~xyd1 ~xyd2 ~dist =
   let (x1,y1,dir1), (x2,y2,dir2) = xyd1, xyd2 in
-  Log.debug (fun f -> f "Graph: Adding path from (%d,%d,%s) to (%d,%d,%s), dist %d, double: %b"
-              x1 y1 (Dir.show dir1) x2 y2 (Dir.show dir2) dist double);
-  let edge = Edge.make x1 y1 dir1 x2 y2 dir2 dist ~double in
+  Log.debug (fun f -> f "Graph: Adding path from (%d,%d,%s) to (%d,%d,%s), dist %d"
+              x1 y1 (Dir.show dir1) x2 y2 (Dir.show dir2) dist);
+  let edge = Edge.make x1 y1 dir1 x2 y2 dir2 dist in
   G.add_edge_e v ((x1,y1), edge, (x2,y2));
   v
 
@@ -163,19 +155,6 @@ let remove_segment v ~xyd =
   Option.iter (fun edge -> G.remove_edge_e v edge) @@ get_edge v xyd;
   v
 
-  (* Change a segment to double or single *)
-let change_segment_double v ~xyd ~double =
-  match get_edge v xyd with
-  | None -> v
-  | Some (_, edge, _) when Bool.equal (Edge.is_double edge) double -> v
-  | Some ((v1, edge, v2) as e) ->
-      let x,y,dir = xyd in
-      Log.debug (fun f -> f "Graph: Change path from (%d,%d,%s) to %s" x y (Dir.show dir) (if double then "double" else "single"));
-      G.remove_edge_e v e;
-      let edge2 = Edge.set_double edge double in
-      G.add_edge_e v (v1, edge2, v2);
-      v
-
 let fold_succ_ixns f v ~ixn ~init = G.fold_succ f v ixn init
 let iter_succ_ixns f v ~ixn = G.iter_succ f v ixn
 
@@ -184,7 +163,7 @@ let iter_succ_ixn_dirs f v ~ixn =
   G.iter_succ_e (fun (ixn1, e, ixn2) ->
     let other_ixn = if Node.equal ixn ixn1 then ixn2 else ixn1 in
     let other_dir = Edge.dir_of_xy other_ixn e |> Option.get_exn_or "Missing dir" in
-    f e.double other_ixn other_dir)
+    f other_ixn other_dir)
   v
   ixn
 
@@ -234,21 +213,20 @@ let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
   let rec loop ixns =
     let next_ixns = Hashtbl.create 10 in
     (* Iterate over ixns we built up *)
-    Hashtbl.iter (fun ixn double ->
+    Hashtbl.iter (fun ixn () ->
       if Hashtbl.mem seen_ixns ixn then ()
-      else begin 
+      else ( 
         (* loop over attached ixn/dirs *)
-        iter_succ_ixn_dirs (fun ixn_double ixn dir ->
+        iter_succ_ixn_dirs (fun ixn dir ->
           if Trackmap.has_station ixn trackmap then 
             (* Add to results *)
-            let double = if double && ixn_double then `Double else `Single in
-            Hashtbl.replace stations (ixn, Dir.catalog dir) double
+            Hashtbl.replace stations (ixn, Dir.catalog dir) ()
           else 
             (* To be handled in next iteration *)
-            Hashtbl.replace next_ixns ixn ixn_double)
+            Hashtbl.replace next_ixns ixn ())
         ~ixn
         graph
-      end;
+      );
       (* Mark that we saw this ixn *)
       Hashtbl.replace seen_ixns ixn ())
       ixns;
@@ -259,7 +237,7 @@ let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
         Hashtbl.remove stations (ixn, `Upper);
         Hashtbl.remove stations (ixn, `Lower);
       ) start_ixns;
-      Hashtbl.to_iter stations
+      Hashtbl.to_iter stations |> Iter.map fst
     ) else
       loop next_ixns
   in
@@ -271,8 +249,7 @@ let connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap ixn =
   let seen_ixns = Hashtbl.create 5 in
   find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
   |> Option.iter (fun ixn2 -> Hashtbl.replace seen_ixns ixn2 ());
-  let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
-  Hashtbl.replace start_ixns ixn double;
+  Hashtbl.replace start_ixns ixn ();
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
@@ -280,10 +257,7 @@ let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
   (* Prevent loops *)
   let seen_ixns = Hashtbl.create 5 in
   List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
-  List.iter (fun ixn ->
-    let double = Trackmap.get_exn trackmap ~x:(fst ixn) ~y:(snd ixn) |> Track.acts_like_double in
-    Hashtbl.replace start_ixns ixn double)
-  ixns;
+  List.iter (fun ixn -> Hashtbl.replace start_ixns ixn ()) ixns;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 module Track = struct
@@ -296,14 +270,14 @@ module Track = struct
     let add_to_edge ixn1 _ ixn3 ixn4 =
       graph
       |> remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir)
-      |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(x,y,ixn3.search_dir) ~dist:ixn3.dist ~double:ixn3.double
-      |> add_segment ~xyd1:(ixn4.x,ixn4.y,ixn4.dir) ~xyd2:(x,y,ixn4.search_dir) ~dist:ixn4.dist ~double:ixn4.double
+      |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(x,y,ixn3.search_dir) ~dist:ixn3.dist
+      |> add_segment ~xyd1:(ixn4.x,ixn4.y,ixn4.dir) ~xyd2:(x,y,ixn4.search_dir) ~dist:ixn4.dist
     in
     match scan1, scan2 with
       (* Unfinished edge. Connect a station here.
           x---       ->    x---s *)
     | Track [ixn1], Station [ixn2] when equal_ixn ixn1 ixn2 ->
-        add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(x,y,ixn2.search_dir) ~dist:ixn2.dist graph ~double:ixn2.double
+        add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(x,y,ixn2.search_dir) ~dist:ixn2.dist graph
 
     (* Edge. Add a station.
       x-------x  ->    x---s---x
@@ -324,8 +298,7 @@ module Track = struct
           when equal_ixn ixn1 ixn2 || equal_ixn ixn1 ixn3 ->
           (* Only case: unfinished edge. Connect an intersection.
               x-- -x      ->    x----x *)
-          let double = ixn2.double && ixn3.double in
-          add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(ixn3.x,ixn3.y,ixn3.dir) ~dist:(ixn2.dist+ixn3.dist) ~double graph
+          add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(ixn3.x,ixn3.y,ixn3.dir) ~dist:(ixn2.dist+ixn3.dist) graph
       | _ -> graph
 
   (* Handle graph management for building track.
@@ -340,7 +313,7 @@ module Track = struct
         (* Unfinished edge. Create an intersection.
           x---       ->    x--+ *)
       | Track [ixn1], Ixn [ixn2] when equal_ixn ixn1 ixn2 ->
-          add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(x,y,ixn2.search_dir) ~dist:ixn2.dist ~double:ixn2.double graph
+          add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(x,y,ixn2.search_dir) ~dist:ixn2.dist graph
 
         (* Regular edge. We add an intersection in the middle.
           x-----x    ->    x--+--x *)
@@ -349,8 +322,8 @@ module Track = struct
              equal_ixn ixn1 ixn4 && equal_ixn ixn2 ixn3 ->
           graph
           |> remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir)
-          |> add_segment ~xyd1:(ixn3.x, ixn3.y, ixn3.dir) ~xyd2:(x, y, ixn3.search_dir) ~dist:ixn3.dist ~double:ixn3.double
-          |> add_segment ~xyd1:(ixn4.x, ixn4.y, ixn4.dir) ~xyd2:(x, y, ixn4.search_dir) ~dist:ixn4.dist ~double:ixn4.double
+          |> add_segment ~xyd1:(ixn3.x, ixn3.y, ixn3.dir) ~xyd2:(x, y, ixn3.search_dir) ~dist:ixn3.dist
+          |> add_segment ~xyd1:(ixn4.x, ixn4.y, ixn4.dir) ~xyd2:(x, y, ixn4.search_dir) ~dist:ixn4.dist
 
         (* Regular edge. We add an intersection in the middle that connects to another
           intersection:
@@ -363,33 +336,12 @@ module Track = struct
           || (equal_ixn ixn1 ixn5 && (equal_ixn ixn2 ixn3 || equal_ixn ixn2 ixn4)) ->
           graph
           |> remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir)
-          |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(x,y,ixn3.search_dir) ~dist:ixn3.dist ~double:ixn3.double
-          |> add_segment ~xyd1:(ixn4.x,ixn4.y,ixn4.dir) ~xyd2:(x,y,ixn4.search_dir) ~dist:ixn4.dist ~double:ixn4.double
-          |> add_segment ~xyd1:(ixn5.x,ixn5.y,ixn5.dir) ~xyd2:(x,y,ixn5.search_dir) ~dist:ixn5.dist ~double:ixn5.double
+          |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(x,y,ixn3.search_dir) ~dist:ixn3.dist
+          |> add_segment ~xyd1:(ixn4.x,ixn4.y,ixn4.dir) ~xyd2:(x,y,ixn4.search_dir) ~dist:ixn4.dist
+          |> add_segment ~xyd1:(ixn5.x,ixn5.y,ixn5.dir) ~xyd2:(x,y,ixn5.search_dir) ~dist:ixn5.dist
 
         (* All other cases require no graph changes *)
       | _ -> graph
-
-  let handle_change_double_track graph scan1 scan2 = match scan1, scan2 with
-    (* Regular track. Only change if have 2 ixns/stations (i.e. segment) *)
-    | Track [ixn1; ixn2], Track [ixn3; ixn4] ->
-        let double1 = ixn1.double && ixn2.double in
-        let double2 = ixn3.double && ixn4.double in
-        if not @@ Bool.equal double1 double2 then
-          change_segment_double ~xyd:(ixn3.x,ixn3.y,ixn3.dir) ~double:double2 graph
-        else
-          graph
-
-      (* Ixn. Potentially change all connected ixns/stations *)
-    | Ixn l1, Ixn l2 ->
-      List.fold_left2 (fun graph ixn1 ixn2 ->
-        if not @@ Bool.equal ixn1.double ixn2.double then
-          change_segment_double ~xyd:(ixn2.x,ixn2.y,ixn2.dir) ~double:ixn2.double graph
-        else
-          graph
-      ) graph l1 l2
-
-    | _ -> graph
 
   let handle_remove_track graph ~x ~y scan1 scan2 =
     match scan1, scan2 with
@@ -426,10 +378,9 @@ module Track = struct
           x---+---x   ->    x-------x *)
       | Ixn [_; _], Track [ixn3; ixn4]
       | Ixn [_; _; _], Track [ixn3; ixn4] ->
-          let double = ixn3.double && ixn4.double in
           graph
           |> remove_ixn ~x ~y
-          |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(ixn4.x,ixn4.y,ixn4.dir) ~dist:(ixn3.dist + ixn4.dist) ~double
+          |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(ixn4.x,ixn4.y,ixn4.dir) ~dist:(ixn3.dist + ixn4.dist)
 
       | _ -> graph
         (* All other cases require no graph changes *)

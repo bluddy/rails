@@ -237,13 +237,10 @@ let check_change_double_track v ~x ~y ~player double =
 
 let _change_double_track (v:t) ~x ~y ~player double =
   if check_change_double_track v ~x ~y ~player double then (
-    let before = Scan.scan v.track ~x ~y ~player in
     let t = Trackmap.get_exn v.track ~x ~y in
     let t = Track.change_to_double t double in
     let track = Trackmap.set v.track ~x ~y ~t in
-    let after = Scan.scan track ~x ~y ~player in
-    let graph = G.Track.handle_change_double_track v.graph before after in
-    [%upf v.graph <- graph];
+    (* TODO: handle at segment level *)
     [%upf v.track <- track];
     v
   ) else v

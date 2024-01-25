@@ -5,24 +5,24 @@ let graph () =
   TG.make ()
   |> TG.add_ixn ~x:1 ~y:2
   |> TG.add_ixn ~x:3 ~y:4
-  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Down) ~dist:5 ~double:false
+  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Down) ~dist:5
 
 let%expect_test "iter_succ_ixn_dirs" =
   let graph = graph () in
-  TG.iter_succ_ixn_dirs (fun _ _ixn dir ->
+  TG.iter_succ_ixn_dirs (fun _ixn dir ->
     print_string @@ Dir.show dir
   ) graph ~ixn:(1,2);
   [%expect {| Dir.Down |}]
 
-let graph ?(double=false) () =
+let graph () =
   TG.make ()
   |> TG.add_ixn ~x:1 ~y:2
   |> TG.add_ixn ~x:3 ~y:4
   |> TG.add_ixn ~x:5 ~y:6
   |> TG.add_ixn ~x:7 ~y:8
-  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Right) ~dist:5 ~double
-  |> TG.add_segment ~xyd1:(1,2,Dir.UpRight) ~xyd2:(5,6,Left) ~dist:10 ~double
-  |> TG.add_segment ~xyd1:(5,6,Dir.UpRight) ~xyd2:(7,8,DownLeft) ~dist:3 ~double
+  |> TG.add_segment ~xyd1:(1,2,Dir.Up) ~xyd2:(3,4,Right) ~dist:5
+  |> TG.add_segment ~xyd1:(1,2,Dir.UpRight) ~xyd2:(5,6,Left) ~dist:10
+  |> TG.add_segment ~xyd1:(5,6,Dir.UpRight) ~xyd2:(7,8,DownLeft) ~dist:3
 
 let print_graph g =
   TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
@@ -31,11 +31,6 @@ let%expect_test "graph print" =
   let g = graph () in
   print_graph g;
   [%expect {| [[[3,4],[1,2],{"nodes":[[[1,2],["Up"]],[[3,4],["Right"]]],"dist":5,"double":false,"block":false}],[[5,6],[1,2],{"nodes":[[[1,2],["UpRight"]],[[5,6],["Left"]]],"dist":10,"double":false,"block":false}],[[7,8],[5,6],{"nodes":[[[5,6],["UpRight"]],[[7,8],["DownLeft"]]],"dist":3,"double":false,"block":false}]] |}]
-
-let%expect_test "double graph print" =
-  let g = graph ~double:true () in
-  print_graph g;
-  [%expect {| [[[3,4],[1,2],{"nodes":[[[1,2],["Up"]],[[3,4],["Right"]]],"dist":5,"double":true,"block":false}],[[5,6],[1,2],{"nodes":[[[1,2],["UpRight"]],[[5,6],["Left"]]],"dist":10,"double":true,"block":false}],[[7,8],[5,6],{"nodes":[[[5,6],["UpRight"]],[[7,8],["DownLeft"]]],"dist":3,"double":true,"block":false}]] |}]
 
 let%expect_test "graph remove segment" =
   let g = graph ()
@@ -52,7 +47,7 @@ let%expect_test "graph find ixn from ixn" =
 
 let%expect_test "graph shortest path" =
   let g = graph ()
-    |> TG.add_segment ~xyd1:(3,4,UpRight) ~xyd2:(5,6,DownRight) ~dist:8 ~double:false
+    |> TG.add_segment ~xyd1:(3,4,UpRight) ~xyd2:(5,6,DownRight) ~dist:8
   in
   let res = TG.shortest_path g ~src:(1,2) ~dest:(5,6) in
   Option.pp Dir.pp Format.std_formatter res;
@@ -60,7 +55,7 @@ let%expect_test "graph shortest path" =
 
 let%expect_test "graph shortest path" =
   let g = graph ()
-    |> TG.add_segment ~xyd1:(3,4,UpRight) ~xyd2:(5,6,DownRight) ~dist:2 ~double:false
+    |> TG.add_segment ~xyd1:(3,4,UpRight) ~xyd2:(5,6,DownRight) ~dist:2
   in
   let res = TG.shortest_path g ~src:(1,2) ~dest:(5,6) in
   Option.pp Dir.pp Format.std_formatter res;
@@ -75,7 +70,7 @@ let%expect_test "connected_stations_dirs" =
   in
   let g = graph () in
   let res = TG.connected_stations_dirs g map [1,2] |> Iter.to_list in
-  List.pp (Pair.pp (Pair.pp (Pair.pp Int.pp Int.pp) Dir.pp_upper) Track.pp_double) Format.std_formatter res;
+  List.pp (Pair.pp (Pair.pp Int.pp Int.pp) Dir.pp_upper) Format.std_formatter res;
   [%expect {|
     3, 4, Dir.Right, 5, 6,
     Dir.Left |}]
@@ -83,9 +78,8 @@ let%expect_test "connected_stations_dirs" =
 module Track = struct
   module TM = Trackmap
 
-  let track ?(double=false) dirs = 
-    let double = if double then `Double else `Single in
-    Track.make (Dir.Set.of_list dirs) (Track double) ~player:0
+  let track dirs = 
+    Track.make (Dir.Set.of_list dirs) (Track `Single) ~player:0
 
   let station dirs = 
     Track.make (Dir.Set.of_list dirs) (Station `Station) ~player:0
@@ -93,13 +87,13 @@ module Track = struct
   let dirs = [Dir.Left; Right]
   let y = 2
   (* x---- *)
-  let std_map ?(double=false) () =
+  let std_map () =
     TM.empty 7 7
-    |> TM.set ~x:1 ~y ~t:(track ~double @@ UpLeft::dirs)
-    |> TM.set ~x:2 ~y ~t:(track ~double dirs)
-    |> TM.set ~x:3 ~y ~t:(track ~double dirs)
-    |> TM.set ~x:4 ~y ~t:(track ~double dirs)
-    |> TM.set ~x:5 ~y ~t:(track ~double [Left])
+    |> TM.set ~x:1 ~y ~t:(track @@ UpLeft::dirs)
+    |> TM.set ~x:2 ~y ~t:(track dirs)
+    |> TM.set ~x:3 ~y ~t:(track dirs)
+    |> TM.set ~x:4 ~y ~t:(track dirs)
+    |> TM.set ~x:5 ~y ~t:(track [Left])
 
   let%expect_test "build_station at end of track" =
     (* x---- map *)
@@ -130,7 +124,7 @@ module Track = struct
     let g = TG.make ()
       |> TG.add_ixn ~x:1 ~y
       |> TG.add_ixn ~x:4 ~y
-      |> TG.add_segment ~xyd1:(1,1,Right) ~xyd2:(5,1,Left) ~dist:5 ~double:false
+      |> TG.add_segment ~xyd1:(1,1,Right) ~xyd2:(5,1,Left) ~dist:5
     in
     print_graph g;
     [%expect {| [[[5,1],[1,1],{"nodes":[[[1,1],["Right"]],[[5,1],["Left"]]],"dist":5,"double":false,"block":false}]] |}];
@@ -193,30 +187,13 @@ module Track = struct
     let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
     let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
     let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"double":false,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"double":false,"block":false}]] |}]
-
-  let%expect_test "build_track create double track in middle" =
-     (* x---x  -> x-=-x *)
-    let double = true in
-    let map = std_map () |> TM.set ~x:5 ~y ~t:(track ~double [Left; Right; UpRight]) in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
-    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
-    let map = TM.set map ~x:1 ~y ~t:(track ~double [Left; Right; UpRight]) in
-    let map = TM.set map ~x:2 ~y ~t:(track ~double [Left; Right]) in
-    let map = TM.set map ~x:3 ~y ~t:(track ~double [Left; Right]) in
-    let map = TM.set map ~x:4 ~y ~t:(track ~double [Left; Right]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
-    let g = TG.Track.handle_change_double_track g scan1 scan2 in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}]
 
   let%expect_test "build_track create ixn in middle (with stations)" =
      (* s---s  -> s-x-s *)
@@ -228,7 +205,7 @@ module Track = struct
     let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
     let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
@@ -249,35 +226,13 @@ module Track = struct
     let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
     let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
     let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"double":false,"block":false}],[[5,0],[3,2],{"nodes":[[[3,2],["UpRight"]],[[5,0],["DownLeft"]]],"dist":2,"double":false,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"double":false,"block":false}]] |}]
-
-  let%expect_test "build_track create+connect to another double ixn" =
-     (*    s          s
-          /          /
-       x---x  -> x-x-x *)
-    let double = true in
-    let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
-      |> TM.set ~x:4 ~y:(y-1) ~t:(track ~double [DownLeft; UpRight])
-      |> TM.set ~x:5 ~y:(y-2) ~t:(station [DownLeft; UpRight])
-    in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
-    let map = TM.set map ~x:3 ~y ~t:(track ~double [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
-    let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false
-    in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
-    let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
-    print_graph g;
-    [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"double":false,"block":false}],[[5,0],[3,2],{"nodes":[[[3,2],["UpRight"]],[[5,0],["DownLeft"]]],"dist":2,"double":true,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"double":false,"block":false}]] |}]
 
   let%expect_test "remove_track full" = 
      (* x---x  -> x- -x *)
@@ -288,7 +243,7 @@ module Track = struct
     let map = TM.remove map ~x:3 ~y in
     let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
@@ -305,7 +260,7 @@ module Track = struct
     let map = TM.set map ~x:3 ~y ~t:(track [Left]) in
     let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
@@ -322,7 +277,7 @@ module Track = struct
     let map = TM.set map ~x:5 ~y ~t:(track [Left]) in
     let scan2 = Scan.scan map ~x:5 ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
@@ -340,80 +295,13 @@ module Track = struct
     let map = TM.set map ~x ~y ~t:(track [Left]) in
     let scan2 = Scan.scan map ~x ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
     let g = TG.Track.handle_remove_track g ~x ~y scan1 scan2 in
     print_graph g;
     [%expect {| [] |}]
-
-  let%expect_test "change double track" = 
-    let double = true in
-     (* x=-=x  -> x===x *)
-    let map = std_map ~double ()
-      |> TM.set ~x:5 ~y ~t:(track ~double [Left; Right; UpRight])
-      |> TM.set ~x:3 ~y ~t:(track [Left; Right])
-    in
-    let x = 5 in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
-    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:false in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
-    let map = TM.set map ~x:3 ~y ~t:(track ~double [Left; Right]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
-    let g = TG.Track.handle_change_double_track g scan1 scan2 in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}]
-
-  let%expect_test "change double track on ixn" = 
-    let double = true in
-     (* X===x  -> X===X *)
-    let map = std_map ~double ()
-      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
-    in
-    let x = 5 in
-    let scan1 = Scan.scan map ~x:5 ~y ~player:0 in
-    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:false in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}];
-    let map = TM.set map ~x:5 ~y ~t:(track ~double [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:5 ~y ~player:0 in
-    let g = TG.Track.handle_change_double_track g scan1 scan2 in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}]
-
-  let%expect_test "change single track on ixn" = 
-    let double = true in
-     (* X===X  -> X===x *)
-    let map = std_map ~double ()
-      |> TM.set ~x:5 ~y ~t:(track ~double [Left; Right; UpRight])
-    in
-    let x = 5 in
-    let scan1 = Scan.scan map ~x:5 ~y ~player:0 in
-    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:true in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}];
-    let map = TM.set map ~x:5 ~y ~t:(track [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:5 ~y ~player:0 in
-    let g = TG.Track.handle_change_double_track g scan1 scan2 in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}]
-
-  let%expect_test "remove double track" = 
-    let double = true in
-     (* x===x  -> x=-=x *)
-    let map = std_map ~double () |> TM.set ~x:5 ~y ~t:(track ~double [Left; Right; UpRight]) in
-    let x = 5 in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
-    let g = TG.make () |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4 ~double:true in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":true,"block":false}]] |}];
-    let map = TM.set map ~x:3 ~y ~t:(track [Left; Right]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
-    let g = TG.Track.handle_change_double_track g scan1 scan2 in
-    print_graph g;
-    [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"double":false,"block":false}]] |}]
 
   let%expect_test "remove ixn in middle" = 
      (* x-x-x  -> x---x*)
@@ -426,8 +314,8 @@ module Track = struct
     let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
     let scan2 = Scan.scan map ~x ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2 ~double:false
-      |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
+      |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2
     in
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"double":false,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"double":false,"block":false}]] |}];
@@ -448,9 +336,9 @@ module Track = struct
     let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
     let scan2 = Scan.scan map ~x ~y ~player:0 in
     let g = TG.make ()
-      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2 ~double:false
-      |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2 ~double:false
-      |> TG.add_segment ~xyd1:(3,y,UpRight) ~xyd2:(4,y-1,DownLeft) ~dist:1 ~double:false
+      |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
+      |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2
+      |> TG.add_segment ~xyd1:(3,y,UpRight) ~xyd2:(4,y-1,DownLeft) ~dist:1
     in
     print_graph g;
     [%expect {| [[[4,1],[3,2],{"nodes":[[[3,2],["UpRight"]],[[4,1],["DownLeft"]]],"dist":1,"double":false,"block":false}],[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"double":false,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"double":false,"block":false}]] |}];
