@@ -25,7 +25,7 @@ end
 
   (* Direction of travel, since stations have only 2 dirs that are opposite. *)
 type upper = [`Upper | `Lower]
-  [@@deriving yojson, show]
+  [@@deriving yojson, ord, show, eq]
 
 (* Helps us catalog directions *)
 let catalog x =

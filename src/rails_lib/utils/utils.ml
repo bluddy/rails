@@ -83,12 +83,15 @@ type loc = int * int
 type locd = loc * Dir.t
   [@@deriving eq, ord, yojson, show]
 
+type locu = loc * Dir.upper
+  [@@deriving eq, ord, yojson, show]
+
 type locdpair = locd * locd
   [@@deriving eq, ord, yojson]
 
-module LocdSet = Set.Make(struct
-  type t = locd [@@deriving yojson]
-  let compare = compare_locd
+module LocuSet = Set.Make(struct
+  type t = locu [@@deriving yojson]
+  let compare = compare_locu
 end)
 
   (* A canonical order for locdp *)

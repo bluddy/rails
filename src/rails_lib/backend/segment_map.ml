@@ -245,10 +245,10 @@ let build_station graph v trackmap loc after =
           let ixn = (ixns.x, ixns.y) in
           (* We need to find the set differences. If it's a station, use that *)
           if Trackmap.has_station ixn trackmap then
-            Utils.LocdSet.singleton (ixn, ixns.dir)
+            Utils.LocuSet.singleton (ixn, Dir.catalog ixns.dir)
           else
           Track_graph.connected_stations_dirs graph trackmap [ixn]
-            |> Utils.LocdSet.of_iter
+            |> Utils.LocuSet.of_iter
         in
         let set1 = get_station_sets ixn1s in
         let set2 = get_station_sets ixn2s in
@@ -257,13 +257,13 @@ let build_station graph v trackmap loc after =
            Common sets: don't separate
         *)
         (* Nothing to do if we have any empty station sets or if they're the same *)
-        if Utils.LocdSet.equal set1 set2 || Utils.LocdSet.is_empty set1 || Utils.LocdSet.is_empty set2 then
+        if Utils.LocuSet.equal set1 set2 || Utils.LocuSet.is_empty set1 || Utils.LocuSet.is_empty set2 then
           segments
         else
           (* Get one member of set1 *)
-          let mem_set1 = Utils.LocdSet.choose set1 in
+          let mem_set1 = Utils.LocuSet.choose set1 in
           let seg1 = get_id mem_set1 segments in
-          let mem_set2 = Utils.LocdSet.choose set2 in
+          let mem_set2 = Utils.LocuSet.choose set2 in
           let seg2 = get_id mem_set2 segments in
           if not @@ equal_id seg1 seg2 then
             segments
@@ -275,7 +275,7 @@ let build_station graph v trackmap loc after =
             (* Create a new segment for the split segment *)
             let seg2 = new_id segments in
             (* Assign seg2 to all set2 stations *)
-            Utils.LocdSet.iter (fun locd -> add locd seg2 segments) set2;
+            Utils.LocuSet.iter (fun locd -> add locd seg2 segments) set2;
             segments
           end
 
