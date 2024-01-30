@@ -1,6 +1,7 @@
 open! Containers
 open! Utils
 module C = Constants
+module LocdSet = Utils.LocdSet
 
 (* Module for searching the trackmap for stations and ixns, and the trainmap for trains
    For updating the graph and the station segment connectivity
@@ -108,8 +109,8 @@ let scan tracks ~x ~y ~player =
       else if Track.is_station track then Station scan
       else Track scan
 
-  (* Scan for number of trains in the station segment. Assumes we're not pointing to a station! *)
-let scan_station_segment_for_trains tracks trains ~x ~y dir ~player =
+  (* Scan for number of trains in the station segment. *)
+let scan_station_segment tracks trains ~x ~y dir ~player =
   let (let*) = Option.bind in
   let seen_ixns = Hashtbl.create 10 in
   let rec loop x y dir =
@@ -156,29 +157,32 @@ let scan_station_segment_for_trains tracks trains ~x ~y dir ~player =
     | _ -> 0, false
   in
   let loc = x, y in
-  match Trackmap.get tracks ~x ~y with
-  | Some track when Track.is_station track ->
-      let train_idxs = Trainmap.get_at_loc loc trains in
-      let count = _train_count_in_ixn trains train_idxs dir in
-      let count2, double = match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
-        | Some (x, y) -> loop x y dir
-        | _ -> 0, true
-      in
-      count + count2, double
+  let count, double =
+    match Trackmap.get tracks ~x ~y with
+    | Some track when Track.is_station track ->
+        let train_idxs = Trainmap.get_at_loc loc trains in
+        let count = _train_count_in_ixn trains train_idxs dir in
+        let count2, double = match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
+          | Some (x, y) -> loop x y dir
+          | _ -> 0, true
+        in
+        count + count2, double
 
-  | Some track ->
-      (* We don't care about user-provided dir when it's an ixn or track *)
-      let count = Trainmap.get_at_loc loc trains |> List.length in
-      let double = Track.acts_like_double track in
-      Dir.Set.fold (fun ((count, double) as acc) dir ->
-        (* We only want to count in the dir we're going so we don't double-count*)
-        match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
-        | Some (x, y) ->
-          let count2, double2 = loop x y dir in
-          count + count2, double && double2
-        | _ -> acc)
-      (count, double)
-      track.dirs
+    | Some track ->
+        (* We don't care about user-provided dir when it's an ixn or track *)
+        let count = Trainmap.get_at_loc loc trains |> List.length in
+        let double = Track.acts_like_double track in
+        Dir.Set.fold (fun ((count, double) as acc) dir ->
+          (* We only want to count in the dir we're going so we don't double-count*)
+          match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
+          | Some (x, y) ->
+            let count2, double2 = loop x y dir in
+            count + count2, double && double2
+          | _ -> acc)
+        (count, double)
+        track.dirs
 
-  | _ -> 0, false
+    | _ -> 0, false
+  in
+  count, Track.double_of_bool double
 

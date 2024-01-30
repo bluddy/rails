@@ -203,61 +203,64 @@ let shortest_path ~src ~dest v =
   | (_,edge,_)::_ -> Edge.dir_of_xy src edge
   | _ -> None
 
+module LocdSet = Utils.LocdSet
+module LocSet = Utils.LocSet
+
   (* Get stations directly connected to a particular ixn or station
      using the track graph.
      exclude_dir: exclude searching in a given direction
      exclude_ixns: exclude these ixns from the search
    *)
 let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
-  let stations = Hashtbl.create 10 in
+  let stations = LocuSet.create 10 in
   let rec loop ixns =
-    let next_ixns = Hashtbl.create 10 in
+    let next_ixns = LocSet.create 10 in
     (* Iterate over ixns we built up *)
-    Hashtbl.iter (fun ixn () ->
-      if Hashtbl.mem seen_ixns ixn then ()
+    LocSet.iter (fun ixn ->
+      if LocSet.mem seen_ixns ixn then ()
       else ( 
         (* loop over attached ixn/dirs *)
         iter_succ_ixn_dirs (fun ixn dir ->
           if Trackmap.has_station ixn trackmap then 
             (* Add to results *)
-            Hashtbl.replace stations (ixn, Dir.catalog dir) ()
+            LocuSet.insert stations (ixn, Dir.catalog dir)
           else 
             (* To be handled in next iteration *)
-            Hashtbl.replace next_ixns ixn ())
+            LocSet.insert next_ixns ixn)
         ~ixn
         graph
       );
       (* Mark that we saw this ixn *)
-      Hashtbl.replace seen_ixns ixn ())
+      LocSet.insert seen_ixns ixn)
       ixns;
     (* Check if done: no more ixns to examine *)
-    if Hashtbl.length next_ixns = 0 then (
+    if LocSet.cardinal next_ixns = 0 then (
      (* Remove starting ixns which might have snuck in *)
-      Hashtbl.iter (fun ixn _ ->
-        Hashtbl.remove stations (ixn, `Upper);
-        Hashtbl.remove stations (ixn, `Lower);
+      LocSet.iter (fun ixn ->
+        LocuSet.remove stations (ixn, `Upper);
+        LocuSet.remove stations (ixn, `Lower);
       ) start_ixns;
-      Hashtbl.to_iter stations |> Iter.map fst
+      stations
     ) else
       loop next_ixns
   in
   loop start_ixns
 
 let connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap ixn =
-  let start_ixns = Hashtbl.create 5 in
+  let start_ixns = LocSet.create 5 in
   (* Prevent loops *)
-  let seen_ixns = Hashtbl.create 5 in
+  let seen_ixns = LocSet.create 5 in
   find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
-  |> Option.iter (fun ixn2 -> Hashtbl.replace seen_ixns ixn2 ());
-  Hashtbl.replace start_ixns ixn ();
+  |> Option.iter (LocSet.insert seen_ixns);
+  LocSet.insert start_ixns ixn;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
-  let start_ixns = Hashtbl.create 5 in
+  let start_ixns = LocSet.create 5 in
   (* Prevent loops *)
-  let seen_ixns = Hashtbl.create 5 in
-  List.iter (fun ixn -> Hashtbl.replace seen_ixns ixn ()) exclude_ixns;
-  List.iter (fun ixn -> Hashtbl.replace start_ixns ixn ()) ixns;
+  let seen_ixns = LocSet.create 5 in
+  List.iter (LocSet.insert seen_ixns) exclude_ixns;
+  List.iter (LocSet.insert start_ixns) ixns;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 module Track = struct

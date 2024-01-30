@@ -89,9 +89,22 @@ type locu = loc * Dir.upper
 type locdpair = locd * locd
   [@@deriving eq, ord, yojson]
 
-module LocuSet = Set.Make(struct
+module LocSet = CCHashSet.Make(struct
+  type t = loc [@@deriving yojson]
+  let equal = equal_loc
+  let hash = Hashtbl.hash
+end)
+
+module LocdSet = CCHashSet.Make(struct
+  type t = locd [@@deriving yojson]
+  let equal = equal_locd
+  let hash = Hashtbl.hash
+end)
+
+module LocuSet = CCHashSet.Make(struct
   type t = locu [@@deriving yojson]
-  let compare = compare_locu
+  let equal = equal_locu
+  let hash = Hashtbl.hash
 end)
 
   (* A canonical order for locdp *)

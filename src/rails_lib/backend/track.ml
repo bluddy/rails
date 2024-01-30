@@ -4,6 +4,8 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 type double = [ `Double | `Single ]
   [@@deriving eq, yojson, hash, show]
 
+let double_of_bool x = if x then `Double else `Single
+
 let combine_double x y = match x, y with
   | `Double, `Double -> `Double
   | _ -> `Single
