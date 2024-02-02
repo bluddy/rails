@@ -27,7 +27,7 @@ let make () = {
   stations=Hashtbl.create 10;
 }
 
-let new_id ?(double=`Double) v =
+let new_seg ?(double=`Double) v =
   (* Find a missing id to use *)
   let id =
     let rec loop i =
@@ -40,51 +40,50 @@ let new_id ?(double=`Double) v =
   Log.debug (fun f -> f "Segment: new id %d" id);
   Id.of_int id
 
-let remove_id id v =
+let remove_seg id v =
   Hashtbl.remove v.info id
 
-let add (loc, d) id v =
+let add_station (loc, d) id v =
   (* add a station and direction + matching id *)
   Hashtbl.replace v.stations (loc, d) id
 
-let remove (loc, d) v =
+let remove_station (loc, d) v =
   (* remove a station and direction *)
   Hashtbl.remove v.stations (loc, d)
 
-let set_count idx v ~count =
-  (* reset the count for a segment id *)
+let set_seg_train_count idx v ~count =
   let info = Hashtbl.find v.info idx in
-  info.count <- 0
+  info.count <- count
 
-let get_id locd v =
+let get_station_seg locd v =
   (* get id for station/dir *)
   Hashtbl.find v.stations locd
 
-let get_double id v =
+let get_seg_double id v =
   let info = Hashtbl.find v.info id in
   info.double
 
-let set_double id double v =
+let set_seg_double id double v =
   (* Update with new double state *)
   let info = Hashtbl.find v.info id in
   if not @@ Track.equal_double info.double double then 
     Hashtbl.replace v.info id {info with double=double}
   else ()
 
-let incr_train locd v =
-  let id = get_id locd v in
+let seg_incr_train locd v =
+  let id = get_seg_id locd v in
   Log.debug (fun f -> f "Segment: incr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
   info.count <- info.count + 1
 
-let decr_train locd v =
-  let id = get_id locd v in
+let seg_decr_train locd v =
+  let id = get_seg_id locd v in
   Log.debug (fun f -> f "Segment: decr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
   if info.count > 0 then
     info.count <- info.count - 1
 
-let remap_station_ids ~from_id to_id v =
+let remap_station_seg_ids ~from_id to_id v =
   (* Remap all stations of a certain id to another one *)
   let stations_to_change = Hashtbl.fold
     (fun locd id acc -> if Id.equal id from_id then locd::acc else acc)
@@ -93,90 +92,94 @@ let remap_station_ids ~from_id to_id v =
   List.iter (fun locd -> Hashtbl.replace v.stations locd to_id) stations_to_change
 
 (* Merge segments so seg2 joins seg. All stations must be changed *)
-let merge_ids ~from_id to_id v =
+let merge_segs ~from_id to_id v =
   Log.debug (fun f -> f "Segment: Merge seg_ids %s, %s" (Id.show to_id) (Id.show from_id));
   (* combine counts *)
   let info = Hashtbl.find v.info to_id in
   let from_info = Hashtbl.find v.info from_id in
   info.count <- info.count + from_info.count;
-  remap_station_ids ~from_id to_id v;
-  remove_id from_id v
+  (* double is harder to deal with and requires handling *)
+  remap_station_seg_ids ~from_id to_id v;
+  remove_seg from_id v
 
-let get_id_station_count id v =
+let get_seg_station_count id v =
   (* O(num_ids) *)
-  Hashtbl.fold (fun _ id2 num -> if Id.equal id id2 then num + 1 else num) v.stations 0
+  Hashtbl.fold (fun _ id2 num ->
+    if Id.equal id id2 then num + 1 else num)
+    v.stations
+    0
+
+(* --- Handling different usecases --- *)
 
 (* When we build a station, we create new station segments on both ends of the station *)
-let build_station graph v trackmap trains loc after =
+let handle_build_station graph v trackmap trains loc after =
   let x, y = loc in
   (* Connected ixns *)
   let ixns = match after with
     | Scan.Station ixns -> ixns  (* 0/1/2 *)
     | _ -> assert false
   in
-  (* Get list of (dir, stations set on both sides) *)
-  let dir_stations =
+  let dir_stations_on_both_sides =
     List.filter_map (fun ixn ->
       let exclude_dir = Dir.opposite ixn.Scan.dir in
       let stations = Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap loc in
       if LocuSet.cardinal stations = 0 then None else Some(ixn.search_dir, stations))
     ixns
   in
-  match dir_stations with
+  match dir_stations_on_both_sides with
   | [] -> (* No connected stations found: add new ids to both ends *)
-      let id = new_id v in
-      let id2 = new_id v in
-      add (loc, `Upper) id v;
-      add (loc, `Lower) id2 v;
+      let id = new_seg v in
+      let id2 = new_seg v in
+      add_station (loc, `Upper) id v;
+      add_station (loc, `Lower) id2 v;
       v
     (* Found only one id. Add one new one and add to both ends *)
   | [dir, loc_dirs] -> 
       (* Add to existing id, update double info *)
       let loc_dir = LocuSet.to_iter loc_dirs |> Iter.head_exn in
-      let id = get_id loc_dir v in
-      add (loc, Dir.catalog dir) id v;
+      let seg_id = get_seg_id loc_dir v in
+      add_station (loc, Dir.catalog dir) seg_id v;
       let _, double = Scan.scan_station_segment trackmap trains ~x ~y dir ~player:0 in
-      set_double id double v;
+      set_seg_double seg_id double v;
       
       (* New segment for missing end *)
-      let id2 = new_id v in
-      add (loc, Dir.catalog @@ Dir.opposite dir) id2 v;
+      let seg_id = new_seg v in
+      add_station (loc, Dir.catalog @@ Dir.opposite dir) seg_id v;
       v
 
     (* Found stations on both dirs. *)
   | [dir1, loc_dirs1; dir2, loc_dirs2 ] ->
       assert Dir.(equal (opposite dir1) dir2);
 
-      (* On first end, add existing id to our station and update double *)
       let loc_dir1 = LocuSet.to_iter loc_dirs1 |> Iter.head_exn in
-      let id1 = get_id loc_dir1 v in
+      let seg_id1 = get_seg_id loc_dir1 v in
       let loc_dir2 = LocuSet.to_iter loc_dirs2 |> Iter.head_exn in
-      let id2 = get_id loc_dir2 v in
+      let seg_id2 = get_seg_id loc_dir2 v in
       (* Check if it's the same segment. They should have nothing in common *)
       let intersect = LocuSet.inter loc_dirs1 loc_dirs2 in
       if LocuSet.cardinal intersect > 0 then (
         (* Same segment on both sides *)
-        add (loc, Dir.catalog dir1) id1 v;
-        add (loc, Dir.catalog dir2) id1 v;
+        add_station (loc, Dir.catalog dir1) seg_id1 v;
+        add_station (loc, Dir.catalog dir2) seg_id1 v;
         (* Double status and count stays the same *)
         v
       ) else (
         (* Split segments with new station. On one end, connect *)
-        add (loc, Dir.catalog dir1) id1 v;
+        add_station (loc, Dir.catalog dir1) seg_id1 v;
         let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir1 ~player:0 in
-        set_double id1 double v;
-        set_count id1 ~count v;
+        set_seg_double seg_id1 double v;
+        set_seg_train_count seg_id1 ~count v;
 
         (* On second end, create a new id and apply it to all stations *)
-        let id = new_id v in
-        add (loc, Dir.catalog dir2) id v;
-        LocuSet.iter (fun loc_dir -> add loc_dir id v) loc_dirs2;
+        let seg_id = new_seg v in
+        add_station (loc, Dir.catalog dir2) seg_id v;
+        LocuSet.iter (fun loc_dir -> add_station loc_dir seg_id v) loc_dirs2;
         let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir2 ~player:0 in
-        set_double id double v;
-        set_count id ~count v;
+        set_seg_double seg_id double v;
+        set_seg_train_count seg_id ~count v;
 
         (* GC old id if needed *)
-        if get_id_station_count id2 v = 0 then remove_id id2 v;
+        if get_seg_station_count seg_id2 v = 0 then remove_seg seg_id2 v;
         v
       )
 
@@ -205,14 +208,23 @@ let build_station graph v trackmap trains loc after =
         let loc = (ixn.x, ixn.y) in
         if Trackmap.has_station loc trackmap then
           (* Handle case where ixn is station *)
-          [(loc, Dir.catalog ixn.dir), `Double]
+          LocuSet.singleton (loc, Dir.catalog ixn.dir)
         else
-          (* Gets us potentially only part of the station segment *)
-          Track_graph.connected_stations_dirs graph trackmap [loc] ~exclude_ixns:[(exclude_ixn.x, exclude_ixn.y)] |> Iter.to_list
+          Track_graph.connected_stations_dirs graph trackmap [loc] ~exclude_ixns:[(exclude_ixn.x, exclude_ixn.y)]
       in
       let stations1 = get_stations ixn1_res ixn2_res in
       let stations2 = get_stations ixn2_res ixn1_res in
-      let double = Track.combine_double (all_double stations1) (all_double stations2) in
+      if LocuSet.cardinal stations1 = 0 || LocuSet.cardinal stations2 = 0 then
+        (* If either set is empty, do nothing: we're not connecting to any station *)
+        v
+      else if LocuSet.inter stations1 stations2 |> LocuSet.cardinal > 0 then
+        (* If it's the same segment on both sides, only update train count and double *)
+        let train_cnt, double =
+          Scan.scan_station_segment trackmap trains ~x:(ixn1_res.x) ~y:(ixn1_res.y) ixn1_res.dir ~player:0
+        in
+        let station = stations1.to_iter |> Iter.get_exn in
+        let id = get_station_seg station in
+        set_seg_double
       match stations1, stations2 with
       | (locd1, _)::_, (locd2, _)::_ ->
         (* Update double values: they could come from unseen areas *)
@@ -337,7 +349,7 @@ let build_station graph v trackmap trains loc after =
     (* GC: delete segments with no other stations *)
     List.iter (fun dir ->
       let seg1 = get_id (station_loc, dir) v in
-      remove_id seg1 v;
+      remove_seg seg1 v;
     )
     empty_dirs;
     (* Finally, delete entries for station no matter what *)
