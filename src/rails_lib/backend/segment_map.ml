@@ -248,6 +248,7 @@ let handle_build_station graph v trackmap trains loc after =
       | _ -> v
          (* Do nothing if there's no stations *)
       )
+    *)
 
     (* Removing a piece of track can split a segment. Unfortunately we can't
        keep track of the segment's semaphore value unless we scan the whole segment for

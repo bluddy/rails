@@ -92,13 +92,15 @@ type locdpair = locd * locd
 (* Expand CCHashSet *)
 module type S2 = sig
   include CCHashSet.S
-  val choose_opt: t -> elt option
+  val choose: t -> elt option
+  val choose_exn: t -> elt
 end
 
 module HashSet = struct
   module Make(E: CCHashSet.ELEMENT) : S2 with type elt = E.t = struct
     include CCHashSet.Make(E)
-    let choose_opt v = to_iter v |> Iter.head
+    let choose v = to_iter v |> Iter.head
+    let choose_exn v = to_iter v |> Iter.head_exn
   end
 end
 
