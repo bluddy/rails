@@ -89,19 +89,32 @@ type locu = loc * Dir.upper
 type locdpair = locd * locd
   [@@deriving eq, ord, yojson]
 
-module LocSet = CCHashSet.Make(struct
+(* Expand CCHashSet *)
+module type S2 = sig
+  include CCHashSet.S
+  val choose_opt: t -> elt option
+end
+
+module HashSet = struct
+  module Make(E: CCHashSet.ELEMENT) : S2 with type elt = E.t = struct
+    include CCHashSet.Make(E)
+    let choose_opt v = to_iter v |> Iter.head
+  end
+end
+
+module LocSet = HashSet.Make(struct
   type t = loc [@@deriving yojson]
   let equal = equal_loc
   let hash = Hashtbl.hash
 end)
 
-module LocdSet = CCHashSet.Make(struct
+module LocdSet = HashSet.Make(struct
   type t = locd [@@deriving yojson]
   let equal = equal_locd
   let hash = Hashtbl.hash
 end)
 
-module LocuSet = CCHashSet.Make(struct
+module LocuSet = HashSet.Make(struct
   type t = locu [@@deriving yojson]
   let equal = equal_locu
   let hash = Hashtbl.hash
