@@ -71,13 +71,13 @@ let set_seg_double id double v =
   else ()
 
 let seg_incr_train locd v =
-  let id = get_seg_id locd v in
+  let id = get_station_seg locd v in
   Log.debug (fun f -> f "Segment: incr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
   info.count <- info.count + 1
 
 let seg_decr_train locd v =
-  let id = get_seg_id locd v in
+  let id = get_station_seg locd v in
   Log.debug (fun f -> f "Segment: decr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
   if info.count > 0 then
@@ -136,8 +136,8 @@ let handle_build_station graph v trackmap trains loc after =
     (* Found only one id. Add one new one and add to both ends *)
   | [dir, loc_dirs] -> 
       (* Add to existing id, update double info *)
-      let loc_dir = LocuSet.to_iter loc_dirs |> Iter.head_exn in
-      let seg_id = get_seg_id loc_dir v in
+      let loc_dir = LocuSet.choose_exn loc_dirs in
+      let seg_id = get_station_seg loc_dir v in
       add_station (loc, Dir.catalog dir) seg_id v;
       let _, double = Scan.scan_station_segment trackmap trains ~x ~y dir ~player:0 in
       set_seg_double seg_id double v;
@@ -151,10 +151,10 @@ let handle_build_station graph v trackmap trains loc after =
   | [dir1, loc_dirs1; dir2, loc_dirs2 ] ->
       assert Dir.(equal (opposite dir1) dir2);
 
-      let loc_dir1 = LocuSet.to_iter loc_dirs1 |> Iter.head_exn in
-      let seg_id1 = get_seg_id loc_dir1 v in
-      let loc_dir2 = LocuSet.to_iter loc_dirs2 |> Iter.head_exn in
-      let seg_id2 = get_seg_id loc_dir2 v in
+      let loc_dir1 = LocuSet.choose_exn loc_dirs1 in
+      let seg_id1 = get_station_seg loc_dir1 v in
+      let loc_dir2 = LocuSet.choose_exn loc_dirs2 in
+      let seg_id2 = get_station_seg loc_dir2 v in
       (* Check if it's the same segment. They should have nothing in common *)
       let intersect = LocuSet.inter loc_dirs1 loc_dirs2 in
       if LocuSet.cardinal intersect > 0 then (
@@ -217,38 +217,24 @@ let handle_build_station graph v trackmap trains loc after =
       if LocuSet.cardinal stations1 = 0 || LocuSet.cardinal stations2 = 0 then
         (* If either set is empty, do nothing: we're not connecting to any station *)
         v
-      else if LocuSet.inter stations1 stations2 |> LocuSet.cardinal > 0 then
-        (* If it's the same segment on both sides, only update train count and double *)
-        let train_cnt, double =
+      else (
+        let station1 = LocuSet.choose_exn stations1 in
+        let station2 = LocuSet.choose_exn stations2 in
+        let id1 = get_station_seg station1 v in
+        let id2 = get_station_seg station2 v in
+        if not @@ Id.equal id1 id2 then (
+          (* We're joining 2 segments. Combine and update count & double *)
+          merge_segs ~from_id:id2 id1 v
+        );
+        (* update train count and double *)
+        let count, double =
           Scan.scan_station_segment trackmap trains ~x:(ixn1_res.x) ~y:(ixn1_res.y) ixn1_res.dir ~player:0
         in
-        let station = stations1.to_iter |> Iter.get_exn in
-        let id = get_station_seg station in
-        set_seg_double
-      match stations1, stations2 with
-      | (locd1, _)::_, (locd2, _)::_ ->
-        (* Update double values: they could come from unseen areas *)
-        let id1 = get_id locd1 v in
-        let double1 = get_double id1 v in
-        let id2 = get_id locd2 v in
-        let double2 = get_double id2 v in
-        set_double id1 (Track.combine_double double @@ Track.combine_double double1 double2) v;
-        if Id.equal id1 id2 then v
-        else (
-          merge_ids id1 ~from_id:id2 v;
-          v
-        )
-      | (locd, _)::_, _
-      | _, (locd, _)::_ ->
-        (* Only one connection - just update double *)
-        let id1 = get_id locd v in
-        let double1 = get_double id1 v in
-        set_double id1 (Track.combine_double double double1) v;
+        set_seg_double id1 double v;
+        set_seg_train_count id1 ~count v;
         v
-      | _ -> v
-         (* Do nothing if there's no stations *)
       )
-    *)
+    )
 
     (* Removing a piece of track can split a segment. Unfortunately we can't
        keep track of the segment's semaphore value unless we scan the whole segment for
