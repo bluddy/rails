@@ -94,6 +94,7 @@ module type S2 = sig
   include CCHashSet.S
   val choose: t -> elt option
   val choose_exn: t -> elt
+  val is_empty: t -> bool
 end
 
 module HashSet = struct
@@ -101,6 +102,7 @@ module HashSet = struct
     include CCHashSet.Make(E)
     let choose v = to_iter v |> Iter.head
     let choose_exn v = to_iter v |> Iter.head_exn
+    let is_empty v = cardinal v > 0
   end
 end
 

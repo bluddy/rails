@@ -189,7 +189,7 @@ let handle_build_station graph v trackmap trains loc after =
   (* We only care about connecting to a new piece of track that could lead
     to a station. ixns and stations are the same for this
   *)
-  let build_track graph trackmap v before after =
+  let build_track graph trackmap trains v before after =
     let join_ixns = match before, after with
       (* Add an attached ixn: make the two have the same segment *)
       | Scan.Track [_], Scan.Track [ixn2; ixn3] -> Some (ixn2, ixn3)
@@ -236,13 +236,8 @@ let handle_build_station graph v trackmap trains loc after =
       )
     )
 
-    (* Removing a piece of track can split a segment. Unfortunately we can't
-       keep track of the segment's semaphore value unless we scan the whole segment for
-       trains.
-       We're too lazy to do that so we'll just set all segment values to 0.
-       NOTE: This can cause train crashes. Implement with mapping to trains.
-     *)
-  let remove_track graph trackmap segments (before:Scan.t) (after:Scan.t) =
+    (* Removing a piece of track can split a segment. *)
+  let remove_track graph trackmap trains v (before:Scan.t) (after:Scan.t) =
     let split_ixns = match before, after with
       (* Disconnecting a track leading to 2 ixns: if all paths are disconnected, create new segment *)
       | Track [ixn1; ixn2], _ -> Some(ixn1, ixn2)
@@ -254,7 +249,7 @@ let handle_build_station graph v trackmap trains loc after =
     in
     (* Find the sets of stations/dirs from each ixn. *)
     match split_ixns with
-    | None -> segments
+    | None -> v
     | Some (ixn1s, ixn2s) ->
         let get_station_sets (ixns:Scan.ixn) =
           let ixn = (ixns.x, ixns.y) in
@@ -262,36 +257,40 @@ let handle_build_station graph v trackmap trains loc after =
           if Trackmap.has_station ixn trackmap then
             Utils.LocuSet.singleton (ixn, Dir.catalog ixns.dir)
           else
-          Track_graph.connected_stations_dirs graph trackmap [ixn]
-            |> Utils.LocuSet.of_iter
+            Track_graph.connected_stations_dirs graph trackmap [ixn]
         in
         let set1 = get_station_sets ixn1s in
         let set2 = get_station_sets ixn2s in
-        (* Possible situations:
-           No intersection: make sure they're separate
-           Common sets: don't separate
-        *)
-        (* Nothing to do if we have any empty station sets or if they're the same *)
-        if Utils.LocuSet.equal set1 set2 || Utils.LocuSet.is_empty set1 || Utils.LocuSet.is_empty set2 then
-          segments
+        (* Nothing to do if we have any empty station sets or if they're the same segment still *)
+        if LocuSet.equal set1 set2 || LocuSet.is_empty set1 || LocuSet.is_empty set2 then
+          v
         else
-          (* Get one member of set1 *)
-          let mem_set1 = Utils.LocuSet.choose set1 in
-          let seg1 = get_id mem_set1 segments in
-          let mem_set2 = Utils.LocuSet.choose set2 in
-          let seg2 = get_id mem_set2 segments in
-          if not @@ equal_id seg1 seg2 then
-            segments
+          (* Separate segments *)
+          let mem_set1 = LocuSet.choose_exn set1 in
+          let seg1 = get_station_seg mem_set1 v in
+          let mem_set2 = LocuSet.choose_exn set2 in
+          let seg2 = get_station_seg mem_set2 v in
+          if not @@ Id.equal seg1 seg2 then
+            (* They're already different segments *)
+            v
           else begin
-            (* seg1 == seg2
-              We don't know how mnay trains, so set value of segment to 0 *)
-            (* TODO: find how many trains per new set *)
-            reset seg1 segments;
+            (* Same segment. Need to split it *)
+            let count, double =
+              Scan.scan_station_segment trackmap trains ~x:(ixn1s.x) ~y:(ixn1s.y) ixn1s.dir ~player:0
+            in
+            set_seg_double seg1 double v;
+            set_seg_train_count seg1 ~count v;
+
             (* Create a new segment for the split segment *)
-            let seg2 = new_id segments in
+            let seg2 = new_seg v in
             (* Assign seg2 to all set2 stations *)
-            Utils.LocuSet.iter (fun locd -> add locd seg2 segments) set2;
-            segments
+            LocuSet.iter (fun locd -> add_station locd seg2 v) set2;
+            let count, double =
+              Scan.scan_station_segment trackmap trains ~x:(ixn2s.x) ~y:(ixn2s.y) ixn2s.dir ~player:0
+            in
+            set_seg_double seg1 double v;
+            set_seg_train_count seg1 ~count v;
+            v
           end
 
     (* Removing a station. *)
