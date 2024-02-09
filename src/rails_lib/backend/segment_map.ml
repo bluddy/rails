@@ -189,7 +189,7 @@ let handle_build_station graph v trackmap trains loc after =
   (* We only care about connecting to a new piece of track that could lead
     to a station. ixns and stations are the same for this
   *)
-  let build_track graph trackmap trains v before after =
+  let handle_build_track graph trackmap trains v before after =
     let join_ixns = match before, after with
       (* Add an attached ixn: make the two have the same segment *)
       | Scan.Track [_], Scan.Track [ixn2; ixn3] -> Some (ixn2, ixn3)
@@ -236,8 +236,10 @@ let handle_build_station graph v trackmap trains loc after =
       )
     )
 
-    (* Removing a piece of track can split a segment. *)
-  let remove_track graph trackmap trains v (before:Scan.t) (after:Scan.t) =
+    (* Removing a piece of track can split a segment.
+       Check if it's truly split. If so, update counts and double status.
+       *)
+  let handle_remove_track graph trackmap trains v (before:Scan.t) (after:Scan.t) =
     let split_ixns = match before, after with
       (* Disconnecting a track leading to 2 ixns: if all paths are disconnected, create new segment *)
       | Track [ixn1; ixn2], _ -> Some(ixn1, ixn2)
@@ -294,12 +296,14 @@ let handle_build_station graph v trackmap trains loc after =
           end
 
     (* Removing a station. *)
+    (* NOTE: assumes we complete remove the track too *)
     (* Cases:
        - No connection: just delete both segments
-       - 1+ connection: for each side, see if you're the only station. If so, delete the segment
+       - 1+ connection: for each side, see if you're the only station.
          - For non-station side, delete segment
+       - Train count and double: cannot be affected since we're an edge
     *)
-  let remove_station graph trackmap v station_loc (before:Scan.t) =
+  let handle_remove_station graph trackmap v station_loc (before:Scan.t) =
     let x, y = station_loc in
     let tile = Trackmap.get_exn trackmap ~x ~y in
     let dirs = tile.Track.dirs |> Dir.Set.to_list in
@@ -308,6 +312,7 @@ let handle_build_station graph v trackmap trains loc after =
         [(ixn1.x, ixn1.y), ixn1.search_dir; (ixn2.x, ixn2.y), ixn2.search_dir], []
 
       | Station [ixn] ->
+        (* Delete just one side *)
         [(ixn.x, ixn.y), ixn.search_dir], [Dir.opposite ixn.search_dir]
 
       | Station [] ->
@@ -316,32 +321,28 @@ let handle_build_station graph v trackmap trains loc after =
       
       | _ -> assert false
     in
-    (* Check if we have more empty dirs, i.e. no stations *)
+    (* Check if we have more empty dirs, i.e. no stations but just ixns *)
     let empty_dirs =
       List.fold_left (fun acc (loc, search_dir) ->
-        (* Get either station here or connected stations *)
+        (* Get either the station here or connected stations *)
         if Trackmap.has_station loc trackmap then acc
         else
           let station_connected =
-            Track_graph.connected_stations_dirs graph trackmap loc ~exclude_ixns:[station_loc]
-            |> Iter.head
+            Track_graph.connected_stations_dirs graph trackmap [loc] ~exclude_ixns:[station_loc]
           in
-          match station_connected with
-          | None -> search_dir::acc
-          | _ -> acc)
+          if LocuSet.is_empty station_connected then
+            search_dir::acc
+          else acc)
       empty_dirs
       ixns
     in
-    (* GC: delete segments with no other stations *)
+    (* GC: delete empty segments *)
     List.iter (fun dir ->
-      let seg1 = get_id (station_loc, dir) v in
-      remove_seg seg1 v;
-    )
+      let seg1 = get_station_seg (station_loc, Dir.catalog dir) v in
+      remove_seg seg1 v)
     empty_dirs;
     (* Finally, delete entries for station no matter what *)
-    List.iter (fun dir ->
-      remove (station_loc, dir) v;
-    ) dirs;
+    List.iter (fun dir -> remove_station (station_loc, Dir.catalog dir) v) dirs;
     v
 
   (* TODO: change_double track *)

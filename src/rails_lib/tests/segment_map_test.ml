@@ -18,6 +18,8 @@ let build_road start end_ map =
 
 let print (segments:SM.t) = SM.yojson_of_t segments |> Yojson.Safe.to_string |> print_string
 
+let trainmap = Trainmap.empty ()
+
 let player = 0
 
 let build_track (x,y) (tmap, graph, segments) ~dirs =
@@ -25,7 +27,7 @@ let build_track (x,y) (tmap, graph, segments) ~dirs =
   let tmap = TM.set ~x ~y ~t:(make_tm dirs) tmap in
   let after = TS.scan tmap ~x ~y ~player in
   let graph = TG.Track.handle_build_track graph ~x ~y before after in
-  let segments = SM.build_track graph tmap segments before after in
+  let segments = SM.handle_build_track graph tmap trainmap segments before after in
   tmap, graph, segments
 
 let remove_track (x,y) (tmap, graph, segments) =
@@ -33,7 +35,7 @@ let remove_track (x,y) (tmap, graph, segments) =
   let tmap = TM.remove ~x ~y tmap in
   let after = TS.scan tmap ~x ~y ~player in
   let graph = TG.Track.handle_remove_track graph ~x ~y before after in
-  let segments = SM.remove_track graph tmap segments before after in
+  let segments = SM.handle_remove_track graph tmap trainmap segments before after in
   tmap, graph, segments
 
 let build_station loc ~dirs (tmap, graph, segments) =
@@ -45,12 +47,12 @@ let build_station loc ~dirs (tmap, graph, segments) =
     tmap, graph, after
   in
   let tmap, graph, after = build_station_inner loc ~graph ~dirs tmap in
-  let segments = SM.build_station graph segments tmap loc after in
+  let segments = SM.handle_build_station graph segments tmap trainmap loc after in
   tmap, graph, segments
 
 let remove_station (x,y) (tmap, graph, segments) =
   let before = TS.scan tmap ~x ~y ~player in
-  let segments = SM.remove_station graph tmap segments (x,y) before in
+  let segments = SM.handle_remove_station graph tmap segments (x,y) before in
   let tmap = TM.remove ~x ~y tmap in
   let after = TS.scan tmap ~x ~y ~player in
   let graph = TG.Track.handle_remove_track graph ~x ~y before after in

@@ -86,6 +86,8 @@ type locd = loc * Dir.t
 type locu = loc * Dir.upper
   [@@deriving eq, ord, yojson, show]
 
+let locu_of_locd (loc, d) = (loc, Dir.catalog d)
+
 type locdpair = locd * locd
   [@@deriving eq, ord, yojson]
 
