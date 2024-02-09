@@ -1,17 +1,14 @@
 # Tasks
 - tests:
   - segment map: with count and double
-- segment_map:
-  - handling double
-- rename Dir.upper functions
-- Tracking train counts
-  - In Scan
-  - Undo: don't track in graph. Just add a scan function that gets train counts by station.
-    - Tracking by ixn adds too many edge cases
+- Scan:
+  - handle track loops (can just count max)
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc
 - Bug:
+  - Train doesn't pause at station
+  - Train doesn't stop at hold
   - First engines use one-chimney img. Check in code.
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game
