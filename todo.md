@@ -1,4 +1,9 @@
 # Tasks
+- tests:
+  - segment map: with count and double
+- segment_map:
+  - handling double
+- rename Dir.upper functions
 - Tracking train counts
   - In Scan
   - Undo: don't track in graph. Just add a scan function that gets train counts by station.
