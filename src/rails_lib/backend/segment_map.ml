@@ -36,22 +36,27 @@ let new_seg ?(double=`Double) v =
     in
     loop 0
   in
-  Hashtbl.replace v.info (Id.of_int id) {count = 0; double};
-  Log.debug (fun f -> f "Segment: new id %d" id);
-  Id.of_int id
+  let id = Id.of_int id in
+  Hashtbl.replace v.info id {count = 0; double};
+  Log.debug (fun f -> f "Segment_map: new segment %s" @@ Id.show id);
+  id
 
 let remove_seg id v =
+  Log.debug (fun f -> f "Segment_map: remove segment %s" @@ Id.show id);
   Hashtbl.remove v.info id
 
-let add_station (loc, d) id v =
+let add_station locu id v =
   (* add a station and direction + matching id *)
-  Hashtbl.replace v.stations (loc, d) id
+  Log.debug (fun f -> f "Segment_map: add station (%s) to segment %s" (Utils.show_locu locu) @@ Id.show id);
+  Hashtbl.replace v.stations locu id
 
-let remove_station (loc, d) v =
+let remove_station locu v =
+  Log.debug (fun f -> f "Segment_map: remove station (%s)" @@ Utils.show_locu locu);
   (* remove a station and direction *)
-  Hashtbl.remove v.stations (loc, d)
+  Hashtbl.remove v.stations locu
 
 let set_seg_train_count idx v ~count =
+  Log.debug (fun f -> f "Segment_map: set seg %s count to %d" (Id.show idx) count);
   let info = Hashtbl.find v.info idx in
   info.count <- count
 
@@ -65,6 +70,7 @@ let get_seg_double id v =
 
 let set_seg_double id double v =
   (* Update with new double state *)
+  Log.debug (fun f -> f "Segment_map: set seg %s double to %s" (Id.show id) @@ Track.show_double double);
   let info = Hashtbl.find v.info id in
   if not @@ Track.equal_double info.double double then 
     Hashtbl.replace v.info id {info with double=double}
