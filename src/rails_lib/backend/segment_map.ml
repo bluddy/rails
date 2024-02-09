@@ -345,5 +345,34 @@ let handle_build_station graph v trackmap trains loc after =
     List.iter (fun dir -> remove_station (station_loc, Dir.to_upper dir) v) dirs;
     v
 
-  (* TODO: change_double track *)
+  (* Handle double track change: just rescan the segment and update *)
+let handle_double_change graph trackmap trains v (after:Scan.t) =
+  match after with
+    | Scan.Track (ixn::_)
+    | Scan.Ixn (ixn::_) -> 
+      (* We may have a segment *)
+      let seg =
+        let loc = (ixn.x, ixn.y) in
+        let (let*) = Option.bind in
+        let* station_locu =
+          if Trackmap.has_station loc trackmap then
+            (* Handle case where ixn is station *)
+            Some (loc, Dir.to_upper ixn.dir)
+          else
+            Track_graph.connected_stations_dirs graph trackmap [loc] |> LocuSet.choose
+        in
+        get_station_seg station_locu v |> Option.return
+      in
+      Option.map_or ~default:v
+      (fun seg ->
+        let _, double =
+          Scan.scan_station_segment trackmap trains ~x:(ixn.x) ~y:(ixn.y) ixn.dir ~player:0
+        in
+        set_seg_double seg double v;
+        v)
+      seg
+
+  | _ -> v
+
+
 

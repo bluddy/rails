@@ -121,7 +121,7 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_station v.graph ~x ~y before after in
-  let _ = Segment_map.handle_build_station graph v.segments track v.trains (x,y) after in
+  let segments = Segment_map.handle_build_station graph v.segments track v.trains (x,y) after in
   let station = match station_type with
   | `SignalTower ->
     Station.make_signaltower ~x ~y ~year:v.year ~player
@@ -175,13 +175,12 @@ let _build_station v ~x ~y station_type ~player =
   in
   let climate = v.climate in
   ignore @@ Station.update_supply_demand station v.map ~climate ~simple_economy;
-
   update_player v player @@
     Player.pay Player.StationExpense (Station.price_of station_type);
-
   [%upf v.stations <- stations];
   [%upf v.graph <- graph];
   [%upf v.track <- track];
+  [%upf v.segments <- segments];
   v
 
 let check_build_tunnel v ~x ~y ~dir ~player =
@@ -197,10 +196,11 @@ let _build_tunnel v ~x ~y ~dir ~player =
     let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
     let after = Scan.scan track ~x ~y ~player in
     let graph = G.Track.handle_build_track_simple v.graph before after in
-    let _ = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+    let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
     update_player v player @@ Player.pay Player.TunnelExpense cost;
-  [%upf v.graph <- graph];
-  [%upf v.track <- track];
+    [%upf v.graph <- graph];
+    [%upf v.track <- track];
+    [%upf v.segments <- segments];
     v
   | _ -> v
 
@@ -209,11 +209,12 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let _ = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+  let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
   [%upf v.graph <- graph];
   [%upf v.track <- track];
+  [%upf v.segments <- segments];
   v
 
 let check_build_track v ~x ~y ~dir ~player =
@@ -240,8 +241,10 @@ let _change_double_track (v:t) ~x ~y ~player double =
     let t = Trackmap.get_exn v.track ~x ~y in
     let t = Track.change_to_double t double in
     let track = Trackmap.set v.track ~x ~y ~t in
-    (* TODO: handle at segment level *)
+    let after = Scan.scan track ~x ~y ~player in
+    let segments = Segment_map.handle_double_change v.graph track v.trains v.segments after in
     [%upf v.track <- track];
+    [%upf v.segments <- segments];
     v
   ) else v
     
@@ -251,10 +254,11 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track v.graph ~x ~y before after in
-  let _ = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+  let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
+  [%upf v.segments <- segments];
   v
 
 let _build_ferry v ~x ~y ~dir ~player =
@@ -271,10 +275,11 @@ let _build_ferry v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let _ = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+  let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
+  [%upf v.segments <- segments];
   v
 
 let check_remove_track v ~x ~y ~dir ~player=
