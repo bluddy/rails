@@ -30,9 +30,9 @@ let%expect_test "scan map ixn" =
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = false; double = false }
+    (Scan.Track
+       [{ Scan.x = 2; y = 2; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
+          station = false; double = false }
          ]) |}]
 
 let%expect_test "scan map ixn double" =
@@ -44,9 +44,9 @@ let%expect_test "scan map ixn double" =
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = false; double = true }
+    (Scan.Track
+       [{ Scan.x = 2; y = 2; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
+          station = false; double = true }
          ]) |}]
 
 let%expect_test "scan map ixn partial double" =
@@ -58,9 +58,9 @@ let%expect_test "scan map ixn partial double" =
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = false; double = false }
+    (Scan.Track
+       [{ Scan.x = 2; y = 2; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
+          station = false; double = false }
          ]) |}]
 
 let%expect_test "scan map ixn partial double woodbridge" =
@@ -72,9 +72,9 @@ let%expect_test "scan map ixn partial double woodbridge" =
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = false; double = false }
+    (Scan.Track
+       [{ Scan.x = 2; y = 2; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
+          station = false; double = false }
          ]) |}]
 
 let%expect_test "scan map ixn partial double stonebridge" =
@@ -86,9 +86,9 @@ let%expect_test "scan map ixn partial double stonebridge" =
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = false; double = true }
+    (Scan.Track
+       [{ Scan.x = 2; y = 2; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
+          station = false; double = true }
          ]) |}]
 
 let station dirs =
@@ -102,9 +102,9 @@ let%expect_test "scan map station" =
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = true; double = false }
+    (Scan.Track
+       [{ Scan.x = 2; y = 2; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
+          station = true; double = false }
          ]) |}]
 
 let%expect_test "scan map station double" =
@@ -116,9 +116,9 @@ let%expect_test "scan map station double" =
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 2; y = 2; dist = 2; dir = Dir.Left;
-          search_dir = Dir.Right; station = true; double = true }
+    (Scan.Track
+       [{ Scan.x = 2; y = 2; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
+          station = true; double = true }
          ]) |}]
 
 let%expect_test "scan map no ixn" =
@@ -127,7 +127,7 @@ let%expect_test "scan map no ixn" =
     |> TM.set ~x:1 ~y:2 ~t:(track [Left;Right])
   in
   S.scan map ~x:0 ~y:2 ~player:0 |> S.show |> print_string;
-  [%expect {| (Trackmap.Search.Track []) |}]
+  [%expect {| (Scan.Track []) |}]
 
 
 let%expect_test "scan map 2 ixns" =
@@ -138,11 +138,11 @@ let%expect_test "scan map 2 ixns" =
   in
   S.scan map ~x:1 ~y:3 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 0; y = 3; dist = 1; dir = Dir.Right;
-          search_dir = Dir.Left; station = false; double = false };
-         { Trackmap.Search.x = 2; y = 3; dist = 1; dir = Dir.Left;
-           search_dir = Dir.Right; station = false; double = false }
+    (Scan.Track
+       [{ Scan.x = 0; y = 3; dist = 1; dir = Dir.Right; search_dir = Dir.Left;
+          station = false; double = false };
+         { Scan.x = 2; y = 3; dist = 1; dir = Dir.Left; search_dir = Dir.Right;
+           station = false; double = false }
          ]) |}]
 
 let%expect_test "scan map 2 ixns 1 double" =
@@ -154,10 +154,10 @@ let%expect_test "scan map 2 ixns 1 double" =
   in
   S.scan map ~x:1 ~y:3 ~player:0 |> S.show |> print_string;
   [%expect {|
-    (Trackmap.Search.Track
-       [{ Trackmap.Search.x = 0; y = 3; dist = 1; dir = Dir.Right;
-          search_dir = Dir.Left; station = false; double = true };
-         { Trackmap.Search.x = 2; y = 3; dist = 1; dir = Dir.Left;
-           search_dir = Dir.Right; station = false; double = false }
+    (Scan.Track
+       [{ Scan.x = 0; y = 3; dist = 1; dir = Dir.Right; search_dir = Dir.Left;
+          station = false; double = true };
+         { Scan.x = 2; y = 3; dist = 1; dir = Dir.Left; search_dir = Dir.Right;
+           station = false; double = false }
          ]) |}]
 

@@ -70,7 +70,7 @@ let%expect_test "build station" =
     |> build_station loc ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}]],"stations":[[[[10,10],["Upper"]],1],[[[10,10],["Lower"]],0]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[10,10],["Lower"]],1]]} |}]
 
 let%expect_test "build station between ixns" =
   let graph, segments = TG.make (), SM.make () in
@@ -82,7 +82,7 @@ let%expect_test "build station between ixns" =
     |> build_station (10, 10) ~dirs:[Left;Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}]],"stations":[[[[10,10],["Upper"]],1],[[[10,10],["Lower"]],0]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[10,10],["Lower"]],1]]} |}]
 
 let%expect_test "build second station" =
   let graph, segments = TG.make (), SM.make () in
@@ -94,7 +94,7 @@ let%expect_test "build second station" =
     |> build_station (5, 10) ~dirs
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],2],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],0]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[5,10],["Upper"]],2],[[[5,10],["Lower"]],0],[[[10,10],["Lower"]],1]]} |}]
 
 let%expect_test "build 3 stations left to right " =
   let graph, segments = TG.make (), SM.make () in
@@ -107,7 +107,7 @@ let%expect_test "build 3 stations left to right " =
     |> build_station (15,10) ~dirs
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[3,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[10,10],["Upper"]],0],[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[10,10],["Lower"]],2],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],2]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],2],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],2]]} |}]
 
 let%expect_test "build 2 stations and then one in the middle" =
   let graph, segments = TG.make (), SM.make () in
@@ -119,12 +119,12 @@ let%expect_test "build 2 stations and then one in the middle" =
     |> build_station (15,10) ~dirs
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
   (* Now the middle station *)
   let _, _, segments =
     build_station (10,10) ~dirs tgs in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[3,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[10,10],["Upper"]],3],[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],3],[[[10,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
 
 (* build 2 stations separated by ixn *)
 let%expect_test "build 2 stations separated by ixn" =
@@ -138,7 +138,7 @@ let%expect_test "build 2 stations separated by ixn" =
     |> build_track (10,10) ~dirs:[Left;Right;UpRight]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
 
 
 (* Test build_track
@@ -155,12 +155,12 @@ let%expect_test "connect 2 station with road" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[3,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}];
+  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],2]]} |}];
   let _, _, segments =
     build_track (10, 10) (tmap, graph, segments) ~dirs:[Left;Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],1]]} |}]
 
 
 (* Test remove_track
@@ -175,10 +175,10 @@ let%expect_test "2 connected stations, disconnect road" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
   let _, _, segments = remove_track (10, 10) (tmap, graph, segments) in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[3,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
 
 (* Test remove_station
    graph trackmap segment_map loc scan1 scan2
@@ -192,9 +192,9 @@ let%expect_test "2 connected stations, disconnect one" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":false}],[0,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[5,10],["Upper"]],1],[[[5,10],["Lower"]],0],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}];
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
   let _, _, segments =
     remove_station (5, 10) (tmap, graph, segments) in
   print segments;
-  [%expect {| {"info":[[0,{"count":0,"double":false}],[2,{"count":0,"double":false}]],"stations":[[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],0]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
 
