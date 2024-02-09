@@ -223,7 +223,7 @@ let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
         iter_succ_ixn_dirs (fun ixn dir ->
           if Trackmap.has_station ixn trackmap then 
             (* Add to results *)
-            LocuSet.insert stations (ixn, Dir.catalog dir)
+            LocuSet.insert stations (ixn, Dir.to_upper dir)
           else 
             (* To be handled in next iteration *)
             LocSet.insert next_ixns ixn)

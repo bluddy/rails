@@ -208,7 +208,7 @@ module Train_update = struct
         let enter train is_new =
           if not is_new then
             (* exit segment *)
-            Segment_map.seg_decr_train (loc, Dir.opposite train.Train.dir |> Dir.catalog) v.segments;
+            Segment_map.seg_decr_train (loc, Dir.opposite train.Train.dir |> Dir.to_upper) v.segments;
           (* TODO: actual UI msg, income handling *)
           let last_station, priority, stop, train, _income, _ui_msgs =
             if Station.is_proper_station station then (
@@ -232,7 +232,7 @@ module Train_update = struct
           in
           (* enter segment *)
           let locd = (loc, dir) in
-          let locu = (loc, Dir.catalog dir) in
+          let locu = Utils.locu_of_locd locd in
           Segment_map.seg_incr_train locu v.segments;
           (* TODO Check signal for exit dir *)
           let train = 

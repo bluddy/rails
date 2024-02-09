@@ -138,13 +138,13 @@ let handle_build_station graph v trackmap trains loc after =
       (* Add to existing id, update double info *)
       let loc_dir = LocuSet.choose_exn loc_dirs in
       let seg_id = get_station_seg loc_dir v in
-      add_station (loc, Dir.catalog dir) seg_id v;
+      add_station (loc, Dir.to_upper dir) seg_id v;
       let _, double = Scan.scan_station_segment trackmap trains ~x ~y dir ~player:0 in
       set_seg_double seg_id double v;
       
       (* New segment for missing end *)
       let seg_id = new_seg v in
-      add_station (loc, Dir.catalog @@ Dir.opposite dir) seg_id v;
+      add_station (loc, Dir.to_upper @@ Dir.opposite dir) seg_id v;
       v
 
     (* Found stations on both dirs. *)
@@ -159,20 +159,20 @@ let handle_build_station graph v trackmap trains loc after =
       let intersect = LocuSet.inter loc_dirs1 loc_dirs2 in
       if LocuSet.cardinal intersect > 0 then (
         (* Same segment on both sides *)
-        add_station (loc, Dir.catalog dir1) seg_id1 v;
-        add_station (loc, Dir.catalog dir2) seg_id1 v;
+        add_station (loc, Dir.to_upper dir1) seg_id1 v;
+        add_station (loc, Dir.to_upper dir2) seg_id1 v;
         (* Double status and count stays the same *)
         v
       ) else (
         (* Split segments with new station. On one end, connect *)
-        add_station (loc, Dir.catalog dir1) seg_id1 v;
+        add_station (loc, Dir.to_upper dir1) seg_id1 v;
         let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir1 ~player:0 in
         set_seg_double seg_id1 double v;
         set_seg_train_count seg_id1 ~count v;
 
         (* On second end, create a new id and apply it to all stations *)
         let seg_id = new_seg v in
-        add_station (loc, Dir.catalog dir2) seg_id v;
+        add_station (loc, Dir.to_upper dir2) seg_id v;
         LocuSet.iter (fun loc_dir -> add_station loc_dir seg_id v) loc_dirs2;
         let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir2 ~player:0 in
         set_seg_double seg_id double v;
@@ -208,7 +208,7 @@ let handle_build_station graph v trackmap trains loc after =
         let loc = (ixn.x, ixn.y) in
         if Trackmap.has_station loc trackmap then
           (* Handle case where ixn is station *)
-          LocuSet.singleton (loc, Dir.catalog ixn.dir)
+          LocuSet.singleton (loc, Dir.to_upper ixn.dir)
         else
           Track_graph.connected_stations_dirs graph trackmap [loc] ~exclude_ixns:[(exclude_ixn.x, exclude_ixn.y)]
       in
@@ -257,7 +257,7 @@ let handle_build_station graph v trackmap trains loc after =
           let ixn = (ixns.x, ixns.y) in
           (* We need to find the set differences. If it's a station, use that *)
           if Trackmap.has_station ixn trackmap then
-            Utils.LocuSet.singleton (ixn, Dir.catalog ixns.dir)
+            Utils.LocuSet.singleton (ixn, Dir.to_upper ixns.dir)
           else
             Track_graph.connected_stations_dirs graph trackmap [ixn]
         in
@@ -338,11 +338,11 @@ let handle_build_station graph v trackmap trains loc after =
     in
     (* GC: delete empty segments *)
     List.iter (fun dir ->
-      let seg1 = get_station_seg (station_loc, Dir.catalog dir) v in
+      let seg1 = get_station_seg (station_loc, Dir.to_upper dir) v in
       remove_seg seg1 v)
     empty_dirs;
     (* Finally, delete entries for station no matter what *)
-    List.iter (fun dir -> remove_station (station_loc, Dir.catalog dir) v) dirs;
+    List.iter (fun dir -> remove_station (station_loc, Dir.to_upper dir) v) dirs;
     v
 
   (* TODO: change_double track *)

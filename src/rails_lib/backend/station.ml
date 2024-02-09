@@ -210,11 +210,11 @@ let set_segment (v:t) dir seg =
 *)
 
 let get_signal (v:t) dir =
-  if Dir.lower dir then v.signals.lower else v.signals.upper
+  if Dir.is_lower dir then v.signals.lower else v.signals.upper
 
 let set_signal (v:t) dir signal =
   let signals =
-    if Dir.lower dir then
+    if Dir.is_lower dir then
       {v.signals with lower=(signal, snd v.signals.lower)}
     else
       {v.signals with upper=(signal, snd v.signals.upper)}
@@ -223,31 +223,12 @@ let set_signal (v:t) dir signal =
 
 let set_override (v:t) dir override =
   let signals =
-    if Dir.lower dir then
+    if Dir.is_lower dir then
       {v.signals with lower=(fst v.signals.lower, override)}
     else
       {v.signals with upper=(fst v.signals.upper, override)}
   in
   {v with signals}
-
-(*
-let replace_segment (v:t) seg_old seg_new =
-  let segments = match v.segments with
-    | seg2, x when Segment.equal_id seg_old seg2 -> seg_new, x
-    | x, seg2 when Segment.equal_id seg_old seg2 -> x, seg_new
-    | _ -> v.segments
-  in
-  [%up {v with segments}]
-
-let make_segments_and_signals segments =
-  let segments = match segments with
-    | [d1, seg1; _, seg2] when Dir.lower d1 -> (seg1, seg2)
-    | [_, seg1; _, seg2] -> (seg2, seg1)
-    | _ -> failwith "Incorrect number of segments"
-  in
-  let signals = Auto, Auto in
-  segments, signals
-  *)
 
 let make_signaltower ~x ~y ~year ~player =
   { x; y; year; info=None; player; signals=default_signals}

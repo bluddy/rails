@@ -28,12 +28,12 @@ type upper = [`Upper | `Lower]
   [@@deriving yojson, ord, show, eq]
 
 (* Helps us catalog directions *)
-let catalog x =
+let to_upper x =
   let open Infix in
   if x <= DownRight then `Lower else `Upper
 let opposite_upper = function `Lower -> `Upper | `Upper -> `Lower
-let lower x = match catalog x with `Lower -> true | _ -> false
-let upper x = not (lower x)
+let is_lower x = match to_upper x with `Lower -> true | _ -> false
+let is_upper x = not (is_lower x)
 
 let cw = function
   | Up -> UpRight
