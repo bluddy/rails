@@ -217,16 +217,8 @@ let handle_build_station graph v trackmap trains loc after =
     join_ixns |>
     Option.map_or ~default:v
     (fun (ixn1_res, ixn2_res) ->
-      let get_stations (ixn:Scan.ixn) (exclude_ixn:Scan.ixn) = 
-        let loc = (ixn.x, ixn.y) in
-        if Trackmap.has_station loc trackmap then
-          (* Handle case where ixn is station *)
-          LocuSet.singleton (loc, Dir.to_upper ixn.dir)
-        else
-          Track_graph.connected_stations_dirs graph trackmap [loc] ~exclude_ixns:[(exclude_ixn.x, exclude_ixn.y)]
-      in
-      let stations1 = get_stations ixn1_res ixn2_res in
-      let stations2 = get_stations ixn2_res ixn1_res in
+      let stations1 = get_stations_with_ixn_scan ixn1_res graph trackmap in
+      let stations2 = get_stations_with_ixn_scan ixn2_res graph trackmap in
       if LocuSet.cardinal stations1 = 0 || LocuSet.cardinal stations2 = 0 then
         (* If either set is empty, do nothing: we're not connecting to any station *)
         v
