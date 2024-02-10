@@ -127,8 +127,15 @@ let handle_build_station graph v trackmap trains loc after =
   in
   let dir_stations_on_both_sides =
     List.filter_map (fun ixn ->
+      let loc = (ixn.Scan.x, ixn.y) in
       let exclude_dir = Dir.opposite ixn.Scan.dir in
-      let stations = Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap loc in
+      let stations =
+        if Trackmap.has_station loc trackmap then
+          (* Handle case where ixn is station *)
+          LocuSet.singleton (loc, Dir.to_upper ixn.dir)
+        else
+          Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap loc
+      in
       if LocuSet.cardinal stations = 0 then None else Some(ixn.search_dir, stations))
     ixns
   in

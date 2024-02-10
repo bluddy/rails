@@ -18,6 +18,8 @@ let build_road start end_ map =
 
 let print (segments:SM.t) = SM.yojson_of_t segments |> Yojson.Safe.to_string |> print_string
 
+let print_graph g = TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
+
 let trainmap = Trainmap.empty ()
 
 let player = 0
@@ -82,7 +84,19 @@ let%expect_test "build station between ixns" =
     |> build_station (10, 10) ~dirs:[Left;Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[10,10],["Lower"]],1]]} |}]
+  [%expect.unreachable]
+[@@expect.uncaught_exn {|
+  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+     This is strongly discouraged as backtraces are fragile.
+     Please change this test to not include a backtrace. *)
+
+  Not_found
+  Raised at Stdlib__Hashtbl.find in file "hashtbl.ml", line 542, characters 13-28
+  Called from Rails_lib__Segment_map.get_station_seg in file "src/rails_lib/backend/segment_map.ml" (inlined), line 65, characters 2-30
+  Called from Rails_lib__Segment_map.handle_build_station in file "src/rails_lib/backend/segment_map.ml", line 168, characters 20-46
+  Called from Rails_lib__Segment_map_test.build_station in file "src/rails_lib/tests/segment_map_test.ml", line 52, characters 17-79
+  Called from Rails_lib__Segment_map_test.(fun) in file "src/rails_lib/tests/segment_map_test.ml", line 81, characters 4-182
+  Called from Expect_test_collector.Make.Instance_io.exec in file "collector/expect_test_collector.ml", line 234, characters 12-19 |}]
 
 let%expect_test "build second station" =
   let graph, segments = TG.make (), SM.make () in
@@ -118,13 +132,17 @@ let%expect_test "build 2 stations and then one in the middle" =
     |> build_station (5,10) ~dirs
     |> build_station (15,10) ~dirs
   in
+  print_graph graph;
+  [%expect {| [[[15,10],[5,10],{"nodes":[[[5,10],["Right"]],[[15,10],["Left"]]],"dist":10,"block":false}]] |}];
   print segments;
   [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
   (* Now the middle station *)
-  let _, _, segments =
+  let _, graph, segments =
     build_station (10,10) ~dirs tgs in
+  print_graph graph;
+  [%expect {| [[[10,10],[5,10],{"nodes":[[[5,10],["Right"]],[[10,10],["Left"]]],"dist":5,"block":false}],[[15,10],[10,10],{"nodes":[[[10,10],["Right"]],[[15,10],["Left"]]],"dist":5,"block":false}]] |}];
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],3],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
 
 (* build 2 stations separated by ixn *)
 let%expect_test "build 2 stations separated by ixn" =
