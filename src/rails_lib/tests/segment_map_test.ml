@@ -196,7 +196,7 @@ let%expect_test "2 connected stations, disconnect road" =
   [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
   let _, _, segments = remove_track (10, 10) (tmap, graph, segments) in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
 
 (* Test remove_station
    graph trackmap segment_map loc scan1 scan2

@@ -104,7 +104,7 @@ module HashSet = struct
     include CCHashSet.Make(E)
     let choose v = to_iter v |> Iter.head
     let choose_exn v = to_iter v |> Iter.head_exn
-    let is_empty v = cardinal v > 0
+    let is_empty v = cardinal v = 0
   end
 end
 

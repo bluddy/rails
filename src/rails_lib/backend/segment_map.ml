@@ -305,12 +305,12 @@ let handle_build_station graph v trackmap trains loc after =
     let tile = Trackmap.get_exn trackmap ~x ~y in
     let dirs = tile.Track.dirs |> Dir.Set.to_list in
     let ixns, empty_dirs = match before with
-      | Station [ixn1; ixn2] ->
-        [(ixn1.x, ixn1.y), ixn1.search_dir; (ixn2.x, ixn2.y), ixn2.search_dir], []
+      | Station ([_; _] as l) ->
+        l,[]
 
-      | Station [ixn] ->
+      | Station ([ixn] as l) ->
         (* Delete just one side *)
-        [(ixn.x, ixn.y), ixn.search_dir], [Dir.opposite ixn.search_dir]
+        l, [Dir.opposite ixn.search_dir]
 
       | Station [] ->
         (* Both sides need to be deleted *)
@@ -320,16 +320,11 @@ let handle_build_station graph v trackmap trains loc after =
     in
     (* Check if we have more empty dirs, i.e. no stations but just ixns *)
     let empty_dirs =
-      List.fold_left (fun acc (loc, search_dir) ->
-        (* Get either the station here or connected stations *)
-        if Trackmap.has_station loc trackmap then acc
-        else
-          let station_connected =
-            Track_graph.connected_stations_dirs graph trackmap [loc] ~exclude_ixns:[station_loc]
-          in
-          if LocuSet.is_empty station_connected then
-            search_dir::acc
-          else acc)
+      List.fold_left (fun acc ixns ->
+        let stations = get_stations_with_ixn_scan ixns graph trackmap in
+        if LocuSet.is_empty stations then (
+            ixns.search_dir::acc
+        )  else acc)
       empty_dirs
       ixns
     in
