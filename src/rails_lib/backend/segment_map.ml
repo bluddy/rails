@@ -117,6 +117,14 @@ let get_seg_station_count id v =
 
 (* --- Handling different usecases --- *)
 
+let get_stations_with_ixn_scan ixns graph trackmap =
+  let loc = (ixns.Scan.x, ixns.y) in
+  if Trackmap.has_station loc trackmap then
+    (* Handle case where ixn is station *)
+    LocuSet.singleton (loc, Dir.to_upper ixns.dir)
+  else
+    Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir:ixns.dir graph trackmap loc
+
 (* When we build a station, we create new station segments on both ends of the station *)
 let handle_build_station graph v trackmap trains loc after =
   let x, y = loc in
@@ -126,17 +134,9 @@ let handle_build_station graph v trackmap trains loc after =
     | _ -> assert false
   in
   let dir_stations_on_both_sides =
-    List.filter_map (fun ixn ->
-      let loc = (ixn.Scan.x, ixn.y) in
-      let exclude_dir = Dir.opposite ixn.Scan.dir in
-      let stations =
-        if Trackmap.has_station loc trackmap then
-          (* Handle case where ixn is station *)
-          LocuSet.singleton (loc, Dir.to_upper ixn.dir)
-        else
-          Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap loc
-      in
-      if LocuSet.cardinal stations = 0 then None else Some(ixn.search_dir, stations))
+    List.filter_map (fun ixns ->
+      let stations = get_stations_with_ixn_scan ixns graph trackmap in
+      if LocuSet.cardinal stations = 0 then None else Some(ixns.search_dir, stations))
     ixns
   in
   match dir_stations_on_both_sides with
