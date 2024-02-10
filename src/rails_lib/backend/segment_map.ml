@@ -258,16 +258,8 @@ let handle_build_station graph v trackmap trains loc after =
     match split_ixns with
     | None -> v
     | Some (ixn1s, ixn2s) ->
-        let get_station_sets (ixns:Scan.ixn) =
-          let ixn = (ixns.x, ixns.y) in
-          (* We need to find the set differences. If it's a station, use that *)
-          if Trackmap.has_station ixn trackmap then
-            Utils.LocuSet.singleton (ixn, Dir.to_upper ixns.dir)
-          else
-            Track_graph.connected_stations_dirs graph trackmap [ixn]
-        in
-        let set1 = get_station_sets ixn1s in
-        let set2 = get_station_sets ixn2s in
+        let set1 = get_stations_with_ixn_scan ixn1s graph trackmap in
+        let set2 = get_stations_with_ixn_scan ixn2s graph trackmap in
         (* Nothing to do if we have any empty station sets or if they're the same segment still *)
         if LocuSet.equal set1 set2 || LocuSet.is_empty set1 || LocuSet.is_empty set2 then
           v
