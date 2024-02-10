@@ -14,7 +14,7 @@ module Id = Int_id.Make(struct end)
 
 type info = {
   mutable count: int;
-  double: Track.double;
+  mutable double: Track.double;
 } [@@deriving yojson]
 
 type t = {
@@ -60,9 +60,12 @@ let set_seg_train_count idx v ~count =
   let info = Hashtbl.find v.info idx in
   info.count <- count
 
-let get_station_seg locd v =
+let get_station_seg locu v =
   (* get id for station/dir *)
-  Hashtbl.find v.stations locd
+  try
+    Hashtbl.find v.stations locu
+  with Not_found ->
+    failwith @@ Printf.sprintf "Locu %s not found" (Utils.show_locu locu)
 
 let get_seg_double id v =
   let info = Hashtbl.find v.info id in
@@ -104,7 +107,7 @@ let merge_segs ~from_id to_id v =
   let info = Hashtbl.find v.info to_id in
   let from_info = Hashtbl.find v.info from_id in
   info.count <- info.count + from_info.count;
-  (* double is harder to deal with and requires handling *)
+  info.double <- Track.combine_double info.double from_info.double;
   remap_station_seg_ids ~from_id to_id v;
   remove_seg from_id v
 
@@ -117,13 +120,17 @@ let get_seg_station_count id v =
 
 (* --- Handling different usecases --- *)
 
-let get_stations_with_ixn_scan ixns graph trackmap =
+let get_stations_with_ixn_scan ?exclude_ixns ixns graph trackmap =
   let loc = (ixns.Scan.x, ixns.y) in
   if Trackmap.has_station loc trackmap then
     (* Handle case where ixn is station *)
     LocuSet.singleton (loc, Dir.to_upper ixns.dir)
   else
-    Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir:ixns.dir graph trackmap loc
+    match exclude_ixns with
+    | Some exclude_ixns ->
+      Track_graph.connected_stations_dirs ~exclude_ixns graph trackmap [loc]
+    | _ ->
+      Track_graph.connected_stations_dirs_exclude_dir ~exclude_dir:ixns.dir graph trackmap loc
 
 (* When we build a station, we create new station segments on both ends of the station *)
 let handle_build_station graph v trackmap trains loc after =
@@ -136,7 +143,11 @@ let handle_build_station graph v trackmap trains loc after =
   let dir_stations_on_both_sides =
     List.filter_map (fun ixns ->
       let stations = get_stations_with_ixn_scan ixns graph trackmap in
-      if LocuSet.cardinal stations = 0 then None else Some(ixns.search_dir, stations))
+      (* Remove current loc_dir if it somehow found its way in: it doesn't count *)
+      LocuSet.remove stations (loc, Dir.to_upper ixns.search_dir);
+      match LocuSet.cardinal stations with
+      | 0 -> None
+      | _ -> Some(ixns.search_dir, stations))
     ixns
   in
   match dir_stations_on_both_sides with
@@ -164,37 +175,56 @@ let handle_build_station graph v trackmap trains loc after =
   | [dir1, loc_dirs1; dir2, loc_dirs2 ] ->
       assert Dir.(equal (opposite dir1) dir2);
 
-      let loc_dir1 = LocuSet.choose_exn loc_dirs1 in
-      let seg_id1 = get_station_seg loc_dir1 v in
-      let loc_dir2 = LocuSet.choose_exn loc_dirs2 in
-      let seg_id2 = get_station_seg loc_dir2 v in
-      (* Check if it's the same segment. They should have nothing in common *)
-      let intersect = LocuSet.inter loc_dirs1 loc_dirs2 in
-      if LocuSet.cardinal intersect > 0 then (
-        (* Same segment on both sides *)
-        add_station (loc, Dir.to_upper dir1) seg_id1 v;
-        add_station (loc, Dir.to_upper dir2) seg_id1 v;
-        (* Double status and count stays the same *)
-        v
-      ) else (
-        (* Split segments with new station. On one end, connect *)
-        add_station (loc, Dir.to_upper dir1) seg_id1 v;
-        let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir1 ~player:0 in
-        set_seg_double seg_id1 double v;
-        set_seg_train_count seg_id1 ~count v;
-
-        (* On second end, create a new id and apply it to all stations *)
+      (* Deal with the case of both sides connected to each other only.
+         In this case, we haven't even put them in the segment map yet *)
+      if LocuSet.cardinal loc_dirs1 = 1 && LocuSet.cardinal loc_dirs2 = 1 &&
+          LocuSet.mem loc_dirs1 (loc, Dir.to_upper dir2) &&
+          LocuSet.mem loc_dirs2 (loc, Dir.to_upper dir1) then begin
+        (* Add them both in under a single segment *)
         let seg_id = new_seg v in
         add_station (loc, Dir.to_upper dir2) seg_id v;
-        LocuSet.iter (fun loc_dir -> add_station loc_dir seg_id v) loc_dirs2;
-        let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir2 ~player:0 in
+        add_station (loc, Dir.to_upper dir1) seg_id v;
+        let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir1 ~player:0 in
         set_seg_double seg_id double v;
         set_seg_train_count seg_id ~count v;
-
-        (* GC old id if needed *)
-        if get_seg_station_count seg_id2 v = 0 then remove_seg seg_id2 v;
         v
-      )
+      end else begin
+        (* Normal case *)
+        (* Remove these since they're not helpful *)
+        LocuSet.remove loc_dirs1 (loc, Dir.to_upper dir2);
+        LocuSet.remove loc_dirs2 (loc, Dir.to_upper dir1);
+        let loc_dir1 = LocuSet.choose_exn loc_dirs1 in
+        let loc_dir2 = LocuSet.choose_exn loc_dirs2 in
+        let seg_id1 = get_station_seg loc_dir1 v in
+        let seg_id2 = get_station_seg loc_dir2 v in
+        (* Check if it's the same segment. They should have nothing in common *)
+        let intersect = LocuSet.inter loc_dirs1 loc_dirs2 in
+        if LocuSet.cardinal intersect > 0 then (
+          (* Same segment on both sides *)
+          add_station (loc, Dir.to_upper dir1) seg_id1 v;
+          add_station (loc, Dir.to_upper dir2) seg_id1 v;
+          (* Double status and count stays the same *)
+          v
+        ) else (
+          (* Different segments. Split segments with new station. On one end, connect *)
+          add_station (loc, Dir.to_upper dir1) seg_id1 v;
+          let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir1 ~player:0 in
+          set_seg_double seg_id1 double v;
+          set_seg_train_count seg_id1 ~count v;
+
+          (* On second end, create a new id and apply it to all stations *)
+          let seg_id = new_seg v in
+          add_station (loc, Dir.to_upper dir2) seg_id v;
+          LocuSet.iter (fun loc_dir -> add_station loc_dir seg_id v) loc_dirs2;
+          let count, double = Scan.scan_station_segment trackmap trains ~x ~y dir2 ~player:0 in
+          set_seg_double seg_id double v;
+          set_seg_train_count seg_id ~count v;
+
+          (* GC old id if needed *)
+          if get_seg_station_count seg_id2 v = 0 then remove_seg seg_id2 v;
+          v
+        )
+      end
 
   | _ -> failwith "Found too many directions or ill-formed data"
 

@@ -17,6 +17,8 @@ type ixn = {
   double: bool; (* Fully double track to this ixn/station *)
 } [@@deriving show]
 
+let max_scan_dist = 1000
+
 let equal_ixn res1 res2 = res1.x = res2.x && res1.y = res2.y
 let nequal_ixn res1 res2 = not (res1 = res2)
 
@@ -55,6 +57,7 @@ let _scan_for_ixn tracks ~x ~y ~dir ~double ~player =
   let search_dir = dir in
   let player2 = player in
   let rec loop_to_node x y dir double_acc ~dist =
+    if dist > max_scan_dist then None else
     let oppo_dir = Dir.opposite dir in
     match Trackmap.get tracks ~x ~y with
     | Some ({ixn = true; player; _} as track) when player = player2 ->

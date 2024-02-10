@@ -381,6 +381,10 @@ let modulo x y =
   let res = x mod y in
   if res >= 0 then res else res + y
 
+let fst3 (x,_,_) = x
+let snd3 (_,x,_) = x
+let thd3 (_,_,x) = x
+
 let show_money ?(spaces=0) region money =
   let b = Buffer.create 20 in
   Buffer.add_char b (Region.money_symbol region);

@@ -10,9 +10,15 @@ let make_tm ?(track=Track `Single) dirs =
 
 let tmap = TM.empty 20 20
 
-let build_road start end_ map =
+let build_road ?(y=10) start end_ map =
   Iter.fold
-    (fun acc x -> TM.set acc ~x ~y:10 ~t:(make_tm [Left;Right]))
+    (fun acc x -> TM.set acc ~x ~y ~t:(make_tm [Left;Right]))
+    map @@
+    Iter.(start -- end_)
+
+let build_road_vert ~x start end_ map =
+  Iter.fold
+    (fun acc y -> TM.set acc ~x ~y ~t:(make_tm [Up;Down]))
     map @@
     Iter.(start -- end_)
 
@@ -84,19 +90,7 @@ let%expect_test "build station between ixns" =
     |> build_station (10, 10) ~dirs:[Left;Right]
   in
   print segments;
-  [%expect.unreachable]
-[@@expect.uncaught_exn {|
-  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-     This is strongly discouraged as backtraces are fragile.
-     Please change this test to not include a backtrace. *)
-
-  Not_found
-  Raised at Stdlib__Hashtbl.find in file "hashtbl.ml", line 542, characters 13-28
-  Called from Rails_lib__Segment_map.get_station_seg in file "src/rails_lib/backend/segment_map.ml" (inlined), line 65, characters 2-30
-  Called from Rails_lib__Segment_map.handle_build_station in file "src/rails_lib/backend/segment_map.ml", line 168, characters 20-46
-  Called from Rails_lib__Segment_map_test.build_station in file "src/rails_lib/tests/segment_map_test.ml", line 52, characters 17-79
-  Called from Rails_lib__Segment_map_test.(fun) in file "src/rails_lib/tests/segment_map_test.ml", line 81, characters 4-182
-  Called from Expect_test_collector.Make.Instance_io.exec in file "collector/expect_test_collector.ml", line 234, characters 12-19 |}]
+  [%expect{| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[10,10],["Lower"]],1]]} |}]
 
 let%expect_test "build second station" =
   let graph, segments = TG.make (), SM.make () in
@@ -215,4 +209,37 @@ let%expect_test "2 connected stations, disconnect one" =
     remove_station (5, 10) (tmap, graph, segments) in
   print segments;
   [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
+
+let%expect_test "4 connected stations in a square, disconnect one" =
+  (* BUG: make sure we can handle being connected to same track on both sides *)
+  let graph, segments = TG.make (), SM.make () in
+  (* Draw square *)
+  let tmap = tmap
+    |> build_road 5 15 ~y:5 
+    |> build_road 5 15 ~y:15
+    |> build_road_vert 5 15 ~x:5
+    |> build_road_vert 5 15 ~x:15
+    |> TM.set ~x:5 ~y:5 ~t:(make_tm [Down; Right])
+    |> TM.set ~x:15 ~y:5 ~t:(make_tm [Down; Left])
+    |> TM.set ~x:5 ~y:15 ~t:(make_tm [Up; Right])
+    |> TM.set ~x:15 ~y:15 ~t:(make_tm [Up; Left])
+  in
+  let tgs =
+    (tmap, graph, segments)
+    |> build_station (6, 5) ~dirs:[Left; Right]
+  in
+  print @@ Utils.thd3 tgs;
+  [%expect{| {"info":[[0,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],0],[[[6,5],["Lower"]],0]]} |}]
+
+  (* let tgs = build_station (14, 5) ~dirs:[Left; Right] tgs in *)
+  (* print @@ Utils.thd3 tgs; *)
+  (* [%expect {||}]; *)
+  (**)
+  (* let tgs = build_station (14, 15) ~dirs:[Left; Right] tgs in *)
+  (* print @@ Utils.thd3 tgs; *)
+  (* [%expect {||}]; *)
+  (**)
+  (* let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in *)
+  (* print @@ Utils.thd3 tgs; *)
+  (* [%expect {||}]; *)
 
