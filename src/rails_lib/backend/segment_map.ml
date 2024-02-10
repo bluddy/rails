@@ -320,12 +320,12 @@ let handle_build_station graph v trackmap trains loc after =
     in
     (* Check if we have more empty dirs, i.e. no stations but just ixns *)
     let empty_dirs =
-      List.fold_left (fun acc ixns ->
+      empty_dirs @
+      List.filter_map (fun ixns ->
         let stations = get_stations_with_ixn_scan ixns graph trackmap in
-        if LocuSet.is_empty stations then (
-            ixns.search_dir::acc
-        )  else acc)
-      empty_dirs
+        if LocuSet.is_empty stations then
+            Some ixns.search_dir
+        else None)
       ixns
     in
     (* GC: delete empty segments *)
