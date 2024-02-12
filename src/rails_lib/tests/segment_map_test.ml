@@ -198,16 +198,7 @@ let%expect_test "4 connected stations in a square, disconnect one" =
   (* BUG: make sure we can handle being connected to same track on both sides *)
   let graph, segments = TG.make (), SM.make () in
   (* Draw square *)
-  let tmap = tmap
-    |> build_road 5 15 ~y:5 
-    |> build_road 5 15 ~y:15
-    |> build_road_vert 5 15 ~x:5
-    |> build_road_vert 5 15 ~x:15
-    |> TM.set ~x:5 ~y:5 ~t:(make_tm [Down; Right])
-    |> TM.set ~x:15 ~y:5 ~t:(make_tm [Down; Left])
-    |> TM.set ~x:5 ~y:15 ~t:(make_tm [Up; Right])
-    |> TM.set ~x:15 ~y:15 ~t:(make_tm [Up; Left])
-  in
+  let tmap = square_track () in
   let tgs =
     (tmap, graph, segments)
     |> build_station (6, 5) ~dirs:[Left; Right]

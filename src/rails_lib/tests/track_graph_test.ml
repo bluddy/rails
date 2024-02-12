@@ -1,4 +1,5 @@
 open Containers
+open Test_common
 module TG = Track_graph
 
 let graph () =
@@ -346,4 +347,9 @@ module Track = struct
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}]
 
+  let%expect_test "4 connected stations in a square, disconnect one" =
+    (* BUG: make sure we can handle being connected to same track on both sides *)
+    let graph, segments = TG.make (), SM.make () in
+    let tmap = square_track () in
+    ()
 end
