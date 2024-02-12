@@ -4,23 +4,7 @@ module TM = Trackmap
 module SM = Segment_map
 module TG = Track_graph
 module TS = Scan
-
-let make_tm ?(track=Track `Single) dirs = 
-  Track.make (Dir.Set.of_list dirs) track ~player:0
-
-let tmap = TM.empty 20 20
-
-let build_road ?(y=10) start end_ map =
-  Iter.fold
-    (fun acc x -> TM.set acc ~x ~y ~t:(make_tm [Left;Right]))
-    map @@
-    Iter.(start -- end_)
-
-let build_road_vert ~x start end_ map =
-  Iter.fold
-    (fun acc y -> TM.set acc ~x ~y ~t:(make_tm [Up;Down]))
-    map @@
-    Iter.(start -- end_)
+open Test_common
 
 let print (segments:SM.t) = SM.yojson_of_t segments |> Yojson.Safe.to_string |> print_string
 
@@ -229,16 +213,14 @@ let%expect_test "4 connected stations in a square, disconnect one" =
     |> build_station (6, 5) ~dirs:[Left; Right]
   in
   print @@ Utils.thd3 tgs;
-  [%expect{| {"info":[[0,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],0],[[[6,5],["Lower"]],0]]} |}]
+  [%expect{| {"info":[[0,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],0],[[[6,5],["Lower"]],0]]} |}];
 
-  (* let tgs = build_station (14, 5) ~dirs:[Left; Right] tgs in *)
-  (* print @@ Utils.thd3 tgs; *)
-  (* [%expect {||}]; *)
-  (**)
+  let tgs = build_station (14, 5) ~dirs:[Left; Right] tgs in
+  print @@ Utils.thd3 tgs;
+  [%expect {||}];
   (* let tgs = build_station (14, 15) ~dirs:[Left; Right] tgs in *)
   (* print @@ Utils.thd3 tgs; *)
   (* [%expect {||}]; *)
-  (**)
   (* let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in *)
   (* print @@ Utils.thd3 tgs; *)
   (* [%expect {||}]; *)
