@@ -25,6 +25,13 @@ let graph () =
   |> TG.add_segment ~xyd1:(1,2,Dir.UpRight) ~xyd2:(5,6,Left) ~dist:10
   |> TG.add_segment ~xyd1:(5,6,Dir.UpRight) ~xyd2:(7,8,DownLeft) ~dist:3
 
+let build_station (x, y) ~dirs (tmap, graph) =
+  let before = TS.scan tmap ~x ~y ~player:0 in
+  let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
+  let after = TS.scan tmap ~x ~y ~player:0 in
+  let graph = TG.Track.handle_build_station graph ~x ~y before after in
+  tmap, graph
+
 let print_graph g =
   TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
 
@@ -349,7 +356,26 @@ module Track = struct
 
   let%expect_test "4 connected stations in a square, disconnect one" =
     (* BUG: make sure we can handle being connected to same track on both sides *)
-    let graph, segments = TG.make (), SM.make () in
-    let tmap = square_track () in
+    let tg = (square_track (), TG.make ())
+     |> build_station (6, 5) ~dirs:[Left; Right] in
+    print_graph @@ snd tg;
+    [%expect {| [] |}];
+    let tg = build_station (14, 5) ~dirs:[Left; Right] tg in
+    print_graph @@ snd tg;
+    [%expect.unreachable];
     ()
+  [@@expect.uncaught_exn {|
+    (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+       This is strongly discouraged as backtraces are fragile.
+       Please change this test to not include a backtrace. *)
+
+    (Invalid_argument "[ocamlgraph] fold_succ_e")
+    Raised at Stdlib.invalid_arg in file "stdlib.ml", line 30, characters 20-45
+    Called from Graph__Blocks.Labeled.fold_succ_e in file "src/blocks.ml", line 348, characters 6-56
+    Called from Rails_lib__Track_graph.remove_segment in file "src/rails_lib/backend/track_graph.ml", line 155, characters 54-68
+    Called from Rails_lib__Track_graph.Track.handle_build_station.add_to_edge in file "src/rails_lib/backend/track_graph.ml" (inlined), line 275, characters 9-53
+    Called from Rails_lib__Track_graph.Track.handle_build_station.add_to_edge in file "src/rails_lib/backend/track_graph.ml", line 274, characters 6-65
+    Called from Rails_lib__Track_graph_test.build_station in file "src/rails_lib/tests/track_graph_test.ml", line 32, characters 14-68
+    Called from Rails_lib__Track_graph_test.Track.(fun) in file "src/rails_lib/tests/track_graph_test.ml", line 363, characters 13-57
+    Called from Expect_test_collector.Make.Instance_io.exec in file "collector/expect_test_collector.ml", line 234, characters 12-19 |}]
 end
