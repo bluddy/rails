@@ -32,6 +32,14 @@ let build_station (x, y) ~dirs (tmap, graph) =
   let graph = TG.Track.handle_build_station graph ~x ~y before after in
   tmap, graph
 
+let build_station2 (x, y) ~dirs (tmap, graph) =
+  let before = TS.scan tmap ~x ~y ~player:0 in
+  let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
+  let after = TS.scan tmap ~x ~y ~player:0 in
+  let graph = TG.Track.handle_build_station graph ~x ~y before after in
+  tmap, graph, before, after
+
+
 let print_graph g =
   TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
 
@@ -356,26 +364,22 @@ module Track = struct
 
   let%expect_test "4 connected stations in a square, disconnect one" =
     (* BUG: make sure we can handle being connected to same track on both sides *)
-    let tg = (square_track (), TG.make ())
-     |> build_station (6, 5) ~dirs:[Left; Right] in
-    print_graph @@ snd tg;
-    [%expect {| [] |}];
-    let tg = build_station (14, 5) ~dirs:[Left; Right] tg in
-    print_graph @@ snd tg;
-    [%expect.unreachable];
+    let tm, tg, before, after = (square_track (), TG.make ())
+     |> build_station2 (6, 5) ~dirs:[Left; Right] in
+    print_endline @@ Scan.show before;
+    [%expect {| (Scan.Track []) |}];
+    print_endline @@ Scan.show after;
+    [%expect {|
+      (Scan.Station
+         [{ Scan.x = 6; y = 5; dist = 40; dir = Dir.Right; search_dir = Dir.Left;
+            station = true; double = false };
+           { Scan.x = 6; y = 5; dist = 40; dir = Dir.Left; search_dir = Dir.Right;
+             station = true; double = false }
+           ]) |}];
+    print_graph tg;
+    [%expect {| [[[6,5],[6,5],{"nodes":[[[6,5],["Right"]],[[6,5],["Left"]]],"dist":40,"block":false}]] |}];
+    let (tm, tg) = build_station (14, 5) ~dirs:[Left; Right] (tm, tg) in
+    print_graph tg;
+    [%expect{| [[[14,5],[6,5],{"nodes":[[[6,5],["Left"]],[[14,5],["Right"]]],"dist":32,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
     ()
-  [@@expect.uncaught_exn {|
-    (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-       This is strongly discouraged as backtraces are fragile.
-       Please change this test to not include a backtrace. *)
-
-    (Invalid_argument "[ocamlgraph] fold_succ_e")
-    Raised at Stdlib.invalid_arg in file "stdlib.ml", line 30, characters 20-45
-    Called from Graph__Blocks.Labeled.fold_succ_e in file "src/blocks.ml", line 348, characters 6-56
-    Called from Rails_lib__Track_graph.remove_segment in file "src/rails_lib/backend/track_graph.ml", line 155, characters 54-68
-    Called from Rails_lib__Track_graph.Track.handle_build_station.add_to_edge in file "src/rails_lib/backend/track_graph.ml" (inlined), line 275, characters 9-53
-    Called from Rails_lib__Track_graph.Track.handle_build_station.add_to_edge in file "src/rails_lib/backend/track_graph.ml", line 274, characters 6-65
-    Called from Rails_lib__Track_graph_test.build_station in file "src/rails_lib/tests/track_graph_test.ml", line 32, characters 14-68
-    Called from Rails_lib__Track_graph_test.Track.(fun) in file "src/rails_lib/tests/track_graph_test.ml", line 363, characters 13-57
-    Called from Expect_test_collector.Make.Instance_io.exec in file "collector/expect_test_collector.ml", line 234, characters 12-19 |}]
 end

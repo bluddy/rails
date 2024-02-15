@@ -89,7 +89,7 @@ type t =
   | Ixn of ixn list (* 0/1/2/3 ixns *)
   | Station of ixn list  (* 0/1/2 ixns *)
   | Track of ixn list (* 0/1/2 ixns *)
-  [@@deriving eq,show]
+  [@@deriving eq, show]
         
 (* Return a query about the segment from a particular tile
    Get back a list of scan results

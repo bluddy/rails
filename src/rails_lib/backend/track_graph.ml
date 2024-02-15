@@ -292,6 +292,17 @@ module Track = struct
     | Track [ixn1; ixn2], Station [ixn4; ixn3]
         when equal_ixn ixn1 ixn3 && equal_ixn ixn2 ixn4 ->
         add_to_edge ixn1 ixn2 ixn3 ixn4
+
+      (* Track loop that becomes a station
+          --      -S
+         | |  -> | |
+         --      __
+       *)
+    | Track [], Station [ixn1; ixn2] when equal_ixn ixn1 ixn2 ->
+      graph
+      |> add_segment ~xyd1:(ixn1.x,ixn1.y,ixn1.dir) ~xyd2:(x,y,ixn1.search_dir) ~dist:ixn1.dist
+      |> add_segment ~xyd1:(ixn2.x,ixn2.y,ixn2.dir) ~xyd2:(x,y,ixn2.search_dir) ~dist:ixn2.dist
+
     | _, _ -> graph
 
   (* Handle simple case of track graph-wise *)
@@ -327,6 +338,16 @@ module Track = struct
           |> remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir)
           |> add_segment ~xyd1:(ixn3.x, ixn3.y, ixn3.dir) ~xyd2:(x, y, ixn3.search_dir) ~dist:ixn3.dist
           |> add_segment ~xyd1:(ixn4.x, ixn4.y, ixn4.dir) ~xyd2:(x, y, ixn4.search_dir) ~dist:ixn4.dist
+
+        (* Add ixn to loop.
+           ---    ->    -x-
+          | |          | |
+         ---          ---
+        *)
+      | Track [], Ixn [ixn1; ixn2] when equal_ixn ixn1 ixn2 ->
+          graph
+          |> add_segment ~xyd1:(ixn1.x, ixn1.y, ixn1.dir) ~xyd2:(x, y, ixn1.search_dir) ~dist:ixn1.dist
+          |> add_segment ~xyd1:(ixn2.x, ixn2.y, ixn2.dir) ~xyd2:(x, y, ixn2.search_dir) ~dist:ixn2.dist
 
         (* Regular edge. We add an intersection in the middle that connects to another
           intersection:
