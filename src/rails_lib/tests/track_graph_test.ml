@@ -361,8 +361,7 @@ module Track = struct
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}]
 
-  let%expect_test "4 connected stations in a square, disconnect one" =
-    (* BUG: make sure we can handle being connected to same track on both sides *)
+  let%expect_test "4 connected stations in a square, disconnect all" =
     let tm, tg = (square_track (), TG.make ())
      |> build_station (6, 5) ~dirs:[Left; Right] in
     print_graph tg;
@@ -379,5 +378,11 @@ module Track = struct
     let _tm, tg = remove_station (14, 15) (tm, tg) in
     print_graph tg;
     [%expect{| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
+    let _tm, tg = remove_station (6, 15) (tm, tg) in
+    print_graph tg;
+    [%expect{| [[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
+    let _tm, tg = remove_station (6, 5) (tm, tg) in
+    print_graph tg;
+    [%expect{| [] |}];
     ()
 end

@@ -290,8 +290,6 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       ((6, 5), `Upper) -> 1 } |}];
 
   let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in
-  print_graph @@ Utils.snd3 tgs;
-  [%expect {| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}],[[14,15],[14,5],{"nodes":[[[14,5],["Right"]],[[14,15],["Right"]]],"dist":12,"block":false}],[[14,15],[6,15],{"nodes":[[[6,15],["Right"]],[[14,15],["Left"]]],"dist":8,"block":false}]] |}];
   print @@ Utils.thd3 tgs;
   [%expect {|
     { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 3
@@ -303,10 +301,7 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1, ((6, 15), `Upper) -> 1 } |}];
 
   let tgs = remove_station (14, 15) tgs in
-  print_graph @@ Utils.snd3 tgs;
-  [%expect {| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
   print @@ Utils.thd3 tgs;
-  (* BUG: remove station in loop *)
   [%expect {|
     { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 3
       -> { Segment_map.count = 0; double = `Single }, 0
@@ -315,4 +310,25 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       stations = ((6, 15), `Lower) -> 3, ((14, 5), `Lower) -> 2,
       ((14, 5), `Upper) -> 0, ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1,
       ((6, 15), `Upper) -> 1 } |}];
+
+  let tgs = remove_station (6, 15) tgs in
+  print @@ Utils.thd3 tgs;
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 0
+      -> { Segment_map.count = 0; double = `Single }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0, ((6, 5), `Lower)
+      -> 0, ((6, 5), `Upper) -> 1 } |}];
+
+  let tgs = remove_station (6, 5) tgs in
+  print @@ Utils.thd3 tgs;
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 0
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0 } |}];
+
+  let tgs = remove_station (14, 5) tgs in
+  print @@ Utils.thd3 tgs;
+  [%expect {|
+    { Segment_map.info = ; stations =  } |}];
 

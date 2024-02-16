@@ -27,13 +27,15 @@ module Edge : sig
     val set_block: bool -> t -> unit
   end
 = struct
+    (* Edges store their end nodes because we need to remember which side we're connected to *)
     type t = {
       nodes: locdpair;
       dist: int; (* Length of edge *)
-      mutable block: bool; (* Temporarily block the edge *)
+      mutable block: bool; (* Temporarily block the edge for computations *)
     } [@@deriving yojson]
 
     let canonical v =
+      (* Create a canonical ordering *)
       let nodes = canonical_locdpair v.nodes in 
       [%up {v with nodes}]
 
@@ -64,6 +66,7 @@ module Edge : sig
 end
 
 module Node = struct
+  (* Node is simple: just (x,y) *)
   type t = loc
     [@@deriving eq, ord, yojson]
 
@@ -73,6 +76,8 @@ end
 module G = struct
   module G = Graph.Imperative.Graph.ConcreteLabeled(Node)(Edge)
   include G
+
+  (* Add serialization *)
 
   let yojson_of_t v : Yojson.Safe.t =
     let edges = G.fold_edges_e (fun e li ->
@@ -376,18 +381,18 @@ module Track = struct
             remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir) graph
 
       | Track [ixn1; _], NoResult ->
-            remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir) graph
+          remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir) graph
 
         (* Was station. Now station gone.
           x---S       ->    x---
           x---S---x   ->    x--- ---x *)
       | Station _, (Track [_] | NoResult) ->
-            remove_ixn ~x ~y graph
+          remove_ixn ~x ~y graph
 
         (* Was ixn. Now deleted.
           x---+       ->    x--- *)
       | Ixn [_], (Track [_] | NoResult) ->
-            remove_ixn ~x ~y graph
+          remove_ixn ~x ~y graph
 
         (* Was 2 ixn. Now edge
           x---+---x   ->    x-------x *)
@@ -398,8 +403,7 @@ module Track = struct
           x---+---x   ->    x-------x
 
           x---S---x   ->    x-------x *)
-      | Ixn [_; _], Track [ixn3; ixn4]
-      | Ixn [_; _; _], Track [ixn3; ixn4]
+      | Ixn _, Track [ixn3; ixn4]
       | Station [_; _], Track[ixn3; ixn4] ->
           graph
           |> remove_ixn ~x ~y
