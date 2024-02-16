@@ -6,7 +6,7 @@ module TG = Track_graph
 module TS = Scan
 open Test_common
 
-let print (segments:SM.t) = SM.yojson_of_t segments |> Yojson.Safe.to_string |> print_string
+let print (segments:SM.t) = SM.show segments |> print_string
 
 let trainmap = Trainmap.empty ()
 
@@ -60,7 +60,10 @@ let%expect_test "build station" =
     |> build_station loc ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[10,10],["Lower"]],1]]} |}]
+  [%expect {|
+    { Segment_map.info = 0 -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Double };
+      stations = ((10, 10), `Lower) -> 1, ((10, 10), `Upper) -> 0 } |}]
 
 let%expect_test "build station between ixns" =
   let graph, segments = TG.make (), SM.make () in
@@ -72,7 +75,10 @@ let%expect_test "build station between ixns" =
     |> build_station (10, 10) ~dirs:[Left;Right]
   in
   print segments;
-  [%expect{| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[10,10],["Lower"]],1]]} |}]
+  [%expect{|
+    { Segment_map.info = 0 -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Double };
+      stations = ((10, 10), `Lower) -> 1, ((10, 10), `Upper) -> 0 } |}]
 
 let%expect_test "build second station" =
   let graph, segments = TG.make (), SM.make () in
@@ -84,7 +90,12 @@ let%expect_test "build second station" =
     |> build_station (5, 10) ~dirs
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],0],[[[5,10],["Upper"]],2],[[[5,10],["Lower"]],0],[[[10,10],["Lower"]],1]]} |}]
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Single }, 1
+      -> { Segment_map.count = 0; double = `Double };
+      stations = ((10, 10), `Lower) -> 1, ((5, 10), `Lower) -> 0,
+      ((5, 10), `Upper) -> 2, ((10, 10), `Upper) -> 0 } |}]
 
 let%expect_test "build 3 stations left to right " =
   let graph, segments = TG.make (), SM.make () in
@@ -97,7 +108,14 @@ let%expect_test "build 3 stations left to right " =
     |> build_station (15,10) ~dirs
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],2],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],2]]} |}]
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 3
+      -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 2, ((15, 10), `Lower) -> 3,
+      ((10, 10), `Lower) -> 2, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
+      ((10, 10), `Upper) -> 1 } |}]
 
 let%expect_test "build 2 stations and then one in the middle" =
   let graph, segments = TG.make (), SM.make () in
@@ -111,14 +129,26 @@ let%expect_test "build 2 stations and then one in the middle" =
   print_graph graph;
   [%expect {| [[[15,10],[5,10],{"nodes":[[[5,10],["Right"]],[[15,10],["Left"]]],"dist":10,"block":false}]] |}];
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
   (* Now the middle station *)
   let _, graph, segments =
     build_station (10,10) ~dirs tgs in
   print_graph graph;
   [%expect {| [[[10,10],[5,10],{"nodes":[[[5,10],["Right"]],[[10,10],["Left"]]],"dist":5,"block":false}],[[15,10],[10,10],{"nodes":[[[10,10],["Right"]],[[15,10],["Left"]]],"dist":5,"block":false}]] |}];
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[10,10],["Upper"]],1],[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[10,10],["Lower"]],3],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 3
+      -> { Segment_map.count = 0; double = `Single }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 3, ((15, 10), `Lower) -> 2,
+      ((10, 10), `Lower) -> 3, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
+      ((10, 10), `Upper) -> 1 } |}]
 
 (* build 2 stations separated by ixn *)
 let%expect_test "build 2 stations separated by ixn" =
@@ -132,7 +162,12 @@ let%expect_test "build 2 stations separated by ixn" =
     |> build_track (10,10) ~dirs:[Left;Right;UpRight]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}]
 
 
 (* Test build_track
@@ -149,12 +184,23 @@ let%expect_test "connect 2 station with road" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Double"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],2]]} |}];
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 3
+      -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Double };
+      stations = ((15, 10), `Upper) -> 2, ((15, 10), `Lower) -> 3,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
   let _, _, segments =
     build_track (10, 10) (tmap, graph, segments) ~dirs:[Left;Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],3],[[[15,10],["Upper"]],1]]} |}]
+  [%expect {|
+    { Segment_map.info = 3 -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 3,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}]
 
 
 (* Test remove_track
@@ -169,10 +215,21 @@ let%expect_test "2 connected stations, disconnect road" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
   let _, _, segments = remove_track (10, 10) (tmap, graph, segments) in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[3,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],3]]} |}]
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 3
+      -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 3, ((15, 10), `Lower) -> 2,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}]
 
 (* Test remove_station
    graph trackmap segment_map loc scan1 scan2
@@ -186,11 +243,19 @@ let%expect_test "2 connected stations, disconnect one" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Double"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[5,10],["Upper"]],0],[[[5,10],["Lower"]],1],[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}];
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
   let _, _, segments =
     remove_station (5, 10) (tmap, graph, segments) in
   print segments;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2 } |}]
 
 let%expect_test "4 connected stations in a square, disconnect one" =
   (* BUG: make sure we can handle being connected to same track on both sides *)
@@ -202,26 +267,52 @@ let%expect_test "4 connected stations in a square, disconnect one" =
     |> build_station (6, 5) ~dirs:[Left; Right]
   in
   print @@ Utils.thd3 tgs;
-  [%expect{| {"info":[[0,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],0],[[[6,5],["Lower"]],0]]} |}];
+  [%expect{|
+    { Segment_map.info = 0 -> { Segment_map.count = 0; double = `Single };
+      stations = ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 0 } |}];
 
   let tgs = build_station (14, 5) ~dirs:[Left; Right] tgs in
   print @@ Utils.thd3 tgs;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],1]]} |}];
+  [%expect {|
+    { Segment_map.info = 0 -> { Segment_map.count = 0; double = `Single }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((14, 5), `Lower) -> 1, ((14, 5), `Upper) -> 0, ((6, 5), `Lower)
+      -> 0, ((6, 5), `Upper) -> 1 } |}];
 
   let tgs = build_station (14, 15) ~dirs:[Left; Right] tgs in
   print @@ Utils.thd3 tgs;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[14,15],["Upper"]],1],[[[14,15],["Lower"]],2]]} |}];
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 0
+      -> { Segment_map.count = 0; double = `Single }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((14, 15), `Lower) -> 2, ((14, 15), `Upper) -> 1,
+      ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0, ((6, 5), `Lower) -> 0,
+      ((6, 5), `Upper) -> 1 } |}];
 
   let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in
   print_graph @@ Utils.snd3 tgs;
   [%expect {| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}],[[14,15],[14,5],{"nodes":[[[14,5],["Right"]],[[14,15],["Right"]]],"dist":12,"block":false}],[[14,15],[6,15],{"nodes":[[[6,15],["Right"]],[[14,15],["Left"]]],"dist":8,"block":false}]] |}];
   print @@ Utils.thd3 tgs;
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,15],["Upper"]],1],[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[6,15],["Lower"]],3],[[[14,15],["Upper"]],3],[[[14,15],["Lower"]],2]]} |}];
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 3
+      -> { Segment_map.count = 0; double = `Single }, 0
+      -> { Segment_map.count = 0; double = `Single }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((14, 15), `Lower) -> 2, ((14, 15), `Upper) -> 3,
+      ((6, 15), `Lower) -> 3, ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0,
+      ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1, ((6, 15), `Upper) -> 1 } |}];
 
   let tgs = remove_station (14, 15) tgs in
   print_graph @@ Utils.snd3 tgs;
   [%expect {| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
   print @@ Utils.thd3 tgs;
   (* BUG: remove station in loop *)
-  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,15],["Upper"]],1],[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[6,15],["Lower"]],3]]} |}];
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 3
+      -> { Segment_map.count = 0; double = `Single }, 0
+      -> { Segment_map.count = 0; double = `Single }, 1
+      -> { Segment_map.count = 0; double = `Single };
+      stations = ((6, 15), `Lower) -> 3, ((14, 5), `Lower) -> 2,
+      ((14, 5), `Upper) -> 0, ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1,
+      ((6, 15), `Upper) -> 1 } |}];
 
