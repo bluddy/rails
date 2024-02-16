@@ -379,18 +379,14 @@ module Track = struct
             remove_segment ~xyd:(ixn1.x,ixn1.y,ixn1.dir) graph
 
         (* Was station. Now station gone.
-          x---S       ->    x--- *)
-      | Station [_], (Track [_] | NoResult) ->
+          x---S       ->    x---
+          x---S---x   ->    x--- ---x *)
+      | Station _, (Track [_] | NoResult) ->
             remove_ixn ~x ~y graph
 
         (* Was ixn. Now deleted.
           x---+       ->    x--- *)
       | Ixn [_], (Track [_] | NoResult) ->
-            remove_ixn ~x ~y graph
-
-        (* Was connecting station. Now disconnected
-          x---S---x   ->    x--- ---x *)
-      | Station [_; _], Track[_] ->
             remove_ixn ~x ~y graph
 
         (* Was 2 ixn. Now edge
@@ -399,9 +395,12 @@ module Track = struct
         (* Was 3 ixn. Now edge + disconnected
               x                 x
               |                 |
-          x---+---x   ->    x-------x *)
+          x---+---x   ->    x-------x
+
+          x---S---x   ->    x-------x *)
       | Ixn [_; _], Track [ixn3; ixn4]
-      | Ixn [_; _; _], Track [ixn3; ixn4] ->
+      | Ixn [_; _; _], Track [ixn3; ixn4]
+      | Station [_; _], Track[ixn3; ixn4] ->
           graph
           |> remove_ixn ~x ~y
           |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(ixn4.x,ixn4.y,ixn4.dir) ~dist:(ixn3.dist + ixn4.dist)

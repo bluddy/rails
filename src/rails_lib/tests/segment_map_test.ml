@@ -8,8 +8,6 @@ open Test_common
 
 let print (segments:SM.t) = SM.yojson_of_t segments |> Yojson.Safe.to_string |> print_string
 
-let print_graph g = TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
-
 let trainmap = Trainmap.empty ()
 
 let player = 0
@@ -215,10 +213,14 @@ let%expect_test "4 connected stations in a square, disconnect one" =
   [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[14,15],["Upper"]],1],[[[14,15],["Lower"]],2]]} |}];
 
   let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in
+  print_graph @@ Utils.snd3 tgs;
+  [%expect {| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}],[[14,15],[14,5],{"nodes":[[[14,5],["Right"]],[[14,15],["Right"]]],"dist":12,"block":false}],[[14,15],[6,15],{"nodes":[[[6,15],["Right"]],[[14,15],["Left"]]],"dist":8,"block":false}]] |}];
   print @@ Utils.thd3 tgs;
   [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,15],["Upper"]],1],[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[6,15],["Lower"]],3],[[[14,15],["Upper"]],3],[[[14,15],["Lower"]],2]]} |}];
 
   let tgs = remove_station (14, 15) tgs in
+  print_graph @@ Utils.snd3 tgs;
+  [%expect {| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
   print @@ Utils.thd3 tgs;
   (* BUG: remove station in loop *)
   [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,15],["Upper"]],1],[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[6,15],["Lower"]],3]]} |}];

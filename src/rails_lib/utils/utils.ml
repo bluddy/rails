@@ -89,7 +89,7 @@ type locu = loc * Dir.upper
 let locu_of_locd (loc, d) = (loc, Dir.to_upper d)
 
 type locdpair = locd * locd
-  [@@deriving eq, ord, yojson]
+  [@@deriving eq, ord, yojson, show]
 
 (* Expand CCHashSet *)
 module type S2 = sig

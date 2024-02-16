@@ -32,13 +32,12 @@ let build_station (x, y) ~dirs (tmap, graph) =
   let graph = TG.Track.handle_build_station graph ~x ~y before after in
   tmap, graph
 
-let build_station2 (x, y) ~dirs (tmap, graph) =
+let remove_station (x, y) (tmap, graph) =
   let before = TS.scan tmap ~x ~y ~player:0 in
-  let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
+  let tmap = TM.remove ~x ~y tmap in
   let after = TS.scan tmap ~x ~y ~player:0 in
-  let graph = TG.Track.handle_build_station graph ~x ~y before after in
-  tmap, graph, before, after
-
+  let graph = TG.Track.handle_remove_track graph ~x ~y before after in
+  tmap, graph
 
 let print_graph g =
   TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
@@ -364,22 +363,21 @@ module Track = struct
 
   let%expect_test "4 connected stations in a square, disconnect one" =
     (* BUG: make sure we can handle being connected to same track on both sides *)
-    let tm, tg, before, after = (square_track (), TG.make ())
-     |> build_station2 (6, 5) ~dirs:[Left; Right] in
-    print_endline @@ Scan.show before;
-    [%expect {| (Scan.Track []) |}];
-    print_endline @@ Scan.show after;
-    [%expect {|
-      (Scan.Station
-         [{ Scan.x = 6; y = 5; dist = 40; dir = Dir.Right; search_dir = Dir.Left;
-            station = true; double = false };
-           { Scan.x = 6; y = 5; dist = 40; dir = Dir.Left; search_dir = Dir.Right;
-             station = true; double = false }
-           ]) |}];
+    let tm, tg = (square_track (), TG.make ())
+     |> build_station (6, 5) ~dirs:[Left; Right] in
     print_graph tg;
     [%expect {| [[[6,5],[6,5],{"nodes":[[[6,5],["Right"]],[[6,5],["Left"]]],"dist":40,"block":false}]] |}];
-    let (tm, tg) = build_station (14, 5) ~dirs:[Left; Right] (tm, tg) in
+    let tm, tg = build_station (14, 5) ~dirs:[Left; Right] (tm, tg) in
     print_graph tg;
     [%expect{| [[[14,5],[6,5],{"nodes":[[[6,5],["Left"]],[[14,5],["Right"]]],"dist":32,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
+    let tm, tg = build_station (14, 15) ~dirs:[Left; Right] (tm, tg) in
+    print_graph tg;
+    [%expect{| [[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}],[[14,15],[14,5],{"nodes":[[[14,5],["Right"]],[[14,15],["Right"]]],"dist":12,"block":false}],[[14,15],[6,5],{"nodes":[[[6,5],["Left"]],[[14,15],["Left"]]],"dist":20,"block":false}]] |}];
+    let tm, tg = build_station (6, 15) ~dirs:[Left; Right] (tm, tg) in
+    print_graph tg;
+    [%expect{| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}],[[14,15],[14,5],{"nodes":[[[14,5],["Right"]],[[14,15],["Right"]]],"dist":12,"block":false}],[[14,15],[6,15],{"nodes":[[[6,15],["Right"]],[[14,15],["Left"]]],"dist":8,"block":false}]] |}];
+    let _tm, tg = remove_station (14, 15) (tm, tg) in
+    print_graph tg;
+    [%expect{| [[[6,15],[6,5],{"nodes":[[[6,5],["Left"]],[[6,15],["Left"]]],"dist":12,"block":false}],[[14,5],[6,5],{"nodes":[[[6,5],["Right"]],[[14,5],["Left"]]],"dist":8,"block":false}]] |}];
     ()
 end

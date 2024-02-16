@@ -15,12 +15,12 @@ module Id = Int_id.Make(struct end)
 type info = {
   mutable count: int;
   mutable double: Track.double;
-} [@@deriving yojson]
+} [@@deriving yojson, show]
 
 type t = {
   info: (Id.t, info) Utils.Hashtbl.t;
   stations: (Utils.loc * Dir.upper, Id.t) Utils.Hashtbl.t;
-} [@@deriving yojson]
+} [@@deriving yojson, show]
 
 let make () = {
   info=Hashtbl.create 10;
