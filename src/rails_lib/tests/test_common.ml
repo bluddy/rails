@@ -33,3 +33,5 @@ let square_track () =
   |> TM.set ~x:5 ~y:15 ~t:(make_tm [Up; Right])
   |> TM.set ~x:15 ~y:15 ~t:(make_tm [Up; Left])
 
+let print_graph g = TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
+
