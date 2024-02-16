@@ -4,6 +4,7 @@ module TM = Trackmap
 module SM = Segment_map
 module TG = Track_graph
 module TS = Scan
+module TRM = Trainmap
 open Test_common
 
 let print (segments:SM.t) = SM.show segments |> print_string
@@ -330,4 +331,10 @@ let%expect_test "4 connected stations in a square, disconnect one" =
   print @@ Utils.thd3 tgs;
   [%expect {|
     { Segment_map.info = ; stations =  } |}];
+  ()
+
+let foo trainmap =
+  let train = TRM.get trainmap @@ TRM.Id.of_int 4 in
+  Train.advance train
+
 

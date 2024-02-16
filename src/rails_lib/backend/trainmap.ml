@@ -4,6 +4,7 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 module Vector = Utils.Vector
 module C = Constants
+open Utils.Infix
 
 
 module Id = Int_id.Make(struct end)
@@ -11,14 +12,14 @@ module Id = Int_id.Make(struct end)
 (* Note: very important to keep the tile_idx updated all the time *)
 
 type t = {
-  trains: Train.t Vector.vector;
+  trains: (rw Train.t) Vector.vector;
   tile_idx: (Utils.loc, Id.t list) Hashtbl.t;  (* Tiles of train locations. *)
 }
 [@@deriving yojson]
 
 let empty () = { trains=Vector.create (); tile_idx=Hashtbl.create 10 }
 
-let _calc_train_loc (train:Train.t) = train.x / C.tile_dim, train.y / C.tile_dim
+let _calc_train_loc (train:'a Train.t) = train.x / C.tile_dim, train.y / C.tile_dim
 
 let _add_train_loc v loc train_id =
   Hashtbl.update v.tile_idx ~k:loc ~f:(fun _k -> function
@@ -36,7 +37,7 @@ let _remove_train_loc v loc train_id =
   )
 
   (* Only for viewing, *not for updating* *)
-let get v idx =
+let get v idx : [`Read] Train.t =
   Vector.get v.trains @@ Id.to_int idx
 
 let add v train =
@@ -73,21 +74,17 @@ let update v idx f =
 
 let size v = Vector.size v.trains
 
-let get_last v =
+let get_last v : [>`Read] Train.t =
   let size = size v in
   get v @@ Id.of_int @@ size - 1
 
-  (* Read-only *)
-let iter f (v:t) = Vector.iter f v.trains
+let iter (f:[> `Read] Train.t -> unit) (v:t) = Vector.iter f v.trains
 
-  (* Read-only *)
-let iteri f (v:t) = Vector.iteri f v.trains
+let iteri (f: int -> [>`Read] Train.t -> unit) (v:t) = Vector.iteri f v.trains
 
-  (* Read-only *)
-let fold f (v:t) ~init = Vector.fold f init v.trains
+let fold (f: 'a -> [>`Read] Train.t -> 'a) (v:t) ~init = Vector.fold f init v.trains
 
-  (* Read-only *)
-let foldi f (v:t) ~init = Vector.foldi f init v.trains
+let foldi (f: int -> 'a -> [>`Read] Train.t -> 'a) (v:t) ~init = Vector.foldi f init v.trains
 
 let mapi_in_place f v = 
   Vector.mapi_in_place (fun i train ->
@@ -96,8 +93,7 @@ let mapi_in_place f v =
     v.trains
 
   (* Return the index of a train that matches *)
-  (* read-only *)
-let find_ret_index f (v:t) =
+let find_ret_index (f:[>`Read] Train.t -> bool) (v:t) =
   let exception Stop of int in
   try
     iteri (fun i x -> if f x then raise (Stop i)) v;

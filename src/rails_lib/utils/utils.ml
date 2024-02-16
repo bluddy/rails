@@ -13,6 +13,8 @@ end
 module Infix = struct
   let (===) = Stdlib.(==)
   let (=!=) = Stdlib.(!=)
+  type rw = [ `Read | `Write] [@@deriving yojson]
+  (* type 'a ro = [> `Read] [@@deriving yojson] *)
 end
 
 module Random = struct
@@ -267,6 +269,20 @@ module List = struct
     loop i [] l0
 end
 
+let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
+  let min_x = max 0 (x-range) in
+  let max_x = min (width-1) (x+range) in
+  let min_y = max 0 (y-range) in
+  let max_y = min (height-1) (y+range) in
+  let v = ref init in
+  for i=min_y to max_y do
+    for j=min_x to max_x do
+      let read_val = read_f j i in
+      v := f !v j i read_val
+    done
+  done;
+  !v
+
 let scan_unordered ~range ~x ~y ~width ~height ~f =
   let min_x = max 0 (x-range) in
   let max_x = min (width-1) (x+range) in
@@ -283,20 +299,6 @@ let scan_unordered ~range ~x ~y ~width ~height ~f =
     None
   with
   | Found x -> x
-
-let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
-  let min_x = max 0 (x-range) in
-  let max_x = min (width-1) (x+range) in
-  let min_y = max 0 (y-range) in
-  let max_y = min (height-1) (y+range) in
-  let v = ref init in
-  for i=min_y to max_y do
-    for j=min_x to max_x do
-      let read_val = read_f j i in
-      v := f !v j i read_val
-    done
-  done;
-  !v
 
   (* Scan in a spiral pattern *)
 let scan =

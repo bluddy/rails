@@ -7,6 +7,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
 module C = Constants
+open Utils.Infix
 
 let max_stops = 4
 
@@ -115,7 +116,7 @@ type periodic = {
   revenue: int;
 } [@@deriving yojson, show]
 
-type t = {
+type 'mut t = {
   mutable x: int;
   mutable y: int;
   state: state;
@@ -153,7 +154,7 @@ let display_speed v = C.speed_mult * get_speed v
 let display_maintenance v =
   v.maintenance_cost / 2 + List.length v.cars + C.min_maintenance_cost
 
-let reset_pixels_from_midtile train =
+let reset_pixels_from_midtile (train: rw t) =
   train.pixels_from_midtile <- 0
 
 let get_route_dest v = Vector.get v.route v.stop
@@ -221,7 +222,7 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
 
 let get_route v = v.route
 
-let remove_stop_car (v:t) stop car =
+let remove_stop_car (v:rw t) stop car =
   let remove_car (stop:stop) =
     let cars = match stop.cars with
       | None -> None
@@ -241,7 +242,7 @@ let remove_stop_car (v:t) stop car =
       let priority = Option.map remove_car v.priority in
       {v with priority}
 
-let add_stop_car (v:t) stop car =
+let add_stop_car (v:rw t) stop car =
   let add_car (stop:stop) =
     let cars = match stop.cars with
       | Some car_list -> Some(car_list @ [car])
@@ -257,7 +258,7 @@ let add_stop_car (v:t) stop car =
       let priority = Option.map add_car v.priority in
       {v with priority}
 
-let remove_all_stop_cars (v:t) stop =
+let remove_all_stop_cars (v:rw t) stop =
   let remove_all_cars (stop:stop) = {stop with cars = Some []} in
   match stop with
   | `Stop stop_idx ->
@@ -267,7 +268,7 @@ let remove_all_stop_cars (v:t) stop =
       let priority = Option.map remove_all_cars v.priority in
       {v with priority}
 
-let check_stop_station (v:t) stop loc =
+let check_stop_station (v:'a t) stop loc =
   (* Don't allow setting the station if the previous or next station
      is the same station already *)
   let len = Vector.length v.route in
@@ -285,7 +286,7 @@ let check_stop_station (v:t) stop loc =
   in
   not (check prev || check next)
 
-let set_stop_station (v:t) stop (x,y) =
+let set_stop_station (v:rw t) stop (x,y) =
   match stop with
   | `Stop i ->
       (* Check for lengthening *)
@@ -302,7 +303,7 @@ let set_stop_station (v:t) stop (x,y) =
       in
       {v with priority=Some stop}
 
-let remove_stop (v:t) stop =
+let remove_stop (v:rw t) stop =
   match stop with
   | `Stop i ->
       Vector.remove_and_shift v.route i;
@@ -355,15 +356,15 @@ let update_period v period f = match period, v.periodic with
   | `First,  (p, x) -> {v with periodic=(f p, x)}
   | `Second, (x, p) -> {v with periodic=(x, f p)}
 
-let add_dist_traveled v add period =
+let add_dist_traveled (v: rw t) add period =
   let period = get_period v period in
   period.dist_traveled <- period.dist_traveled + add
 
-let add_ton_miles v add period =
+let add_ton_miles (v: rw t) add period =
   let period = get_period v period in
   period.ton_miles <- period.ton_miles + add
 
-let advance (v:t) =
+let advance (v:rw t) =
   (* Always advance train by single pixel *)
   let dx, dy = Dir.to_offsets v.dir in
   v.x <- v.x + dx;
@@ -423,7 +424,7 @@ let calc_arrival_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~diff
   in 
   money / 2 (* Seems like it's divided in the end *)
 
-let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
+let update_speed (v:rw t) ~cycle ~cycle_check ~cycle_bit =
   (* Update current train speed based on target speed and cycle *)
   match v.state with
   | Traveling s ->
@@ -446,7 +447,7 @@ let update_speed (v:t) ~cycle ~cycle_check ~cycle_bit =
     v
   | _ -> v
 
-let update_train _idx (train:t) ~cycle ~cycle_check ~cycle_bit ~region_div ~update_mid_tile =
+let update_train _idx (train:rw t) ~cycle ~cycle_check ~cycle_bit ~region_div ~update_mid_tile =
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   match train.state with
   | Traveling travel_state ->
@@ -523,7 +524,7 @@ let update_train _idx (train:t) ~cycle ~cycle_check ~cycle_bit ~region_div ~upda
      if there's sufficient space for it. Otherwise it'll be in the next
      segment, and use that segment's direction history slot, etc.
    *)
-let calc_car_loc_in_pixels (v:t) trackmap total_pixels =
+let calc_car_loc_in_pixels (v:'a t) trackmap total_pixels =
   let move_back x y dir ~total_pixels ~move_pixels =
     let diag = Dir.is_diagonal dir in
     let x, y =
@@ -557,11 +558,11 @@ let calc_car_loc_in_pixels (v:t) trackmap total_pixels =
   let x, y = adjust_loc_for_double_track trackmap x y dir in
   x, y, dir
 
-let calc_car_loc (v:t) trackmap car_idx ~car_pixels =
+let calc_car_loc (v:'a t) trackmap car_idx ~car_pixels =
   (* Same function, with a per-car interface *)
   let total_pixels = car_pixels * (car_idx + 1) in
   calc_car_loc_in_pixels v trackmap total_pixels
 
 
-let get_car_dir (v:t) i = (History.get v.history (i+1)).dir
+let get_car_dir (v:'a t) i = (History.get v.history (i+1)).dir
   

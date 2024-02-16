@@ -13,7 +13,7 @@ module C = Constants
 
 module Train_update = struct
 
-  let _update_train_target_speed (v:t) (train:Train.t) (track:Track.t) ~idx ~cycle ~x ~y ~dir =
+  let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~idx ~cycle ~x ~y ~dir =
     (* Speed factor computation from height delta and turn *)
     let height1 = Tilemap.get_tile_height v.map x y in
     let x2, y2 = Dir.adjust dir x y in
@@ -54,7 +54,7 @@ module Train_update = struct
     Train.advance train
 
 
-  let _train_enter_station (v:t) loc (station:Station.t) (train:Train.t) =
+  let _train_enter_station (v:t) loc (station:Station.t) (train:rw Train.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
       let had_maintenance =
@@ -190,7 +190,7 @@ module Train_update = struct
          delivery to station, print revenue
        *)
 
-  let _update_train_mid_tile ~idx ~cycle (v:t) (train:Train.t) loc =
+  let _update_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) loc =
     (* All major computation happens mid-tile *)
     let (x,y) = loc in
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
