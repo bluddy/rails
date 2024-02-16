@@ -258,7 +258,6 @@ let%expect_test "2 connected stations, disconnect one" =
       stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2 } |}]
 
 let%expect_test "4 connected stations in a square, disconnect one" =
-  (* BUG: make sure we can handle being connected to same track on both sides *)
   let graph, segments = TG.make (), SM.make () in
   (* Draw square *)
   let tmap = square_track () in

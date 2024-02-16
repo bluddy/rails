@@ -33,5 +33,10 @@ let square_track () =
   |> TM.set ~x:5 ~y:15 ~t:(make_tm [Up; Right])
   |> TM.set ~x:15 ~y:15 ~t:(make_tm [Up; Left])
 
+  (* Dummy train for test purposes *)
+let dummy_train tile_loc ~dir =
+  let engine = List.hd @@ Engine.of_region Region.WestUS in
+  Train.make tile_loc engine [] None ~dir ~player:0
+
 let print_graph g = TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
 

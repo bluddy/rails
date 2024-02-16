@@ -8,6 +8,8 @@ module C = Constants
 
 module Id = Int_id.Make(struct end)
 
+(* Note: very important to keep the tile_idx updated all the time *)
+
 type t = {
   trains: Train.t Vector.vector;
   tile_idx: (Utils.loc, Id.t list) Hashtbl.t;  (* Tiles of train locations. *)
