@@ -194,7 +194,6 @@ let%expect_test "2 connected stations, disconnect one" =
   print segments;
   [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Double"]}]],"stations":[[[[15,10],["Lower"]],2],[[[15,10],["Upper"]],1]]} |}]
 
-  (*
 let%expect_test "4 connected stations in a square, disconnect one" =
   (* BUG: make sure we can handle being connected to same track on both sides *)
   let graph, segments = TG.make (), SM.make () in
@@ -209,11 +208,18 @@ let%expect_test "4 connected stations in a square, disconnect one" =
 
   let tgs = build_station (14, 5) ~dirs:[Left; Right] tgs in
   print @@ Utils.thd3 tgs;
-  [%expect {||}];
-  (* let tgs = build_station (14, 15) ~dirs:[Left; Right] tgs in *)
-  (* print @@ Utils.thd3 tgs; *)
-  (* [%expect {||}]; *)
-  (* let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in *)
-  (* print @@ Utils.thd3 tgs; *)
-  (* [%expect {||}]; *)
-*)
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],1]]} |}];
+
+  let tgs = build_station (14, 15) ~dirs:[Left; Right] tgs in
+  print @@ Utils.thd3 tgs;
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[14,15],["Upper"]],1],[[[14,15],["Lower"]],2]]} |}];
+
+  let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in
+  print @@ Utils.thd3 tgs;
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,15],["Upper"]],1],[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[6,15],["Lower"]],3],[[[14,15],["Upper"]],3],[[[14,15],["Lower"]],2]]} |}];
+
+  let tgs = remove_station (14, 15) tgs in
+  print @@ Utils.thd3 tgs;
+  (* BUG: remove station in loop *)
+  [%expect {| {"info":[[1,{"count":0,"double":["Single"]}],[0,{"count":0,"double":["Single"]}],[3,{"count":0,"double":["Single"]}],[2,{"count":0,"double":["Single"]}]],"stations":[[[[6,15],["Upper"]],1],[[[6,5],["Upper"]],1],[[[6,5],["Lower"]],0],[[[14,5],["Upper"]],0],[[[14,5],["Lower"]],2],[[[6,15],["Lower"]],3]]} |}];
+
