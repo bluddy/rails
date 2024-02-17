@@ -13,8 +13,8 @@ end
 module Infix = struct
   let (===) = Stdlib.(==)
   let (=!=) = Stdlib.(!=)
-  type rw = [ `Read | `Write] [@@deriving yojson]
-  (* type 'a ro = [> `Read] [@@deriving yojson] *)
+  type rw = [`RW] [@@deriving yojson]
+  type ro = [`RO] [@@deriving yojson]
 end
 
 module Random = struct

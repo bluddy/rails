@@ -7,7 +7,6 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
 module C = Constants
-open Utils.Infix
 
 let max_stops = 4
 
@@ -115,6 +114,9 @@ type periodic = {
   mutable ton_miles: int;
   revenue: int;
 } [@@deriving yojson, show]
+
+type rw = Utils.Infix.rw
+type ro = Utils.Infix.ro
 
 type 'mut t = {
   mutable x: int;

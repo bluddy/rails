@@ -333,8 +333,5 @@ let%expect_test "4 connected stations in a square, disconnect one" =
     { Segment_map.info = ; stations =  } |}];
   ()
 
-let foo trainmap =
-  let train = TRM.get trainmap @@ TRM.Id.of_int 4 in
-  Train.advance train
 
 

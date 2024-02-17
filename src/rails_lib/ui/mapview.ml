@@ -208,7 +208,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         else
           false
       in
-      Trainmap.find_ret_index (fun (train:[>`Read] Train.t) ->
+      Trainmap.find_ret_index (fun train ->
         (* Test cars *)
         let on_car = 
           Utils.List.findi (fun i _ ->
@@ -421,7 +421,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       )
     );
     (* Draw train *)
-    Trainmap.iter (fun (train:[>`Read] Train.t) ->
+    Trainmap.iter (fun train ->
       (* NOTE: Is the 2nd black point necessary? *)
       List.iter (fun (pixels, color) ->
         let x_map, y_map, _ = Train.calc_car_loc_in_pixels train s.backend.track pixels in
@@ -561,7 +561,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     v.draw_buffer;
 
     (* draw current trains *)
-    Trainmap.iteri (fun train_num (train:[>`Read] Train.t) ->
+    Trainmap.iteri (fun train_num train ->
       let should_write_to_buffer =
         match Hashtbl.find_opt v.draw_buffer train_num with
         | Some history when List.length history.(0) = 0 -> true
@@ -715,7 +715,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_trains_zoom4 () =
     let open Textures.CarsTop in
     let offset_x, offset_y = (-C.tile_w/2) - 2, v.dims.y -C.tile_h/2 - 2 in
-    Trainmap.iter (fun (train:[>`Read] Train.t) ->
+    Trainmap.iter (fun train ->
       (* Draw cars *)
       List.iteri (fun i car ->
         let car_x, car_y, car_dir =
@@ -847,7 +847,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
       let _, _, _, _, start_x_map, start_y_map, end_x_map, end_y_map = mapview_bounds v tile_w tile_h in
       (* Create plumes of smoke *)
       let smoke_plumes =
-        Trainmap.foldi (fun i acc (train:[>`Read] Train.t) ->
+        Trainmap.foldi (fun i acc train ->
           if Engine.has_steam train.engine &&
              Train.get_speed train > 0 &&
              (i * 3 + s.backend.cycle) mod 16 = 0 &&

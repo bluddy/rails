@@ -290,7 +290,7 @@ end
 let handle_cycle v =
   let time_step () =
     v.cycle <- v.cycle + 1;
-    Train_update._update_all_trains v;
+    ignore @@ Train_update._update_all_trains v;
     (* TODO: ai_routines *)
     let demand_msgs =
       if v.cycle mod cycles_station_supply_demand = 0 then (
