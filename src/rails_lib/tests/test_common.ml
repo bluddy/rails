@@ -10,9 +10,9 @@ let make_tm ?(track=Track.Track `Single) dirs =
 
 let tmap = TM.empty 20 20
 
-let build_road ?(y=10) start end_ map =
+let build_road ?track ?(y=10) start end_ map =
   Iter.fold
-    (fun acc x -> TM.set acc ~x ~y ~t:(make_tm [Left;Right]))
+    (fun acc x -> TM.set acc ~x ~y ~t:(make_tm ?track [Left;Right]))
     map @@
     Iter.(start -- end_)
 
@@ -34,7 +34,7 @@ let square_track () =
   |> TM.set ~x:15 ~y:15 ~t:(make_tm [Up; Left])
 
   (* Dummy train for test purposes *)
-let dummy_train tile_loc ~dir =
+let dummy_train tile_loc dir =
   let engine = List.hd @@ Engine.of_region Region.WestUS in
   Train.make tile_loc engine [] None ~dir ~player:0
 

@@ -2,6 +2,7 @@ open! Containers
 open Dir
 module TM = Trackmap
 module S = Scan
+open Test_common
 
 let print_map (map:TM.t) = TM.yojson_of_t map |> Yojson.Safe.to_string |> print_string
 
@@ -179,4 +180,95 @@ let%expect_test "scan map 3 stations in a row" =
          { Scan.x = 5; y = 5; dist = 2; dir = Dir.Left; search_dir = Dir.Right;
            station = true; double = false }
          ]) |}]
+
+let print_sscan s = Pair.pp Int.pp Track.pp_double Format.std_formatter s
+
+let%expect_test "train_scan map one train" =
+  let tracks = TM.empty 20 20
+    |> build_road ~y:10 5 15 
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in
+  S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
+  [%expect {|
+    1,
+    `Single |}]
+
+let%expect_test "train_scan map double" =
+  let tracks = TM.empty 20 20
+    |> build_road ~track:(Track.Track `Double) ~y:10 5 15 
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in
+  S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
+  (* Bug *)
+  [%expect {|
+    1,
+    `Single |}]
+
+let%expect_test "train_scan map two trains" =
+  let tracks = TM.empty 20 20
+    |> build_road ~y:10 5 15 
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in
+  let trains = Trainmap.add trains @@ dummy_train (14, 10) Right in
+  S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
+  [%expect {|
+    2,
+    `Single |}]
+
+let%expect_test "train_scan map two trains same place" =
+  let tracks = TM.empty 20 20
+    |> build_road ~y:10 5 15 
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in
+  S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
+  [%expect {|
+    2,
+    `Single |}]
+
+let%expect_test "train_scan map two trains, ixn in middle" =
+  let tracks = TM.empty 20 20
+    |> build_road ~y:10 5 15 
+    |> TM.set ~x:10 ~y:10 ~t:(track [Left;Right;UpRight])
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in
+  let trains = Trainmap.add trains @@ dummy_train (14, 10) Right in
+  S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
+  [%expect {|
+    2,
+    `Single |}]
+
+let%expect_test "train_scan map two trains, station in middle" =
+  let tracks = TM.empty 20 20
+    |> build_road ~y:10 5 15 
+    |> TM.set ~x:10 ~y:10 ~t:(station [Left;Right])
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in 
+  let trains = Trainmap.add trains @@ dummy_train (14, 10) Right in
+  S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
+  (* Get just 1 till end of segment *)
+  [%expect {|
+    1,
+    `Single |}]
+
+let%expect_test "train_scan double map two trains, station in middle" =
+  let tracks = TM.empty 20 20
+    |> build_road ~track:(Track.Track `Double) ~y:10 5 15 
+    |> TM.set ~x:10 ~y:10 ~t:(station [Left;Right])
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in 
+  let trains = Trainmap.add trains @@ dummy_train (14, 10) Right in
+  S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
+  (* Get just 1 till end of segment *)
+  (* Bug *)
+  [%expect {|
+    1,
+    `Single |}]
 
