@@ -126,6 +126,7 @@ let scan_station_segment tracks trains ~x ~y dir ~player =
         Hashtbl.replace seen_ixns loc ();
         (* Found station at edge: count just on incoming track *)
         let count = _train_count_in_ixn trains train_idxs oppo_dir in
+        (* Station is always double *)
         count, true
 
     | Some ({ixn = true; _} as track) when not_been_here () && track.player = player ->
@@ -157,7 +158,9 @@ let scan_station_segment tracks trains ~x ~y dir ~player =
         | None -> count, double
         end
 
-    | _ -> 0, false
+    | _ ->
+      (* Don't cancel double once we run out of track *)
+      0, true
   in
   let loc = x, y in
   let count, double =

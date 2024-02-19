@@ -201,10 +201,9 @@ let%expect_test "train_scan map double" =
   let trains = Trainmap.empty () in
   let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in
   S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
-  (* Bug *)
   [%expect {|
     1,
-    `Single |}]
+    `Double |}]
 
 let%expect_test "train_scan map two trains" =
   let tracks = TM.empty 20 20
@@ -266,9 +265,8 @@ let%expect_test "train_scan double map two trains, station in middle" =
   let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in 
   let trains = Trainmap.add trains @@ dummy_train (14, 10) Right in
   S.scan_station_segment tracks trains ~x:5 ~y:10 ~player:0 Right |> print_sscan;
-  (* Get just 1 till end of segment *)
-  (* Bug *)
+  (* Get just 1 till end of segment, but double *)
   [%expect {|
     1,
-    `Single |}]
+    `Double |}]
 
