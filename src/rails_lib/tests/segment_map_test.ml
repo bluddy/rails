@@ -21,7 +21,7 @@ let build_track (x,y) (tmap, graph, segments) ~dirs =
   let segments = SM.handle_build_track graph tmap trainmap segments before after in
   tmap, graph, segments
 
-let remove_track (x,y) (tmap, graph, segments) =
+let remove_track ?(trainmap=trainmap) (x,y) (tmap, graph, segments) =
   let before = TS.scan tmap ~x ~y ~player in
   let tmap = TM.remove ~x ~y tmap in
   let after = TS.scan tmap ~x ~y ~player in
@@ -29,7 +29,7 @@ let remove_track (x,y) (tmap, graph, segments) =
   let segments = SM.handle_remove_track graph tmap trainmap segments before after in
   tmap, graph, segments
 
-let build_station loc ~dirs (tmap, graph, segments) =
+let build_station ?(trainmap=trainmap) loc ~dirs (tmap, graph, segments) =
   let build_station_inner (x,y) tmap ~graph ~dirs =
     let before = TS.scan tmap ~x ~y ~player in
     let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
@@ -334,4 +334,65 @@ let%expect_test "4 connected stations in a square, disconnect one" =
   ()
 
 
+let%expect_test "3 connected stations in a line, trains and double track" =
+  let graph, segments = TG.make (), SM.make () in
+  let tmap = build_road ~track:(Track.Track `Double) ~y:10 5 10 tmap in
+  let tmap = build_road ~track:(Track.Track `Single) ~y:10 10 15 tmap in
+  let tgs =
+    (tmap, graph, segments)
+    |> build_station (5, 10) ~dirs:[Left; Right]
+    |> build_station (10, 10) ~dirs:[Left; Right]
+    |> build_station (15, 10) ~dirs:[Left; Right]
+  in
+  let trains = Trainmap.empty () in
+  let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in 
+  let trains = Trainmap.add trains @@ dummy_train (9, 10) Right in
+  let locu = ((5, 10), `Lower) in
+  Segment_map.seg_incr_train locu segments;
+  Segment_map.seg_incr_train locu segments;
+  print @@ Utils.thd3 tgs;
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Single }, 3
+      -> { Segment_map.count = 0; double = `Double }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 2; double = `Double };
+      stations = ((15, 10), `Upper) -> 2, ((15, 10), `Lower) -> 3,
+      ((10, 10), `Lower) -> 2, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
+      ((10, 10), `Upper) -> 1 } |}]
+  
+  (* TODO *)
+let%expect_test "2 connected stations in a line, trains, add station" =
+  let graph, segments = TG.make (), SM.make () in
+  let tmap = build_road ~track:(Track.Track `Double) ~y:10 5 10 tmap in
+  let tmap = build_road ~track:(Track.Track `Single) ~y:10 10 15 tmap in
+  let tgs =
+    (tmap, graph, segments)
+    |> build_station (5, 10) ~dirs:[Left; Right]
+    |> build_station (15, 10) ~dirs:[Left; Right]
+  in
+  let trainmap = Trainmap.empty () in
+  let trainmap = Trainmap.add trainmap @@ dummy_train (8, 10) Right in 
+  let trainmap = Trainmap.add trainmap @@ dummy_train (9, 10) Right in
+  let locu = ((5, 10), `Lower) in
+  Segment_map.seg_incr_train locu segments;
+  Segment_map.seg_incr_train locu segments;
+  print @@ Utils.thd3 tgs;
+  [%expect {|
+  { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 0
+    -> { Segment_map.count = 0; double = `Double }, 1
+    -> { Segment_map.count = 2; double = `Single };
+    stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
+    ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
+  let tgs = tgs
+    |> build_station ~trainmap (10, 10) ~dirs:[Left; Right]
+  in
+  print @@ Utils.thd3 tgs;
+  [%expect {|
+    { Segment_map.info = 2 -> { Segment_map.count = 0; double = `Double }, 3
+      -> { Segment_map.count = 0; double = `Single }, 0
+      -> { Segment_map.count = 0; double = `Double }, 1
+      -> { Segment_map.count = 2; double = `Double };
+      stations = ((15, 10), `Upper) -> 3, ((15, 10), `Lower) -> 2,
+      ((10, 10), `Lower) -> 3, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
+      ((10, 10), `Upper) -> 1 } |}]
 

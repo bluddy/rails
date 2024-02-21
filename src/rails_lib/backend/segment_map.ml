@@ -79,14 +79,14 @@ let set_seg_double id double v =
     Hashtbl.replace v.info id {info with double=double}
   else ()
 
-let seg_incr_train locd v =
-  let id = get_station_seg locd v in
+let seg_incr_train locu v =
+  let id = get_station_seg locu v in
   Log.debug (fun f -> f "Segment: incr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
   info.count <- info.count + 1
 
-let seg_decr_train locd v =
-  let id = get_station_seg locd v in
+let seg_decr_train locu v =
+  let id = get_station_seg locu v in
   Log.debug (fun f -> f "Segment: decr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
   if info.count > 0 then
