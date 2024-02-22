@@ -277,13 +277,13 @@ let check_stop_station (v:'a t) stop loc =
   let prev, next = match stop with
     | 0 when len >= 2 -> None, Some 1
     | 0 -> None, None
-    | s when len >= (s + 1) -> Some (s-1), Some (s+1)
+    | s when len > s + 1 -> Some (s-1), Some (s+1)
     | s -> Some (s-1), None
   in
   let check = function
     | Some i ->
         let stop = Vector.get v.route i in
-        Utils.eq_xy loc (stop.x,stop.y)
+        Utils.eq_xy loc (stop.x, stop.y)
     | None -> false
   in
   not (check prev || check next)
