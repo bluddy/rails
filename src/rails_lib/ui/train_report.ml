@@ -207,7 +207,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     in
 
     let draw_cars_option (stop:Train.stop) ~y =
-      match stop.cars with
+      match stop.consist_change with
       | None -> write Ega.gray ~x:168 ~y "no changes"
       | Some cars -> draw_cars cars ~x:160 ~y Utils.id
     in
@@ -384,8 +384,8 @@ let handle_event (s:State.t) v (event:Event.t) =
           (* Click on car to delete, or space in priority stop to open the menu *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 137 && y <= 147 ->
             let msg = match train.priority with
-              | Some {cars=Some cars;_} -> make_car_msg `Priority cars x
-              | Some {cars=None;_} -> `AddCarMenu `Priority
+              | Some {consist_change=Some cars;_} -> make_car_msg `Priority cars x
+              | Some {consist_change=None;_} -> `AddCarMenu `Priority
               | _ -> `None
             in
             handle_car_msg msg
@@ -396,7 +396,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               Vector.foldi (fun i acc (stop:Train.stop) ->
                 match acc with
                 | `None when y < ystart + i * line_h ->
-                    begin match stop.cars with
+                    begin match stop.consist_change with
                     | None -> `AddCarMenu (`Stop i)  (* currently "No Change" *)
                     | Some cars ->
                         make_car_msg (`Stop i) cars x

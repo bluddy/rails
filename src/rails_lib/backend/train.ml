@@ -14,19 +14,20 @@ let max_stops = 4
 type stop = {
   x: int;
   y: int;
-  cars: (Goods.t list) option; (* change of cars. None -> "No Change" *)
+  consist_change: (Goods.t list) option; (* consist. None -> "No Change" *)
 } [@@deriving yojson, show]
 
-let make_stop x y cars = {x; y; cars}
+let make_stop x y consist_change = {x; y; consist_change}
 
 type train_type =
   | Local (* Stops at every stop *)
   | Through (* Skips depots *)
   | Express (* Skips stations or less *)
-  | Limited (* Skips terminals or less *)
+  | Limited (* Skips all *)
   [@@deriving yojson, enum, eq, show {with_path = false}]
 
 module History = struct
+  (* History is used to draw the cars behind the engine *)
   type elem = {
     x: int;
     y: int;
@@ -118,23 +119,26 @@ type periodic = {
 type rw = Utils.Infix.rw
 type ro = Utils.Infix.ro
 
+(* 'mut is so we can't mutate a train from the wrong api *)
 type 'mut t = {
   mutable x: int;
   mutable y: int;
   state: state;
+  (* Used for train/car drawing algorithm *)
   mutable pixels_from_midtile: int; (* 0-16 *)
   mutable dir: Dir.t;
+  (* Only record trains can be named, and it increases passenger income by 25% *)
   name: string option;
   last_station: Station.id; (* Could be far away due to express *)
   stop_at_station: bool;
   engine: Engine.t;
   cars: Car.t list;
-  freight: Goods.freight; (* freight class *)
-  typ: train_type;
+  freight: Goods.freight; (* freight class. Based on majority of cars *)
+  typ: train_type; (* How many stations we stop at *)
   history: History.t; (* History of values. Used for cars *)
   stop: int; (* current stop of route *)
   route: stop Utils.Vector.vector; (* route stops *)
-  priority: stop option;
+  priority: stop option; (* priority stop *)
   had_maintenance: bool;
   maintenance_cost: int; (* per fin period *)
   periodic: periodic * periodic;
@@ -226,7 +230,7 @@ let get_route v = v.route
 
 let remove_stop_car (v:rw t) stop car =
   let remove_car (stop:stop) =
-    let cars = match stop.cars with
+    let consist_change = match stop.consist_change with
       | None -> None
       | Some car_list ->
           begin match List.remove_at_idx car car_list with
@@ -234,7 +238,7 @@ let remove_stop_car (v:rw t) stop car =
           | l  -> Some l
           end
     in
-    {stop with cars}
+    {stop with consist_change}
   in
   match stop with
   | `Stop stop_idx ->
@@ -246,11 +250,11 @@ let remove_stop_car (v:rw t) stop car =
 
 let add_stop_car (v:rw t) stop car =
   let add_car (stop:stop) =
-    let cars = match stop.cars with
+    let consist_change = match stop.consist_change with
       | Some car_list -> Some(car_list @ [car])
       | None -> Some([car])
     in
-    {stop with cars}
+    {stop with consist_change}
   in
   match stop with
   | `Stop stop_idx ->
@@ -261,7 +265,7 @@ let add_stop_car (v:rw t) stop car =
       {v with priority}
 
 let remove_all_stop_cars (v:rw t) stop =
-  let remove_all_cars (stop:stop) = {stop with cars = Some []} in
+  let remove_all_cars (stop:stop) = {stop with consist_change = Some []} in
   match stop with
   | `Stop stop_idx ->
       Vector.modify_at_idx v.route stop_idx remove_all_cars;
