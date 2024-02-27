@@ -101,7 +101,7 @@ and 'a mode =
     | `ChooseEngine
     | `AddCars of 'a Build_train_d.addcars
   ]
-  | EditTrain of 'a Edit_train_d.t
+  | TrainReport of 'a Train_report_d.t
 
 let is_normal_mode = function
   | Normal -> true

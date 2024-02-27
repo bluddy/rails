@@ -463,7 +463,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On `Build_train, _ ->
             {v with mode=BuildTrain(`ChooseEngine)}, nobaction
         | _, `EditTrain train_idx ->
-            {v with mode=EditTrain(Edit_train.make s train_idx)}, nobaction
+            {v with mode=TrainReport(Train_report.make s train_idx)}, nobaction
         | On `Build_station, _ ->
             let menu =
               build_station_menu s.fonts s.backend.region
@@ -700,11 +700,11 @@ let handle_event (s:State.t) v (event:Event.t) =
         in
         v, action
 
-    | EditTrain state ->
-        let exit_state, state2, action = Edit_train.handle_event s state event in
+    | TrainReport state ->
+        let exit_state, state2, action = Train_report.handle_event s state event in
         let v =
           if exit_state then {v with mode=Normal}
-          else if state =!= state2 then {v with mode=EditTrain state2}
+          else if state =!= state2 then {v with mode=TrainReport state2}
           else v
         in
         v, action
@@ -728,8 +728,8 @@ let handle_msgs (s:State.t) v ui_msgs =
   let handle_msg v ui_msg =
     match v.mode, ui_msg with
     | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
-        let state = Edit_train.make s idx in
-        {v with mode=EditTrain state}
+        let state = Train_report.make s idx in
+        {v with mode=TrainReport state}
     | _ ->
         v
   in
@@ -740,9 +740,9 @@ let handle_tick s v time is_cycle = match v.mode with
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
       if state === state2 then v else {v with mode=BuildTrain(`AddCars state2)}
-  | EditTrain state ->
-      let state2 = Edit_train.handle_tick state time in
-      if state === state2 then v else {v with mode=EditTrain state2}
+  | TrainReport state ->
+      let state2 = Train_report.handle_tick state time in
+      if state === state2 then v else {v with mode=TrainReport state2}
   | Normal ->
       let view = Mapview.handle_tick s v.view time is_cycle in
       [%up {v with view}]
@@ -865,8 +865,8 @@ let render (win:R.window) (s:State.t) v =
         Station_view.render win s (x,y) ~show_demand:true
     | BuildTrain(state) ->
         Build_train.render win s state
-    | EditTrain state ->
-        Edit_train.render win s state
+    | TrainReport state ->
+        Train_report.render win s state
   in
   render_mode v.mode
 

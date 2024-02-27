@@ -1,7 +1,7 @@
 open Containers
 module R = Renderer
 module B = Backend
-open Edit_train_d
+open Train_report_d
 open Utils.Infix
 module Vector = Utils.Vector
 module C = Constants
