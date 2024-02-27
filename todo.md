@@ -24,6 +24,7 @@
   - stations cannot overlap in area
   - tunnel has 0 grade
   - metal bridge not available before tech is done
+  - doubling: not wood but all other bridges
   - switching yard reduces change time by 75%
   - double rates: new station until end of fiscal period, fiscal period after winning rate war
   - maintenance shop reduces maintenance in fiscal period by 75%

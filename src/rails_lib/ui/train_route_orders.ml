@@ -8,7 +8,7 @@ open Train_report_d
 let selection_dist = 24
 let blink_time = 500
 
-let make graph train state : Train_report_d.station_map =
+let make graph train state : Train_report_d.train_route_orders =
   (* min and max over stations and ixns *)
   let min_x, min_y, max_x, max_y =
     Track_graph.G.fold_vertex (fun (x,y) (min_x, min_y, max_x, max_y) ->
@@ -45,7 +45,7 @@ let scale_xy v x y =
   let y = (y - v.map_y) * 100 / v.map_dim in
   (x,y)
 
-let render win (s:State.t) (v:Train_report_d.station_map) =
+let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   let write ?(color=Ega.black) ?(active_color=Ega.white) ?(idx=1) =
     Fonts.Render.write win s.fonts ~idx ~color ~active_color
   in

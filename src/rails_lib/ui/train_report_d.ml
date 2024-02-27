@@ -8,7 +8,7 @@ type msg =
   ]
 
 (* Place this here to avoid circular dependency or an extra file *)
-type station_map = {
+type train_route_orders = {
   train: Trainmap.Id.t;
   state: [`ShowRoute | `EditPriority | `EditStop of int];
   selected_station: (int * int) option;
@@ -22,7 +22,7 @@ type station_map = {
 
 type screen =
   | Normal
-  | StationMap of station_map
+  | TrainRouteOrders of train_route_orders
   | EngineInfo of Engine_info.t
   | ChooseEngine
 

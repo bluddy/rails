@@ -7,7 +7,7 @@ module Vector = Utils.Vector
 module C = Constants
 module T = Train
 
-open Station_map_ui
+open Train_route_orders
 
 (* The edit train screen *)
 
@@ -84,8 +84,8 @@ let make (s:State.t) train_idx =
 
 let render win (s:State.t) (v:State.t t) : unit =
   match v.screen with
-  | StationMap station_map ->
-      Station_map_ui.render win s station_map
+  | TrainRouteOrders station_map ->
+      Train_route_orders.render win s station_map
 
   | EngineInfo state ->
       Engine_info.render win state ~fonts:s.fonts ~textures:s.textures
@@ -264,9 +264,9 @@ let render win (s:State.t) (v:State.t t) : unit =
 
 let handle_event (s:State.t) v (event:Event.t) =
   match v.screen, v.car_menu with
-  | StationMap state, _ ->
-      let exit, state2, b_action = Station_map_ui.handle_event s state event in
-      let v = if state =!= state2 then {v with screen=StationMap state2} else v in
+  | TrainRouteOrders state, _ ->
+      let exit, state2, b_action = Train_route_orders.handle_event s state event in
+      let v = if state =!= state2 then {v with screen=TrainRouteOrders state2} else v in
       let v = if exit then {v with screen=Normal} else v in
       false, v, b_action
 
@@ -338,7 +338,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         match action, event with
           (* Global menu choice: route map view *)
         | Menu.On(`ShowMap), _ ->
-            let screen = StationMap (Station_map_ui.make s.backend.graph v.train `ShowRoute) in
+            let screen = TrainRouteOrders (Train_route_orders.make s.backend.graph v.train `ShowRoute) in
             false, screen, None, nobaction
 
         | Menu.On(`Type typ), _ ->
@@ -358,7 +358,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           (* Click on priority stop -> open route map *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->
             let screen = 
-              StationMap (Station_map_ui.make s.backend.graph v.train `EditPriority)
+              TrainRouteOrders (Train_route_orders.make s.backend.graph v.train `EditPriority)
             in
             false, screen, None, nobaction
 
@@ -375,7 +375,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             begin match res with
             | Some i ->
                 let screen =
-                  StationMap (Station_map_ui.make s.backend.graph v.train @@ `EditStop i)
+                  TrainRouteOrders (Train_route_orders.make s.backend.graph v.train @@ `EditStop i)
                 in
                 false, screen, None, nobaction
             | _ -> false, v.screen, None, nobaction
@@ -419,7 +419,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
 let handle_tick v time =
   begin match v.screen with
-  | StationMap state -> Station_map_ui.handle_tick state time
+  | TrainRouteOrders state -> Train_route_orders.handle_tick state time
   | _ -> ()
   end;
   v
