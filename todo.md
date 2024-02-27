@@ -1,8 +1,4 @@
 # Tasks
-- tests:
-  - segment map: with count and double
-- Scan:
-  - handle track loops (can just count max)
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc
@@ -16,13 +12,10 @@
   - Smoke seems to go in different direction from game
   - After load, trains are stuck
   - joining a track from another track either refuses or crashes
-  - Circular track will cause infinite loop
 - From manual:
   - build first station, pay for engine shop
   - difficulty factor
   - turbo speed doesn't stop for messages or end of year
-  - current cash
-  - train roster
   - at end of year, charged interest on bonds and short term loans
   - end of dec in odd number year is end of fiscal period
   - displays: area, region, local, detail
