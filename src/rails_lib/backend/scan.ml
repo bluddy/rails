@@ -4,7 +4,7 @@ module C = Constants
 module LocdSet = Utils.LocdSet
 
 (* Module for searching the trackmap for stations and ixns, and the trainmap for trains
-   For updating the graph and the station segment connectivity
+   For updating the graph and the station block connectivity
  *)
 (* This is our return type representing an ixn. Will be used to introspect *)
 type ixn = {
@@ -25,7 +25,7 @@ let nequal_ixn res1 res2 = not (res1 = res2)
 let _make_ixn x y dist dir search_dir ~station ~double =
   { x; y; dist; dir; search_dir; station; double }
 
-  (* Check more closely if the train is within the segment
+  (* Check more closely if the train is within the block
      dir: direction we should focus on
        for ixns/stations, we want the entry dir
        for the first tile, we want the exit dir
@@ -51,7 +51,7 @@ let _train_count_in_ixn trains train_idxs dir =
     0
     train_idxs
 
-  (* Scan for a new segment ending in a station or ixn *)
+  (* Scan for a new block ending in a station or ixn *)
   (* x, y: before movement *)
 let _scan_for_ixn tracks ~x ~y ~dir ~double ~player =
   let search_dir = dir in
@@ -91,7 +91,7 @@ type t =
   | Track of ixn list (* 0/1/2 ixns *)
   [@@deriving eq, show]
         
-(* Return a query about the segment from a particular tile
+(* Return a query about the block from a particular tile
    Get back a list of scan results
  *)
 let scan tracks ~x ~y ~player =
@@ -112,8 +112,8 @@ let scan tracks ~x ~y ~player =
       else if Track.is_station track then Station scan
       else Track scan
 
-  (* Scan for number of trains in the station segment. *)
-let scan_station_segment tracks trains ~x ~y dir ~player =
+  (* Scan for number of trains in the station block. *)
+let scan_station_block tracks trains ~x ~y dir ~player =
   let (let*) = Option.bind in
   let seen_ixns = Hashtbl.create 10 in
   let rec loop x y dir =

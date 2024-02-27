@@ -57,7 +57,7 @@ let default region resources ~random ~seed =
     cities;
     trains;
     track;
-    segments=Segment_map.make ();
+    blocks=Block_map.make ();
     graph;
     stations;
     engines;
@@ -121,7 +121,7 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_station v.graph ~x ~y before after in
-  let segments = Segment_map.handle_build_station graph v.segments track v.trains (x,y) after in
+  let blocks = Block_map.handle_build_station graph v.blocks track v.trains (x,y) after in
   let station = match station_type with
   | `SignalTower ->
     Station.make_signaltower ~x ~y ~year:v.year ~player
@@ -180,7 +180,7 @@ let _build_station v ~x ~y station_type ~player =
   [%upf v.stations <- stations];
   [%upf v.graph <- graph];
   [%upf v.track <- track];
-  [%upf v.segments <- segments];
+  [%upf v.blocks <- blocks];
   v
 
 let check_build_tunnel v ~x ~y ~dir ~player =
@@ -196,11 +196,11 @@ let _build_tunnel v ~x ~y ~dir ~player =
     let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
     let after = Scan.scan track ~x ~y ~player in
     let graph = G.Track.handle_build_track_simple v.graph before after in
-    let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+    let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
     update_player v player @@ Player.pay Player.TunnelExpense cost;
     [%upf v.graph <- graph];
     [%upf v.track <- track];
-    [%upf v.segments <- segments];
+    [%upf v.blocks <- blocks];
     v
   | _ -> v
 
@@ -209,12 +209,12 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+  let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
   [%upf v.graph <- graph];
   [%upf v.track <- track];
-  [%upf v.segments <- segments];
+  [%upf v.blocks <- blocks];
   v
 
 let check_build_track v ~x ~y ~dir ~player =
@@ -242,9 +242,9 @@ let _change_double_track (v:t) ~x ~y ~player double =
     let t = Track.change_to_double t double in
     let track = Trackmap.set v.track ~x ~y ~t in
     let after = Scan.scan track ~x ~y ~player in
-    let segments = Segment_map.handle_double_change v.graph track v.trains v.segments after in
+    let blocks = Block_map.handle_double_change v.graph track v.trains v.blocks after in
     [%upf v.track <- track];
-    [%upf v.segments <- segments];
+    [%upf v.blocks <- blocks];
     v
   ) else v
     
@@ -254,11 +254,11 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track v.graph ~x ~y before after in
-  let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+  let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
-  [%upf v.segments <- segments];
+  [%upf v.blocks <- blocks];
   v
 
 let _build_ferry v ~x ~y ~dir ~player =
@@ -275,11 +275,11 @@ let _build_ferry v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let segments = Segment_map.handle_build_track graph v.track v.trains v.segments before after in
+  let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
-  [%upf v.segments <- segments];
+  [%upf v.blocks <- blocks];
   v
 
 let check_remove_track v ~x ~y ~dir ~player=
@@ -291,21 +291,21 @@ let _remove_track v ~x ~y ~dir ~player =
   let is_station = Trackmap.has_station loc v.track in
   let before = Scan.scan v.track ~x ~y ~player in
   (* Have to be careful with order here or we'll mess up state *)
-  let segments =
+  let blocks =
     if is_station then
-      Segment_map.handle_remove_station v.graph v.track v.segments loc before
-    else v.segments
+      Block_map.handle_remove_station v.graph v.track v.blocks loc before
+    else v.blocks
   in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
-  let segments =
+  let blocks =
     if not is_station then
-      Segment_map.handle_remove_track graph v.track v.trains v.segments before after
-    else segments
+      Block_map.handle_remove_track graph v.track v.trains v.blocks before after
+    else blocks
   in
   update_player v player (Player.add_track ~length:(-1));
-  [%upf v.segments <- segments];
+  [%upf v.blocks <- blocks];
   [%upf v.track <- track];
   [%upf v.graph <- graph];
   v
@@ -410,7 +410,7 @@ let _remove_train v idx =
   let train = Trainmap.get v.trains idx in
   (match train.state with
     | Traveling {last_stop_dir=Some locd;_} ->
-      Segment_map.seg_decr_train (Utils.locu_of_locd locd) v.segments
+      Block_map.block_decr_train (Utils.locu_of_locd locd) v.blocks
     | _ -> ());
   let trains = Trainmap.delete v.trains idx in
   [%up {v with trains}]

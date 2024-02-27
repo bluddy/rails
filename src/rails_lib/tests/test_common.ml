@@ -1,7 +1,6 @@
 open! Containers
 module T = Track
 module TM = Trackmap
-module SM = Segment_map
 module TG = Track_graph
 module TS = Scan
 

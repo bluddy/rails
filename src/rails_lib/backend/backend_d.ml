@@ -43,7 +43,7 @@ type t = {
   cities: Cities.t;
   engines: Engine.t list;
   mutable stations: Station_map.t;
-  mutable segments: Segment_map.t; (* map segments btw stations *)
+  mutable blocks: Block_map.t; (* map blocks btw stations *)
   priority: (loc * loc * Goods.t) option;  (* priority shipment *)
   options: B_options.t;
   mutable ui_msgs: ui_msg list;

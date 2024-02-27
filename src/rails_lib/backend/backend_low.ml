@@ -207,8 +207,8 @@ module Train_update = struct
         let station = Station_map.get_exn loc v.stations in
         let enter train is_new =
           if not is_new then
-            (* exit segment *)
-            Segment_map.seg_decr_train (loc, Dir.opposite train.Train.dir |> Dir.to_upper) v.segments;
+            (* exit block *)
+            Block_map.block_decr_train (loc, Dir.opposite train.Train.dir |> Dir.to_upper) v.blocks;
           (* TODO: actual UI msg, income handling *)
           let last_station, priority, stop, train, _income, _ui_msgs =
             if Station.is_proper_station station then (
@@ -230,10 +230,10 @@ module Train_update = struct
               Dir.Set.find_nearest train.dir track.dirs
               |> Option.get_exn_or "Cannot find track for train"
           in
-          (* enter segment *)
+          (* enter block *)
           let locd = (loc, dir) in
           let locu = Utils.locu_of_locd locd in
-          Segment_map.seg_incr_train locu v.segments;
+          Block_map.block_incr_train locu v.blocks;
           (* TODO Check signal for exit dir *)
           let train = 
             {train with
