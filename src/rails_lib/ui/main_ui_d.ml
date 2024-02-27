@@ -96,7 +96,7 @@ and 'a mode =
   | BuildHighGrade of ('a, [`BuildTunnel | `BuildTrack], Utils.msg) modalmenu
   | BuildTunnel of ('a, bool, Utils.msg * int) modalmenu
   | SignalMenu of ('a, [`Normal|`Hold|`Proceed], int * int * Dir.t) modalmenu (* x,y,dir *)
-  | StationView of int * int (* x, y *)
+  | StationReport of int * int (* x, y *)
   | BuildTrain of [
     | `ChooseEngine
     | `AddCars of 'a Build_train_d.addcars

@@ -476,7 +476,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with view=Mapview.set_build_mode v.view false}, nobaction 
         | On `ImproveStation upgrade, _ ->
             let x, y = Mapview.get_cursor_pos v.view in
-            {v with mode=StationView(x, y)}, ImproveStation{x; y; player=0; upgrade}
+            {v with mode=StationReport(x, y)}, ImproveStation{x; y; player=0; upgrade}
         | On `Save_game, _ ->
             save_game s;
             v, nobaction
@@ -596,7 +596,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with mode=SignalMenu modal}, nobaction
 
         | _, `StationView(x, y) ->
-            {v with mode=StationView(x, y)}, nobaction
+            {v with mode=StationReport(x, y)}, nobaction
 
         | _, `DoubleTrack(double, x, y, player) ->
             v, B.Action.DoubleTrack{x; y; double; player}
@@ -687,7 +687,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun {data=(x, y, dir);_} cmd ->
           {v with mode=Normal}, StationSetSignal{x; y; dir; cmd})
 
-    | StationView _ ->
+    | StationReport _ ->
         if Event.is_left_click event || Event.key_modal_dismiss event then
           {v with mode=Normal}, nobaction
         else
@@ -861,8 +861,8 @@ let render (win:R.window) (s:State.t) v =
     | SignalMenu modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
-    | StationView(x, y) ->
-        Station_view.render win s (x,y) ~show_demand:true
+    | StationReport(x, y) ->
+        Station_report.render win s (x,y) ~show_demand:true
     | BuildTrain(state) ->
         Build_train.render win s state
     | TrainReport state ->

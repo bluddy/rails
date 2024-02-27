@@ -37,8 +37,6 @@
   - named train: 24 letters.
     - passenger revenue increased by 25%
   - higher classed trains move first
-  - train route orders screen
-    - contains route diagram
   - train report: right click clears consist change
   - wait until full
   - west us: higher fares for east-west routes than north-south
