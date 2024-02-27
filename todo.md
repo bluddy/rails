@@ -19,8 +19,6 @@
   - at end of year, charged interest on bonds and short term loans
   - end of dec in odd number year is end of fiscal period
   - displays: area, region, local, detail
-  - station report
-  - train report
   - stations cannot overlap in area
   - tunnel has 0 grade
   - metal bridge not available before tech is done
