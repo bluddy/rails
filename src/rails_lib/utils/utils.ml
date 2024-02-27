@@ -387,10 +387,13 @@ let fst3 (x,_,_) = x
 let snd3 (_,x,_) = x
 let thd3 (_,_,x) = x
 
-let show_cash ?(spaces=0) region money =
+let map_fst f (x, y) = (f x, y)
+let map_snd f (x, y) = (x, f y)
+
+let show_cash ?(spaces=0) region cash =
   let b = Buffer.create 20 in
   Buffer.add_char b (Region.money_symbol region);
-  let money_s = Printf.sprintf "%#d" money
+  let money_s = Printf.sprintf "%#d" cash
     |> String.map (function '_' -> ',' | x -> x)
   in
   let len = String.length money_s in

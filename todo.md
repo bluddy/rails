@@ -28,7 +28,6 @@
   - maintenance shop reduces maintenance in fiscal period by 75%
   - shipping report money emptied at end of fiscal period
   - build train: shows options where we have an engine shop
-  - consist
   - train report: money in this period on left, previous on right
   - keyboard shortcuts often only appear when no mouse
     - tab to train roster

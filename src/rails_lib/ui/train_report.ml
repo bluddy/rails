@@ -235,7 +235,7 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     (* Write stop names *)
     let n, y =
-      Vector.fold (fun (i, y) (stop:Train.stop) ->
+      Vector.fold (fun (i, y) (_, (stop:Train.stop)) ->
         write_station stop ~i:(Some i) ~y;
         draw_cars_option stop ~y;
         R.draw_line win ~color:Ega.black ~x1:160 ~y1:(y+9) ~x2:312 ~y2:(y+9);
@@ -393,7 +393,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
             let ystart = 167 in
             let msg =
-              Vector.foldi (fun i acc (stop:Train.stop) ->
+              Vector.foldi (fun i acc (_, (stop:Train.stop)) ->
                 match acc with
                 | `None when y < ystart + i * line_h ->
                     begin match stop.consist_change with
