@@ -46,7 +46,6 @@
   - higher classed trains move first
   - train route orders screen
     - contains route diagram
-  - blocks, not segments
   - train report: right click clears consist change
   - wait until full
   - west us: higher fares for east-west routes than north-south

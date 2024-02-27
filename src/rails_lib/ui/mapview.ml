@@ -16,7 +16,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let default dims = 
   {
-    kbd_cursor_x = 0; kbd_cursor_y = 0;
+    const_box_x = 0; const_box_y = 0;
     center_x = 0; center_y = 0;
     zoom = Zoom4;
     dims;
@@ -28,7 +28,7 @@ let default dims =
     options=Options.of_list [`StationBoxes];
   }
 
-let get_cursor_pos v = (v.kbd_cursor_x, v.kbd_cursor_y)
+let get_cursor_pos v = (v.const_box_x, v.const_box_y)
 
 let get_zoom v = v.zoom
 
@@ -99,16 +99,16 @@ let check_recenter_zoom4 v cursor_x cursor_y =
 
 let move_cursor v dir n =
   let dx, dy = Dir.to_offsets dir in
-  let x, y = v.kbd_cursor_x + dx * n, v.kbd_cursor_y + dy * n in
-  let kbd_cursor_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
-  let kbd_cursor_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
-  let center_x, center_y = check_recenter_zoom4 v kbd_cursor_x kbd_cursor_y in
-  {v with kbd_cursor_x; kbd_cursor_y; center_x; center_y}
+  let x, y = v.const_box_x + dx * n, v.const_box_y + dy * n in
+  let const_box_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
+  let const_box_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
+  let center_x, center_y = check_recenter_zoom4 v const_box_x const_box_y in
+  {v with const_box_x; const_box_y; center_x; center_y}
 
   (* Used by menu *)
 let cursor_on_woodbridge ?cursor_x ?cursor_y backend v =
-  let cursor_x = Option.get_or ~default:v.kbd_cursor_x cursor_x in
-  let cursor_y = Option.get_or ~default:v.kbd_cursor_y cursor_y in
+  let cursor_x = Option.get_or ~default:v.const_box_x cursor_x in
+  let cursor_y = Option.get_or ~default:v.const_box_y cursor_y in
   match B.get_track backend cursor_x cursor_y with
   | Some track when track.player = 0 ->
       begin match track.kind with
@@ -119,8 +119,8 @@ let cursor_on_woodbridge ?cursor_x ?cursor_y backend v =
 
 let cursor_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
   (* all: all stations, not just Depot and higher *)
-  let cursor_x_tile = Option.get_or ~default:v.kbd_cursor_x cursor_x_tile in
-  let cursor_y_tile = Option.get_or ~default:v.kbd_cursor_y cursor_y_tile in
+  let cursor_x_tile = Option.get_or ~default:v.const_box_x cursor_x_tile in
+  let cursor_y_tile = Option.get_or ~default:v.const_box_y cursor_y_tile in
   (* check if we're clicking on a station *)
   match B.get_track backend cursor_x_tile cursor_y_tile with
   | Some track when track.player = 0 ->
@@ -152,7 +152,7 @@ let cursor_on_signal backend tile_x tile_y delta_x delta_y =
 
 let get_station_under_cursor_exn backend v =
   (* get the station the cursor is over *)
-  match B.get_station (v.kbd_cursor_x, v.kbd_cursor_y) backend with
+  match B.get_station (v.const_box_x, v.const_box_y) backend with
   | Some station -> station
   | None -> failwith "No station under cursor"
 
@@ -224,7 +224,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
       ) s.backend.trains
     in
     begin match v.zoom, button with
-    | Zoom4, `Left when cursor_x_tile = v.kbd_cursor_x && cursor_y_tile = v.kbd_cursor_y ->
+    | Zoom4, `Left when cursor_x_tile = v.const_box_x && cursor_y_tile = v.const_box_y ->
         (* second click, after focusing the cursor on that tile *)
         if cursor_on_station s.backend v then
           let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
@@ -242,7 +242,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | Zoom4, `Left ->
         (* move cursor *)
         let center_x, center_y = check_recenter_zoom4 v cursor_x_tile cursor_y_tile in
-        {v with center_x; center_y; kbd_cursor_x=cursor_x_tile; kbd_cursor_y=cursor_y_tile}, `NoAction
+        {v with center_x; center_y; const_box_x=cursor_x_tile; const_box_y=cursor_y_tile}, `NoAction
 
       (* Zoom_station is open *)
     | (Zoom3 {zoom_station=Some _} | Zoom2 {zoom_station=Some _}), (`Right | `Left) ->
@@ -251,7 +251,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | (Zoom4 | Zoom3 _ | Zoom2 _), `Right ->
         (* recenter *)
         flush_draw_buffer v;
-        {v with center_x=cursor_x_tile; center_y=cursor_y_tile; kbd_cursor_x=cursor_x_tile; kbd_cursor_y=cursor_y_tile}, `NoAction
+        {v with center_x=cursor_x_tile; center_y=cursor_y_tile; const_box_x=cursor_x_tile; const_box_y=cursor_y_tile}, `NoAction
     | (Zoom3 _ | Zoom2 _), `Left ->
         let show_stationbox = Options.mem v.options `StationBoxes in
         let stationbox_click = Tilebuffer.get_loc v.tile_buffer screen_tile_x screen_tile_y in
@@ -279,14 +279,14 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match v.zoom with
       | Zoom1 ->
           let y = y - v.dims.y in
-          {v with center_x=x; center_y=y; kbd_cursor_x=x; kbd_cursor_y=y; zoom=def_zoom2}, `NoAction
+          {v with center_x=x; center_y=y; const_box_x=x; const_box_y=y; zoom=def_zoom2}, `NoAction
       | _ when x > minimap.x && y > minimap.y && y < minimap.y + minimap.h ->
           (* click on minimap *)
           let start_x_tile, start_y_tile, _, _ = minimap_bounds v ~minimap in
           let x = x - minimap.x + start_x_tile in
           let y = y - minimap.y + start_y_tile in
           flush_draw_buffer v;
-          {v with center_x=x; center_y=y; kbd_cursor_x=x; kbd_cursor_y=y}, `NoAction
+          {v with center_x=x; center_y=y; const_box_x=x; const_box_y=y}, `NoAction
       | _ when x <= v.dims.x + v.dims.w && y > v.dims.y ->
           handle_mapview_button v x y button
      | _ -> v, `NoAction
@@ -308,11 +308,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match key_to_dir key with
     | Some dir ->
         let move i = move_cursor v dir i in
-        let msg () = Utils.{x=v.kbd_cursor_x; y=v.kbd_cursor_y; dir; player=0} in
+        let msg () = Utils.{x=v.const_box_x; y=v.const_box_y; dir; player=0} in
         if build then (
           if v.build_mode then
             (* Build track *)
-            match B.check_build_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ~dir ~player:0 with
+            match B.check_build_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~dir ~player:0 with
             | `Ok -> move 1, `BuildTrack(msg ())
             | `Ferry -> move 1, `BuildFerry(msg ())
             | `HighGrade g -> v, `HighGradeTrack(msg (), g, false)
@@ -321,7 +321,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             | `Illegal -> v, `NoAction
           else
             (* Remove Track *)
-            match B.check_remove_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ~dir ~player:0 with
+            match B.check_remove_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~dir ~player:0 with
             | true -> move 1, `RemoveTrack(msg ())
             | false -> v, `NoAction
         ) else
@@ -330,19 +330,19 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | None ->
       match key with
       | Event.Enter ->
-          begin match B.get_station (v.kbd_cursor_x, v.kbd_cursor_y) s.backend with
+          begin match B.get_station (v.const_box_x, v.const_box_y) s.backend with
           | Some station when Station.is_proper_station station ->
-            v, `StationView (v.kbd_cursor_x, v.kbd_cursor_y)
+            v, `StationView (v.const_box_x, v.const_box_y)
           | _ ->
-            let tile = B.get_tile s.backend v.kbd_cursor_x v.kbd_cursor_y in
-            v, `ShowTileInfo (v.kbd_cursor_x, v.kbd_cursor_y, tile)
+            let tile = B.get_tile s.backend v.const_box_x v.const_box_y in
+            v, `ShowTileInfo (v.const_box_x, v.const_box_y, tile)
           end
       | Event.K1 when build &&
-            B.check_change_double_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ~player:0 false ->
-              v, `DoubleTrack(false, v.kbd_cursor_x, v.kbd_cursor_y, 0)
+            B.check_change_double_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~player:0 false ->
+              v, `DoubleTrack(false, v.const_box_x, v.const_box_y, 0)
       | Event.K2 when build &&
-            B.check_change_double_track s.backend ~x:v.kbd_cursor_x ~y:v.kbd_cursor_y ~player:0 true ->
-              v, `DoubleTrack(true, v.kbd_cursor_x, v.kbd_cursor_y, 0)
+            B.check_change_double_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~player:0 true ->
+              v, `DoubleTrack(true, v.const_box_x, v.const_box_y, 0)
       | _ -> v, `NoAction
   in
 
@@ -700,8 +700,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     R.draw_rect win ~x ~y ~w ~h ~color:Ega.white ~fill:false
   in
   let draw_cursor_zoom4 () =
-    let x = (v.kbd_cursor_x - start_x) * tile_w in
-    let y = (v.kbd_cursor_y - start_y) * tile_h + v.dims.y in
+    let x = (v.const_box_x - start_x) * tile_w in
+    let y = (v.const_box_y - start_y) * tile_h + v.dims.y in
     let color = if v.build_mode then Ega.white else Ega.red in
     R.draw_rect win ~x ~y ~w:tile_w ~h:tile_h ~color ~fill:false
   in
@@ -767,9 +767,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let color = Ega.gray in
     let fill = false in
     let font = Fonts.get_font s.fonts 4 in
-    let x = (v.kbd_cursor_x - start_x - 1) * tile_w in
+    let x = (v.const_box_x - start_x - 1) * tile_w in
     let font_x = x in
-    let y = (v.kbd_cursor_y - start_y - 1) * tile_h + v.dims.y in
+    let y = (v.const_box_y - start_y - 1) * tile_h + v.dims.y in
     R.draw_rect win ~x ~y ~w:(tile_w * 3) ~h:(tile_h * 3) ~color ~fill;
     Fonts.Font.write win font ~color:Ega.white "Depot" ~x:font_x ~y:(y-8);
     let x = x - tile_w in
