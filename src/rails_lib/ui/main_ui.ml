@@ -357,8 +357,8 @@ let build_tunnel_menu fonts ~length ~cost ~region =
   in
   make ~fonts ~heading ~x:176 ~y:50 entries
 
-  (* Iterate over trains in right UI *)
-let ui_train_iter (s:State.t) v f =
+  (* Iterate over trains in train roster *)
+let train_roster_iter (s:State.t) v f =
   let train_h = v.dims.train_ui_train_h in
   let max_fit_trains = v.dims.train_ui.h / train_h in
   let max_draw_trains = min max_fit_trains @@
@@ -369,7 +369,7 @@ let ui_train_iter (s:State.t) v f =
   )
   Iter.(0 -- (max_draw_trains - 1))
 
-let handle_ui_train_event (s:State.t) v event =
+let handle_train_roster_event (s:State.t) v event =
   let ui_train_find f =
     let train_h = v.dims.train_ui_train_h in
     let max_fit_trains = v.dims.train_ui.h / train_h in
@@ -450,7 +450,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | Off(`Survey) -> Mapview.set_survey v.view false
         | _ -> v.view
       in
-      let v, view_action = handle_ui_train_event s v event in
+      let v, view_action = handle_train_roster_event s v event in
       let view, view_action =
         match view_action with
         | `NoAction -> Mapview.handle_event s view event ~minimap:v.dims.minimap
@@ -750,8 +750,8 @@ let handle_tick s v time is_cycle = match v.mode with
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
 
-let draw_ui_trains win (s:State.t) v =
-  ui_train_iter s v
+let draw_train_roster win (s:State.t) v =
+  train_roster_iter s v
   (fun y_bot idx ->
     let train = Trainmap.get s.backend.trains (Trainmap.Id.of_int idx) in
     (* Speed line *)
@@ -832,7 +832,7 @@ let render_main win (s:State.t) v =
   (* Train area *)
   let y = y + dims.infobar.h in
   R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
-  draw_ui_trains win s v;
+  draw_train_roster win s v;
 
   (* Menu bar *)
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:dims.menu.h;

@@ -28,7 +28,6 @@
   - displays: area, region, local, detail
   - station report
   - train report
-  - construction box
   - stations cannot overlap in area
   - tunnel has 0 grade
   - metal bridge not available before tech is done
