@@ -97,7 +97,7 @@ let check_recenter_zoom4 v cursor_x cursor_y =
   else
     v.center_x, v.center_y
 
-let move_cursor v dir n =
+let move_const_box v dir n =
   let dx, dy = Dir.to_offsets dir in
   let x, y = v.const_box_x + dx * n, v.const_box_y + dy * n in
   let const_box_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
@@ -106,7 +106,7 @@ let move_cursor v dir n =
   {v with const_box_x; const_box_y; center_x; center_y}
 
   (* Used by menu *)
-let cursor_on_woodbridge ?cursor_x ?cursor_y backend v =
+let const_box_on_woodbridge ?cursor_x ?cursor_y backend v =
   let cursor_x = Option.get_or ~default:v.const_box_x cursor_x in
   let cursor_y = Option.get_or ~default:v.const_box_y cursor_y in
   match B.get_track backend cursor_x cursor_y with
@@ -117,7 +117,7 @@ let cursor_on_woodbridge ?cursor_x ?cursor_y backend v =
       end
   | _ -> false
 
-let cursor_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
+let const_box_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
   (* all: all stations, not just Depot and higher *)
   let cursor_x_tile = Option.get_or ~default:v.const_box_x cursor_x_tile in
   let cursor_y_tile = Option.get_or ~default:v.const_box_y cursor_y_tile in
@@ -131,7 +131,7 @@ let cursor_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
       end
   | _ -> false
 
-let cursor_on_signal backend tile_x tile_y delta_x delta_y =
+let const_box_on_signal backend tile_x tile_y delta_x delta_y =
   (* assumes we are on a station *)
   (* offsets: delta relative to tile *)
   let midpoint_x, midpoint_y = 8, 8 in
@@ -226,9 +226,9 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     begin match v.zoom, button with
     | Zoom4, `Left when cursor_x_tile = v.const_box_x && cursor_y_tile = v.const_box_y ->
         (* second click, after focusing the cursor on that tile *)
-        if cursor_on_station s.backend v then
+        if const_box_on_station s.backend v then
           let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
-          match cursor_on_signal s.backend cursor_x_tile cursor_y_tile (x - screen_x) (y - screen_y) with
+          match const_box_on_signal s.backend cursor_x_tile cursor_y_tile (x - screen_x) (y - screen_y) with
           | Some dir -> (* signal click *)
             v, `SignalMenu (cursor_x_tile, cursor_y_tile, dir, x, y)
           | None -> (* station click *)
@@ -259,7 +259,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         | Some (station_x, station_y) when show_stationbox ->
             let x_tile, y_tile = station_x + start_x_tile, station_y + start_y_tile in
             v, `StationView (x_tile, y_tile)
-        | _ when cursor_on_station s.backend v ~cursor_x_tile ~cursor_y_tile ~all:true ->
+        | _ when const_box_on_station s.backend v ~cursor_x_tile ~cursor_y_tile ~all:true ->
             (* station click *)
             with_zoom_23 v (fun _ -> {zoom_station=Some(cursor_x_tile, cursor_y_tile)}), `NoAction
         | _ ->
@@ -307,7 +307,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   let handle_key_zoom4 v key ~build =
     match key_to_dir key with
     | Some dir ->
-        let move i = move_cursor v dir i in
+        let move i = move_const_box v dir i in
         let msg () = Utils.{x=v.const_box_x; y=v.const_box_y; dir; player=0} in
         if build then (
           if v.build_mode then

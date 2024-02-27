@@ -113,9 +113,9 @@ let main_menu fonts menu_h region =
   in
   let is_zoom4 (s:State.t) = Mapview.is_zoom4 s.ui.view in
   let is_station4 (s:State.t) =
-    Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_station s.backend s.ui.view in
+    Mapview.is_zoom4 s.ui.view && Mapview.const_box_on_station s.backend s.ui.view in
   let is_woodbridge4 (s:State.t) =
-    Mapview.is_zoom4 s.ui.view && Mapview.cursor_on_woodbridge s.backend s.ui.view in
+    Mapview.is_zoom4 s.ui.view && Mapview.const_box_on_woodbridge s.backend s.ui.view in
   let improve_station =
     let check_upgrade ?(flip=false) upgrade (s:State.t) =
       let station = Mapview.get_station_under_cursor_exn s.backend s.ui.view in
@@ -634,7 +634,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
             | `Ok -> 
                 let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
-                let view = Mapview.move_cursor v.view dir 2 in
+                let view = Mapview.move_const_box v.view dir 2 in
                 {v with mode=modal.last; view}, backend_action
             | _ ->
                 {v with mode=modal.last}, nobaction
@@ -647,7 +647,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> BuildHighGrade x)
         (fun ({data={x;y;dir;player} as msg;_} as modal) -> function
           | `BuildTrack ->
-              let view = Mapview.move_cursor v.view dir 1 in
+              let view = Mapview.move_const_box v.view dir 1 in
               {v with mode=modal.last; view}, B.Action.BuildTrack msg
           | `BuildTunnel ->
               match B.check_build_tunnel s.backend ~x ~y ~player ~dir with
@@ -675,7 +675,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> BuildTunnel x)
         (fun {data=(msg, length);_} -> function
           | true ->
-              let view = Mapview.move_cursor v.view msg.dir length in
+              let view = Mapview.move_const_box v.view msg.dir length in
               {v with mode=Normal; view}, B.Action.BuildTunnel(msg, length)
           | _ -> {v with mode=Normal}, nobaction
         )
