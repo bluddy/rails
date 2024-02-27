@@ -387,7 +387,7 @@ let fst3 (x,_,_) = x
 let snd3 (_,x,_) = x
 let thd3 (_,_,x) = x
 
-let show_money ?(spaces=0) region money =
+let show_cash ?(spaces=0) region money =
   let b = Buffer.create 20 in
   Buffer.add_char b (Region.money_symbol region);
   let money_s = Printf.sprintf "%#d" money

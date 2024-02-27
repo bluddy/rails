@@ -109,7 +109,7 @@ let _player_pay_for_track v ~x ~y ~len ~dir ~player =
   update_player v player @@ pay LandExpense land_expense;
   ()
 
-let get_money v ~player = Player.get_money v.players.(player)
+let get_cash v ~player = Player.get_cash v.players.(player)
 
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with

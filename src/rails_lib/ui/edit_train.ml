@@ -125,7 +125,7 @@ let render win (s:State.t) (v:State.t t) : unit =
           in
           "near "^Station.get_name station
     in
-    let maintenance = Train.display_maintenance train |> Utils.show_money s.backend.region in
+    let maintenance = Train.display_maintenance train |> Utils.show_cash s.backend.region in
     let engine_data_s = sprintf "(%s/%s)" train.engine.name maintenance in
     let status_s = match train.state with
       | WaitingAtStation _ -> "Speed: unloading/loading"
@@ -183,7 +183,7 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     let rev period =
       Train.get_revenue train period
-      |> Utils.show_money ~spaces:6 s.backend.region
+      |> Utils.show_cash ~spaces:6 s.backend.region
     in
     let rev_l = rev s.backend.fiscal_period in
     let rev_r = rev @@ Utils.other_period s.backend.fiscal_period in

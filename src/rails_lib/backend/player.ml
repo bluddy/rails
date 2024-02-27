@@ -13,7 +13,7 @@ type expense =
 
 
 type monetary = {
-  money: int; (* x1000 *)
+  cash: int; (* x1000 *)
   bonds: int;
   yearly_interest_payment: int;
   net_worth: int;
@@ -36,7 +36,7 @@ type t = {
 
 let default difficulty = {
   m = {
-    money = 1000;
+    cash = 1000;
     bonds = 500;
     yearly_interest_payment=20;
     net_worth=50;
@@ -54,19 +54,19 @@ let default difficulty = {
   goods_delivered=Goods.Set.empty;
 }
 
-let get_money v = v.m.money
+let get_cash v = v.m.cash
 
-let decr_money ~money v =
-  let m = {v.m with money = v.m.money - money} in
+let decr_cash ~cash v =
+  let m = {v.m with cash = v.m.cash - cash} in
   {v with m}
 
-let incr_money ~money v =
-  let m = {v.m with money = v.m.money + money} in
+let incr_cash ~cash v =
+  let m = {v.m with cash = v.m.cash + cash} in
   {v with m}
 
-let pay expense money v =
-  Hashtbl.incr ~by:money v.m.expenses expense;
-  decr_money ~money v
+let pay expense cash v =
+  Hashtbl.incr ~by:cash v.m.expenses expense;
+  decr_cash ~cash v
 
 let track_length v = v.track_length
 

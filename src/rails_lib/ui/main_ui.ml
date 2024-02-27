@@ -126,8 +126,8 @@ let main_menu fonts menu_h region =
     let module S = Station in
     let entry str upgrade =
       let price_s =
-        let money = Station.price_of_upgrade upgrade in
-        Printf.sprintf " (%s)" (Utils.show_money region money)
+        let cash = Station.price_of_upgrade upgrade in
+        Printf.sprintf " (%s)" (Utils.show_cash region cash)
       in
       make_entry (str^price_s) ~test_enabled:(check_upgrade ~flip:true upgrade)
         (`Checkbox(`ImproveStation upgrade, check_upgrade upgrade))
@@ -286,7 +286,7 @@ let build_station_menu fonts region =
   let open Menu in
   let open MsgBox in
   let open Printf in
-  let price station = Station.price_of station |> Utils.show_money region in
+  let price station = Station.price_of station |> Utils.show_cash region in
   make ~fonts ~heading:"Type of facility?" ~x:176 ~y:16
   [
     make_entry "&CANCEL" @@ `Action(None);
@@ -313,7 +313,7 @@ let build_bridge_menu fonts region =
   let open Printf in
   let price bridge =
     Bridge.price_of bridge
-    |> Utils.show_money region 
+    |> Utils.show_cash region 
   in
   make ~fonts ~heading:"Type of bridge?" ~x:176 ~y:16
   [
@@ -347,7 +347,7 @@ let build_tunnel_menu fonts ~length ~cost ~region =
   let heading =
     Printf.sprintf "%d mile tunnel required.\nCost: %s"
       length
-      (Utils.show_money region cost)
+      (Utils.show_cash region cost)
   in
   let entries =
   [
@@ -541,7 +541,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                 static_entry ~color:Ega.white tilename;
                 static_entry ~color:Ega.white "Right-of-Way costs";
                 static_entry ~color:Ega.white @@
-                  Printf.sprintf "%s per mile" (Utils.show_money s.backend.region info.cost);
+                  Printf.sprintf "%s per mile" (Utils.show_cash s.backend.region info.cost);
               ]
               in
               let demand = match info.demand with
@@ -821,9 +821,9 @@ let render_main win (s:State.t) v =
   let y = y + dims.minimap.h in
   R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
 
-  let money = B.get_money s.backend ~player:0 in
-  let money_s = Utils.show_money ~spaces:6 s.backend.region money in
-  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:66 money_s;
+  let cash = B.get_cash s.backend ~player:0 in
+  let cash_s = Utils.show_cash ~spaces:6 s.backend.region cash in
+  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:66 cash_s;
 
   let month, year = B.get_date s.backend in
   let date_s = Printf.sprintf "%s %d" (str_of_month.(month)) year in
