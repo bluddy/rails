@@ -192,7 +192,7 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     write Ega.black ~x:105 ~y:118 "TRAIN ORDERS";
 
-    let write_station (stop:Train.stop) ~i ~y =
+    let write_station ?(wait=`NoWait) (stop:Train.stop) ~i ~y =
       let station =
         Station_map.get_exn (stop.x, stop.y) s.backend.stations
       in
@@ -203,6 +203,9 @@ let render win (s:State.t) (v:State.t t) : unit =
         | None ->
             Ega.black
       in
+      match wait with
+      | `NoWait -> ()
+      | `Wait -> write Ega.red ~x:10 ~y "W";
       write color ~x:24 ~y (Station.get_name station)
     in
 
@@ -234,9 +237,9 @@ let render win (s:State.t) (v:State.t t) : unit =
     write Ega.black ~x:160 ~y:149 "New Consist:";
 
     (* Write stop names *)
-    let n, y =
-      Vector.fold (fun (i, y) (_, (stop:Train.stop)) ->
-        write_station stop ~i:(Some i) ~y;
+    let last_full_stop, y =
+      Vector.fold (fun (i, y) (wait, (stop:Train.stop)) ->
+        write_station stop ~wait ~i:(Some i) ~y;
         draw_cars_option stop ~y;
         R.draw_line win ~color:Ega.black ~x1:160 ~y1:(y+9) ~x2:312 ~y2:(y+9);
         (i+1, y+10)
@@ -250,7 +253,7 @@ let render win (s:State.t) (v:State.t t) : unit =
       write Ega.gray ~x:29 ~y "---";
       y + 10)
       y
-      Iter.(n -- Train.max_stops);
+      Iter.(last_full_stop -- Train.max_stops);
 
     (* Car menu *)
     begin match v.car_menu with
@@ -261,6 +264,16 @@ let render win (s:State.t) (v:State.t t) : unit =
     (* Menu bar - last so we draw over all else *)
     Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
     ()
+
+let _find_clicked_stop (train:ro Train.t) click_y =
+    let ystart = 167 in
+    let line_h = 10 in
+    Vector.foldi (fun i acc _ ->
+      match acc with
+      | None when click_y < ystart + i * line_h -> Some i
+      | x -> x)
+    None
+    train.route
 
 let handle_event (s:State.t) v (event:Event.t) =
   match v.screen, v.car_menu with
@@ -381,6 +394,15 @@ let handle_event (s:State.t) v (event:Event.t) =
             | _ -> false, v.screen, None, nobaction
             end
 
+          (* Click next to station to wait or unwait *)
+        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 9 && x <= 23 && y >= 159 ->
+          let stop = _find_clicked_stop train y in
+          let b_action = match stop with
+            | Some stop -> Backend.Action.TrainToggleStopWait{train=v.train; stop}
+            | None -> nobaction
+          in
+          false, v.screen, None, b_action
+
           (* Click on car to delete, or space in priority stop to open the menu *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 137 && y <= 147 ->
             let msg = match train.priority with
@@ -391,19 +413,14 @@ let handle_event (s:State.t) v (event:Event.t) =
             handle_car_msg msg
 
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
-            let ystart = 167 in
-            let msg =
-              Vector.foldi (fun i acc (_, (stop:Train.stop)) ->
-                match acc with
-                | `None when y < ystart + i * line_h ->
-                    begin match stop.consist_change with
-                    | None -> `AddCarMenu (`Stop i)  (* currently "No Change" *)
-                    | Some cars ->
-                        make_car_msg (`Stop i) cars x
-                    end
-                | x -> x)
-              `None
-              train.route
+            let stop = _find_clicked_stop train y in
+            let msg = Option.map_or ~default:`None
+              (fun i ->
+                 let _, stop = Train.get_stop train i in
+                 match stop.consist_change with
+                 | None -> `AddCarMenu (`Stop i)  (* currently "No Change" *)
+                 | Some cars -> make_car_msg (`Stop i) cars x)
+              stop
             in
             handle_car_msg msg
 

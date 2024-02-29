@@ -138,7 +138,7 @@ module Train_update = struct
         cars cars_delivered
       in
       let car_change_work, car_change_expense, cars =
-        Train_station.dump_unused_cars_to_station cars (Train.get_stop train) station_supply
+        Train_station.dump_unused_cars_to_station cars (Train.get_next_stop train) station_supply
       in
       let time_for_car_change =
         let multiplier = if Station.has_upgrade station Station.SwitchingYard then 16 else 64 in

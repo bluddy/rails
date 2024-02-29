@@ -393,6 +393,14 @@ let _train_replace_engine v ~train ~engine ~player =
   update_player v player (Player.pay Player.TrainExpense engine.price);
   [%up {v with trains}]
 
+let _train_toggle_stop_wait v ~train ~stop =
+  let trains =
+    Trainmap.update v.trains train
+      (fun train -> Train.toggle_stop_wait train stop)
+  in
+  [%up {v with trains}]
+
+
 let _station_set_signal v loc dir cmd =
   (* the user can only set the override *)
   let signal = match cmd with
@@ -466,6 +474,7 @@ module Action = struct
     | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type}
     | RemoveTrain of Trainmap.Id.t
     | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make}
+    | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
     [@@deriving show]
 
@@ -511,6 +520,8 @@ module Action = struct
           _remove_train backend idx
       | TrainReplaceEngine {train; engine} ->
           _train_replace_engine backend ~train ~engine ~player:0
+      | TrainToggleStopWait {train; stop} ->
+          _train_toggle_stop_wait backend ~train ~stop
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
       | Pause -> {backend with pause=true}

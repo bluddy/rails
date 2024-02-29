@@ -346,7 +346,7 @@ let%expect_test "3 connected stations in a line, trains and double track" =
   in
   let trains = Trainmap.empty () in
   let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in 
-  let trains = Trainmap.add trains @@ dummy_train (9, 10) Right in
+  let _ = Trainmap.add trains @@ dummy_train (9, 10) Right in
   let locu = ((5, 10), `Lower) in
   Block_map.block_incr_train locu blocks;
   Block_map.block_incr_train locu blocks;

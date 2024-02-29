@@ -170,13 +170,13 @@ let reset_pixels_from_midtile (train: rw t) =
 
 let get_route_dest v = Vector.get v.route v.stop |> snd
 
-let get_stop v =
+let get_next_stop v =
   match v.priority with
   | Some stop -> stop
   | None -> get_route_dest v
 
 let get_dest v = 
-  let stop = get_stop v in
+  let stop = get_next_stop v in
   (stop.x, stop.y)
 
 let freight_of_cars cars =
@@ -234,6 +234,8 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
   v
 
 let get_route v = v.route
+
+let get_stop v i = Vector.get v.route i
 
 let remove_stop_car (v:rw t) stop car =
   let remove_car (stop:stop) =
@@ -322,6 +324,13 @@ let remove_stop (v:rw t) stop =
       Vector.remove_and_shift v.route i;
       v
   | `Priority -> {v with priority=None}
+
+let toggle_stop_wait (v:rw t) stop =
+  Vector.modify_at_idx v.route stop (fun (wait, stop) ->
+    let wait2 = match wait with `Wait -> `NoWait | `NoWait -> `Wait in
+    (wait2, stop)
+  );
+  v
 
 (* Cycles used to update integer speed up to index=12
    Note that each step has one more active bit
