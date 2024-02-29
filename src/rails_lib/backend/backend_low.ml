@@ -280,6 +280,7 @@ module Train_update = struct
           in
           _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
         in
+        (* TODO: remove override proceed after one train *)
         let train = match train.state with
           | LoadingAtStation s when s.wait_time > 0 ->
               train
