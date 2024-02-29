@@ -230,13 +230,19 @@ let set_override (v:t) dir override =
   in
   {v with signals}
 
-let can_train_go_and_need_to_cancel_override (v:t) dir =
+let can_train_go (v:t) dir =
   let signal = get_signal v dir in
   match signal with
-    _, OverrideProceed -> true, true
-  | _, OverrideHold -> false, false
-  | Go, _ -> true, false
-  | Stop, _ -> false, false
+    _, OverrideProceed -> true
+  | _, OverrideHold -> false
+  | Go, _ -> true
+  | Stop, _ -> false
+
+let cancel_override_with_one_visit (v:t) dir =
+  let signal = get_signal v dir in
+  match signal with
+    _, OverrideProceed -> true
+  | _ -> false
 
 let make_signaltower ~x ~y ~year ~player =
   { x; y; year; info=None; player; signals=default_signals}

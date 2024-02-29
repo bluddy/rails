@@ -280,32 +280,88 @@ module Train_update = struct
           in
           _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
         in
-        let train, disable_signal_override = match train.state with
+        let train = match train.state with
           | LoadingAtStation s when s.wait_time > 0 ->
-              train, false
+              train
           | LoadingAtStation _ ->
-              exit_station train, false
+              exit_station train
           | WaitingForFullLoad when Train.is_full train ->
-              exit_station train, false
+              exit_station train
           | WaitingForFullLoad ->
-              train, false
+              train
           | HoldingAtStation when train.hold_at_next_station -> (* Don't enter station yet *)
-              train, false
-          | HoldingAtStation when not train.hold_at_next_station ->
-              _enter_station v train station loc, false
+              train
+          | HoldingAtStation ->
+              _enter_station v train station loc
           | StoppedAtSignal ->
-            let can_go, disable_override = 
-              Station.can_train_go_and_need_to_cancel_override station train.dir
-            in
-            let train = if can_go then exit_station train else train in
-            train, disable_override
+            let can_go = Station.can_train_go station train.dir in
+            if can_go then exit_station train else train
 
           | Traveling _ -> assert false
         in
-        Log.debug (fun f -> f "Station: %s" (Train.show_state train.state));
-        train, disable_signal_override
+        Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state));
+        train
 
     | _ -> assert false
+
+let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
+  (* This is the regular update function for trains. Important stuff happens midtile *)
+  (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
+  match train.state with
+  | Traveling travel_state ->
+    let train = Train.update_speed train ~cycle ~cycle_check ~cycle_bit in
+    (* TODO: fiscal period update stuff *)
+    let rec train_update_loop train speed_bound =
+      let speed = Train.get_speed train in
+      if speed_bound >= speed then train
+      else (
+        let speed =
+          if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3
+          else speed
+        in
+        let update_val =
+          if speed > 12 then 
+            if speed_bound = 0 then 12 else speed - 12
+          else speed
+        in
+        (* BUGFIX: original code allowed sampling from random memory *)
+        let update_val = update_val / region_div
+          |> min Train.update_array_length
+        in
+        (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
+        let train =
+          if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
+            (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
+            let is_mid_tile =
+              (train.x mod C.tile_w) = C.tile_w / 2 &&
+              (train.y mod C.tile_h) = C.tile_h / 2
+            in
+            let loc = train.x / C.tile_w, train.y / C.tile_h in
+
+            (* Make sure we don't double-process mid-tiles *)
+            match is_mid_tile, travel_state.traveling_past_station with
+            | true, false ->
+                _traveling_train_mid_tile ~idx ~cycle v train loc
+            | false, true ->
+                travel_state.traveling_past_station <- false;
+                Train.advance train
+            | _ ->
+                Train.advance train
+          end else
+            train
+        in
+        train_update_loop train (speed_bound + 12)
+      )
+    in
+    train_update_loop train 0
+
+  | LoadingAtStation s when s.wait_time > 0 ->
+      s.wait_time <- s.wait_time - 1;
+      train
+
+  | _ ->  (* Time is up or other stopped states *)
+      let loc = train.x / C.tile_w, train.y / C.tile_h in
+      _stopped_train_mid_tile ~idx ~cycle v train loc
 
 
     (* Run every cycle, updating every train's position and speed *)
@@ -316,11 +372,8 @@ module Train_update = struct
     let cycle = v.cycle in
     (* TODO: We update the high priority trains before the low priority *)
     Trainmap.mapi_in_place (fun idx train ->
-      Train.update_train idx train ~cycle ~cycle_check ~cycle_bit ~region_div
-      ~traveling_update_mid_tile:(_traveling_train_mid_tile ~idx ~cycle v)
-      ~stopped_update_mid_tile:(_stopped_train_mid_tile ~idx ~cycle v))
+      update_train v idx train ~cycle ~cycle_check ~cycle_bit ~region_div)
     v.trains
-
 
 end
 

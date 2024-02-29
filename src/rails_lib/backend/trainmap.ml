@@ -66,6 +66,7 @@ let delete v idx =
   v
 
 let _with_update_loc v idx train f =
+  (* Any r/w action on trains needs to update their positions in the index *)
   let loc1 = _calc_train_loc train in
   let train = f train in
   let loc2 = _calc_train_loc train in
@@ -74,6 +75,17 @@ let _with_update_loc v idx train f =
     _add_train_loc v loc2 idx;
   );
   train
+
+let _with_update_loc_pair v idx train f =
+  (* Any r/w action on trains needs to update their positions in the index *)
+  let loc1 = _calc_train_loc train in
+  let train, x = f train in
+  let loc2 = _calc_train_loc train in
+  if not @@ Utils.equal_loc loc1 loc2 then (
+    _remove_train_loc v loc1 idx;
+    _add_train_loc v loc2 idx;
+  );
+  train, x
 
   (* Update a train. R/W *)
 let update v idx f =
@@ -105,6 +117,12 @@ let mapi_in_place f v =
   )
   v.trains;
   v
+
+(* R/W *)
+let fold_mapi_in_place f v ~init =
+  Vector.fold_mapi_in_place (fun i acc train ->
+    _with_update_loc_pair v (Id.of_int i) train (f i acc))
+    init v.trains
 
   (* Return the index of a train that matches *)
 let find_ret_index (f:ro Train.t -> bool) (v:t) =
