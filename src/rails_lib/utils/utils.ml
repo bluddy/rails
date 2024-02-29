@@ -162,6 +162,21 @@ module Vector = struct
     in
     foldi acc 0
 
+  let fold_mapi_in_place ~init f v =
+    let rec loop acc i =
+      if i >= length v then
+        acc
+      else (
+        let x = get v i in
+        let acc, x' = f i acc x in
+        if x =!= x' then (
+          set v i x'
+        );
+        loop acc (i + 1)
+      )
+    in
+    loop init 0
+       
   let mapi_in_place f v =
     for i=0 to (length v) - 1 do
       let x = get v i in
