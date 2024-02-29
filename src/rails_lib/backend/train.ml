@@ -466,6 +466,7 @@ let update_speed (v:rw t) ~cycle ~cycle_check ~cycle_bit =
   | _ -> v
 
 let update_train _idx (train:rw t) ~cycle ~cycle_check ~cycle_bit ~region_div ~update_mid_tile =
+  (* This is the regular update function for trains. Important stuff happens midtile *)
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   match train.state with
   | Traveling travel_state ->
@@ -499,12 +500,12 @@ let update_train _idx (train:rw t) ~cycle ~cycle_check ~cycle_bit ~region_div ~u
             let loc = train.x / C.tile_w, train.y / C.tile_h in
             match travel_state.last_stop_dir with
             | Some (last_stop, _) when is_mid_tile && Utils.neq_xy last_stop loc ->
-              (* Avoid double update *)
-              update_mid_tile train loc
+                (* Avoid double update *)
+                update_mid_tile train loc
             | None when is_mid_tile ->
-              update_mid_tile train loc
+                update_mid_tile train loc
             | _ ->
-              advance train)
+                advance train)
           else
             train
         in
@@ -515,7 +516,7 @@ let update_train _idx (train:rw t) ~cycle ~cycle_check ~cycle_bit ~region_div ~u
   | LoadingAtStation s when s.wait_time > 0 ->
       s.wait_time <- s.wait_time - 1;
       train
-  | LoadingAtStation _ ->
+  | LoadingAtStation _ ->  (* Time is up *)
       let loc = train.x / C.tile_w, train.y / C.tile_h in
       update_mid_tile train loc (* TODO: Check *)
 
