@@ -122,7 +122,7 @@ let render win (s:State.t) (v:State.t t) : unit =
           in
           "near "^Station.get_name station
       | _ ->
-          let station = Station_map.get_exn (train.x, train.y) s.backend.stations in
+          let station = Station_map.get_exn (train.x / C.tile_w, train.y / C.tile_h) s.backend.stations in
           sprintf ("at %s") (Station.get_name station)
     in
     let maintenance = Train.display_maintenance train |> Utils.show_cash s.backend.region in

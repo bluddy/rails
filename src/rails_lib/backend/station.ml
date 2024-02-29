@@ -146,8 +146,8 @@ let default_signals = {
 }
 
 type t = {
-  x: int;
-  y: int;
+  x: int; (* in tiles *)
+  y: int; (* in tiles *)
   year: int;
   info: info option;
   player: int;

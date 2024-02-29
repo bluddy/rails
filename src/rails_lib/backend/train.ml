@@ -125,8 +125,8 @@ type wait = [`Wait | `NoWait]
 
 (* 'mut is so we can't mutate a train from the wrong api *)
 type 'mut t = {
-  mutable x: int;
-  mutable y: int;
+  mutable x: int; (* in map pixels *)
+  mutable y: int; (* in map pixels *)
   player: int;
   state: state;
   (* Used for train/car drawing algorithm *)
