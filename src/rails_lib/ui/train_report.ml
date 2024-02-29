@@ -203,9 +203,10 @@ let render win (s:State.t) (v:State.t t) : unit =
         | None ->
             Ega.black
       in
-      match wait with
-      | `NoWait -> ()
-      | `Wait -> write Ega.red ~x:10 ~y "W";
+      begin match wait with
+      | `Wait -> write color ~x:12 ~y "W"
+      | _ -> ()
+      end;
       write color ~x:24 ~y (Station.get_name station)
     in
 
