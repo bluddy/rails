@@ -45,7 +45,7 @@ module Train_update = struct
     | Traveling s ->
       if target_speed =!= s.target_speed then s.target_speed <- target_speed;
       if speed =!= s.speed then s.speed <- speed;
-    | WaitingAtStation _ -> ()
+    | _ -> ()
     end;
     (* Bookkeeping *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
@@ -150,7 +150,7 @@ module Train_update = struct
       let wait_time = time_for_sold_goods + time_for_car_change + time_pickup in
       let income = (Utils.sum money_from_goods) + other_income + car_change_expense in
       let state =
-        if wait_time > 0 then Train.WaitingAtStation {wait_time}
+        if wait_time > 0 then Train.LoadingAtStation {wait_time}
         else train.state
       in
       Log.debug (fun f -> f "wait_time(%d)" wait_time);
@@ -245,10 +245,10 @@ module Train_update = struct
           | Traveling s ->
               let train = enter train (Option.is_none s.last_stop_dir) in
               (match train.state with
-              | WaitingAtStation s when s.wait_time > 0 -> train
+              | LoadingAtStation s when s.wait_time > 0 -> train
               | _ -> exit train)
-          | WaitingAtStation s when s.wait_time > 0 -> train
-          | WaitingAtStation _ -> exit train
+          | LoadingAtStation s when s.wait_time > 0 -> train
+          | LoadingAtStation _ -> exit train
         in
         Log.debug (fun f -> f "Station: %s" (Train.show_state train.state));
         train

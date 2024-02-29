@@ -102,16 +102,12 @@ type state =
                    mutable target_speed: int;
                    last_stop_dir: ((int * int) * Dir.t) option; (* To prevent double processing *)
                 }
-  | WaitingAtStation of {mutable wait_time: int}
+  | LoadingAtStation of {mutable wait_time: int} (* Normal loading time *)
+  | WaitingForFullLoad  (* In a station with Wait *)
+  | HoldingAtStation (* Held and waiting for unhold by player *)
+  | StoppedAtSignal (* Waiting at a hold signal *)
   [@@deriving yojson, show]
 
-  (* TODO: 
-    other states:
-      holding
-      Waiting for full load
-      waiting at siding
-      stopped at signal
-    *)
 type periodic = {
   mutable dist_traveled: int;
   mutable ton_miles: int;
@@ -136,7 +132,7 @@ type 'mut t = {
   (* Only record trains can be named, and it increases passenger income by 25% *)
   name: string option;
   last_station: Station.id; (* Could be far away due to express *)
-  stop_at_station: bool;
+  hold_at_next_station: bool;
   engine: Engine.t;
   cars: Car.t list;
   freight: Goods.freight; (* freight class. Based on majority of cars *)
@@ -155,7 +151,7 @@ let get_route_stop v i = Vector.get v.route i
 
 let get_speed v = match v.state with
   | Traveling s -> s.speed
-  | WaitingAtStation _ -> 0
+  | _ -> 0
 
 let set_type v typ = {v with typ}
 let replace_engine v engine = {v with engine; maintenance_cost=0}
@@ -223,7 +219,7 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
     name=None;
     last_station=station;
     had_maintenance=false;
-    stop_at_station=false;
+    hold_at_next_station=false;
     priority=None;
     maintenance_cost=0;
     periodic=(make_periodic (), make_periodic ());
@@ -516,12 +512,13 @@ let update_train _idx (train:rw t) ~cycle ~cycle_check ~cycle_bit ~region_div ~u
       )
     in
     train_update_loop train 0
-  | WaitingAtStation s when s.wait_time > 0 ->
+  | LoadingAtStation s when s.wait_time > 0 ->
       s.wait_time <- s.wait_time - 1;
       train
-  | WaitingAtStation _ ->
+  | LoadingAtStation _ ->
       let loc = train.x / C.tile_w, train.y / C.tile_h in
       update_mid_tile train loc (* TODO: Check *)
+
 
   let adjust_loc_for_double_track trackmap x y dir =
     (* Handle double tracks *)
@@ -535,6 +532,7 @@ let update_train _idx (train:rw t) ~cycle ~cycle_check ~cycle_bit ~region_div ~u
         let dx, dy = Dir.to_offsets adjust_dir in
         x + dx * mult, y + dy * mult
     | _ -> x, y
+
 
   (* The algorithm works in segments.
      The length of the full train is car_idx * car_pixels.

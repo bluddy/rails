@@ -120,3 +120,4 @@
         - Only way company builds now
     - build tracks into controlled ai station: union station
     - charged 100k for terminal (normally $200k)
+  - Holding is before we enter the station! (records and such come later)

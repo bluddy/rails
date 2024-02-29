@@ -116,19 +116,22 @@ let render win (s:State.t) (v:State.t t) : unit =
     in
     let train_loc = (train.x, train.y) in
     let train_loc_s = match train.state with
-      | WaitingAtStation _ ->
-          let station = Station_map.get_exn (train.x, train.y) s.backend.stations in
-          sprintf ("at %s") (Station.get_name station)
       | Traveling _ ->
           let station = Station_map.find_nearest s.backend.stations train_loc
             |> Option.get_exn_or "must have station"
           in
           "near "^Station.get_name station
+      | _ ->
+          let station = Station_map.get_exn (train.x, train.y) s.backend.stations in
+          sprintf ("at %s") (Station.get_name station)
     in
     let maintenance = Train.display_maintenance train |> Utils.show_cash s.backend.region in
     let engine_data_s = sprintf "(%s/%s)" train.engine.name maintenance in
     let status_s = match train.state with
-      | WaitingAtStation _ -> "Speed: unloading/loading"
+      | LoadingAtStation _ -> "Speed: unloading/loading"
+      | HoldingAtStation -> "Speed: holding"
+      | WaitingForFullLoad -> "Speed: waiting for full load"
+      | StoppedAtSignal -> "Speed: stopped at signal"
       | Traveling _ ->
           sprintf "Speed: %d mph, bound for %s"
           (Train.display_speed train)
