@@ -417,8 +417,8 @@ let _station_set_signal v loc dir cmd =
 let _remove_train v idx =
   let train = Trainmap.get v.trains idx in
   (match train.state with
-    | Traveling {last_stop_dir=Some locd;_} ->
-      Block_map.block_decr_train (Utils.locu_of_locd locd) v.blocks
+    | Traveling {block; _} ->
+      Block_map.block_decr_train block v.blocks
     | _ -> ());
   let trains = Trainmap.delete v.trains idx in
   [%up {v with trains}]

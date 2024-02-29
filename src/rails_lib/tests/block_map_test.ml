@@ -348,8 +348,8 @@ let%expect_test "3 connected stations in a line, trains and double track" =
   let trains = Trainmap.add trains @@ dummy_train (8, 10) Right in 
   let _ = Trainmap.add trains @@ dummy_train (9, 10) Right in
   let locu = ((5, 10), `Lower) in
-  Block_map.block_incr_train locu blocks;
-  Block_map.block_incr_train locu blocks;
+  ignore @@ Block_map.block_incr_train locu blocks;
+  ignore @@ Block_map.block_incr_train locu blocks;
   print @@ Utils.thd3 tgs;
   [%expect {|
     { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 3
@@ -374,8 +374,8 @@ let%expect_test "2 connected stations in a line, trains, add station" =
   let trainmap = Trainmap.add trainmap @@ dummy_train (8, 10) Right in 
   let trainmap = Trainmap.add trainmap @@ dummy_train (9, 10) Right in
   let locu = ((5, 10), `Lower) in
-  Block_map.block_incr_train locu blocks;
-  Block_map.block_incr_train locu blocks;
+  ignore @@ Block_map.block_incr_train locu blocks;
+  ignore @@ Block_map.block_incr_train locu blocks;
   print @@ Utils.thd3 tgs;
   [%expect {|
   { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 0

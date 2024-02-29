@@ -207,6 +207,7 @@ module Train_update = struct
     (* All major computation happens mid-tile *)
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
     (* TODO: check for colocated trains (accidents/stop a train) *)
+    (* TODO: traveling past station *)
     (* Assume train is travelling. Check where we arrived *)
     let track = Trackmap.get_exn v.track ~x ~y in
     match track.kind with
@@ -215,8 +216,8 @@ module Train_update = struct
         let train = match train.state with
           | Traveling s when s.traveling_past_station -> train
 
-          | Traveling _ ->
-              Block_map.block_decr_train (loc, Dir.opposite train.Train.dir |> Dir.to_upper) v.blocks;
+          | Traveling s ->
+              Block_map.block_decr_train s.block v.blocks;
               if train.hold_at_next_station then
                 {train with state = HoldingAtStation }
               else
@@ -272,10 +273,10 @@ module Train_update = struct
           (* enter block *)
           let locd = (loc, dir) in
           let locu = Utils.locu_of_locd locd in
-          Block_map.block_incr_train locu v.blocks;
+          let block = Block_map.block_incr_train locu v.blocks in
           let train = 
             {train with
-              state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true}
+              state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true; block}
             }
           in
           _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir

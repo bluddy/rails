@@ -1,6 +1,7 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module LocuSet = Utils.LocuSet
+open Block_map_d
 
 let src = Logs.Src.create "blocks" ~doc:"Blocks"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -10,17 +11,8 @@ module Log = (val Logs.src_log src: Logs.LOG)
      Unlike the graph, we don't concern ourselves with ixns
    *)
 
-module Id = Int_id.Make(struct end)
 
-type info = {
-  mutable count: int;
-  mutable double: Track.double;
-} [@@deriving yojson, show]
-
-type t = {
-  info: (Id.t, info) Utils.Hashtbl.t;
-  stations: (Utils.loc * Dir.upper, Id.t) Utils.Hashtbl.t;
-} [@@deriving yojson, show]
+type t = Block_map_d.t [@@deriving yojson, show]
 
 let make () = {
   info=Hashtbl.create 10;
@@ -83,14 +75,15 @@ let block_incr_train locu v =
   let id = get_station_block locu v in
   Log.debug (fun f -> f "Block: incr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
-  info.count <- info.count + 1
+  info.count <- info.count + 1;
+  id
 
-let block_decr_train locu v =
-  let id = get_station_block locu v in
+let block_decr_train id v =
   Log.debug (fun f -> f "Block: decr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
-  if info.count > 0 then
+  if info.count > 0 then (
     info.count <- info.count - 1
+  )
 
 let remap_station_block_ids ~from_id to_id v =
   (* Remap all stations of a certain id to another one *)

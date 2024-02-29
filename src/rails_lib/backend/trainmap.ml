@@ -79,13 +79,13 @@ let _with_update_loc v idx train f =
 let _with_update_loc_pair v idx train f =
   (* Any r/w action on trains needs to update their positions in the index *)
   let loc1 = _calc_train_loc train in
-  let train, x = f train in
+  let x, train = f train in
   let loc2 = _calc_train_loc train in
   if not @@ Utils.equal_loc loc1 loc2 then (
     _remove_train_loc v loc1 idx;
     _add_train_loc v loc2 idx;
   );
-  train, x
+  x, train
 
   (* Update a train. R/W *)
 let update v idx f =

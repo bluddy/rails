@@ -103,6 +103,7 @@ type state =
                    mutable target_speed: int;
                    (* To prevent double processing, we turn on this flag while at a station location *)
                    mutable traveling_past_station: bool;
+                   block: Block_map_d.Id.t; 
                 }
   | LoadingAtStation of {mutable wait_time: int} (* Normal loading time *)
   | WaitingForFullLoad  (* In a station with Wait *)
@@ -211,7 +212,7 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
     engine;
     pixels_from_midtile=0;
     dir;
-    state=Traveling {speed=1; target_speed=1; traveling_past_station=false};
+    state=LoadingAtStation{wait_time=0};
     cars;
     freight=freight_of_cars cars;
     typ=Local;
@@ -468,65 +469,6 @@ let update_speed (v:rw t) ~cycle ~cycle_check ~cycle_bit =
     );
     v
   | _ -> v
-
-let update_train _idx (train:rw t) ~cycle ~cycle_check ~cycle_bit ~region_div ~traveling_update_mid_tile ~stopped_update_mid_tile =
-  (* This is the regular update function for trains. Important stuff happens midtile *)
-  (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
-  match train.state with
-  | Traveling travel_state ->
-    let train = update_speed train ~cycle ~cycle_check ~cycle_bit in
-    (* TODO: fiscal period update stuff *)
-    let rec train_update_loop train speed_bound =
-      let speed = get_speed train in
-      if speed_bound >= speed then train
-      else (
-        let speed =
-          if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3
-          else speed
-        in
-        let update_val =
-          if speed > 12 then 
-            if speed_bound = 0 then 12 else speed - 12
-          else speed
-        in
-        (* BUGFIX: original code allowed sampling from random memory *)
-        let update_val = update_val / region_div
-          |> min update_array_length
-        in
-        (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
-        let train =
-          if (update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
-            (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
-            let is_mid_tile =
-              (train.x mod C.tile_w) = C.tile_w / 2 &&
-              (train.y mod C.tile_h) = C.tile_h / 2
-            in
-            let loc = train.x / C.tile_w, train.y / C.tile_h in
-
-            (* Make sure we don't double-process mid-tiles *)
-            match is_mid_tile, travel_state.traveling_past_station with
-            | true, false ->
-                traveling_update_mid_tile train loc
-            | false, true ->
-                travel_state.traveling_past_station <- false;
-                advance train
-            | _ ->
-                advance train
-          end else
-            train
-        in
-        train_update_loop train (speed_bound + 12)
-      )
-    in
-    train_update_loop train 0
-
-  | LoadingAtStation s when s.wait_time > 0 ->
-      s.wait_time <- s.wait_time - 1;
-      train
-
-  | _ ->  (* Time is up or other stopped states *)
-      let loc = train.x / C.tile_w, train.y / C.tile_h in
-      stopped_update_mid_tile train loc
 
 
   let adjust_loc_for_double_track trackmap x y dir =
