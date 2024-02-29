@@ -190,65 +190,39 @@ module Train_update = struct
          delivery to station, print revenue
        *)
 
-  let _update_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) loc =
+  let _enter_station (v:t) (train: rw Train.t) station loc =
+    (* TODO: actual UI msg, income handling *)
+    let last_station, priority, stop, train, _income, _ui_msgs =
+      if Station.is_proper_station station then (
+        let train, income, ui_msgs = _train_enter_station v loc station train in
+        let priority, stop = Train.check_increment_stop train loc in
+        loc, priority, stop, train, income, ui_msgs
+      ) else (
+        train.last_station, train.priority, train.stop, train, 0, []
+      )
+    in
+    {train with last_station; priority; stop}
+
+  let _traveling_train_mid_tile ~idx ~cycle (v:t) (train: rw Train.t) ((x, y) as loc) =
     (* All major computation happens mid-tile *)
-    let (x,y) = loc in
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
     (* TODO: check for colocated trains (accidents/stop a train) *)
-    (* Trains can be stopped by 3 things:
-      1. R-click: told to stop at next stop
-         Don't process train arrival
-      2. Wait timer from first arrival
-      3. Prevent from leaving via manual signal hold
-    *)
+    (* Assume train is travelling. Check where we arrived *)
     let track = Trackmap.get_exn v.track ~x ~y in
     match track.kind with
     | Station _ ->
         let station = Station_map.get_exn loc v.stations in
-        let enter train is_new =
-          if not is_new then
-            (* exit block *)
-            Block_map.block_decr_train (loc, Dir.opposite train.Train.dir |> Dir.to_upper) v.blocks;
-          (* TODO: actual UI msg, income handling *)
-          let last_station, priority, stop, train, _income, _ui_msgs =
-            if Station.is_proper_station station then (
-              let train, income, ui_msgs = _train_enter_station v loc station train in
-              let priority, stop = Train.check_increment_stop train loc in
-              loc, priority, stop, train, income, ui_msgs
-            ) else (
-              train.last_station, train.priority, train.stop, train, 0, []
-            )
-          in
-          {train with last_station; priority; stop}
-        in
-        let exit train =
-          let dest = Train.get_dest train in
-          let dir =
-            match Track_graph.shortest_path v.graph ~src:loc ~dest with
-            | Some dir -> dir
-            | None -> (* TODO: Impossible route message *)
-              Dir.Set.find_nearest train.dir track.dirs
-              |> Option.get_exn_or "Cannot find track for train"
-          in
-          (* enter block *)
-          let locd = (loc, dir) in
-          let locu = Utils.locu_of_locd locd in
-          Block_map.block_incr_train locu v.blocks;
-          (* TODO Check signal for exit dir *)
-          let train = 
-            {train with
-              state=Train.Traveling {speed=0; target_speed=4; last_stop_dir=Some locd}}
-          in
-          _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
-        in
         let train = match train.state with
-          | Traveling s ->
-              let train = enter train (Option.is_none s.last_stop_dir) in
-              (match train.state with
-              | LoadingAtStation s when s.wait_time > 0 -> train
-              | _ -> exit train)
-          | LoadingAtStation s when s.wait_time > 0 -> train
-          | LoadingAtStation _ -> exit train
+          | Traveling s when s.traveling_past_station -> train
+
+          | Traveling _ ->
+              Block_map.block_decr_train (loc, Dir.opposite train.Train.dir |> Dir.to_upper) v.blocks;
+              if train.hold_at_next_station then
+                {train with state = HoldingAtStation }
+              else
+                _enter_station v train station loc
+
+          | _ -> assert false
         in
         Log.debug (fun f -> f "Station: %s" (Train.show_state train.state));
         train
@@ -271,6 +245,69 @@ module Train_update = struct
         in
         _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
 
+  let _stopped_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) ((x, y) as loc) =
+    (* All major computation happens mid-tile *)
+    (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
+    (* TODO: check for colocated trains (accidents/stop a train) *)
+    (* Trains can be stopped by 3 things:
+      1. R-click: told to stop at next stop
+         Don't process train arrival
+      2. Wait timer from first arrival
+      3. Prevent from leaving via manual signal hold
+    *)
+    let track = Trackmap.get_exn v.track ~x ~y in
+    match track.kind with
+    | Station _ ->
+        let station = Station_map.get_exn loc v.stations in
+
+        let exit_station train =
+          let dest = Train.get_dest train in
+          let dir =
+            match Track_graph.shortest_path v.graph ~src:loc ~dest with
+            | Some dir -> dir
+            | None -> (* TODO: Impossible route message *)
+              Dir.Set.find_nearest train.dir track.dirs
+              |> Option.get_exn_or "Cannot find track for train"
+          in
+          (* enter block *)
+          let locd = (loc, dir) in
+          let locu = Utils.locu_of_locd locd in
+          Block_map.block_incr_train locu v.blocks;
+          let train = 
+            {train with
+              state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true}
+            }
+          in
+          _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+        in
+        let train, disable_signal_override = match train.state with
+          | LoadingAtStation s when s.wait_time > 0 ->
+              train, false
+          | LoadingAtStation _ ->
+              exit_station train, false
+          | WaitingForFullLoad when Train.is_full train ->
+              exit_station train, false
+          | WaitingForFullLoad ->
+              train, false
+          | HoldingAtStation when train.hold_at_next_station -> (* Don't enter station yet *)
+              train, false
+          | HoldingAtStation when not train.hold_at_next_station ->
+              _enter_station v train station loc, false
+          | StoppedAtSignal ->
+            let can_go, disable_override = 
+              Station.can_train_go_and_need_to_cancel_override station train.dir
+            in
+            let train = if can_go then exit_station train else train in
+            train, disable_override
+
+          | Traveling _ -> assert false
+        in
+        Log.debug (fun f -> f "Station: %s" (Train.show_state train.state));
+        train, disable_signal_override
+
+    | _ -> assert false
+
+
     (* Run every cycle, updating every train's position and speed *)
   let _update_all_trains (v:t) =
     (* Log.debug (fun f -> f "update_all_trains"); *)
@@ -280,7 +317,8 @@ module Train_update = struct
     (* TODO: We update the high priority trains before the low priority *)
     Trainmap.mapi_in_place (fun idx train ->
       Train.update_train idx train ~cycle ~cycle_check ~cycle_bit ~region_div
-        ~update_mid_tile:(_update_train_mid_tile ~idx ~cycle v))
+      ~traveling_update_mid_tile:(_traveling_train_mid_tile ~idx ~cycle v)
+      ~stopped_update_mid_tile:(_stopped_train_mid_tile ~idx ~cycle v))
     v.trains
 
 
