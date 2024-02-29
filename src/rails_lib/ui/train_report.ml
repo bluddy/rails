@@ -198,7 +198,7 @@ let render win (s:State.t) (v:State.t t) : unit =
       in
       let color = match i with
         | Some i ->
-            write Ega.gray ~x:8 ~y @@ Printf.sprintf "%d." (i+1);
+            write Ega.gray ~x:3 ~y @@ Printf.sprintf "%d." (i+1);
             if i = train.stop then Ega.black else Ega.gray
         | None ->
             Ega.black
@@ -220,7 +220,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     Renderer.draw_rect win ~x:2 ~y:127 ~w:315 ~h:10 ~color:Ega.yellow ~fill:true;
     write Ega.black ~x:8 ~y:128 "Priority Orders:";
     write Ega.black ~x:160 ~y:128 "Priority Consist:";
-    write Ega.gray ~x:8 ~y:138 "P";
+    write Ega.gray ~x:3 ~y:138 "P";
     R.draw_line win ~color:Ega.black ~x1:160 ~y1:147 ~x2:312 ~y2:147;
 
     begin match train.priority with
@@ -377,7 +377,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             false, screen, None, nobaction
 
           (* Click on a stop -> open route map *)
-        | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 158 ->
+        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 24 && x <= 120 && y >= 159 ->
             let ystart = 167 in
             let res =
               Iter.foldi (fun acc i _ -> match acc with
