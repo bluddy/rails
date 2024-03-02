@@ -236,15 +236,24 @@ module Train_update = struct
     | Station _ ->
         let station = Station_map.get_exn loc v.stations in
         let train = match train.state with
+            (* This is only when we've already processed *)
           | Traveling s when s.traveling_past_station -> train
 
           | Traveling s ->
               Block_map.block_decr_train s.block v.blocks;
-              if train.hold_at_next_station then
-                {train with state = HoldingAtStation }
+              let train =
+                if train.hold_at_next_station then
+                  {train with state = HoldingAtStation }
+                else
+                  _enter_station v train station loc
+              in
+              if Train.is_traveling train then
+                (* No stopping at this station *)
+                _exit_station ~idx ~cycle v train track loc
               else
-                _enter_station v train station loc
-
+                (* Some kind of stop. Exit later *)
+                train
+    
           | _ -> assert false
         in
         Log.debug (fun f -> f "Station: %s" (Train.show_state train.state));
@@ -281,7 +290,6 @@ module Train_update = struct
     let track = Trackmap.get_exn v.track ~x ~y in
     match track.kind with
     | Station _ ->
-
         (* TODO: remove override proceed after one train *)
         let train = match train.state with
           | LoadingAtStation s when s.wait_time > 0 ->

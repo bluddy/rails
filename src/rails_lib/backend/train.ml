@@ -156,6 +156,10 @@ let get_speed v = match v.state with
   | Traveling s -> s.speed
   | _ -> 0
 
+let is_traveling v = match v.state with
+  | Traveling _ -> true
+  | _ -> false
+
 let set_type v typ = {v with typ}
 let replace_engine v engine = {v with engine; maintenance_cost=0}
 
