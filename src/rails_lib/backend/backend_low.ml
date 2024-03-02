@@ -54,7 +54,7 @@ module Train_update = struct
     Train.advance train
 
 
-  let _train_enter_station (v:t) loc (station:Station.t) (train:rw Train.t) =
+  let _train_station_handle_consist_and_maintenance (v:t) loc (station:Station.t) (train:rw Train.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
       let had_maintenance =
@@ -194,14 +194,36 @@ module Train_update = struct
     (* TODO: actual UI msg, income handling *)
     let last_station, priority, stop, train, _income, _ui_msgs =
       if Station.is_proper_station station then (
-        let train, income, ui_msgs = _train_enter_station v loc station train in
+        let train, income, ui_msgs =
+          _train_station_handle_consist_and_maintenance v loc station train in
         let priority, stop = Train.check_increment_stop train loc in
         loc, priority, stop, train, income, ui_msgs
       ) else (
+        (* Just a signal tower. Keep traveling *)
         train.last_station, train.priority, train.stop, train, 0, []
       )
     in
     {train with last_station; priority; stop}
+
+  let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) (track:Track.t) ((x, y) as loc) =
+    let dest = Train.get_dest train in
+    let dir =
+      match Track_graph.shortest_path v.graph ~src:loc ~dest with
+      | Some dir -> dir
+      | None -> (* TODO: Impossible route message *)
+        Dir.Set.find_nearest train.dir track.dirs
+        |> Option.get_exn_or "Cannot find track for train"
+    in
+    (* enter block *)
+    let locd = (loc, dir) in
+    let locu = Utils.locu_of_locd locd in
+    let block = Block_map.block_incr_train locu v.blocks in
+    let train = 
+      {train with
+        state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true; block}
+      }
+    in
+    _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
 
   let _traveling_train_mid_tile ~idx ~cycle (v:t) (train: rw Train.t) ((x, y) as loc) =
     (* All major computation happens mid-tile *)
@@ -259,45 +281,29 @@ module Train_update = struct
     let track = Trackmap.get_exn v.track ~x ~y in
     match track.kind with
     | Station _ ->
-        let station = Station_map.get_exn loc v.stations in
 
-        let exit_station train =
-          let dest = Train.get_dest train in
-          let dir =
-            match Track_graph.shortest_path v.graph ~src:loc ~dest with
-            | Some dir -> dir
-            | None -> (* TODO: Impossible route message *)
-              Dir.Set.find_nearest train.dir track.dirs
-              |> Option.get_exn_or "Cannot find track for train"
-          in
-          (* enter block *)
-          let locd = (loc, dir) in
-          let locu = Utils.locu_of_locd locd in
-          let block = Block_map.block_incr_train locu v.blocks in
-          let train = 
-            {train with
-              state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true; block}
-            }
-          in
-          _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
-        in
         (* TODO: remove override proceed after one train *)
         let train = match train.state with
           | LoadingAtStation s when s.wait_time > 0 ->
               train
           | LoadingAtStation _ ->
-              exit_station train
+              _exit_station ~idx ~cycle v train track loc
           | WaitingForFullLoad when Train.is_full train ->
-              exit_station train
+              _exit_station ~idx ~cycle v train track loc
           | WaitingForFullLoad ->
               train
           | HoldingAtStation when train.hold_at_next_station -> (* Don't enter station yet *)
               train
           | HoldingAtStation ->
+              let station = Station_map.get_exn loc v.stations in
               _enter_station v train station loc
           | StoppedAtSignal ->
-            let can_go = Station.can_train_go station train.dir in
-            if can_go then exit_station train else train
+              let station = Station_map.get_exn loc v.stations in
+              let can_go = Station.can_train_go station train.dir in
+              if can_go then
+                _exit_station ~idx ~cycle v train track loc
+              else
+                train
 
           | Traveling _ -> assert false
         in

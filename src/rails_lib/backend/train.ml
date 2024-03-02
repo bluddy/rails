@@ -397,6 +397,7 @@ let advance (v:rw t) =
   v
 
 let check_increment_stop v (x,y) =
+  (* Increment the next stop on the route *)
   match v.priority, Vector.get v.route v.stop |> snd with
   | Some stop, _ when stop.x = x && stop.y = y ->
       (* When exiting priority mode, we go to the closest station *)
