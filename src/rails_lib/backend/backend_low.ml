@@ -70,58 +70,68 @@ module Train_update = struct
         Train.add_ton_miles train total_dist v.fiscal_period
       in
       let cars = train.cars in
-      let cars_delivered =
-        List.map (fun car -> 
-          Train.Car.get_amount car > 0 && 
-          Station.has_demand_for station_info car.good)
-        cars
+      let deliver_cargo () =
+        let cars_delivered =
+          List.map (fun car -> 
+            Train.Car.get_amount car > 0 && 
+            Station.has_demand_for station_info car.good)
+          cars
+        in
+        let money_from_goods =
+          List.map2 (fun car delivered ->
+            if delivered then
+              Train.calc_arrival_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
+              ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
+              ~difficulty:v.options.difficulty ~cycle:v.cycle
+            else 0)
+          cars
+          cars_delivered
+        in
+        let other_income =
+          let has_rest = Station.has_restaurant station in
+          let has_hotel = Station.has_hotel station in
+          List.fold_left2 (fun acc car delivered -> 
+            let amount, good = Train.Car.get_amount car, Train.Car.get_good car in
+            match good with
+            | Passengers when delivered && has_rest && has_hotel ->
+                acc + amount/32 + amount/16
+            | Passengers when delivered && has_rest ->
+                acc + amount / 32
+            | Passengers when delivered && has_hotel ->
+                acc + amount / 16
+            | _ -> acc)
+          0
+          cars
+          cars_delivered
+        in
+        cars_delivered, money_from_goods, other_income
       in
-      let money_from_goods =
-        List.map2 (fun car delivered ->
-          if delivered then
-            Train.calc_arrival_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
-            ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
-            ~difficulty:v.options.difficulty ~cycle:v.cycle
-          else 0)
-        cars
-        cars_delivered
-      in
-      let other_income =
-        let has_rest = Station.has_restaurant station in
-        let has_hotel = Station.has_hotel station in
-        List.fold_left2 (fun acc car delivered -> 
-          let amount, good = Train.Car.get_amount car, Train.Car.get_good car in
-          match good with
-          | Passengers when delivered && has_rest && has_hotel ->
-              acc + amount/32 + amount/16
-          | Passengers when delivered && has_rest ->
-              acc + amount / 32
-          | Passengers when delivered && has_hotel ->
-              acc + amount / 16
-          | _ -> acc)
-        0
-        cars
-        cars_delivered
-      in
+      let cars_delivered, money_from_goods, other_income = deliver_cargo () in
+
       let station_supply = station_info.supply in
-      let conversion_goods =
-        List.map2 (fun car delivered -> 
-          if delivered then 
-            let conv_good =
-              Station.convert station_info (Train.Car.get_good car) v.region
-            in
-            match conv_good with
-            | Some good -> Some (good, Train.Car.get_amount car)
-            | _ -> None
-          else None)
-        cars
-        cars_delivered
+      let add_converted_goods_to_station cars cars_delivered =
+        let conversion_goods =
+          List.map2 (fun car delivered -> 
+            if delivered then 
+              let conv_good =
+                Station.convert station_info (Train.Car.get_good car) v.region
+              in
+              match conv_good with
+              | Some good -> Some (good, Train.Car.get_amount car)
+              | _ -> None
+            else None)
+          cars
+          cars_delivered
+        in
+        (* Add converted goods to station *)
+        List.iter (function
+          | Some (good, amount) ->
+              Hashtbl.incr station_supply good ~by:amount
+          | _ -> ())
+          conversion_goods
       in
-      List.iter (function
-        | Some (good, amount) ->
-            Hashtbl.incr station_supply good ~by:amount
-        | _ -> ())
-        conversion_goods;
+      add_converted_goods_to_station cars cars_delivered;
+
       let time_for_sold_goods =
         List.fold_left2 (fun acc car delivered ->
           if delivered then 
@@ -133,6 +143,7 @@ module Train_update = struct
         cars
         cars_delivered
       in
+      (* Refresh cars: empty cars emptied *)
       let cars = List.map2 (fun car delivered ->
         if delivered then Train.Car.empty car else car)
         cars cars_delivered
@@ -145,10 +156,15 @@ module Train_update = struct
         car_change_work * multiplier
       in
       let freight = Train.freight_of_cars cars in
-      let time_pickup, cars =
+      (* TODO: this is all we need for wait until full.
+         Cycle between time for filling and checking if full *)
+      let time_for_pickup, cars =
         Train_station.fill_train_and_empty_station cars loc v.cycle station_supply in
-      let wait_time = time_for_sold_goods + time_for_car_change + time_pickup in
-      let income = (Utils.sum money_from_goods) + other_income + car_change_expense in
+
+      let wait_time = time_for_sold_goods + time_for_car_change + time_for_pickup in
+
+      let income = (Utils.sum money_from_goods) + other_income - car_change_expense in
+
       let state =
         if wait_time > 0 then Train.LoadingAtStation {wait_time}
         else train.state

@@ -44,7 +44,7 @@ let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
         train_cars_by_good
         0
       in
-      let expense = (removed_cars - added_cars) * C.car_cost in
+      let expense = (added_cars - removed_cars) * C.car_cost in
       let work_done = removed_cars + added_cars in
       work_done, expense, train_cars
                            
