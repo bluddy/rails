@@ -53,7 +53,6 @@ module Train_update = struct
     update_player v train.player (Player.incr_dist_traveled ~dist);
     Train.advance train
 
-
   let _train_station_handle_consist_and_maintenance (v:t) loc (station:Station.t) (train:rw Train.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =

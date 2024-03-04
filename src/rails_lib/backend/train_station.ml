@@ -106,9 +106,9 @@ let train_class_stops_at station_info train =
   station > train
 
 let train_stops_at (station:Station.t) train =
+  (* Check if a train stops at a station for any reason *)
   match station.info with
-  | Some station_info ->
-      train_class_stops_at station_info train &&
-      Utils.equal_loc (Train.get_dest train) (station.x, station.y)
-  | None -> false
+  | Some station_info when train_class_stops_at station_info train -> true
+  | Some _ when Utils.equal_loc (Train.get_dest train) (station.x, station.y) -> true
+  | _ -> false
 
