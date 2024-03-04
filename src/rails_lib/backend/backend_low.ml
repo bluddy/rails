@@ -159,7 +159,7 @@ module Train_update = struct
       (* TODO: this is all we need for wait until full.
          Cycle between time for filling and checking if full *)
       let time_for_pickup, cars =
-        Train_station.fill_train_and_empty_station cars loc v.cycle station_supply in
+        Train_station.train_pickup_and_empty_station cars loc v.cycle station_supply in
 
       let wait_time = time_for_sold_goods + time_for_car_change + time_for_pickup in
 

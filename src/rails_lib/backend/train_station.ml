@@ -49,45 +49,55 @@ let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
       work_done, expense, train_cars
                            
 
-let fill_train_and_empty_station cars source cycle station_supply =
-  let pickup_amount = 
-    List.map (fun car ->
+let train_pickup_and_empty_station cars source cycle station_supply =
+  (* Go over the train and find goods to fill it up with.
+     Returns time for pickup and new cars
+   *)
+  let total_pickup, pickup_amounts = 
+    List.fold_map (fun total car ->
       let car_amount, good = T.Car.get_amount car, T.Car.get_good car in
-      let station_amount = Hashtbl.get_or station_supply good ~default:0 in
-      Utils.clip station_amount ~min:0 ~max:(C.car_amount - car_amount)
-    )
+      let station_amount_of_good = Hashtbl.get_or station_supply good ~default:0 in
+      let amount_to_take =
+        Utils.clip station_amount_of_good ~min:0 ~max:(C.car_amount - car_amount)
+      in
+      total + amount_to_take, amount_to_take)
+    0
     cars
   in
-  let cars =
-    List.map2 (fun (car:T.Car.t) add_amount ->
-      match car.load with
-      | Some load ->
-        let amount = load.amount + add_amount in
-        if load.amount < add_amount then
-          let load = Some {T.Car.amount; source; cycle} in
-          {car with load}
-        else
-          {car with load=Some {load with amount}}
-      | None ->
-          {car with load=Some {amount=add_amount; source; cycle}})
-    cars
-    pickup_amount
-  in
-  let time_pickup =
-    List.fold_left2 (fun time amt car ->
-      let freight = T.Car.get_freight car |> Goods.freight_to_enum in
-      time + (amt * freight / 32))
-      0
-      pickup_amount
+  (* Shortcut if we can pick up nothing *)
+  match total_pickup with
+  | 0 -> 0, cars
+  | _ ->
+    let cars =
+      List.map2 (fun (car:T.Car.t) add_amount ->
+        match car.load with
+        | Some load ->
+          let amount = load.amount + add_amount in
+          if load.amount < add_amount then
+            let load = Some {T.Car.amount; source; cycle} in
+            {car with load}
+          else
+            {car with load=Some {load with amount}}
+        | None ->
+            {car with load=Some {amount=add_amount; source; cycle}})
       cars
-  in
-  let () =
-    List.iter2 (fun car amount ->
-      Hashtbl.decr station_supply (T.Car.get_good car) ~by:amount)
-    cars
-    pickup_amount
-  in
-  time_pickup, cars
+      pickup_amounts
+    in
+    let time_pickup =
+      List.fold_left2 (fun time amt car ->
+        let freight = T.Car.get_freight car |> Goods.freight_to_enum in
+        time + (amt * freight / 32))
+        0
+        pickup_amounts
+        cars
+    in
+    let () =
+      List.iter2 (fun car amount ->
+        Hashtbl.decr station_supply (T.Car.get_good car) ~by:amount)
+      cars
+      pickup_amounts
+    in
+    time_pickup, cars
 
   (* Check whether a train stops at a particular size station *)
 let train_class_stops_at station_info train = 
