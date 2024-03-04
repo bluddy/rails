@@ -89,6 +89,7 @@ let fill_train_and_empty_station cars source cycle station_supply =
   in
   time_pickup, cars
 
+  (* Check whether a train stops at a particular size station *)
 let train_class_stops_at station_info train = 
   let train = Train.train_type_to_enum train.Train.typ in
   let station = Station.kind_to_enum station_info.Station.kind in
@@ -97,7 +98,7 @@ let train_class_stops_at station_info train =
 let train_stops_at (station:Station.t) train =
   match station.info with
   | Some station_info ->
-    train_class_stops_at station_info train &&
-    Utils.eq_xy (Train.get_dest train) (station.x, station.y)
+      train_class_stops_at station_info train &&
+      Utils.equal_loc (Train.get_dest train) (station.x, station.y)
   | None -> false
 

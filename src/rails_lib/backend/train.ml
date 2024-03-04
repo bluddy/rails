@@ -108,7 +108,7 @@ type state =
   | LoadingAtStation of {mutable wait_time: int} (* Normal loading time *)
   | WaitingForFullLoad  (* In a station with Wait *)
   | HoldingAtStation (* Held and waiting for unhold by player *)
-  | StoppedAtSignal (* Waiting at a hold signal *)
+  | StoppedAtSignal of Dir.t (* Waiting at a hold signal *)
   [@@deriving yojson, show]
 
 type periodic = {
@@ -541,4 +541,4 @@ let calc_car_loc (v:'a t) trackmap car_idx ~car_pixels =
 
 
 let get_car_dir (v:'a t) i = (History.get v.history (i+1)).dir
-  
+

@@ -131,7 +131,7 @@ let render win (s:State.t) (v:State.t t) : unit =
       | LoadingAtStation _ -> "Speed: unloading/loading"
       | HoldingAtStation -> "Speed: holding"
       | WaitingForFullLoad -> "Speed: waiting for full load"
-      | StoppedAtSignal -> "Speed: stopped at signal"
+      | StoppedAtSignal _ -> "Speed: stopped at signal"
       | Traveling _ ->
           sprintf "Speed: %d mph, bound for %s"
           (Train.display_speed train)

@@ -193,6 +193,7 @@ module Train_update = struct
   let _enter_station (v:t) (train: rw Train.t) station loc =
     (* TODO: actual UI msg, income handling *)
     let last_station, priority, stop, train, _income, _ui_msgs =
+      (* TODO: change to proper status for train *)
       if Station.is_proper_station station then (
         let train, income, ui_msgs =
           _train_station_handle_consist_and_maintenance v loc station train in
@@ -206,24 +207,35 @@ module Train_update = struct
     {train with last_station; priority; stop}
 
   let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) (track:Track.t) ((x, y) as loc) =
-    let dest = Train.get_dest train in
-    let dir =
-      match Track_graph.shortest_path v.graph ~src:loc ~dest with
-      | Some dir -> dir
-      | None -> (* TODO: Impossible route message *)
-        Dir.Set.find_nearest train.dir track.dirs
-        |> Option.get_exn_or "Cannot find track for train"
+    let compute_dir_to_dest graph =
+      (* This is expensive *)
+      let dest = Train.get_dest train in
+      let dir =
+        match Track_graph.shortest_path graph ~src:loc ~dest with
+        | Some dir -> dir
+        | None -> (* TODO: Impossible route message *)
+          Dir.Set.find_nearest train.dir track.dirs
+          |> Option.get_exn_or "Cannot find track for train"
+      in
+      dir
     in
-    (* enter block *)
-    let locd = (loc, dir) in
-    let locu = Utils.locu_of_locd locd in
-    let block = Block_map.block_incr_train locu v.blocks in
-    let train = 
-      {train with
-        state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true; block}
-      }
-    in
-    _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+    let dir = compute_dir_to_dest v.graph in
+    let station = Station_map.get_exn loc v.stations in
+    let can_go = Station.can_train_go station dir in
+    if can_go then (
+      (* enter block *)
+      let locd = (loc, dir) in
+      let locu = Utils.locu_of_locd locd in
+      let block = Block_map.block_incr_train locu v.blocks in
+      let train = 
+        {train with
+          state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true; block}
+        }
+      in
+      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+    ) else (
+      {train with state=Train.StoppedAtSignal dir}
+    )
 
   let _traveling_train_mid_tile ~idx ~cycle (v:t) (train: rw Train.t) ((x, y) as loc) =
     (* All major computation happens mid-tile *)
@@ -303,11 +315,12 @@ module Train_update = struct
           | HoldingAtStation when train.hold_at_next_station -> (* Don't enter station yet *)
               train
           | HoldingAtStation ->
+              (* Hold happens before we enter the station *)
               let station = Station_map.get_exn loc v.stations in
               _enter_station v train station loc
-          | StoppedAtSignal ->
+          | StoppedAtSignal dir ->
               let station = Station_map.get_exn loc v.stations in
-              let can_go = Station.can_train_go station train.dir in
+              let can_go = Station.can_train_go station dir in
               if can_go then
                 _exit_station ~idx ~cycle v train track loc
               else
