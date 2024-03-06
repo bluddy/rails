@@ -106,7 +106,7 @@ type state =
                    block: Block_map_d.Id.t; 
                 }
   | LoadingAtStation of {mutable wait_time: int} (* Normal loading time *)
-  | WaitingForFullLoad  of {mutable wait_time: int} (* In a station with Wait *)
+  | WaitingForFullLoad (* In a station with Wait *)
   | HoldingAtStation (* Held and waiting for unhold by player *)
   | StoppedAtSignal of Dir.t (* Waiting at a hold signal *)
   [@@deriving yojson, show]
