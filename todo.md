@@ -3,10 +3,9 @@
   - Also for new train
   - Also for station, upgrade etc
 - What happens when we delete a station and a train is heading there?
+- Check computation of wait time
 - Bug:
   - Clicking on map during train creation crashes
-  - Train doesn't pause at station
-  - Train doesn't stop at hold
   - First engines use one-chimney img. Check in code.
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game
