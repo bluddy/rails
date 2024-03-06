@@ -136,8 +136,8 @@ type signal =
 type id = int * int [@@deriving yojson, eq, show]
 
 type signals = {
-  lower: signal * override;
-  upper: signal * override;
+  mutable lower: signal * override;
+  mutable upper: signal * override;
 } [@@deriving yojson]
 
 let default_signals = {
@@ -196,19 +196,6 @@ let can_build_train v = has_upgrade v EngineShop
 let has_restaurant v = has_upgrade v Restaurant
 let has_hotel v = has_upgrade v Hotel
 
-(*
-let get_segment (v:t) dir = match v.segments with
-  | x, _ when Dir.lower dir -> x
-  | _, x -> x
-
-let set_segment (v:t) dir seg =
-  let segments = match v.segments with
-    | _, x when Dir.lower dir -> seg, x
-    | x, _ -> x, seg
-  in
-  {v with segments}
-*)
-
 let get_signal (v:t) dir =
   if Dir.is_lower dir then v.signals.lower else v.signals.upper
 
@@ -230,19 +217,23 @@ let set_override (v:t) dir override =
   in
   {v with signals}
 
-let can_train_go (v:t) dir =
-  let signal = get_signal v dir in
-  match signal with
-    _, OverrideProceed -> true
-  | _, OverrideHold -> false
-  | Go, _ -> true
-  | Stop, _ -> false
+let set_override_mut (v:t) dir override =
+  if Dir.is_lower dir then (
+    v.signals.lower <- (fst v.signals.lower, override)
+  ) else (
+    v.signals.upper <- (fst v.signals.upper, override)
+  )
 
-let cancel_override_with_one_visit (v:t) dir =
+let cancel_override_mut (v:t) dir = set_override_mut v dir NoOverride
+
+let can_train_go (v:t) dir =
+  (* Also returns whether we need to cancel override *)
   let signal = get_signal v dir in
   match signal with
-    _, OverrideProceed -> true
-  | _ -> false
+    _, OverrideProceed -> true, `Cancel_override
+  | _, OverrideHold -> false, `None
+  | Go, _ -> true, `None
+  | Stop, _ -> false, `None
 
 let make_signaltower ~x ~y ~year ~player =
   { x; y; year; info=None; player; signals=default_signals}

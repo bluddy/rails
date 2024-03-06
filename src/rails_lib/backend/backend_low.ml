@@ -157,8 +157,6 @@ module Train_update = struct
         car_change_work * multiplier
       in
       let freight = Train.freight_of_cars cars in
-      (* TODO: this is all we need for wait until full.
-         Cycle between time for filling and checking if full *)
       let time_for_pickup, cars =
         Train_station.train_pickup_and_empty_station cars loc v.cycle station_supply in
 
@@ -209,7 +207,6 @@ module Train_update = struct
   let _enter_station (v:t) (train: rw Train.t) station loc : rw Train.t =
     (* TODO: actual UI msg, income handling *)
     let last_station, priority, stop, train, _income, _ui_msgs =
-      (* TODO: change to proper status for train *)
       if Station.is_proper_station station then (
         let train, income, ui_msgs =
           _train_station_handle_consist_and_maintenance v loc station train in
@@ -237,8 +234,15 @@ module Train_update = struct
     in
     let dir = compute_dir_to_dest v.graph in
     let station = Station_map.get_exn loc v.stations in
-    let can_go = Station.can_train_go station dir in
+    (* Second check of this. No matter *)
+    let can_go, cancel_override = Station.can_train_go station dir in
     if can_go then (
+      (* Mutably canel override if needed. Stringing the station along
+         right now would be painful *)
+      begin match cancel_override with
+      | `Cancel_override -> Station.cancel_override_mut station dir
+      | _ -> ()
+      end;
       (* enter block *)
       let locd = (loc, dir) in
       let locu = Utils.locu_of_locd locd in
@@ -282,15 +286,12 @@ module Train_update = struct
                   _enter_station v train station loc
                 )
               in
-              let train =
-                if Train.is_traveling train then
-                  (* No stopping at this station *)
-                  _exit_station ~idx ~cycle v train track loc
-                else
-                  (* Some kind of stop. Exit later *)
-                  train
-              in
-              train
+              if Train.is_traveling train then
+                (* No stopping at this station *)
+                _exit_station ~idx ~cycle v train track loc
+              else
+                (* Some kind of stop. Exit later *)
+                train
 
             (* Loading/unloading goods at the station *)
           | LoadingAtStation s when s.wait_time > 0 ->
@@ -336,7 +337,8 @@ module Train_update = struct
           | StoppedAtSignal dir ->
               (* This happens after we've already 'exited' *)
               let station = Station_map.get_exn loc v.stations in
-              let can_go = Station.can_train_go station dir in
+              (* Check here as well to avoid expensive computation *)
+              let can_go, _ = Station.can_train_go station dir in
               if can_go then
                 _exit_station ~idx ~cycle v train track loc
               else
