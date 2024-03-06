@@ -148,7 +148,7 @@ module Train_update = struct
         if delivered then Train.Car.empty car else car)
         cars cars_delivered
       in
-      let wait_at_stop, next_stop = Train.get_next_stop train in
+      let _, next_stop = Train.get_next_stop train in
       let car_change_work, car_change_expense, cars =
         Train_station.dump_unused_cars_to_station cars next_stop station_supply
       in
@@ -313,16 +313,16 @@ module Train_update = struct
           | WaitingForFullLoad ->
               (* If we're not full, we need to see if we can offload more from the station *)
               let wait_time, cars =
-        -       let station = Station_map.get_exn loc v.stations in
+                let station = Station_map.get_exn loc v.stations in
                 let station_supply = Station.get_supply_exn station in
                 Train_station.train_pickup_and_empty_station train.cars loc v.cycle station_supply
               in
               if wait_time > 0 then
                   (* We found stuff to load *)
-                  {train with state = LoadingAtStation {wait_time}}
+                  {train with state = LoadingAtStation {wait_time}; cars}
               else
                   (* Keep waiting for more goods to show up *)
-                  train
+                  [%up {train with cars}]
 
           | HoldingAtStation when train.hold_at_next_station ->
               (* Don't enter station yet *)
