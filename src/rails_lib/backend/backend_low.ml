@@ -263,28 +263,26 @@ module Train_update = struct
       2. Wait timer from first arrival
       3. Prevent from leaving via manual signal hold
     *)
-    let (track: Track.t) = Trackmap.get_exn v.track ~x ~y in
-    let (train : rw Train.t) = match track.kind with
+    let track = Trackmap.get_exn v.track ~x ~y in
+    match track.kind with
     | Station _ ->
         (* TODO: remove override Proceed after one train *)
-        let train : rw Train.t = match train.state with
+        let train = match train.state with
             (* This is only when we've already processed the train *)
           | Traveling s when s.traveling_past_station -> (train: rw Train.t)
 
             (* This is before possibly entering the station *)
           | Traveling s ->
               Block_map.block_decr_train s.block v.blocks;
-              let train: rw Train.t =
+              let train =
                 if train.hold_at_next_station then (
-                  let (train: rw Train.t) = {train with state = HoldingAtStation} in
-                  train
+                  {train with state = HoldingAtStation}
                 ) else (
-          -       let station : Station.t = Station_map.get_exn loc v.stations in
-                  let train: rw Train.t = _enter_station v train station loc in
-                  train
+                  let station = Station_map.get_exn loc v.stations in
+                  _enter_station v train station loc
                 )
               in
-              let train: rw Train.t =
+              let train =
                 if Train.is_traveling train then
                   (* No stopping at this station *)
                   _exit_station ~idx ~cycle v train track loc
@@ -366,8 +364,6 @@ module Train_update = struct
           |> Option.get_exn_or "Cannot find track for train"
         in
         _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
-  in
-  train
 
 let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
   (* This is the regular update function for trains. Important stuff happens midtile *)
