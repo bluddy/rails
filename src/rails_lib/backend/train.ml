@@ -106,7 +106,7 @@ type state =
                    block: Block_map_d.Id.t; 
                 }
   | LoadingAtStation of {mutable wait_time: int} (* Normal loading time *)
-  | WaitingForFullLoad  (* In a station with Wait *)
+  | WaitingForFullLoad  of {mutable wait_time: int} (* In a station with Wait *)
   | HoldingAtStation (* Held and waiting for unhold by player *)
   | StoppedAtSignal of Dir.t (* Waiting at a hold signal *)
   [@@deriving yojson, show]
@@ -122,6 +122,8 @@ type ro = Utils.Infix.ro
 
 type wait = [`Wait | `NoWait]
   [@@ deriving yojson, show]
+
+let is_wait = function `Wait -> true | `NoWait -> false
 
 (* 'mut is so we can't mutate a train from the wrong api *)
 type 'mut t = {
@@ -171,15 +173,15 @@ let display_maintenance v =
 let reset_pixels_from_midtile (train: rw t) =
   train.pixels_from_midtile <- 0
 
-let get_route_dest v = Vector.get v.route v.stop |> snd
+let get_route_dest v = Vector.get v.route v.stop
 
 let get_next_stop v =
   match v.priority with
-  | Some stop -> stop
+  | Some stop -> (`NoWait, stop)
   | None -> get_route_dest v
 
 let get_dest v = 
-  let stop = get_next_stop v in
+  let stop = get_next_stop v |> snd in
   (stop.x, stop.y)
 
 let freight_of_cars cars =

@@ -53,6 +53,9 @@ module Train_update = struct
     update_player v train.player (Player.incr_dist_traveled ~dist);
     Train.advance train
 
+    (* todo: finish this *)
+  let _train_handle_waiting_until_full (v:t) loc (train:rw Train.t) =
+
   let _train_station_handle_consist_and_maintenance (v:t) loc (station:Station.t) (train:rw Train.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
@@ -147,8 +150,9 @@ module Train_update = struct
         if delivered then Train.Car.empty car else car)
         cars cars_delivered
       in
+      let wait_at_stop, next_stop = Train.get_next_stop train in
       let car_change_work, car_change_expense, cars =
-        Train_station.dump_unused_cars_to_station cars (Train.get_next_stop train) station_supply
+        Train_station.dump_unused_cars_to_station cars next_stop station_supply
       in
       let time_for_car_change =
         let multiplier = if Station.has_upgrade station Station.SwitchingYard then 16 else 64 in
@@ -161,22 +165,20 @@ module Train_update = struct
         Train_station.train_pickup_and_empty_station cars loc v.cycle station_supply in
 
       let wait_time = time_for_sold_goods + time_for_car_change + time_for_pickup in
+      (* This function always naively switches to loading at station *)
+      let state = Train.LoadingAtStation {wait_time} in
 
       let income = (Utils.sum money_from_goods) + other_income - car_change_expense in
 
-      let state =
-        if wait_time > 0 then Train.LoadingAtStation {wait_time}
-        else train.state
-      in
       Log.debug (fun f -> f "wait_time(%d)" wait_time);
       {train with cars; had_maintenance; state; freight}, income, []
     in
     match station.info with
-    | Some station_info when Train_station.train_stops_at station train ->
-        handle_stop station_info
+    | Some station_info when Train_station.train_stops_at station train -> handle_stop station_info
     | Some _ when not train.had_maintenance && Station.can_maintain station ->
          {train with had_maintenance=true}, 0, []
     | _ -> train, 0, []
+
 
       (* TODO: young_station_reached if age <= 20 *)
       (* add income/2 to other_income type *)
@@ -276,6 +278,7 @@ module Train_update = struct
               in
               if Train.is_traveling train then
                 (* No stopping at this station *)
+                (* TODO: is a train that doesn't stop here maintained? *)
                 _exit_station ~idx ~cycle v train track loc
               else
                 (* Some kind of stop. Exit later *)
@@ -320,20 +323,40 @@ module Train_update = struct
         (* TODO: remove override proceed after one train *)
         let train = match train.state with
           | LoadingAtStation s when s.wait_time > 0 ->
+              s.wait_time <- s.wait_time - 1;
               train
           | LoadingAtStation _ ->
-              _exit_station ~idx ~cycle v train track loc
+              (* Check if we can exit the station *)
+              let wait_at_stop, _ = Train.get_next_stop train in
+              let train = match wait_at_stop with
+                | `Wait -> {train with state=Train.WaitingForFullLoad}
+                | _ -> _exit_station ~idx ~cycle v train track loc
+              in
+              train
+          | WaitingForFullLoad s when s.wait_time > 0 ->
+              (* Wait if we need to *)
+              train
           | WaitingForFullLoad when Train.is_full train ->
               _exit_station ~idx ~cycle v train track loc
           | WaitingForFullLoad ->
-              train
-          | HoldingAtStation when train.hold_at_next_station -> (* Don't enter station yet *)
+              (* If we're not full, we need to see if we can offload more from the station *)
+              let wait_time, cars =
+                Train_station.train_pickup_and_empty_station cars loc v.cycle station_supply
+              in
+              if wait_time > 0 then
+                  (* Did we find stuff to load *)
+                  {train with state = LoadingAtStation {wait_time}}
+              else
+                train
+          | HoldingAtStation when train.hold_at_next_station ->
+              (* Don't enter station yet *)
               train
           | HoldingAtStation ->
               (* Hold happens before we enter the station *)
               let station = Station_map.get_exn loc v.stations in
               _enter_station v train station loc
           | StoppedAtSignal dir ->
+              (* This happens after we've already 'exited' *)
               let station = Station_map.get_exn loc v.stations in
               let can_go = Station.can_train_go station dir in
               if can_go then
@@ -398,10 +421,6 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
       )
     in
     train_update_loop train 0
-
-  | LoadingAtStation s when s.wait_time > 0 ->
-      s.wait_time <- s.wait_time - 1;
-      train
 
   | _ ->  (* Time is up or other stopped states *)
       let loc = train.x / C.tile_w, train.y / C.tile_h in
