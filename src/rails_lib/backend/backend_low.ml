@@ -232,7 +232,7 @@ module Train_update = struct
         train.last_station, train.priority, train.stop, train, 0, []
       )
     in
-    {train with last_station; priority; stop}
+    {train with last_station; priority; stop}, ui_msgs
 
   let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) (track:Track.t) ((x, y) as loc) =
     let compute_dir_to_dest graph =
@@ -286,16 +286,17 @@ module Train_update = struct
     match track.kind with
     | Station _ ->
         (* TODO: remove override Proceed after one train *)
-        let train = match train.state with
+        let train, ui_msgs = match train.state with
             (* This is only when we've already processed the train *)
-          | Traveling s when s.traveling_past_station -> (train: rw Train.t)
+          | Traveling s when s.traveling_past_station ->
+              train, []
 
             (* This is before possibly entering the station *)
           | Traveling s ->
               Block_map.block_decr_train s.block v.blocks;
-              let train =
+              let train, ui_msgs =
                 if train.hold_at_next_station then (
-                  {train with state = HoldingAtStation}
+                {train with state = HoldingAtStation}, []
                 ) else (
                   let station = Station_map.get_exn loc v.stations in
                   _enter_station v idx train station loc
@@ -303,15 +304,15 @@ module Train_update = struct
               in
               if Train.is_traveling train then
                 (* No stopping at this station *)
-                _exit_station ~idx ~cycle v train track loc
+                _exit_station ~idx ~cycle v train track loc, ui_msgs
               else
                 (* Some kind of stop. Exit later *)
-                train
+                train, ui_msgs
 
             (* Loading/unloading goods at the station *)
           | LoadingAtStation s when s.wait_time > 0 ->
               s.wait_time <- s.wait_time - 1;
-              train
+              train, []
 
           | LoadingAtStation _ ->
               (* Done loading/unloading. Check if we can exit the station *)
@@ -320,11 +321,11 @@ module Train_update = struct
                 | `Wait -> {train with state=Train.WaitingForFullLoad}
                 | _ -> _exit_station ~idx ~cycle v train track loc
               in
-              train
+              train, []
 
           | WaitingForFullLoad when Train.is_full train ->
               (* Done waiting for full load *)
-              _exit_station ~idx ~cycle v train track loc
+              _exit_station ~idx ~cycle v train track loc, []
 
           | WaitingForFullLoad ->
               (* If we're not full, we need to see if we can offload more from the station *)
@@ -334,15 +335,15 @@ module Train_update = struct
                 Train_station.train_pickup_and_empty_station train.cars loc v.cycle station_supply
               in
               if wait_time > 0 then
-                  (* We found stuff to load *)
-                  {train with state = LoadingAtStation {wait_time}; cars}
+                (* We found stuff to load *)
+                {train with state = LoadingAtStation {wait_time}; cars}, []
               else
-                  (* Keep waiting for more goods to show up *)
-                  [%up {train with cars}]
+                (* Keep waiting for more goods to show up *)
+                [%up {train with cars}], []
 
           | HoldingAtStation when train.hold_at_next_station ->
               (* Don't enter station yet *)
-              train
+              train, []
 
           | HoldingAtStation ->
               (* Hold happens before we enter the station *)
@@ -355,12 +356,12 @@ module Train_update = struct
               (* Check here as well to avoid expensive computation *)
               let can_go, _ = Station.can_train_go station dir in
               if can_go then
-                _exit_station ~idx ~cycle v train track loc
+                _exit_station ~idx ~cycle v train track loc, []
               else
-                train
+                train, []
         in
         Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state));
-        train
+        train, ui_msgs
 
     (* --- Below this trains cannot stop so must be traveling --- *)
 
@@ -372,7 +373,7 @@ module Train_update = struct
             ~ixn:loc ~cur_dir:train.dir ~dest 
             |> Option.get_exn_or "Cannot find route for train" 
         in
-        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, []
 
     | _ ->
         (* All other track and non-decision ixns *)
@@ -380,18 +381,18 @@ module Train_update = struct
           Dir.Set.find_nearest train.dir track.dirs
           |> Option.get_exn_or "Cannot find track for train"
         in
-        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir
+        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, []
 
 let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
   (* This is the regular update function for trains. Important stuff happens midtile *)
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
-  match train.state with
+  begin match train.state with
   | Traveling travel_state ->
     let train = Train.update_speed train ~cycle ~cycle_check ~cycle_bit in
     (* TODO: fiscal period update stuff *)
-    let rec train_update_loop train speed_bound =
+    let rec train_update_loop train speed_bound ui_msg_acc =
       let speed = Train.get_speed train in
-      if speed_bound >= speed then train
+      if speed_bound >= speed then train, ui_msg_acc
       else (
         let speed =
           if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3
@@ -407,7 +408,7 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
           |> min Train.update_array_length
         in
         (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
-        let train =
+        let train, ui_msgs =
           if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
             (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
             let is_mid_tile =
@@ -422,20 +423,21 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
                 _handle_train_mid_tile ~idx ~cycle v train loc
             | false, true ->
                 travel_state.traveling_past_station <- false;
-                Train.advance train
+                Train.advance train, []
             | _ ->
-                Train.advance train
+                Train.advance train, []
           end else
-            train
+              train, []
         in
-        train_update_loop train (speed_bound + 12)
+        train_update_loop train (speed_bound + 12) (ui_msgs @ ui_msg_acc)
       )
     in
-    train_update_loop train 0
+    train_update_loop train 0 []
 
   | _ ->  (* Time is up or other stopped states *)
-      let loc = train.x / C.tile_w, train.y / C.tile_h in
-      _handle_train_mid_tile ~idx ~cycle v train loc
+    let loc = train.x / C.tile_w, train.y / C.tile_h in
+    _handle_train_mid_tile ~idx ~cycle v train loc
+  end
 
 
     (* Run every cycle, updating every train's position and speed *)
@@ -445,9 +447,13 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
     let cycle_bit = 1 lsl (v.cycle mod 12) in
     let cycle = v.cycle in
     (* TODO: We update the high priority trains before the low priority *)
-    Trainmap.mapi_in_place (fun idx train ->
-      update_train v idx train ~cycle ~cycle_check ~cycle_bit ~region_div)
-    v.trains
+    Trainmap.fold_mapi_in_place (fun idx ui_msg_acc train ->
+      let train, ui_msgs = 
+        update_train v idx train ~cycle ~cycle_check ~cycle_bit ~region_div
+      in
+      ui_msgs @ ui_msg_acc, train)
+      v.trains
+      ~init:[]
 
 end
 
@@ -455,9 +461,9 @@ end
 let handle_cycle v =
   let time_step () =
     v.cycle <- v.cycle + 1;
-    ignore @@ Train_update._update_all_trains v;
+    let ui_msgs = Train_update._update_all_trains v in
     (* TODO: ai_routines *)
-    let demand_msgs =
+    let ui_msgs =
       if v.cycle mod cycles_station_supply_demand = 0 then (
         (* Printf.printf "_handle_cycle%!\n"; *)
         let difficulty = v.options.difficulty in
@@ -479,7 +485,7 @@ let handle_cycle v =
             in
             msgs @ old_msgs)
         v.stations
-        ~init:[])
+        ~init:ui_msgs)
       else []
     in
     (* adjust time *)
@@ -489,7 +495,7 @@ let handle_cycle v =
         {v with year=v.year + 1; time=0}
       else v
     in
-    v, demand_msgs
+    v, ui_msgs
   in
   if not v.pause then time_step () else v, []
 

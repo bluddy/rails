@@ -122,7 +122,8 @@ let mapi_in_place f v =
 let fold_mapi_in_place f v ~init =
   Vector.fold_mapi_in_place (fun i acc train ->
     _with_update_loc_pair v (Id.of_int i) train (f i acc))
-    init v.trains
+    ~init
+    v.trains
 
   (* Return the index of a train that matches *)
 let find_ret_index (f:ro Train.t -> bool) (v:t) =

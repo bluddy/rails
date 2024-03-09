@@ -730,8 +730,8 @@ let handle_msgs (s:State.t) v ui_msgs =
     | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
         let state = Train_report.make s idx in
         {v with mode=TrainReport state}
-    | _ ->
-        v
+    (* | _ -> *)
+    (*     v *)
   in
   List.fold_left handle_msg v ui_msgs
 

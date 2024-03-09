@@ -30,6 +30,8 @@ val foldi: (int -> 'a -> ro Train.t -> 'a) -> t -> init:'a -> 'a
 
 val mapi_in_place: (int -> rw Train.t -> rw Train.t) -> t -> t
 
+val fold_mapi_in_place: (int -> 'a -> rw Train.t -> 'a * rw Train.t) -> t -> init:'a -> 'a
+
 val find_ret_index: (ro Train.t -> bool) -> t -> Id.t option
 
 val get_at_loc: Utils.loc -> t -> Id.t list

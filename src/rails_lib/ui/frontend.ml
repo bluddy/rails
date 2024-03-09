@@ -35,6 +35,7 @@ let handle_tick win (s:State.t) time =
         {s with backend; screen=Screen.MapGen(Some data)}
 
     | Screen.MapView ->
+        (* Main game *)
         let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
         let ui = Main_ui.handle_tick s s.ui time is_cycle in
         let ui = Main_ui.handle_msgs s ui ui_msgs in
