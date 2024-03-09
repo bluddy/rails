@@ -54,7 +54,7 @@ module Train_update = struct
     Train.advance train
 
 
-  let _train_station_handle_consist_and_maintenance (v:t) loc (station:Station.t) (train:rw Train.t) =
+  let _train_station_handle_consist_and_maintenance (v:t) idx loc (station:Station.t) (train:rw Train.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
       let had_maintenance =
@@ -74,24 +74,24 @@ module Train_update = struct
       let deliver_cargo () =
         let cars_delivered =
           List.map (fun car -> 
+            car,
             Train.Car.get_amount car > 0 && 
             Station.has_demand_for station_info car.good)
           cars
         in
         let money_from_goods =
-          List.map2 (fun car delivered ->
+          List.map (fun (car, delivered) ->
             if delivered then
               Train.calc_arrival_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
               ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
               ~difficulty:v.options.difficulty ~cycle:v.cycle
             else 0)
-          cars
           cars_delivered
         in
         let other_income =
           let has_rest = Station.has_restaurant station in
           let has_hotel = Station.has_hotel station in
-          List.fold_left2 (fun acc car delivered -> 
+          List.fold_left (fun acc (car, delivered) -> 
             let amount, good = Train.Car.get_amount car, Train.Car.get_good car in
             match good with
             | Passengers when delivered && has_rest && has_hotel ->
@@ -102,7 +102,6 @@ module Train_update = struct
                 acc + amount / 16
             | _ -> acc)
           0
-          cars
           cars_delivered
         in
         cars_delivered, money_from_goods, other_income
@@ -110,9 +109,9 @@ module Train_update = struct
       let cars_delivered, money_from_goods, other_income = deliver_cargo () in
 
       let station_supply = station_info.supply in
-      let add_converted_goods_to_station cars cars_delivered =
+      let add_converted_goods_to_station cars_delivered =
         let conversion_goods =
-          List.map2 (fun car delivered -> 
+          List.map (fun (car, delivered) -> 
             if delivered then 
               let conv_good =
                 Station.convert station_info (Train.Car.get_good car) v.region
@@ -121,7 +120,6 @@ module Train_update = struct
               | Some good -> Some (good, Train.Car.get_amount car)
               | _ -> None
             else None)
-          cars
           cars_delivered
         in
         (* Add converted goods to station *)
@@ -131,23 +129,22 @@ module Train_update = struct
           | _ -> ())
           conversion_goods
       in
-      add_converted_goods_to_station cars cars_delivered;
+      add_converted_goods_to_station cars_delivered;
 
       let time_for_sold_goods =
-        List.fold_left2 (fun acc car delivered ->
+        List.fold_left (fun acc (car, delivered) ->
           if delivered then 
             let freight = Train.Car.get_freight car |> Goods.freight_to_enum in
             acc + (freight * (Train.Car.get_amount car) / 32)
           else
             acc)
         0
-        cars
         cars_delivered
       in
       (* Refresh cars: empty cars emptied *)
-      let cars = List.map2 (fun car delivered ->
+      let cars = List.map (fun (car, delivered) ->
         if delivered then Train.Car.empty car else car)
-        cars cars_delivered
+        cars_delivered
       in
       let _, next_stop = Train.get_next_stop train in
       let car_change_work, car_change_expense, cars =
@@ -166,10 +163,26 @@ module Train_update = struct
       (* This function always naively switches to loading at station. Other conditions will be handled elsewhere *)
       let state = Train.LoadingAtStation {wait_time} in
 
-      let income = (Utils.sum money_from_goods) + other_income - car_change_expense in
+      let revenue = (Utils.sum money_from_goods) + other_income - car_change_expense in
 
+      let cars_that_were_delivered = List.filter_map (fun (car, delivered) ->
+        if delivered then Some car else None)
+        cars_delivered
+      in
+
+      let ui_msg = TrainArrival {
+        player=0;
+        time=v.time;
+        freight=train.freight;
+        _type=train.typ;
+        train_num=idx;
+        revenue;
+        cars=cars_that_were_delivered;
+      }
+      in
       Log.debug (fun f -> f "wait_time(%d)" wait_time);
-      {train with cars; had_maintenance; state; freight}, income, []
+
+      {train with cars; had_maintenance; state; freight}, revenue, [ui_msg]
     in
     match station.info with
     | Some station_info when Train_station.train_stops_at station train ->
@@ -206,12 +219,12 @@ module Train_update = struct
          delivery to station, print revenue
        *)
 
-  let _enter_station (v:t) (train: rw Train.t) station loc : rw Train.t =
+  let _enter_station (v:t) idx (train: rw Train.t) station loc  =
     (* TODO: actual UI msg, income handling *)
-    let last_station, priority, stop, train, _income, _ui_msgs =
+    let last_station, priority, stop, train, _income, ui_msgs =
       if Station.is_proper_station station then (
         let train, income, ui_msgs =
-          _train_station_handle_consist_and_maintenance v loc station train in
+          _train_station_handle_consist_and_maintenance v idx loc station train in
         let priority, stop = Train.check_increment_stop train loc in
         loc, priority, stop, train, income, ui_msgs
       ) else (
@@ -285,7 +298,7 @@ module Train_update = struct
                   {train with state = HoldingAtStation}
                 ) else (
                   let station = Station_map.get_exn loc v.stations in
-                  _enter_station v train station loc
+                  _enter_station v idx train station loc
                 )
               in
               if Train.is_traveling train then
@@ -334,7 +347,7 @@ module Train_update = struct
           | HoldingAtStation ->
               (* Hold happens before we enter the station *)
               let station = Station_map.get_exn loc v.stations in
-              _enter_station v train station loc
+              _enter_station v idx train station loc
 
           | StoppedAtSignal dir ->
               (* This happens after we've already 'exited' *)
