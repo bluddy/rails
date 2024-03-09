@@ -22,6 +22,15 @@ let cycles_supply_decay = 512
 type ui_msg =
   | TrainBuilt of Trainmap.Id.t
   | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
+  | TrainArrival of {
+      player: int;
+      time: int;
+      freight: Goods.freight;
+      _type: Train.train_type;
+      train_num: int;
+      cars: Train.Car.t list; (* car delivered *)
+      revenue: int; (* x 1000 *)
+    }
   [@@deriving yojson]
 
 type t = {

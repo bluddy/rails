@@ -70,6 +70,7 @@ module Train_update = struct
         Train.add_ton_miles train total_dist v.fiscal_period
       in
       let cars = train.cars in
+
       let deliver_cargo () =
         let cars_delivered =
           List.map (fun car -> 
@@ -161,7 +162,8 @@ module Train_update = struct
         Train_station.train_pickup_and_empty_station cars loc v.cycle station_supply in
 
       let wait_time = time_for_sold_goods + time_for_car_change + time_for_pickup in
-      (* This function always naively switches to loading at station *)
+
+      (* This function always naively switches to loading at station. Other conditions will be handled elsewhere *)
       let state = Train.LoadingAtStation {wait_time} in
 
       let income = (Utils.sum money_from_goods) + other_income - car_change_expense in
