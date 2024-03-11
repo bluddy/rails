@@ -4,15 +4,13 @@ open Utils
 open Utils.Infix
 (* Backend data *)
 
-let tick_ms = 15 (* ms *)
-let year_ticks = 2032 (* really 170*12 = 2040 is new year *)
-let month_ticks = 170
 let num_players = 4
 
 (* Cycle counts to perform some tasks *)
 let cycles_periodic_maintenance = 1024
 let cycles_priority_delivery = 8
 let cycles_background_update = 16
+
 let cycles_ai_update = cycles_background_update
 (* In the original game, we do slices of 1/32 stations. No need *)
 let cycles_station_supply_demand = cycles_background_update * 32 (* 512 *)

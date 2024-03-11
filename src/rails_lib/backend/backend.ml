@@ -429,7 +429,7 @@ let reset_tick v =
   (* Returns ui_msgs and whether we have a cycle *)
 let handle_tick v cur_time =
   let delay_mult = B_options.delay_mult_of_speed v.options.speed in
-  let tick_delta = delay_mult * tick_ms in
+  let tick_delta = delay_mult * C.tick_ms in
   let new_time = v.last_tick + tick_delta in
   let ui_msgs = v.ui_msgs in
   v.ui_msgs <- [];
@@ -441,7 +441,7 @@ let handle_tick v cur_time =
   else
     v, ui_msgs, false
 
-let _month_of_time time = (time / month_ticks) mod 12
+let _month_of_time time = (time / C.month_ticks) mod 12
 
 let get_date v = _month_of_time v.time, v.year
 

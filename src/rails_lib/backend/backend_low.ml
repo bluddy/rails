@@ -491,7 +491,7 @@ let handle_cycle v =
     (* adjust time *)
     v.time <- v.time + 1;
     let v = 
-      if v.time >= year_ticks then
+      if v.time >= Constants.year_ticks then
         {v with year=v.year + 1; time=0}
       else v
     in

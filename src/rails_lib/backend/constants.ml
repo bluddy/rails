@@ -1,4 +1,9 @@
 
+(* Time *)
+let tick_ms = 15 (* ms *)
+let year_ticks = 2032 (* really 170*12 = 2040 is new year, but any time we go over 2032 we stop the year *)
+let month_ticks = 170
+
 let tile_dim = 16
 let tile_hdim = tile_dim / 2
 let tile_w = tile_dim
