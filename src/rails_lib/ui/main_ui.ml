@@ -723,15 +723,29 @@ let handle_event (s:State.t) v (event:Event.t) =
   in
   v, backend_msgs
 
+  
+
 (* Handle incoming messages from backend *)
 let handle_msgs (s:State.t) v ui_msgs =
+  let train_arrival_msg_speed v = match v.options.message_speed with
+    | `Off -> None
+    (* Turbo mode cancels train messges *)
+    | x when not (B_options.equal_speed s.backend.options.speed `Turbo) -> Some x
+    | _ -> None
+  in
   let handle_msg v ui_msg =
     match v.mode, ui_msg with
     | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
         let state = Train_report.make s idx in
         {v with mode=TrainReport state}
-    (* | _ -> *)
-    (*     v *)
+    | Normal, (TrainArrival _) as t ->
+         let msg_speed = train_arrival_msg_speed v in
+         Option.map_or ~default:v
+           (fun msg_speed ->
+            [%up {v with view=Mapview.handle_msg v.view msg_speed t}])
+           msg_speed
+  (* TODO: handle demand changed msg *)
+    | _ -> v
   in
   List.fold_left handle_msg v ui_msgs
 

@@ -47,9 +47,11 @@ type train_history = (int * int * Ega.color) list
 
 type t =
   {
-    center_x: int; (* in map coordinates *)
+    (* in map coordinates *)
+    center_x: int;
     center_y: int;
-    const_box_x: int; (* construction box for zoom4 *)
+    (* construction box for zoom4 *)
+    const_box_x: int;
     const_box_y: int;
     zoom: zoom;
     dims: Utils.rect;
@@ -61,6 +63,8 @@ type t =
     (* Used for zoom2/3 for stationboxes *)
     tile_buffer: Tilebuffer.t;
     options: Options.t;
+    (* Top-right UI arrival message, time to display *)
+    train_arrival_msg: (Backend_d.train_arrival_msg * int ref) option;
   }
   [@@deriving yojson]
 

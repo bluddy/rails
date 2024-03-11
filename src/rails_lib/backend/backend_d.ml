@@ -19,18 +19,20 @@ let cycles_station_supply_demand = cycles_background_update * 32 (* 512 *)
 (* Since we don't spread out the supply addition, decay happens in the same cycle *)
 let cycles_supply_decay = 512
 
+type train_arrival_msg = {
+    player: int;
+    time: int;
+    freight: Goods.freight;
+    _type: Train.train_type;
+    train_num: int;
+    cars: Train.Car.t list; (* car delivered *)
+    revenue: int; (* x 1000 *)
+} [@@deriving yojson]
+
 type ui_msg =
   | TrainBuilt of Trainmap.Id.t
   | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
-  | TrainArrival of {
-      player: int;
-      time: int;
-      freight: Goods.freight;
-      _type: Train.train_type;
-      train_num: int;
-      cars: Train.Car.t list; (* car delivered *)
-      revenue: int; (* x 1000 *)
-    }
+  | TrainArrival of train_arrival_msg
   [@@deriving yojson]
 
 type t = {

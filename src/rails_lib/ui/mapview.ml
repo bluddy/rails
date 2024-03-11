@@ -24,8 +24,9 @@ let default dims =
     survey = false;
     smoke_plumes = [];
     draw_buffer = Hashtbl.create 10;
-    tile_buffer=Tilebuffer.create 70 50; (* TODO: remove hardcoding *)
-    options=Options.of_list [`StationBoxes];
+    tile_buffer = Tilebuffer.create 70 50; (* TODO: remove hardcoding *)
+    options = Options.of_list [`StationBoxes];
+    train_arrival_msg = None;
   }
 
 let get_cursor_pos v = (v.const_box_x, v.const_box_y)
@@ -886,5 +887,10 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
   in
   v
 
+let handle_msg v msg_speed = function
+  | Backend_d.TrainArrival t -> 
+    {v with train_arrival_msg=Some (t, ref 40) } (* TODO: get proper timer *)
+  | _ -> v
+    
 
 
