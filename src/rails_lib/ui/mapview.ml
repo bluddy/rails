@@ -889,7 +889,11 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
 
 let handle_msg v msg_speed = function
   | Backend_d.TrainArrival t -> 
-    {v with train_arrival_msg=Some (t, ref 40) } (* TODO: get proper timer *)
+      let time = match msg_speed with
+      | `Fast -> 10
+      | `Slow -> 30
+      in
+    {v with train_arrival_msg=Some (t, ref time) } (* TODO: get proper timer *)
   | _ -> v
     
 
