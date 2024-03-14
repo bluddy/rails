@@ -441,9 +441,21 @@ let handle_tick v cur_time =
   else
     v, ui_msgs, false
 
+(* Each time period is both 2 years and a 24 hour day *)
+
 let _month_of_time time = (time / C.month_ticks) mod 12
 
 let get_date v = _month_of_time v.time, v.year
+
+let get_time_of_day time =
+  (* Get time of day representation *)
+  let minutes = 3 * time / 8 in
+  let hours = minutes / 60 in
+  let time_hours = ((hours + 11) / 12) + 1 in
+  let time_mins = minutes mod 60 in
+  let am_pm = if hours >= 12 then "PM" else "AM" in
+  Printf.sprintf "%d:%02d %s" time_hours time_mins am_pm
+
 
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
