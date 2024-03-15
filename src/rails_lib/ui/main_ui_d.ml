@@ -114,7 +114,7 @@ type 'state t = {
   mode: 'state mode; (* determines mode of operation *)
   train_ui_start: int; (* which train we start showing in the UI *)
   (* Top-right UI arrival message, time to display *)
-  train_arrival_msg: (Backend_d.train_arrival_msg * int ref) list;
+  train_arrival_msgs: (Backend_d.train_arrival_msg * int ref) list;
   mutable view: Mapview_d.t;
 }
 

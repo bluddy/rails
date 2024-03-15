@@ -280,7 +280,7 @@ let default ?options ?view win fonts region =
     options;
     train_ui_start=0;
     mode=Normal;
-    train_arrival_msg = [];
+    train_arrival_msgs = [];
   }
 
 let build_station_menu fonts region =
@@ -737,9 +737,11 @@ let handle_msgs (s:State.t) v ui_msgs =
   in
   let handle_msg v ui_msg =
     match v.mode, ui_msg with
+
     | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
         let state = Train_report.make s idx in
         {v with mode=TrainReport state}
+
     | Normal, (TrainArrival t) ->
          let msg_speed = train_arrival_msg_speed v in
          Option.map_or ~default:v
@@ -748,9 +750,10 @@ let handle_msgs (s:State.t) v ui_msgs =
               | `Fast -> C.fast_message_time
               | `Slow -> C.slow_message_time
               in
-              {v with train_arrival_msg=v.train_arrival_msg @ [t, ref time] } (* TODO: get proper timer *)
+              {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
             )
           msg_speed
+
   (* TODO: handle demand changed msg *)
     | _ -> v
   in
@@ -766,7 +769,17 @@ let handle_tick s v time is_cycle = match v.mode with
       if state === state2 then v else {v with mode=TrainReport state2}
   | Normal ->
       let view = Mapview.handle_tick s v.view time is_cycle in
-      [%up {v with view}]
+      let decr_train_msgs () =
+        let train_arrival_msgs = match v.train_arrival_msgs with
+        | ((_, t)::_) as msgs when !t > 0 ->
+            decr t;
+            msgs
+        | _::msgs -> msgs
+        | [] -> []
+        in
+        [%up {v with view; train_arrival_msgs}]
+      in
+      decr_train_msgs ()
   | _ -> v
 
 let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
