@@ -280,6 +280,7 @@ let default ?options ?view win fonts region =
     options;
     train_ui_start=0;
     mode=Normal;
+    train_arrival_msg = [];
   }
 
 let build_station_menu fonts region =
@@ -739,13 +740,17 @@ let handle_msgs (s:State.t) v ui_msgs =
     | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
         let state = Train_report.make s idx in
         {v with mode=TrainReport state}
-    | Normal, (TrainArrival _ as t) ->
+    | Normal, (TrainArrival t) ->
          let msg_speed = train_arrival_msg_speed v in
          Option.map_or ~default:v
            (fun msg_speed ->
-            let view = Mapview.handle_msg v.view msg_speed t in
-            [%up {v with view}])
-           msg_speed
+              let time = match msg_speed with
+              | `Fast -> C.fast_message_time
+              | `Slow -> C.slow_message_time
+              in
+              {v with train_arrival_msg=v.train_arrival_msg @ [t, ref time] } (* TODO: get proper timer *)
+            )
+          msg_speed
   (* TODO: handle demand changed msg *)
     | _ -> v
   in

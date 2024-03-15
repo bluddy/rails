@@ -26,7 +26,6 @@ let default dims =
     draw_buffer = Hashtbl.create 10;
     tile_buffer = Tilebuffer.create 70 50; (* TODO: remove hardcoding *)
     options = Options.of_list [`StationBoxes];
-    train_arrival_msg = None;
   }
 
 let get_cursor_pos v = (v.const_box_x, v.const_box_y)
@@ -886,15 +885,5 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
     | _ -> ()
   in
   v
-
-let handle_msg v msg_speed = function
-  | Backend_d.TrainArrival t -> 
-      let time = match msg_speed with
-      | `Fast -> 10
-      | `Slow -> 30
-      in
-    {v with train_arrival_msg=Some (t, ref time) } (* TODO: get proper timer *)
-  | _ -> v
-    
 
 

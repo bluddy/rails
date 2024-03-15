@@ -1,6 +1,9 @@
 
 (* Time *)
+(* Each time period is both 2 years and a 24 hour day *)
+
 let tick_ms = 15 (* ms *)
+
 let year_ticks = 2032 (* really 170*12 = 2040 is new year, but any time we go over 2032 we stop the year *)
 let month_ticks = 170
 
@@ -24,3 +27,6 @@ let tunnel_cost = 20 (* per mile *)
 let draw_margin = 4
 
 let draw_buffer_len = 5
+
+let fast_message_time = 10
+let slow_message_time = 30

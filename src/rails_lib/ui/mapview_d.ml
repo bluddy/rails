@@ -63,8 +63,6 @@ type t =
     (* Used for zoom2/3 for stationboxes *)
     tile_buffer: Tilebuffer.t;
     options: Options.t;
-    (* Top-right UI arrival message, time to display *)
-    train_arrival_msg: (Backend_d.train_arrival_msg * int ref) option;
   }
   [@@deriving yojson]
 
