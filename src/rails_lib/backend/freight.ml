@@ -80,3 +80,11 @@ let idx_of_good = function
   | Coal
   | Armaments -> 2
 
+module Set = Bitset.Make(struct
+  type nonrec t = t
+  let t_of_yojson = t_of_yojson
+  let yojson_of_t = yojson_of_t
+  let of_enum = of_enum
+  let to_enum = to_enum
+  let last = Bulk
+end)
