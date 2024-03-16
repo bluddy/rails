@@ -165,10 +165,15 @@ module Train_update = struct
 
       let revenue = (Utils.sum money_from_goods) + other_income - car_change_expense in
 
-      let cars_that_were_delivered = List.filter_map (fun (car, delivered) ->
-        if delivered then Some car else None)
+      let goods_delivered = List.fold_left (fun acc (car, delivered) ->
+        if delivered then
+          let good, amount = Train.Car.get_good car, Train.Car.get_amount car in
+          Goods.Map.add good amount acc
+        else acc)
+        Goods.Map.empty
         cars_delivered
       in
+      let goods_amount = Goods.Map.to_list goods_delivered in
 
       let ui_msg = TrainArrival {
         player=0;
@@ -176,8 +181,9 @@ module Train_update = struct
         freight=train.freight;
         _type=train.typ;
         train_num=idx;
+        train_name = train.name;
         revenue;
-        cars=cars_that_were_delivered;
+        goods_amount;
       }
       in
       Log.debug (fun f -> f "wait_time(%d)" wait_time);

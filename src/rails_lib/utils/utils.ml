@@ -405,9 +405,13 @@ let thd3 (_,_,x) = x
 let map_fst f (x, y) = (f x, y)
 let map_snd f (x, y) = (x, f y)
 
-let show_cash ?(spaces=0) region cash =
+let show_cash ?(spaces=0) ?region cash =
   let b = Buffer.create 20 in
-  Buffer.add_char b (Region.money_symbol region);
+  begin match region with
+  | None -> ()
+  | Some region ->
+    Buffer.add_char b (Region.money_symbol region)
+  end;
   let money_s = Printf.sprintf "%#d" cash
     |> String.map (function '_' -> ',' | x -> x)
   in

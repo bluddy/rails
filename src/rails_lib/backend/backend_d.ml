@@ -20,10 +20,11 @@ let cycles_supply_decay = 512
 type train_arrival_msg = {
     player: int;
     time: int;
+    train_name: string option;
     freight: Goods.freight;
     _type: Train.train_type;
     train_num: int;
-    cars: Train.Car.t list; (* car delivered *)
+    goods_amount: (Goods.t * int) list; (* goods delivered *)
     revenue: int; (* x 1000 *)
 } [@@deriving yojson]
 
