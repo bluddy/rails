@@ -333,7 +333,7 @@ end
 module CarsTop = struct
   type hash =
   | Engine of Engine._type
-  | Car of Goods.freight
+  | Car of Freight.t
 
   let tile_w, tile_h = 20, 20
 
@@ -360,11 +360,11 @@ module CarsTop = struct
     tex 200 120 @@ Engine(Engine.SteamBig);
     tex 200 140 @@ Engine(Engine.SteamSmall);
     tex 40 120 @@ Engine(Engine.Diesel);
-    tex 40 140 @@ Car(Goods.FreightMail);
-    tex 200 160 @@ Car(Goods.FreightPassenger);
-    tex 40 160 @@ Car(Goods.FreightFast);
-    tex 200 180 @@ Car(Goods.FreightSlow);
-    tex 40 180 @@ Car(Goods.FreightBulk);
+    tex 40 140 @@ Car(Freight.Mail);
+    tex 200 160 @@ Car(Freight.Passenger);
+    tex 40 160 @@ Car(Freight.Fast);
+    tex 200 180 @@ Car(Freight.Slow);
+    tex 40 180 @@ Car(Freight.Bulk);
     hash
 end
 
@@ -448,11 +448,11 @@ module RouteScreen = struct
     let tex_part = tex_full ~arr:ndarray ~hash:car_hash ~dy:8 in
     let tex = tex_part ~dx:20 in
 
-    tex (`Freight FreightMail) 139 97;
-    tex (`Freight FreightPassenger) 139 107;
-    tex (`Freight FreightFast) 139 117;
-    tex (`Freight FreightSlow) 139 127;
-    tex (`Freight FreightBulk) 139 137;
+    tex (`Freight Freight.Mail) 139 97;
+    tex (`Freight Passenger) 139 107;
+    tex (`Freight Fast) 139 117;
+    tex (`Freight Slow) 139 127;
+    tex (`Freight Bulk) 139 137;
     tex `Caboose 200 97;
 
     let cars ~y ~dx car_age_fn =
@@ -1028,7 +1028,7 @@ type t = {
   small_engine: (Engine.make, R.Texture.t) Hashtbl.t;
   route_engine: (Engine.make, R.Texture.t) Hashtbl.t;
   route_cars: ([ `Caboose | `CarNew of Goods.t | `CarOld of Goods.t
-               | `Freight of Goods.freight ], R.Texture.t) Hashtbl.t;
+               | `Freight of Freight.t ], R.Texture.t) Hashtbl.t;
   engine_detail: (Engine.make, R.Texture.t) Hashtbl.t;
   engine_anim: (Engine.make, TrainAnim.t) Hashtbl.t;
   car_anim: (Goods.t, (R.Texture.t * R.Texture.t)) Hashtbl.t;

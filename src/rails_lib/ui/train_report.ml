@@ -111,7 +111,7 @@ let render win (s:State.t) (v:State.t t) : unit =
       | Some name -> sprintf "Train #%d: %s" (Trainmap.Id.to_int v.train + 1) name
       | _ -> sprintf "Train #%d: %s %s"
         (Trainmap.Id.to_int v.train + 1)
-        (Goods.show_freight train.freight) 
+        (Freight.show train.freight) 
         (Train.show_train_type train.typ)
     in
     let train_loc = (train.x, train.y) in

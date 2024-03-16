@@ -77,7 +77,7 @@ module Car = struct
 
   let make good = {good; load=None}
   let get_good v = v.good
-  let get_freight v = Goods.freight_of_goods @@ get_good v
+  let get_freight v = Freight.of_good @@ get_good v
   let get_age v cycle = match v.load with
     | Some load -> cycle - load.cycle
     | None -> assert false
@@ -140,7 +140,7 @@ type 'mut t = {
   hold_at_next_station: bool;
   engine: Engine.t;
   cars: Car.t list;
-  freight: Goods.freight; (* freight class. Based on majority of cars *)
+  freight: Freight.t; (* freight class. Based on majority of cars *)
   typ: train_type; (* How many stations we stop at *)
   history: History.t; (* History of values. Used for cars *)
   stop: int; (* current stop of route *)
@@ -188,9 +188,9 @@ let freight_of_cars cars =
   (* Freight goes by the highest level *)
   List.fold_left (fun freight car ->
     let freight2 = Car.get_freight car in
-    if Goods.compare_freight freight2 freight > 0
+    if Freight.compare freight2 freight > 0
     then freight2 else freight)
-  Goods.FreightMail
+  Freight.Mail
   cars
 
 let get_car_goods_count cars =
@@ -347,7 +347,7 @@ let update_array_length = Array.length update_cycle_array
 
 let get_weight v =
   List.fold_left (fun weight car ->
-    let freight = Goods.freight_of_goods car.Car.good |> Goods.freight_to_enum in
+    let freight = Freight.of_good car.Car.good |> Freight.to_enum in
     let weight2 = (Car.get_amount car * 4 - 320) / (6 - freight) + 240 in
     weight + weight2)
   0
@@ -434,7 +434,7 @@ let calc_arrival_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~diff
       dx * 3 / 2 + dy / 2
     else calc_dist
   in
-  let freight = Goods.freight_to_enum @@ Car.get_freight car in
+  let freight = Freight.to_enum @@ Car.get_freight car in
   let v1 = (calc_dist * (5 - freight) + 40 * freight + 40) / 8 in
   let fp2 = freight * freight * 2 in
   let v3 = (year - 1790) / 10 + fp2 in

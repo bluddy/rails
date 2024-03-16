@@ -17,7 +17,7 @@ type monetary = {
   bonds: int;
   yearly_interest_payment: int;
   net_worth: int;
-  freight_income: (Goods.freight, int) Hashtbl.t;
+  freight_income: (Freight.t, int) Hashtbl.t;
   other_income: int;
   expenses: (expense, int) Hashtbl.t;
 } [@@deriving yojson]
@@ -30,7 +30,7 @@ type t = {
   track_length: int;
   mutable dist_traveled: int;
   ton_miles: (int * int);
-  freight_ton_miles: (Goods.freight, int) Hashtbl.t;
+  freight_ton_miles: (Freight.t, int) Hashtbl.t;
   goods_delivered: Goods.Set.t;
 } [@@deriving yojson]
 

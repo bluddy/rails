@@ -85,7 +85,7 @@ let train_pickup_and_empty_station cars source cycle station_supply =
     in
     let time_pickup =
       List.fold_left2 (fun time amt car ->
-        let freight = T.Car.get_freight car |> Goods.freight_to_enum in
+        let freight = T.Car.get_freight car |> Freight.to_enum in
         time + (amt * freight / 32))
         0
         pickup_amounts

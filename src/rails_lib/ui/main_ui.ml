@@ -866,7 +866,7 @@ let render_main win (s:State.t) v =
       | Some name ->
           buf_add name
       | None ->
-          buf_add @@ Goods.show_freight msg.freight
+          buf_add @@ Freight.show msg.freight
       end;
       buf_add "\n";
       buf_add @@ Train.show_train_type msg._type;

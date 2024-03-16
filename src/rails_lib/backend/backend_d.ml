@@ -21,7 +21,7 @@ type train_arrival_msg = {
     player: int;
     time: int;
     train_name: string option;
-    freight: Goods.freight;
+    freight: Freight.t;
     _type: Train.train_type;
     train_num: int;
     goods_amount: (Goods.t * int) list; (* goods delivered *)

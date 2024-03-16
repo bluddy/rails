@@ -585,7 +585,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let draw_buffer = 
         List.foldi (fun draw_list i car ->
           let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
-          let color = Train.Car.get_freight car |> Goods.color_of_freight ~full:true in
+          let color = Train.Car.get_freight car |> Freight.to_color ~full:true in
           draw_car_or_engine color x y;
           if should_write_to_buffer then (x,y,color)::draw_list else []
         ) [] train.cars
@@ -646,8 +646,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let demand = Station.get_demand_exn station in
       let supply = Station.get_supply_exn station in
       List.iter (fun good ->
-        let n_freight = Goods.freight_of_goods good |> Goods.freight_to_enum in
-        let n_good = Goods.freight_idx_of_good good in
+        let n_freight = Freight.of_good good |> Freight.to_enum in
+        let n_good = Freight.idx_of_good good in
         let x = x + n_good * 10 in
         let y = y + n_freight * 5 + 10 in
         if Goods.Set.mem good demand then (
@@ -722,7 +722,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           Train.calc_car_loc ~car_pixels:12 train s.backend.track i
         in
         if is_in_view car_x car_y then (
-          let freight = Goods.freight_of_goods car.Train.Car.good in
+          let freight = Freight.of_good car.Train.Car.good in
           let tex = Hashtbl.find s.textures.cars_top (Car freight, car_dir) in
           let x, y = car_x - start_x_map + offset_x, car_y - start_y_map + offset_y in
           R.Texture.render win tex ~x ~y

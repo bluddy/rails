@@ -134,7 +134,7 @@ module Train_update = struct
       let time_for_sold_goods =
         List.fold_left (fun acc (car, delivered) ->
           if delivered then 
-            let freight = Train.Car.get_freight car |> Goods.freight_to_enum in
+            let freight = Train.Car.get_freight car |> Freight.to_enum in
             acc + (freight * (Train.Car.get_amount car) / 32)
           else
             acc)

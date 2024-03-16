@@ -405,8 +405,8 @@ let lose_supplies v =
           | Armaments when has ArmsStorage -> amount2
           | _ -> 
               (* higher freight classes are less time sensitive *)
-              let freight = Goods.freight_of_goods good in
-              let div = Goods.freight_to_enum freight + 2 in
+              let freight = Freight.of_good good in
+              let div = Freight.to_enum freight + 2 in
               let lost = (amount2 / div) / 2 in
               amount2 - lost
         in
