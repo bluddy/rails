@@ -5,6 +5,7 @@
 - What happens when we delete a station and a train is heading there?
 - Check computation of wait time
 - Bug:
+  - New train doesn't pick up stuff from starting station
   - Clicking on map during train creation crashes
   - First engines use one-chimney img. Check in code.
   - Where does smoke originate? Check in code.

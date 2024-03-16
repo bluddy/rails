@@ -2,6 +2,9 @@ open! Containers
 open Utils.Infix
 open Main_ui_d
 
+let src = Logs.Src.create "main_ui" ~doc:"Main_ui"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 module R = Renderer
 module B = Backend
 module C = Constants
@@ -743,15 +746,16 @@ let handle_msgs (s:State.t) v ui_msgs =
         {v with mode=TrainReport state}
 
     | Normal, (TrainArrival t) ->
-         let msg_speed = train_arrival_msg_speed v in
-         Option.map_or ~default:v
-           (fun msg_speed ->
-              let time = match msg_speed with
-              | `Fast -> C.fast_message_time
-              | `Slow -> C.slow_message_time
-              in
-              {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
-            )
+        let msg_speed = train_arrival_msg_speed v in
+        Option.map_or ~default:v
+          (fun msg_speed ->
+             let time = match msg_speed with
+             | `Fast -> C.fast_message_time
+             | `Slow -> C.slow_message_time
+             in
+             Log.debug (fun f -> f "Setting train arrival message with %d time" time);
+             {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
+          )
           msg_speed
 
   (* TODO: handle demand changed msg *)
