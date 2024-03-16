@@ -858,25 +858,26 @@ let render_main win (s:State.t) v =
   let draw_train_arrival_msg (msg:Backend_d.train_arrival_msg) =
     let msg_s: string =
       let b = Buffer.create 100 in 
-      Buffer.add_string b "...";
-      Buffer.add_string b @@ Backend.get_time_of_day msg.time;
-      Buffer.add_string b "...\n";
+      let buf_add = Buffer.add_string b in
+      buf_add "...";
+      buf_add @@ Backend.get_time_of_day msg.time;
+      buf_add "...\n";
       begin match msg.train_name with
       | Some name ->
-          Buffer.add_string b name
+          buf_add name
       | None ->
-          Buffer.add_string b @@ Goods.show_freight msg.freight
+          buf_add @@ Goods.show_freight msg.freight
       end;
-      Buffer.add_string b "\n";
-      Buffer.add_string b @@ Train.show_train_type msg._type;
-      Buffer.add_string b "  (";
-      Buffer.add_string b @@ string_of_int (msg.train_num + 1);
-      Buffer.add_string b ")\n";
+      buf_add "\n";
+      buf_add @@ Train.show_train_type msg._type;
+      buf_add "  (";
+      buf_add @@ string_of_int (msg.train_num + 1);
+      buf_add ")\n";
       List.iter (fun (good, amount) ->
-         Buffer.add_string b @@ Goods.short_descr_of good amount)
+         buf_add @@ Goods.short_descr_of good amount)
         msg.goods_amount;
-      Buffer.add_string b "\nRev: ";
-      Buffer.add_string b @@ Utils.show_cash msg.revenue;
+      buf_add "\nRev: ";
+      buf_add @@ Utils.show_cash msg.revenue;
       Buffer.contents b
     in
     let x, y = (dims.minimap.x+1), (dims.minimap.y+1) in
