@@ -88,3 +88,41 @@ module Set = Bitset.Make(struct
   let to_enum = to_enum
   let last = Bulk
 end)
+
+type complex =
+  | MailFreight
+  | PassengerFreight
+  | MixedExpress
+  | FastFreight
+  | PassengerMixedFreight
+  | MixedFreight
+  | SlowFreight
+  | BulkFreight
+
+let show_complex = function
+  | MailFreight -> "Mail"
+  | PassengerFreight -> "Passenger"
+  | MixedExpress ->  "Mixed Express"
+  | FastFreight -> "Fast Freight"
+  | PassengerMixedFreight -> "Passenger/Freight"
+  | MixedFreight -> "Mixed Freight"
+  | SlowFreight -> "Slow Freight"
+  | BulkFreight -> "Bulk Freight"
+
+let complex_of_set set = 
+  assert (Set.cardinal set <> 0);
+  if Set.mem set Mail && Set.cardinal set = 1 then MailFreight
+  else
+    (* Mail won't matter from now on *)
+    let set = Set.remove set Mail in
+    if Set.cardinal set = 1 then
+      if Set.mem set Passenger then PassengerFreight
+      else if Set.mem set Fast then FastFreight
+      else if Set.mem set Slow then SlowFreight
+      else BulkFreight
+    else if Set.mem set Passenger then PassengerMixedFreight
+    else MixedFreight
+
+
+
+
