@@ -870,7 +870,7 @@ let render_main win (s:State.t) v =
       Buffer.add_string b "\n";
       Buffer.add_string b @@ Train.show_train_type msg._type;
       Buffer.add_string b "  (";
-      Buffer.add_string b @@ string_of_int msg.train_num;
+      Buffer.add_string b @@ string_of_int (msg.train_num + 1);
       Buffer.add_string b ")\n";
       List.iter (fun (good, amount) ->
          Buffer.add_string b @@ Goods.short_descr_of good amount)
@@ -879,7 +879,9 @@ let render_main win (s:State.t) v =
       Buffer.add_string b @@ Utils.show_cash msg.revenue;
       Buffer.contents b
     in
-    R.draw_rect win ~x:dims.minimap.x ~y:dims.minimap.y ~h:dims.minimap.h ~w:dims.minimap.w ~color:Ega.bblue ~fill:true;
+    let x, y = (dims.minimap.x+1), (dims.minimap.y+1) in
+    let h, w = dims.minimap.h - 1, dims.minimap.w - 1 in
+    R.draw_rect win ~x ~y ~h ~w ~color:Ega.bblue ~fill:true;
     Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3 ~x:258 ~y:12 msg_s
   in
   begin match v.train_arrival_msgs with

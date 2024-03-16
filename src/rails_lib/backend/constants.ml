@@ -31,5 +31,5 @@ let draw_margin = 4
 
 let draw_buffer_len = 5
 
-let fast_message_time = 10
-let slow_message_time = 30
+let fast_message_time = 40
+let slow_message_time = 150
