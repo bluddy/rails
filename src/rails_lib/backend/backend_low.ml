@@ -173,22 +173,26 @@ module Train_update = struct
         Goods.Map.empty
         cars_delivered
       in
-      let goods_amount = Goods.Map.to_list goods_delivered in
-
-      let ui_msg = TrainArrival {
-        player=0;
-        time=v.time;
-        freight=train.freight;
-        _type=train.typ;
-        train_num=idx;
-        train_name = train.name;
-        revenue;
-        goods_amount;
-      }
+      let goods_delivered_amt = Goods.Map.to_list goods_delivered in
+      let total_goods = List.fold_left (fun acc (_,amt) -> acc + amt) 0 goods_delivered_amt in
+      let ui_msgs =
+        if total_goods > 0 then (
+          Log.debug (fun f -> f "Sending train_arrival_msg");
+          [TrainArrival {
+            player=0;
+            time=v.time;
+            freight=train.freight;
+            _type=train.typ;
+            train_num=idx;
+            train_name = train.name;
+            revenue;
+            goods_amount=goods_delivered_amt;
+          }]
+        ) else []
       in
-      Log.debug (fun f -> f "wait_time(%d)" wait_time);
+      Log.debug (fun f -> f "Wait_time(%d)" wait_time);
 
-      {train with cars; had_maintenance; state; freight}, revenue, [ui_msg]
+      {train with cars; had_maintenance; state; freight}, revenue, ui_msgs
     in
     match station.info with
     | Some station_info when Train_station.train_stops_at station train ->
@@ -226,7 +230,7 @@ module Train_update = struct
        *)
 
   let _enter_station (v:t) idx (train: rw Train.t) station loc  =
-    (* TODO: actual UI msg, income handling *)
+    (* TODO: income handling *)
     let last_station, priority, stop, train, _income, ui_msgs =
       if Station.is_proper_station station then (
         let train, income, ui_msgs =
@@ -440,7 +444,7 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
     in
     train_update_loop train 0 []
 
-  | _ ->  (* Time is up or other stopped states *)
+  | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
     _handle_train_mid_tile ~idx ~cycle v train loc
   end
@@ -471,7 +475,6 @@ let handle_cycle v =
     (* TODO: ai_routines *)
     let ui_msgs =
       if v.cycle mod cycles_station_supply_demand = 0 then (
-        (* Printf.printf "_handle_cycle%!\n"; *)
         let difficulty = v.options.difficulty in
         let climate = v.climate in
         let simple_economy =
@@ -492,7 +495,7 @@ let handle_cycle v =
             msgs @ old_msgs)
         v.stations
         ~init:ui_msgs)
-      else []
+      else ui_msgs
     in
     (* adjust time *)
     v.time <- v.time + 1;

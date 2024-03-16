@@ -858,9 +858,9 @@ let render_main win (s:State.t) v =
   let draw_train_arrival_msg (msg:Backend_d.train_arrival_msg) =
     let msg_s: string =
       let b = Buffer.create 100 in 
-      Buffer.add_string b " . . . ";
+      Buffer.add_string b "...";
       Buffer.add_string b @@ Backend.get_time_of_day msg.time;
-      Buffer.add_string b " . . . \n";
+      Buffer.add_string b "...\n";
       begin match msg.train_name with
       | Some name ->
           Buffer.add_string b name
@@ -879,8 +879,8 @@ let render_main win (s:State.t) v =
       Buffer.add_string b @@ Utils.show_cash msg.revenue;
       Buffer.contents b
     in
-    R.draw_rect win ~x:dims.minimap.x ~y:dims.minimap.y ~h:dims.minimap.h ~w:dims.minimap.w ~color:Ega.blue ~fill:true;
-    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:4 ~x:258 ~y:12 msg_s
+    R.draw_rect win ~x:dims.minimap.x ~y:dims.minimap.y ~h:dims.minimap.h ~w:dims.minimap.w ~color:Ega.bblue ~fill:true;
+    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3 ~x:258 ~y:12 msg_s
   in
   begin match v.train_arrival_msgs with
   | (msg, _)::_ -> draw_train_arrival_msg msg
