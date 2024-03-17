@@ -23,7 +23,8 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Priority deliveries
 - [ ] Opponents and AI
 - [ ] Stock Market
-- [ ] Balance Sheet
+- [ ] Balance Sheet, Income Statement
+- [ ] History and accomplishments
 - [x] Flesh out train info screen (currently dummy)
 - [x] Station lights and train stopping mechanism
 - [ ] Map changes over time
@@ -32,6 +33,12 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Being driven out of town
 - [ ] Rate war
 - [ ] Integrate animations
+- [ ] Record train arrivals
+- [ ] Newspapers
+- [ ] Resource map
+- [ ] Retirement
+- [ ] Naming Train (speed record)
+- [ ] Starting menu
 
 ## Feature List for 1.0+
 
