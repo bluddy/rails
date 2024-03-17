@@ -193,6 +193,15 @@ let freight_of_cars cars =
   Freight.Mail
   cars
 
+let freight_set_of_cars cars =
+  (* Create a complex freight set *)
+  List.fold_left (fun set car ->
+    let freight = Car.get_freight car in
+    Freight.Set.add set freight)
+  Freight.Set.empty
+  cars
+
+
 let get_car_goods_count cars =
   let h = Hashtbl.create 10 in
   List.iter (fun car -> Hashtbl.incr ~by:1 h car.Car.good) cars;

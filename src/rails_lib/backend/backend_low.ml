@@ -177,11 +177,11 @@ module Train_update = struct
       let total_goods = List.fold_left (fun acc (_,amt) -> acc + amt) 0 goods_delivered_amt in
       let ui_msgs =
         if total_goods > 0 then (
-          Log.debug (fun f -> f "Sending train_arrival_msg");
+          let complex_freight = Train.freight_set_of_cars train.cars |> Freight.complex_of_set in
           [TrainArrival {
             player=0;
             time=v.time;
-            freight=train.freight;
+            freight=complex_freight;
             _type=train.typ;
             train_num=idx;
             train_name = train.name;

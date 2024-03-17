@@ -98,6 +98,7 @@ type complex =
   | MixedFreight
   | SlowFreight
   | BulkFreight
+  [@@deriving yojson]
 
 let show_complex = function
   | MailFreight -> "Mail"

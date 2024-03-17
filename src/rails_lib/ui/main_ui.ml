@@ -859,14 +859,14 @@ let render_main win (s:State.t) v =
     let msg_s: string =
       let b = Buffer.create 100 in 
       let buf_add = Buffer.add_string b in
-      buf_add "...";
+      buf_add " ...";
       buf_add @@ Backend.get_time_of_day msg.time;
       buf_add "...\n";
       begin match msg.train_name with
       | Some name ->
           buf_add name
       | None ->
-          buf_add @@ Freight.show msg.freight
+          buf_add @@ Freight.show_complex msg.freight
       end;
       buf_add "\n";
       buf_add @@ Train.show_train_type msg._type;
