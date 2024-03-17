@@ -18,14 +18,14 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Money tracking
 - [x] Double tracks
 - [x] Engine info display
-- [ ] Train arrival message (top-right UI)
+- [x] Train arrival message (top-right UI)
 - [ ] Messages to the player (record etc)
 - [ ] Priority deliveries
 - [ ] Opponents and AI
 - [ ] Stock Market
 - [ ] Balance Sheet
-- [ ] Flesh out train info screen (currently dummy)
-- [ ] Station lights and train stopping mechanism
+- [x] Flesh out train info screen (currently dummy)
+- [x] Station lights and train stopping mechanism
 - [ ] Map changes over time
 - [ ] Train stop by right click
 - [ ] Accidents

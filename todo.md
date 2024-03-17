@@ -4,6 +4,7 @@
   - Also for station, upgrade etc
 - What happens when we delete a station and a train is heading there?
 - Check computation of wait time
+- F10 survey
 - Bug:
   - New train doesn't pick up stuff from starting station
   - Clicking on map during train creation crashes
@@ -20,10 +21,8 @@
   - end of dec in odd number year is end of fiscal period
   - displays: area, region, local, detail
   - stations cannot overlap in area
-  - tunnel has 0 grade
   - metal bridge not available before tech is done
   - doubling: not wood but all other bridges
-  - switching yard reduces change time by 75%
   - double rates: new station until end of fiscal period, fiscal period after winning rate war
   - maintenance shop reduces maintenance in fiscal period by 75%
   - shipping report money emptied at end of fiscal period
@@ -35,14 +34,12 @@
     - passenger revenue increased by 25%
   - higher classed trains move first
   - train report: right click clears consist change
-  - wait until full
   - west us: higher fares for east-west routes than north-south
   - train wreck: all cargos of same type disappear from all trains and supplies
   - mail cars are heaviest empty, fastest to load, lightest when full
   - priority shipment is cancelled below $20k
   - station stocks priority shipment if stopped there
   - build industry: within 3 squares of construction box
-  - train stop: at next signal
   - no collision: lower class stops
   - bonds:
     - reach 9%: no more
@@ -119,5 +116,4 @@
         - If can't, message appears
         - Only way company builds now
     - build tracks into controlled ai station: union station
-    - charged 100k for terminal (normally $200k)
-  - Holding is before we enter the station! (records and such come later)
+      - charged 100k for terminal (normally $200k)
