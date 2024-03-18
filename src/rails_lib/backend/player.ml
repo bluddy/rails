@@ -20,11 +20,13 @@ type monetary = {
   freight_income: (Freight.t, int) Hashtbl.t;
   other_income: int;
   expenses: (expense, int) Hashtbl.t;
+  yearly_balance_sheet: Balance_sheet_d.t;
 } [@@deriving yojson]
 
 type t = {
   m: monetary;
-  owned_shares: int;
+  treasury_stock: int;
+  other_rr_stock: int;
   shares: int;
   share_price: int;
   track_length: int;
@@ -43,8 +45,10 @@ let default difficulty = {
     freight_income=Hashtbl.create 10;
     other_income=0;
     expenses=Hashtbl.create 10;
+    yearly_balance_sheet=Balance_sheet_d.default;
   };
-  owned_shares=0;
+  treasury_stock=0;
+  other_rr_stock = 0;
   shares=100;
   share_price=B_options.difficulty_to_enum difficulty + 7;
   track_length = 0;

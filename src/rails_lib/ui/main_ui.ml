@@ -87,7 +87,7 @@ let main_menu fonts menu_h region =
       make_entry "&Train Income (F6)" @@ `Action `Train_income;
       make_entry "&Stocks" @@ `Action `Stocks;
       make_entry "&Accomplishments" @@ `Action `Accomplishments;
-      make_entry "&Efficiency" @@ `Action `Efficiency;
+      make_entry "&Efficiency" @@ `Action `Efficiency_report;
       make_entry "&History" @@ `Action `History;
     ]
   in
@@ -442,6 +442,12 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _ -> {v with mode=build_fn {modal with menu}}, B.Action.NoAction
       end
   in
+  let modal_screen_no_input v event =
+    if Event.is_left_click event || Event.key_modal_dismiss event then
+      {v with mode=Normal}, nobaction
+    else
+      v, nobaction
+  in
   let old_mode, old_menu = v.mode, v.menu in
   let v, backend_msg =
     match v.mode with
@@ -510,6 +516,14 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with options}, nobaction
         | On (`Options option), _ ->
             {v with view=Mapview.update_option v.view option true}, nobaction
+        | On (`Balance_sheet), _ ->
+            {v with mode=Balance_sheet}, nobaction
+        | On (`Income_statement), _ ->
+            {v with mode=Income_statement}, nobaction
+        | On (`Accomplishments), _ ->
+            {v with mode=Accomplishments}, nobaction
+        | On (`Efficiency_report), _ ->
+            {v with mode=Efficiency_report}, nobaction
         | Off (`Options option), _ ->
             {v with view=Mapview.update_option v.view option false}, nobaction
         | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
@@ -691,12 +705,6 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun {data=(x, y, dir);_} cmd ->
           {v with mode=Normal}, StationSetSignal{x; y; dir; cmd})
 
-    | StationReport _ ->
-        if Event.is_left_click event || Event.key_modal_dismiss event then
-          {v with mode=Normal}, nobaction
-        else
-          v, nobaction
-
     | BuildTrain state ->
         let state2, action = Build_train.handle_event s state event in
         let v = 
@@ -712,6 +720,13 @@ let handle_event (s:State.t) v (event:Event.t) =
           else v
         in
         v, action
+
+    | StationReport _
+    | Balance_sheet
+    | Income_statement
+    | Efficiency_report
+    | Accomplishments -> modal_screen_no_input v event
+        
   in
   let check_pause old _new = match old,_new with
     | true, false -> `Pause
@@ -940,6 +955,14 @@ let render (win:R.window) (s:State.t) v =
         Build_train.render win s state
     | TrainReport state ->
         Train_report.render win s state
+    | Balance_sheet ->
+        Balance_sheet.render win s
+    | Income_statement ->
+        Income_statement.render win s
+    | Accomplishments ->
+        Accomplishments.render win s
+    | Efficiency_report ->
+        Efficiency_report.render win s
   in
   render_mode v.mode
 

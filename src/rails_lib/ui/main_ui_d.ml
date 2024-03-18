@@ -55,7 +55,7 @@ type menu_action =
     | `Train_income
     | `Stocks
     | `Accomplishments
-    | `Efficiency
+    | `Efficiency_report
     | `History
     | `Display of Mapview_d.zoom
     | `Options of Mapview_d.options
@@ -102,6 +102,10 @@ and 'a mode =
     | `AddCars of 'a Build_train_d.addcars
   ]
   | TrainReport of 'a Train_report_d.t
+  | Balance_sheet
+  | Accomplishments
+  | Income_statement
+  | Efficiency_report
 
 let is_normal_mode = function
   | Normal -> true

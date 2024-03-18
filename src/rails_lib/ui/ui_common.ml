@@ -19,3 +19,18 @@ let draw_ui_car win ~x ~y ~full good =
     R.draw_line win ~x1:(x+1) ~y1:y ~x2:(x+2) ~y2:y ~color:Ega.bblue
   | _ -> ()
 
+let render_full_screen_frame win textures (dims:Main_ui_d.dims) =
+  R.paint_screen win ~color:Ega.white;
+  R.draw_rect win ~x:2 ~y:2 ~w:(dims.screen.w - 4) ~h:(dims.screen.h - 4) ~color:Ega.dgray ~fill:false;
+  match
+    List.map (fun dir -> Hashtbl.find textures.Textures.misc dir)
+      [`FrameBL; `FrameBR; `FrameTL; `FrameTR]
+  with
+  | [bl; br; tl; tr] ->
+    R.Texture.render ~x:4 ~y:4 win tl;
+    R.Texture.render ~x:(dims.screen.w - 12) ~y:4 win tr;
+    R.Texture.render ~x:4 ~y:(dims.screen.h - 12) win bl;
+    R.Texture.render ~x:(dims.screen.w - 12) ~y:(dims.screen.h - 12) win br;
+    ()
+  | _ -> assert false
+
