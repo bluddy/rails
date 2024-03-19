@@ -24,6 +24,8 @@ type monetary = {
 } [@@deriving yojson]
 
 type t = {
+  name: string option;
+  trains: Trainmap.t;
   m: monetary;
   treasury_stock: int;
   other_rr_stock: int;
@@ -36,8 +38,9 @@ type t = {
   goods_delivered: Goods.Set.t;
 } [@@deriving yojson]
 
-let default difficulty = {
-  m = {
+let default difficulty =
+  let trains = Trainmap.empty () in
+  let m = {
     cash = 1000;
     bonds = 500;
     yearly_interest_payment=20;
@@ -46,17 +49,21 @@ let default difficulty = {
     other_income=0;
     expenses=Hashtbl.create 10;
     yearly_balance_sheet=Balance_sheet_d.default;
-  };
-  treasury_stock=0;
-  other_rr_stock = 0;
-  shares=100;
-  share_price=B_options.difficulty_to_enum difficulty + 7;
-  track_length = 0;
-  dist_traveled=0;
-  ton_miles=(0, 0);
-  freight_ton_miles=Hashtbl.create 10;
-  goods_delivered=Goods.Set.empty;
-}
+  } in
+  {
+    name=None;
+    m;
+    trains;
+    treasury_stock=0;
+    other_rr_stock = 0;
+    shares=100;
+    share_price=B_options.difficulty_to_enum difficulty + 7;
+    track_length = 0;
+    dist_traveled=0;
+    ton_miles=(0, 0);
+    freight_ton_miles=Hashtbl.create 10;
+    goods_delivered=Goods.Set.empty;
+  }
 
 let get_cash v = v.m.cash
 

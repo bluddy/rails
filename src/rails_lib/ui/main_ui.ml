@@ -366,7 +366,7 @@ let train_roster_iter (s:State.t) v f =
   let train_h = v.dims.train_ui_train_h in
   let max_fit_trains = v.dims.train_ui.h / train_h in
   let max_draw_trains = min max_fit_trains @@
-    (Trainmap.size s.backend.trains) - v.train_ui_start
+    (Trainmap.size s.backend.players.(0).trains) - v.train_ui_start
   in
   Iter.iter (fun i ->
     f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
@@ -378,7 +378,7 @@ let handle_train_roster_event (s:State.t) v event =
     let train_h = v.dims.train_ui_train_h in
     let max_fit_trains = v.dims.train_ui.h / train_h in
     let max_draw_trains = min max_fit_trains @@
-      (Trainmap.size s.backend.trains) - v.train_ui_start
+      (Trainmap.size s.backend.players.(0).trains) - v.train_ui_start
     in
     Iter.find (fun i ->
       f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
@@ -806,7 +806,7 @@ let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Se
 let draw_train_roster win (s:State.t) v =
   train_roster_iter s v
   (fun y_bot idx ->
-    let train = Trainmap.get s.backend.trains (Trainmap.Id.of_int idx) in
+    let train = Trainmap.get s.backend.players.(0).trains (Trainmap.Id.of_int idx) in
     (* Speed line *)
     let x = v.dims.train_ui.x + 1 in
     let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in

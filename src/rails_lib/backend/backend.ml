@@ -40,7 +40,6 @@ let default region resources ~random ~seed =
     | Britain -> 1828
     | Europe -> 1900
   in
-  let trains = Trainmap.empty () in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
   {
@@ -55,7 +54,6 @@ let default region resources ~random ~seed =
     map;
     region;
     cities;
-    trains;
     track;
     blocks=Block_map.make ();
     graph;
@@ -121,7 +119,7 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track = Trackmap.build_station v.track ~x ~y station_type in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_station v.graph ~x ~y before after in
-  let blocks = Block_map.handle_build_station graph v.blocks track v.trains (x,y) after in
+  let blocks = Block_map.handle_build_station graph v.blocks track v.players.(player).trains (x,y) after in
   let station = match station_type with
   | `SignalTower ->
     Station.make_signaltower ~x ~y ~year:v.year ~player
@@ -196,7 +194,7 @@ let _build_tunnel v ~x ~y ~dir ~player =
     let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
     let after = Scan.scan track ~x ~y ~player in
     let graph = G.Track.handle_build_track_simple v.graph before after in
-    let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
+    let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
     update_player v player @@ Player.pay Player.TunnelExpense cost;
     [%upf v.graph <- graph];
     [%upf v.track <- track];
@@ -209,7 +207,7 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
+  let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay Player.TrackExpense (Bridge.price_of kind);
   [%upf v.graph <- graph];
@@ -242,7 +240,7 @@ let _change_double_track (v:t) ~x ~y ~player double =
     let t = Track.change_to_double t double in
     let track = Trackmap.set v.track ~x ~y ~t in
     let after = Scan.scan track ~x ~y ~player in
-    let blocks = Block_map.handle_double_change v.graph track v.trains v.blocks after in
+    let blocks = Block_map.handle_double_change v.graph track v.players.(player).trains v.blocks after in
     [%upf v.track <- track];
     [%upf v.blocks <- blocks];
     v
@@ -254,7 +252,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track v.graph ~x ~y before after in
-  let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
+  let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
@@ -275,7 +273,7 @@ let _build_ferry v ~x ~y ~dir ~player =
   let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let blocks = Block_map.handle_build_track graph v.track v.trains v.blocks before after in
+  let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
@@ -301,7 +299,7 @@ let _remove_track v ~x ~y ~dir ~player =
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
   let blocks =
     if not is_station then
-      Block_map.handle_remove_track graph v.track v.trains v.blocks before after
+      Block_map.handle_remove_track graph v.track v.players.(player).trains v.blocks before after
     else blocks
   in
   update_player v player (Player.add_track ~length:(-1));
@@ -327,79 +325,105 @@ let _build_train v ((x, y) as station) engine cars other_station ~player =
   let track = Trackmap.get v.track ~x ~y |> Option.get_exn_or "trackmap" in
   let dir, _ = Dir.Set.pop track.dirs in
   let train = Train.make station engine_t cars other_station ~dir ~player in
-  let trains = Trainmap.add v.trains train in
-  update_player v player (Player.pay Player.TrainExpense engine_t.price);
-  let msg = TrainBuilt (Trainmap.Id.of_int (Trainmap.size v.trains - 1)) in
+  let trains = Trainmap.add v.players.(player).trains train in
+  update_player v player (fun player ->
+    let player = Player.pay Player.TrainExpense engine_t.price player in
+    [%up {player with trains}]
+  );
+  let msg = TrainBuilt (Trainmap.Id.of_int (Trainmap.size v.players.(player).trains - 1)) in
   v.ui_msgs <- msg::v.ui_msgs;
-  [%up {v with trains}]
+  v
 
-let _remove_stop_car v ~train ~stop ~car =
-  let trains =
-    Trainmap.update v.trains train
-      (fun train -> Train.remove_stop_car train stop car)
-  in
-  [%up {v with trains}]
+let _remove_stop_car v ~train ~stop ~car ~player =
+  update_player v player (fun player ->
+    let trains =
+      Trainmap.update player.trains train
+        (fun train -> Train.remove_stop_car train stop car)
+    in
+    [%up {player with trains}]
+  );
+  v
 
-let check_stop_station v ~train ~stop ~station =
-  let train = Trainmap.get v.trains train in
+let check_stop_station v ~train ~stop ~station ~player =
+  let train = Trainmap.get v.players.(player).trains train in
   Train.check_stop_station train stop station
 
-let _set_stop_station v ~train ~stop ~station =
-  let trains =
-    Trainmap.update v.trains train
-      (fun train -> Train.set_stop_station train stop station)
-  in
-  [%up {v with trains}]
+let _set_stop_station v ~train ~stop ~station ~player =
+  update_player v player (fun player ->
+    let trains =
+      Trainmap.update player.trains train
+        (fun train -> Train.set_stop_station train stop station)
+    in
+    [%up {player with trains}]
+  );
+  v
 
-let _remove_stop v ~train ~stop =
-  let trains =
-    Trainmap.update v.trains train
-      (fun train -> Train.remove_stop train stop)
-  in
-  [%up {v with trains}]
+let _remove_stop v ~train ~stop ~player =
+  update_player v player (fun player ->
+    let trains =
+      Trainmap.update player.trains train
+        (fun train -> Train.remove_stop train stop)
+    in
+    [%up {player with trains}]
+  );
+  v
 
-let _add_stop_car v ~train ~stop ~car =
-  let trains =
-    Trainmap.update v.trains train
-      (fun train -> Train.add_stop_car train stop car)
-  in
-  [%up {v with trains}]
+let _add_stop_car v ~train ~stop ~car ~player =
+  update_player v player (fun player ->
+    let trains =
+      Trainmap.update player.trains train
+        (fun train -> Train.add_stop_car train stop car)
+    in
+    [%up {player with trains}]
+  );
+  v
 
-let _remove_all_stop_cars v ~train ~stop =
-  let trains =
-    Trainmap.update v.trains train
-      (fun train -> Train.remove_all_stop_cars train stop)
-  in
-  [%up {v with trains}]
+let _remove_all_stop_cars v ~train ~stop ~player =
+  update_player v player (fun player ->
+    let trains =
+      Trainmap.update player.trains train
+        (fun train -> Train.remove_all_stop_cars train stop)
+    in
+    [%up {player with trains}]
+  );
+  v
 
-let get_num_trains v = Trainmap.size v.trains
+let get_num_trains v ~player = Trainmap.size v.players.(player).trains
 
-let get_train v idx = Trainmap.get v.trains idx
+let get_train v idx ~player = Trainmap.get v.players.(player).trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-let _train_set_type v ~train ~typ =
-  let trains =
-    Trainmap.update v.trains train (fun train -> Train.set_type train typ)
-  in
-  [%up {v with trains}]
+let _train_set_type v ~train ~typ ~player =
+  update_player v player (fun player ->
+    let trains =
+      Trainmap.update player.trains train (fun train -> Train.set_type train typ)
+    in
+    [%up {player with trains}]
+  );
+  v
 
 let _train_replace_engine v ~train ~engine ~player =
   let engine = Engine.t_of_make v.engines engine in
-  let trains =
-    Trainmap.update v.trains train
-      (fun train -> Train.replace_engine train engine)
-  in
-  update_player v player (Player.pay Player.TrainExpense engine.price);
-  [%up {v with trains}]
+  update_player v player (fun player ->
+    let player = Player.pay Player.TrainExpense engine.price player in
+    let trains =
+      Trainmap.update player.trains train
+        (fun train -> Train.replace_engine train engine)
+    in
+    [%up {player with trains}]
+  );
+  v
 
-let _train_toggle_stop_wait v ~train ~stop =
-  let trains =
-    Trainmap.update v.trains train
-      (fun train -> Train.toggle_stop_wait train stop)
-  in
-  [%up {v with trains}]
-
+let _train_toggle_stop_wait v ~train ~stop ~player =
+  update_player v player (fun player ->
+    let trains =
+      Trainmap.update player.trains train
+        (fun train -> Train.toggle_stop_wait train stop)
+    in
+    [%up {player with trains}]
+  );
+  v
 
 let _station_set_signal v loc dir cmd =
   (* the user can only set the override *)
@@ -414,14 +438,17 @@ let _station_set_signal v loc dir cmd =
   in
   [%up {v with stations}]
   
-let _remove_train v idx =
-  let train = Trainmap.get v.trains idx in
-  (match train.state with
-    | Traveling {block; _} ->
-      Block_map.block_decr_train block v.blocks
-    | _ -> ());
-  let trains = Trainmap.delete v.trains idx in
-  [%up {v with trains}]
+let _remove_train v idx ~player =
+  update_player v player (fun player ->
+    let train = Trainmap.get player.trains idx in
+    (match train.state with
+      | Traveling {block; _} ->
+        Block_map.block_decr_train block v.blocks
+      | _ -> ());
+    let trains = Trainmap.delete player.trains idx in
+    [%up {player with trains}]
+  );
+  v
 
 let reset_tick v =
   v.last_tick <- 0
@@ -472,21 +499,17 @@ module Action = struct
     | DoubleTrack of {x: int; y: int; double: bool; player: int}
     | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
-    | BuildTrain of {engine: Engine.make;
-                     cars: Goods.t list;
-                     station: int * int;
-                     other_station: (int * int) option;
-                     player: int;
-                    } 
-    | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int}
-    | RemoveStop of {train: Trainmap.Id.t; stop: stop}
-    | AddStopCar of {train: Trainmap.Id.t; stop: stop; car: Goods.t}
-    | RemoveStopCar of {train: Trainmap.Id.t; stop: stop; car: int}
-    | RemoveAllStopCars of {train: Trainmap.Id.t; stop: stop}
-    | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type}
-    | RemoveTrain of Trainmap.Id.t
-    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make}
-    | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int}
+    | BuildTrain of {engine: Engine.make; cars: Goods.t list;
+                     station: int * int; other_station: (int * int) option; player: int} 
+    | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int; player: int}
+    | RemoveStop of {train: Trainmap.Id.t; stop: stop; player: int}
+    | AddStopCar of {train: Trainmap.Id.t; stop: stop; car: Goods.t; player: int}
+    | RemoveStopCar of {train: Trainmap.Id.t; stop: stop; car: int; player: int}
+    | RemoveAllStopCars of {train: Trainmap.Id.t; stop: stop; player: int}
+    | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type; player: int}
+    | RemoveTrain of {idx: Trainmap.Id.t; player: int}
+    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: int}
+    | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: int}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
     [@@deriving show]
 
@@ -516,24 +539,24 @@ module Action = struct
           _set_speed backend speed
       | BuildTrain {engine; cars; station; other_station; player} ->
           _build_train backend station engine cars other_station ~player
-      | RemoveStopCar {train; stop; car} ->
-          _remove_stop_car backend ~train ~stop ~car
-      | SetStopStation {train; stop; station} ->
-          _set_stop_station backend ~train ~stop ~station
-      | RemoveStop {train; stop} ->
-          _remove_stop backend ~train ~stop
-      | RemoveAllStopCars {train; stop} ->
-          _remove_all_stop_cars backend ~train ~stop
-      | AddStopCar {train; stop; car} ->
-          _add_stop_car backend ~train ~stop ~car
-      | TrainSetType {train; typ} ->
-          _train_set_type backend ~train ~typ
-      | RemoveTrain idx ->
-          _remove_train backend idx
-      | TrainReplaceEngine {train; engine} ->
-          _train_replace_engine backend ~train ~engine ~player:0
-      | TrainToggleStopWait {train; stop} ->
-          _train_toggle_stop_wait backend ~train ~stop
+      | RemoveStopCar {train; stop; car; player} ->
+          _remove_stop_car backend ~train ~stop ~car ~player
+      | SetStopStation {train; stop; station; player} ->
+          _set_stop_station backend ~train ~stop ~station ~player
+      | RemoveStop {train; stop; player} ->
+          _remove_stop backend ~train ~stop ~player
+      | RemoveAllStopCars {train; stop; player} ->
+          _remove_all_stop_cars backend ~train ~stop ~player
+      | AddStopCar {train; stop; car; player} ->
+          _add_stop_car backend ~train ~stop ~car ~player
+      | TrainSetType {train; typ; player} ->
+          _train_set_type backend ~train ~typ ~player
+      | RemoveTrain {idx; player} ->
+          _remove_train backend idx ~player
+      | TrainReplaceEngine {train; engine; player} ->
+          _train_replace_engine backend ~train ~engine ~player
+      | TrainToggleStopWait {train; stop; player} ->
+          _train_toggle_stop_wait backend ~train ~stop ~player
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
       | Pause -> {backend with pause=true}

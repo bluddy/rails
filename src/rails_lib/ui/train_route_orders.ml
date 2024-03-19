@@ -61,7 +61,8 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
     s.backend.graph;
 
   (* Write stop text *)
-  let train = Trainmap.get s.backend.trains v.train in
+  let player = 0 in
+  let train = Trainmap.get s.backend.players.(player).trains v.train in
   let route = Train.get_route train in
   (* TODO: wait *)
   Vector.iteri (fun i (_, (stop:Train.stop)) ->
@@ -164,7 +165,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       | `EditStop i -> `Stop i
       | _ -> assert false
     in
-    let b_action = Backend.Action.RemoveStop {train=v.train; stop} in
+    let b_action = Backend.Action.RemoveStop {train=v.train; stop; player=0} in
     false, v, b_action
   in
   match event, v.selected_station, v.state with
@@ -199,14 +200,14 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditPriority ->
       let b_action =
-        Backend.Action.SetStopStation {train=v.train; stop=`Priority; station}
+        Backend.Action.SetStopStation {train=v.train; stop=`Priority; station; player=0}
       in
       false, v, b_action
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditStop stop  ->
       let b_action =
-        if Backend.check_stop_station s.backend ~train:v.train ~stop ~station then
-          Backend.Action.SetStopStation {train=v.train; stop=`Stop stop; station}
+        if Backend.check_stop_station s.backend ~train:v.train ~stop ~station ~player:0 then
+          Backend.Action.SetStopStation {train=v.train; stop=`Stop stop; station; player=0}
         else nobaction
       in
       false, v, b_action

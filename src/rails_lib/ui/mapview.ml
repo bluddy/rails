@@ -221,7 +221,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           test_loc x y
         in
         Option.is_some on_car || on_engine ()
-      ) s.backend.trains
+      ) s.backend.players.(0).trains
     in
     begin match v.zoom, button with
     | Zoom4, `Left when cursor_x_tile = v.const_box_x && cursor_y_tile = v.const_box_y ->
@@ -432,7 +432,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           R.draw_point win ~color ~x ~y
         ))
       [0, Ega.white; 16, Ega.black]
-    ) s.backend.trains
+    ) s.backend.players.(0).trains
   in
   let draw_track_zoom4 ~tile_x ~tile_y ~screen_x ~screen_y =
     (* draw an individual piece of tile *)
@@ -597,7 +597,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         if should_write_to_buffer then (x,y,Ega.black)::draw_buffer else []
       in
       if should_write_to_buffer then set_draw_buffer draw_buffer;
-    ) s.backend.trains;
+    ) s.backend.players.(0).trains;
   in
   let draw_stationboxes mult size =
     (* mult and size are in tiles! *)
@@ -740,7 +740,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         R.Texture.render win tex ~x ~y
       )
     )
-    s.backend.trains;
+    s.backend.players.(0).trains;
     (* Draw smoke *)
     let smoke_texs = Hashtbl.find s.textures.Textures.smoke `SmokeTop in
     let offset_x, offset_y = (-C.tile_w/2) - 2, -2 in
@@ -863,7 +863,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
             acc
         )
         ~init:smoke_plumes
-        s.backend.trains
+        s.backend.players.(0).trains
       in
       smoke_plumes
     | _ -> smoke_plumes

@@ -13,6 +13,8 @@ module R = Renderer
 
 let render win (s:State.t) =
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
+  Fonts.Render.write_shadow win s.fonts ~idx:2 ~color:Ega.gray ~x:32 ~y:8 @@
+    Printf.sprintf "Balance Sheet: %d" s.backend.year;
   ()
 
     

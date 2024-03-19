@@ -451,7 +451,7 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
 
 
     (* Run every cycle, updating every train's position and speed *)
-  let _update_all_trains (v:t) =
+  let _update_all_trains (v:t) ~player =
     (* Log.debug (fun f -> f "update_all_trains"); *)
     let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
     let cycle_bit = 1 lsl (v.cycle mod 12) in
@@ -462,7 +462,7 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
         update_train v idx train ~cycle ~cycle_check ~cycle_bit ~region_div
       in
       ui_msgs @ ui_msg_acc, train)
-      v.trains
+      v.players.(player).trains
       ~init:[]
 
 end
@@ -471,7 +471,7 @@ end
 let handle_cycle v =
   let time_step () =
     v.cycle <- v.cycle + 1;
-    let ui_msgs = Train_update._update_all_trains v in
+    let ui_msgs = Train_update._update_all_trains v ~player:0 in
     (* TODO: ai_routines *)
     let ui_msgs =
       if v.cycle mod cycles_station_supply_demand = 0 then (

@@ -49,7 +49,6 @@ type t = {
   map : Tilemap.t;
   mutable track: Trackmap.t;
   mutable graph: Track_graph.t;
-  trains: Trainmap.t;
   cities: Cities.t;
   engines: Engine.t list;
   mutable stations: Station_map.t;
