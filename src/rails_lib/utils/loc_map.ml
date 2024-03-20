@@ -4,44 +4,44 @@ open Utils
 
 (* A common pattern: a hashtbl from location to a thing *)
 
-type 'a t = 'a IntIntMap.t [@@deriving yojson]
+type 'a t = 'a LocMap.t [@@deriving yojson]
 
-let empty = IntIntMap.empty
+let empty = LocMap.empty
 
-let length v = IntIntMap.cardinal v
+let length v = LocMap.cardinal v
 
-let iter f v = IntIntMap.iter (fun _ station -> f station) v
+let iter f v = LocMap.iter (fun _ station -> f station) v
 
 let fold f v ~init =
-  IntIntMap.fold (fun _ station acc -> f station acc) v init
+  LocMap.fold (fun _ station acc -> f station acc) v init
 
 let find f v =
   let exception Found of loc in
   try
-    IntIntMap.iter (fun k station ->
+    LocMap.iter (fun k station ->
       if f station then raise_notrace @@ Found k)
     v;
     None
   with
     Found k -> Some k
 
-let get loc v = IntIntMap.find_opt loc v
+let get loc v = LocMap.find_opt loc v
 
 let update loc f v =
-  IntIntMap.update
+  LocMap.update
     loc
     (fun v -> f v)
     v
 
-let mem loc v = IntIntMap.mem loc v
+let mem loc v = LocMap.mem loc v
 
-let get_exn loc v = IntIntMap.find loc v
+let get_exn loc v = LocMap.find loc v
 
-let add loc value v = IntIntMap.add loc value v
+let add loc value v = LocMap.add loc value v
 
-let delete loc v = IntIntMap.remove loc v
+let delete loc v = LocMap.remove loc v
 
 let filter f v =
-  IntIntMap.to_iter v
+  LocMap.to_iter v
   |> Iter.map snd |> Iter.filter (fun value -> f value)
 

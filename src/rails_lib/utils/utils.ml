@@ -132,7 +132,7 @@ end)
 let canonical_locdpair ((locd1, locd2) as p) =
    if compare_locd locd1 locd2 > 0 then locd2, locd1 else p
 
-module IntIntMap = Map.Make(struct
+module LocMap = Map.Make(struct
   type t = loc [@@deriving yojson]
   let compare = compare_loc
 end)

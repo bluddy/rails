@@ -23,8 +23,21 @@ type monetary = {
   yearly_balance_sheet: Balance_sheet_d.t;
 } [@@deriving yojson]
 
+module Name = struct
+    (* Railroads can be custom-named or station-named *)
+  type t =
+    | Custom of string
+    | Stations of (string * Utils.loc) * (string * Utils.loc)
+    [@@deriving yojson]
+
+  let show = function
+    | Custom name -> name
+    | Stations ((name1, _), (name2, _)) ->
+        Printf.sprintf "%s & %s RR" name1 name2
+end
+
 type t = {
-  name: string option;
+  name: Name.t option;
   trains: Trainmap.t;
   m: monetary;
   treasury_stock: int;
@@ -78,6 +91,10 @@ let incr_cash ~cash v =
 let pay expense cash v =
   Hashtbl.incr ~by:cash v.m.expenses expense;
   decr_cash ~cash v
+
+let get_name v = match v.name with
+  | Some name -> Name.show name
+  | _ -> "RR"
 
 let track_length v = v.track_length
 
