@@ -164,6 +164,9 @@ let _build_station v ~x ~y station_type ~player =
       ~first
   in
   let stations = Station_map.add (x,y) station v.stations in
+  (* let should_add_name = *)
+  (*   Option.is_none v.players.(C.player).name && *)
+  (* in *)
   if build_new_track then (
     update_player v player @@ Player.add_track ~length:1
   );

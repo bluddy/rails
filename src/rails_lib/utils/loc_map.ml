@@ -15,6 +15,9 @@ let iter f v = LocMap.iter (fun _ station -> f station) v
 let fold f v ~init =
   LocMap.fold (fun _ station acc -> f station acc) v init
 
+let fold_loc f v ~init =
+  LocMap.fold (fun loc station acc -> f loc station acc) v init
+
 let find f v =
   let exception Found of loc in
   try

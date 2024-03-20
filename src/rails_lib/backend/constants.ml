@@ -2,6 +2,8 @@
 (* Time *)
 (* Each time period is both 2 years and a 24 hour day *)
 
+let player = 0
+
 let tick_ms = 15 (* ms *)
 
 let year_ticks = 2032 (* really 170*12 = 2040 is new year, but any time we go over 2032 we stop the year *)
@@ -33,3 +35,4 @@ let draw_buffer_len = 5
 
 let fast_message_time = 40
 let slow_message_time = 150
+
