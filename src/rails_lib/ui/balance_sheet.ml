@@ -20,14 +20,22 @@ let render win (s:State.t) =
   let rr_name = Player.get_name player s.backend.stations s.backend.cities in
   let y = 24 in
   let line = 8 in
-  let write = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black in
+  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
+  let write_money ~x ~y money =
+    let money_s = Utils.show_cash ~spaces:6 ~region:s.backend.region money in
+    let color = if money < 0 then Ega.red else Ega.black in
+    write ~x ~y ~color money_s
+  in
   write ~x:80 ~y rr_name;
   let y = y + line + line in
   write ~x:x_total ~y "Total";
   write ~x:x_ytd ~y "YTD Changes";
   let y = y + line in
   write ~x:x_left ~y "Assets:"; let y = y + line in
-  write ~x:x_text ~y "Operating Funds:"; let y = y + line in
+  write ~x:x_text ~y "Operating Funds:";
+  let funds = Player.get_cash s.backend.players.(C.player) in
+  write_money ~x:x_total ~y funds;
+  let y = y + line in
   write ~x:x_text ~y "Treasury Stock:"; let y = y + line in
   write ~x:x_text ~y "Other RR Stock:"; let y = y + line in
   write ~x:x_text ~y "Facilities:"; let y = y + line in
