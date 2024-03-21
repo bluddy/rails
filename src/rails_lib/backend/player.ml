@@ -23,22 +23,10 @@ type monetary = {
   yearly_balance_sheet: Balance_sheet_d.t;
 } [@@deriving yojson]
 
-module Name = struct
-    (* Railroads can be custom-named or station-named *)
-  type t =
-    | Custom of string
-    | Stations of (string * Utils.loc) * (string * Utils.loc)
-    [@@deriving yojson]
-
-  let show = function
-    | Custom name -> name
-    | Stations ((name1, _), (name2, _)) ->
-        Printf.sprintf "%s & %s RR" name1 name2
-end
-
 type t = {
-  name: Name.t option;
+  name: string option; (* custom name *)
   trains: Trainmap.t;
+  stations: Utils.loc list; (* Stations ordered by creation order *)
   m: monetary;
   treasury_stock: int;
   other_rr_stock: int;
@@ -65,6 +53,7 @@ let default difficulty =
   } in
   {
     name=None;
+    stations = [];
     m;
     trains;
     treasury_stock=0;
@@ -92,9 +81,27 @@ let pay expense cash v =
   Hashtbl.incr ~by:cash v.m.expenses expense;
   decr_cash ~cash v
 
-let get_name v = match v.name with
-  | Some name -> Name.show name
-  | _ -> "RR"
+let get_name v station_map cities = match v.name with
+  | Some name -> name
+  | _ -> 
+    (* Getting the name if it's not custom is... complicated *)
+    let first_two_proper_station_cities =
+      List.fold_right (fun loc acc ->
+        if List.length acc >= 2 then acc
+        else
+          let station = Station_map.get_exn loc station_map in
+          match station.Station.info with 
+          | Some info ->
+            let x, y = info.city in
+            let city, _ = Cities.find_exn cities x y in
+            city::acc
+          | _ -> acc)
+      v.stations
+      []
+    in
+    match first_two_proper_station_cities with
+    | x::y::_ -> Printf.sprintf "%s & %s RR" y x
+    | _ -> "RR"
 
 let track_length v = v.track_length
 
@@ -104,4 +111,14 @@ let incr_dist_traveled ~dist v =
 
 let add_track ~length v =
   {v with track_length = v.track_length + length}
+
+let remove_track ~length v =
+  {v with track_length = v.track_length - length}
+
+let add_station loc v =
+  {v with stations=loc::v.stations}
+
+let remove_station loc v =
+  let stations = List.filter (fun loc2 -> not @@ Utils.equal_loc loc loc2) v.stations in
+  [%up {v with stations}]
 

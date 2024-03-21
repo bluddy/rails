@@ -163,10 +163,9 @@ let _build_station v ~x ~y station_type ~player =
       ~player
       ~first
   in
-  let stations = Station_map.add (x,y) station v.stations in
-  (* let should_add_name = *)
-  (*   Option.is_none v.players.(C.player).name && *)
-  (* in *)
+  let loc = (x, y) in
+  let stations = Station_map.add loc station v.stations in
+  update_player v player @@ Player.add_station loc;
   if build_new_track then (
     update_player v player @@ Player.add_track ~length:1
   );
@@ -286,26 +285,34 @@ let _build_ferry v ~x ~y ~dir ~player =
 let check_remove_track v ~x ~y ~dir ~player=
   Trackmap.check_remove_track v.track ~x ~y ~dir ~player
 
-  (* TODO: handle removal of station *)
-let _remove_track v ~x ~y ~dir ~player =
+let _remove_station v ~x ~y ~dir ~player =
   let loc = (x,y) in
-  let is_station = Trackmap.has_station loc v.track in
   let before = Scan.scan v.track ~x ~y ~player in
   (* Have to be careful with order here or we'll mess up state *)
-  let blocks =
-    if is_station then
-      Block_map.handle_remove_station v.graph v.track v.blocks loc before
-    else v.blocks
-  in
+  let blocks = Block_map.handle_remove_station v.graph v.track v.blocks loc before in
   let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
-  let blocks =
-    if not is_station then
-      Block_map.handle_remove_track graph v.track v.players.(player).trains v.blocks before after
-    else blocks
-  in
+  let stations = Station_map.delete loc v.stations in
+  update_player v player (Player.remove_station loc);
   update_player v player (Player.add_track ~length:(-1));
+  [%upf v.stations <- stations];
+  [%upf v.blocks <- blocks];
+  [%upf v.track <- track];
+  [%upf v.graph <- graph];
+  v
+
+let _remove_track v ~x ~y ~dir ~player =
+  let loc = (x,y) in
+  let is_station = Trackmap.has_station loc v.track in
+  if is_station then _remove_station v ~x ~y ~dir ~player else
+  let before = Scan.scan v.track ~x ~y ~player in
+  (* Have to be careful with order here or we'll mess up state *)
+  let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
+  let after = Scan.scan track ~x ~y ~player in
+  let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
+  let blocks = Block_map.handle_remove_track graph v.track v.players.(player).trains v.blocks before after in
+  update_player v player (Player.remove_track ~length:1);
   [%upf v.blocks <- blocks];
   [%upf v.track <- track];
   [%upf v.graph <- graph];
@@ -313,7 +320,7 @@ let _remove_track v ~x ~y ~dir ~player =
 
 let _improve_station v ~x ~y ~player ~upgrade =
   let stations = 
-    Loc_map.update (x,y)
+    Station_map.update (x,y)
       (Option.map @@ fun station -> Station.add_upgrade station upgrade player)
       v.stations
   in

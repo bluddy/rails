@@ -1,7 +1,11 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
   type t = {
-    map: (int, string * int) Utils.Hashtbl.t; (* random offset for suffix *)
+   (* int: random offset for suffix.
+      To make station names interesting, we have a list of suffixes,
+      and we distribute random offsets with our cities into that list.
+    *)
+    map: (int, string * int) Utils.Hashtbl.t;
     width: int;
     height: int;
   } [@@deriving yojson]

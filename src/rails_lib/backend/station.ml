@@ -102,7 +102,7 @@ let num_suffix = (suffix_to_enum Woods) + 1
 type info = {
   name: string;
   short_name: string;
-  city: int * int;
+  city: Utils.loc;
   suffix: suffix option;
   mutable demand: Goods.Set.t; (* sufficient demand *)
   mutable convert_demand: Goods.Set.t; (* minimum for conversion *)
