@@ -25,7 +25,7 @@ type balance_sheet = {
 } [@@deriving yojson]
 
 let default_balance_sheet = {
-  operating_funds=0;
+  operating_funds=1000;
   treasury_stock=0;
   other_rr_stock=0;
   faciliies=0;
@@ -33,7 +33,7 @@ let default_balance_sheet = {
   real_estate=0;
   track=0;
   rolling_stock=0;
-  outstanding_loans=0;
+  outstanding_loans=500;
   stockholders_equity=0;
 }
 
@@ -41,6 +41,10 @@ type monetary = {
   cash: int; (* x1000 *)
   bonds: int;
   yearly_interest_payment: int;
+  treasury_shares: int;
+  other_rr_shares: int;
+  total_shares: int;
+  share_price: int;
   net_worth: int;
   freight_income: (Freight.t, int) Hashtbl.t;
   other_income: int;
@@ -48,15 +52,30 @@ type monetary = {
   last_balance_sheet: balance_sheet;
 } [@@deriving yojson]
 
+let default_monetary difficulty =
+  let share_price =
+    B_options.difficulty_to_enum difficulty + 7
+  in
+  {
+    cash = 1000;
+    bonds = 500;
+    treasury_shares = 0;
+    other_rr_shares = 0;
+    total_shares = 100;
+    share_price;
+    yearly_interest_payment=20;
+    net_worth=50;
+    freight_income=Hashtbl.create 10;
+    other_income=0;
+    expenses=Hashtbl.create 10;
+    last_balance_sheet=default_balance_sheet;
+}
+
 type t = {
   name: string option; (* custom name *)
   trains: Trainmap.t;
   stations: Utils.loc list; (* Stations ordered by creation order *)
   m: monetary;
-  treasury_stock: int;
-  other_rr_stock: int;
-  shares: int;
-  share_price: int;
   track_length: int;
   mutable dist_traveled: int;
   ton_miles: (int * int);
@@ -66,25 +85,11 @@ type t = {
 
 let default difficulty =
   let trains = Trainmap.empty () in
-  let m = {
-    cash = 1000;
-    bonds = 500;
-    yearly_interest_payment=20;
-    net_worth=50;
-    freight_income=Hashtbl.create 10;
-    other_income=0;
-    expenses=Hashtbl.create 10;
-    last_balance_sheet=default_balance_sheet;
-  } in
   {
     name=None;
     stations = [];
-    m;
+    m = default_monetary difficulty;
     trains;
-    treasury_stock=0;
-    other_rr_stock = 0;
-    shares=100;
-    share_price=B_options.difficulty_to_enum difficulty + 7;
     track_length = 0;
     dist_traveled=0;
     ton_miles=(0, 0);

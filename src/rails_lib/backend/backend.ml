@@ -109,6 +109,8 @@ let _player_pay_for_track v ~x ~y ~len ~dir ~player =
 
 let get_cash v ~player = Player.get_cash v.players.(player)
 
+let get_player v player = v.players.(player)
+
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with
   | `Ok -> Tilemap.check_build_station v.map ~x ~y

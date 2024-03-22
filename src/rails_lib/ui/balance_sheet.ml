@@ -32,11 +32,23 @@ let render win (s:State.t) =
   write ~x:x_ytd ~y "YTD Changes";
   let y = y + line in
   write ~x:x_left ~y "Assets:"; let y = y + line in
+
+  let player = Backend.get_player s.backend C.player in
+  let prev_balance_sheet = player.m.last_balance_sheet in
+
   write ~x:x_text ~y "Operating Funds:";
   let funds = Player.get_cash s.backend.players.(C.player) in
   write_money ~x:x_total ~y funds;
+  let ytd_funds = funds - prev_balance_sheet.operating_funds in
+  write_money ~x:x_ytd ~y ytd_funds;
+
   let y = y + line in
-  write ~x:x_text ~y "Treasury Stock:"; let y = y + line in
+
+  write ~x:x_text ~y "Treasury Stock:";
+
+
+  let y = y + line in
+
   write ~x:x_text ~y "Other RR Stock:"; let y = y + line in
   write ~x:x_text ~y "Facilities:"; let y = y + line in
   write ~x:x_text ~y "Industries:"; let y = y + line in
