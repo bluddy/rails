@@ -126,7 +126,7 @@ let render win (s:State.t) =
 
   let y = y + line in
   write ~x:x_text ~y "Stockholders Equity:";
-  let stockholders_equity = -player.m.stock.share_price * Stocks.non_treasury_shares player.m.stock in
+  let stockholders_equity = player.m.stockholders_equity in
   write_total_and_ytd ~y stockholders_equity prev_balance_sheet.stockholders_equity;
 
   let y = y + line + line in

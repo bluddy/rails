@@ -41,6 +41,7 @@ type monetary = {
   cash: int; (* all x1000 *)
   bonds: int; (* money *)
   stock: Stocks.t;
+  stockholders_equity : int;
   owned_industry: int;
   yearly_interest_payment: int;
   net_worth: int;
@@ -54,6 +55,7 @@ let default_monetary ~player difficulty =
   {
     cash = 1000;
     bonds = 500;
+    stockholders_equity = -500;
     stock = Stocks.default_for_player ~player difficulty;
     owned_industry = 0;
     yearly_interest_payment=20;
