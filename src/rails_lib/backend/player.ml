@@ -15,7 +15,7 @@ type balance_sheet = {
   operating_funds: int;
   treasury_stock: int;
   other_rr_stock: int;
-  faciliies: int;
+  facilities: int;
   industries: int;
   real_estate: int;
   track: int;
@@ -28,7 +28,7 @@ let default_balance_sheet = {
   operating_funds=1000;
   treasury_stock=0;
   other_rr_stock=0;
-  faciliies=0;
+  facilities=0;
   industries=0;
   real_estate=0;
   track=0;

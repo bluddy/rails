@@ -190,6 +190,12 @@ let has_upgrade v upgrade =
   let upgrades = get_upgrades v in
   Upgrades.mem upgrades upgrade
 
+let total_upgrade_value v =
+  Upgrades.fold (fun acc upgrade ->
+    acc + price_of_upgrade upgrade)
+    0 @@
+    get_upgrades v
+
 let can_maintain v =
   has_upgrade v EngineShop || has_upgrade v MaintenanceShop
 let can_build_train v = has_upgrade v EngineShop
@@ -414,18 +420,18 @@ let lose_supplies v =
         CCHashtbl.incr info.lost_supply good ~by:(amount - amount2);
       )
 
-  let total_goods_revenue v =
-    match v.info with
-    | Some info ->
-      Goods.Map.fold (fun _ i sum -> sum + i) info.cargo_revenue 0
-    | _ -> 0
+let total_goods_revenue v =
+  match v.info with
+  | Some info ->
+    Goods.Map.fold (fun _ i sum -> sum + i) info.cargo_revenue 0
+  | _ -> 0
 
-  let color_of_rates v = match v.info with
-    | Some info -> begin match info.rates with
-      | `Normal -> Ega.white
-      | `Half   -> Ega.bred
-      | `Double -> Ega.gray
-      end
-    | _ -> failwith "Shouldn't get here"
-       
+let color_of_rates v = match v.info with
+  | Some info -> begin match info.rates with
+    | `Normal -> Ega.white
+    | `Half   -> Ega.bred
+    | `Double -> Ega.gray
+    end
+  | _ -> failwith "Shouldn't get here"
+     
 

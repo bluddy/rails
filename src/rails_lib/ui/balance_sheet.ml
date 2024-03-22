@@ -52,25 +52,35 @@ let render win (s:State.t) =
   write_total_and_ytd ~y stock prev_balance_sheet.treasury_stock;
 
   let y = y + line in
-  write ~x:x_text ~y "Other RR Stock:"
+  write ~x:x_text ~y "Other RR Stock:";
   let other_rr_stock =
-    Iter.fold (fun total ai_player_idx ->
-      if ai_player_idx = C.player then total
+    Iter.fold (fun acc ai_player_idx ->
+      if ai_player_idx = C.player then acc
       else
         let ai_player = Backend.get_player s.backend ai_player_idx in
         let ai_stock = ai_player.m.stock in
+        let owned_shares = Stocks.get_owned_shares ai_stock ai_player_idx in
         let owned_value = Stocks.compute_owned_share_value
-           ~total_shares:ai_stock.total_shares
-           ~owned_shares:(Stocks.get_owned_shares ai_stock ai_player_idx)
-           ~share_price:ai_stock.share_price
+           ~total_shares:ai_stock.total_shares ~owned_shares ~share_price:ai_stock.share_price
         in
-        total + owned_value)
+        acc + owned_value)
     0
     Iter.(0 -- (C.num_players - 1))
   in
   write_total_and_ytd ~y other_rr_stock prev_balance_sheet.other_rr_stock;
 
-  write ~x:x_text ~y "Facilities:"; let y = y + line in
+  let y = y + line in
+  write ~x:x_text ~y "Facilities:";
+  let facilities = 
+    List.fold_left (fun acc loc ->
+      let station = Station_map.get_exn loc s.backend.stations in
+      acc + Station.total_upgrade_value station)
+    0
+    player.stations
+  in
+  write_total_and_ytd ~y facilities prev_balance_sheet.facilities;
+
+  let y = y + line in
   write ~x:x_text ~y "Industries:"; let y = y + line in
   write ~x:x_text ~y "Real Estate:"; let y = y + line in
   write ~x:x_text ~y @@ Printf.sprintf "Track: %d miles:" 41; let y = y + line in
