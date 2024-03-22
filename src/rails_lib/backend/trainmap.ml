@@ -137,3 +137,9 @@ let find_ret_index (f:ro Train.t -> bool) (v:t) =
 let get_at_loc loc (v:t) =
   Hashtbl.find_opt v.tile_idx loc |> Option.get_or ~default:[]
 
+let total_engine_value (v:t) =
+  fold (fun acc train -> acc + Train.get_engine_cost train) v ~init:0
+
+let total_car_value (v:t) =
+  C.car_cost * fold (fun acc train -> acc + Train.get_num_of_cars train) v ~init:0
+

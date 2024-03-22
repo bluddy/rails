@@ -553,3 +553,8 @@ let calc_car_loc (v:'a t) trackmap car_idx ~car_pixels =
 
 let get_car_dir (v:'a t) i = (History.get v.history (i+1)).dir
 
+let get_engine_cost v = v.engine.price
+
+let get_num_of_cars v = List.length v.cars
+
+

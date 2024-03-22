@@ -103,7 +103,13 @@ let render win (s:State.t) =
   write_total_and_ytd ~y track prev_balance_sheet.track;
 
   let y = y + line in
-  write ~x:x_text ~y "Rolling Stock:"; let y = y + line + line in
+  write ~x:x_text ~y "Rolling Stock:";
+  let engine_cost = Trainmap.total_engine_value player.trains in
+  let car_cost = Trainmap.total_car_value player.trains in
+  let rolling_stock = engine_cost + car_cost in
+  write_total_and_ytd ~y rolling_stock prev_balance_sheet.rolling_stock;
+    
+  let y = y + line + line in
   write ~x:x_left ~y "Liabilities:"; let y = y + line in
   write ~x:x_text ~y "Outstandling Loans:"; let y = y + line in
   write ~x:x_text ~y "Stockholders Equity:"; let y = y + line + line in

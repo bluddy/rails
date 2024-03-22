@@ -36,3 +36,6 @@ val find_ret_index: (ro Train.t -> bool) -> t -> Id.t option
 
 val get_at_loc: Utils.loc -> t -> Id.t list
 
+val total_engine_value: t -> int
+
+val total_car_value: t -> int
