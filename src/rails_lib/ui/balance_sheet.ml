@@ -3,6 +3,8 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 module R = Renderer
 
+(* TODO: for some reason, we have different ways of rounding different assets of the balance sheet *)
+
 let calc_real_estate region track_map tile_map ~player =
   Trackmap.fold (fun (x, y) track acc ->
     if track.player = player then
@@ -83,7 +85,7 @@ let render win (s:State.t) =
   let facilities = 
     List.fold_left (fun acc loc ->
       let station = Station_map.get_exn loc s.backend.stations in
-      acc + Station.total_upgrade_value station)
+      acc + Station.value_of station + Station.total_upgrade_value station)
     0
     player.stations
   in

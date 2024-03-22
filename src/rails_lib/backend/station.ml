@@ -329,6 +329,10 @@ let check_rate_war_lose_supplies v ~difficulty =
       info.supply
   | _ -> ()
 
+let value_of station = match station.info with
+  | None -> price_of `SignalTower
+  | Some info -> price_of info.kind
+
   (* Call periodically per station -- impure for performance *)
   (* TODO: better to memoize demand/supply calculation and recompute when things change *)
 let update_supply_demand v tilemap ~climate ~simple_economy =
