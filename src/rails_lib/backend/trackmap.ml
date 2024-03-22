@@ -36,6 +36,14 @@ let iter v f =
     f x y track)
   v.map
 
+let fold f v ~init =
+  IntMap.fold (fun i track acc ->
+    let loc = Utils.x_y_of_offset v.width i in
+    f loc track acc
+  )
+  v.map
+  init
+
 let out_of_bounds v ~x ~y =
   x < 0 || y < 0 || x >= v.width || y >= v.height
 
@@ -235,4 +243,22 @@ let has_station (x,y) v =
   match get ~x ~y v with
   | Some t -> Track.is_station t
   | None -> false
+
+let calc_total_dist v ~player =
+  IntMap.fold (fun _ track acc ->
+    if track.Track.player = player then
+      acc + Track.calc_dist track
+    else 
+      acc)
+  v.map
+  0
+
+let calc_total_land_cost v ~player =
+  IntMap.fold (fun _ track acc ->
+    if track.Track.player = player then
+      acc + Track.calc_dist track
+    else 
+      acc)
+  v.map
+  0
 

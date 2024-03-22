@@ -3,13 +3,18 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 module R = Renderer
 
-(* let compute_ytd backend player last_year = *)
-(*   (* Compute the current balance sheet *) *)
-(*   let operating_funds = player.cash in *)
-(*   let treasury_stock = player.treasury_stock in *)
-(*   let other_rr_stock = player.other_rr_stock in *)
-(*   () *)
-
+let calc_real_estate region track_map tile_map ~player =
+  Trackmap.fold (fun (x, y) track acc ->
+    if track.player = player then
+      let tile = Tilemap.get_tile tile_map x y in
+      let info = Tile.Info.get region tile in
+      let cost = info.cost in
+      let track_dist = Track.calc_dist ~use_double:false track in
+      acc + track_dist * cost
+    else acc)
+  track_map
+  ~init:0
+  
 
 let render win (s:State.t) =
   let x_left, x_text, x_total, x_ytd = 8, 16, 128, 224 in
@@ -81,9 +86,23 @@ let render win (s:State.t) =
   write_total_and_ytd ~y facilities prev_balance_sheet.facilities;
 
   let y = y + line in
-  write ~x:x_text ~y "Industries:"; let y = y + line in
-  write ~x:x_text ~y "Real Estate:"; let y = y + line in
-  write ~x:x_text ~y @@ Printf.sprintf "Track: %d miles:" 41; let y = y + line in
+  write ~x:x_text ~y "Industries:";
+  let industries = player.m.owned_industry in
+  write_total_and_ytd ~y industries prev_balance_sheet.industries;
+
+   let y = y + line in
+  write ~x:x_text ~y "Real Estate:";
+  let real_estate = calc_real_estate s.backend.region s.backend.track s.backend.map ~player:C.player in
+  write_total_and_ytd ~y real_estate prev_balance_sheet.real_estate;
+
+   let y = y + line in
+  let dist = Trackmap.calc_total_dist s.backend.track ~player:C.player in
+  let dist = dist * Region.dist_mult s.backend.region in
+  write ~x:x_text ~y @@ Printf.sprintf "Track: %d miles:" dist;
+  let track = dist * 3 / 2 in
+  write_total_and_ytd ~y track prev_balance_sheet.track;
+
+  let y = y + line in
   write ~x:x_text ~y "Rolling Stock:"; let y = y + line + line in
   write ~x:x_left ~y "Liabilities:"; let y = y + line in
   write ~x:x_text ~y "Outstandling Loans:"; let y = y + line in

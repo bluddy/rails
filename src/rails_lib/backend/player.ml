@@ -38,9 +38,10 @@ let default_balance_sheet = {
 }
 
 type monetary = {
-  cash: int; (* x1000 *)
+  cash: int; (* all x1000 *)
   bonds: int;
   stock: Stocks.t;
+  owned_industry: int;
   yearly_interest_payment: int;
   net_worth: int;
   freight_income: (Freight.t, int) Hashtbl.t;
@@ -54,6 +55,7 @@ let default_monetary ~player difficulty =
     cash = 1000;
     bonds = 500;
     stock = Stocks.default_for_player ~player difficulty;
+    owned_industry = 0;
     yearly_interest_payment=20;
     net_worth=50;
     freight_income=Hashtbl.create 10;

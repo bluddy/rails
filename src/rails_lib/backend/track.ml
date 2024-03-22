@@ -187,3 +187,17 @@ let double_track_offsets v =
   ) else
     (-x_offset, -y_offset), (x_offset, y_offset)
 
+let calc_dist ?(use_double=true) v =
+  (* Compute the total distance of a piece of track
+     Use_double: double affects this distance or not
+   *)
+    let is_double = acts_like_double v in
+    Dir.Set.fold (fun acc dir ->
+      let dist = if Dir.is_diagonal dir then 3 else 2 in
+      let dist = if use_double && is_double then dist * 2 else dist in
+      acc + dist)
+    0
+    v.dirs
+
+
+

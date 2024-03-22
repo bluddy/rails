@@ -21,3 +21,8 @@ let is_us = function
 let is_west_us = function
   | WestUS -> true
   | _ -> false
+
+  (* Handle larger scale of Europe map *)
+let dist_mult = function
+  | Europe -> 2
+  | _ -> 1
