@@ -14,6 +14,10 @@ let calc_real_estate region track_map tile_map ~player =
     else acc)
   track_map
   ~init:0
+
+let compute_profit (balance_sheet:Player.balance_sheet) =
+  let b = balance_sheet in
+  b.operating_funds + b.treasury_stock + b.other_rr_stock + b.facilities + b.industries + b.real_estate + b.track + b.rolling_stock + b.outstanding_loans + b.stockholders_equity
   
 
 let render win (s:State.t) =
@@ -27,8 +31,8 @@ let render win (s:State.t) =
   let line = 8 in
   let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
   let write_money ~x ~y money =
-    let money_s = Utils.show_cash ~spaces:6 ~region:s.backend.region money in
-    let color = if money < 0 then Ega.red else Ega.black in
+    let money_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region:s.backend.region money in
+    let color = if money < 0 then Ega.bred else Ega.black in
     write ~x ~y ~color money_s
   in
   let write_total_and_ytd ~y money oldval =
@@ -90,12 +94,12 @@ let render win (s:State.t) =
   let industries = player.m.owned_industry in
   write_total_and_ytd ~y industries prev_balance_sheet.industries;
 
-   let y = y + line in
+  let y = y + line in
   write ~x:x_text ~y "Real Estate:";
   let real_estate = calc_real_estate s.backend.region s.backend.track s.backend.map ~player:C.player in
   write_total_and_ytd ~y real_estate prev_balance_sheet.real_estate;
 
-   let y = y + line in
+  let y = y + line in
   let dist = Trackmap.calc_total_dist s.backend.track ~player:C.player in
   let dist = dist * Region.dist_mult s.backend.region in
   write ~x:x_text ~y @@ Printf.sprintf "Track: %d miles:" dist;
@@ -108,12 +112,29 @@ let render win (s:State.t) =
   let car_cost = Trainmap.total_car_value player.trains in
   let rolling_stock = engine_cost + car_cost in
   write_total_and_ytd ~y rolling_stock prev_balance_sheet.rolling_stock;
+
+  let assets = funds + stock + other_rr_stock + facilities + industries + real_estate + track + rolling_stock in
+  R.draw_line win ~x1:128 ~y1:120 ~x2:180 ~y2:120 ~color:Ega.black;
+  let y = y + line + 2 in
+  write_money ~x:x_total ~y assets;
     
-  let y = y + line + line in
+  let y = y + line in
   write ~x:x_left ~y "Liabilities:"; let y = y + line in
-  write ~x:x_text ~y "Outstandling Loans:"; let y = y + line in
-  write ~x:x_text ~y "Stockholders Equity:"; let y = y + line + line in
+  write ~x:x_text ~y "Outstandling Loans:";
+  let outstanding_loans = -player.m.bonds in
+  write_total_and_ytd ~y outstanding_loans prev_balance_sheet.outstanding_loans;
+
+  let y = y + line in
+  write ~x:x_text ~y "Stockholders Equity:";
+  let stockholders_equity = -player.m.stock.share_price * Stocks.non_treasury_shares player.m.stock in
+  write_total_and_ytd ~y stockholders_equity prev_balance_sheet.stockholders_equity;
+
+  let y = y + line + line in
   write ~x:x_text ~y "PROFIT:";
+  let liabilities = outstanding_loans + stockholders_equity in
+  let profit = assets + liabilities in (* negative *)
+  let old_profit = compute_profit prev_balance_sheet in
+  write_total_and_ytd ~y profit old_profit;
   ()
 
     

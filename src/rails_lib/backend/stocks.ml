@@ -9,18 +9,20 @@ type t = {
   share_price: int;
 } [@@ deriving yojson]
 
-let default_for_player ~player difficulty =
-  let share_price =
+let starting_share_price difficulty = 
     B_options.difficulty_to_enum difficulty + 7
-  in
+
+let default_for_player ~player difficulty =
   {
     player_idx = player;
     owned_shares = Array.make C.num_players 0;
     total_shares = 100;
-    share_price;
+    share_price = starting_share_price difficulty;
   }
 
 let treasury_shares v = v.owned_shares.(v.player_idx)
+
+let non_treasury_shares v = v.total_shares - treasury_shares v
 
 let get_owned_shares v player_idx = v.owned_shares.(player_idx)
 

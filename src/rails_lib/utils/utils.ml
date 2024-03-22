@@ -405,18 +405,23 @@ let thd3 (_,_,x) = x
 let map_fst f (x, y) = (f x, y)
 let map_snd f (x, y) = (x, f y)
 
-let show_cash ?(spaces=0) ?region cash =
+let show_cash ?(show_neg=true) ?(spaces=0) ?region cash =
+  (* show_neg: have a negative symbol
+     spaces: spaces to use for the upper thousands
+     region: determines money symbol to use
+  *)
   let b = Buffer.create 20 in
   begin match region with
   | None -> ()
   | Some region ->
     Buffer.add_char b (Region.money_symbol region)
   end;
+  let cash = if not show_neg then abs cash else cash in
   let money_s = Printf.sprintf "%#d" cash
     |> String.map (function '_' -> ',' | x -> x)
   in
   let len = String.length money_s in
-  for _=0 to spaces-1-len do
+  for _=0 to spaces - 1 - len do
     Buffer.add_char b ' ';
   done;
   Buffer.add_string b money_s;

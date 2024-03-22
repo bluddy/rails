@@ -33,13 +33,13 @@ let default_balance_sheet = {
   real_estate=0;
   track=0;
   rolling_stock=0;
-  outstanding_loans=500;
-  stockholders_equity=0;
+  outstanding_loans = -500;
+  stockholders_equity = -500;
 }
 
 type monetary = {
   cash: int; (* all x1000 *)
-  bonds: int;
+  bonds: int; (* money *)
   stock: Stocks.t;
   owned_industry: int;
   yearly_interest_payment: int;
