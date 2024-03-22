@@ -40,11 +40,8 @@ let default_balance_sheet = {
 type monetary = {
   cash: int; (* x1000 *)
   bonds: int;
+  stock: Stocks.t;
   yearly_interest_payment: int;
-  treasury_shares: int;
-  other_rr_shares: int;
-  total_shares: int;
-  share_price: int;
   net_worth: int;
   freight_income: (Freight.t, int) Hashtbl.t;
   other_income: int;
@@ -53,16 +50,10 @@ type monetary = {
 } [@@deriving yojson]
 
 let default_monetary difficulty =
-  let share_price =
-    B_options.difficulty_to_enum difficulty + 7
-  in
   {
     cash = 1000;
     bonds = 500;
-    treasury_shares = 0;
-    other_rr_shares = 0;
-    total_shares = 100;
-    share_price;
+    stock = Stocks.default_for_player difficulty;
     yearly_interest_payment=20;
     net_worth=50;
     freight_income=Hashtbl.create 10;

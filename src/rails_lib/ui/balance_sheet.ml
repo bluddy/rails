@@ -26,29 +26,32 @@ let render win (s:State.t) =
     let color = if money < 0 then Ega.red else Ega.black in
     write ~x ~y ~color money_s
   in
+  let write_total_and_ytd ~y money oldval =
+    write_money ~x:x_total ~y money;
+    let ytd_money = money - oldval in
+    write_money ~x:x_ytd ~y ytd_money
+  in
   write ~x:80 ~y rr_name;
   let y = y + line + line in
   write ~x:x_total ~y "Total";
   write ~x:x_ytd ~y "YTD Changes";
   let y = y + line in
-  write ~x:x_left ~y "Assets:"; let y = y + line in
+  write ~x:x_left ~y "Assets:";
 
   let player = Backend.get_player s.backend C.player in
   let prev_balance_sheet = player.m.last_balance_sheet in
 
+   let y = y + line in
   write ~x:x_text ~y "Operating Funds:";
   let funds = Player.get_cash s.backend.players.(C.player) in
-  write_money ~x:x_total ~y funds;
-  let ytd_funds = funds - prev_balance_sheet.operating_funds in
-  write_money ~x:x_ytd ~y ytd_funds;
+  write_total_and_ytd ~y funds prev_balance_sheet.operating_funds;
 
   let y = y + line in
-
   write ~x:x_text ~y "Treasury Stock:";
-
+  let stock = Stocks.compute_treasury_stock player.m.stock in
+  write_total_and_ytd ~y stock prev_balance_sheet.treasury_stock;
 
   let y = y + line in
-
   write ~x:x_text ~y "Other RR Stock:"; let y = y + line in
   write ~x:x_text ~y "Facilities:"; let y = y + line in
   write ~x:x_text ~y "Industries:"; let y = y + line in
