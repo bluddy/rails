@@ -22,10 +22,12 @@ let default_for_player ~player difficulty =
 
 let treasury_shares v = v.owned_shares.(v.player_idx)
 
-let compute_treasury_stock v =
+let get_owned_shares v player_idx = v.owned_shares.(player_idx)
+
+let compute_owned_share_value ~total_shares ~owned_shares ~share_price =
   (* We need to account for the cost of selling all our stock 10k shares at a time *)
-  let non_treasury_shares = v.total_shares - (treasury_shares v) in
-  let sale_rounds = (treasury_shares v) / 10 in
+  let non_treasury_shares = total_shares - owned_shares in
+  let sale_rounds = owned_shares / 10 in
   let rec loop i ~total ~share_price =
     if i < sale_rounds then
       let loss = (10 * share_price ) / (10 * i + non_treasury_shares + 10) in
@@ -35,4 +37,9 @@ let compute_treasury_stock v =
     else
       total
   in
-  loop 0 ~total:0 ~share_price:v.share_price
+  loop 0 ~total:0 ~share_price
+
+let compute_treasury_stock v =
+  (* How much the player owns in itself *)
+  compute_owned_share_value ~total_shares:v.total_shares ~owned_shares:(treasury_shares v) ~share_price:v.share_price
+

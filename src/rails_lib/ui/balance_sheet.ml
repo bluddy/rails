@@ -52,7 +52,24 @@ let render win (s:State.t) =
   write_total_and_ytd ~y stock prev_balance_sheet.treasury_stock;
 
   let y = y + line in
-  write ~x:x_text ~y "Other RR Stock:"; let y = y + line in
+  write ~x:x_text ~y "Other RR Stock:"
+  let other_rr_stock =
+    Iter.fold (fun total ai_player_idx ->
+      if ai_player_idx = C.player then total
+      else
+        let ai_player = Backend.get_player s.backend ai_player_idx in
+        let ai_stock = ai_player.m.stock in
+        let owned_value = Stocks.compute_owned_share_value
+           ~total_shares:ai_stock.total_shares
+           ~owned_shares:(Stocks.get_owned_shares ai_stock ai_player_idx)
+           ~share_price:ai_stock.share_price
+        in
+        total + owned_value)
+    0
+    Iter.(0 -- (C.num_players - 1))
+  in
+  write_total_and_ytd ~y other_rr_stock prev_balance_sheet.other_rr_stock;
+
   write ~x:x_text ~y "Facilities:"; let y = y + line in
   write ~x:x_text ~y "Industries:"; let y = y + line in
   write ~x:x_text ~y "Real Estate:"; let y = y + line in
