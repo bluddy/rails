@@ -3,6 +3,7 @@
 (* Each time period is both 2 years and a 24 hour day *)
 
 let player = 0
+let num_players = 4
 
 let tick_ms = 15 (* ms *)
 

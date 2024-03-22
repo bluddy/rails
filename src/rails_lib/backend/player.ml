@@ -49,11 +49,11 @@ type monetary = {
   last_balance_sheet: balance_sheet;
 } [@@deriving yojson]
 
-let default_monetary difficulty =
+let default_monetary ~player difficulty =
   {
     cash = 1000;
     bonds = 500;
-    stock = Stocks.default_for_player difficulty;
+    stock = Stocks.default_for_player ~player difficulty;
     yearly_interest_payment=20;
     net_worth=50;
     freight_income=Hashtbl.create 10;
@@ -74,12 +74,12 @@ type t = {
   goods_delivered: Goods.Set.t;
 } [@@deriving yojson]
 
-let default difficulty =
+let default ~player difficulty =
   let trains = Trainmap.empty () in
   {
     name=None;
     stations = [];
-    m = default_monetary difficulty;
+    m = default_monetary ~player difficulty;
     trains;
     track_length = 0;
     dist_traveled=0;
