@@ -517,7 +517,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Options option), _ ->
             {v with view=Mapview.update_option v.view option true}, nobaction
         | On (`Balance_sheet), _ ->
-            {v with mode=Balance_sheet}, nobaction
+            let b = Balance_sheet.create s ~player_idx:0 in
+            {v with mode=Balance_sheet b}, nobaction
         | On (`Income_statement), _ ->
             {v with mode=Income_statement}, nobaction
         | On (`Accomplishments), _ ->
@@ -722,7 +723,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         v, action
 
     | StationReport _
-    | Balance_sheet
+    | Balance_sheet _
     | Income_statement
     | Efficiency_report
     | Accomplishments -> modal_screen_no_input v event
@@ -955,8 +956,8 @@ let render (win:R.window) (s:State.t) v =
         Build_train.render win s state
     | TrainReport state ->
         Train_report.render win s state
-    | Balance_sheet ->
-        Balance_sheet.render win s
+    | Balance_sheet state ->
+        Balance_sheet_view.render win s state
     | Income_statement ->
         Income_statement.render win s
     | Accomplishments ->

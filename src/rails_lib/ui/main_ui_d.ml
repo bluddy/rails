@@ -102,7 +102,7 @@ and 'a mode =
     | `AddCars of 'a Build_train_d.addcars
   ]
   | TrainReport of 'a Train_report_d.t
-  | Balance_sheet
+  | Balance_sheet of Balance_sheet_d.t
   | Accomplishments
   | Income_statement
   | Efficiency_report

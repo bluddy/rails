@@ -11,32 +11,6 @@ type expense =
   | StationExpense
   [@@deriving yojson]
 
-type balance_sheet = {
-  operating_funds: int;
-  treasury_stock: int;
-  other_rr_stock: int;
-  facilities: int;
-  industries: int;
-  real_estate: int;
-  track: int;
-  rolling_stock: int;
-  outstanding_loans: int;
-  stockholders_equity: int;
-} [@@deriving yojson]
-
-let default_balance_sheet = {
-  operating_funds=1000;
-  treasury_stock=0;
-  other_rr_stock=0;
-  facilities=0;
-  industries=0;
-  real_estate=0;
-  track=0;
-  rolling_stock=0;
-  outstanding_loans = -500;
-  stockholders_equity = -500;
-}
-
 type monetary = {
   cash: int; (* all x1000 *)
   bonds: int; (* money *)
@@ -48,7 +22,7 @@ type monetary = {
   freight_income: (Freight.t, int) Hashtbl.t;
   other_income: int;
   expenses: (expense, int) Hashtbl.t;
-  last_balance_sheet: balance_sheet;
+  last_balance_sheet: Balance_sheet_d.t;
 } [@@deriving yojson]
 
 let default_monetary ~player difficulty =
@@ -63,7 +37,7 @@ let default_monetary ~player difficulty =
     freight_income=Hashtbl.create 10;
     other_income=0;
     expenses=Hashtbl.create 10;
-    last_balance_sheet=default_balance_sheet;
+    last_balance_sheet=Balance_sheet_d.default;
 }
 
 type t = {
