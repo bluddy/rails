@@ -959,7 +959,7 @@ let render (win:R.window) (s:State.t) v =
     | Balance_sheet state ->
         Balance_sheet_view.render win s state
     | Income_statement ->
-        Income_statement.render win s
+        Income_statement_view.render win s
     | Accomplishments ->
         Accomplishments.render win s
     | Efficiency_report ->

@@ -1,5 +1,4 @@
 open! Containers
-open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 module R = Renderer
 

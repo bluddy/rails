@@ -49,7 +49,7 @@ let default region resources ~random ~seed =
     year;
     year_start=year;
     fiscal_period=`First;
-    climate=Moderation;
+    climate=Normal;
     players;
     map;
     region;

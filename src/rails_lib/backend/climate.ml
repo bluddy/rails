@@ -2,9 +2,9 @@
 type t =
   | Panic
   | Recession
-  | Moderation
+  | Normal
   | Prosperity
   | Boom
-  [@@deriving enum, yojson]
+  [@@deriving enum, yojson, show{with_path=false}]
 
-let default = Moderation
+let default = Normal
