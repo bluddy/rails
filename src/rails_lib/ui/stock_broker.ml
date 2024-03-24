@@ -91,7 +91,8 @@ let render win (s:State.t) v =
     s.backend.players
   in
   let y = y + line in
-  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show s.backend.climate) 5;
+  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show s.backend.climate)
+    (Climate.interest_rate s.backend.climate 0 |> Option.get_exn_or "Missing interest rate");
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
   ()
 
