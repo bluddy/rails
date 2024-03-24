@@ -360,11 +360,11 @@ module CarsTop = struct
     tex 200 120 @@ Engine(Engine.SteamBig);
     tex 200 140 @@ Engine(Engine.SteamSmall);
     tex 40 120 @@ Engine(Engine.Diesel);
-    tex 40 140 @@ Car(Freight.Mail);
-    tex 200 160 @@ Car(Freight.Passenger);
-    tex 40 160 @@ Car(Freight.Fast);
-    tex 200 180 @@ Car(Freight.Slow);
-    tex 40 180 @@ Car(Freight.Bulk);
+    tex 40 140 @@ Car(`Mail);
+    tex 200 160 @@ Car(`Passenger);
+    tex 40 160 @@ Car(`Fast);
+    tex 200 180 @@ Car(`Slow);
+    tex 40 180 @@ Car(`Bulk);
     hash
 end
 
@@ -448,11 +448,11 @@ module RouteScreen = struct
     let tex_part = tex_full ~arr:ndarray ~hash:car_hash ~dy:8 in
     let tex = tex_part ~dx:20 in
 
-    tex (`Freight Freight.Mail) 139 97;
-    tex (`Freight Passenger) 139 107;
-    tex (`Freight Fast) 139 117;
-    tex (`Freight Slow) 139 127;
-    tex (`Freight Bulk) 139 137;
+    tex (`Freight `Mail) 139 97;
+    tex (`Freight `Passenger) 139 107;
+    tex (`Freight `Fast) 139 117;
+    tex (`Freight `Slow) 139 127;
+    tex (`Freight `Bulk) 139 137;
     tex `Caboose 200 97;
 
     let cars ~y ~dx car_age_fn =

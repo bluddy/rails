@@ -2,26 +2,16 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 
-type expense =
-  | LandExpense
-  | TrackExpense
-  | TunnelExpense
-  | TrainExpense
-  | InterestExpense
-  | StationExpense
-  [@@deriving yojson]
-
 type monetary = {
   cash: int; (* all x1000 *)
   bonds: int; (* money *)
   stock: Stocks.t;
-  stockholders_equity : int;
+  stockholders_equity : int; (* not sure how this changes *)
   owned_industry: int;
   yearly_interest_payment: int;
   net_worth: int;
-  freight_income: (Freight.t, int) Hashtbl.t;
-  other_income: int;
-  expenses: (expense, int) Hashtbl.t;
+  income_statement: Income_statement_d.t;
+  last_income_statement: Income_statement_d.t;
   last_balance_sheet: Balance_sheet_d.t;
 } [@@deriving yojson]
 
@@ -34,9 +24,8 @@ let default_monetary ~player difficulty =
     owned_industry = 0;
     yearly_interest_payment=20;
     net_worth=50;
-    freight_income=Hashtbl.create 10;
-    other_income=0;
-    expenses=Hashtbl.create 10;
+    income_statement=Income_statement_d.default;
+    last_income_statement=Income_statement_d.default;
     last_balance_sheet=Balance_sheet_d.default;
 }
 
@@ -68,17 +57,15 @@ let default ~player difficulty =
 
 let get_cash v = v.m.cash
 
-let decr_cash ~cash v =
-  let m = {v.m with cash = v.m.cash - cash} in
-  {v with m}
+let pay expense money (v:t) =
+  let income_statement = Income_statement.deduct expense money v.m.income_statement in
+  let cash = v.m.cash - money in
+  {v with m = {v.m with cash; income_statement}}
 
-let incr_cash ~cash v =
-  let m = {v.m with cash = v.m.cash + cash} in
-  {v with m}
-
-let pay expense cash v =
-  Hashtbl.incr ~by:cash v.m.expenses expense;
-  decr_cash ~cash v
+let earn revenue money (v:t) =
+  let income_statement = Income_statement.add_revenue revenue money v.m.income_statement in
+  let cash = v.m.cash + money in
+  {v with m = {v.m with cash; income_statement}}
 
 let get_name v station_map cities = match v.name with
   | Some name -> name

@@ -190,7 +190,7 @@ let freight_of_cars cars =
     let freight2 = Car.get_freight car in
     if Freight.compare freight2 freight > 0
     then freight2 else freight)
-  Freight.Mail
+  `Mail
   cars
 
 let freight_set_of_cars cars =
