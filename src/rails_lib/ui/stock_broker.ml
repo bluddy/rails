@@ -5,6 +5,8 @@ module R = Renderer
 module B = Backend
 open Utils.Infix
 
+let sp = Printf.sprintf
+
 let make_menu fonts =
   let open Menu in
 
@@ -46,8 +48,28 @@ let make (s:State.t) =
 let render win (s:State.t) v =
   R.paint_screen win ~color:Ega.white;
   let dims = s.ui.dims in
-  Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
+  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
   R.draw_rect win ~x:2 ~y:(2 + C.menu_h) ~w:(dims.screen.w - 4) ~h:(dims.screen.h - 4 - C.menu_h) ~color:Ega.black ~fill:false;
+  write ~x:100 ~y:12 "Financial Summaries";
+
+  let player = Backend.get_player s.backend C.player in
+  let name = Player.get_name player s.backend.stations s.backend.cities in
+  let region = s.backend.region in
+  let x_left, x_right = 8, 160 in
+  let y = 24 in
+  let line = 8 in
+
+  write ~x:x_left ~y name;
+  let cash_s = Utils.show_cash ~region ~spaces:7 player.m.cash in
+  write ~x:x_right ~y @@ sp "Cash:%s" cash_s;
+  let y = y + line in
+  write ~x:x_left ~y @@ sp "Track: %d miles" @@ player.track_length;
+  write ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 player.m.bonds;
+  let y = y + line in
+  write ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 player.m.net_worth;
+  write ~x:x_right ~y @@ sp "Stock at %s per share" @@ Utils.show_cash ~ks:false ~region player.m.stock.share_price;
+
+  Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
   ()
 
 let handle_event (s:State.t) v (event:Event.t) =

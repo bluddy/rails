@@ -405,7 +405,7 @@ let thd3 (_,_,x) = x
 let map_fst f (x, y) = (f x, y)
 let map_snd f (x, y) = (x, f y)
 
-let show_cash ?(show_neg=true) ?(spaces=0) ?region cash =
+let show_cash ?(ks=true) ?(show_neg=true) ?(spaces=0) ?region cash =
   (* show_neg: have a negative symbol
      spaces: spaces to use for the upper thousands
      region: determines money symbol to use
@@ -425,7 +425,9 @@ let show_cash ?(show_neg=true) ?(spaces=0) ?region cash =
     Buffer.add_char b ' ';
   done;
   Buffer.add_string b money_s;
-  Buffer.add_string b ",000";
+  if ks then (
+    Buffer.add_string b ",000"
+  );
   Buffer.contents b
 
 let other_period = function
