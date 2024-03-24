@@ -52,26 +52,46 @@ let render win (s:State.t) v =
   R.draw_rect win ~x:2 ~y:(2 + C.menu_h) ~w:(dims.screen.w - 4) ~h:(dims.screen.h - 4 - C.menu_h) ~color:Ega.black ~fill:false;
   write ~x:100 ~y:12 "Financial Summaries";
 
-  let player = Backend.get_player s.backend C.player in
-  let name = Player.get_name player s.backend.stations s.backend.cities in
   let region = s.backend.region in
   let x_left, x_right = 8, 160 in
   let y = 24 in
   let line = 8 in
 
-  write ~x:x_left ~y name;
-  let cash_s = Utils.show_cash ~region ~spaces:7 player.m.cash in
-  write ~x:x_right ~y @@ sp "Cash:%s" cash_s;
-  let y = y + line in
-  write ~x:x_left ~y @@ sp "Track: %d miles" @@ player.track_length;
-  write ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 player.m.bonds;
-  let y = y + line in
-  write ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 player.m.net_worth;
-  write ~x:x_right ~y @@ sp "Stock at %s.00 per share" @@ Utils.show_cash ~ks:false ~region player.m.stock.share_price;
-  let y = y + line in
-  let treasury, non = Stocks.treasury_shares player.m.stock, Stocks.non_treasury_shares player.m.stock in
-  write ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" treasury non;
+  let render_player player y =
+    let name = Player.get_name player s.backend.stations s.backend.cities in
+    let color = match player.ai with
+    | Some opponent ->
+      let color = Ega.green in
+      write ~color ~x:x_left ~y @@ sp "%s's" @@ Opponent.show opponent;
+      let y = y + line in
+      write ~color ~x:x_left ~y name;
+      color
 
+    | None ->
+      write ~x:x_left ~y name;
+      let y = y + line in
+      write ~x:x_left ~y @@ sp "Track: %d miles" @@ player.track_length;
+      Ega.black
+    in
+    let cash_s = Utils.show_cash ~region ~spaces:7 player.m.cash in
+    write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
+    let y = y + line in
+    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 player.m.bonds;
+    let y = y + line in
+    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 player.m.net_worth;
+    write ~color ~x:x_right ~y @@ sp "Stock at %s.00/share" @@ Utils.show_cash ~ks:false ~region player.m.stock.share_price;
+    let y = y + line in
+    let treasury, non = Stocks.treasury_shares player.m.stock, Stocks.non_treasury_shares player.m.stock in
+    write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" treasury non;
+    y + line
+  in
+  let y =
+    Array.fold (fun y player -> render_player player y)
+    y
+    s.backend.players
+  in
+  let y = y + line in
+  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show s.backend.climate) 5;
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
   ()
 
