@@ -59,19 +59,19 @@ let render win (s:State.t) v =
 
   let render_player player y =
     let name = Player.get_name player s.backend.stations s.backend.cities in
-    let color = match player.ai with
+    let is_ai, color = match player.ai with
     | Some opponent ->
       let color = Ega.green in
       write ~color ~x:x_left ~y @@ sp "%s's" @@ Opponent.show opponent;
       let y = y + line in
       write ~color ~x:x_left ~y name;
-      color
+      true, color
 
     | None ->
       write ~x:x_left ~y name;
       let y = y + line in
       write ~x:x_left ~y @@ sp "Track: %d miles" @@ player.track_length;
-      Ega.black
+      false, Ega.black
     in
     let cash_s = Utils.show_cash ~region ~spaces:7 player.m.cash in
     write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
@@ -79,7 +79,9 @@ let render win (s:State.t) v =
     write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 player.m.bonds;
     let y = y + line in
     write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 player.m.net_worth;
-    write ~color ~x:x_right ~y @@ sp "Stock at %s.00/share" @@ Utils.show_cash ~ks:false ~region player.m.stock.share_price;
+    let per_s = if is_ai then "/" else " per " in
+    write ~color ~x:x_right ~y @@ sp "Stock at %s.00%sshare"
+      (Utils.show_cash ~ks:false ~region player.m.stock.share_price) per_s;
     let y = y + line in
     let treasury, non = Stocks.treasury_shares player.m.stock, Stocks.non_treasury_shares player.m.stock in
     write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" treasury non;
