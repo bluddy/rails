@@ -433,10 +433,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _ ->
           false, v.screen, None, nobaction
       in
-      let v =
-        if menu =!= v.menu || screen =!= v.screen || car_menu =!= v.car_menu then
-          {v with menu; screen; car_menu} else v
-      in
+      let v = [%up {v with menu; screen; car_menu}] in
       let exit = Event.pressed_esc event || exit in
       exit, v, bk_action
 

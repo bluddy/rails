@@ -22,3 +22,4 @@ type t =
   | GeorgeSHudson
   | HelmuthVonMoltke
   | BaronRothschild
+  [@@deriving yojson]

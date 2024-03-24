@@ -39,6 +39,7 @@ type t = {
   ton_miles: (int * int);
   freight_ton_miles: (Freight.t, int) Hashtbl.t;
   goods_delivered: Goods.Set.t;
+  ai: Opponent.t option;
 } [@@deriving yojson]
 
 let default ~player difficulty =
@@ -53,6 +54,7 @@ let default ~player difficulty =
     ton_miles=(0, 0);
     freight_ton_miles=Hashtbl.create 10;
     goods_delivered=Goods.Set.empty;
+    ai=None;
   }
 
 let get_cash v = v.m.cash

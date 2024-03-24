@@ -484,6 +484,11 @@ let handle_tick v cur_time =
 
 let _month_of_time time = (time / C.month_ticks) mod 12
 
+let _sell_bond v = v
+let _repay_bond v = v
+let _buy_stock v _player = v
+let _sell_stock v _player = v
+
 let get_date v = _month_of_time v.time, v.year
 
 let get_time_of_day time =
@@ -523,6 +528,10 @@ module Action = struct
     | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: int}
     | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: int}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
+    | SellBond
+    | RepayBond
+    | BuyStock of int (* player *)
+    | SellStock of int (* player *)
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -571,6 +580,14 @@ module Action = struct
           _train_toggle_stop_wait backend ~train ~stop ~player
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
+      | SellBond ->
+          _sell_bond backend
+      | RepayBond ->
+          _repay_bond backend
+      | BuyStock player ->
+          _buy_stock backend player
+      | SellStock player ->
+          _sell_stock backend player
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

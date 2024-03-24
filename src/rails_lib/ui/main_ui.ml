@@ -526,6 +526,9 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
             {v with mode=Efficiency_report}, nobaction
+        | On (`Call_broker), _ ->
+            let state = Stock_broker.make s in
+            {v with mode=Stock_broker state}, nobaction
         | Off (`Options option), _ ->
             {v with view=Mapview.update_option v.view option false}, nobaction
         | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
@@ -719,6 +722,15 @@ let handle_event (s:State.t) v (event:Event.t) =
         let v =
           if exit_state then {v with mode=Normal}
           else if state =!= state2 then {v with mode=TrainReport state2}
+          else v
+        in
+        v, action
+
+    | Stock_broker state ->
+       let exit_state, state2, action = Stock_broker.handle_event s state event in
+        let v =
+          if exit_state then {v with mode=Normal}
+          else if state =!= state2 then {v with mode=Stock_broker state2}
           else v
         in
         v, action
@@ -957,6 +969,8 @@ let render (win:R.window) (s:State.t) v =
         Build_train.render win s state
     | TrainReport state ->
         Train_report.render win s state
+    | Stock_broker state ->
+        Stock_broker.render win s state
     | Balance_sheet state ->
         Balance_sheet_view.render win s state
     | Income_statement state ->
