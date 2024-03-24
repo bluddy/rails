@@ -45,7 +45,9 @@ let make (s:State.t) =
 
 let render win (s:State.t) v =
   R.paint_screen win ~color:Ega.white;
-  Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:C.menu_h;
+  let dims = s.ui.dims in
+  Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
+  R.draw_rect win ~x:2 ~y:(2 + C.menu_h) ~w:(dims.screen.w - 4) ~h:(dims.screen.h - 4 - C.menu_h) ~color:Ega.black ~fill:false;
   ()
 
 let handle_event (s:State.t) v (event:Event.t) =
