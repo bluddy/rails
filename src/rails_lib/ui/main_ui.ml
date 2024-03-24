@@ -520,7 +520,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             let b = Balance_sheet.create s ~player_idx:0 in
             {v with mode=Balance_sheet b}, nobaction
         | On (`Income_statement), _ ->
-            {v with mode=Income_statement}, nobaction
+            let b = Balance_sheet.create s ~player_idx:0 in
+            {v with mode=Income_statement b}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
@@ -724,7 +725,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | StationReport _
     | Balance_sheet _
-    | Income_statement
+    | Income_statement _
     | Efficiency_report
     | Accomplishments -> modal_screen_no_input v event
         
@@ -958,8 +959,8 @@ let render (win:R.window) (s:State.t) v =
         Train_report.render win s state
     | Balance_sheet state ->
         Balance_sheet_view.render win s state
-    | Income_statement ->
-        Income_statement_view.render win s
+    | Income_statement state ->
+        Income_statement_view.render win s state
     | Accomplishments ->
         Accomplishments.render win s
     | Efficiency_report ->

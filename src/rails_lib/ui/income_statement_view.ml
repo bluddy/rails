@@ -8,7 +8,7 @@ let relevant_expenses = [
   InterestFees; TrainMaintenance; TrackMaintenance; StationMaintenance;
 ]
 
-let render win (s:State.t) =
+let render win (s:State.t) balance_sheet =
   let player = Backend.get_player s.backend C.player in
   let is, old_is = player.m.income_statement, player.m.last_income_statement in
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
@@ -108,5 +108,9 @@ let render win (s:State.t) =
 
   let y = y + line + 1 in
   write ~x:x_text ~y "Stock Profits:";
-  write_money ~x:x_ytd ~y 0;
+  let prev_balance_sheet = player.m.last_balance_sheet in
+  let prev_stock = prev_balance_sheet.treasury_stock + prev_balance_sheet.other_rr_stock in
+  let cur_stock = balance_sheet.Balance_sheet.treasury_stock + balance_sheet.other_rr_stock in
+  let profit = cur_stock - prev_stock in
+  write_money ~x:x_ytd ~y profit;
   ()

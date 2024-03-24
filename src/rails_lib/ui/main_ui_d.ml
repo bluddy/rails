@@ -104,7 +104,7 @@ and 'a mode =
   | TrainReport of 'a Train_report_d.t
   | Balance_sheet of Balance_sheet_d.t
   | Accomplishments
-  | Income_statement
+  | Income_statement of Balance_sheet_d.t (* we use the stock part *)
   | Efficiency_report
 
 let is_normal_mode = function
