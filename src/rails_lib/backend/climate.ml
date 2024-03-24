@@ -9,8 +9,12 @@ type t =
 
 let default = Normal
 
-(* TODO: west us should have lower rates *)
-let interest_rate climate outstanding =
+let interest_rate climate region outstanding_bonds =
+  let bond_val = match region with
+    | Region.WestUS -> 1000
+    | _ -> 500
+  in
+  let num_bonds = outstanding_bonds / bond_val in
   let base_rate = match climate with
   | Boom -> 2
   | Prosperity -> 3
@@ -18,5 +22,4 @@ let interest_rate climate outstanding =
   | Recession -> 5
   | Panic -> 6
   in
-  let rate = base_rate + outstanding in
-  if rate > 8 then None else Some rate
+  base_rate + num_bonds
