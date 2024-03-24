@@ -67,7 +67,10 @@ let render win (s:State.t) v =
   write ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 player.m.bonds;
   let y = y + line in
   write ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 player.m.net_worth;
-  write ~x:x_right ~y @@ sp "Stock at %s per share" @@ Utils.show_cash ~ks:false ~region player.m.stock.share_price;
+  write ~x:x_right ~y @@ sp "Stock at %s.00 per share" @@ Utils.show_cash ~ks:false ~region player.m.stock.share_price;
+  let y = y + line in
+  let treasury, non = Stocks.treasury_shares player.m.stock, Stocks.non_treasury_shares player.m.stock in
+  write ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" treasury non;
 
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
   ()
