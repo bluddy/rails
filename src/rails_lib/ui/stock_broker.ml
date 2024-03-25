@@ -10,10 +10,15 @@ let sp = Printf.sprintf
 let make_menu region fonts =
   let open Menu in
   let cash_menu =
+    let check_bankruptcy (s:State.t) =
+      let player = Backend.get_player s.backend C.player in
+      player.m.cash < C.max_cash_for_bankruptcy
+    in
     let open MsgBox in
     make ~fonts ~x:16 ~y:8 [
       make_entry (sp "&Sell %s bond" @@ Utils.show_cash ~region 500)  @@ `Action `SellBond;
       make_entry (sp "&Buy %s bond" @@ Utils.show_cash ~region 500) @@ `Action `RepayBond;
+      make_entry ~test_enabled:check_bankruptcy "Declare Bankruptcy" @@ `Action `Declare_bankruptcy;
     ]
   in
   let sell_stock_menu =
@@ -106,6 +111,7 @@ let handle_event (s:State.t) v (event:Event.t) =
   | Menu.On(`RepayBond), _ -> true, B.Action.RepayBond
   | Menu.On(`BuyStock i), _ -> true, B.Action.BuyStock i
   | Menu.On(`SellStock i), _ -> true, B.Action.SellStock i
+  (* TODO: Declare_bankruptcy *)
   | _ -> false, B.Action.NoAction
   in
   let v = if menu === v.menu then v else {menu} in

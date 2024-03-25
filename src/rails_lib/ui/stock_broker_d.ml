@@ -5,6 +5,7 @@ type msg = [
   | `RepayBond
   | `BuyStock of int (* player *)
   | `SellStock of int (* player *)
+  | `Declare_bankruptcy
   (* TODO: operate RR menu *)
   ]
 

@@ -38,3 +38,6 @@ let fast_message_time = 40
 let slow_message_time = 150
 
 let menu_h = 8
+
+let max_cash_for_bankruptcy = 500
+
