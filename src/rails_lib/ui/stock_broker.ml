@@ -12,7 +12,9 @@ let make_menu region fonts =
   let cash_menu =
     let check_bankruptcy (s:State.t) =
       let player = Backend.get_player s.backend C.player in
-      player.m.cash < C.max_cash_for_bankruptcy
+      not player.m.in_receivership &&
+      player.m.bonds > C.min_bonds_for_bankruptcy &&
+      player.m.cash < C.max_cash_for_bankruptcy 
     in
     let open MsgBox in
     make ~fonts ~x:16 ~y:8 [
