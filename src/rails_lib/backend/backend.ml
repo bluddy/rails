@@ -484,9 +484,16 @@ let handle_tick v cur_time =
 
 let _month_of_time time = (time / C.month_ticks) mod 12
 
-let _sell_bond v = v
-let _repay_bond v = v
+let _sell_bond v =
+  update_player v C.player (fun player -> Player.sell_bond player v.region);
+  v
+
+let _repay_bond v =
+  update_player v C.player (fun player -> Player.repay_bond player v.region);
+  v
+
 let _buy_stock v _player = v
+
 let _sell_stock v _player = v
 
 let get_date v = _month_of_time v.time, v.year

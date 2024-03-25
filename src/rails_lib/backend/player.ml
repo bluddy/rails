@@ -110,3 +110,13 @@ let remove_station loc v =
   let stations = List.filter (fun loc2 -> not @@ Utils.equal_loc loc loc2) v.stations in
   [%up {v with stations}]
 
+let sell_bond (v:t) region =
+  let bond = match region with Region.WestUS -> 1000 | _ -> 500 in
+  let bonds = v.m.bonds + bond in
+  {v with m={v.m with bonds}}
+
+let repay_bond (v:t) region =
+  let bond = match region with Region.WestUS -> 1000 | _ -> 500 in
+  let bonds = v.m.bonds - bond in
+  {v with m={v.m with bonds}}
+
