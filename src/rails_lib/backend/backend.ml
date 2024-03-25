@@ -109,6 +109,8 @@ let _player_pay_for_track v ~x ~y ~len ~dir ~player =
 
 let get_cash v ~player = Player.get_cash v.players.(player)
 
+let num_players v = Array.length v.players
+
 let get_player v player = v.players.(player)
 
 let check_build_station v ~x ~y ~player station_type =

@@ -15,7 +15,7 @@ let starting_share_price difficulty =
 let default_for_player ~player difficulty =
   {
     player_idx = player;
-    owned_shares = Array.make C.num_players 0;
+    owned_shares = Array.make C.max_num_players 0;
     total_shares = 100;
     share_price = starting_share_price difficulty;
   }

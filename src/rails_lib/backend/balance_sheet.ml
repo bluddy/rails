@@ -33,7 +33,7 @@ let create (s:State.t) ~player_idx =
         in
         acc + owned_value)
     0
-    Iter.(0 -- (C.num_players - 1))
+    Iter.(0 -- (Backend.num_players s.backend - 1))
   in
   let facilities = 
     List.fold_left (fun acc loc ->
