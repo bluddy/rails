@@ -10,8 +10,9 @@ type monetary = {
   owned_industry: int;
   yearly_interest_payment: int;
   net_worth: int;
+  in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
-  last_income_statement: Income_statement_d.t;
+  total_income_statement: Income_statement_d.t;
   last_balance_sheet: Balance_sheet_d.t;
 } [@@deriving yojson]
 
@@ -24,8 +25,9 @@ let default_monetary ~player difficulty =
     owned_industry = 0;
     yearly_interest_payment=20;
     net_worth=500;
+    in_receivership=false;
     income_statement=Income_statement_d.default;
-    last_income_statement=Income_statement_d.default;
+    total_income_statement=Income_statement_d.default;
     last_balance_sheet=Balance_sheet_d.default;
 }
 
