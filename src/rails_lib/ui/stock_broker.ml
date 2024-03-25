@@ -7,29 +7,28 @@ open Utils.Infix
 
 let sp = Printf.sprintf
 
-let make_menu fonts =
+let make_menu region fonts =
   let open Menu in
-
+  let cash_menu =
+    let open MsgBox in
+    make ~fonts ~x:16 ~y:8 [
+      make_entry (sp "&Sell %s bond" @@ Utils.show_cash ~region 500)  @@ `Action `SellBond;
+      make_entry (sp "&Buy %s bond" @@ Utils.show_cash ~region 500) @@ `Action `RepayBond;
+    ]
+  in
+  let sell_stock_menu =
+    let open MsgBox in
+    make ~fonts ~x:2 ~y:8 [
+      make_entry "S&ell 10,000 shares treasury stock" @@ `Action (`SellStock 0);
+    ]
+  in
+  let buy_stock_menu =
+    let open MsgBox in
+    make ~fonts ~x:2 ~y:8 [
+      make_entry "B&uy 10,000 shares treasury stock" @@ `Action (`BuyStock 0);
+    ]
+  in
   let titles =
-    let cash_menu =
-      let open MsgBox in
-      make ~fonts ~x:16 ~y:8 [
-        make_entry "&Sell $500,000 bond" @@ `Action `SellBond;
-        make_entry "&Buy $500,000 bond" @@ `Action `RepayBond;
-      ]
-    in
-    let buy_stock_menu =
-      let open MsgBox in
-      make ~fonts ~x:2 ~y:8 [
-        make_entry "B&uy 10,000 shares treasury stock" @@ `Action (`BuyStock 0);
-      ]
-    in
-    let sell_stock_menu =
-      let open MsgBox in
-      make ~fonts ~x:2 ~y:8 [
-        make_entry "S&ell 10,000 shares treasury stock" @@ `Action (`SellStock 0);
-      ]
-    in
     let open Menu.Title in
     [
       make ~fonts ~x:7 ~y:1 "&Cash" cash_menu;
@@ -40,7 +39,7 @@ let make_menu fonts =
   Menu.Global.make ~menu_h:C.menu_h titles
 
 let make (s:State.t) =
-  let menu = make_menu s.fonts in
+  let menu = make_menu s.backend.region s.fonts in
   {
     menu;
   }
