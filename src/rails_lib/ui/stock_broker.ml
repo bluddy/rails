@@ -84,7 +84,7 @@ let render win (s:State.t) v =
       (Utils.show_cash ~ks:false ~region player.m.stock.share_price) per_s;
     let y = y + line in
     let treasury, non = Stocks.treasury_shares player.m.stock, Stocks.non_treasury_shares player.m.stock in
-    write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" treasury non;
+    write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" non treasury;
     y + line
   in
   let y =
