@@ -122,10 +122,14 @@ let sell_bond (v:t) =
   {v with m = {v.m with bonds; cash}}
 
 let repay_bond (v:t) =
-  let bond = C.bond_value in
-  let bonds = v.m.bonds - bond in
-  let cash = v.m.cash - bond in
-  {v with m = {v.m with bonds; cash}}
+  let num_bonds = v.m.bonds / C.bond_value in
+  let interest_saving = v.m.yearly_interest_payment / num_bonds in
+  let yearly_interest_payment = v.m.yearly_interest_payment - interest_saving in
+  let bonds = v.m.bonds - C.bond_value in
+  let v = pay InterestFees C.bond_value v in
+  (* Get rid of bankruptcy *)
+  let in_receivership = if bonds = 0 then false else v.m.in_receivership in
+  {v with m = {v.m with bonds; yearly_interest_payment; in_receivership}}
 
 let check_bankruptcy (v:t) =
   not v.m.in_receivership &&
