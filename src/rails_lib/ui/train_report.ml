@@ -325,7 +325,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             let car_menu = if car_menu2 =!= car_menu then Some(car_menu2, stop) else current in
             car_menu, nobaction
       in
-      let v = if car_menu =!= v.car_menu then {v with car_menu} else v in
+      let v = [%up {v with car_menu}] in
       false, v, b_action
 
   | Normal, _ ->

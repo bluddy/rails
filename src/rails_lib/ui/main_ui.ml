@@ -399,22 +399,7 @@ let handle_train_roster_event (s:State.t) v event =
 let nobaction = B.Action.NoAction
 
 let make_msgbox ?x ?y s v ~fonts text =
-  let open Menu in
-  let open MsgBox in
-  let y = Option.get_or ~default:80 y in
-  let x = match x with
-    | Some x -> x
-    | None ->
-      let len = String.index_opt text '\n'
-        |> Option.get_or ~default:(String.length text)
-      in
-      150 - 5 * len / 2 
-  in
-  let entry = static_entry ~color:Ega.white text in
-  let menu =
-    Menu.MsgBox.make ~x ~y ~fonts [entry] ~font_idx:4
-    |> Menu.MsgBox.do_open_menu s
-  in
+  let menu = Menu.MsgBox.make_basic ?x ?y s ~fonts text in
   let mode = ModalMsgbox {menu; data=(); last=Normal} in
   {v with mode}, nobaction
 
@@ -786,6 +771,11 @@ let handle_msgs (s:State.t) v ui_msgs =
              {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
           )
           msg_speed
+
+    | Stock_broker state, _ ->
+        let state2 = Stock_broker.handle_msg s state ui_msg in
+        if state2 === state then v else {v with mode=Stock_broker state}
+
 
   (* TODO: handle demand changed msg *)
     | _ -> v

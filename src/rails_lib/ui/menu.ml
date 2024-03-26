@@ -424,6 +424,22 @@ module MsgBox = struct
           end
       | _ -> ()
 
+    let make_basic ?x ?y ~fonts s text =
+      (* Easy to use msgbox with just text *)
+      let y = Option.get_or ~default:80 y in
+      let x = match x with
+        | Some x -> x
+        | None ->
+          let len = String.index_opt text '\n'
+            |> Option.get_or ~default:(String.length text)
+          in
+          150 - 5 * len / 2 
+      in
+      let entry = static_entry ~color:Ega.white text in
+      let menu =
+        make ~x ~y ~fonts [entry] ~font_idx:4 |> do_open_menu s
+      in
+      menu
 end
 
 module Title = struct

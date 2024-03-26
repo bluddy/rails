@@ -11,4 +11,5 @@ type msg = [
 
 type 'state t = {
   menu: (msg, 'state) Menu.Global.t;
+  msgbox: (unit, 'state) Menu.MsgBox.t option;
 }

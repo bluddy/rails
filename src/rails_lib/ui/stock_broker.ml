@@ -3,7 +3,6 @@ open Stock_broker_d
 module C = Constants
 module R = Renderer
 module B = Backend
-open Utils.Infix
 
 let sp = Printf.sprintf
 
@@ -45,6 +44,7 @@ let make (s:State.t) =
   let menu = make_menu s.backend.region s.fonts in
   {
     menu;
+    msgbox=None;
   }
 
 let render win (s:State.t) v =
@@ -102,17 +102,30 @@ let render win (s:State.t) v =
 
 let handle_event (s:State.t) v (event:Event.t) =
   let menu, menu_action, event = Menu.Global.update s v.menu event in
-  let exit, bk_action =
+  let exit, v, bk_action =
     let player = C.player in
-    match menu_action, event with
-    | Menu.On(`SellBond), _ -> false, B.Action.SellBond {player}
-    | Menu.On(`RepayBond), _ -> false, B.Action.RepayBond {player}
-    | Menu.On(`BuyStock stock), _ -> false, B.Action.BuyStock {player; stock}
-    | Menu.On(`SellStock stock), _ -> false, B.Action.SellStock {player; stock}
-    | Menu.On(`Declare_bankruptcy), _ -> false, B.Action.Declare_bankruptcy {player}
-    | _ when Event.pressed_esc event -> true, B.Action.NoAction
-    | _ -> false, B.Action.NoAction
+    match menu_action with
+    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player}
+    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player}
+    | Menu.On(`BuyStock stock) -> false, v, B.Action.BuyStock {player; stock}
+    | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player; stock}
+    | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player}
+    | _ when Event.key_modal_dismiss event -> true, v, B.Action.NoAction
+    | _ -> false, v, B.Action.NoAction
   in
-  let v = if menu === v.menu then v else {menu} in
+  let v = [%up {v with menu}] in
   exit, v, bk_action
-    
+
+let handle_msg (s:State.t) v ui_msg =
+  (* Create a msgbox *)
+  let open Printf in
+  let msgbox = match ui_msg with
+    | Backend_d.StockBroker(BondSold{interest_rate; player}) when player = C.player ->
+        let text = sprintf "%s bond sold\nat %d%% interest." (Utils.show_cash C.bond_value) interest_rate in
+        let menu = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s text in
+        Some menu
+    | _ -> None
+  in
+  [%up {v with msgbox}]
+
+
