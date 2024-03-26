@@ -115,15 +115,17 @@ let remove_station loc v =
 
 let has_bond (v:t) = v.m.bonds > 0
 
-let sell_bond (v:t) region =
-  let bond = match region with Region.WestUS -> 1000 | _ -> 500 in
+let sell_bond (v:t) =
+  let bond = C.bond_value in
   let bonds = v.m.bonds + bond in
-  {v with m = {v.m with bonds}}
+  let cash = v.m.cash + bond in
+  {v with m = {v.m with bonds; cash}}
 
-let repay_bond (v:t) region =
-  let bond = match region with Region.WestUS -> 1000 | _ -> 500 in
+let repay_bond (v:t) =
+  let bond = C.bond_value in
   let bonds = v.m.bonds - bond in
-  {v with m = {v.m with bonds}}
+  let cash = v.m.cash - bond in
+  {v with m = {v.m with bonds; cash}}
 
 let check_bankruptcy (v:t) =
   not v.m.in_receivership &&

@@ -11,7 +11,7 @@ let default = Normal
 
 let interest_rate climate region outstanding_bonds =
   let bond_val = match region with
-    | Region.WestUS -> 1000
+    | Region.WestUS -> 1000 (* Special treatment *)
     | _ -> 500
   in
   let num_bonds = outstanding_bonds / bond_val in

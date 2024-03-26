@@ -501,14 +501,14 @@ let player_has_bond v player_idx =
 let _sell_bond v ~player =
   let interest_rate = get_interest_rate v player in
   if interest_rate < C.max_interest_rate then (
-    update_player v player (fun player -> Player.sell_bond player v.region);
+    update_player v player (fun player -> Player.sell_bond player);
     send_ui_msg v @@ StockBroker(BondSold{player; interest_rate});
     v
   ) else v
 
 let _repay_bond v ~player =
   if player_has_bond v player then (
-    update_player v player (fun player -> Player.repay_bond player v.region);
+    update_player v player (fun player -> Player.repay_bond player);
     send_ui_msg v @@ StockBroker(BondRepaid{player});
     v
   ) else v
