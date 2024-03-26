@@ -94,6 +94,10 @@ let iter_cities f v = Cities.iter f v.cities
 
 let find_close_city v x y ~range = Cities.find_close v.cities x y ~range
 
+let send_ui_msg v msg =
+  (* Line up ui msg for when we can send it *)
+  v.ui_msgs <- msg::v.ui_msgs
+
 let _player_pay_for_track v ~x ~y ~len ~dir ~player =
   let base_length = if Dir.is_diagonal dir then 3 else 2 in
   (* includes climate, for one piece of track *)
@@ -345,7 +349,7 @@ let _build_train v ((x, y) as station) engine cars other_station ~player =
     [%up {player with trains}]
   );
   let msg = TrainBuilt (Trainmap.Id.of_int (Trainmap.size v.players.(player).trains - 1)) in
-  v.ui_msgs <- msg::v.ui_msgs;
+  send_ui_msg v msg;
   v
 
 let _remove_stop_car v ~train ~stop ~car ~player =
@@ -486,17 +490,46 @@ let handle_tick v cur_time =
 
 let _month_of_time time = (time / C.month_ticks) mod 12
 
-let _sell_bond v =
-  update_player v C.player (fun player -> Player.sell_bond player v.region);
+let get_interest_rate v player_idx =
+  let player = get_player v C.player in
+  Climate.interest_rate v.climate v.region player.m.bonds
+
+let player_has_bond v player_idx =
+  let player = get_player v C.player in
+  Player.has_bond player
+
+let _sell_bond v ~player =
+  let interest_rate = get_interest_rate v player in
+  if interest_rate < C.max_interest_rate then (
+    update_player v player (fun player -> Player.sell_bond player v.region);
+    send_ui_msg v @@ StockBroker(BondSold{player; interest_rate});
+    v
+  ) else v
+
+let _repay_bond v ~player =
+  if player_has_bond v player then (
+    update_player v player (fun player -> Player.repay_bond player v.region);
+    send_ui_msg v @@ StockBroker(BondRepaid{player});
+    v
+  ) else v
+
+let _buy_stock v ~player ~stock = v
+
+let _sell_stock v ~player ~stock = v
+
+let check_bankruptcy v player_idx =
+  let player = get_player v player_idx in
+  Player.check_bankruptcy player
+
+let _declare_bankruptcy v player_idx =
+  update_player v player_idx (fun player ->
+    if Player.check_bankruptcy player then (
+      let player = Player.declare_bankruptcy player in
+      send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
+      player
+    ) else 
+      player);
   v
-
-let _repay_bond v =
-  update_player v C.player (fun player -> Player.repay_bond player v.region);
-  v
-
-let _buy_stock v _player = v
-
-let _sell_stock v _player = v
 
 let get_date v = _month_of_time v.time, v.year
 
@@ -537,10 +570,11 @@ module Action = struct
     | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: int}
     | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: int}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
-    | SellBond
-    | RepayBond
-    | BuyStock of int (* player *)
-    | SellStock of int (* player *)
+    | SellBond of {player: int}
+    | RepayBond of {player: int}
+    | Declare_bankruptcy of {player: int}
+    | BuyStock of {player: int; stock: int}
+    | SellStock of {player: int; stock: int}
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -589,14 +623,16 @@ module Action = struct
           _train_toggle_stop_wait backend ~train ~stop ~player
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
-      | SellBond ->
-          _sell_bond backend
-      | RepayBond ->
-          _repay_bond backend
-      | BuyStock player ->
-          _buy_stock backend player
-      | SellStock player ->
-          _sell_stock backend player
+      | SellBond{player} ->
+          _sell_bond backend ~player
+      | RepayBond{player}->
+          _repay_bond backend ~player
+      | BuyStock{player; stock} ->
+          _buy_stock backend ~player ~stock
+      | SellStock{player; stock} ->
+          _sell_stock backend ~player ~stock
+      | Declare_bankruptcy{player} ->
+          _declare_bankruptcy backend player
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

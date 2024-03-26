@@ -1,6 +1,7 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
+module C = Constants
 
 type monetary = {
   cash: int; (* all x1000 *)
@@ -112,13 +113,23 @@ let remove_station loc v =
   let stations = List.filter (fun loc2 -> not @@ Utils.equal_loc loc loc2) v.stations in
   [%up {v with stations}]
 
+let has_bond (v:t) = v.m.bonds > 0
+
 let sell_bond (v:t) region =
   let bond = match region with Region.WestUS -> 1000 | _ -> 500 in
   let bonds = v.m.bonds + bond in
-  {v with m={v.m with bonds}}
+  {v with m = {v.m with bonds}}
 
 let repay_bond (v:t) region =
   let bond = match region with Region.WestUS -> 1000 | _ -> 500 in
   let bonds = v.m.bonds - bond in
-  {v with m={v.m with bonds}}
+  {v with m = {v.m with bonds}}
+
+let check_bankruptcy (v:t) =
+  not v.m.in_receivership &&
+  v.m.bonds > C.min_bonds_for_bankruptcy &&
+  v.m.cash < C.max_cash_for_bankruptcy 
+
+let declare_bankruptcy (v:t) =
+  {v with m = {v.m with in_receivership = true}}
 

@@ -10,16 +10,12 @@ let sp = Printf.sprintf
 let make_menu region fonts =
   let open Menu in
   let cash_menu =
-    let check_bankruptcy (s:State.t) =
-      let player = Backend.get_player s.backend C.player in
-      not player.m.in_receivership &&
-      player.m.bonds > C.min_bonds_for_bankruptcy &&
-      player.m.cash < C.max_cash_for_bankruptcy 
-    in
+    let check_bankruptcy (s:State.t) = Backend.check_bankruptcy s.backend C.player in
+    let check_bond (s:State.t) = Backend.player_has_bond s.backend C.player in
     let open MsgBox in
     make ~fonts ~x:16 ~y:8 [
       make_entry (sp "&Sell %s bond" @@ Utils.show_cash ~region 500)  @@ `Action `SellBond;
-      make_entry (sp "&Buy %s bond" @@ Utils.show_cash ~region 500) @@ `Action `RepayBond;
+      make_entry ~test_enabled:check_bond (sp "&Buy %s bond" @@ Utils.show_cash ~region 500) @@ `Action `RepayBond;
       make_entry ~test_enabled:check_bankruptcy "Declare Bankruptcy" @@ `Action `Declare_bankruptcy;
     ]
   in
@@ -99,25 +95,24 @@ let render win (s:State.t) v =
     s.backend.players
   in
   let y = y + line in
-  let player = Backend.get_player s.backend C.player in
   write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show s.backend.climate)
-    (Climate.interest_rate s.backend.climate s.backend.region player.m.bonds);
+    (Backend.get_interest_rate s.backend C.player);
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
   ()
 
 let handle_event (s:State.t) v (event:Event.t) =
   let menu, menu_action, event = Menu.Global.update s v.menu event in
   let exit, bk_action =
-  match menu_action, event with
-  | Menu.On(`SellBond), _ -> true, B.Action.SellBond
-  | Menu.On(`RepayBond), _ -> true, B.Action.RepayBond
-  | Menu.On(`BuyStock i), _ -> true, B.Action.BuyStock i
-  | Menu.On(`SellStock i), _ -> true, B.Action.SellStock i
-  (* TODO: Declare_bankruptcy *)
-  | _ -> false, B.Action.NoAction
+    let player = C.player in
+    match menu_action, event with
+    | Menu.On(`SellBond), _ -> false, B.Action.SellBond {player}
+    | Menu.On(`RepayBond), _ -> false, B.Action.RepayBond {player}
+    | Menu.On(`BuyStock stock), _ -> false, B.Action.BuyStock {player; stock}
+    | Menu.On(`SellStock stock), _ -> false, B.Action.SellStock {player; stock}
+    | Menu.On(`Declare_bankruptcy), _ -> false, B.Action.Declare_bankruptcy {player}
+    | _ when Event.pressed_esc event -> true, B.Action.NoAction
+    | _ -> false, B.Action.NoAction
   in
   let v = if menu === v.menu then v else {menu} in
-  let exit = Event.pressed_esc event || exit in
   exit, v, bk_action
-
     
