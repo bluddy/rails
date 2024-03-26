@@ -4,6 +4,9 @@ module C = Constants
 module R = Renderer
 module B = Backend
 
+let src = Logs.Src.create "stock_broker" ~doc:"Stock_broker"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 let sp = Printf.sprintf
 
 let make_menu region fonts =
@@ -97,7 +100,9 @@ let render win (s:State.t) v =
   let y = y + line in
   write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show s.backend.climate)
     (Backend.get_interest_rate s.backend C.player);
+
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
+
   Option.iter (fun msgbox -> Menu.MsgBox.render win s msgbox) v.msgbox;
   ()
 
@@ -122,9 +127,10 @@ let handle_msg (s:State.t) v ui_msg =
   let open Printf in
   let msgbox = match ui_msg with
     | Backend_d.StockBroker(BondSold{interest_rate; player}) when player = C.player ->
+        Log.debug (fun f -> f "Received bond sold ui msg");
         let text = sprintf "%s bond sold\nat %d%% interest." (Utils.show_cash C.bond_value) interest_rate in
-        let menu = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s text in
-        Some menu
+        let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s text in
+        Some msgbox
     | _ -> None
   in
   [%up {v with msgbox}]

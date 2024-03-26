@@ -759,6 +759,10 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state = Train_report.make s idx in
         {v with mode=TrainReport state}
 
+    | Stock_broker state, _ ->
+        let state2 = Stock_broker.handle_msg s state ui_msg in
+        if state2 === state then v else {v with mode=Stock_broker state2}
+
     | Normal, (TrainArrival t) ->
         let msg_speed = train_arrival_msg_speed v in
         Option.map_or ~default:v
@@ -772,12 +776,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           )
           msg_speed
 
-    | Stock_broker state, _ ->
-        let state2 = Stock_broker.handle_msg s state ui_msg in
-        if state2 === state then v else {v with mode=Stock_broker state}
-
-
-  (* TODO: handle demand changed msg *)
+    (* TODO: handle demand changed msg *)
     | _ -> v
   in
   List.fold_left handle_msg v ui_msgs
