@@ -98,6 +98,7 @@ let render win (s:State.t) v =
   write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show s.backend.climate)
     (Backend.get_interest_rate s.backend C.player);
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
+  Option.iter (fun msgbox -> Menu.MsgBox.render win s msgbox) v.msgbox;
   ()
 
 let handle_event (s:State.t) v (event:Event.t) =
