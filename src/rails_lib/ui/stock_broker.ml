@@ -9,7 +9,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let sp = Printf.sprintf
 
-let make_menu region fonts =
+let make_menu players stations cities region fonts =
   let open Menu in
   let cash_menu =
     let check_bankruptcy (s:State.t) = Backend.check_bankruptcy s.backend C.player in
@@ -21,17 +21,27 @@ let make_menu region fonts =
       make_entry ~test_enabled:check_bankruptcy "Declare Bankruptcy" @@ `Action `Declare_bankruptcy;
     ]
   in
-  let sell_stock_menu =
+  let create_stock_menu ~x ~y action f =
     let open MsgBox in
-    make ~fonts ~x:2 ~y:8 [
-      make_entry "S&ell 10,000 shares treasury stock" @@ `Action (`SellStock 0);
-    ]
+    let l =
+      Array.to_iter players |> Iter.mapi (fun i player ->
+        let s =
+          if i = C.player then
+            Printf.sprintf "%s 10,000 shares Treasury stock" action
+          else
+            let name = Player.get_name player stations cities in
+            Printf.sprintf "%s 10,000 shares of %s" action name
+        in
+        make_entry s @@ `Action(f i)
+      ) |> Iter.to_list
+    in
+    make ~fonts ~x ~y l
+  in
+  let sell_stock_menu =
+    create_stock_menu ~x:2 ~y:8 "Sell" (fun i -> `SellStock i)
   in
   let buy_stock_menu =
-    let open MsgBox in
-    make ~fonts ~x:2 ~y:8 [
-      make_entry "B&uy 10,000 shares treasury stock" @@ `Action (`BuyStock 0);
-    ]
+    create_stock_menu ~x:2 ~y:8 "Buy" (fun i -> `BuyStock i)
   in
   let titles =
     let open Menu.Title in
@@ -44,7 +54,8 @@ let make_menu region fonts =
   Menu.Global.make ~menu_h:C.menu_h titles
 
 let make (s:State.t) =
-  let menu = make_menu s.backend.region s.fonts in
+  let b = s.backend in
+  let menu = make_menu b.players b.stations b.cities b.region s.fonts in
   {
     menu;
     msgbox=None;

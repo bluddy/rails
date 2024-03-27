@@ -160,3 +160,7 @@ let check_bankruptcy (v:t) =
 let declare_bankruptcy (v:t) =
   {v with m = {v.m with in_receivership = true}}
 
+let check_buy_stock (v:t) stock =
+  v
+
+
