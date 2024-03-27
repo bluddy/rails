@@ -498,18 +498,21 @@ let player_has_bond v player_idx =
   let player = get_player v C.player in
   Player.has_bond player
 
-let _sell_bond v ~player =
-  let interest_rate = get_interest_rate v player in
-  if interest_rate < C.max_interest_rate then (
-    update_player v player (fun player -> Player.sell_bond player);
-    send_ui_msg v @@ StockBroker(BondSold{player; interest_rate});
+let _sell_bond v player_idx =
+  let player = get_player v C.player in
+  if Player.check_sell_bond player v.climate v.region then (
+    let interest_rate = Player.get_interest_rate player v.climate v.region in
+    (* Must be before we get new bond *)
+    update_player v player_idx (fun player -> Player.sell_bond player v.climate v.region);
+    send_ui_msg v @@ StockBroker(BondSold{player=player_idx; interest_rate});
     v
   ) else v
 
-let _repay_bond v ~player =
-  if player_has_bond v player then (
-    update_player v player (fun player -> Player.repay_bond player);
-    send_ui_msg v @@ StockBroker(BondRepaid{player});
+let _repay_bond v player_idx =
+  let player = get_player v player_idx in
+  if Player.check_repay_bond player then (
+    update_player v player_idx Player.repay_bond;
+    send_ui_msg v @@ StockBroker(BondRepaid{player=player_idx});
     v
   ) else v
 
@@ -624,9 +627,9 @@ module Action = struct
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
       | SellBond{player} ->
-          _sell_bond backend ~player
+          _sell_bond backend player
       | RepayBond{player}->
-          _repay_bond backend ~player
+          _repay_bond backend player
       | BuyStock{player; stock} ->
           _buy_stock backend ~player ~stock
       | SellStock{player; stock} ->

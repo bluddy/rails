@@ -127,8 +127,11 @@ let handle_msg (s:State.t) v ui_msg =
   let open Printf in
   let msgbox = match ui_msg with
     | Backend_d.StockBroker(BondSold{interest_rate; player}) when player = C.player ->
-        Log.debug (fun f -> f "Received bond sold ui msg");
         let text = sprintf "%s bond sold\nat %d%% interest." (Utils.show_cash C.bond_value) interest_rate in
+        let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s text in
+        Some msgbox
+    | Backend_d.StockBroker(BondRepaid{player}) when player = C.player ->
+        let text = sprintf "%s bond repaid." (Utils.show_cash C.bond_value) in
         let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s text in
         Some msgbox
     | _ -> None

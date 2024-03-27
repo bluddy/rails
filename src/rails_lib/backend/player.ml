@@ -115,21 +115,42 @@ let remove_station loc v =
 
 let has_bond (v:t) = v.m.bonds > 0
 
-let sell_bond (v:t) =
-  let bond = C.bond_value in
-  let bonds = v.m.bonds + bond in
-  let cash = v.m.cash + bond in
-  {v with m = {v.m with bonds; cash}}
+let get_interest_rate v climate region =
+  Climate.interest_rate climate region v.m.bonds
+
+let check_sell_bond v climate region =
+  let interest_rate = get_interest_rate v climate region in
+  interest_rate < C.max_interest_rate && not v.m.in_receivership
+    
+
+let sell_bond (v:t) climate region =
+  if check_sell_bond v climate region then (
+    let bonds = v.m.bonds + C.bond_value in
+    let cash = v.m.cash + C.bond_value in
+    let interest_rate = Climate.interest_rate climate region v.m.bonds in
+    let base_payment = C.bond_value / 100 in
+    let interest_increase = base_payment * interest_rate in
+    let yearly_interest_payment = v.m.yearly_interest_payment + interest_increase in
+    let v = {v with m = {v.m with bonds; cash; yearly_interest_payment}} in
+    pay InterestFees base_payment v
+  ) else v
+
+let check_repay_bond (v:t) =
+  let has_bond = v.m.bonds > 0 in
+  let has_cash = v.m.cash > C.bond_value in
+  has_bond && (has_cash || not v.m.in_receivership)
 
 let repay_bond (v:t) =
-  let num_bonds = v.m.bonds / C.bond_value in
-  let interest_saving = v.m.yearly_interest_payment / num_bonds in
-  let yearly_interest_payment = v.m.yearly_interest_payment - interest_saving in
-  let bonds = v.m.bonds - C.bond_value in
-  let v = pay InterestFees C.bond_value v in
-  (* Get rid of bankruptcy *)
-  let in_receivership = if bonds = 0 then false else v.m.in_receivership in
-  {v with m = {v.m with bonds; yearly_interest_payment; in_receivership}}
+  if check_repay_bond v then
+    let num_bonds = v.m.bonds / C.bond_value in
+    let interest_saving = v.m.yearly_interest_payment / num_bonds in
+    let yearly_interest_payment = v.m.yearly_interest_payment - interest_saving in
+    let bonds = v.m.bonds - C.bond_value in
+    let v = pay InterestFees C.bond_value v in
+    (* Get rid of bankruptcy if needed *)
+    let in_receivership = if bonds = 0 then false else v.m.in_receivership in
+    {v with m = {v.m with bonds; yearly_interest_payment; in_receivership}}
+  else v
 
 let check_bankruptcy (v:t) =
   not v.m.in_receivership &&
