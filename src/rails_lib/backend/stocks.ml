@@ -2,9 +2,11 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 
+module IntMap = Utils.IntMap
+
 type t = {
   player_idx: int;
-  owned_shares: int array; (* how many shares are owned in each company *)
+  owned_shares: int IntMap.t; (* how many shares are owned in each company *)
   total_shares: int;
   share_price: int;
 } [@@ deriving yojson]
@@ -15,16 +17,19 @@ let starting_share_price difficulty =
 let default_for_player ~player difficulty =
   {
     player_idx = player;
-    owned_shares = Array.make C.max_num_players 0;
+    owned_shares = IntMap.singleton 0 0;
     total_shares = 100;
     share_price = starting_share_price difficulty;
   }
 
-let treasury_shares v = v.owned_shares.(v.player_idx)
+let owned_shares v player_idx =
+  IntMap.get_or ~default:0 player_idx v.owned_shares
+
+let treasury_shares v = owned_shares v v.player_idx
 
 let non_treasury_shares v = v.total_shares - treasury_shares v
 
-let get_owned_shares v player_idx = v.owned_shares.(player_idx)
+let total_shares v = v.total_shares
 
 let compute_owned_share_value ~total_shares ~owned_shares ~share_price =
   (* We need to account for the cost of selling all our stock 10k shares at a time *)
@@ -42,6 +47,12 @@ let compute_owned_share_value ~total_shares ~owned_shares ~share_price =
   loop 0 ~total:0 ~share_price
 
 let compute_treasury_stock v =
-  (* How much the player owns in itself *)
+  (* How much the player owns in itself value-wise *)
   compute_owned_share_value ~total_shares:v.total_shares ~owned_shares:(treasury_shares v) ~share_price:v.share_price
+
+let add_shares v ~target_idx ~num_shares =
+  IntMap.update target_idx (function | Some x -> Some(x + num_shares) | _ -> None) v.owned_shares
+
+let remove_shares v ~target_idx ~num_shares =
+  add_shares v ~target_idx ~num_shares:(-num_shares)
 

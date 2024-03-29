@@ -44,3 +44,5 @@ let max_cash_for_bankruptcy = 500
 let min_bonds_for_bankruptcy = 500
 let max_interest_rate = 9 (* At 9%, we can no longer sell bonds *)
 
+let num_buy_shares = 10
+
