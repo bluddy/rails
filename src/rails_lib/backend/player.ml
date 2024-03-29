@@ -162,24 +162,30 @@ let check_bankruptcy (v:t) =
 let declare_bankruptcy (v:t) =
   {v with m = {v.m with in_receivership = true}}
 
-let can_buy_stock (v:t) stock_idx target_player =
+let can_buy_stock (v:t) target_idx ~target_player ~difficulty =
   let enough_money = v.m.cash >= v.m.stock.share_price * C.num_buy_shares in
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
-  let can_buy = Stocks.owned_shares v.m.stock stock_idx < get_total_shares target_player in
-  enough_money && can_buy
+  let can_buy = Stocks.owned_shares v.m.stock target_idx < get_total_shares target_player in
+  (* Test if we have an 'anti-trust' problem *)
+  let max_owned_companies = Utils.clip difficulty ~min:1 ~max:3 in
+  let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares:C.num_buy_shares in
+  if Stocks.num_owned_companies stock > max_owned_companies then
+    `Anti_trust_viloation
+  else
+    if enough_money && can_buy then `Ok else `Error
 
-let buy_stock (v:t) target_idx target_player =
-  if can_buy_stock v target_idx target_player then
+let buy_stock (v:t) target_idx target_player ~difficulty =
+  match can_buy_stock v target_idx ~target_player ~difficulty with
+  | `Ok ->
     let share_price = target_player.m.stock.share_price in
     let non_treasury_shares = Stocks.non_treasury_shares target_player.m.stock in
     let price_increase = (share_price / non_treasury_shares) + 1 in
     let share_price = share_price + price_increase in
-    let owned_shares = Stocks.add_shares v.m.stock ~target_idx ~num_shares:C.num_buy_shares in
+    let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares:C.num_buy_shares in
     let cost = target_player.m.stock.share_price * C.num_buy_shares in
     let cash = v.m.cash - cost in
-    {v with m={v.m with cash; stock={v.m.stock with share_price; owned_shares}}}
-  else
-    v
+    {v with m={v.m with cash; stock={stock with share_price}}}
+  | _ -> v
 
     
 
