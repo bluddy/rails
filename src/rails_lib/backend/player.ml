@@ -167,10 +167,10 @@ let can_buy_stock (v:t) target_idx ~target_player ~difficulty =
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
   let can_buy = Stocks.owned_shares v.m.stock target_idx < get_total_shares target_player in
   (* Test if we have an 'anti-trust' problem *)
-  let max_owned_companies = Utils.clip difficulty ~min:1 ~max:3 in
+  let max_owned_companies = Utils.clip (B_options.difficulty_to_enum difficulty) ~min:1 ~max:3 in
   let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares:C.num_buy_shares in
   if Stocks.num_owned_companies stock > max_owned_companies then
-    `Anti_trust_viloation
+    `Anti_trust_violation max_owned_companies
   else
     if enough_money && can_buy then `Ok else `Error
 

@@ -27,7 +27,7 @@ let create (s:State.t) ~player_idx =
       else
         let ai_player = Backend.get_player s.backend ai_player_idx in
         let ai_stock = ai_player.m.stock in
-        let owned_shares = Stocks.get_owned_shares ai_stock ai_player_idx in
+        let owned_shares = Stocks.owned_shares ai_stock ai_player_idx in
         let owned_value = Stocks.compute_owned_share_value
            ~total_shares:ai_stock.total_shares ~owned_shares ~share_price:ai_stock.share_price
         in

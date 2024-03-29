@@ -121,10 +121,24 @@ let handle_event (s:State.t) v (event:Event.t) =
   let menu, menu_action, event = Menu.Global.update s v.menu event in
   let exit, v, bk_action =
     let player = C.player in
+    let player_obj = Backend.get_player s.backend player in
     match menu_action with
     | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player}
     | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player}
-    | Menu.On(`BuyStock stock) -> false, v, B.Action.BuyStock {player; stock}
+    | Menu.On(`BuyStock stock) ->
+      let target_player = Backend.get_player s.backend stock in
+      let difficulty = s.backend.options.difficulty in
+      begin match Player.can_buy_stock player_obj stock ~target_player ~difficulty with
+      | `Ok -> false, v, B.Action.BuyStock {player; stock}
+      | `Error -> false, v, B.Action.NoAction
+      | `Anti_trust_violation max_num ->
+          let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
+            Printf.sprintf "Anti-Trust Violation\nAs a %s you are\nonly authorized to invest\nin %d other RailRoad%s."
+              (B_options.show_difficulty difficulty)
+              max_num (if max_num > 1 then "s" else "")
+          in
+          false, {v with msgbox=Some msgbox}, B.Action.NoAction
+      end
     | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player; stock}
     | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player}
     | _ when Event.key_modal_dismiss event -> true, v, B.Action.NoAction

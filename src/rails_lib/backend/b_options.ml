@@ -30,6 +30,12 @@ type difficulty =
   [ `Investor | `Financier | `Mogul | `Tycoon ]
   [@@deriving yojson, enum]
 
+let show_difficulty = function
+  | `Investor -> "Investor"
+  | `Financier -> "Financier"
+  | `Mogul -> "Mogul"
+  | `Tycoon -> "Tycoon"
+
 type t = {
   speed: speed;
   reality_levels: RealityLevels.t;
