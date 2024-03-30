@@ -516,9 +516,23 @@ let _repay_bond v player_idx =
     v
   ) else v
 
-let _buy_stock v ~player ~stock = v
+let _buy_stock v player_idx ~stock = 
+  let player = get_player v player_idx in
+  let target_player = get_player v stock in
+  let difficulty = v.options.difficulty in
+  begin match Player.can_buy_stock player stock ~target_player ~difficulty with
+  | `Ok ->
+      update_player v player_idx (fun player ->
+        Player.buy_stock player stock target_player ~difficulty);
+      send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock})
+  | _ -> ()
+  end;
+  v
 
-let _sell_stock v ~player ~stock = v
+let _sell_stock v player_idx ~stock =
+  let player = get_player v player_idx in
+  let target_player = get_player v stock in
+  v
 
 let check_bankruptcy v player_idx =
   let player = get_player v player_idx in
@@ -631,9 +645,9 @@ module Action = struct
       | RepayBond{player}->
           _repay_bond backend player
       | BuyStock{player; stock} ->
-          _buy_stock backend ~player ~stock
+          _buy_stock backend player ~stock
       | SellStock{player; stock} ->
-          _sell_stock backend ~player ~stock
+          _sell_stock backend player ~stock
       | Declare_bankruptcy{player} ->
           _declare_bankruptcy backend player
       | Pause -> {backend with pause=true}

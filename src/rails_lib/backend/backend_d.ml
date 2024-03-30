@@ -32,6 +32,7 @@ type stock_broker_msg =
   | BondSold of {player: int; interest_rate: int}
   | BondRepaid of {player: int}
   | StockBought of {player:int; stock: int}
+  | StockSold of {player:int; stock: int}
   | BankruptcyDeclared of {player: int}
   [@@deriving yojson]
 
