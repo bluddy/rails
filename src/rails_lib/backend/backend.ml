@@ -522,8 +522,9 @@ let _buy_stock v player_idx ~stock =
   let difficulty = v.options.difficulty in
   begin match Player.can_buy_stock player stock ~target_player ~difficulty with
   | `Ok ->
-      update_player v player_idx (fun player ->
-        Player.buy_stock player stock target_player ~difficulty);
+      let player2, share_price = Player.buy_stock player target_player player_idx ~target_idx:stock ~difficulty in
+      update_player v player_idx (fun player -> player2);
+      Option.iter (fun share_price -> update_player v stock (fun player -> Player.set_share_price player share_price)) share_price;
       send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock})
   | _ -> ()
   end;
@@ -532,6 +533,14 @@ let _buy_stock v player_idx ~stock =
 let _sell_stock v player_idx ~stock =
   let player = get_player v player_idx in
   let target_player = get_player v stock in
+  begin match Player.can_sell_stock player stock with
+  | true -> 
+      let player2, share_price = Player.sell_stock player target_player player_idx ~target_idx:stock in
+      update_player v player_idx (fun player -> player2);
+      Option.iter (fun share_price -> update_player v stock (fun player -> Player.set_share_price player share_price)) share_price;
+      send_ui_msg v @@ StockBroker(StockSold {player=player_idx; stock})
+  | false -> ()
+  end;
   v
 
 let check_bankruptcy v player_idx =
