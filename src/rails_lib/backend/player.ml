@@ -183,24 +183,24 @@ let _sell_buy_calculations v target_player ~target_idx ~add_stock ~buy =
   in
   let cost = share_price * C.num_buy_shares in
   let price_change = if buy then price_change else -price_change in
-  let share_price = share_price + price_change in
+  let share_price2 = share_price + price_change in
   let num_shares = if buy then C.num_buy_shares else -C.num_buy_shares in
   let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares in
   let cost = if buy then -cost else cost in
   let cash = v.m.cash + cost in
-  cash, stock, share_price
+  cash, stock, cost, share_price2
 
 let buy_stock (v:t) target_player player_idx ~target_idx ~difficulty =
   match can_buy_stock v target_idx ~target_player ~difficulty with
   | `Ok when player_idx = target_idx ->
-    let cash, stock, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:0 ~buy:true in
-    {v with m={v.m with cash; stock={stock with share_price}}}, None
+    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:0 ~buy:true in
+    Some({v with m={v.m with cash; stock={stock with share_price}}}, cost, None)
 
   | `Ok -> (* different companies *)
-    let cash, stock, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:C.num_buy_shares ~buy:true in
-    {v with m={v.m with cash; stock}}, Some share_price
+    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:C.num_buy_shares ~buy:true in
+    Some({v with m={v.m with cash; stock}}, cost, Some share_price)
 
-  | _ -> v, None
+  | _ -> None
 
 let can_sell_stock (v:t) target_idx =   
   Stocks.owned_shares v.m.stock target_idx > 0
@@ -211,14 +211,14 @@ let set_share_price (v:t) share_price =
 let sell_stock (v:t) target_player player_idx ~target_idx =
   match can_sell_stock v target_idx with
   | true when player_idx = target_idx ->
-    let cash, stock, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:0 ~buy:false in
-    {v with m={v.m with cash; stock={stock with share_price}}}, None
+    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:0 ~buy:false in
+    Some({v with m={v.m with cash; stock={stock with share_price}}}, cost, None)
 
   | true ->
-    let cash, stock, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:C.num_buy_shares ~buy:false in
-    {v with m={v.m with cash; stock}}, Some share_price
+    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:C.num_buy_shares ~buy:false in
+    Some({v with m={v.m with cash; stock}}, cost, Some share_price)
 
-  | false -> v, None
+  | false -> None
 
 
 

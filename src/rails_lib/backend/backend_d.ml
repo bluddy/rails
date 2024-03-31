@@ -31,8 +31,8 @@ type train_arrival_msg = {
 type stock_broker_msg = 
   | BondSold of {player: int; interest_rate: int}
   | BondRepaid of {player: int}
-  | StockBought of {player:int; stock: int}
-  | StockSold of {player:int; stock: int}
+  | StockBought of {player:int; stock: int; cost: int}
+  | StockSold of {player:int; stock: int; cost: int}
   | BankruptcyDeclared of {player: int}
   [@@deriving yojson]
 

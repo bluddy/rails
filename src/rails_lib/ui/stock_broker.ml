@@ -150,15 +150,34 @@ let handle_event (s:State.t) v (event:Event.t) =
 let handle_msg (s:State.t) v ui_msg =
   (* Create a msgbox *)
   let open Printf in
-  let msgbox = match ui_msg with
-    | Backend_d.StockBroker(BondSold{interest_rate; player}) when player = C.player ->
-        let text = sprintf "%s bond sold\nat %d%% interest." (Utils.show_cash C.bond_value) interest_rate in
-        let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s text in
-        Some msgbox
-    | Backend_d.StockBroker(BondRepaid{player}) when player = C.player ->
-        let text = sprintf "%s bond repaid." (Utils.show_cash C.bond_value) in
-        let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s text in
-        Some msgbox
+  let show_cash = Utils.show_cash ~show_neg:false ~region:s.backend.region in
+  let msgbox =
+    let basic_msgbox text = Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text |> Option.some in
+    match ui_msg with
+    | Backend_d.StockBroker x -> begin match x with
+      | BondSold{interest_rate; player} when player = C.player ->
+          let text = sprintf "%s bond sold\nat %d%% interest." (show_cash C.bond_value) interest_rate in
+          basic_msgbox text
+      | BondRepaid{player} when player = C.player ->
+          let text = sprintf "%s bond repaid." (show_cash C.bond_value) in
+          basic_msgbox text
+      | StockSold{player; stock; cost} when player = C.player && stock = player ->
+          let text = sprintf "10,000 shares of\ncompany stock sold for\n%s.\n" (show_cash cost) in
+          basic_msgbox text
+      | StockSold{player; stock; cost} when player = C.player ->
+          let text = sprintf "10,000 shares of\n%s\nstock sold\n for %s.\n"
+            (B.get_company_name s.backend stock) (show_cash cost)
+          in
+          basic_msgbox text
+      | StockBought{player; stock; cost} when player = C.player && stock = player ->
+          let text = sprintf "10,000 shares of company\nstock purchased for\n%s.\n" (show_cash cost) in
+          basic_msgbox text
+      | StockBought{player; stock; cost} when player = C.player ->
+          let text = sprintf "10,000 shares of\n%s\nstock purchased for %s.\n"
+            (B.get_company_name s.backend stock) (show_cash cost)
+          in
+          basic_msgbox text
+      end
     | _ -> None
   in
   [%up {v with msgbox}]

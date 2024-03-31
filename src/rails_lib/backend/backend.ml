@@ -520,12 +520,12 @@ let _buy_stock v player_idx ~stock =
   let player = get_player v player_idx in
   let target_player = get_player v stock in
   let difficulty = v.options.difficulty in
-  begin match Player.can_buy_stock player stock ~target_player ~difficulty with
-  | `Ok ->
-      let player2, share_price = Player.buy_stock player target_player player_idx ~target_idx:stock ~difficulty in
-      update_player v player_idx (fun player -> player2);
-      Option.iter (fun share_price -> update_player v stock (fun player -> Player.set_share_price player share_price)) share_price;
-      send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock})
+  begin match Player.buy_stock player target_player player_idx ~target_idx:stock ~difficulty with
+  | Some(player2, cost, other_share_price) ->
+      update_player v player_idx (fun _ -> player2);
+      Option.iter (fun share_price -> update_player v stock (fun player ->
+        Player.set_share_price player share_price)) other_share_price;
+      send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock; cost})
   | _ -> ()
   end;
   v
@@ -533,13 +533,14 @@ let _buy_stock v player_idx ~stock =
 let _sell_stock v player_idx ~stock =
   let player = get_player v player_idx in
   let target_player = get_player v stock in
-  begin match Player.can_sell_stock player stock with
-  | true -> 
-      let player2, share_price = Player.sell_stock player target_player player_idx ~target_idx:stock in
-      update_player v player_idx (fun player -> player2);
-      Option.iter (fun share_price -> update_player v stock (fun player -> Player.set_share_price player share_price)) share_price;
-      send_ui_msg v @@ StockBroker(StockSold {player=player_idx; stock})
-  | false -> ()
+  begin match Player.sell_stock player target_player player_idx ~target_idx:stock with
+  | Some(player2, cost, other_share_price) ->
+      update_player v player_idx (fun _ -> player2);
+      (* Update other company if necessary *)
+      Option.iter (fun share_price -> update_player v stock (fun player ->
+        Player.set_share_price player share_price)) other_share_price;
+      send_ui_msg v @@ StockBroker(StockSold {player=player_idx; stock; cost})
+  | _ -> ()
   end;
   v
 
@@ -568,6 +569,9 @@ let get_time_of_day time =
   let am_pm = if hours >= 12 then "PM" else "AM" in
   Printf.sprintf "%d:%02d %s" time_hours time_mins am_pm
 
+let get_company_name v player_idx =
+  let player = get_player v player_idx in
+  Player.get_name player v.stations v.cities
 
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
