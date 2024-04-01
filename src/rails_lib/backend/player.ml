@@ -164,6 +164,14 @@ let declare_bankruptcy (v:t) =
 
 let get_player players player_idx = players.(player_idx)
 
+let shares_owned_by_others players ~target_idx ~exclude_idx =
+  Array.foldi (fun acc i player ->
+    if i = exclude_idx then acc
+    else
+      acc + Stocks.owned_shares player.m.stock target_idx)
+    0
+    players
+
 let compute_public_shares players ~player_idx =
   let v = get_player players player_idx in
   let total_shares = v.m.stock.total_shares in
@@ -176,16 +184,24 @@ let compute_public_shares players ~player_idx =
 let can_buy_stock players ~player_idx ~target_idx ~difficulty =
   let v = get_player players player_idx in
   let tgt_player = get_player players target_idx in
-  let enough_money = v.m.cash >= tgt_player.m.stock.share_price * C.num_buy_shares in
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
-  let can_buy = Stocks.owned_shares v.m.stock target_idx < get_total_shares tgt_player in
   (* Test if we have an 'anti-trust' problem *)
   let max_owned_companies = Utils.clip (B_options.difficulty_to_enum difficulty) ~min:1 ~max:3 in
   let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares:C.num_buy_shares in
   if Stocks.num_owned_companies stock > max_owned_companies then
     `Anti_trust_violation max_owned_companies
+  else if player_idx <> target_idx &&
+       compute_public_shares players ~player_idx = 0 && 
+       Stocks.owned_shares v.m.stock target_idx < tgt_player.m.stock.total_shares / 2
+    then
+      let share_price = tgt_player.m.stock.share_price * 2 in
+      let shares_to_buy = shares_owned_by_others players ~target_idx ~exclude_idx:player_idx in
+      `Offer_takeover(share_price, shares_to_buy)
   else
-    if enough_money && can_buy then `Ok else `Error
+    let can_buy = Stocks.owned_shares v.m.stock target_idx < get_total_shares tgt_player in
+    let enough_money = v.m.cash >= tgt_player.m.stock.share_price * C.num_buy_shares in
+    if enough_money && can_buy then `Ok
+  else `Error
 
 let _sell_buy_calculations v target_player ~target_idx ~add_stock ~buy =
   let share_price = target_player.m.stock.share_price in
