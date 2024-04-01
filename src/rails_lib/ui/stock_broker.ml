@@ -120,16 +120,13 @@ let render win (s:State.t) v =
 let handle_event (s:State.t) v (event:Event.t) =
   let menu, menu_action, event = Menu.Global.update s v.menu event in
   let exit, v, bk_action =
-    let player = C.player in
-    let player_obj = Backend.get_player s.backend player in
     match menu_action with
-    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player}
-    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player}
+    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player=C.player}
+    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
     | Menu.On(`BuyStock stock) ->
-      let target_player = Backend.get_player s.backend stock in
       let difficulty = s.backend.options.difficulty in
-      begin match Player.can_buy_stock player_obj stock ~target_player ~difficulty with
-      | `Ok -> false, v, B.Action.BuyStock {player; stock}
+      begin match Player.can_buy_stock s.backend.players ~player_idx:C.player ~target_idx:stock ~difficulty with
+      | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
       | `Error -> false, v, B.Action.NoAction
       | `Anti_trust_violation max_num ->
           let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
@@ -139,8 +136,8 @@ let handle_event (s:State.t) v (event:Event.t) =
           in
           false, {v with msgbox=Some msgbox}, B.Action.NoAction
       end
-    | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player; stock}
-    | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player}
+    | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player=C.player; stock}
+    | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player=C.player}
     | _ when Event.key_modal_dismiss event -> true, v, B.Action.NoAction
     | _ -> false, v, B.Action.NoAction
   in

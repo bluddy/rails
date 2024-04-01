@@ -516,11 +516,12 @@ let _repay_bond v player_idx =
     v
   ) else v
 
+let can_buy_stock v ~player_idx ~target_idx =
+  Player.can_buy_stock v.players ~player_idx ~target_idx ~difficulty:v.options.difficulty
+
 let _buy_stock v player_idx ~stock = 
-  let player = get_player v player_idx in
-  let target_player = get_player v stock in
   let difficulty = v.options.difficulty in
-  begin match Player.buy_stock player target_player player_idx ~target_idx:stock ~difficulty with
+  begin match Player.buy_stock v.players ~player_idx ~target_idx:stock ~difficulty with
   | Some(player2, cost, other_share_price) ->
       update_player v player_idx (fun _ -> player2);
       Option.iter (fun share_price -> update_player v stock (fun player ->

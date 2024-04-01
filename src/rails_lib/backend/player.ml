@@ -162,18 +162,23 @@ let check_bankruptcy (v:t) =
 let declare_bankruptcy (v:t) =
   {v with m = {v.m with in_receivership = true}}
 
-let compute_public_shares v player_idx players =
+let get_player players player_idx = players.(player_idx)
+
+let compute_public_shares players ~player_idx =
+  let v = get_player players player_idx in
   let total_shares = v.m.stock.total_shares in
   let owned_shares =
-    Array.fold (fun acc player -> acc + Stocks.owned_shares player.Player.m.stock player_idx)
+    Array.fold (fun acc player -> acc + Stocks.owned_shares player.m.stock player_idx)
       0 players
   in
   total_shares - owned_shares
 
-let can_buy_stock (v:t) target_idx ~target_player ~difficulty =
-  let enough_money = v.m.cash >= v.m.stock.share_price * C.num_buy_shares in
+let can_buy_stock players ~player_idx ~target_idx ~difficulty =
+  let v = get_player players player_idx in
+  let tgt_player = get_player players target_idx in
+  let enough_money = v.m.cash >= tgt_player.m.stock.share_price * C.num_buy_shares in
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
-  let can_buy = Stocks.owned_shares v.m.stock target_idx < get_total_shares target_player in
+  let can_buy = Stocks.owned_shares v.m.stock target_idx < get_total_shares tgt_player in
   (* Test if we have an 'anti-trust' problem *)
   let max_owned_companies = Utils.clip (B_options.difficulty_to_enum difficulty) ~min:1 ~max:3 in
   let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares:C.num_buy_shares in
@@ -198,14 +203,17 @@ let _sell_buy_calculations v target_player ~target_idx ~add_stock ~buy =
   let cash = v.m.cash + cost in
   cash, stock, cost, share_price2
 
-let buy_stock (v:t) target_player player_idx ~target_idx ~difficulty =
-  match can_buy_stock v target_idx ~target_player ~difficulty with
+let buy_stock players ~player_idx ~target_idx ~difficulty =
+  let v = get_player players player_idx in
+  let tgt_player = get_player players target_idx in
+  match can_buy_stock players ~target_idx ~player_idx ~difficulty with
   | `Ok when player_idx = target_idx ->
-    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:0 ~buy:true in
+    (* add_stock: code adds 10 for ai *)
+    let cash, stock, cost, share_price = _sell_buy_calculations v tgt_player ~target_idx ~add_stock:0 ~buy:true in
     Some({v with m={v.m with cash; stock={stock with share_price}}}, cost, None)
 
   | `Ok -> (* different companies *)
-    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:C.num_buy_shares ~buy:true in
+    let cash, stock, cost, share_price = _sell_buy_calculations v tgt_player ~target_idx ~add_stock:C.num_buy_shares ~buy:true in
     Some({v with m={v.m with cash; stock}}, cost, Some share_price)
 
   | _ -> None
