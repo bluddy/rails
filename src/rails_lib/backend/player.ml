@@ -162,6 +162,14 @@ let check_bankruptcy (v:t) =
 let declare_bankruptcy (v:t) =
   {v with m = {v.m with in_receivership = true}}
 
+let compute_public_shares v player_idx players =
+  let total_shares = v.m.stock.total_shares in
+  let owned_shares =
+    Array.fold (fun acc player -> acc + Stocks.owned_shares player.Player.m.stock player_idx)
+      0 players
+  in
+  total_shares - owned_shares
+
 let can_buy_stock (v:t) target_idx ~target_player ~difficulty =
   let enough_money = v.m.cash >= v.m.stock.share_price * C.num_buy_shares in
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
@@ -219,6 +227,4 @@ let sell_stock (v:t) target_player player_idx ~target_idx =
     Some({v with m={v.m with cash; stock}}, cost, Some share_price)
 
   | false -> None
-
-
 

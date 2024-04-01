@@ -530,15 +530,6 @@ let _buy_stock v player_idx ~stock =
   end;
   v
 
-let _compute_public_shares v player_idx =
-  let player = get_player v player_idx in
-  let total_shares = player.m.stock.total_shares in
-  let owned_shares =
-    Array.fold (fun acc player -> acc + Stocks.owned_shares player.Player.m.stock player_idx)
-      0 v.players
-  in
-  total_shares - owned_shares
-
 let _sell_stock v player_idx ~stock =
   let player = get_player v player_idx in
   let target_player = get_player v stock in
