@@ -135,6 +135,21 @@ let handle_event (s:State.t) v (event:Event.t) =
               max_num (if max_num > 1 then "s" else "")
           in
           false, {v with msgbox=Some msgbox}, B.Action.NoAction
+      | `Offer_takeover(share_price, shares_to_buy) ->
+          let open Menu in
+          let open MsgBox in
+          let menu =
+            let text = Printf.sprintf "Management demands %s.00\n per share for treasury stock.\nTotal Cost: %s.\n"
+               (Utils.show_cash ~ks:false share_price)
+               (Utils.show_cash @@ share_price * shares_to_buy)
+            in
+            make ~fonts:s.fonts ~x:180 ~y:8 [
+              static_entry ~color:Ega.white text;
+              make_entry "Never Mind" @@ `Action `None;
+              make_entry "Buy Stock" @@ `Action (`BuyStock stock);
+            ]
+          in
+          false, {v with msgbox=Some menu}, B.Action.NoAction
       end
     | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player=C.player; stock}
     | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player=C.player}
