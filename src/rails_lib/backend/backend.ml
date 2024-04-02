@@ -604,7 +604,7 @@ module Action = struct
     | SellBond of {player: int}
     | RepayBond of {player: int}
     | Declare_bankruptcy of {player: int}
-    | BuyStock of {player: int; stock: int}
+    | BuyStock of {player: int; stock: int; all: bool}
     | SellStock of {player: int; stock: int}
     [@@deriving show]
 
@@ -658,7 +658,7 @@ module Action = struct
           _sell_bond backend player
       | RepayBond{player}->
           _repay_bond backend player
-      | BuyStock{player; stock} ->
+      | BuyStock{player; stock; all} ->
           _buy_stock backend player ~stock
       | SellStock{player; stock} ->
           _sell_stock backend player ~stock

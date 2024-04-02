@@ -3,6 +3,9 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 module C = Constants
 
+let src = Logs.Src.create "player" ~doc:"Player"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 type monetary = {
   cash: int; (* all x1000 *)
   bonds: int; (* money *)
@@ -206,12 +209,13 @@ let can_buy_stock players ~player_idx ~target_idx ~difficulty =
 let _sell_buy_calculations v target_player ~target_idx ~add_stock ~buy =
   let share_price = target_player.m.stock.share_price in
   let non_treasury_shares = Stocks.non_treasury_shares target_player.m.stock + add_stock in
+  let cost = share_price * C.num_buy_shares in
   let price_change =
     let delta = if buy then 1 else 0 in
-    (share_price / non_treasury_shares) + delta
+    (cost / non_treasury_shares) + delta
   in
-  let cost = share_price * C.num_buy_shares in
   let price_change = if buy then price_change else -price_change in
+  Log.debug (fun f -> f "price change[%d] non-t-shares[%d] share_price=[%d]" price_change non_treasury_shares share_price);
   let share_price2 = share_price + price_change in
   let num_shares = if buy then C.num_buy_shares else -C.num_buy_shares in
   let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares in

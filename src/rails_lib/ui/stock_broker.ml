@@ -132,7 +132,7 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
      | `Stay modal -> false, Some (Confirm_menu modal), nobaction
-     | `Activate (`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock}
+     | `Activate (`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock; all=true}
      | `Activate `None -> false, Some modal, nobaction
      | `Exit -> true, None, nobaction
      end
@@ -154,7 +154,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       | Menu.On(`BuyStock stock) ->
         let difficulty = s.backend.options.difficulty in
         begin match Player.can_buy_stock s.backend.players ~player_idx:C.player ~target_idx:stock ~difficulty with
-        | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
+        | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock; all=false}
         | `Error -> false, v, B.Action.NoAction
         | `Anti_trust_violation max_num ->
             let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
