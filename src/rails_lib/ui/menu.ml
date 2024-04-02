@@ -650,3 +650,14 @@ module Global = struct
 
 end
 
+let modal_handle_event ~is_msgbox s menu event =
+  let menu, action = MsgBox.update s menu event in
+  match action with
+  | On(None) -> `Exit
+  | NoAction when Event.pressed_esc event -> `Exit
+  | NoAction when is_msgbox && Event.key_modal_dismiss event -> `Exit
+  | ClickInMsgBox when is_msgbox -> `Exit
+  | On(Some choice) -> `Activate choice
+  | NoAction -> `Stay menu
+  | _ -> `Stay menu
+

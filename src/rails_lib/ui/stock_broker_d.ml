@@ -9,7 +9,18 @@ type msg = [
   (* TODO: operate RR menu *)
   ]
 
+  (* For the "are you sure" menu *)
+type confirm_msg = [
+  | `None
+  | `BuyStock of int
+  ]
+
+  (* These things prevent any other interaction *)
+type 'state modal =
+  | MsgBox of (unit, 'state) Menu.MsgBox.t
+  | Confirm_menu of (confirm_msg, 'state) Menu.MsgBox.t
+
 type 'state t = {
   menu: (msg, 'state) Menu.Global.t;
-  msgbox: (unit, 'state) Menu.MsgBox.t option;
+  modal: 'state modal option;
 }

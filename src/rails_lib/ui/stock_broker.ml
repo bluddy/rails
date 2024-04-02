@@ -58,7 +58,7 @@ let make (s:State.t) =
   let menu = make_menu b.players b.stations b.cities b.region s.fonts in
   {
     menu;
-    msgbox=None;
+    modal = None;
   }
 
 let render win (s:State.t) v =
@@ -75,6 +75,7 @@ let render win (s:State.t) v =
 
   let render_player player y =
     let name = Player.get_name player s.backend.stations s.backend.cities in
+    (* TODO: render owned stock by player in ai *)
     let is_ai, color = match player.ai with
     | Some opponent ->
       let color = Ega.green in
@@ -115,49 +116,73 @@ let render win (s:State.t) v =
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
 
   Option.iter (fun msgbox -> Menu.MsgBox.render win s msgbox) v.msgbox;
+  Option.iter (fun msgbox -> Menu.MsgBox.render win s msgbox) v.confirm_menu;
   ()
 
+let handle_modal_event (s:State.t) modal (event:Event.t) = match modal with
+  | MsgBox modal -> 
+     let modal, action = Menu.MsgBox.update s modal event in
+     begin match action with
+     | Menu.NoAction -> false, modal, B.Action.NoAction
+     | _ -> true, modal, N.Action.NoAction
+     end
+  | Confirm_menu modal ->
+     let modal, action = Menu.MsgBox.update s modal event in
+     begin match action with
+      | Menu.On(`BuyStock(stock)) -> true, None, B.Action.BuyStock{player=C.player; stock}
+      | Menu.NoAction -> false, modal, B.Action.NoAction
+      | _ -> false, None, B.Action.Noaction
+     end
+  
+  
+
 let handle_event (s:State.t) v (event:Event.t) =
-  let menu, menu_action, event = Menu.Global.update s v.menu event in
-  let exit, v, bk_action =
-    match menu_action with
-    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player=C.player}
-    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
-    | Menu.On(`BuyStock stock) ->
-      let difficulty = s.backend.options.difficulty in
-      begin match Player.can_buy_stock s.backend.players ~player_idx:C.player ~target_idx:stock ~difficulty with
-      | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
-      | `Error -> false, v, B.Action.NoAction
-      | `Anti_trust_violation max_num ->
-          let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
-            Printf.sprintf "Anti-Trust Violation\nAs a %s you are\nonly authorized to invest\nin %d other RailRoad%s."
-              (B_options.show_difficulty difficulty)
-              max_num (if max_num > 1 then "s" else "")
-          in
-          false, {v with msgbox=Some msgbox}, B.Action.NoAction
-      | `Offer_takeover(share_price, shares_to_buy) ->
-          let open Menu in
-          let open MsgBox in
-          let menu =
-            let text = Printf.sprintf "Management demands %s.00\n per share for treasury stock.\nTotal Cost: %s.\n"
-               (Utils.show_cash ~ks:false share_price)
-               (Utils.show_cash @@ share_price * shares_to_buy)
+  match v.modal with
+  | Some modal ->
+    let exit, modal, bk_action = handle_modal_event s event modal in
+    let v = [%up {v with modal}] in
+    exit, v, bk_action
+  | None ->
+    let menu, menu_action, event = Menu.Global.update s v.menu event in
+    let exit, v, bk_action =
+      match menu_action with
+      | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player=C.player}
+      | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
+      | Menu.On(`BuyStock stock) ->
+        let difficulty = s.backend.options.difficulty in
+        begin match Player.can_buy_stock s.backend.players ~player_idx:C.player ~target_idx:stock ~difficulty with
+        | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
+        | `Error -> false, v, B.Action.NoAction
+        | `Anti_trust_violation max_num ->
+            let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
+              Printf.sprintf "Anti-Trust Violation\nAs a %s you are\nonly authorized to invest\nin %d other RailRoad%s."
+                (B_options.show_difficulty difficulty)
+                max_num (if max_num > 1 then "s" else "")
             in
-            make ~fonts:s.fonts ~x:180 ~y:8 [
-              static_entry ~color:Ega.white text;
-              make_entry "Never Mind" @@ `Action `None;
-              make_entry "Buy Stock" @@ `Action (`BuyStock stock);
-            ]
-          in
-          false, {v with msgbox=Some menu}, B.Action.NoAction
-      end
-    | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player=C.player; stock}
-    | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player=C.player}
-    | _ when Event.key_modal_dismiss event -> true, v, B.Action.NoAction
-    | _ -> false, v, B.Action.NoAction
-  in
-  let v = [%up {v with menu}] in
-  exit, v, bk_action
+            false, {v with msgbox=Some msgbox}, B.Action.NoAction
+        | `Offer_takeover(share_price, shares_to_buy) ->
+            let open Menu in
+            let open MsgBox in
+            let menu =
+              let text = Printf.sprintf "Management demands %s.00\n per share for treasury stock.\nTotal Cost: %s.\n"
+                 (Utils.show_cash ~ks:false share_price)
+                 (Utils.show_cash @@ share_price * shares_to_buy)
+              in
+              make ~fonts:s.fonts ~x:180 ~y:8 [
+                static_entry ~color:Ega.white text;
+                make_entry "Never Mind" @@ `Action `None;
+                make_entry "Buy Stock" @@ `Action (`BuyStock stock);
+              ]
+            in
+            false, {v with confirm_menu=Some menu}, B.Action.NoAction
+        end
+      | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player=C.player; stock}
+      | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player=C.player}
+      | _ when Event.key_modal_dismiss event -> true, v, B.Action.NoAction
+      | _ -> false, v, B.Action.NoAction
+    in
+    let v = [%up {v with menu}] in
+    exit, v, bk_action
 
 let handle_msg (s:State.t) v ui_msg =
   (* Create a msgbox *)
