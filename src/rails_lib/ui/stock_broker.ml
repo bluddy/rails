@@ -115,23 +115,26 @@ let render win (s:State.t) v =
 
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
 
-  Option.iter (fun msgbox -> Menu.MsgBox.render win s msgbox) v.msgbox;
-  Option.iter (fun msgbox -> Menu.MsgBox.render win s msgbox) v.confirm_menu;
+  Option.iter (function 
+    | MsgBox msgbox -> Menu.MsgBox.render win s msgbox
+    | Confirm_menu msgbox -> Menu.MsgBox.render win s msgbox)
+    v.modal;
   ()
 
-let handle_modal_event (s:State.t) modal (event:Event.t) = match modal with
-  | MsgBox modal -> 
-     let modal, action = Menu.MsgBox.update s modal event in
-     begin match action with
-     | Menu.NoAction -> false, modal, B.Action.NoAction
-     | _ -> true, modal, N.Action.NoAction
+let handle_modal_event (s:State.t) modal (event:Event.t) =
+    let nobaction = B.Action.NoAction in
+    match modal with
+  | MsgBox msgbox -> 
+     begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event with
+     | `Stay _ -> false, Some modal, nobaction
+     | _ -> true, None, nobaction
      end
-  | Confirm_menu modal ->
-     let modal, action = Menu.MsgBox.update s modal event in
-     begin match action with
-      | Menu.On(`BuyStock(stock)) -> true, None, B.Action.BuyStock{player=C.player; stock}
-      | Menu.NoAction -> false, modal, B.Action.NoAction
-      | _ -> false, None, B.Action.Noaction
+  | Confirm_menu menu ->
+     begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
+     | `Stay modal -> false, Some (Confirm_menu modal), nobaction
+     | `Activate (`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock}
+     | `Activate `None -> false, Some modal, nobaction
+     | `Exit -> true, None, nobaction
      end
   
   
@@ -139,7 +142,7 @@ let handle_modal_event (s:State.t) modal (event:Event.t) = match modal with
 let handle_event (s:State.t) v (event:Event.t) =
   match v.modal with
   | Some modal ->
-    let exit, modal, bk_action = handle_modal_event s event modal in
+    let exit, modal, bk_action = handle_modal_event s modal event in
     let v = [%up {v with modal}] in
     exit, v, bk_action
   | None ->
@@ -159,7 +162,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                 (B_options.show_difficulty difficulty)
                 max_num (if max_num > 1 then "s" else "")
             in
-            false, {v with msgbox=Some msgbox}, B.Action.NoAction
+            false, {v with modal=Some (MsgBox msgbox)}, B.Action.NoAction
         | `Offer_takeover(share_price, shares_to_buy) ->
             let open Menu in
             let open MsgBox in
@@ -174,7 +177,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                 make_entry "Buy Stock" @@ `Action (`BuyStock stock);
               ]
             in
-            false, {v with confirm_menu=Some menu}, B.Action.NoAction
+            false, {v with modal=Some(Confirm_menu(menu))}, B.Action.NoAction
         end
       | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player=C.player; stock}
       | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player=C.player}
@@ -188,8 +191,8 @@ let handle_msg (s:State.t) v ui_msg =
   (* Create a msgbox *)
   let open Printf in
   let show_cash = Utils.show_cash ~show_neg:false ~region:s.backend.region in
-  let msgbox =
-    let basic_msgbox text = Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text |> Option.some in
+  let modal =
+    let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
     match ui_msg with
     | Backend_d.StockBroker x -> begin match x with
       | BondSold{interest_rate; player} when player = C.player ->
@@ -199,24 +202,24 @@ let handle_msg (s:State.t) v ui_msg =
           let text = sprintf "%s bond repaid." (show_cash C.bond_value) in
           basic_msgbox text
       | StockSold{player; stock; cost} when player = C.player && stock = player ->
-          let text = sprintf "10,000 shares of\ncompany stock sold for\n%s.\n" (show_cash cost) in
+          let text = sprintf "10,000 shares of\ncompany stock sold for\n------ %s ------." (show_cash cost) in
           basic_msgbox text
       | StockSold{player; stock; cost} when player = C.player ->
-          let text = sprintf "10,000 shares of\n%s\nstock sold\n for %s.\n"
+          let text = sprintf "10,000 shares of\n%s\nstock sold\n for %s."
             (B.get_company_name s.backend stock) (show_cash cost)
           in
           basic_msgbox text
       | StockBought{player; stock; cost} when player = C.player && stock = player ->
-          let text = sprintf "10,000 shares of company\nstock purchased for\n%s.\n" (show_cash cost) in
+          let text = sprintf "10,000 shares of company\nstock purchased for\n------ %s ------." (show_cash cost) in
           basic_msgbox text
       | StockBought{player; stock; cost} when player = C.player ->
-          let text = sprintf "10,000 shares of\n%s\nstock purchased for %s.\n"
+          let text = sprintf "10,000 shares of\n%s\nstock purchased for %s."
             (B.get_company_name s.backend stock) (show_cash cost)
           in
           basic_msgbox text
       end
     | _ -> None
   in
-  [%up {v with msgbox}]
+  [%up {v with modal}]
 
 
