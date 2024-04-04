@@ -223,6 +223,9 @@ let _sell_buy_calculations v target_player ~target_idx ~add_stock ~buy =
   let cash = v.m.cash + cost in
   cash, stock, cost, share_price2
 
+let set_share_price (v:t) share_price =
+  {v with m={v.m with stock={v.m.stock with share_price}}}
+
 let buy_stock players ~player_idx ~target_idx ~difficulty =
   let v = get_player players player_idx in
   let tgt_player = get_player players target_idx in
@@ -230,19 +233,36 @@ let buy_stock players ~player_idx ~target_idx ~difficulty =
   | `Ok when player_idx = target_idx ->
     (* add_stock: code adds 10 for ai *)
     let cash, stock, cost, share_price = _sell_buy_calculations v tgt_player ~target_idx ~add_stock:0 ~buy:true in
-    Some({v with m={v.m with cash; stock={stock with share_price}}}, cost, None)
+    let v = {v with m={v.m with cash; stock={stock with share_price}}} in
+    players.(player_idx) <- v;
+    `Bought(cost)
 
   | `Ok -> (* different companies *)
     let cash, stock, cost, share_price = _sell_buy_calculations v tgt_player ~target_idx ~add_stock:C.num_buy_shares ~buy:true in
-    Some({v with m={v.m with cash; stock}}, cost, Some share_price)
+    let v = {v with m={v.m with cash; stock}} in
+    players.(player_idx) <- v;
+    players.(target_idx) <- set_share_price players.(target_idx) share_price;
+    `Bought(cost)
 
-  | _ -> None
+  | `Offer_takeover(share_price, num_shares) when get_cash v >= share_price * num_shares -> (* buy all *)
+    (* Buy all stock for one player. Remove from all others *)
+    Array.mapi_inplace (fun i player ->
+      let stock, cash = if i = player_idx then
+        Stocks.add_shares player.m.stock ~target_idx ~num_shares,
+        (get_cash player) - (share_price * num_shares)
+      else
+        let num_shares = Stocks.owned_shares player.m.stock target_idx in
+        Stocks.set_shares player.m.stock ~target_idx ~num_shares:0,
+        player.m.cash + num_shares * share_price
+      in
+      {player with m={player.m with stock; cash}}
+    ) players;
+    `Takeover
+
+  | _ -> `None
 
 let can_sell_stock (v:t) target_idx =   
   Stocks.owned_shares v.m.stock target_idx > 0
-
-let set_share_price (v:t) share_price =
-  {v with m={v.m with stock={v.m.stock with share_price}}}
 
 let sell_stock (v:t) target_player player_idx ~target_idx =
   match can_sell_stock v target_idx with

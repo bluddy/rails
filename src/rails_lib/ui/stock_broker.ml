@@ -132,7 +132,7 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
      | `Stay modal -> false, Some (Confirm_menu modal), nobaction
-     | `Activate (`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock; all=true}
+     | `Activate (`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock}
      | `Activate `None -> false, Some modal, nobaction
      | `Exit -> true, None, nobaction
      end
@@ -154,7 +154,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       | Menu.On(`BuyStock stock) ->
         let difficulty = s.backend.options.difficulty in
         begin match Player.can_buy_stock s.backend.players ~player_idx:C.player ~target_idx:stock ~difficulty with
-        | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock; all=false}
+        | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
         | `Error -> false, v, B.Action.NoAction
         | `Anti_trust_violation max_num ->
             let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
@@ -216,6 +216,9 @@ let handle_msg (s:State.t) v ui_msg =
           let text = sprintf "10,000 shares of\n%s\nstock purchased for %s."
             (B.get_company_name s.backend stock) (show_cash cost)
           in
+          basic_msgbox text
+      | Takeover {player; stock} when player = C.player ->
+          let text = sprintf "You take control of the\n%s!" (B.get_company_name s.backend stock) in
           basic_msgbox text
       end
     | _ -> None

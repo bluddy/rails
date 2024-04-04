@@ -522,11 +522,10 @@ let can_buy_stock v ~player_idx ~target_idx =
 let _buy_stock v player_idx ~stock = 
   let difficulty = v.options.difficulty in
   begin match Player.buy_stock v.players ~player_idx ~target_idx:stock ~difficulty with
-  | Some(player2, cost, other_share_price) ->
-      update_player v player_idx (fun _ -> player2);
-      Option.iter (fun share_price -> update_player v stock (fun player ->
-        Player.set_share_price player share_price)) other_share_price;
+  | `Bought cost ->
       send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock; cost})
+  | `Takeover ->
+      send_ui_msg v @@ StockBroker(Takeover {player=player_idx; stock})
   | _ -> ()
   end;
   v
@@ -604,7 +603,7 @@ module Action = struct
     | SellBond of {player: int}
     | RepayBond of {player: int}
     | Declare_bankruptcy of {player: int}
-    | BuyStock of {player: int; stock: int; all: bool}
+    | BuyStock of {player: int; stock: int}
     | SellStock of {player: int; stock: int}
     [@@deriving show]
 
@@ -658,7 +657,7 @@ module Action = struct
           _sell_bond backend player
       | RepayBond{player}->
           _repay_bond backend player
-      | BuyStock{player; stock; all} ->
+      | BuyStock{player; stock} ->
           _buy_stock backend player ~stock
       | SellStock{player; stock} ->
           _sell_stock backend player ~stock

@@ -60,6 +60,13 @@ let add_shares v ~target_idx ~num_shares =
 let remove_shares v ~target_idx ~num_shares =
   add_shares v ~target_idx ~num_shares:(-num_shares)
 
+let _set_shares owned_shares ~target_idx ~num_shares =
+  IntMap.add target_idx num_shares owned_shares
+
+let set_shares v ~target_idx ~num_shares =
+  let owned_shares = _set_shares v.owned_shares ~target_idx ~num_shares in
+  {v with owned_shares}
+
 let num_owned_companies v =
   IntMap.fold (fun idx shares acc -> if v.player_idx <> idx && shares > 0 then acc + 1 else acc) v.owned_shares 0
 

@@ -1,4 +1,5 @@
 # Tasks
+- Debug menu to test functionalities
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc
@@ -6,6 +7,7 @@
 - Check computation of wait time
 - F10 survey
 - Bug:
+  - Selling stock doesn't lower stock price
   - New train doesn't pick up stuff from starting station
   - Clicking on map during train creation crashes
   - First engines use one-chimney img. Check in code.
@@ -116,4 +118,5 @@
         - If can't, message appears
         - Only way company builds now
     - build tracks into controlled ai station: union station
-      - charged 100k for terminal (normally $200k)
+    - charged 100k for terminal (normally $200k)
+  - Holding is before we enter the station! (records and such come later)

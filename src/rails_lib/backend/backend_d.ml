@@ -34,6 +34,7 @@ type stock_broker_msg =
   | StockBought of {player:int; stock: int; cost: int}
   | StockSold of {player:int; stock: int; cost: int}
   | BankruptcyDeclared of {player: int}
+  | Takeover of {player:int; stock: int}
   [@@deriving yojson]
 
 type ui_msg =
