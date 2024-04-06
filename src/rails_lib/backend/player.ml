@@ -276,3 +276,13 @@ let sell_stock (v:t) target_player player_idx ~target_idx =
 
   | false -> None
 
+let companies_controlled_by (players:t array) ~player_idx =
+  let player = players.(player_idx) in
+  Array.foldi (fun acc i company ->
+    if i <> player_idx &&
+      Stocks.owned_shares player.m.stock i > Stocks.total_shares company.m.stock / 2
+    then i::acc
+    else acc)
+  []
+  players
+

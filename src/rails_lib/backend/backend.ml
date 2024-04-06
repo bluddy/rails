@@ -573,6 +573,9 @@ let get_company_name v player_idx =
   let player = get_player v player_idx in
   Player.get_name player v.stations v.cities
 
+let companies_controlled_by v player_idx =
+  Player.companies_controlled_by v.players ~player_idx
+
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
   type t =

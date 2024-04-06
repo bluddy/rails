@@ -9,8 +9,9 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let sp = Printf.sprintf
 
-let make_menu players stations cities region fonts =
+let make_menu b players stations cities region fonts =
   let open Menu in
+  let open MsgBox in
   let cash_menu =
     let check_bankruptcy (s:State.t) = Backend.check_bankruptcy s.backend C.player in
     let check_bond (s:State.t) = Backend.player_has_bond s.backend C.player in
@@ -22,7 +23,6 @@ let make_menu players stations cities region fonts =
     ]
   in
   let create_stock_menu ~x ~y action f =
-    let open MsgBox in
     let l =
       Array.to_iter players |> Iter.mapi (fun i player ->
         let s =
@@ -43,19 +43,41 @@ let make_menu players stations cities region fonts =
   let buy_stock_menu =
     create_stock_menu ~x:2 ~y:8 "Buy" (fun i -> `BuyStock i)
   in
+  let operate_rr_menu =
+    let companies = Backend.companies_controlled_by b C.player in
+    let company_menu company_idx =
+      make ~fonts [
+        make_entry "Financial Report" @@ `Action(`OperateRR(company_idx, `FinancialReport));
+        make_entry (sp "Take %s" @@ Utils.show_cash ~region 100) @@ `Action(`OperateRR(company_idx, `TakeMoney 100));
+        make_entry (sp "Take %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `TakeMoney 250));
+        make_entry (sp "Take %s" @@ Utils.show_cash ~region 500) @@ `Action(`OperateRR(company_idx, `TakeMoney 500));
+        make_entry (sp "Give %s" @@ Utils.show_cash ~region 100) @@ `Action(`OperateRR(company_idx, `GiveMoney 100));
+        make_entry (sp "Give %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `GiveMoney 200));
+        make_entry "Build Track" @@ `Action(`OperateRR(company_idx, `BuildTrack));
+        make_entry "Repay Bond" @@ `Action(`OperateRR(company_idx, `RepayBond));
+      ]
+    in
+    let entries =
+      List.map (fun company_idx ->
+        make_entry (Backend.get_company_name b company_idx) @@ `MsgBox(company_menu company_idx))
+      companies
+    in
+    make ~fonts entries
+  in
   let titles =
     let open Menu.Title in
     [
       make ~fonts ~x:7 ~y:1 "&Cash" cash_menu;
       make ~fonts ~x:72 ~y:1 "&Buy Stock" buy_stock_menu;
       make ~fonts ~x:136 ~y:1 "&Sell Stock" sell_stock_menu;
+      make ~fonts ~x:170 ~y:1 "&Operate RR" operate_rr_menu;
     ]
   in
   Menu.Global.make ~menu_h:C.menu_h titles
 
 let make (s:State.t) =
   let b = s.backend in
-  let menu = make_menu b.players b.stations b.cities b.region s.fonts in
+  let menu = make_menu b b.players b.stations b.cities b.region s.fonts in
   {
     menu;
     modal = None;

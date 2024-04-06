@@ -6,7 +6,12 @@ type msg = [
   | `BuyStock of int (* player *)
   | `SellStock of int (* player *)
   | `Declare_bankruptcy
-  (* TODO: operate RR menu *)
+  | `OperateRR of int *
+      [ `FinancialReport
+      | `TakeMoney of int
+      | `GiveMoney of int 
+      | `BuildTrack
+      | `RepayBond ]
   ]
 
   (* For the "are you sure" menu *)
