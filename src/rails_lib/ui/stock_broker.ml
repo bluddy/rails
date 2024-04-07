@@ -162,6 +162,7 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   
 
 let handle_event (s:State.t) v (event:Event.t) =
+  let nobaction = B.Action.NoAction in
   match v.modal with
   | Some modal ->
     let exit, modal, bk_action = handle_modal_event s modal event in
@@ -203,6 +204,23 @@ let handle_event (s:State.t) v (event:Event.t) =
         end
       | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player=C.player; stock}
       | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player=C.player}
+      | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
+        let player = Backend.get_player s.backend company_idx in
+        let build_order = Option.map_or ~default:"" @@
+          fun player ->
+          let (x1, y1), (x2, y2) = Player.build_order player in
+          "\nSurveying route from\n%s to %s."
+            (Cities.find_exn b.cities loc1)
+            (Cities.find_exn b.cities loc2)
+        in
+        let text = "%s\nRevenue YTD: %s\nYearly Interest: %s%s" in
+          (Player.get_name player)
+          (Income_statement.total_revenue player.m.income_statement)
+          (player.m.yearly_income_payment)
+          build_order
+        in
+        false, {v with modal=MsgBox(basic_msgbox text)}, nobaction
+        
       | _ when Event.key_modal_dismiss event -> true, v, B.Action.NoAction
       | _ -> false, v, B.Action.NoAction
     in

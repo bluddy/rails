@@ -35,6 +35,11 @@ let default_monetary ~player difficulty =
     last_balance_sheet=Balance_sheet_d.default;
 }
 
+type ai = {
+  opponent: Opponent.t;
+  build_order: (Utils.loc * Utils.loc) option;
+}
+
 type t = {
   name: string option; (* custom name *)
   trains: Trainmap.t;
@@ -45,7 +50,7 @@ type t = {
   ton_miles: (int * int);
   freight_ton_miles: (Freight.t, int) Hashtbl.t;
   goods_delivered: Goods.Set.t;
-  ai: Opponent.t option;
+  ai: ai option;
 } [@@deriving yojson]
 
 let default ~player difficulty =
@@ -100,6 +105,10 @@ let get_name v station_map cities = match v.name with
     | _ -> "RR"
 
 let track_length v = v.track_length
+
+let build_order v = match v.ai with
+  | Some x -> x.build_order
+  | _ -> None
 
 let incr_dist_traveled ~dist v =
   v.dist_traveled <- v.dist_traveled + dist;

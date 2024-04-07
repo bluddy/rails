@@ -6,7 +6,7 @@ type msg = [
   | `BuyStock of int (* player *)
   | `SellStock of int (* player *)
   | `Declare_bankruptcy
-  | `OperateRR of int *
+  | `OperateRR of int * (* company *)
       [ `FinancialReport
       | `TakeMoney of int
       | `GiveMoney of int 

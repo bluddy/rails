@@ -14,4 +14,5 @@ let add_revenue revenue money v =
     (Option.map @@ fun current -> current + money) v.revenues in
   {v with revenues}
 
+let total_revenue v = RevenueMap.fold (fun _ i acc -> i + acc) v.revenues 0
 
