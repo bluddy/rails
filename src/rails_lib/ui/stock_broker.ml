@@ -99,9 +99,9 @@ let render win (s:State.t) v =
     let name = Player.get_name player s.backend.stations s.backend.cities in
     (* TODO: render owned stock by player in ai *)
     let is_ai, color = match player.ai with
-    | Some opponent ->
+    | Some ai ->
       let color = Ega.green in
-      write ~color ~x:x_left ~y @@ sp "%s's" @@ Opponent.show opponent;
+      write ~color ~x:x_left ~y @@ sp "%s's" @@ Opponent.show ai.opponent;
       let y = y + line in
       write ~color ~x:x_left ~y name;
       true, color
@@ -162,7 +162,9 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   
 
 let handle_event (s:State.t) v (event:Event.t) =
+  let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
   let nobaction = B.Action.NoAction in
+  let b = s.backend in
   match v.modal with
   | Some modal ->
     let exit, modal, bk_action = handle_modal_event s modal event in
@@ -170,59 +172,63 @@ let handle_event (s:State.t) v (event:Event.t) =
     exit, v, bk_action
   | None ->
     let menu, menu_action, event = Menu.Global.update s v.menu event in
-    let exit, v, bk_action =
-      match menu_action with
-      | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player=C.player}
-      | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
-      | Menu.On(`BuyStock stock) ->
-        let difficulty = s.backend.options.difficulty in
-        begin match Player.can_buy_stock s.backend.players ~player_idx:C.player ~target_idx:stock ~difficulty with
-        | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
-        | `Error -> false, v, B.Action.NoAction
-        | `Anti_trust_violation max_num ->
-            let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
-              Printf.sprintf "Anti-Trust Violation\nAs a %s you are\nonly authorized to invest\nin %d other RailRoad%s."
-                (B_options.show_difficulty difficulty)
-                max_num (if max_num > 1 then "s" else "")
+    let exit, v, bk_action = match menu_action with
+    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player=C.player}
+    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
+    | Menu.On(`BuyStock stock) ->
+      let difficulty = b.options.difficulty in
+      begin match Player.can_buy_stock b.players ~player_idx:C.player ~target_idx:stock ~difficulty with
+      | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
+      | `Error -> false, v, B.Action.NoAction
+      | `Anti_trust_violation max_num ->
+          let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
+            Printf.sprintf "Anti-Trust Violation\nAs a %s you are\nonly authorized to invest\nin %d other RailRoad%s."
+              (B_options.show_difficulty difficulty)
+              max_num (if max_num > 1 then "s" else "")
+          in
+          false, {v with modal=Some (MsgBox msgbox)}, nobaction
+      | `Offer_takeover(share_price, shares_to_buy) ->
+          let open Menu in
+          let open MsgBox in
+          let menu =
+            let text = Printf.sprintf "Management demands %s.00\n per share for treasury stock.\nTotal Cost: %s.\n"
+               (Utils.show_cash ~ks:false share_price)
+               (Utils.show_cash @@ share_price * shares_to_buy)
             in
-            false, {v with modal=Some (MsgBox msgbox)}, B.Action.NoAction
-        | `Offer_takeover(share_price, shares_to_buy) ->
-            let open Menu in
-            let open MsgBox in
-            let menu =
-              let text = Printf.sprintf "Management demands %s.00\n per share for treasury stock.\nTotal Cost: %s.\n"
-                 (Utils.show_cash ~ks:false share_price)
-                 (Utils.show_cash @@ share_price * shares_to_buy)
-              in
-              make ~fonts:s.fonts ~x:180 ~y:8 [
-                static_entry ~color:Ega.white text;
-                make_entry "Never Mind" @@ `Action `None;
-                make_entry "Buy Stock" @@ `Action (`BuyStock stock);
-              ]
-            in
-            false, {v with modal=Some(Confirm_menu(menu))}, B.Action.NoAction
-        end
-      | Menu.On(`SellStock stock) -> false, v, B.Action.SellStock {player=C.player; stock}
-      | Menu.On(`Declare_bankruptcy) -> false, v, B.Action.Declare_bankruptcy {player=C.player}
-      | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
-        let player = Backend.get_player s.backend company_idx in
-        let build_order = Option.map_or ~default:"" @@
-          fun player ->
-          let (x1, y1), (x2, y2) = Player.build_order player in
-          "\nSurveying route from\n%s to %s."
-            (Cities.find_exn b.cities loc1)
-            (Cities.find_exn b.cities loc2)
+            make ~fonts:s.fonts ~x:180 ~y:8 [
+              static_entry ~color:Ega.white text;
+              make_entry "Never Mind" @@ `Action `None;
+              make_entry "Buy Stock" @@ `Action (`BuyStock stock);
+            ]
+          in
+          false, {v with modal=Some(Confirm_menu(menu))}, B.Action.NoAction
+      end
+    | Menu.On(`SellStock stock) ->
+        false, v, B.Action.SellStock {player=C.player; stock}
+    | Menu.On(`Declare_bankruptcy) ->
+        false, v, B.Action.Declare_bankruptcy {player=C.player}
+    | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
+        let player = Backend.get_player b company_idx in
+        let build_order_s = Option.map_or ~default:"" (fun ((x1, y1), (x2, y2)) ->
+          sp "\nSurveying route from\n%s to %s."
+            (Cities.find_exn b.cities x1 y1 |> fst)
+            (Cities.find_exn b.cities x2 y2 |> fst)) @@
+          Player.build_order player
         in
-        let text = "%s\nRevenue YTD: %s\nYearly Interest: %s%s" in
-          (Player.get_name player)
-          (Income_statement.total_revenue player.m.income_statement)
-          (player.m.yearly_income_payment)
-          build_order
+        let text = sp "%s\nRevenue YTD: %s\nYearly Interest: %s%s"
+          (Player.get_name player b.stations b.cities)
+          (Income_statement.total_revenue player.m.income_statement
+           |> Utils.show_cash ~region:b.region)
+          (player.m.yearly_interest_payment
+           |> Utils.show_cash ~region:b.region)
+          build_order_s
         in
-        false, {v with modal=MsgBox(basic_msgbox text)}, nobaction
-        
-      | _ when Event.key_modal_dismiss event -> true, v, B.Action.NoAction
-      | _ -> false, v, B.Action.NoAction
+        false, {v with modal=basic_msgbox text}, nobaction
+      
+    | _ when Event.key_modal_dismiss event ->
+        true, v, nobaction
+    | _ ->
+        false, v, nobaction
     in
     let v = [%up {v with menu}] in
     exit, v, bk_action

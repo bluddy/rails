@@ -35,10 +35,10 @@ let default_monetary ~player difficulty =
     last_balance_sheet=Balance_sheet_d.default;
 }
 
-type ai = {
+type ai_info = {
   opponent: Opponent.t;
   build_order: (Utils.loc * Utils.loc) option;
-}
+} [@@deriving yojson]
 
 type t = {
   name: string option; (* custom name *)
@@ -50,7 +50,7 @@ type t = {
   ton_miles: (int * int);
   freight_ton_miles: (Freight.t, int) Hashtbl.t;
   goods_delivered: Goods.Set.t;
-  ai: ai option;
+  ai: ai_info option;
 } [@@deriving yojson]
 
 let default ~player difficulty =
