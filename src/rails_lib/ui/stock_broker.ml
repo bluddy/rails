@@ -46,13 +46,21 @@ let make_menu b players stations cities region fonts =
   let operate_rr_menu =
     let companies = Backend.companies_controlled_by b C.player in
     let company_menu company_idx =
+      let has_money_to_take x _ =
+        let cash = Backend.get_player b company_idx |> Player.get_cash in
+        cash >= x
+      in
+      let has_money_to_give x _ =
+        let cash = Backend.get_player b C.player |> Player.get_cash in
+        cash >= x
+      in
       make ~fonts [
         make_entry "Financial Report" @@ `Action(`OperateRR(company_idx, `FinancialReport));
         make_entry (sp "Take %s" @@ Utils.show_cash ~region 100) @@ `Action(`OperateRR(company_idx, `TakeMoney 100));
-        make_entry (sp "Take %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `TakeMoney 250));
-        make_entry (sp "Take %s" @@ Utils.show_cash ~region 500) @@ `Action(`OperateRR(company_idx, `TakeMoney 500));
+        make_entry ~test_enabled:(has_money_to_give 500)(sp "Take %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `TakeMoney 250));
+        make_entry ~test_enabled:(has_money_to_take 2000) (sp "Take %s" @@ Utils.show_cash ~region 500) @@ `Action(`OperateRR(company_idx, `TakeMoney 500));
         make_entry (sp "Give %s" @@ Utils.show_cash ~region 100) @@ `Action(`OperateRR(company_idx, `GiveMoney 100));
-        make_entry (sp "Give %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `GiveMoney 200));
+        make_entry ~test_enabled:(has_money_to_give 500) (sp "Give %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `GiveMoney 200));
         make_entry "Build Track" @@ `Action(`OperateRR(company_idx, `BuildTrack));
         make_entry "Repay Bond" @@ `Action(`OperateRR(company_idx, `RepayBond));
       ]
