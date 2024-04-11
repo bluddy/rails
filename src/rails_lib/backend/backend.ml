@@ -576,8 +576,42 @@ let get_company_name v player_idx =
 let companies_controlled_by v player_idx =
   Player.companies_controlled_by v.players ~player_idx
 
+let _operate_rr_take_money v ~player_idx ~company ~amount =
+  update_player v player_idx (fun player ->
+    Player.modify_cash player (fun cash -> cash + amount));
+  update_player v company (fun player ->
+    Player.modify_cash player (fun cash -> cash - amount));
+  send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player=player_idx; company; amount});
+  v
+  
+let _operate_rr_give_money v ~player_idx ~company ~amount =
+  let player = get_player v player_idx in
+  if not @@ Player.in_receivership player then (
+    update_player v player_idx (fun player ->
+      Player.modify_cash player (fun cash -> cash - amount));
+    update_player v company (fun player ->
+      Player.modify_cash player (fun cash -> cash + amount))
+  );
+  send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player=player_idx; amount});
+  v
+
+let _operate_rr_repay_bond v ~player_idx ~company_idx =
+  update_player v company_idx Player.repay_bond;
+  send_ui_msg v @@ StockBroker(AiBondRepaid {player=player_idx; company=company_idx});
+  v
+
+let _operate_rr_build_track v ~player_idx ~company src dst = v
+
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
+
+  type operate_rr =
+    | RRTakeMoney of int
+    | RRGiveMoney of int
+    | RRBuildTrack of Utils.loc * Utils.loc
+    | RRRepayBond
+    [@@deriving show]
+
   type t =
     | NoAction
     | Pause
@@ -608,6 +642,7 @@ module Action = struct
     | Declare_bankruptcy of {player: int}
     | BuyStock of {player: int; stock: int}
     | SellStock of {player: int; stock: int}
+    | OperateRR of {player: int; company: int; action: operate_rr}
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -666,6 +701,14 @@ module Action = struct
           _sell_stock backend player ~stock
       | Declare_bankruptcy{player} ->
           _declare_bankruptcy backend player
+      | OperateRR{player; company; action=RRTakeMoney x} ->
+          _operate_rr_take_money backend ~player_idx:player ~company ~amount:x
+      | OperateRR{player; company; action=RRGiveMoney x} ->
+          _operate_rr_give_money backend ~player_idx:player ~company ~amount:x
+      | OperateRR{player; company; action=RRBuildTrack(src,dst)} ->
+          _operate_rr_build_track backend ~player_idx:player ~company src dst
+      | OperateRR{player; company; action=RRRepayBond} ->
+          _operate_rr_repay_bond backend ~player_idx:player ~company_idx:company
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

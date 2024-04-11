@@ -70,7 +70,13 @@ let default ~player difficulty =
 
 let get_cash v = v.m.cash
 
+let bonds v = v.m.bonds
+
+let modify_cash v f = {v with m={v.m with cash = f v.m.cash}}
+
 let get_total_shares v = Stocks.total_shares v.m.stock
+
+let in_receivership v = v.m.in_receivership
 
 let pay expense money (v:t) =
   let income_statement = Income_statement.deduct expense money v.m.income_statement in
