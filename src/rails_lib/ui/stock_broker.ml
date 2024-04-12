@@ -162,7 +162,8 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
      | `Stay modal -> false, Some (Confirm_menu modal), nobaction
-     | `Activate (`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock}
+     | `Activate(`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock}
+     | `Activate(`Declare_bankruptcy) -> false, None, B.Action.Declare_bankruptcy{player=C.player}
      | `Activate `None -> false, Some modal, nobaction
      | `Exit -> true, None, nobaction
      end
@@ -209,12 +210,21 @@ let handle_event (s:State.t) v (event:Event.t) =
               make_entry "Buy Stock" @@ `Action (`BuyStock stock);
             ]
           in
-          false, {v with modal=Some(Confirm_menu(menu))}, B.Action.NoAction
+          false, {v with modal=Some(Confirm_menu(menu))}, nobaction
       end
     | Menu.On(`SellStock stock) ->
         false, v, B.Action.SellStock {player=C.player; stock}
     | Menu.On(`Declare_bankruptcy) ->
-        false, v, B.Action.Declare_bankruptcy {player=C.player}
+        let menu =
+          let text = "Are you sure you want\nto declare bankruptcy?" in
+          let open Menu.MsgBox in
+          make ~fonts:s.fonts ~x:180 ~y:8 [
+            static_entry ~color:Ega.white text;
+            make_entry "Oops!" @@ `Action `None;
+            make_entry "YES" @@ `Action(`Declare_bankruptcy);
+          ]
+        in
+        false, {v with modal=Some(Confirm_menu(menu))}, nobaction
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
         let player = Backend.get_player b company_idx in
         let build_order_s = Option.map_or ~default:"" (fun ((x1, y1), (x2, y2)) ->
@@ -295,6 +305,11 @@ let handle_msg (s:State.t) v ui_msg =
       | AiBondRepaid {player; _} when player = C.player ->
           let text = sp "%s bond repaid." (show_cash 500) in
           basic_msgbox text
+      | BankruptcyDeclared {player} when player = C.player ->
+          (* TODO: newspaper *)
+          let text = sp "Bankruptcy declared!" in
+          basic_msgbox text
+      | _ -> None
       end
     | _ -> None
   in

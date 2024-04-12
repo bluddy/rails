@@ -18,6 +18,7 @@ type msg = [
 type confirm_msg = [
   | `None
   | `BuyStock of int
+  | `Declare_bankruptcy
   ]
 
   (* These things prevent any other interaction *)

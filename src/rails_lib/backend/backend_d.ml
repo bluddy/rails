@@ -28,7 +28,7 @@ type train_arrival_msg = {
     revenue: int; (* x 1000 *)
 } [@@deriving yojson]
 
-type stock_broker_msg = 
+type stock_broker_ui_msg = 
   | BondSold of {player: int; interest_rate: int}
   | BondRepaid of {player: int}
   | StockBought of {player:int; stock: int; cost: int}
@@ -44,7 +44,7 @@ type ui_msg =
   | TrainBuilt of Trainmap.Id.t
   | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
   | TrainArrival of train_arrival_msg
-  | StockBroker of stock_broker_msg
+  | StockBroker of stock_broker_ui_msg
   [@@deriving yojson]
 
 type t = {
