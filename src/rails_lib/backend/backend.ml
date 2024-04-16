@@ -508,6 +508,7 @@ let _sell_bond v player_idx =
     v
   ) else v
 
+  (* TODO: evaluate ai company value *)
 let _repay_bond v player_idx =
   let player = get_player v player_idx in
   if Player.check_repay_bond player then (
@@ -549,6 +550,7 @@ let check_bankruptcy v player_idx =
   Player.check_bankruptcy player
 
 let _declare_bankruptcy v player_idx =
+  (* TODO: fully update bankruptcy status *)
   update_player v player_idx (fun player ->
     if Player.check_bankruptcy player then (
       let player = Player.declare_bankruptcy player in
