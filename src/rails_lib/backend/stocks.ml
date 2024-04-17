@@ -29,6 +29,8 @@ let treasury_shares v = owned_shares v v.player_idx
 
 let non_treasury_shares v = v.total_shares - treasury_shares v
 
+let share_price v = v.share_price
+
 let total_shares v = v.total_shares
 
 let compute_owned_share_value ~total_shares ~owned_shares ~share_price =
@@ -66,6 +68,10 @@ let _set_shares owned_shares ~target_idx ~num_shares =
 let set_shares v ~target_idx ~num_shares =
   let owned_shares = _set_shares v.owned_shares ~target_idx ~num_shares in
   {v with owned_shares}
+
+let reset_owned_shares v = {v with owned_shares = IntMap.empty}
+
+let set_total_shares v total_shares = {v with total_shares}
 
 let num_owned_companies v =
   IntMap.fold (fun idx shares acc -> if v.player_idx <> idx && shares > 0 then acc + 1 else acc) v.owned_shares 0

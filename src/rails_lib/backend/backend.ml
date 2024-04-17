@@ -492,7 +492,7 @@ let _month_of_time time = (time / C.month_ticks) mod 12
 
 let get_interest_rate v player_idx =
   let player = get_player v player_idx in
-  Climate.interest_rate v.climate v.region player.m.bonds
+  Player.get_interest_rate player v.climate v.region 
 
 let player_has_bond v player_idx =
   let player = get_player v player_idx in
@@ -550,15 +550,16 @@ let check_bankruptcy v player_idx =
   Player.check_bankruptcy player
 
 let _declare_bankruptcy v player_idx =
-  (* TODO: fully update bankruptcy status *)
-  update_player v player_idx (fun player ->
+  let players =
+    let player = Player.get_player v.players player_idx in
     if Player.check_bankruptcy player then (
-      let player = Player.declare_bankruptcy player in
+      let players = Player.declare_bankruptcy v.players player_idx ~difficulty:v.options.difficulty in
       send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
-      player
+      players
     ) else 
-      player);
-  v
+      v.players
+  in
+  [%up {v with players}]
 
 let get_date v = _month_of_time v.time, v.year
 

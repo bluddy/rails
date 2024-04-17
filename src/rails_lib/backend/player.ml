@@ -18,6 +18,7 @@ type monetary = {
   income_statement: Income_statement_d.t;
   total_income_statement: Income_statement_d.t;
   last_balance_sheet: Balance_sheet_d.t;
+  num_bankruptcies: int;
 } [@@deriving yojson]
 
 let default_monetary ~player difficulty =
@@ -27,12 +28,13 @@ let default_monetary ~player difficulty =
     stockholders_equity = -500;
     stock = Stocks.default_for_player ~player difficulty;
     owned_industry = 0;
-    yearly_interest_payment=20;
-    net_worth=500;
-    in_receivership=false;
-    income_statement=Income_statement_d.default;
-    total_income_statement=Income_statement_d.default;
-    last_balance_sheet=Balance_sheet_d.default;
+    yearly_interest_payment = 20;
+    net_worth = 500;
+    in_receivership = false;
+    income_statement = Income_statement_d.default;
+    total_income_statement = Income_statement_d.default;
+    last_balance_sheet = Balance_sheet_d.default;
+    num_bankruptcies = 0;
 }
 
 type ai_info = {
@@ -136,7 +138,12 @@ let remove_station loc v =
 let has_bond (v:t) = v.m.bonds > 0
 
 let get_interest_rate v climate region =
-  Climate.interest_rate climate region v.m.bonds
+  let bond_val = match region with
+    | Region.WestUS -> 1000 (* Special treatment *)
+    | _ -> 500
+  in
+  let num_bonds = v.m.bonds / bond_val in
+  num_bonds - (Climate.to_enum climate) + v.m.num_bankruptcies + 6
 
 let check_sell_bond v climate region =
   let interest_rate = get_interest_rate v climate region in
@@ -147,7 +154,7 @@ let sell_bond (v:t) climate region =
   if check_sell_bond v climate region then (
     let bonds = v.m.bonds + C.bond_value in
     let cash = v.m.cash + C.bond_value in
-    let interest_rate = Climate.interest_rate climate region v.m.bonds in
+    let interest_rate = get_interest_rate v climate region in
     let base_payment = C.bond_value / 100 in
     let interest_increase = base_payment * interest_rate in
     let yearly_interest_payment = v.m.yearly_interest_payment + interest_increase in
@@ -177,10 +184,7 @@ let check_bankruptcy (v:t) =
   v.m.bonds > C.min_bonds_for_bankruptcy &&
   v.m.cash < C.max_cash_for_bankruptcy 
 
-let declare_bankruptcy (v:t) =
-  {v with m = {v.m with in_receivership = true}}
-
-let get_player players player_idx = players.(player_idx)
+let get_player players player_idx : t = players.(player_idx)
 
 let shares_owned_by_others players ~target_idx ~exclude_idx =
   Array.foldi (fun acc i player ->
@@ -300,4 +304,28 @@ let companies_controlled_by (players:t array) ~player_idx =
     else acc)
   []
   players
+
+let declare_bankruptcy players player_idx ~difficulty =
+  let player = get_player players player_idx in
+  let share_price = Stocks.share_price player.m.stock in
+  Array.mapi (fun idx v -> 
+    if idx = player_idx then
+      let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
+      let yearly_interest_payment =
+        v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
+      in
+      let stock = Stocks.set_total_shares v.m.stock 100
+        |> Stocks.reset_owned_shares
+      in
+      let in_receivership = true in
+      let num_bankruptcies = v.m.num_bankruptcies + 1 in
+      {v with m = {
+        v.m with bonds; yearly_interest_payment; stock; in_receivership; num_bankruptcies}
+      }
+    else
+      let sold_stock = (share_price * Stocks.owned_shares v.m.stock player_idx) / 2 in
+      let cash = v.m.cash + sold_stock in
+      let stock = Stocks.set_shares v.m.stock ~target_idx:player_idx ~num_shares:0 in
+      {v with m = {v.m with cash; stock}}
+  ) players
 

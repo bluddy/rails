@@ -154,18 +154,18 @@ let render win (s:State.t) v =
   ()
 
 let handle_modal_event (s:State.t) modal (event:Event.t) =
-    let nobaction = B.Action.NoAction in
-    match modal with
+  let nobaction = B.Action.NoAction in
+  match modal with
   | MsgBox msgbox -> 
      begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event with
      | `Stay _ -> false, Some modal, nobaction
      | _ -> true, None, nobaction
      end
   | Newspaper newspaper ->
-    begin match Newspaper.handle_event s newspaper event with
-    | `Stay -> false, Some modal, nobaction
-    | `Exit -> true, None, nobaction
-    end
+     begin match Newspaper.handle_event s newspaper event with
+     | `Stay -> false, Some modal, nobaction
+     | `Exit -> true, None, nobaction
+     end
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
      | `Stay modal -> false, Some (Confirm_menu modal), nobaction
