@@ -25,6 +25,7 @@ type confirm_msg = [
 type 'state modal =
   | MsgBox of (unit, 'state) Menu.MsgBox.t
   | Confirm_menu of (confirm_msg, 'state) Menu.MsgBox.t
+  | Newspaper of 'state Newspaper_d.t
 
 type 'state t = {
   menu: (msg, 'state) Menu.Global.t;

@@ -2,22 +2,12 @@
 
 open! Containers
 module R = Renderer
-
-type kind =
-  | FinancialNews
-  | RailRoadNews
-  | LocalNews
+include Newspaper_d
 
 let show_kind = function
   | FinancialNews -> "Financial\nNews"
   | RailRoadNews -> "Railroad\nNews"
   | LocalNews -> "Local\nNews"
-
-type 'state t = {
-  opponent: Opponent.t option;
-  kind: kind;
-  msgbox: (unit, 'state) Menu.MsgBox.t;
-}
 
 let make (s:State.t) kind text opponent = {
     opponent;
@@ -39,7 +29,7 @@ let render win (s:State.t) v =
   Menu.MsgBox.render win s v.msgbox;
   ()
 
-let handle_event v s event =
+let handle_event s v event =
   begin match Menu.modal_handle_event ~is_msgbox:true s v.msgbox event with
   | `Exit -> `Exit
   | _ -> `Stay

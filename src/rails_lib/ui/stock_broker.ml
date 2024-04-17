@@ -145,9 +145,11 @@ let render win (s:State.t) v =
 
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
 
-  Option.iter (function 
+  Option.iter begin function 
     | MsgBox msgbox -> Menu.MsgBox.render win s msgbox
-    | Confirm_menu msgbox -> Menu.MsgBox.render win s msgbox)
+    | Confirm_menu msgbox -> Menu.MsgBox.render win s msgbox
+    | Newspaper newspaper -> Newspaper.render win s newspaper
+    end
     v.modal;
   ()
 
@@ -159,6 +161,11 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
      | `Stay _ -> false, Some modal, nobaction
      | _ -> true, None, nobaction
      end
+  | Newspaper newspaper ->
+    begin match Newspaper.handle_event s newspaper event with
+    | `Stay -> false, Some modal, nobaction
+    | `Exit -> true, None, nobaction
+    end
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
      | `Stay modal -> false, Some (Confirm_menu modal), nobaction
@@ -306,9 +313,9 @@ let handle_msg (s:State.t) v ui_msg =
           let text = sp "%s bond repaid." (show_cash 500) in
           basic_msgbox text
       | BankruptcyDeclared {player} when player = C.player ->
-          (* TODO: newspaper *)
-          let text = sp "Bankruptcy declared!" in
-          basic_msgbox text
+          let company_name = Backend.get_company_name s.backend player in
+          let text = sp "%s\nBankruptcy declared!" company_name in
+          Some(Newspaper(Newspaper.make s Newspaper.FinancialNews text None))
       | _ -> None
       end
     | _ -> None
