@@ -584,6 +584,7 @@ let _operate_rr_take_money v ~player_idx ~company ~amount =
     Player.modify_cash player (fun cash -> cash + amount));
   update_player v company (fun player ->
     Player.modify_cash player (fun cash -> cash - amount));
+  Player.update_ai_valuation v.players player_idx;
   send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player=player_idx; company; amount});
   v
   
@@ -595,15 +596,20 @@ let _operate_rr_give_money v ~player_idx ~company ~amount =
     update_player v company (fun player ->
       Player.modify_cash player (fun cash -> cash + amount))
   );
+  Player.update_ai_valuation v.players player_idx;
   send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player=player_idx; amount});
   v
 
 let _operate_rr_repay_bond v ~player_idx ~company_idx =
   update_player v company_idx Player.repay_bond;
+  Player.update_ai_valuation v.players player_idx;
   send_ui_msg v @@ StockBroker(AiBondRepaid {player=player_idx; company=company_idx});
   v
 
-let _operate_rr_build_track v ~player_idx ~company src dst = v
+  (* TODO: RR build track *)
+let _operate_rr_build_track v ~player_idx ~company _src _dst =
+  let _player_idx, _company = player_idx, company in
+  v
 
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
