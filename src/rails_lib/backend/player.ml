@@ -312,6 +312,14 @@ let companies_controlled_by (players:t array) ~player_idx =
   []
   players
 
+let owns_some_company (players: t array) ~player_idx =
+  let player = players.(player_idx) in
+  Array.foldi (fun acc i company ->
+    if i <> player_idx && owns_company player ~company ~company_idx:i
+    then acc || true else false)
+  false
+  players
+
   (* Compute value of all stocks a player has in all companies, including itself *)
 let total_owned_stock_value (players:t array) ~player_idx =
   let player = players.(player_idx) in
