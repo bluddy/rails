@@ -65,9 +65,15 @@ let make_menu b players stations cities region fonts =
         make_entry "Repay Bond" @@ `Action(`OperateRR(company_idx, `RepayBond));
       ]
     in
+    let owns_company i (s:State.t) =
+       Player.owns_company_by_idx s.backend.players ~player_idx:C.player ~company_idx:i
+    in
     let entries =
       List.map (fun company_idx ->
-        make_entry (Backend.get_company_name b company_idx) @@ `MsgBox(company_menu company_idx))
+        make_entry
+          ~test_enabled:(owns_company company_idx)
+          (Backend.get_company_name b company_idx) @@
+          `MsgBox(company_menu company_idx))
       companies
     in
     make ~fonts entries
@@ -78,7 +84,7 @@ let make_menu b players stations cities region fonts =
       make ~fonts ~x:7 ~y:1 "&Cash" cash_menu;
       make ~fonts ~x:72 ~y:1 "&Buy Stock" buy_stock_menu;
       make ~fonts ~x:136 ~y:1 "&Sell Stock" sell_stock_menu;
-      make ~fonts ~x:170 ~y:1 "&Operate RR" operate_rr_menu;
+      make ~fonts ~x:220 ~y:1 "&Operate RR" operate_rr_menu;
     ]
   in
   Menu.Global.make ~menu_h:C.menu_h titles

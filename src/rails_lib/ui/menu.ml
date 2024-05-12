@@ -452,19 +452,26 @@ module Title = struct
     h: int;
     name: string;
     msgbox: ('msg, 'state) MsgBox.t;
+    test_enabled: ('state -> bool) option;
   }
 
-  let make ~fonts ~x ~y name msgbox =
+  let make ?test_enabled ~fonts ~x ~y name msgbox =
     let w, h = Fonts.get_str_w_h ~skip_amp:true ~fonts ~idx:1 name in
     {
       x; y;
       w; h;
       name;
       msgbox;
+      test_enabled;
     }
 
   let is_title_clicked v ~x ~y =
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
+
+  let is_enabled s v =
+    match v.test_enabled with
+    | None -> true
+    | Some f -> f s
 
   let handle_click s v ~x ~y =
     let msgbox, action = MsgBox.handle_click s v.msgbox ~x ~y in
@@ -486,8 +493,10 @@ module Title = struct
     MsgBox.render win s v.msgbox
 
   let do_open_menu s v =
-    let msgbox = MsgBox.do_open_menu s v.msgbox in
-    {v with msgbox}
+    if is_enabled s v then
+      let msgbox = MsgBox.do_open_menu s v.msgbox in
+      {v with msgbox}
+    else v
 
 end
 
@@ -518,6 +527,11 @@ module Global = struct
     let _x = x in
     y > v.menu_h && Option.is_none v.open_menu
 
+  let is_enabled s v i =
+    (* Check if a menu index is enabled *)
+    let menu = List.nth v.menus i in
+    Title.is_enabled s menu
+
   let is_open v = Option.is_some v.open_menu
   let is_closed v = Option.is_none v.open_menu
 
@@ -538,6 +552,9 @@ module Global = struct
         let menus = v.menus in
         let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) menus in
         match clicked_top_menu, v.open_menu with
+        | Some (i, _), _ when not @@ is_enabled s v i ->
+            (* Non-enabled menu *)
+            v, NoAction
         | Some (i, _), Some mopen when i = mopen ->
             (* clicked top menu, same menu is open *)
             let menus = L.modify_at_idx mopen Title.close_menu menus in
