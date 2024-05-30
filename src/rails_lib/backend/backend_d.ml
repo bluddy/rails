@@ -45,6 +45,7 @@ type ui_msg =
   | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
   | TrainArrival of train_arrival_msg
   | StockBroker of stock_broker_ui_msg
+  | OpenStockBroker of {player: int}
   [@@deriving yojson]
 
 type t = {

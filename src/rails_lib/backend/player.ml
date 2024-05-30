@@ -2,6 +2,7 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 module C = Constants
+open! Utils.Infix
 
 let src = Logs.Src.create "player" ~doc:"Player"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -54,6 +55,7 @@ type t = {
   freight_ton_miles: (Freight.t, int) Hashtbl.t;
   goods_delivered: Goods.Set.t;
   ai: ai_info option;
+  broker_timer: int option;  (* Time to see broker *)
 } [@@deriving yojson]
 
 let default ~player difficulty =
@@ -69,6 +71,7 @@ let default ~player difficulty =
     freight_ton_miles=Hashtbl.create 10;
     goods_delivered=Goods.Set.empty;
     ai=None;
+    broker_timer=None;
   }
 
 let get_cash v = v.m.cash
@@ -365,4 +368,21 @@ let declare_bankruptcy players player_idx ~difficulty =
       let stock = Stocks.set_shares v.m.stock ~target_idx:player_idx ~num_shares:0 in
       {v with m = {v.m with cash; stock}}
   ) players
+
+let has_broker_timer player = Option.is_some player.broker_timer
+
+let incr_broker_timer player =
+  let broker_timer, msg = match player.broker_timer with
+    | None -> Some 0, false
+    | Some i when i = 3 -> Some 3, true
+    | Some i -> Some (i + 1), false
+  in
+  {player with broker_timer}, msg
+
+let update players idx f =
+  let p = players.(idx) in
+  let p' = f p in
+  if p =!= p' then
+    players.(idx) <- p';
+  ()
 

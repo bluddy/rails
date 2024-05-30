@@ -497,6 +497,16 @@ let handle_cycle v =
         ~init:ui_msgs)
       else ui_msgs
     in
+    let ui_msgs =
+      let player = Player.get_player v.players C.player in
+      if Player.has_broker_timer player then (
+        let player', ui_msg = Player.incr_broker_timer player in
+        Player.update v.players C.player (fun _ -> player');
+        if ui_msg then
+          (OpenStockBroker{player=C.player}) :: ui_msgs
+        else ui_msgs)
+      else ui_msgs
+    in
     (* adjust time *)
     v.time <- v.time + 1;
     let v = 
@@ -506,5 +516,7 @@ let handle_cycle v =
     in
     v, ui_msgs
   in
-  if not v.pause then time_step () else v, []
+  if not v.pause then
+    time_step ()
+  else v, []
 
