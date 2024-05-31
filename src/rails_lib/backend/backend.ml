@@ -611,6 +611,18 @@ let _operate_rr_build_track v ~player_idx ~company _src _dst =
   let _player_idx, _company = player_idx, company in
   v
 
+let broker_timer_active v player_idx =
+  Player.has_broker_timer (get_player v player_idx)
+
+let _start_broker_timer v player_idx =
+  (* Only activate if no broker time active *)
+  if not @@ broker_timer_active v player_idx then (
+    update_player v player_idx (fun player ->
+      Player.incr_broker_timer player |> fst);
+    v
+  ) else v
+
+
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
 
@@ -645,6 +657,7 @@ module Action = struct
     | RemoveTrain of {idx: Trainmap.Id.t; player: int}
     | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: int}
     | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: int}
+    | CallBroker of {player: int}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
     | SellBond of {player: int}
     | RepayBond of {player: int}
@@ -700,6 +713,8 @@ module Action = struct
           _train_toggle_stop_wait backend ~train ~stop ~player
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
+      | CallBroker{player} ->
+          _start_broker_timer backend player
       | SellBond{player} ->
           _sell_bond backend player
       | RepayBond{player}->

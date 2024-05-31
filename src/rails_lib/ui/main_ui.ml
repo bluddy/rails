@@ -511,8 +511,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Efficiency_report), _ ->
             {v with mode=Efficiency_report}, nobaction
         | On (`Call_broker), _ ->
-            let state = Stock_broker.make s in
-            {v with mode=Stock_broker state}, nobaction
+            v, B.Action.CallBroker{player=C.player}
         | Off (`Options option), _ ->
             {v with view=Mapview.update_option v.view option false}, nobaction
         | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
@@ -910,6 +909,9 @@ let render_main win (s:State.t) v =
   (* Info bar *)
   let y = y + dims.minimap.h in
   R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
+
+  if Backend.broker_timer_active s.backend C.player then
+    Fonts.Render.write win s.fonts ~color:Ega.bgreen ~idx:4 ~x:256 ~y:66 "B";
 
   let cash = B.get_cash s.backend ~player:0 in
   let cash_s = Utils.show_cash ~spaces:6 ~region:s.backend.region cash in
