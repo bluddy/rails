@@ -774,6 +774,10 @@ let handle_msgs (s:State.t) v ui_msgs =
           )
           msg_speed
 
+    | Normal, OpenStockBroker{player} when player = C.player ->
+      let state = Stock_broker.make s in
+      {v with mode=Stock_broker state}
+
     (* TODO: handle demand changed msg *)
     | _ -> v
   in
