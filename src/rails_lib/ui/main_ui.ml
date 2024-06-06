@@ -194,8 +194,9 @@ let main_menu fonts menu_h region =
       make ~fonts ~x:8 ~y:1 "&Game" game_menu;
       make ~fonts ~x:64 ~y:1 "D&isplays" displays_menu;
       make ~fonts ~x:120 ~y:1 "&Reports" reports_menu;
+      make ~fonts ~x:210 ~y:1 "&Cheats" (Cheats.make_menu fonts);
       make ~fonts ~x:176 ~y:1 "&Build" build_menu;
-      make ~fonts ~x:242 ~y:1 "Ac&tions" actions_menu;
+      make ~fonts ~x:252 ~y:1 "Ac&tions" actions_menu; (* was x:242 *)
     ]
   in
   Menu.Global.make ~menu_h titles

@@ -72,6 +72,7 @@ type menu_action =
     | `Survey
     | `Name_rr
     | `Retire
+    | `Cheat of Cheat_d.t
     ]
     [@@deriving show, yojson]
 

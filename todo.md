@@ -7,6 +7,7 @@
 - Check computation of wait time
 - F10 survey
 - Bug:
+  - Create a train with no station: msgbox to build a station first
   - Selling stock doesn't lower stock price
   - New train doesn't pick up stuff from starting station
   - Clicking on map during train creation crashes

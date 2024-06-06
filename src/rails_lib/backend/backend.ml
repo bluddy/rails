@@ -622,6 +622,9 @@ let _start_broker_timer v player_idx =
     v
   ) else v
 
+let _handle_cheat v = function
+  | Cheat_d.Add500Cash -> v
+
 
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
@@ -665,6 +668,7 @@ module Action = struct
     | BuyStock of {player: int; stock: int}
     | SellStock of {player: int; stock: int}
     | OperateRR of {player: int; company: int; action: operate_rr}
+    | Cheat of Cheat_d.t (* player *)
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -736,6 +740,7 @@ module Action = struct
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend
+      | Cheat x -> _handle_cheat backend x
     in
     List.fold_left run_single backend msgs
 end
