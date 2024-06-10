@@ -622,8 +622,11 @@ let _start_broker_timer v player_idx =
     v
   ) else v
 
-let _handle_cheat v = function
-  | Cheat_d.Add500Cash -> v
+let _handle_cheat v player = function
+  | Cheat_d.Add500Cash ->
+    (update_player v player @@ fun player ->
+      Player.modify_cash player @@ fun money -> money + 500);
+    v
 
 
 module Action = struct
@@ -668,7 +671,7 @@ module Action = struct
     | BuyStock of {player: int; stock: int}
     | SellStock of {player: int; stock: int}
     | OperateRR of {player: int; company: int; action: operate_rr}
-    | Cheat of Cheat_d.t (* player *)
+    | Cheat of int * Cheat_d.t (* player *)
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -740,7 +743,7 @@ module Action = struct
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend
-      | Cheat x -> _handle_cheat backend x
+      | Cheat (player, x) -> _handle_cheat backend player x
     in
     List.fold_left run_single backend msgs
 end

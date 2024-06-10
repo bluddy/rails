@@ -513,6 +513,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with mode=Efficiency_report}, nobaction
         | On (`Call_broker), _ ->
             v, B.Action.CallBroker{player=C.player}
+        | On (`Cheat x), _ ->
+            v, B.Action.Cheat(C.player, x)
         | Off (`Options option), _ ->
             {v with view=Mapview.update_option v.view option false}, nobaction
         | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
