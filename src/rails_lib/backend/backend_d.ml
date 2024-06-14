@@ -4,8 +4,6 @@ open Utils
 open Utils.Infix
 (* Backend data *)
 
-let num_players = 4
-
 (* Cycle counts to perform some tasks *)
 let cycles_periodic_maintenance = 1024
 let cycles_priority_delivery = 8
