@@ -46,3 +46,16 @@ let max_interest_rate = 9 (* At 9%, we can no longer sell bonds *)
 
 let num_buy_shares = 10
 
+module Cycles = struct
+  (* Cycle counts to perform some tasks *)
+  let periodic_maintenance = 1024
+  let priority_delivery = 8
+  let background_update = 16
+
+  let ai_update = background_update
+  (* In the original game, we do slices of 1/32 stations. No need *)
+  let station_supply_demand = background_update * 32 (* 512 *)
+  (* Since we don't spread out the supply addition, decay happens in the same cycle *)
+  let supply_decay = 512
+end
+

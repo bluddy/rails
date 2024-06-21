@@ -474,7 +474,7 @@ let handle_cycle v =
     let ui_msgs = Train_update._update_all_trains v ~player:0 in
     (* TODO: ai_routines *)
     let ui_msgs =
-      if v.cycle mod cycles_station_supply_demand = 0 then (
+      if v.cycle mod C.Cycles.station_supply_demand = 0 then (
         let difficulty = v.options.difficulty in
         let climate = v.climate in
         let simple_economy =
