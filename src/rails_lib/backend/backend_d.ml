@@ -1,19 +1,9 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open Containers
-open Utils
+open! Utils
 open Utils.Infix
 (* Backend data *)
 
-(* Cycle counts to perform some tasks *)
-let cycles_periodic_maintenance = 1024
-let cycles_priority_delivery = 8
-let cycles_background_update = 16
-
-let cycles_ai_update = cycles_background_update
-(* In the original game, we do slices of 1/32 stations. No need *)
-let cycles_station_supply_demand = cycles_background_update * 32 (* 512 *)
-(* Since we don't spread out the supply addition, decay happens in the same cycle *)
-let cycles_supply_decay = 512
 
 type train_arrival_msg = {
     player: int;
@@ -48,7 +38,7 @@ type ui_msg =
 
 type t = {
   mutable last_tick: int; (* last time we updated a cycle *)
-  mutable cycle: int; (* counter used for all sorts of per-tick updates *)
+  mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
   mutable time: int;  (* In-game time, resets at end of year *)
   mutable year: int;
   pause: bool;  (* pause the backend. Do not advance time *)
@@ -65,7 +55,6 @@ type t = {
   engines: Engine.t list;
   mutable stations: Station_map.t;
   mutable blocks: Block_map.t; (* map blocks btw stations *)
-  priority: (loc * loc * Goods.t) option;  (* priority shipment *)
   options: B_options.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;

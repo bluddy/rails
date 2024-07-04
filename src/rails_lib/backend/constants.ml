@@ -59,3 +59,6 @@ module Cycles = struct
   let supply_decay = 512
 end
 
+let priority_min_dist = 6
+let priority_max_dist = 64
+

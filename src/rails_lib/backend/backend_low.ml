@@ -473,6 +473,12 @@ let handle_cycle v =
     v.cycle <- v.cycle + 1;
     let ui_msgs = Train_update._update_all_trains v ~player:0 in
     (* TODO: ai_routines *)
+    let priority =
+      match (Player.get_player v.players C.player).priority with
+      | None when v.cycle mod C.Cycles.priority_delivery = 0 ->
+          Priority_shipment.try_to_create v.random v.stations v.cycle
+      | x -> x
+    in
     let ui_msgs =
       if v.cycle mod C.Cycles.station_supply_demand = 0 then (
         let difficulty = v.options.difficulty in

@@ -2,7 +2,7 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 open Utils
 
-(* A common pattern: a hashtbl from location to a thing *)
+(* A common pattern: a map from location to a thing *)
 
 type 'a t = 'a LocMap.t [@@deriving yojson]
 
@@ -28,13 +28,14 @@ let find f v =
   with
     Found k -> Some k
 
+
+let find_exn f v = 
+  find f v
+  |> Option.get_exn_or "Not found"
+
 let get loc v = LocMap.find_opt loc v
 
-let update loc f v =
-  LocMap.update
-    loc
-    (fun v -> f v)
-    v
+let update loc f v = LocMap.update loc (fun v -> f v) v
 
 let mem loc v = LocMap.mem loc v
 
@@ -47,4 +48,15 @@ let delete loc v = LocMap.remove loc v
 let filter f v =
   LocMap.to_iter v
   |> Iter.map snd |> Iter.filter (fun value -> f value)
+
+let nth n v =
+  (* Linear search for nth member *)
+  let i = ref 0 in
+  find_exn (fun _ ->
+    let v = !i in
+    incr i;
+    v >= n)
+    v
+
+
 

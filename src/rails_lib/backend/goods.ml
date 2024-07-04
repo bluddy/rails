@@ -101,7 +101,6 @@ let of_region = function
   | Europe -> europe
   | Britain -> england
 
-
   (* Conversion tables:
     Each region can only convert one good to one other good.
     ENHANCE: we want to expand this a lot

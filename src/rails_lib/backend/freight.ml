@@ -9,6 +9,8 @@ type t = [
   | `Bulk
   ] [@@deriving enum, ord, yojson, show]
 
+let all_freight : t array = [|`Mail; `Passenger; `Fast; `Slow; `Bulk|]
+
 let to_color freight ~full = match freight, full with
   | `Mail, true -> Ega.white
   | `Mail, false -> Ega.gray

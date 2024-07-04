@@ -59,7 +59,6 @@ let default region resources ~random ~seed =
     graph;
     stations;
     engines;
-    priority=None;
     options;
     ui_msgs = [];
     random;
@@ -628,6 +627,9 @@ let _handle_cheat v player = function
       Player.modify_cash player @@ fun money -> money + 500);
     v
 
+let get_priority_shipment v player =
+  let player = Player.get_player v.players player in
+  player.priority
 
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]

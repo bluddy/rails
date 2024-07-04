@@ -86,11 +86,11 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   Station_map.iter (fun (station:Station.t) ->
     if Station.is_proper_station station then
       let color =
-        match v.selected_station, s.backend.priority with
+        match v.selected_station, Backend.get_priority_shipment s.backend C.player with
         | Some (x,y), _ when x = station.x && y = station.y && v.flash_on -> Ega.white
         | Some (x,y), _ when x = station.x && y = station.y -> Ega.black
-        | _, Some ((x,y),_,_) when x = station.x && y = station.y -> Ega.bgreen
-        | _, Some (_,(x,y),_) when x = station.x && y = station.y -> Ega.bgreen
+        | _, Some {src_loc=(x,y);_} when x = station.x && y = station.y -> Ega.bgreen
+        | _, Some {dest_loc=(x,y);_} when x = station.x && y = station.y -> Ega.bgreen
         | _ -> Ega.gray
       in
       let x, y = scale_xy v station.x station.y in

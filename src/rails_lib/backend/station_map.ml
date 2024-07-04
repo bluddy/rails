@@ -31,3 +31,10 @@ let get_two_proper_stations v =
   | exception Found(x, y) -> Some(x, y)
   | _ -> None
   
+let get_num_proper_stations v =
+  Loc_map.fold (fun station acc ->
+    if Station.is_proper_station station then acc + 1 else acc)
+    v
+    ~init:0
+
+

@@ -56,6 +56,7 @@ type t = {
   goods_delivered: Goods.Set.t;
   ai: ai_info option;
   broker_timer: int option;  (* Time to see broker *)
+  priority: Priority_shipment.t option;
 } [@@deriving yojson]
 
 let default ~player difficulty =
@@ -72,6 +73,7 @@ let default ~player difficulty =
     goods_delivered=Goods.Set.empty;
     ai=None;
     broker_timer=None;
+    priority=None;
   }
 
 let get_cash v = v.m.cash
