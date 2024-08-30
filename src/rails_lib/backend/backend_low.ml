@@ -473,12 +473,17 @@ let handle_cycle v =
     v.cycle <- v.cycle + 1;
     let ui_msgs = Train_update._update_all_trains v ~player:0 in
     (* TODO: ai_routines *)
-    let priority =
-      match (Player.get_player v.players C.player).priority with
+    let try_create_priority () =
+      begin match (Player.get_player v.players C.player).priority with
       | None when v.cycle mod C.Cycles.priority_delivery = 0 ->
-          Priority_shipment.try_to_create v.random v.stations v.cycle
-      | x -> x
-    in
+          let priority = Priority_shipment.try_to_create v.random v.stations v.cycle in
+          begin match priority with
+          | None -> ()
+          | p -> Player.update v.players C.player @@ Player.set_priority p
+          end
+      | _ -> ()
+      end
+    in try_create_priority ();
     let ui_msgs =
       if v.cycle mod C.Cycles.station_supply_demand = 0 then (
         let difficulty = v.options.difficulty in
@@ -504,6 +509,7 @@ let handle_cycle v =
       else ui_msgs
     in
     let ui_msgs =
+      (* Check broker *)
       let player = Player.get_player v.players C.player in
       if Player.has_broker_timer player then (
         let player', ui_msg = Player.incr_broker_timer player in

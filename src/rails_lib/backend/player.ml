@@ -381,6 +381,8 @@ let incr_broker_timer player =
   in
   {player with broker_timer}, msg
 
+let set_priority priority player = {player with priority}
+
 let update players idx f =
   let p = players.(idx) in
   let p' = f p in
