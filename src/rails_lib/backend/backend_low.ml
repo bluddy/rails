@@ -479,7 +479,9 @@ let handle_cycle v =
           let priority = Priority_shipment.try_to_create v.random v.stations v.cycle in
           begin match priority with
           | None -> ()
-          | p -> Player.update v.players C.player @@ Player.set_priority p
+          | p ->
+            print_endline "Create priority";
+            Player.update v.players C.player @@ Player.set_priority p
           end
       | _ -> ()
     in try_create_priority ();

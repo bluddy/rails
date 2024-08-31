@@ -52,3 +52,15 @@ let try_to_create random stations cycle =
           let shipment = {src_loc; dest_loc; freight; deadline} in
           Some shipment
 
+let compute_bonus pr_data cycle year region =
+  let dist = Utils.classic_dist pr_data.src_loc pr_data.dest_loc in
+  let time_factor = cycle - pr_data.deadline
+    |> Utils.clip ~min:(32 * dist) ~max:31999
+  in
+  let bonus_var = dist * 16 / (time_factor / 64 + 1) in
+  let age = (year - C.reference_year) / 4 in
+  let result = (dist + 32) * bonus_var * 8 / age in
+  let bonus = Utils.clip ~min:0 ~max:999 result in
+  let bonus = if Region.is_europe region then bonus + bonus / 2  else bonus in
+  bonus
+
