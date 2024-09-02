@@ -626,6 +626,10 @@ let _handle_cheat v player = function
     (update_player v player @@ fun player ->
       Player.modify_cash player @@ fun money -> money + 500);
     v
+  | CreatePriorityShipment ->
+    let priority = Priority_shipment._create v.random v.stations v.cycle in
+    (update_player v player @@ fun player -> Player.set_priority priority player);
+    v
 
 let get_priority_shipment v player =
   let player = Player.get_player v.players player in

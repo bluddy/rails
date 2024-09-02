@@ -18,6 +18,27 @@ type t = {
    There's also a range check to make sure that we're not too close (6) or too far (64).
    But the function ranges from 1/10000 in the early game to 1/9 in the late game.
   *)
+let _create random stations cycle =
+  let num_stations = Station_map.length stations in
+  let src_i = Random.int num_stations random in
+  let dst_i = Random.int num_stations random in
+  if src_i = dst_i then None
+  else
+    let src_loc = Station_map.nth src_i stations in
+    let dest_loc = Station_map.nth dst_i stations in
+    let src_station = Station_map.get_exn src_loc stations in
+    let dest_station = Station_map.get_exn dest_loc stations in
+    if not @@ Station.is_proper_station src_station ||
+       not @@ Station.is_proper_station dest_station then None
+    else
+      (* Check distance *)
+      let dist = Utils.classic_dist src_loc dest_loc in
+      if dist <= C.priority_min_dist || dist >= C.priority_max_dist then None
+      else
+        let freight = Random.pick_array Freight.all_freight random in
+        let deadline = cycle - 1000 in
+        let shipment = {src_loc; dest_loc; freight; deadline} in
+        Some shipment
 
 let try_to_create random stations cycle =
   (* The delay seems to be a result of just random tries *)
@@ -31,26 +52,7 @@ let try_to_create random stations cycle =
   (* Return if we don't pass the test *)
   if draw >. factor then None
   else
-    let num_stations = Station_map.length stations in
-    let src_i = Random.int num_stations random in
-    let dst_i = Random.int num_stations random in
-    if src_i = dst_i then None
-    else
-      let src_loc = Station_map.nth src_i stations in
-      let dest_loc = Station_map.nth dst_i stations in
-      let src_station = Station_map.get_exn src_loc stations in
-      let dest_station = Station_map.get_exn dest_loc stations in
-      if not @@ Station.is_proper_station src_station ||
-         not @@ Station.is_proper_station dest_station then None
-      else
-        (* Check distance *)
-        let dist = Utils.classic_dist src_loc dest_loc in
-        if dist <= C.priority_min_dist || dist >= C.priority_max_dist then None
-        else
-          let freight = Random.pick_array Freight.all_freight random in
-          let deadline = cycle - 1000 in
-          let shipment = {src_loc; dest_loc; freight; deadline} in
-          Some shipment
+    _create random stations cycle
 
 let compute_bonus pr_data cycle year region =
   let dist = Utils.classic_dist pr_data.src_loc pr_data.dest_loc in
