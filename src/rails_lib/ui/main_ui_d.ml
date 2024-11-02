@@ -89,21 +89,22 @@ type ('state, 'menu_options, 'payload) modalmenu =
        2nd: type of choices from menu
        3rd: type of stored data
     *)
-and 'a mode =
+and 'state mode =
   | Normal
-  | ModalMsgbox of ('a, unit, unit) modalmenu
-  | BuildStation of ('a, Station.kind, unit) modalmenu
-  | BuildBridge of ('a, Bridge.t, Utils.msg) modalmenu
-  | BuildHighGrade of ('a, [`BuildTunnel | `BuildTrack], Utils.msg) modalmenu
-  | BuildTunnel of ('a, bool, Utils.msg * int) modalmenu
-  | SignalMenu of ('a, [`Normal|`Hold|`Proceed], int * int * Dir.t) modalmenu (* x,y,dir *)
+  | ModalMsgbox of ('state, unit, unit) modalmenu
+  | Newspaper of 'state Newspaper_d.t
+  | BuildStation of ('state, Station.kind, unit) modalmenu
+  | BuildBridge of ('state, Bridge.t, Utils.msg) modalmenu
+  | BuildHighGrade of ('state, [`BuildTunnel | `BuildTrack], Utils.msg) modalmenu
+  | BuildTunnel of ('state, bool, Utils.msg * int) modalmenu
+  | SignalMenu of ('state, [`Normal|`Hold|`Proceed], int * int * Dir.t) modalmenu (* x,y,dir *)
   | StationReport of int * int (* x, y *)
   | BuildTrain of [
     | `ChooseEngine
-    | `AddCars of 'a Build_train_d.addcars
+    | `AddCars of 'state Build_train_d.addcars
   ]
-  | TrainReport of 'a Train_report_d.t
-  | Stock_broker of 'a Stock_broker_d.t
+  | TrainReport of 'state Train_report_d.t
+  | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of Balance_sheet_d.t
   | Accomplishments
   | Income_statement of Balance_sheet_d.t (* we use the stock part *)

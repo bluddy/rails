@@ -620,6 +620,13 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> ModalMsgbox x)
         (fun _ () -> v, nobaction)
 
+    | Newspaper news_state ->
+        let v = match Newspaper.handle_event s news_state event with
+          | `Exit -> {v with mode=Normal}
+          | _ -> v
+        in
+        v, nobaction
+
     | BuildStation build_menu ->
         handle_modal_menu_events build_menu
         (fun x -> BuildStation x)
@@ -780,6 +787,10 @@ let handle_msgs (s:State.t) v ui_msgs =
     | Normal, OpenStockBroker{player} when player = C.player ->
       let state = Stock_broker.make s in
       {v with mode=Stock_broker state}
+
+    | Normal, PriorityShipmentCanceled{player} when player = C.player ->
+      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews "Priority Shipment\nCANCELLED.\n" None) in
+      {v with mode}
 
     (* TODO: handle demand changed msg *)
     | _ -> v
@@ -957,6 +968,9 @@ let render (win:R.window) (s:State.t) v =
     | ModalMsgbox modal ->
         render_mode modal.last;
         Menu.MsgBox.render win s modal.menu
+    | Newspaper news_state ->
+        render_main win s v;
+        Newspaper.render win s news_state
     | BuildStation modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu

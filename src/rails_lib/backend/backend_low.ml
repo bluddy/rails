@@ -516,6 +516,12 @@ let handle_cycle v =
         else ui_msgs)
       else ui_msgs
     in
+    (* Cancel any expired priority shipments *)
+    let canceled = Player.cancel_priority v.players v.cycle v.year v.region
+      |> List.filter ((=) C.player) |> List.map (fun i -> PriorityShipmentCanceled{player=i})
+    in
+    let ui_msgs = canceled @ ui_msgs in
+
     (* adjust time *)
     v.time <- v.time + 1;
     let v = 
