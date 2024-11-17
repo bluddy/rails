@@ -66,3 +66,5 @@ let compute_bonus pr_data cycle year region =
   let bonus = if Region.is_europe region then bonus + bonus / 2  else bonus in
   bonus
 
+let should_be_cancelled pr_data cycle year region =
+  compute_bonus pr_data cycle year region < C.priority_min_bonus

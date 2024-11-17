@@ -61,5 +61,6 @@ end
 
 let priority_min_dist = 6
 let priority_max_dist = 64
+let priority_min_bonus = 20
 
 let reference_year = 1740

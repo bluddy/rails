@@ -388,8 +388,7 @@ let check_cancel_priority player cycle year region =
   match player.priority with
   | None -> false
   | Some pr_data ->
-     let bonus = Priority_shipment.compute_bonus pr_data cycle year region in
-     bonus < 20
+     Priority_shipment.should_be_cancelled pr_data cycle year region
 
 let cancel_priority players cycle year region =
   (* Cancel priority and let us know if one was canceled *)
