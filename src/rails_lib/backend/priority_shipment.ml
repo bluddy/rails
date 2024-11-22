@@ -54,7 +54,7 @@ let try_to_create random stations cycle =
   else
     _create random stations cycle
 
-let compute_bonus pr_data cycle year region =
+let compute_bonus pr_data ~cycle ~year region =
   let dist = Utils.classic_dist pr_data.src_loc pr_data.dest_loc in
   let time_factor = cycle - pr_data.deadline
     |> Utils.clip ~min:(32 * dist) ~max:31999
@@ -66,5 +66,6 @@ let compute_bonus pr_data cycle year region =
   let bonus = if Region.is_europe region then bonus + bonus / 2  else bonus in
   bonus
 
-let should_be_cancelled pr_data cycle year region =
-  compute_bonus pr_data cycle year region < C.priority_min_bonus
+let should_be_cancelled pr_data ~cycle ~year region =
+  compute_bonus pr_data ~cycle ~year region < C.priority_min_bonus
+
