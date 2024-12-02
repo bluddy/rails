@@ -20,6 +20,8 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
   let find_exn v x y = Hashtbl.find v.map (Utils.calc_offset v.width x y)
 
+  let get_name v x y = find_exn v x y |> fst
+
   let find v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
   let to_list v = CCHashtbl.to_list v.map

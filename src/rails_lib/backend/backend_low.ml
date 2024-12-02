@@ -471,10 +471,11 @@ end
 let handle_cycle v =
   let time_step () =
     v.cycle <- v.cycle + 1;
+    let main_player = Player.get_player v.players C.player in
     let ui_msgs = Train_update._update_all_trains v ~player:0 in
     (* TODO: ai_routines *)
     let try_create_priority () =
-      match (Player.get_player v.players C.player).priority with
+      match main_player.priority with
       | None when v.cycle mod C.Cycles.priority_delivery = 0 ->
           let priority = Priority_shipment.try_to_create v.random v.stations v.cycle in
           Player.update v.players C.player @@ Player.set_priority priority
@@ -507,9 +508,8 @@ let handle_cycle v =
     let ui_msgs = update_station_supply_demand () in
     let ui_msgs =
       (* Check broker *)
-      let player = Player.get_player v.players C.player in
-      if Player.has_broker_timer player then (
-        let player', ui_msg = Player.incr_broker_timer player in
+      if Player.has_broker_timer main_player then (
+        let player', ui_msg = Player.incr_broker_timer main_player in
         Player.update v.players C.player (fun _ -> player');
         if ui_msg then
           (OpenStockBroker{player=C.player}) :: ui_msgs

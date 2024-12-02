@@ -90,7 +90,7 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
         | Some (x,y), _ when x = station.x && y = station.y && v.flash_on -> Ega.white
         | Some (x,y), _ when x = station.x && y = station.y -> Ega.black
         | _, Some {src_loc=(x,y);_} when x = station.x && y = station.y -> Ega.bgreen
-        | _, Some {dest_loc=(x,y);_} when x = station.x && y = station.y -> Ega.bgreen
+        | _, Some {dst_loc=(x,y);_} when x = station.x && y = station.y -> Ega.bgreen
         | _ -> Ega.gray
       in
       let x, y = scale_xy v station.x station.y in

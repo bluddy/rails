@@ -749,8 +749,6 @@ let handle_event (s:State.t) v (event:Event.t) =
   in
   v, backend_msgs
 
-  
-
 (* Handle incoming messages from backend *)
 let handle_msgs (s:State.t) v ui_msgs =
   let train_arrival_msg_speed v : [`Fast | `Slow] option =
@@ -789,7 +787,12 @@ let handle_msgs (s:State.t) v ui_msgs =
       {v with mode=Stock_broker state}
 
     | Normal, PriorityShipmentCanceled{player} when player = C.player ->
-      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews "Priority Shipment\nCANCELLED.\n" None) in
+      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews Priority_shipment.cancel_text None) in
+      {v with mode}
+
+    | Normal, PriorityShipmentCreated{player; shipment} when player = C.player ->
+      let text = Priority_shipment.create_text shipment s.backend.region s.backend.stations in
+      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews text None) in
       {v with mode}
 
     (* TODO: handle demand changed msg *)

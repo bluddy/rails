@@ -5,7 +5,7 @@ module C = Constants
 type t = {
   freight: Freight.t;
   src_loc: Utils.loc;
-  dest_loc: Utils.loc;
+  dst_loc: Utils.loc;
   deadline: int; (* in cycles. Used in a complicated way *)
 } [@@deriving yojson]
 
@@ -25,19 +25,19 @@ let _create random stations cycle =
   if src_i = dst_i then None
   else
     let src_loc = Station_map.nth src_i stations in
-    let dest_loc = Station_map.nth dst_i stations in
+    let dst_loc = Station_map.nth dst_i stations in
     let src_station = Station_map.get_exn src_loc stations in
-    let dest_station = Station_map.get_exn dest_loc stations in
+    let dest_station = Station_map.get_exn dst_loc stations in
     if not @@ Station.is_proper_station src_station ||
        not @@ Station.is_proper_station dest_station then None
     else
       (* Check distance *)
-      let dist = Utils.classic_dist src_loc dest_loc in
+      let dist = Utils.classic_dist src_loc dst_loc in
       if dist <= C.priority_min_dist || dist >= C.priority_max_dist then None
       else
         let freight = Random.pick_array Freight.all_freight random in
         let deadline = cycle - 1000 in
-        let shipment = {src_loc; dest_loc; freight; deadline} in
+        let shipment = {src_loc; dst_loc; freight; deadline} in
         Some shipment
 
 let try_to_create random stations cycle =
@@ -55,7 +55,7 @@ let try_to_create random stations cycle =
     _create random stations cycle
 
 let compute_bonus pr_data ~cycle ~year region =
-  let dist = Utils.classic_dist pr_data.src_loc pr_data.dest_loc in
+  let dist = Utils.classic_dist pr_data.src_loc pr_data.dst_loc in
   let time_factor = cycle - pr_data.deadline
     |> Utils.clip ~min:(32 * dist) ~max:31999
   in
@@ -68,4 +68,26 @@ let compute_bonus pr_data ~cycle ~year region =
 
 let should_be_cancelled pr_data ~cycle ~year region =
   compute_bonus pr_data ~cycle ~year region < C.priority_min_bonus
+
+let create_text shipment (region:Region.t) station_map =
+  let type_s = match shipment.freight, region with
+    | `Mail, _ -> "Rare Vaccine Required."
+    | `Passenger, _ -> "Congressional junket."
+    | `Fast, Britain -> "Championship soccer game."
+    | `Fast, _ -> "New strawberry crop."
+    | `Slow, _ -> "Mine rescue equipment."
+    | `Bulk, _ -> "Heating fuel emergency."
+  in
+  let get_name loc = Station_map.get_exn loc station_map |> Station.get_name in
+  let msg = Printf.sprintf
+    "Priority_shipment! \n\
+     %s\n\
+     \n from %s\
+     \n to %s\
+     \n"
+    type_s (get_name shipment.src_loc) (get_name shipment.dst_loc)
+  in
+  msg
+
+let cancel_text = "Priority Shipment\nCANCELLED.\n" 
 
