@@ -94,7 +94,7 @@ let iter_cities f v = Cities.iter f v.cities
 let find_close_city v x y ~range = Cities.find_close v.cities x y ~range
 
 let send_ui_msg v msg =
-  (* Line up ui msg for when we can send it *)
+  (* Mutation. Line up ui msg for when we can send it *)
   v.ui_msgs <- msg::v.ui_msgs
 
 let _player_pay_for_track v ~x ~y ~len ~dir ~player =
@@ -627,9 +627,12 @@ let _handle_cheat v player = function
       Player.modify_cash player @@ fun money -> money + 500);
     v
   | CreatePriorityShipment ->
-    let priority = Priority_shipment._create v.random v.stations v.cycle in
-    (update_player v player @@ fun player -> Player.set_priority priority player);
+    let ui_msg = Backend_low.try_create_priority_shipment v ~force:true in
+    Option.iter (send_ui_msg v) ui_msg;
     v
+  | CancelPriorityShipment ->
+    v
+    
 
 let get_priority_shipment v player =
   let player = Player.get_player v.players player in

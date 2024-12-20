@@ -467,6 +467,24 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
 
 end
 
+let try_create_priority_shipment ?(force=false) v =
+  (* Try to create a priority shipment:
+     TODO: for all players? check if AI *)
+  let main_player = Player.get_player v.players C.player in
+  match main_player.priority with
+  | None when v.cycle mod C.Cycles.priority_delivery = 0 || force ->
+      begin match Priority_shipment.try_to_create v.random v.stations v.cycle with
+      | Some pri as some_prio ->
+        Player.update v.players C.player @@ Player.set_priority some_prio;
+        Some (PriorityShipmentCreated{player=C.player; shipment=pri})
+      | None -> None
+      end
+  | _ -> None
+
+let try_cancel_priority_shipments ?(force=false) v =
+  Player.cancel_priority ~force v.players ~cycle:v.cycle ~year:v.year v.region
+  |> List.map (fun i -> PriorityShipmentCanceled{player=i})
+
 (** Most time-based work happens here **)
 let handle_cycle v =
   let time_step () =
@@ -474,17 +492,7 @@ let handle_cycle v =
     let main_player = Player.get_player v.players C.player in
     let ui_msgs = Train_update._update_all_trains v ~player:0 in
     (* TODO: ai_routines *)
-    let try_create_priority = match main_player.priority with
-      | None when v.cycle mod C.Cycles.priority_delivery = 0 ->
-          begin match Priority_shipment.try_to_create v.random v.stations v.cycle with
-          | Some pri as some_prio ->
-            Player.update v.players C.player @@ Player.set_priority some_prio;
-            [PriorityShipmentCreated{player=C.player; shipment=pri}]
-          | None -> []
-          end
-      | _ -> []
-    in
-    let ui_msgs = try_create_priority @ ui_msgs in
+    let ui_msgs = (Option.to_list (try_create_priority_shipment v)) @ ui_msgs in
     let update_station_supply_demand () =
       if v.cycle mod C.Cycles.station_supply_demand = 0 then (
         let difficulty = v.options.difficulty in
@@ -521,10 +529,8 @@ let handle_cycle v =
       else ui_msgs
     in
     (* Cancel any expired priority shipments *)
-    let canceled = Player.cancel_priority v.players ~cycle:v.cycle ~year:v.year v.region
-      |> List.filter ((=) C.player) |> List.map (fun i -> PriorityShipmentCanceled{player=i})
-    in
-    let ui_msgs = canceled @ ui_msgs in
+
+    let ui_msgs = (try_cancel_priority_shipments v) @ ui_msgs in
 
     (* adjust time *)
     v.time <- v.time + 1;

@@ -383,6 +383,8 @@ let incr_broker_timer player =
 
 let set_priority priority player = {player with priority}
 
+let has_priority player = Option.is_some player.priority
+
 let check_cancel_priority player ~cycle ~year region =
   (* Priority shipments are cancelled when the bonus is < 20 *)
   match player.priority with
@@ -390,10 +392,11 @@ let check_cancel_priority player ~cycle ~year region =
   | Some pr_data ->
      Priority_shipment.should_be_cancelled pr_data ~cycle ~year region
 
-let cancel_priority players ~cycle ~year region =
+let cancel_priority ?(force=false) players ~cycle ~year region =
   (* Cancel priority and let us know which players' were canceled *)
   Array.foldi (fun acc i player ->
-    if check_cancel_priority player ~cycle ~year region then (
+    if has_priority player &&
+      (check_cancel_priority player ~cycle ~year region || force) then (
       players.(i) <- {player with priority=None};
       i::acc
     ) else acc)
