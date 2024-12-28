@@ -18,7 +18,7 @@ let make (s:State.t) kind text opponent = {
 let render win (s:State.t) v =
   R.draw_rect win ~x:56 ~y:46 ~w:183 ~h:107 ~color:Ega.white ~fill:true;
   R.draw_rect win ~x:56 ~y:46 ~w:183 ~h:107 ~color:Ega.black ~fill:false;
-  Fonts.Render.write_shadow win s.fonts ~color:Ega.dgray ~x:62 ~y:54 ~idx:0 @@
+  Fonts.Render.write_shadow win s.fonts ~color:Ega.gray ~x:62 ~y:54 ~idx:2 @@
     show_kind v.kind;
   begin match v.opponent with
   | Some opponent ->
