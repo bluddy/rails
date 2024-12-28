@@ -40,19 +40,20 @@ let _create random stations cycle =
         let shipment = {src_loc; dst_loc; freight; deadline} in
         Some shipment
 
-let try_to_create random stations cycle =
+let try_to_create ?(force=false) random stations cycle =
   (* The delay seems to be a result of just random tries *)
   let num_proper_stations = Station_map.get_num_proper_stations stations in
   (* This factor emulates the original function, which is dependent on the number of stations *)
-  let factor = if num_proper_stations > 32 then (1. /. 9.)
+  let factor =
+    if num_proper_stations > 32 then (1. /. 9.)
     else
       let f = (float_of_int num_proper_stations /. 96.) in f *. f
   in
   let draw = Random.float 1. random in
   (* Return if we don't pass the test *)
-  if draw >. factor then None
-  else
+  if draw <. factor || force then
     _create random stations cycle
+  else None
 
 let compute_bonus pr_data ~cycle ~year region =
   let dist = Utils.classic_dist pr_data.src_loc pr_data.dst_loc in

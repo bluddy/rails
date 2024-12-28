@@ -627,10 +627,12 @@ let _handle_cheat v player = function
       Player.modify_cash player @@ fun money -> money + 500);
     v
   | CreatePriorityShipment ->
-    let ui_msg = Backend_low.try_create_priority_shipment v ~force:true in
-    Option.iter (send_ui_msg v) ui_msg;
+    let ui_msgs = Backend_low.try_create_priority_shipment v ~force:true in
+    Option.iter (send_ui_msg v) ui_msgs;
     v
   | CancelPriorityShipment ->
+    let ui_msgs = Backend_low.try_cancel_priority_shipments v ~force:true in
+    List.iter (send_ui_msg v) ui_msgs;
     v
     
 
