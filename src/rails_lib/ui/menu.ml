@@ -424,7 +424,7 @@ module MsgBox = struct
           end
       | _ -> ()
 
-    let make_basic ?x ?y ~fonts s text =
+    let make_basic ?x ?y ?heading ~fonts s text =
       (* Easy to use msgbox with just text *)
       let y = Option.get_or ~default:80 y in
       let x = match x with
@@ -435,9 +435,10 @@ module MsgBox = struct
           in
           150 - 5 * len / 2 
       in
-      let entry = static_entry ~color:Ega.white text in
+      let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
+      let entry = static_entry ~color:entry_color text in
       let menu =
-        make ~x ~y ~fonts [entry] ~font_idx:4 |> do_open_menu s
+        make ~x ~y ?heading ~fonts [entry] ~font_idx:4 |> do_open_menu s
       in
       menu
 end

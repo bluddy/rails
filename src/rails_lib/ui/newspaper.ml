@@ -9,10 +9,10 @@ let show_kind = function
   | RailRoadNews -> "Railroad\nNews"
   | LocalNews -> "Local\nNews"
 
-let make (s:State.t) kind text opponent = {
+let make (s:State.t) kind ?heading text opponent = {
     opponent;
     kind;
-    msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ~fonts:s.fonts s text;
+    msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ?heading ~fonts:s.fonts s text;
 }
 
 let render win (s:State.t) v =
@@ -20,12 +20,13 @@ let render win (s:State.t) v =
   R.draw_rect win ~x:56 ~y:46 ~w:183 ~h:107 ~color:Ega.black ~fill:false;
   Fonts.Render.write_shadow win s.fonts ~color:Ega.gray ~x:62 ~y:54 ~idx:2 @@
     show_kind v.kind;
-  begin match v.opponent with
-  | Some opponent ->
-    let tex = Hashtbl.find s.textures.opponents opponent in
-    R.Texture.render win ~x:194 ~y:50 tex;
-  | None -> () (* TODO: newspaper pic? *)
-  end;
+  let tex = match v.opponent with
+    | Some opponent ->
+      Hashtbl.find s.textures.opponents opponent
+    | None ->
+      Hashtbl.find s.textures.misc `Newspaper
+  in
+  R.Texture.render win ~x:194 ~y:50 tex;
   Menu.MsgBox.render win s v.msgbox;
   ()
 

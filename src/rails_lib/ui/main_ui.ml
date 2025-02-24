@@ -791,8 +791,8 @@ let handle_msgs (s:State.t) v ui_msgs =
       {v with mode}
 
     | Normal, PriorityShipmentCreated{player; shipment} when player = C.player ->
-      let text = Priority_shipment.create_text shipment s.backend.region s.backend.stations in
-      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews text None) in
+      let heading, text = Priority_shipment.create_text shipment s.backend.region s.backend.stations in
+      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
       {v with mode}
 
     (* TODO: handle demand changed msg *)

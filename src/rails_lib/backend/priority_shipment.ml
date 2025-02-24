@@ -72,7 +72,7 @@ let should_be_cancelled pr_data ~cycle ~year region =
 
 let create_text shipment (region:Region.t) station_map =
   let type_s = match shipment.freight, region with
-    | `Mail, _ -> "Rare Vaccine Required."
+    | `Mail, _ -> "Rare vaccine required."
     | `Passenger, _ -> "Congressional junket."
     | `Fast, Britain -> "Championship soccer game."
     | `Fast, _ -> "New strawberry crop."
@@ -80,15 +80,19 @@ let create_text shipment (region:Region.t) station_map =
     | `Bulk, _ -> "Heating fuel emergency."
   in
   let get_name loc = Station_map.get_exn loc station_map |> Station.get_name in
-  let msg = Printf.sprintf
-    "Priority_shipment! \n\
-     %s\n\
-     \n from %s\
-     \n to %s\
-     \n"
-    type_s (get_name shipment.src_loc) (get_name shipment.dst_loc)
+  let msg1 = Printf.sprintf
+    "Priority Shipment!\
+     \n%s"
+     type_s
+ in
+  let msg2 = Printf.sprintf
+     " %s\
+      \n from %s\
+      \n to %s"
+      (Freight.show shipment.freight)
+      (get_name shipment.src_loc) (get_name shipment.dst_loc)
   in
-  msg
+  msg1, msg2
 
 let cancel_text = "Priority Shipment\nCANCELLED.\n" 
 
