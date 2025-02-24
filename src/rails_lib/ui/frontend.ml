@@ -51,18 +51,19 @@ let handle_event (s:State.t) (event:Event.t) =
   let state =
     match s.screen with
     | Screen.MapGen Some {state=`Done; _} ->
+        (* Only for map generation *)
         begin match event with
         | Key {down=true; _} ->
-                (* Printf.printf "Mapview\n"; *)
                 {s with screen = Screen.MapView}
         | _ -> s
         end
 
     | Screen.MapView ->
+        (* Main map view screen *)
         let ui, backend_msgs = Main_ui.handle_event s s.ui event in
         let backend = Backend.Action.run s.backend backend_msgs in
-        if s.ui =!= ui then s.ui <- ui;
-        if s.backend =!= backend then s.backend <- backend;
+        [%upf s.ui <- ui];
+        [%upf s.backend <- backend];
         s
 
     | _ -> s
