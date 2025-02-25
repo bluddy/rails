@@ -1,6 +1,5 @@
 open Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
-open Utils.Infix
 
 module R = Renderer
 module B = Backend
@@ -36,9 +35,13 @@ let handle_tick win (s:State.t) time =
 
     | Screen.MapView ->
         (* Main game *)
+
+        (* A tick starts with the backend *)
         let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
         let ui = Main_ui.handle_tick s s.ui time is_cycle in
-        let ui = Main_ui.handle_msgs s ui ui_msgs in
+        (* TODO: send msgs to backend. UI doesn't buffer backend_msgs *)
+        let ui, backend_msgs = Main_ui.handle_msgs s ui ui_msgs in
+        let backend = Backend.Action.handle_msgs backend backend_msgs in
         [%upf s.ui <- ui];
         [%upf s.backend <- backend];
         s
@@ -48,6 +51,7 @@ let handle_tick win (s:State.t) time =
   state
 
 let handle_event (s:State.t) (event:Event.t) =
+  (* Handle an input event, starting with the UI *)
   let state =
     match s.screen with
     | Screen.MapGen Some {state=`Done; _} ->
@@ -61,7 +65,8 @@ let handle_event (s:State.t) (event:Event.t) =
     | Screen.MapView ->
         (* Main map view screen *)
         let ui, backend_msgs = Main_ui.handle_event s s.ui event in
-        let backend = Backend.Action.run s.backend backend_msgs in
+        let backend = Backend.Action.handle_msgs s.backend backend_msgs in
+        (* The backend buffers further msgs to ui and sends on next tick *)
         [%upf s.ui <- ui];
         [%upf s.backend <- backend];
         s

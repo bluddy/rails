@@ -687,7 +687,7 @@ module Action = struct
 
   let has_action = function NoAction -> false | _ -> true
 
-  let run backend msgs =
+  let handle_msgs backend msgs =
     let run_single backend msg =
       if has_action msg then Log.debug (fun f -> f "Received msg %s" (show msg));
       match msg with

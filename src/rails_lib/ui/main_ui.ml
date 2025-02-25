@@ -404,6 +404,19 @@ let make_msgbox ?x ?y s v ~fonts text =
   let mode = ModalMsgbox {menu; data=(); last=Normal} in
   {v with mode}, nobaction
 
+let check_add_pause_msg old_mode old_menu v =
+  let check_pause old _new = match old,_new with
+    | true, false -> `Pause
+    | false, true -> `Unpause
+    | _ -> `DoNothing
+  in
+  let mode_pause = check_pause (is_normal_mode old_mode) (is_normal_mode v.mode) in
+  let menu_pause = check_pause (Menu.Global.is_closed old_menu) (Menu.Global.is_closed v.menu) in
+  match mode_pause, menu_pause with
+   | `Pause, _ | _, `Pause -> [B.Action.Pause]
+   | `Unpause, _ | _, `Unpause -> [B.Action.Unpause]
+   | _ -> []
+
 let handle_event (s:State.t) v (event:Event.t) =
   (* Handle most stuff for regular menus and msgboxes
      process_fn: main processing on choice
@@ -735,22 +748,13 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Accomplishments -> modal_screen_no_input v event
         
   in
-  let check_pause old _new = match old,_new with
-    | true, false -> `Pause
-    | false, true -> `Unpause
-    | _ -> `DoNothing
-  in
-  let mode_pause = check_pause (is_normal_mode old_mode) (is_normal_mode v.mode) in
-  let menu_pause = check_pause (Menu.Global.is_closed old_menu) (Menu.Global.is_closed v.menu) in
-  let backend_msgs = match mode_pause, menu_pause with
-   | `Pause, _ | _, `Pause -> [backend_msg; B.Action.Pause]
-   | `Unpause, _ | _, `Unpause -> [backend_msg; B.Action.Unpause]
-   | _ -> [backend_msg]
-  in
-  v, backend_msgs
+  (* See if we need to pause or unpause *)
+  let pause_msgs = check_add_pause_msg old_mode old_menu v in
+  v, [backend_msg] @ pause_msgs
 
 (* Handle incoming messages from backend *)
 let handle_msgs (s:State.t) v ui_msgs =
+  let old_mode, old_menu = v.mode, v.menu in
   let train_arrival_msg_speed v : [`Fast | `Slow] option =
     match v.options.message_speed with
     | `Off -> None
@@ -760,7 +764,6 @@ let handle_msgs (s:State.t) v ui_msgs =
   in
   let handle_msg v ui_msg =
     match v.mode, ui_msg with
-
     | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
         let state = Train_report.make s idx in
         {v with mode=TrainReport state}
@@ -771,16 +774,19 @@ let handle_msgs (s:State.t) v ui_msgs =
 
     | Normal, (TrainArrival t) ->
         let msg_speed = train_arrival_msg_speed v in
-        Option.map_or ~default:v
-          (fun msg_speed ->
-             let time = match msg_speed with
-             | `Fast -> C.fast_message_time
-             | `Slow -> C.slow_message_time
-             in
-             Log.debug (fun f -> f "Setting train arrival message with %d time" time);
-             {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
-          )
-          msg_speed
+        let v' =
+          Option.map_or ~default:v
+            (fun msg_speed ->
+               let time = match msg_speed with
+               | `Fast -> C.fast_message_time
+               | `Slow -> C.slow_message_time
+               in
+               Log.debug (fun f -> f "Setting train arrival message with %d time" time);
+               {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
+            )
+            msg_speed
+        in
+        if v === v' then v else v'
 
     | Normal, OpenStockBroker{player} when player = C.player ->
       let state = Stock_broker.make s in
@@ -798,7 +804,11 @@ let handle_msgs (s:State.t) v ui_msgs =
     (* TODO: handle demand changed msg *)
     | _ -> v
   in
-  List.fold_left handle_msg v ui_msgs
+  let v = List.fold_left handle_msg v ui_msgs in
+  (* Handle pausing/unpausing *)
+  let pause_msg = check_add_pause_msg old_mode old_menu v in
+  v, pause_msg
+  
 
   (* Mostly animations. *)
 let handle_tick s v time is_cycle = match v.mode with
