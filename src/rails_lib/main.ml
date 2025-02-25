@@ -93,6 +93,6 @@ let main () =
   | `Pani when !dump -> Pani.main !file
   | `Pani -> Mainloop.main @@ init_pani ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `Game -> Frontend.run ()
-  | `LoadGame -> Frontend.run ~load:!file ()
+  | `Game -> Modules.run ()
+  | `LoadGame -> Modules.run ~load:!file ()
 

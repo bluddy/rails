@@ -4,19 +4,21 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 module R = Renderer
 module B = Backend
 
+open Modules_d
+
 let update_map _win v map =
   R.Texture.update v.State.map_tex @@ Tilemap.to_img map
 
 let handle_tick win (s:State.t) time =
   let state =
     match s.screen with
-    | Screen.MapGen None ->
+    | MapGen None ->
         (* Prepare mapgen with init *)
         let cities = B.get_cities s.backend in
         let data = Mapgen.init s.backend.random (B.get_region s.backend) cities in
-        {s with screen=Screen.MapGen(Some data)}
+        {s with screen=MapGen(Some data)}
 
-    | Screen.MapGen Some data ->
+    | MapGen Some data ->
         let done_fn () =
           (* Final update of map *)
           let map = Tilemap.update_heightmap @@ B.get_map s.backend in
@@ -31,9 +33,9 @@ let handle_tick win (s:State.t) time =
           (data, B.get_map s.backend)
         in
         let backend = {s.backend with map} in
-        {s with backend; screen=Screen.MapGen(Some data)}
+        {s with backend; screen=MapGen(Some data)}
 
-    | Screen.MapView ->
+    | MapView ->
         (* Main game *)
 
         (* A tick starts with the backend *)
@@ -52,17 +54,17 @@ let handle_event (s:State.t) (event:Event.t) =
   (* Handle an input event, starting with the UI *)
   let state =
     match s.screen with
-    | Screen.MapGen Some {state=`Done; _} ->
+    | MapGen Some {state=`Done; _} ->
         (* Only for map generation *)
         begin match event with
         | Key {down=true; _} ->
-                {s with screen = Screen.MapView}
+                {s with screen = MapView}
         | _ -> s
         end
 
-    | Screen.MapGen _ -> s
+    | MapGen _ -> s
 
-    | Screen.MapView ->
+    | MapView ->
         (* Main map view screen *)
         let ui, backend_msgs = Main_ui.handle_event s s.ui event in
         let backend = Backend.Action.handle_msgs s.backend backend_msgs in
@@ -75,7 +77,7 @@ let handle_event (s:State.t) (event:Event.t) =
 
 let render win (s:State.t) =
   match s.screen with
-  | Screen.MapGen Some data ->
+  | MapGen Some data ->
       let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
       R.clear_screen win;
       R.Texture.render win ~x:0 ~y:0 bg_tex;
@@ -143,12 +145,12 @@ let run ?load ?(region=Region.WestUS) () : unit =
               Backend.reset_tick backend;
               let ui_options = Yojson.Safe.from_string options |> Main_ui_d.options_of_yojson in
               let ui_view = Yojson.Safe.from_string view |> Mapview_d.t_of_yojson in
-              create_state ~backend ~ui_options ~ui_view Screen.MapView
+              create_state ~backend ~ui_options ~ui_view MapView
 
           | _ -> assert false
           end
               
-      | None -> create_state (Screen.MapGen None)
+      | None -> create_state (MapGen None)
 
     in
 
