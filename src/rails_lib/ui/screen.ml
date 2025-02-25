@@ -1,17 +1,14 @@
 (* open Containers *)
 
-(* Everything related to the screen *)
+(* The basic modules of the game, specifically ones that don't need
+   to carry heavy info between each other *)
 
 type t =
-  | Title
-  | MainMenu
   | MapView
   | MapGen of Mapgen.t option
-  | Broker
-  | Schedule
-  | ScheduleRoute
-  | Station
-  | BuildStation
-  | Animation
 
+  (* TODO:
+     Title
+     Retirement
+  *)
 

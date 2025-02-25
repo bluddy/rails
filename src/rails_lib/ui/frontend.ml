@@ -45,8 +45,6 @@ let handle_tick win (s:State.t) time =
         [%upf s.ui <- ui];
         [%upf s.backend <- backend];
         s
-
-    | _ -> s
   in
   state
 
@@ -62,6 +60,8 @@ let handle_event (s:State.t) (event:Event.t) =
         | _ -> s
         end
 
+    | Screen.MapGen _ -> s
+
     | Screen.MapView ->
         (* Main map view screen *)
         let ui, backend_msgs = Main_ui.handle_event s s.ui event in
@@ -70,8 +70,6 @@ let handle_event (s:State.t) (event:Event.t) =
         [%upf s.ui <- ui];
         [%upf s.backend <- backend];
         s
-
-    | _ -> s
   in
   state, false
 
@@ -89,8 +87,6 @@ let render win (s:State.t) =
 
   | MapView ->
       Main_ui.render win s s.ui
-
-  | _ -> ()
 
 let run ?load ?(region=Region.WestUS) () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
