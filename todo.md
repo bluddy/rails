@@ -1,5 +1,5 @@
 # Tasks
-- Debug menu to test functionalities
+- Priority shipment never goes away by itself
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc
@@ -8,7 +8,6 @@
 - F10 survey
 - Bug:
   - Train revenue doesn't add to money
-  - (maybe) Train turning around at station: cars overlapping
   - Create a train with no station: msgbox to build a station first
   - Selling stock doesn't lower stock price
   - New train doesn't pick up stuff from starting station

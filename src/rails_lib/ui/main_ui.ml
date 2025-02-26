@@ -962,8 +962,7 @@ let render_main win (s:State.t) v =
     match Backend.get_priority_shipment s.backend C.player with
     | Some priority ->
       let bonus = Priority_shipment.compute_bonus priority ~cycle:s.backend.cycle ~year:s.backend.year s.backend.region in
-      let money_s = Utils.show_cash ~region:s.backend.region bonus in
-      let bonus_s = Printf.sprintf "bonus: %s" money_s in
+      let bonus_s = Printf.sprintf "bonus: %d,000" bonus in
       Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3 ~x:258 ~y:194 bonus_s;
     | _ -> ()
   in
