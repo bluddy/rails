@@ -140,12 +140,13 @@ type 'mut t = {
   hold_at_next_station: bool;
   engine: Engine.t;
   cars: Car.t list;
+  holds_priority_shipment: bool;
   freight: Freight.t; (* freight class. Based on majority of cars *)
   typ: train_type; (* How many stations we stop at *)
   history: History.t; (* History of values. Used for cars *)
   stop: int; (* current stop of route *)
   route: (wait * stop) Utils.Vector.vector; (* route stops *)
-  priority: stop option; (* priority stop *)
+  priority_stop: stop option;
   had_maintenance: bool; (* this period *)
   maintenance_cost: int; (* per fin period *)
   periodic: periodic * periodic; (* data saved for periodic tracking *)
@@ -176,7 +177,7 @@ let reset_pixels_from_midtile (train: rw t) =
 let get_route_dest v = Vector.get v.route v.stop
 
 let get_next_stop v =
-  match v.priority with
+  match v.priority_stop with
   | Some stop -> (`NoWait, stop)
   | None -> get_route_dest v
 
@@ -229,6 +230,7 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
     dir;
     state=LoadingAtStation{wait_time=0};
     cars;
+    holds_priority_shipment=false;
     freight=freight_of_cars cars;
     typ=Local;
     history=History.make ();
@@ -238,7 +240,7 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
     last_station=station;
     had_maintenance=false;
     hold_at_next_station=false;
-    priority=None;
+    priority_stop=None;
     maintenance_cost=0;
     periodic=(make_periodic (), make_periodic ());
     player;
@@ -268,8 +270,8 @@ let remove_stop_car (v:rw t) stop car =
       Vector.modify_at_idx v.route stop_idx (fun x -> Utils.map_snd remove_car x);
       v
   | `Priority ->
-      let priority = Option.map remove_car v.priority in
-      {v with priority}
+      let priority_stop = Option.map remove_car v.priority_stop in
+      {v with priority_stop}
 
 let add_stop_car (v:rw t) stop car =
   let add_car (stop:stop) =
@@ -284,8 +286,8 @@ let add_stop_car (v:rw t) stop car =
       Vector.modify_at_idx v.route stop_idx (fun x -> Utils.map_snd add_car x);
       v
   | `Priority ->
-      let priority = Option.map add_car v.priority in
-      {v with priority}
+      let priority_stop = Option.map add_car v.priority_stop in
+      {v with priority_stop}
 
 let remove_all_stop_cars (v:rw t) stop =
   let remove_all_cars (stop:stop) = {stop with consist_change = Some []} in
@@ -294,8 +296,8 @@ let remove_all_stop_cars (v:rw t) stop =
       Vector.modify_at_idx v.route stop_idx (fun x -> Utils.map_snd remove_all_cars x);
       v
   | `Priority ->
-      let priority = Option.map remove_all_cars v.priority in
-      {v with priority}
+      let priority_stop = Option.map remove_all_cars v.priority_stop in
+      {v with priority_stop}
 
 let check_stop_station (v:'a t) stop loc =
   (* Don't allow setting the station if the previous or next station
@@ -326,18 +328,18 @@ let set_stop_station (v:rw t) stop (x,y) =
       end;
       v
   | `Priority ->
-      let stop = match v.priority with
+      let stop = match v.priority_stop with
         | None -> make_stop x y None
         | Some stop -> {stop with x; y}
       in
-      {v with priority=Some stop}
+      {v with priority_stop=Some stop}
 
 let remove_stop (v:rw t) stop =
   match stop with
   | `Stop i ->
       Vector.remove_and_shift v.route i;
       v
-  | `Priority -> {v with priority=None}
+  | `Priority -> {v with priority_stop=None}
 
 let toggle_stop_wait (v:rw t) stop =
   Vector.modify_at_idx v.route stop (fun (wait, stop) ->
@@ -413,9 +415,9 @@ let advance (v:rw t) =
 
 let check_increment_stop v (x,y) =
   (* Increment the next stop on the route *)
-  match v.priority, Vector.get v.route v.stop |> snd with
+  match v.priority_stop, Vector.get v.route v.stop |> snd with
   | Some stop, _ when stop.x = x && stop.y = y ->
-      (* When exiting priority mode, we go to the closest station *)
+      (* When exiting priority_stop mode, we go to the closest station *)
       let min_stop_idx =
         Vector.foldi (fun i ((min_dist,_) as acc) (_, (stop: stop)) ->
           let dist = Utils.classic_dist (stop.x, stop.y) (x,y) in
@@ -428,7 +430,7 @@ let check_increment_stop v (x,y) =
   | _, stop when stop.x = x && stop.y = y ->
       None, (v.stop + 1) mod (Vector.length v.route)
   | _ ->
-      v.priority, v.stop
+      v.priority_stop, v.stop
 
 let calc_arrival_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~difficulty ~year ~year_start ~cycle =
   let mult = if Region.is_us region then 1 else 2 in

@@ -227,7 +227,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     write Ega.gray ~x:3 ~y:138 "P";
     R.draw_line win ~color:Ega.black ~x1:160 ~y1:147 ~x2:312 ~y2:147;
 
-    begin match train.priority with
+    begin match train.priority_stop with
     | None ->
         write Ega.black ~x:29 ~y:138 "---";
         write Ega.gray ~x:168 ~y:138 "no changes"
@@ -411,7 +411,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
           (* Click on car to delete, or space in priority stop to open the menu *)
         | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 137 && y <= 147 ->
-            let msg = match train.priority with
+            let msg = match train.priority_stop with
               | Some {consist_change=Some cars;_} -> make_car_msg `Priority cars x
               | Some {consist_change=None;_} -> `AddCarMenu `Priority
               | _ -> `None

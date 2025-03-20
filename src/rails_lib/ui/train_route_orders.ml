@@ -73,7 +73,7 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   ) route;
 
   (* Priority stop *)
-  begin match train.priority with
+  begin match train.priority_stop with
   | Some stop -> 
     let station = Station_map.get_exn (stop.x, stop.y) s.backend.stations in
     let name = Printf.sprintf "P:%s" (Station.get_name station) in

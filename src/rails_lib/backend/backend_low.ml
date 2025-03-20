@@ -231,18 +231,18 @@ module Train_update = struct
 
   let _enter_station (v:t) idx (train: rw Train.t) station loc  =
     (* TODO: income handling *)
-    let last_station, priority, stop, train, _income, ui_msgs =
+    let last_station, priority_stop, stop, train, _income, ui_msgs =
       if Station.is_proper_station station then (
         let train, income, ui_msgs =
           _train_station_handle_consist_and_maintenance v idx loc station train in
-        let priority, stop = Train.check_increment_stop train loc in
-        loc, priority, stop, train, income, ui_msgs
+        let priority_stop, stop = Train.check_increment_stop train loc in
+        loc, priority_stop, stop, train, income, ui_msgs
       ) else (
         (* Just a signal tower. Keep traveling *)
-        train.last_station, train.priority, train.stop, train, 0, []
+        train.last_station, train.priority_stop, train.stop, train, 0, []
       )
     in
-    {train with last_station; priority; stop}, ui_msgs
+    {train with last_station; priority_stop; stop}, ui_msgs
 
   let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) (track:Track.t) ((x, y) as loc) =
     let compute_dir_to_dest graph =
