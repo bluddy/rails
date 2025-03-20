@@ -113,6 +113,7 @@ type info = {
   rate_war: bool;
   rates: [`Normal | `Double | `Half];
   cargo_revenue: int Goods.Map.t; (* revenue for each cargo type at this station *)
+  holds_priority_shipment: bool;
 } [@@deriving yojson]
 
 let has_demand_for v good = Goods.Set.mem good v.demand
@@ -157,6 +158,14 @@ type t = {
 let with_info v f = match v.info with
   | Some x -> Some (f x)
   | _ -> None
+
+let update_with_info v f = match v.info with
+  (* None = don't update *)
+  | Some x -> begin match f x with
+    | Some _ as info -> {v with info}
+    | None -> v
+    end
+  | _ -> v
 
 let get_age v year = year - v.year
 
@@ -274,6 +283,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
         rate_war=false;
         rates=`Normal;
         cargo_revenue=Goods.Map.empty;
+        holds_priority_shipment=false;
       } |> Option.some
   in
   let signals = default_signals in
@@ -438,4 +448,17 @@ let color_of_rates v = match v.info with
     end
   | _ -> failwith "Shouldn't get here"
      
+let holds_priority_shipment v =
+  Option.map_or
+    ~default:false
+    (fun x -> x.holds_priority_shipment)
+    v.info
+
+let set_priority_shipment v x =
+  update_with_info v
+  (fun info ->
+    if Bool.equal info.holds_priority_shipment x then
+        None
+    else
+        Some {info with holds_priority_shipment = x})
 

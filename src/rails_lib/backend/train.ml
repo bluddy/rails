@@ -559,4 +559,7 @@ let get_engine_cost v = v.engine.price
 
 let get_num_of_cars v = List.length v.cars
 
+let holds_priority_shipment v = v.holds_priority_shipment
+
+let set_priority_shipment v x = {v with holds_priority_shipment=x}
 
