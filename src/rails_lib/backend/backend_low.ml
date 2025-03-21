@@ -57,10 +57,7 @@ module Train_update = struct
   let _train_station_handle_consist_and_maintenance (v:t) idx loc (station:Station.t) (train:rw Train.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
-      let had_maintenance =
-        if Station.can_maintain station then true
-        else train.had_maintenance
-      in
+      let had_maintenance = Station.can_maintain station || train.had_maintenance in
       (* TODO: deal with priority shipment *)
       (* TODO: deal with dist_shipped_cargo *)
       let _dist_shipped_cargo =
