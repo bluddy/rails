@@ -385,23 +385,30 @@ let set_priority priority player = {player with priority}
 
 let has_priority player = Option.is_some player.priority
 
-let check_cancel_priority player ~cycle ~year region =
+let check_cancel_priority_shipment player ~cycle ~year region =
   (* Priority shipments are cancelled when the bonus is < 20 *)
   match player.priority with
   | None -> false
   | Some pr_data ->
      Priority_shipment.should_be_cancelled pr_data ~cycle ~year region
 
-let cancel_priority ?(force=false) players ~cycle ~year region =
+let cancel_priority_shipment ?(force=false) players ~cycle ~year region =
   (* Cancel priority and let us know which players' were canceled *)
-  Array.foldi (fun acc i player ->
-    if has_priority player &&
-      (check_cancel_priority player ~cycle ~year region || force) then (
-      players.(i) <- {player with priority=None};
-      i::acc
-    ) else acc)
-  []
-  players
+  let cancel_players =
+    Array.foldi (fun acc i player ->
+      if has_priority player &&
+        (check_cancel_priority_shipment player ~cycle ~year region || force)
+      then i::acc else acc) []
+    players
+  in
+  List.iter (fun i ->
+    let player = players.(i) in
+    let trains = Trainmap.clear_priority_shipment player.trains in
+    let player = [%up {player with trains; priority=None}] in
+    players.(i) <- player
+    )
+  cancel_players;
+  cancel_players
 
 let update players idx f =
   let p = players.(idx) in

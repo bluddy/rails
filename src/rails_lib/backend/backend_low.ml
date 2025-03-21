@@ -482,8 +482,14 @@ let try_create_priority_shipment ?(force=false) v =
   | _ -> None
 
 let try_cancel_priority_shipments ?(force=false) v =
-  Player.cancel_priority ~force v.players ~cycle:v.cycle ~year:v.year v.region
-  |> List.map (fun i -> PriorityShipmentCanceled{player=i})
+  (* Try to cancel and create corresponding messages *)
+  match Player.cancel_priority_shipment ~force v.players ~cycle:v.cycle ~year:v.year v.region with
+  | _::_ as players ->
+    let station_map = Station_map.clear_priority_shipment_for_all v.stations ~players in
+    [%upf v.stations <- station_map];
+    List.map (fun i -> PriorityShipmentCanceled{player=i}) players
+  | _ -> []
+    
 
 (** Most time-based work happens here **)
 let handle_cycle v =
@@ -529,7 +535,6 @@ let handle_cycle v =
       else ui_msgs
     in
     (* Cancel any expired priority shipments *)
-
     let ui_msgs = (try_cancel_priority_shipments v) @ ui_msgs in
 
     (* adjust time *)

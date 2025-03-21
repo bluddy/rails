@@ -39,3 +39,6 @@ val get_at_loc: Utils.loc -> t -> Id.t list
 val total_engine_value: t -> int
 
 val total_car_value: t -> int
+
+val clear_priority_shipment: t -> t
+
