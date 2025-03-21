@@ -49,10 +49,12 @@ let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
       work_done, expense, train_cars
                            
 
-let train_pickup_and_empty_station cars source cycle station_supply =
+let train_pickup_and_empty_station cars source ~cycle stations =
   (* Go over the train and find goods to fill it up with.
      Returns time for pickup and new cars
    *)
+  let station = Station_map.get_exn source stations in
+  let station_supply = Station.get_supply_exn station in
   let total_pickup, pickup_amounts = 
     List.fold_map (fun total car ->
       let car_amount, good = T.Car.get_amount car, T.Car.get_good car in
@@ -66,7 +68,7 @@ let train_pickup_and_empty_station cars source cycle station_supply =
   in
   (* Shortcut if we can pick up nothing *)
   match total_pickup with
-  | 0 -> 0, cars
+  | 0 -> 0, cars, stations
   | _ ->
     let cars =
       List.map2 (fun (car:T.Car.t) add_amount ->
@@ -97,7 +99,7 @@ let train_pickup_and_empty_station cars source cycle station_supply =
       cars
       pickup_amounts
     in
-    time_pickup, cars
+    time_pickup, cars, stations
 
   (* Check whether a train stops at a particular size station *)
 let train_class_stops_at station_info train = 
