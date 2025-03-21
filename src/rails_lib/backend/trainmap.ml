@@ -143,3 +143,13 @@ let total_engine_value (v:t) =
 let total_car_value (v:t) =
   C.car_cost * fold (fun acc train -> acc + Train.get_num_of_cars train) v ~init:0
 
+let clear_priority_shipment_for_all v ~players =
+  (* Clear priority shipment holding for the given players *)
+  let open Train in
+  Vector.map_in_place (fun train ->
+    if List.mem ~eq:Int.equal train.player players then
+      Train.set_priority_shipment train false
+    else train)
+    v.trains
+
+

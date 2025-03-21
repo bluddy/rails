@@ -45,6 +45,8 @@ let add loc value v = LocMap.add loc value v
 
 let delete loc v = LocMap.remove loc v
 
+let map f v = LocMap.map f v
+
 let filter f v =
   LocMap.to_iter v
   |> Iter.map snd |> Iter.filter (fun value -> f value)
