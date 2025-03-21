@@ -59,6 +59,9 @@ module Train_update = struct
     let handle_stop station_info =
       let had_maintenance = Station.can_maintain station || train.had_maintenance in
       (* TODO: deal with priority shipment *)
+      let holds_priority_shipment =
+        Train.holds_priority_shipment station train || Station.holds_priority_shipment station in
+
       (* TODO: deal with dist_shipped_cargo *)
       let _dist_shipped_cargo =
         let dist = Utils.classic_dist loc train.last_station in
@@ -259,7 +262,7 @@ module Train_update = struct
     (* Second check of this. No matter *)
     let can_go, cancel_override = Station.can_train_go station dir in
     if can_go then (
-      (* Mutably canel override if needed. Stringing the station along
+      (* Mutably cancel override if needed. Stringing the station along
          right now would be painful *)
       begin match cancel_override with
       | `Cancel_override -> Station.cancel_override_mut station dir
@@ -279,7 +282,7 @@ module Train_update = struct
       {train with state=Train.StoppedAtSignal dir}
     )
 
-  let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) ((x, y) as loc) =
+  let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations ((x, y) as loc) =
     (* All major computation happens mid-tile *)
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
     (* TODO: check for colocated trains (accidents/stop a train) *)
@@ -290,22 +293,22 @@ module Train_update = struct
       3. Prevent from leaving via manual signal hold
     *)
     let track = Trackmap.get_exn v.track ~x ~y in
+    let default_ret = train, stations, [] in
     match track.kind with
     | Station _ ->
         (* TODO: remove override Proceed after one train *)
         let train, ui_msgs = match train.state with
             (* This is only when we've already processed the train *)
-          | Traveling s when s.traveling_past_station ->
-              train, []
+          | Traveling s when s.traveling_past_station -> default_ret
 
             (* This is before possibly entering the station *)
           | Traveling s ->
               Block_map.block_decr_train s.block v.blocks;
               let train, ui_msgs =
                 if train.hold_at_next_station then (
-                {train with state = HoldingAtStation}, []
+                {train with state = HoldingAtStation}, stations, []
                 ) else (
-                  let station = Station_map.get_exn loc v.stations in
+                  let station = Station_map.get_exn loc stations in
                   _enter_station v idx train station loc
                 )
               in
@@ -314,12 +317,12 @@ module Train_update = struct
                 _exit_station ~idx ~cycle v train track loc, ui_msgs
               else
                 (* Some kind of stop. Exit later *)
-                train, ui_msgs
+                train, stations, ui_msgs
 
             (* Loading/unloading goods at the station *)
           | LoadingAtStation s when s.wait_time > 0 ->
               s.wait_time <- s.wait_time - 1;
-              train, []
+              default_ret
 
           | LoadingAtStation _ ->
               (* Done loading/unloading. Check if we can exit the station *)
@@ -328,7 +331,7 @@ module Train_update = struct
                 | `Wait -> {train with state=Train.WaitingForFullLoad}
                 | _ -> _exit_station ~idx ~cycle v train track loc
               in
-              train, []
+              default_ret
 
           | WaitingForFullLoad when Train.is_full train ->
               (* Done waiting for full load *)
@@ -343,18 +346,18 @@ module Train_update = struct
               in
               if wait_time > 0 then
                 (* We found stuff to load *)
-                {train with state = LoadingAtStation {wait_time}; cars}, []
+                {train with state = LoadingAtStation {wait_time}; cars}, stations, []
               else
                 (* Keep waiting for more goods to show up *)
-                [%up {train with cars}], []
+                [%up {train with cars}], stations, []
 
           | HoldingAtStation when train.hold_at_next_station ->
               (* Don't enter station yet *)
-              train, []
+              default_ret
 
           | HoldingAtStation ->
               (* Hold happens before we enter the station *)
-              let station = Station_map.get_exn loc v.stations in
+              let station = Station_map.get_exn loc stations in
               _enter_station v idx train station loc
 
           | StoppedAtSignal dir ->
@@ -365,10 +368,10 @@ module Train_update = struct
               if can_go then
                 _exit_station ~idx ~cycle v train track loc, []
               else
-                train, []
+                default_ret
         in
         Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state));
-        train, ui_msgs
+        train, stations, ui_msgs
 
     (* --- Below this trains cannot stop so must be traveling --- *)
 
@@ -380,7 +383,7 @@ module Train_update = struct
             ~ixn:loc ~cur_dir:train.dir ~dest 
             |> Option.get_exn_or "Cannot find route for train" 
         in
-        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, []
+        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, []
 
     | _ ->
         (* All other track and non-decision ixns *)
@@ -388,16 +391,16 @@ module Train_update = struct
           Dir.Set.find_nearest train.dir track.dirs
           |> Option.get_exn_or "Cannot find track for train"
         in
-        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, []
+        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, []
 
-let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
+let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_bit ~region_div =
   (* This is the regular update function for trains. Important stuff happens midtile *)
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   begin match train.state with
   | Traveling travel_state ->
     let train = Train.update_speed train ~cycle ~cycle_check ~cycle_bit in
     (* TODO: fiscal period update stuff *)
-    let rec train_update_loop train speed_bound ui_msg_acc =
+    let rec train_update_loop train speed_bound stations ui_msg_acc =
       let speed = Train.get_speed train in
       if speed_bound >= speed then train, ui_msg_acc
       else (
@@ -415,7 +418,7 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
           |> min Train.update_array_length
         in
         (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
-        let train, ui_msgs =
+        let train, stations, ui_msgs =
           if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
             (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
             let is_mid_tile =
@@ -427,25 +430,24 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
             (* Make sure we don't double-process mid-tiles *)
             match is_mid_tile, travel_state.traveling_past_station with
             | true, false ->
-                _handle_train_mid_tile ~idx ~cycle v train loc
+                _handle_train_mid_tile ~idx ~cycle v train stations loc
             | false, true ->
                 travel_state.traveling_past_station <- false;
-                Train.advance train, []
+                Train.advance train, stations, []
             | _ ->
-                Train.advance train, []
+                Train.advance train, stations, []
           end else
-              train, []
+              train, stations, []
         in
-        train_update_loop train (speed_bound + 12) (ui_msgs @ ui_msg_acc)
+        train_update_loop train (speed_bound + 12) stations (ui_msgs @ ui_msg_acc)
       )
     in
-    train_update_loop train 0 []
+    train_update_loop train 0 stations []
 
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
-    _handle_train_mid_tile ~idx ~cycle v train loc
+    _handle_train_mid_tile ~idx ~cycle v train stations loc
   end
-
 
     (* Run every cycle, updating every train's position and speed *)
   let _update_all_trains (v:t) ~player =
@@ -454,13 +456,14 @@ let update_train v idx (train:rw Train.t) ~cycle ~cycle_check ~cycle_bit ~region
     let cycle_bit = 1 lsl (v.cycle mod 12) in
     let cycle = v.cycle in
     (* TODO: We update the high priority trains before the low priority *)
-    Trainmap.fold_mapi_in_place (fun idx ui_msg_acc train ->
-      let train, ui_msgs = 
-        update_train v idx train ~cycle ~cycle_check ~cycle_bit ~region_div
+    Trainmap.fold_mapi_in_place (fun idx (stations, ui_msg_acc) train ->
+      let train, stations, ui_msgs = 
+        _update_train v idx train stations ~cycle ~cycle_check ~cycle_bit ~region_div
       in
-      ui_msgs @ ui_msg_acc, train)
+      (stations, ui_msgs @ ui_msg_acc), train
+      )
       v.players.(player).trains
-      ~init:[]
+      ~init:(v.stations, [])
 
 end
 
