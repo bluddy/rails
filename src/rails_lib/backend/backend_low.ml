@@ -192,14 +192,14 @@ module Train_update = struct
       in
       Log.debug (fun f -> f "Wait_time(%d)" wait_time);
 
-      {train with cars; had_maintenance; state; freight}, revenue, ui_msgs
+      {train with cars; had_maintenance; state; freight}, station, revenue, ui_msgs
     in
     match station.info with
     | Some station_info when Train_station.train_stops_at station train ->
           handle_stop station_info
     | Some _ when not train.had_maintenance && Station.can_maintain station ->
-         {train with had_maintenance=true}, 0, []
-    | _ -> train, 0, []
+         {train with had_maintenance=true}, station, 0, []
+    | _ -> train, station, 0, []
 
 
       (* TODO: young_station_reached if age <= 20 *)
@@ -232,17 +232,18 @@ module Train_update = struct
   let _enter_station (v:t) idx (train: rw Train.t) stations loc  =
     let station = Station_map.get_exn loc stations in
     (* TODO: income handling *)
-    let last_station, priority_stop, stop, train, _income, ui_msgs =
+    let last_station, priority_stop, stop, train, station, _income, ui_msgs =
       if Station.is_proper_station station then (
-        let train, income, ui_msgs =
+        let train, station, income, ui_msgs =
           _train_station_handle_consist_and_maintenance v idx loc station train in
         let priority_stop, stop = Train.check_increment_stop train loc in
-        loc, priority_stop, stop, train, income, ui_msgs
+        loc, priority_stop, stop, train, station, income, ui_msgs
       ) else (
         (* Just a signal tower. Keep traveling *)
-        train.last_station, train.priority_stop, train.stop, train, 0, []
+        train.last_station, train.priority_stop, train.stop, train, station, 0, []
       )
     in
+    let stations = Station_map.add loc station stations in
     {train with last_station; priority_stop; stop}, stations, ui_msgs
 
   let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) ((x, y) as loc) =
