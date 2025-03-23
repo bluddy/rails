@@ -75,6 +75,8 @@ let check_priority_delivery pr_data stations =
   let station = Station_map.get_exn dest_loc stations in
   Station.holds_priority_shipment station
 
+let _get_station_name stations loc = Station_map.get_exn loc stations |> Station.get_name in
+
 let create_text shipment (region:Region.t) station_map =
   let type_s = match shipment.freight, region with
     | `Mail, _ -> "Rare vaccine required."
@@ -84,22 +86,35 @@ let create_text shipment (region:Region.t) station_map =
     | `Slow, _ -> "Mine rescue equipment."
     | `Bulk, _ -> "Heating fuel emergency."
   in
-  let get_name loc = Station_map.get_exn loc station_map |> Station.get_name in
   let msg1 = Printf.sprintf
     "Priority Shipment!\
      \n%s"
      type_s
- in
+  in
   let msg2 = Printf.sprintf
      " %s\
       \n from %s\
       \n to %s"
       (Freight.show shipment.freight)
-      (get_name shipment.src_loc) (get_name shipment.dst_loc)
+      (_get_station_name station_map shipment.src_loc)
+      (_get_station_name station_map shipment.dst_loc)
   in
   msg1, msg2
 
 let cancel_text = "Priority Shipment\nCANCELLED.\n" 
+
+let delivery_text shipment region stations money =
+  let msg1 = Printf.sprintf
+    "Priority %s\
+     \ndelivered to %s"
+    (Freight.show shipment.freight)
+    (_get_station_name stations shipment.dst_loc)
+  in
+  let msg2 = Printf.sprintf
+    "%s Delivery Bonus!"
+    (Utils.show_cash ~region money)
+  in
+  msg1, msg2
 
 let get_freight v = v.freight
 

@@ -546,7 +546,15 @@ let check_priority_delivery v =
         then i::acc else acc) []
       players
     in
-    clear_player_and_train_priority_shipments v deliver_players;
+    List.iter (fun i ->
+      let player = v.players.(i) in
+      let bonus = Priority_shipment.compute_bonus priority ~cycle ~year region in
+      (* TODO: create messages *)
+      let trains = Trainmap.clear_priority_shipment player.trains in
+      let player = [%up {player with trains; priority=None}] in
+      let player = Player.earn `Other bonus player in
+      v.players.(i) <- player
+    ) deliver_players;
     deliver_players
   in
   match check_priority_delivery_all v.players v.stations ~cycle:v.cycle ~year:v.year v.region with

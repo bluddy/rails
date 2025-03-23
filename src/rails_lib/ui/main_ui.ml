@@ -801,6 +801,11 @@ let handle_msgs (s:State.t) v ui_msgs =
       let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
       {v with mode}
 
+    | Normal, PriorityShipmentDelivered{player; shipment; bonus} when player = C.player ->
+      let heading, text = Priority_shipment.delivery_text shipment s.backend.region s.backend.stations bonus in
+      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
+      {v with mode}
+
     (* TODO: handle demand changed msg *)
     | _ -> v
   in

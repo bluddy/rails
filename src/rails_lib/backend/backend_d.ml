@@ -35,6 +35,7 @@ type ui_msg =
   | StockBroker of stock_broker_ui_msg
   | OpenStockBroker of {player: int}
   | PriorityShipmentCreated of {player: int; shipment:Priority_shipment.t}
+  | PriorityShipmentDelivered of {player: int; shipment:Priority_shipment.t; bonus:int}
   | PriorityShipmentCanceled of {player: int}
   [@@deriving yojson]
 
