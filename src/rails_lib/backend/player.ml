@@ -46,7 +46,7 @@ type ai_info = {
 
 type t = {
   name: string option; (* custom name *)
-  trains: Trainmap.t;
+  mutable trains: Trainmap.t;
   stations: Utils.loc list; (* Stations ordered by creation order *)
   m: monetary;
   track_length: int;
