@@ -58,7 +58,7 @@ module Train_update = struct
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
       let had_maintenance = Station.can_maintain station || train.had_maintenance in
-      (* TODO: deal with priority shipment *)
+      (* Priority shipment arriving to station *)
       let station =
         if Train.holds_priority_shipment train && not @@ Station.holds_priority_shipment station then
           Station.set_priority_shipment station true
@@ -160,6 +160,16 @@ module Train_update = struct
       let time_for_pickup, cars, station =
         Train_station.train_pickup_and_empty_station cars loc v.cycle station
       in
+      (* Update whether we leave with priority shipment on train *)
+      let holds_priority_shipment =
+        let player = Player.get_player v.players train.player in
+        match Player.get_priority player with
+        | None -> false
+        | Some priority_shipment ->
+          let freight = Priority_shipment.get_freight priority_shipment in
+          Station.holds_priority_shipment station &&
+          Train.can_hold_priority_shipment cars freight
+      in
 
       let wait_time = time_for_sold_goods + time_for_car_change + time_for_pickup in
 
@@ -195,7 +205,14 @@ module Train_update = struct
       in
       Log.debug (fun f -> f "Wait_time(%d)" wait_time);
 
-      let train = {train with cars; had_maintenance; state; freight} in
+      let train = {
+        train with cars;
+        had_maintenance;
+        state;
+        freight;
+        holds_priority_shipment
+      }
+      in
       train, station, revenue, ui_msgs
     in
     match station.info with

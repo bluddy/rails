@@ -563,3 +563,7 @@ let holds_priority_shipment v = v.holds_priority_shipment
 
 let set_priority_shipment v x = {v with holds_priority_shipment=x}
 
+let can_hold_priority_shipment cars priority_freight =
+  let freight_set = freight_set_of_cars cars in
+  Freight.Set.mem freight_set priority_freight 
+

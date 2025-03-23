@@ -385,6 +385,8 @@ let set_priority priority player = {player with priority}
 
 let has_priority player = Option.is_some player.priority
 
+let get_priority player = player.priority
+
 let check_cancel_priority_shipment player ~cycle ~year region =
   (* Priority shipments are cancelled when the bonus is < 20 *)
   match player.priority with

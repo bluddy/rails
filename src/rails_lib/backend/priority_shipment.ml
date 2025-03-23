@@ -96,3 +96,5 @@ let create_text shipment (region:Region.t) station_map =
 
 let cancel_text = "Priority Shipment\nCANCELLED.\n" 
 
+let get_freight v = v.freight
+
