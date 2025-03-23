@@ -264,12 +264,12 @@ module Train_update = struct
     (* Second check of this. No matter *)
     let can_go, cancel_override = Station.can_train_go station dir in
     if can_go then (
-      (* Mutably cancel override if needed. Stringing the station along
-         right now would be painful *)
-      begin match cancel_override with
-      | `Cancel_override -> Station.cancel_override_mut station dir
-      | _ -> ()
-      end;
+      let stations = match cancel_override with
+        | `Cancel_override ->
+          let station = Station.cancel_override station dir in
+          Station_map.add loc station stations
+        | _ -> stations
+      in
       (* enter block *)
       let locd = (loc, dir) in
       let locu = Utils.locu_of_locd locd in

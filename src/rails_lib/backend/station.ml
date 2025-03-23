@@ -137,8 +137,8 @@ type signal =
 type id = int * int [@@deriving yojson, eq, show]
 
 type signals = {
-  mutable lower: signal * override;
-  mutable upper: signal * override;
+  lower: signal * override;
+  upper: signal * override;
 } [@@deriving yojson]
 
 let default_signals = {
@@ -232,14 +232,7 @@ let set_override (v:t) dir override =
   in
   {v with signals}
 
-let set_override_mut (v:t) dir override =
-  if Dir.is_lower dir then (
-    v.signals.lower <- (fst v.signals.lower, override)
-  ) else (
-    v.signals.upper <- (fst v.signals.upper, override)
-  )
-
-let cancel_override_mut (v:t) dir = set_override_mut v dir NoOverride
+let cancel_override (v:t) dir = set_override v dir NoOverride
 
 let can_train_go (v:t) dir =
   (* Also returns whether we need to cancel override *)
