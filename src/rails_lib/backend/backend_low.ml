@@ -97,7 +97,7 @@ module Train_update = struct
             let amount, good = Train.Car.get_amount car, Train.Car.get_good car in
             match good with
             | Passengers when delivered && has_rest && has_hotel ->
-                acc + amount/32 + amount/16
+                acc + amount / 32 + amount / 16
             | Passengers when delivered && has_rest ->
                 acc + amount / 32
             | Passengers when delivered && has_hotel ->
@@ -414,8 +414,7 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
       if speed_bound >= speed then train, stations, ui_msg_acc
       else (
         let speed =
-          if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3
-          else speed
+          if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3 else speed
         in
         let update_val =
           if speed > 12 then 
