@@ -70,6 +70,11 @@ let compute_bonus pr_data ~cycle ~year region =
 let should_be_cancelled pr_data ~cycle ~year region =
   compute_bonus pr_data ~cycle ~year region < C.priority_min_bonus
 
+let check_priority_delivery pr_data stations =
+  let dest_loc = pr_data.dst_loc in
+  let station = Station_map.get_exn dest_loc stations in
+  Station.holds_priority_shipment station
+
 let create_text shipment (region:Region.t) station_map =
   let type_s = match shipment.freight, region with
     | `Mail, _ -> "Rare vaccine required."

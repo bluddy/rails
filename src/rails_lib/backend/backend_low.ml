@@ -507,15 +507,54 @@ let try_create_priority_shipment ?(force=false) v =
       end
   | _ -> None
 
+let clear_player_and_train_priority_shipments v player_list =
+  List.iter (fun i ->
+    let player = v.players.(i) in
+    let trains = Trainmap.clear_priority_shipment player.trains in
+    let player = [%up {player with trains; priority=None}] in
+    v.players.(i) <- player
+  ) player_list
+
 let try_cancel_priority_shipments ?(force=false) v =
   (* Try to cancel and create corresponding messages *)
-  match Player.cancel_priority_shipment ~force v.players ~cycle:v.cycle ~year:v.year v.region with
+  let try_cancel_priority_shipment_all players ~cycle ~year region =
+    (* Cancel priority and let us know which players' were canceled *)
+    let cancel_players =
+      Array.foldi (fun acc i player ->
+        if Player.has_priority player &&
+          (Player.check_cancel_priority_shipment player ~cycle ~year region || force)
+        then i::acc else acc) []
+      players
+    in
+    clear_player_and_train_priority_shipments v cancel_players;
+    cancel_players
+  in
+  match try_cancel_priority_shipment_all v.players ~cycle:v.cycle ~year:v.year v.region with
   | _::_ as players ->
-    let station_map = Station_map.clear_priority_shipment_for_all v.stations ~players in
-    [%upf v.stations <- station_map];
+    let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
+    [%upf v.stations <- stations];
     List.map (fun i -> PriorityShipmentCanceled{player=i}) players
   | _ -> []
     
+let check_priority_delivery v =
+  (* Check if a priority shipment has been delivered *)
+  let check_priority_delivery_all players stations ~cycle ~year region =
+    (* Check for priority delivery completion *)
+    let deliver_players =
+      Array.foldi (fun acc i player ->
+        if Player.has_priority player && Player.check_priority_delivery player stations
+        then i::acc else acc) []
+      players
+    in
+    clear_player_and_train_priority_shipments v deliver_players;
+    deliver_players
+  in
+  match check_priority_delivery_all v.players v.stations ~cycle:v.cycle ~year:v.year v.region with
+  | _::_ as players ->
+    let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
+    [%upf v.stations <- stations];
+    List.map (fun i -> PriorityShipmentDelivered{player=i}) players
+  | _ -> []
 
 (** Most time-based work happens here **)
 let handle_cycle v =
@@ -568,7 +607,10 @@ let handle_cycle v =
       else ui_msgs
     in
     (* Cancel any expired priority shipments *)
-    let ui_msgs = (try_cancel_priority_shipments v) @ ui_msgs in
+    let cancel_ui_msgs = try_cancel_priority_shipments v in
+    let delivered_priority_ui_msgs = check_priority_delivery v in
+
+    let ui_msgs = cancel_ui_msgs @ ui_msgs in
 
     (* adjust time *)
     v.time <- v.time + 1;
