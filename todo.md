@@ -5,7 +5,6 @@
     - "P" in color of freight for station
     - "D" in color of freight for destination station
     - Station view: priority delivery
-- Priority shipment never goes away by itself
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc

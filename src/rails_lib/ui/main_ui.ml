@@ -853,12 +853,13 @@ let draw_train_roster win (s:State.t) v =
     R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
 
     (* Draw UI train *)
-    (* draw engine *)
-    (* TODO: priority on board -> green *)
-    let color = Ega.black in
-    R.draw_line win ~x1:(x+3) ~y1:(y-3) ~x2:(x+3) ~y2:y ~color;
-    R.draw_line win ~x1:(x+4) ~y1:(y-2) ~x2:(x+4) ~y2:(y-1) ~color;
-    R.draw_rect win ~x:(x+5) ~y:(y-3) ~w:2 ~h:4 ~color ~fill:true;
+    let draw_engine () =
+      let color = if Train.holds_priority_shipment train then Ega.bgreen else Ega.black in
+      R.draw_line win ~x1:(x+3) ~y1:(y-3) ~x2:(x+3) ~y2:y ~color;
+      R.draw_line win ~x1:(x+4) ~y1:(y-2) ~x2:(x+4) ~y2:(y-1) ~color;
+      R.draw_rect win ~x:(x+5) ~y:(y-3) ~w:2 ~h:4 ~color ~fill:true;
+    in
+    draw_engine ();
     (* draw cars *)
     let _ =
       List.fold_left (fun x car ->
