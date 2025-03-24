@@ -507,14 +507,6 @@ let try_create_priority_shipment ?(force=false) v =
       end
   | _ -> None
 
-let clear_player_and_train_priority_shipments v player_list =
-  List.iter (fun i ->
-    let player = v.players.(i) in
-    let trains = Trainmap.clear_priority_shipment player.trains in
-    let player = [%up {player with trains; priority=None}] in
-    v.players.(i) <- player
-  ) player_list
-
 let try_cancel_priority_shipments ?(force=false) v =
   (* Try to cancel and create corresponding messages *)
   let try_cancel_priority_shipment_all players ~cycle ~year region =
@@ -525,6 +517,14 @@ let try_cancel_priority_shipments ?(force=false) v =
           (Player.check_cancel_priority_shipment player ~cycle ~year region || force)
         then i::acc else acc) []
       players
+    in
+    let clear_player_and_train_priority_shipments v player_list =
+      List.iter (fun i ->
+        let player = v.players.(i) in
+        let trains = Trainmap.clear_priority_shipment player.trains in
+        let player = [%up {player with trains; priority=None}] in
+        v.players.(i) <- player
+      ) player_list
     in
     clear_player_and_train_priority_shipments v cancel_players;
     cancel_players
@@ -546,22 +546,25 @@ let check_priority_delivery v =
         then i::acc else acc) []
       players
     in
-    List.iter (fun i ->
-      let player = v.players.(i) in
-      let bonus = Priority_shipment.compute_bonus priority ~cycle ~year region in
-      (* TODO: create messages *)
-      let trains = Trainmap.clear_priority_shipment player.trains in
-      let player = [%up {player with trains; priority=None}] in
-      let player = Player.earn `Other bonus player in
-      v.players.(i) <- player
-    ) deliver_players;
-    deliver_players
+    let ui_msgs =
+      List.map (fun i ->
+        let player = v.players.(i) in
+        let priority = Player.get_priority player |> Option.get_exn_or "Problem with priority" in
+        let bonus = Priority_shipment.compute_bonus priority ~cycle ~year region in
+        let trains = Trainmap.clear_priority_shipment player.trains in
+        let player = {player with trains; priority=None} in
+        let player = Player.earn `Other bonus player in
+        v.players.(i) <- player;
+        PriorityShipmentDelivered {player=i; shipment=priority; bonus}
+      ) deliver_players
+    in
+    deliver_players, ui_msgs
   in
   match check_priority_delivery_all v.players v.stations ~cycle:v.cycle ~year:v.year v.region with
-  | _::_ as players ->
+  | _::_ as players, ui_msgs ->
     let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
     [%upf v.stations <- stations];
-    List.map (fun i -> PriorityShipmentDelivered{player=i}) players
+    ui_msgs
   | _ -> []
 
 (** Most time-based work happens here **)
@@ -618,7 +621,7 @@ let handle_cycle v =
     let cancel_ui_msgs = try_cancel_priority_shipments v in
     let delivered_priority_ui_msgs = check_priority_delivery v in
 
-    let ui_msgs = cancel_ui_msgs @ ui_msgs in
+    let ui_msgs = delivered_priority_ui_msgs @ cancel_ui_msgs @ ui_msgs in
 
     (* adjust time *)
     v.time <- v.time + 1;

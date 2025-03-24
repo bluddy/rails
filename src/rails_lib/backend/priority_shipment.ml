@@ -75,7 +75,7 @@ let check_priority_delivery pr_data stations =
   let station = Station_map.get_exn dest_loc stations in
   Station.holds_priority_shipment station
 
-let _get_station_name stations loc = Station_map.get_exn loc stations |> Station.get_name in
+let _get_station_name stations loc = Station_map.get_exn loc stations |> Station.get_name
 
 let create_text shipment (region:Region.t) station_map =
   let type_s = match shipment.freight, region with
