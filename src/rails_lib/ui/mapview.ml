@@ -625,7 +625,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       in
       search_for_box_space 0
     in
-    let draw_stationbox station s_tile_x s_tile_y tile_x tile_y =
+    let draw_stationbox station loc s_tile_x s_tile_y tile_x tile_y =
       (* tiles in terms of on-screen tiles
          s_tiles: station tiles
        *)
@@ -671,7 +671,21 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       (* frame *)
       let color = Station.color_of_rates station in
       R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:false ~color;
-     (* station name *)
+
+      (* Priority shipment *)
+      let player = Station.get_player station in
+      let priority = B.get_player s.backend player |> Player.get_priority in
+      Option.iter (fun priority ->
+        let draw_letter letter =
+          let color = Freight.to_color ~full:true priority.Priority_shipment.freight in
+          Fonts.Render.write win s.fonts ~color letter ~x ~y:(y+2) ~idx:4
+        in
+        if Utils.equal_loc priority.src_loc loc then draw_letter "P"
+        else if Utils.equal_loc priority.dst_loc loc then draw_letter "D"
+        else ()) 
+        priority;
+
+      (* station name *)
       let name = Station.get_short_name station in
       Fonts.Render.write win s.fonts ~color name ~x:(x+7) ~y:(y+2) ~idx:4;
     in
@@ -685,7 +699,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
             let station = Station_map.get_exn loc s.backend.stations in
             let box_x, box_y = find_space_for_stationbox x y in
             Tilebuffer.set_box v.tile_buffer ~x:box_x ~y:box_y ~w:size ~h:size x y;
-            draw_stationbox station x y box_x box_y
+            draw_stationbox station loc x y box_x box_y
       ))
   in
   let draw_minimap ~(minimap:Utils.rect) =

@@ -455,3 +455,4 @@ let set_priority_shipment v x =
     else
         Some {info with holds_priority_shipment = x})
 
+let get_player v = v.player
