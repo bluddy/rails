@@ -136,9 +136,12 @@ let render win (s:State.t) loc ~show_demand =
 
   let font = Fonts.get_font s.fonts 4 in
 
-  let write_name ~x ~y ~color =
-    Printf.sprintf "%s (%s)\nBuilt in %d" (Station.get_name station) (Station.kind_str station) station.year
-    |> Fonts.Font.write win font ~x ~y ~color
+  let write_name ~shadow ~x ~y ~color =
+    let str = Printf.sprintf "%s (%s)\nBuilt in %d" (Station.get_name station) (Station.kind_str station) station.year in
+    if shadow then
+      Fonts.Render.write_shadow win s.fonts ~color ~x ~y ~idx:4 str
+    else
+      Fonts.Font.write win font ~x ~y ~color str
   in
 
   if show_demand then (
@@ -187,13 +190,13 @@ let render win (s:State.t) loc ~show_demand =
       10
     in
     (* name with shadow *)
-    write_name ~x:9 ~y:105 ~color:Ega.black;
-    write_name ~x:8 ~y:104 ~color:Ega.white;
+    write_name ~shadow:true ~x:8 ~y:104 ~color:Ega.white;
     ()
 
   ) else (
     (* normal view *)
-    write_name ~x:96 ~y:16 ~color:Ega.white
+    write_name ~shadow:false ~x:96 ~y:16 ~color:Ega.white;
+    ()
   );
   ()
 
