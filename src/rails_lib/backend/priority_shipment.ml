@@ -118,3 +118,9 @@ let delivery_text shipment region stations money =
 
 let get_freight v = v.freight
 
+let station_waiting_delivery_text priority ~loc =
+  Option.bind priority (fun priority ->
+    if Utils.equal_loc loc priority.dst_loc then
+      Some(Freight.show priority.freight)
+    else None)
+

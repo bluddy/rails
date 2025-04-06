@@ -189,6 +189,17 @@ let render win (s:State.t) loc ~show_demand =
       info.demand
       10
     in
+    (* Priority shipment *)
+    let goods_s = Backend.get_player s.backend C.player
+      |> Player.get_priority
+      |> Priority_shipment.station_waiting_delivery_text ~loc
+    in
+    Option.iter
+      (fun goods ->
+        let str = "PRIORITY\nDELIVERY:\n" ^ goods in
+        Fonts.Render.write_shadow win s.fonts ~color:Ega.white ~idx:4 ~x:210 ~y:104 str)
+      goods_s;
+
     (* name with shadow *)
     write_name ~shadow:true ~x:8 ~y:104 ~color:Ega.white;
     ()
