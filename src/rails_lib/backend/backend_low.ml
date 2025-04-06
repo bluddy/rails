@@ -500,9 +500,10 @@ let try_create_priority_shipment ?(force=false) v =
   match main_player.priority with
   | None when (v.cycle mod C.Cycles.priority_delivery = 0) || force ->
       begin match Priority_shipment.try_to_create v.random v.stations v.cycle ~force with
-      | Some pri as some_prio ->
-        Player.update v.players C.player @@ Player.set_priority some_prio;
-        Some (PriorityShipmentCreated{player=C.player; shipment=pri})
+      | Some (stations, priority) ->
+        Player.update v.players C.player @@ Player.set_priority @@ Some priority;
+        v.stations <- stations;
+        Some (PriorityShipmentCreated{player=C.player; shipment=priority})
       | None -> None
       end
   | _ -> None

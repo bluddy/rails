@@ -38,7 +38,9 @@ let _create random stations cycle =
         let freight = Random.pick_array Freight.all_freight random in
         let deadline = cycle - 1000 in
         let shipment = {src_loc; dst_loc; freight; deadline} in
-        Some shipment
+        let src_station = Station.set_priority_shipment src_station true in
+        let stations = Station_map.add src_loc src_station stations in
+        Some (stations, shipment)
 
 let try_to_create ?(force=false) random stations cycle =
   (* The delay seems to be a result of just random tries *)
