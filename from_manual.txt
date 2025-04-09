@@ -1,0 +1,109 @@
+- From the manual:
+  - build first station, pay for engine shop
+  - difficulty factor
+  - turbo speed doesn't stop for messages or end of year
+  - at end of year, charged interest on bonds and short term loans
+  - end of dec in odd number year is end of fiscal period
+  - displays: area, region, local, detail
+  - stations cannot overlap in area
+  - metal bridge not available before tech is done
+  - doubling: not wood but all other bridges
+  - double rates: new station until end of fiscal period, fiscal period after winning rate war
+  - maintenance shop reduces maintenance in fiscal period by 75%
+  - shipping report money emptied at end of fiscal period
+  - build train: shows options where we have an engine shop
+  - train report: money in this period on left, previous on right
+  - keyboard shortcuts often only appear when no mouse
+    - tab to train roster
+  - named train: 24 letters.
+    - passenger revenue increased by 25%
+  - higher classed trains move first
+  - train report: right click clears consist change
+  - west us: higher fares for east-west routes than north-south
+  - train wreck: all cargos of same type disappear from all trains and supplies
+  - mail cars are heaviest empty, fastest to load, lightest when full
+  - priority shipment is cancelled below $20k
+  - station stocks priority shipment if stopped there
+  - build industry: within 3 squares of construction box
+  - no collision: lower class stops
+  - bonds:
+    - reach 9%: no more
+    - interest rates
+    - bonds outstanding: 0 1 2 3 4 5 6 7
+    - boom: 2, 3, 4, 5, 6, 7, 8, x
+    - moderation: 3, 4, 5, 6, 7, 8, x, x
+    - normal: 4, 5, 6, 7, 8, x, x, x
+    - recession: 5, 6, 7, 8, x, x, x, x
+    - panic: 6, 7, 8, x, x, x, x, x
+    - bond rates lower in west us due to govt subsidies
+  - build train into new city: new stock may be issued
+    - 10k new shares
+  - when buying/selling stock: 10% higher/lower
+    - due to high volume
+    - 12% interest on short term loans
+  - stock split 2:1 at $100
+  - stockholders happy when stock goes up 
+  - happiness measured at end of fiscal period
+  - compute roi over last 5 years
+  - if own 50%+ can't be thrown out
+  - start with 4% bond of $500k
+  - end of december: pay interest
+  - declare bankruptcy:
+    - all bonds from cash paid off
+    - half of bonds eliminated (rounded down)
+    - treasury stock eliminated
+    - stock held by competitors eliminated
+    - public left with 100k shares
+    - may not lay more track until positive cash balance and bonds repaid
+  - balance sheet:
+    - lifetime on left, year to date on right
+    - operating funds: cash on hand
+    - stock assets: treasury stock + other railroads
+      - price if you tried to sell it (including lower price)
+    - facilities: stations, signal towers, station improvements
+    - real estate: right of way
+    - track: if laid during normal climate
+    - rolling stock: trains and cars
+      - negative if you removed cars or engines
+  - income statement
+    - YTD on left (year to date)
+    - total column doesn't include ytd
+  - train income report
+  - climate:
+    - affects track, double track, right of way, supply of cargo, interest rate on bonds
+  - accomplishments: stuff in news
+    - service to new city etc
+  - efficiency report
+    - total number of available carloads of cargo
+    - this fisal period compared to previous
+    - how many you picked up. percentage
+    - ton-miles travels
+    - utillization efficiency: ton-miles travelled / ton-miles delivered
+    - revenue efficiency: money you make vs number of ton-miles carried
+  - history: year by year
+  - rate war:
+    - 66% vote majority in town council
+    - competing RR: all tack leading to station torn up
+    - any isolated station: also eliminated
+    - can't build facilities
+  - competing RR
+    - Can't build station within 5 squares
+  - Takeover
+    - Once public has no more, can make offer for rest of stock
+    - 2x current market pricej:w
+    - only need >50% to control
+    - Operate RR menu
+      - Take $100k, give $100k
+      - Can move at $250k if have that (changes in menu)
+      - Buy back bond option
+      - Build track
+        - Text window from to cities
+        - If can't, message appears
+        - Only way company builds now
+    - build tracks into controlled ai station: union station
+    - charged 100k for terminal (normally $200k)
+  - Holding is before we enter the station! (records and such come later)
+Failed to connect to a Wayland server: No such file or directory
+Note: WAYLAND_DISPLAY is set to wayland-0
+Note: XDG_RUNTIME_DIR is set to /run/user/1000/
+Please check whether /run/user/1000//wayland-0 socket exists and is accessible.
