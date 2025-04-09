@@ -20,7 +20,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Engine info display
 - [x] Train arrival message (top-right UI)
 - [ ] Messages to the player (record etc)
-- [ ] Priority deliveries
+- [x] Priority deliveries
 - [ ] Opponents and AI
 - [ ] Stock Market
 - [ ] Balance Sheet, Income Statement
@@ -34,7 +34,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Rate war
 - [ ] Integrate animations
 - [ ] Record train arrivals
-- [ ] Newspapers
+- [x] Newspapers
 - [ ] Resource map
 - [ ] Retirement
 - [ ] Naming Train (speed record)
