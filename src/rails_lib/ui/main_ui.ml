@@ -978,6 +978,13 @@ let render_main win (s:State.t) v =
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:dims.menu.h;
   ()
 
+let should_render_mouse = function
+  | _ -> true
+  
+let render_mouse win textures =
+  let cursor_tex = Hashtbl.find textures.Textures.misc `Cursor in
+  R.draw_cursor win cursor_tex
+
 let render (win:R.window) (s:State.t) v =
   (* Msgboxes *)
   let rec render_mode = function
@@ -1021,5 +1028,7 @@ let render (win:R.window) (s:State.t) v =
     | Efficiency_report ->
         Efficiency_report.render win s
   in
-  render_mode v.mode
+  render_mode v.mode;
+  if should_render_mouse v.mode then
+    render_mouse win s.textures
 

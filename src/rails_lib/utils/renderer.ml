@@ -28,10 +28,12 @@ let create w h ~zoom =
       | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
       | Ok (w,r) -> w,r
   in
+  let _ = Sdl.show_cursor false in
+  Sdl.set_window_grab window true;
   Sdl.render_set_scale renderer zoom zoom |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
-  { inner_w=w; inner_h=h; renderer; window; zoom=1.; rect; rect2; opt_rect=Some rect; }
+  { inner_w=w; inner_h=h; renderer; window; zoom; rect; rect2; opt_rect=Some rect; }
 
 let zoom _win x = x
   (* win.zoom *. Float.of_int x |> Int.of_float *)
@@ -215,4 +217,12 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
+
+let draw_cursor win texture =
+  let _, (mouse_x, mouse_y) = Sdl.get_mouse_state () in
+  (* let win_w, win_h = Sdl.get_window_size win.window in *)
+  let mouse_x = (float_of_int mouse_x) /. win.zoom |> int_of_float in
+  let mouse_y = (float_of_int mouse_y) /. win.zoom |> int_of_float in
+  Texture.render ~x:mouse_x ~y:mouse_y win texture
+
 

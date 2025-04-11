@@ -15,7 +15,7 @@ let main init_fn =
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)
 
-  let fps = 15 in (* WSL has limited fps support *)
+  let fps = 30 in (* WSL has limited fps support *)
   let render_wait_time = 1000/fps in
   let tick_fps = 15 in (* How fast we want to update state *)
   let tick_wait_time = 1000/tick_fps in
