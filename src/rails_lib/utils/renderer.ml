@@ -28,7 +28,12 @@ let create w h ~zoom =
       | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
       | Ok (w,r) -> w,r
   in
-  let _ = Sdl.show_cursor false in
+  let hide_cursor () =
+    match Sdl.show_cursor false with
+    | Ok x -> print_endline @@ Printf.sprintf "set show cursor: %b" x
+    | _ -> print_endline "Failed to hide cursor"
+  in
+  hide_cursor ();
   Sdl.set_window_grab window true;
   Sdl.render_set_scale renderer zoom zoom |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
