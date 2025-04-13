@@ -73,6 +73,7 @@ type menu_action =
     | `Name_rr
     | `Retire
     | `Cheat of Cheat_d.t
+    | `Quit_game
     ]
     [@@deriving show, yojson]
 

@@ -52,17 +52,17 @@ let handle_tick win (s:State.t) time =
 
 let handle_event (s:State.t) (event:Event.t) =
   (* Handle an input event, starting with the UI *)
-  let state =
+  let state, quit =
     match s.screen with
     | MapGen Some {state=`Done; _} ->
         (* Only for map generation *)
         begin match event with
         | Key {down=true; _} ->
-                {s with screen = MapView}
-        | _ -> s
+                {s with screen = MapView}, false
+        | _ -> s, false
         end
 
-    | MapGen _ -> s
+    | MapGen _ -> s, false
 
     | MapView ->
         (* Main map view screen *)
@@ -71,9 +71,13 @@ let handle_event (s:State.t) (event:Event.t) =
         (* The backend buffers further msgs to ui and sends on next tick *)
         [%upf s.ui <- ui];
         [%upf s.backend <- backend];
-        s
+        let quit = List.exists (function
+          | Backend.Action.Quit_game -> true
+          | _ -> false) backend_msgs
+        in
+        s, quit
   in
-  state, false
+  state, quit
 
 let render win (s:State.t) =
   match s.screen with

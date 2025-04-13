@@ -683,6 +683,7 @@ module Action = struct
     | SellStock of {player: int; stock: int}
     | OperateRR of {player: int; company: int; action: operate_rr}
     | Cheat of int * Cheat_d.t (* player *)
+    | Quit_game
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -755,6 +756,7 @@ module Action = struct
       | Unpause -> {backend with pause=false}
       | NoAction -> backend
       | Cheat (player, x) -> _handle_cheat backend player x
+      | Quit_game -> backend
     in
     List.fold_left run_single backend msgs
 end

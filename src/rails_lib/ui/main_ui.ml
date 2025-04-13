@@ -76,6 +76,7 @@ let main_menu fonts menu_h region =
       make_entry "&Features" @@ `MsgBox features;
       make_entry "&Repeat Message" @@ `Action `Repeat_message;
       make_entry "&Save Game" @@ `Action `Save_game;
+      make_entry "Quit" @@ `Action `Quit_game;
     ]
   in
   let reports_menu =
@@ -488,6 +489,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On `Save_game, _ ->
             save_game s;
             v, nobaction
+        | On `Quit_game, _ ->
+            v, B.Action.Quit_game
         | On (`Speed speed), _ -> v, B.Action.SetSpeed speed
         | On (`Message setting), _ ->
             let options = {v.options with message_speed=setting} in
