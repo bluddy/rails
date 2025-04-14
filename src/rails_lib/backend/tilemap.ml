@@ -133,7 +133,9 @@ let get_mask ?(n=8) ?(diag=false) ~edge v ~f ~x ~y =
   )
   Iter.(0--(n-1))
 
-(* seed: 15 bits from time *)
+(* seed: 15 bits from time
+   pixel: pixel at this position
+ *)
 let tile_of_pixel ~region ~x ~y ~pixel v =
   let seed = v.seed in
   let water_dirs ~edge ~f =
@@ -149,7 +151,6 @@ let tile_of_pixel ~region ~x ~y ~pixel v =
   in
   let not_water x = not (is_water x) in
   let xy_random = x * 9 + y * 13 + seed in
-  (* let pixel = Option.get @@ pixel_of_enum pixel in *)
   let simple_mapping = function
     | Slum_pixel -> Tile.Slums
     | Clear_pixel -> Clear
@@ -330,7 +331,7 @@ let to_img (map:t) =
   let ndarray = to_ndarray map.map in
   Pic.img_of_ndarray ndarray
 
-let get_pixel ~map ~x ~y =
+let get_pixel map ~x ~y =
   get_tile map x y |> pixel_of_tile
 
 let set_pixel ~region v ~x ~y ~pixel =
@@ -445,3 +446,18 @@ let track_land_expense v ~track_expense ~x ~y ~dir ~len =
     Iter.(0 -- (len-1))
   in
   expense
+
+  (* Search for a site to build a specific tile (industry) *)
+let search_for_industry_site v wanted_tile ~region ~x ~y =
+  Utils.scan ~range:3 ~x ~y ~width:(get_width v) ~height:(get_height v)
+    ~f:(fun x y ->
+      let pixel = get_pixel v ~x ~y in
+      match pixel with
+      | Woods_pixel (* NOTE: why only these? *)
+      | Clear_pixel
+      | Farm_pixel
+      | Desert_pixel ->
+        let possible_tile = tile_of_pixel ~region ~x ~y ~pixel v in
+        Tile.equal possible_tile wanted_tile
+      | _ -> false)
+

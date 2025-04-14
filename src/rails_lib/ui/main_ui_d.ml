@@ -106,7 +106,7 @@ and 'state mode =
   ]
   | BuildIndustry of [
     | `ChooseIndustry of ('state, Tile.t, unit) modalmenu
-    | `ConfirmBuild of ('state, unit, bool) modalmenu
+    | `ConfirmBuild of ('state, bool, unit) modalmenu
   ]
   | TrainReport of 'state Train_report_d.t
   | Stock_broker of 'state Stock_broker_d.t

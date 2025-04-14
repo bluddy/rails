@@ -315,7 +315,11 @@ let scan_unordered ~range ~x ~y ~width ~height ~f =
   with
   | Found x -> x
 
-  (* Scan in a spiral pattern *)
+  (* Scan in a spiral pattern.
+     We go from an upper left point, then clockwise.
+     range: the number of steps from the starting position. Range 1 is 3x3, 2 is 5x5, 3 is 7x7
+     width, height: max size of the 2d area we're accessing
+   *)
 let scan =
   let offsets =
     [Dir.Right; Down; Left; Up] |> List.map Dir.to_offsets

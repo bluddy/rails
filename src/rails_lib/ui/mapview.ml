@@ -105,6 +105,12 @@ let move_const_box v dir n =
   let center_x, center_y = check_recenter_zoom4 v const_box_x const_box_y in
   {v with const_box_x; const_box_y; center_x; center_y}
 
+let set_const_box_to_loc v ~x ~y =
+  let const_box_x = Utils.clip x ~min:0 ~max:(v.dims.w-1) in
+  let const_box_y = Utils.clip y ~min:0 ~max:(v.dims.h-1) in
+  let center_x, center_y = check_recenter_zoom4 v const_box_x const_box_y in
+  {v with const_box_x; const_box_y; center_x; center_y}
+
   (* Used by menu *)
 let const_box_on_woodbridge ?cursor_x ?cursor_y backend v =
   let cursor_x = Option.get_or ~default:v.const_box_x cursor_x in

@@ -309,7 +309,8 @@ let build_industry_menu fonts region =
   let entries = Tile.Info.map_industry region @@
     fun (tile, info) ->
       make_entry
-        (sprintf "%s  %s" (Tile.show tile) (Utils.show_cash ~region info.cost)) @@ `Action(Some tile)
+        (sprintf "%s  %s" (Tile.show tile) (Utils.show_cash ~region @@ info.cost * C.build_industry_mult)) @@
+        `Action(Some tile)
   in
   make ~fonts ~heading:"Build..." ~x:176 ~y:16 @@
     (make_entry "NONE" @@ `Action(None)) ::
@@ -375,6 +376,14 @@ let build_tunnel_menu fonts ~length ~cost ~region =
   ]
   in
   make ~fonts ~heading ~x:176 ~y:50 entries
+
+let build_site_menu fonts =
+  let open Menu in
+  let open MsgBox in
+  make ~fonts ~heading:"Site selected..." ~x:144 ~y:24 [
+    make_entry "Build" @@ `Action(Some true);
+    make_entry "Cancel" @@ `Action None;
+  ]
 
   (* Iterate over trains in train roster *)
 let train_roster_iter (s:State.t) v f =
@@ -745,7 +754,22 @@ let handle_event (s:State.t) v (event:Event.t) =
     | BuildIndustry(`ChooseIndustry(industry_menu)) ->
       handle_modal_menu_events industry_menu
         (fun x -> BuildIndustry(`ChooseIndustry x))
-        (fun _ tile -> v, nobaction)
+        (fun _ wanted_tile ->
+          let (x, y) = Mapview.get_cursor_pos v.view in
+          let site = Tilemap.search_for_industry_site s.backend.map wanted_tile ~region:s.backend.region ~x ~y in
+          match site with
+          | None -> make_msgbox ~x:144 ~y:24 s v ~fonts:s.fonts "No suitable site found."
+          | Some (x, y) ->
+            let view = Mapview.set_const_box_to_loc v.view ~x ~y in
+            let menu = build_site_menu s.fonts in
+            let modal = {menu; data=(); last=Normal} in
+            {v with view; mode=BuildIndustry(`ConfirmBuild modal)}, nobaction)
+
+    | BuildIndustry(`ConfirmBuild(confirm_menu)) ->
+      handle_modal_menu_events confirm_menu
+        (fun x -> BuildIndustry(`ConfirmBuild x))
+        (fun _ confirm ->
+            v, nobaction)
 
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event in
@@ -1024,6 +1048,9 @@ let render (win:R.window) (s:State.t) v =
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | BuildIndustry(`ChooseIndustry modal) ->
+        render_main win s v;
+        Menu.MsgBox.render win s modal.menu
+    | BuildIndustry(`ConfirmBuild modal) ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | BuildBridge modal ->
