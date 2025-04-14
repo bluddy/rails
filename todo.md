@@ -9,6 +9,8 @@
 - Refactor modal_menu: give it a 4th last type, move to its own module
   - Also the model_menu handler
 - Bug:
+  - Can't change light from f2/f3
+  - Need better feedback for clicking on menu
   - Train revenue doesn't add to money
   - Create a train with no station: msgbox to build a station first
   - Selling stock doesn't lower stock price
