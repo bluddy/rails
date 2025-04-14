@@ -6,6 +6,8 @@
 - Check computation of wait time
 - F10 for survey
 - cursor
+- Refactor modal_menu: give it a 4th last type, move to its own module
+  - Also the model_menu handler
 - Bug:
   - Train revenue doesn't add to money
   - Create a train with no station: msgbox to build a station first

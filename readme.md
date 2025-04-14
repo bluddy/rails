@@ -41,6 +41,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Starting menu
 - [ ] Build industry
 - [ ] Give command to RR
+- [ ] Music and Sound
 
 ## Feature List for 1.0+
 

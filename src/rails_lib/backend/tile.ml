@@ -124,6 +124,29 @@ let is_ground = function
   | River _ | Ocean _ | Harbor _ | Landing _ -> false
   | _ -> true
 
+  (* Whether a tile is something you can build *)
+let is_buildable = function
+  | FoodProc
+  | Ranch
+  | Stockyard
+  | Factory
+  | GrainElev
+  | PaperMill
+  | LumberMill
+  | CoalMine
+  | SteelMill
+  | PowerPlant
+  | OilWell
+  | Refinery
+  | SaltMine
+  | TextileMill
+  | ChemicalPlant
+  | Brewery
+  | Vineyard
+  | Winery
+  | GlassWorks -> true
+  | _ -> false
+
 module Info = struct
 
   module TileHash = Hashtbl.Make(struct
@@ -155,7 +178,7 @@ module Info = struct
   let empty = Dir.Set.empty
   let d = 64
   let s = 32
-  let std_tbl = [
+  let std_list = [
       Clear, make 1;
       Woods, make 0;
       Swamp, make 0;
@@ -169,7 +192,7 @@ module Info = struct
       Slums, make 4;
   ]
 
-  let us_tbl = (std_tbl @ [
+  let us_list = (std_list @ [
       City, make 10
         ~supply:[Mail, 24; Passengers, 32] (* 1, 2 *)
         ~demand:[Mail, d/2; Passengers, d/2; Food, d/2; Textiles, d/2];
@@ -190,7 +213,7 @@ module Info = struct
       OilWell, make 10 ~supply:[Petroleum, 96];
       Refinery, make 15 ~demand:[Petroleum, 64];
       Harbor empty, make 20 ~supply:[MfgGoods, 128] ~demand:[Grain, 64; Coal, 64];
-  ]) |> List.to_seq |> TileHash.of_seq
+  ])
 
   let us_convert = [
       Livestock, Food;
@@ -201,7 +224,7 @@ module Info = struct
       Coal, Steel;
   ] |> Hashtbl.of_list
 
-  let eu_tbl = (std_tbl @ [
+  let eu_list = (std_list @ [
       City, make 10
         ~supply:[Mail, 24; Passengers, 32]
         ~demand:[Mail, 32; Passengers, 32; Wine, 32; Textiles, 32];
@@ -220,9 +243,9 @@ module Info = struct
       Vineyard, make 10 ~supply:[Grapes, 128]; (* Eur *)
       Winery, make 10 ~demand:[Grapes, 64]; (* Eur *)
       Fort, make 5 ~demand:[Armaments, 64]; (* Eur *)
-    ]) |> List.to_seq |> TileHash.of_seq
+    ])
 
-  let en_tbl = (std_tbl @ [
+  let en_list = (std_list @ [
       (* Note: this seems like a limitation. Livestock should not go to city except as food,
          but there's no space for the food proc plant in the economy *)
       City, make 10
@@ -243,15 +266,28 @@ module Info = struct
       Brewery, make 10 ~demand:[Hops, 64]; (* Eng *)
       GlassWorks, make 10 ~supply:[MfgGoods, 5 * 32]; (* Eng *)
       SheepFarm, make 5 ~supply:[Livestock, 5 * 32]; (* Eng, Eur *)
-    ]) |> List.to_seq |> TileHash.of_seq
+    ])
+
+  let us_tbl = List.to_seq us_list |> TileHash.of_seq
+  let eu_tbl = List.to_seq eu_list |> TileHash.of_seq
+  let en_tbl = List.to_seq en_list |> TileHash.of_seq
 
   let get region tile =
-    let tbl =
-      match region with
+    let tbl = match region with
       | Region.WestUS | EastUS -> us_tbl
       | Europe -> eu_tbl
       | Britain -> en_tbl
     in
     TileHash.find tbl tile
+
+  let map_industry region f =
+    let list = match region with
+      | Region.WestUS | EastUS -> us_list
+      | Europe -> eu_list
+      | Britain -> en_list
+    in
+    list
+    |> List.filter (fun (tile, _) -> is_buildable tile)
+    |> List.map f
 
 end

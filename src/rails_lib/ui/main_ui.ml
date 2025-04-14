@@ -302,6 +302,19 @@ let build_station_menu fonts region =
     make_entry (sprintf "&Terminal (%s)" @@ price `Terminal) @@ `Action(Some `Terminal);
   ]
 
+let build_industry_menu fonts region =
+  let open Menu in
+  let open MsgBox in
+  let open Printf in
+  let entries = Tile.Info.map_industry region @@
+    fun (tile, info) ->
+      make_entry
+        (sprintf "%s  %s" (Tile.show tile) (Utils.show_cash ~region info.cost)) @@ `Action(Some tile)
+  in
+  make ~fonts ~heading:"Build..." ~x:176 ~y:16 @@
+    (make_entry "NONE" @@ `Action(None)) ::
+    entries
+
 let build_signal_menu fonts x y =
   let open Menu in
   let open MsgBox in
@@ -479,6 +492,12 @@ let handle_event (s:State.t) v (event:Event.t) =
               |> Menu.MsgBox.do_open_menu s in
             let modal = {menu; data=(); last=Normal} in
             {v with mode=BuildStation modal}, nobaction
+        | On `Build_industry, _ ->
+            let menu =
+              build_industry_menu s.fonts s.backend.region
+              |> Menu.MsgBox.do_open_menu s in
+            let modal = {menu; data=(); last=Normal} in
+            {v with mode=BuildIndustry(`ChooseIndustry modal)}, nobaction
         | On `BuildTrack, _ ->
             {v with view=Mapview.set_build_mode v.view true}, nobaction 
         | On `RemoveTrack, _ ->
@@ -674,8 +693,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | BuildHighGrade build_menu ->
         let fonts = s.fonts in
-        handle_modal_menu_events
-        build_menu
+        handle_modal_menu_events build_menu
         (fun x -> BuildHighGrade x)
         (fun ({data={x;y;dir;player} as msg;_} as modal) -> function
           | `BuildTrack ->
@@ -702,8 +720,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         )
 
     | BuildTunnel build_menu ->
-      handle_modal_menu_events
-      build_menu
+      handle_modal_menu_events build_menu
         (fun x -> BuildTunnel x)
         (fun {data=(msg, length);_} -> function
           | true ->
@@ -713,8 +730,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         )
 
     | SignalMenu signal_menu ->
-      handle_modal_menu_events
-      signal_menu
+      handle_modal_menu_events signal_menu
         (fun x -> SignalMenu x)
         (fun {data=(x, y, dir);_} cmd ->
           {v with mode=Normal}, StationSetSignal{x; y; dir; cmd})
@@ -725,6 +741,11 @@ let handle_event (s:State.t) v (event:Event.t) =
           if state2 =!= state then {v with mode=BuildTrain(state2)} else v
         in
         v, action
+
+    | BuildIndustry(`ChooseIndustry(industry_menu)) ->
+      handle_modal_menu_events industry_menu
+        (fun x -> BuildIndustry(`ChooseIndustry x))
+        (fun _ tile -> v, nobaction)
 
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event in

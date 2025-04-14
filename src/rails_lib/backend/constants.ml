@@ -65,3 +65,5 @@ let priority_min_bonus = 20
 
 let reference_year = 1740
 
+let build_industry_mult = 40
+

@@ -104,6 +104,10 @@ and 'state mode =
     | `ChooseEngine
     | `AddCars of 'state Build_train_d.addcars
   ]
+  | BuildIndustry of [
+    | `ChooseIndustry of ('state, Tile.t, unit) modalmenu
+    | `ConfirmBuild of ('state, unit, bool) modalmenu
+  ]
   | TrainReport of 'state Train_report_d.t
   | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of Balance_sheet_d.t
