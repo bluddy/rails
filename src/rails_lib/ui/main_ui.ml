@@ -1023,6 +1023,9 @@ let render (win:R.window) (s:State.t) v =
     | BuildStation modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
+    | BuildIndustry(`ChooseIndustry modal) ->
+        render_main win s v;
+        Menu.MsgBox.render win s modal.menu
     | BuildBridge modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
