@@ -377,11 +377,11 @@ let build_tunnel_menu fonts ~length ~cost ~region =
   in
   make ~fonts ~heading ~x:176 ~y:50 entries
 
-let build_site_menu fonts =
+let confirm_build_site_menu fonts =
   let open Menu in
   let open MsgBox in
   make ~fonts ~heading:"Site selected..." ~x:144 ~y:24 [
-    make_entry "Build" @@ `Action(Some true);
+    make_entry "Build" @@ `Action(Some ());
     make_entry "Cancel" @@ `Action None;
   ]
 
@@ -761,15 +761,16 @@ let handle_event (s:State.t) v (event:Event.t) =
           | None -> make_msgbox ~x:144 ~y:24 s v ~fonts:s.fonts "No suitable site found."
           | Some (x, y) ->
             let view = Mapview.set_const_box_to_loc v.view ~x ~y in
-            let menu = build_site_menu s.fonts |> Menu.MsgBox.do_open_menu s in
-            let modal = {menu; data=(); last=Normal} in
+            let menu = confirm_build_site_menu s.fonts |> Menu.MsgBox.do_open_menu s in
+            let modal = {menu; data=(wanted_tile, x, y); last=Normal} in
             {v with view; mode=BuildIndustry(`ConfirmBuild modal)}, nobaction)
 
     | BuildIndustry(`ConfirmBuild(confirm_menu)) ->
       handle_modal_menu_events confirm_menu
         (fun x -> BuildIndustry(`ConfirmBuild x))
-        (fun _ confirm ->
-            v, nobaction)
+        (fun modal ()  ->
+          let tile, x, y = modal.data in
+          {v with mode=Normal}, B.Action.BuildIndustry{player=C.player; x; y; tile})
 
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event in

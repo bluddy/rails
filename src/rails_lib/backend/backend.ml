@@ -454,6 +454,9 @@ let _station_set_signal v loc dir cmd =
     v.stations
   in
   [%up {v with stations}]
+
+let _build_industry v ~player loc tile =
+  v
   
 let _remove_train v idx ~player =
   update_player v player (fun player ->
@@ -674,6 +677,7 @@ module Action = struct
     | RemoveTrain of {idx: Trainmap.Id.t; player: int}
     | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: int}
     | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: int}
+    | BuildIndustry of {player: int; x: int; y: int; tile: Tile.t}
     | CallBroker of {player: int}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
     | SellBond of {player: int}
@@ -732,6 +736,8 @@ module Action = struct
           _train_toggle_stop_wait backend ~train ~stop ~player
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
+      | BuildIndustry{player; x; y; tile} ->
+          _build_industry backend ~player (x, y) tile
       | CallBroker{player} ->
           _start_broker_timer backend player
       | SellBond{player} ->
