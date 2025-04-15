@@ -761,7 +761,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           | None -> make_msgbox ~x:144 ~y:24 s v ~fonts:s.fonts "No suitable site found."
           | Some (x, y) ->
             let view = Mapview.set_const_box_to_loc v.view ~x ~y in
-            let menu = build_site_menu s.fonts in
+            let menu = build_site_menu s.fonts |> Menu.MsgBox.do_open_menu s in
             let modal = {menu; data=(); last=Normal} in
             {v with view; mode=BuildIndustry(`ConfirmBuild modal)}, nobaction)
 
