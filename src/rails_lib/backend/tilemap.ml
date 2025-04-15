@@ -1,6 +1,10 @@
 module Ndarray = Owl_base_dense_ndarray.Generic
 open Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+
+let src = Logs.Src.create "tilemap" ~doc:"Tilemap"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 module C = Constants
 
 let map_height_default = 192
@@ -453,11 +457,9 @@ let search_for_industry_site v wanted_tile ~region ~x ~y =
     ~f:(fun x y ->
       let pixel = get_pixel v ~x ~y in
       match pixel with
-      | Woods_pixel (* NOTE: why only these? *)
-      | Clear_pixel
-      | Farm_pixel
-      | Desert_pixel ->
-        let possible_tile = tile_of_pixel ~region ~x ~y ~pixel v in
-        Tile.equal possible_tile wanted_tile
+      | Woods_pixel | Clear_pixel | Farm_pixel | Desert_pixel ->
+        let possible_tile1 = tile_of_pixel ~region ~x ~y ~pixel:Village_pixel v in
+        let possible_tile2 = tile_of_pixel ~region ~x ~y ~pixel:City_pixel v in
+        Tile.equal possible_tile1 wanted_tile || Tile.equal possible_tile2 wanted_tile
       | _ -> false)
 
