@@ -37,6 +37,7 @@ type ui_msg =
   | PriorityShipmentCreated of {player: int; shipment:Priority_shipment.t}
   | PriorityShipmentDelivered of {player: int; shipment:Priority_shipment.t; bonus:int}
   | PriorityShipmentCanceled of {player: int}
+  | IndustryBuilt of {player: int; tile: Tile.t}
   [@@deriving yojson]
 
 type t = {

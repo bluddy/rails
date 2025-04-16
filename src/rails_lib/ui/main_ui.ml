@@ -758,7 +758,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           let (x, y) = Mapview.get_cursor_pos v.view in
           let site = Tilemap.search_for_industry_site s.backend.map wanted_tile ~region:s.backend.region ~x ~y in
           match site with
-          | None -> make_msgbox ~x:144 ~y:24 s v ~fonts:s.fonts "No suitable site found."
+          | None -> make_msgbox ~x:144 ~y:24 s v ~fonts:s.fonts "No suitable site found.\nTry another location."
           | Some (x, y) ->
             let view = Mapview.set_const_box_to_loc v.view ~x ~y in
             let menu = confirm_build_site_menu s.fonts |> Menu.MsgBox.do_open_menu s in
@@ -854,6 +854,10 @@ let handle_msgs (s:State.t) v ui_msgs =
       let heading, text = Priority_shipment.delivery_text shipment s.backend.region s.backend.stations bonus in
       let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
       {v with mode}
+
+    | Normal, IndustryBuilt{player; tile} when player = C.player ->
+      let tile_s = Tile.show tile in
+      fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s
 
     (* TODO: handle demand changed msg *)
     | _ -> v

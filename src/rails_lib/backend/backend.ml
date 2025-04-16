@@ -460,6 +460,7 @@ let _build_industry v ~player_idx (x, y) tile =
     Tilemap.set_tile v.map x y tile;
     let cost = Tile.Info.build_cost_of_tile v.region tile in
     update_player v player_idx (Player.build_industry cost);
+    send_ui_msg v @@ IndustryBuilt {player=player_idx; tile};
     v
   ) else
     v
