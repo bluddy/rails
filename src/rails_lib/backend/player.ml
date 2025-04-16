@@ -96,6 +96,11 @@ let earn revenue money (v:t) =
   let cash = v.m.cash + money in
   {v with m = {v.m with cash; income_statement}}
 
+let build_industry cost (v:t) =
+  let v = pay Income_statement_d.StructuresEquipment cost v in
+  let owned_industry = v.m.owned_industry + cost in
+  {v with m={v.m with owned_industry}}
+
 let get_name v station_map cities = match v.name with
   | Some name -> name
   | _ -> 
@@ -405,4 +410,3 @@ let update players idx f =
   if p =!= p' then
     players.(idx) <- p';
   ()
-

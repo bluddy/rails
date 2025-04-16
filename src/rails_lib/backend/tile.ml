@@ -290,4 +290,8 @@ module Info = struct
     |> List.filter (fun (tile, _) -> is_buildable tile)
     |> List.map f
 
+  let build_cost_of_tile region tile =
+    let data = get region tile in
+    data.cost * C.build_industry_mult
+
 end

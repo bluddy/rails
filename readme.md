@@ -39,8 +39,9 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Retirement
 - [ ] Naming Train (speed record)
 - [ ] Starting menu
-- [ ] Build industry
+- [x] Build industry
 - [ ] Give command to RR
+- [ ] Economic Climate
 - [ ] Music and Sound
 
 ## Feature List for 1.0+

@@ -451,15 +451,17 @@ let track_land_expense v ~track_expense ~x ~y ~dir ~len =
   in
   expense
 
+  (* Check whether we can build at a tile *)
+let check_build_industry_at v wanted_tile ~region ~x ~y =
+  match get_pixel v ~x ~y with
+  | Woods_pixel | Clear_pixel | Farm_pixel | Desert_pixel ->
+    let possible_tile1 = tile_of_pixel ~region ~x ~y ~pixel:Village_pixel v in
+    let possible_tile2 = tile_of_pixel ~region ~x ~y ~pixel:City_pixel v in
+    Tile.equal possible_tile1 wanted_tile || Tile.equal possible_tile2 wanted_tile
+  | _ -> false
+
   (* Search for a site to build a specific tile (industry) *)
 let search_for_industry_site v wanted_tile ~region ~x ~y =
   Utils.scan ~range:3 ~x ~y ~width:(get_width v) ~height:(get_height v)
-    ~f:(fun x y ->
-      let pixel = get_pixel v ~x ~y in
-      match pixel with
-      | Woods_pixel | Clear_pixel | Farm_pixel | Desert_pixel ->
-        let possible_tile1 = tile_of_pixel ~region ~x ~y ~pixel:Village_pixel v in
-        let possible_tile2 = tile_of_pixel ~region ~x ~y ~pixel:City_pixel v in
-        Tile.equal possible_tile1 wanted_tile || Tile.equal possible_tile2 wanted_tile
-      | _ -> false)
+    ~f:(fun x y -> check_build_industry_at v wanted_tile ~region ~x ~y)
 

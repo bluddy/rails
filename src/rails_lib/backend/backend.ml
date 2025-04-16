@@ -455,8 +455,14 @@ let _station_set_signal v loc dir cmd =
   in
   [%up {v with stations}]
 
-let _build_industry v ~player loc tile =
-  v
+let _build_industry v ~player_idx (x, y) tile =
+  if Tilemap.check_build_industry_at v.map tile ~region:v.region ~x ~y then (
+    Tilemap.set_tile v.map x y tile;
+    let cost = Tile.Info.build_cost_of_tile v.region tile in
+    update_player v player_idx (Player.build_industry cost);
+    v
+  ) else
+    v
   
 let _remove_train v idx ~player =
   update_player v player (fun player ->
@@ -737,7 +743,7 @@ module Action = struct
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal backend (x, y) dir cmd
       | BuildIndustry{player; x; y; tile} ->
-          _build_industry backend ~player (x, y) tile
+          _build_industry backend ~player_idx:player (x, y) tile
       | CallBroker{player} ->
           _start_broker_timer backend player
       | SellBond{player} ->
