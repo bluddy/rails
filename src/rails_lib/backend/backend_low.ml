@@ -8,6 +8,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module G = Track_graph
 module C = Constants
+module IS = Income_statement
 
 (* Low-level backend module. Deals with multiple modules at a time *)
 
@@ -54,7 +55,8 @@ module Train_update = struct
     Train.advance train
 
 
-  let _train_station_handle_consist_and_maintenance (v:t) idx loc (station:Station.t) (train:rw Train.t) =
+  let _train_station_handle_consist_and_maintenance (v:t) idx loc
+      (station:Station.t) (train:rw Train.t) (income_s:Income_statement_d.t) =
     (* returns train, income, ui_msgs *)
     let handle_stop station_info =
       let had_maintenance = Station.can_maintain station || train.had_maintenance in
@@ -82,12 +84,17 @@ module Train_update = struct
           cars
         in
         let money_from_goods =
-          List.map (fun (car, delivered) ->
+          List.fold_left (fun acc (car, delivered) ->
             if delivered then
-              Train.calc_arrival_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
-              ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
-              ~difficulty:v.options.difficulty ~cycle:v.cycle
-            else 0)
+              let money =
+                Train.calc_arrival_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
+                ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
+                ~difficulty:v.options.difficulty ~cycle:v.cycle
+              in
+              let freight = Freight.of_good car.good in
+              IS.RevenueMap.update freight (Option.map (fun x -> x + money)) acc
+            else acc)
+          IS.RevenueMap.empty
           cars_delivered
         in
         let other_income =
@@ -176,18 +183,24 @@ module Train_update = struct
       (* This function always naively switches to loading at station. Other conditions will be handled elsewhere *)
       let state = Train.LoadingAtStation {wait_time} in
 
-      let revenue = (Utils.sum money_from_goods) + other_income - car_change_expense in
+      let revenue = (IS.RevenueMap.total money_from_goods) + other_income - car_change_expense in
+
+      let income_s =
+        IS.add_revenues money_from_goods income_s
+        |> IS.add_revenue `Other other_income
+        |> IS.deduct `Train car_change_expense
+      in
 
       let goods_delivered = List.fold_left (fun acc (car, delivered) ->
         if delivered then
           let good, amount = Train.Car.get_good car, Train.Car.get_amount car in
-          Goods.Map.add good amount acc
+          Goods.Map.add_amount good amount acc
         else acc)
         Goods.Map.empty
         cars_delivered
       in
       let goods_delivered_amt = Goods.Map.to_list goods_delivered in
-      let total_goods = List.fold_left (fun acc (_,amt) -> acc + amt) 0 goods_delivered_amt in
+      let total_goods = Goods.Map.total goods_delivered in
       let ui_msgs =
         if total_goods > 0 then (
           let complex_freight = Train.freight_set_of_cars train.cars |> Freight.complex_of_set in
@@ -213,14 +226,14 @@ module Train_update = struct
         holds_priority_shipment
       }
       in
-      train, station, revenue, ui_msgs
+      train, station, revenue, income_s, ui_msgs
     in
     match station.info with
     | Some station_info when Train_station.train_stops_at station train ->
           handle_stop station_info
     | Some _ when not train.had_maintenance && Station.can_maintain station ->
-         {train with had_maintenance=true}, station, 0, []
-    | _ -> train, station, 0, []
+         {train with had_maintenance=true}, station, 0, income_s, []
+    | _ -> train, station, 0, income_s, []
 
 
       (* TODO: young_station_reached if age <= 20 *)

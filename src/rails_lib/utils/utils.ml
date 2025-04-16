@@ -71,6 +71,25 @@ module Map = struct
 
     let yojson_of_t conv v =
       to_hashtbl v |> yojson_of_hashtbl O.yojson_of_t conv
+
+    let total v = fold (fun _ x acc -> acc + x) v 0
+
+    let add_amount k x v =
+      let x2 = get_or k v ~default:0 in
+      add k (x + x2) v
+
+    let merge_add v1 v2 =
+      let v3 = fold (fun key x1 acc ->
+        let x2 = get_or key v2 ~default:0 in
+        add key (x1 + x2) acc)
+        v1
+        v2
+      in
+      fold (fun key x2 acc ->
+        if not @@ mem key acc then add key x2 acc
+        else acc)
+        v2
+        v3
   end
 end
 

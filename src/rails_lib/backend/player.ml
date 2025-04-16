@@ -97,7 +97,7 @@ let earn revenue money (v:t) =
   {v with m = {v.m with cash; income_statement}}
 
 let build_industry cost (v:t) =
-  let v = pay Income_statement_d.StructuresEquipment cost v in
+  let v = pay `StructuresEquipment cost v in
   let owned_industry = v.m.owned_industry + cost in
   {v with m={v.m with owned_industry}}
 

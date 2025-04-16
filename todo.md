@@ -9,6 +9,7 @@
 - Refactor modal_menu: give it a 4th last type, move to its own module
   - Also the model_menu handler
 - Refactor msgbox: shouldn't need so many args?
+- Check /2 for different things with money (e.g. pay)
 - Bug:
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu
