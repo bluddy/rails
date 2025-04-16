@@ -8,6 +8,7 @@
 - cursor
 - Refactor modal_menu: give it a 4th last type, move to its own module
   - Also the model_menu handler
+- Refactor msgbox: shouldn't need so many args?
 - Bug:
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu
@@ -21,3 +22,4 @@
   - Smoke seems to go in different direction from game
   - After load, trains are stuck
   - joining a track from another track either refuses or crashes
+  - Going into negative should be red money
