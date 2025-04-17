@@ -13,6 +13,9 @@
 - Figure out ton-miles for freight/per period
   - Seems to involve per-car computation
 - Remove bitset premature optimization
+- Check if we need to loop in _update_train (print out if we ever do multiple updates)
+- Wire up player updates
+- Deal with player ton-miles
 - Bug:
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu
