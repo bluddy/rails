@@ -458,10 +458,8 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
         let update_val = update_val / region_div
           |> min Train.update_array_length
         in
-        (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
         let train, stations, data, ui_msgs =
           if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
-            (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
             let is_mid_tile =
               (train.x mod C.tile_w) = C.tile_w / 2 &&
               (train.y mod C.tile_h) = C.tile_h / 2
