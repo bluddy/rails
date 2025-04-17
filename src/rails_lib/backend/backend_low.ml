@@ -214,7 +214,7 @@ module Train_update = struct
               goods_amount=goods_delivered_amt;
             }
           in
-          let data = (revenue, income_stmt) in
+          let data = income_stmt in
           [msg], Some data
         ) else
           ([], None)
@@ -432,7 +432,12 @@ module Train_update = struct
         in
         _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, None, []
 
-let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_bit ~region_div =
+let _update_player_with_data (player:Player.t) data =
+    match data with
+    | Some income_stmt -> Player.add_income_stmt income_stmt player
+    | _ -> player
+
+let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
   (* This is the regular update function for trains. Important stuff happens midtile
      The train can be looped over several times as it picks up speed.
    *)
@@ -442,9 +447,9 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
   | Traveling travel_state ->
     let train = Train.update_speed train ~cycle ~cycle_check ~cycle_bit in
     (* TODO: fiscal period update stuff *)
-    let rec train_update_loop train speed_bound stations ui_msg_acc =
+    let rec train_update_loop train speed_bound stations player ui_msg_acc =
       let speed = Train.get_speed train in
-      if speed_bound >= speed then train, stations, None, ui_msg_acc
+      if speed_bound >= speed then train, stations, player, ui_msg_acc
       else (
         let speed =
           if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3 else speed
@@ -478,14 +483,17 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
           end else
             train, stations, None, []
         in
-        train_update_loop train (speed_bound + 12) stations (ui_msgs @ ui_msg_acc)
+        let player = _update_player_with_data player data in
+        train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
     in
-    train_update_loop train 0 stations []
+    train_update_loop train 0 stations player []
 
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
-    _handle_train_mid_tile ~idx ~cycle v train stations loc
+    let train, stations, data, ui_msgs = _handle_train_mid_tile ~idx ~cycle v train stations loc in
+    let player = _update_player_with_data player data in
+    train, stations, player, ui_msgs
   end
 
     (* Run every cycle, updating every train's position and speed *)
@@ -495,16 +503,17 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
     let cycle_bit = 1 lsl (v.cycle mod 12) in
     let cycle = v.cycle in
     (* TODO: We update the high priority trains before the low priority *)
-    let stations, ui_msgs =
-      Trainmap.fold_mapi_in_place (fun idx (stations, ui_msg_acc) train ->
-        let train, stations, data, ui_msgs = 
-          _update_train v idx train stations ~cycle ~cycle_check ~cycle_bit ~region_div
+    (* Trains are in a vector, updated in-place *)
+    let stations, player, ui_msgs =
+      Trainmap.fold_mapi_in_place (fun idx (stations, player, ui_msg_acc) train ->
+        let train, stations, player, ui_msgs = 
+          _update_train v idx train stations player ~cycle ~cycle_check ~cycle_bit ~region_div
         in
-        (stations, ui_msgs @ ui_msg_acc), train)
+        (stations, player, ui_msgs @ ui_msg_acc), train)
         player.trains
-        ~init:(v.stations, [])
+        ~init:(v.stations, player, [])
     in
-    player.trains, stations, ui_msgs
+    player.trains, stations, player, ui_msgs
 end
 
 let try_create_priority_shipment ?(force=false) v =
@@ -588,7 +597,7 @@ let handle_cycle v =
     v.cycle <- v.cycle + 1;
     (* Currenly only the main player has trains *)
     let main_player = Player.get_player v.players C.player in
-    let trains, stations, ui_msgs = Train_update._update_all_trains v main_player in
+    let trains, stations, player, ui_msgs = Train_update._update_all_trains v main_player in
     (* TODO: ai_routines *)
     let ui_msgs = (Option.to_list (try_create_priority_shipment v)) @ ui_msgs in
 

@@ -96,6 +96,11 @@ let earn revenue money (v:t) =
   let cash = v.m.cash + money in
   {v with m = {v.m with cash; income_statement}}
 
+let add_income_stmt income_stmt (v:t) =
+  let income_statement = Income_statement.merge v.m.income_statement income_stmt in
+  let cash = v.m.cash + Income_statement.total income_stmt in
+  {v with m={v.m with income_statement; cash}}
+
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
   let owned_industry = v.m.owned_industry + cost in

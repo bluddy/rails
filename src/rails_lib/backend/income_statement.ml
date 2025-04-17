@@ -19,5 +19,14 @@ let add_expenses expenses v =
   let expenses = ExpenseMap.merge_add v.expenses expenses in
   {v with expenses}
 
-let total_revenue v = RevenueMap.fold (fun _ i acc -> i + acc) v.revenues 0
+let merge v1 v2 =
+  let revenues = RevenueMap.merge_add v1.revenues v2.revenues in
+  let expenses = ExpenseMap.merge_add v1.expenses v2.expenses in
+  {revenues; expenses}
+
+let total_revenue v = RevenueMap.total v.revenues
+
+let total_expenses v = ExpenseMap.total v.expenses
+
+let total v = total_revenue v - total_expenses v
 
