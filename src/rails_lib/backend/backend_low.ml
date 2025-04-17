@@ -598,6 +598,7 @@ let handle_cycle v =
     (* Currenly only the main player has trains *)
     let main_player = Player.get_player v.players C.player in
     let trains, stations, player, ui_msgs = Train_update._update_all_trains v main_player in
+
     (* TODO: ai_routines *)
     let ui_msgs = (Option.to_list (try_create_priority_shipment v)) @ ui_msgs in
 
@@ -630,6 +631,7 @@ let handle_cycle v =
     in
     let stations, ui_msgs = update_station_supply_demand () in
 
+    if player =!= main_player then Player.set v.players C.player player;
     [%upf v.stations <- stations];
     [%upf main_player.trains <- trains];
 
