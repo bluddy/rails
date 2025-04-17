@@ -5,7 +5,7 @@ module R = Renderer
 open Income_statement_d
 
 let relevant_expenses = [
-  InterestFees; TrainMaintenance; TrackMaintenance; StationMaintenance;
+  `InterestFees; `TrainMaintenance; `TrackMaintenance; `StationMaintenance;
 ]
 
 let render win (s:State.t) balance_sheet =
@@ -83,13 +83,13 @@ let render win (s:State.t) balance_sheet =
   let y = y + line in
   write ~x:x_left ~y "EXPENSES:";
   let y = y + 12 in
-  write_exp_total_and_ytd ~y InterestFees;
+  write_exp_total_and_ytd ~y `InterestFees;
   let y = y + line in
-  write_exp_total_and_ytd ~y TrainMaintenance;
+  write_exp_total_and_ytd ~y `TrainMaintenance;
   let y = y + line in
-  write_exp_total_and_ytd ~y TrackMaintenance;
+  write_exp_total_and_ytd ~y `TrackMaintenance;
   let y = y + line in
-  write_exp_total_and_ytd ~y StationMaintenance;
+  write_exp_total_and_ytd ~y `StationMaintenance;
   let y = y + line in
   R.draw_line win ~x1:x_ytd ~y1:y ~x2:(x_ytd+54) ~y2:y ~color:Ega.black;
   R.draw_line win ~x1:x_total ~y1:y ~x2:(x_total+54) ~y2:y ~color:Ega.black;

@@ -170,7 +170,7 @@ let sell_bond (v:t) climate region =
     let interest_increase = base_payment * interest_rate in
     let yearly_interest_payment = v.m.yearly_interest_payment + interest_increase in
     let v = {v with m = {v.m with bonds; cash; yearly_interest_payment}} in
-    pay InterestFees base_payment v
+    pay `InterestFees base_payment v
   ) else v
 
 let check_repay_bond (v:t) =
@@ -184,7 +184,7 @@ let repay_bond (v:t) =
     let interest_saving = v.m.yearly_interest_payment / num_bonds in
     let yearly_interest_payment = v.m.yearly_interest_payment - interest_saving in
     let bonds = v.m.bonds - C.bond_value in
-    let v = pay InterestFees C.bond_value v in
+    let v = pay `InterestFees C.bond_value v in
     (* Get rid of bankruptcy if needed *)
     let in_receivership = if bonds = 0 then false else v.m.in_receivership in
     {v with m = {v.m with bonds; yearly_interest_payment; in_receivership}}

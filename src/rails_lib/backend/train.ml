@@ -432,14 +432,19 @@ let check_increment_stop v (x,y) =
   | _ ->
       v.priority_stop, v.stop
 
-let calc_arrival_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~difficulty ~year ~year_start ~cycle =
+let car_delivery_ton_miles ~loc ~car ~region =
   let mult = if Region.is_us region then 1 else 2 in
-  let calc_dist =
-    Utils.classic_dist loc (Car.get_source car) * mult
-  in
+  let dist = Utils.classic_dist loc (Car.get_source car) * mult in
+  let dist_amount = dist * (Car.get_amount car) in
+  dist_amount / C.car_amount
+
+let car_delivery_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~difficulty ~year ~year_start ~cycle =
+  let mult = if Region.is_us region then 1 else 2 in
+  let calc_dist = Utils.classic_dist loc (Car.get_source car) * mult in
   let car_age = Car.get_age car cycle in
   let reward = calc_dist * 16 / (car_age / 24) in
   let calc_dist =
+    (* For west US, we override the car distance here for bonus purposes. *)
     if Region.is_west_us region && not west_us_route_done then
       let dx, dy = Utils.dxdy train.last_station loc in
       dx * 3 / 2 + dy / 2

@@ -1,15 +1,14 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
-module Hashtbl = Utils.Hashtbl
 
-open Income_statement_d
+include Income_statement_d
 
 let deduct expense money v =
-  let expenses = ExpenseMap.add_amount expense money v.expenses in
+  let expenses = ExpenseMap.incr expense money v.expenses in
   {v with expenses}
 
 let add_revenue revenue money v =
-  let revenues = RevenueMap.add_amount revenue money v.revenues in
+  let revenues = RevenueMap.incr revenue money v.revenues in
   {v with revenues}
 
 let add_revenues revenues v =

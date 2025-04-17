@@ -10,6 +10,9 @@
   - Also the model_menu handler
 - Refactor msgbox: shouldn't need so many args?
 - Check /2 for different things with money (e.g. pay)
+- Figure out ton-miles for freight/per period
+  - Seems to involve per-car computation
+- Remove bitset premature optimization
 - Bug:
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu

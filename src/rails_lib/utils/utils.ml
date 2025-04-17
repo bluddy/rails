@@ -74,7 +74,7 @@ module Map = struct
 
     let total v = fold (fun _ x acc -> acc + x) v 0
 
-    let add_amount k x v =
+    let incr k x v =
       let x2 = get_or k v ~default:0 in
       add k (x + x2) v
 

@@ -56,8 +56,7 @@ module Train_update = struct
 
 
   let _train_station_handle_consist_and_maintenance (v:t) idx loc
-      (station:Station.t) (train:rw Train.t) (income_s:Income_statement_d.t) =
-    (* returns train, income, ui_msgs *)
+      (station:Station.t) (train:rw Train.t) =
     let handle_stop station_info =
       let had_maintenance = Station.can_maintain station || train.had_maintenance in
       (* Priority shipment arriving to station *)
@@ -67,7 +66,7 @@ module Train_update = struct
         else station
       in
       (* TODO: deal with dist_shipped_cargo *)
-      let _dist_shipped_cargo =
+      let () =
         let dist = Utils.classic_dist loc train.last_station in
         let num_cars = List.length train.cars in
         let total_dist = dist * num_cars in
@@ -87,12 +86,12 @@ module Train_update = struct
           List.fold_left (fun acc (car, delivered) ->
             if delivered then
               let money =
-                Train.calc_arrival_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
+                Train.car_delivery_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
                 ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
                 ~difficulty:v.options.difficulty ~cycle:v.cycle
               in
               let freight = Freight.of_good car.good in
-              IS.RevenueMap.update freight (Option.map (fun x -> x + money)) acc
+              IS.RevenueMap.incr freight money acc
             else acc)
           IS.RevenueMap.empty
           cars_delivered
@@ -133,8 +132,7 @@ module Train_update = struct
         in
         (* Add converted goods to station *)
         List.iter (function
-          | Some (good, amount) ->
-              Hashtbl.incr station_supply good ~by:amount
+          | Some (good, amount) -> Hashtbl.incr station_supply good ~by:amount
           | _ -> ())
           conversion_goods
       in
@@ -145,8 +143,7 @@ module Train_update = struct
           if delivered then 
             let freight = Train.Car.get_freight car |> Freight.to_enum in
             acc + (freight * (Train.Car.get_amount car) / 32)
-          else
-            acc)
+          else acc)
         0
         cars_delivered
       in
@@ -185,8 +182,9 @@ module Train_update = struct
 
       let revenue = (IS.RevenueMap.total money_from_goods) + other_income - car_change_expense in
 
-      let income_s =
-        IS.add_revenues money_from_goods income_s
+      let income_stmt =
+        IS.default
+        |> IS.add_revenues money_from_goods 
         |> IS.add_revenue `Other other_income
         |> IS.deduct `Train car_change_expense
       in
@@ -194,27 +192,32 @@ module Train_update = struct
       let goods_delivered = List.fold_left (fun acc (car, delivered) ->
         if delivered then
           let good, amount = Train.Car.get_good car, Train.Car.get_amount car in
-          Goods.Map.add_amount good amount acc
+          Goods.Map.incr good amount acc
         else acc)
         Goods.Map.empty
         cars_delivered
       in
       let goods_delivered_amt = Goods.Map.to_list goods_delivered in
       let total_goods = Goods.Map.total goods_delivered in
-      let ui_msgs =
+      let ui_msgs, data =
         if total_goods > 0 then (
           let complex_freight = Train.freight_set_of_cars train.cars |> Freight.complex_of_set in
-          [TrainArrival {
-            player=0;
-            time=v.time;
-            freight=complex_freight;
-            _type=train.typ;
-            train_num=idx;
-            train_name = train.name;
-            revenue;
-            goods_amount=goods_delivered_amt;
-          }]
-        ) else []
+          let msg =
+            TrainArrival {
+              player=train.player;
+              time=v.time;
+              freight=complex_freight;
+              _type=train.typ;
+              train_num=idx;
+              train_name = train.name;
+              revenue;
+              goods_amount=goods_delivered_amt;
+            }
+          in
+          let data = (revenue, income_stmt) in
+          [msg], Some data
+        ) else
+          ([], None)
       in
       Log.debug (fun f -> f "Wait_time(%d)" wait_time);
 
@@ -226,14 +229,14 @@ module Train_update = struct
         holds_priority_shipment
       }
       in
-      train, station, revenue, income_s, ui_msgs
+      train, station, data, ui_msgs
     in
     match station.info with
     | Some station_info when Train_station.train_stops_at station train ->
           handle_stop station_info
     | Some _ when not train.had_maintenance && Station.can_maintain station ->
-         {train with had_maintenance=true}, station, 0, income_s, []
-    | _ -> train, station, 0, income_s, []
+         {train with had_maintenance=true}, station, None, []
+    | _ -> train, station, None, []
 
 
       (* TODO: young_station_reached if age <= 20 *)
@@ -260,26 +263,24 @@ module Train_update = struct
          first delivery of good (only >2 difficulty)
          first pickup of goods (only >2 difficulty)
          record reward for delivery
-         delivery to station, print revenue
        *)
 
   let _enter_station (v:t) idx (train: rw Train.t) stations loc  =
     let station' = Station_map.get_exn loc stations in
-    (* TODO: income handling *)
-    let last_station, priority_stop, stop, train, station, _income, ui_msgs =
+    let last_station, priority_stop, stop, train, station, data, ui_msgs =
       if Station.is_proper_station station' then (
-        let train, station, income, ui_msgs =
+        let train, station, data, ui_msgs =
           _train_station_handle_consist_and_maintenance v idx loc station' train in
         let priority_stop, stop = Train.check_increment_stop train loc in
-        loc, priority_stop, stop, train, station, income, ui_msgs
+        loc, priority_stop, stop, train, station, data, ui_msgs
       ) else (
         (* Just a signal tower. Keep traveling *)
-        train.last_station, train.priority_stop, train.stop, train, station', 0, []
+        train.last_station, train.priority_stop, train.stop, train, station', None, []
       )
     in
     let stations = if station' =!= station then Station_map.add loc station stations else stations
     in
-    {train with last_station; priority_stop; stop}, stations, ui_msgs
+    {train with last_station; priority_stop; stop}, stations, data, ui_msgs
 
   let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) ((x, y) as loc) =
     let compute_dir_to_dest graph =
@@ -330,31 +331,30 @@ module Train_update = struct
       3. Prevent from leaving via manual signal hold
     *)
     let track = Trackmap.get_exn v.track ~x ~y in
-    let default_ret = train, stations, [] in
+    let default_ret = train, stations, None, [] in
     match track.kind with
     | Station _ ->
         (* TODO: remove override Proceed after one train *)
-        let train, stations, ui_msgs = match train.state with
+        let train, stations, data, ui_msgs = match train.state with
             (* This is only when we've already processed the train *)
           | Traveling s when s.traveling_past_station -> default_ret
 
             (* This is before possibly entering the station *)
           | Traveling s ->
               Block_map.block_decr_train s.block v.blocks;
-              let train, stations, ui_msgs =
-                if train.hold_at_next_station then (
-                {train with state = HoldingAtStation}, stations, []
-                ) else (
+              let train, stations, data, ui_msgs =
+                if train.hold_at_next_station then
+                  {train with state = HoldingAtStation}, stations, None, []
+                else
                   _enter_station v idx train stations loc
-                )
               in
               if Train.is_traveling train then
                 (* No stopping at this station *)
                 let train, stations = _exit_station ~idx ~cycle v train stations track loc in
-                train, stations, ui_msgs
+                train, stations, data, ui_msgs
               else
                 (* Some kind of stop. Exit later *)
-                train, stations, ui_msgs
+                train, stations, data, ui_msgs
 
             (* Loading/unloading goods at the station *)
           | LoadingAtStation s when s.wait_time > 0 ->
@@ -368,12 +368,12 @@ module Train_update = struct
                 | `Wait -> {train with state=Train.WaitingForFullLoad}, stations
                 | _ -> _exit_station ~idx ~cycle v train stations track loc
               in
-              train, stations, []
+              train, stations, None, []
 
           | WaitingForFullLoad when Train.is_full train ->
               (* Done waiting for full load *)
               let train, stations = _exit_station ~idx ~cycle v train stations track loc in
-              train, stations, []
+              train, stations, None, []
 
           | WaitingForFullLoad ->
               (* If we're not full, we need to see if we can offload more from the station *)
@@ -385,10 +385,10 @@ module Train_update = struct
               in
               if wait_time > 0 then
                 (* We found stuff to load *)
-                {train with state = LoadingAtStation {wait_time}; cars}, stations, []
+                {train with state = LoadingAtStation {wait_time}; cars}, stations, None, []
               else
                 (* Keep waiting for more goods to show up *)
-                [%up {train with cars}], stations, []
+                [%up {train with cars}], stations, None, []
 
           | HoldingAtStation when train.hold_at_next_station ->
               (* Don't enter station yet *)
@@ -405,12 +405,12 @@ module Train_update = struct
               let can_go, _ = Station.can_train_go station dir in
               if can_go then
                 let train, stations = _exit_station ~idx ~cycle v train stations track loc in
-                train, stations, []
+                train, stations, None, []
               else
                 default_ret
         in
         Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state));
-        train, stations, ui_msgs
+        train, stations, data, ui_msgs
 
     (* --- Below this trains cannot stop so must be traveling --- *)
 
@@ -422,7 +422,7 @@ module Train_update = struct
             ~ixn:loc ~cur_dir:train.dir ~dest 
             |> Option.get_exn_or "Cannot find route for train" 
         in
-        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, []
+        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, None, []
 
     | _ ->
         (* All other track and non-decision ixns *)
@@ -430,10 +430,13 @@ module Train_update = struct
           Dir.Set.find_nearest train.dir track.dirs
           |> Option.get_exn_or "Cannot find track for train"
         in
-        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, []
+        _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, None, []
 
 let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_bit ~region_div =
-  (* This is the regular update function for trains. Important stuff happens midtile *)
+  (* This is the regular update function for trains. Important stuff happens midtile
+     The train can be looped over several times as it picks up speed.
+   *)
+
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   begin match train.state with
   | Traveling travel_state ->
@@ -441,7 +444,7 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
     (* TODO: fiscal period update stuff *)
     let rec train_update_loop train speed_bound stations ui_msg_acc =
       let speed = Train.get_speed train in
-      if speed_bound >= speed then train, stations, ui_msg_acc
+      if speed_bound >= speed then train, stations, None, ui_msg_acc
       else (
         let speed =
           if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3 else speed
@@ -456,7 +459,7 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
           |> min Train.update_array_length
         in
         (* Log.debug (fun f -> f "Update val %d, cycle_bit %d" update_val cycle_bit); *)
-        let train, stations, ui_msgs =
+        let train, stations, data, ui_msgs =
           if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
             (* Log.debug (fun f -> f "Pass test. Update val %d, cycle_bit %d" update_val cycle_bit); *)
             let is_mid_tile =
@@ -471,11 +474,11 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
                 _handle_train_mid_tile ~idx ~cycle v train stations loc
             | false, true ->
                 travel_state.traveling_past_station <- false;
-                Train.advance train, stations, []
+                Train.advance train, stations, None, []
             | _ ->
-                Train.advance train, stations, []
+                Train.advance train, stations, None, []
           end else
-              train, stations, []
+            train, stations, None, []
         in
         train_update_loop train (speed_bound + 12) stations (ui_msgs @ ui_msg_acc)
       )
@@ -496,7 +499,7 @@ let _update_train v idx (train:rw Train.t) stations ~cycle ~cycle_check ~cycle_b
     (* TODO: We update the high priority trains before the low priority *)
     let stations, ui_msgs =
       Trainmap.fold_mapi_in_place (fun idx (stations, ui_msg_acc) train ->
-        let train, stations, ui_msgs = 
+        let train, stations, data, ui_msgs = 
           _update_train v idx train stations ~cycle ~cycle_check ~cycle_bit ~region_div
         in
         (stations, ui_msgs @ ui_msg_acc), train)
@@ -585,10 +588,12 @@ let check_priority_delivery v =
 let handle_cycle v =
   let time_step () =
     v.cycle <- v.cycle + 1;
+    (* Currenly only the main player has trains *)
     let main_player = Player.get_player v.players C.player in
     let trains, stations, ui_msgs = Train_update._update_all_trains v main_player in
     (* TODO: ai_routines *)
     let ui_msgs = (Option.to_list (try_create_priority_shipment v)) @ ui_msgs in
+
     let update_station_supply_demand () =
       if v.cycle mod C.Cycles.station_supply_demand = 0 then (
         let difficulty = v.options.difficulty in

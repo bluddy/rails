@@ -19,7 +19,7 @@ let show_expense = function
   | `Track -> "Track"
   | `BridgeTunnel -> "Bridges/Tunnels"
   | `StructuresEquipment -> "Structures/Equipment"
-  | `Trains -> "Trains"
+  | `Train -> "Trains"
   | `InterestFees -> "Interest/Fees"
   | `TrainMaintenance -> "Train Maintenance"
   | `TrackMaintenance -> "Track Maintenance"

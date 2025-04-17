@@ -106,8 +106,8 @@ let _player_pay_for_track v ~x ~y ~len ~dir ~player =
   in
   let open Player in
   update_player v player @@ add_track ~length:(len * base_length);
-  update_player v player @@ pay Income_statement_d.Track (track_expense * len);
-  update_player v player @@ pay Income_statement_d.RightOfWay land_expense;
+  update_player v player @@ pay `Track (track_expense * len);
+  update_player v player @@ pay `RightOfWay land_expense;
   ()
 
 let get_cash v ~player = Player.get_cash v.players.(player)
@@ -183,7 +183,7 @@ let _build_station v ~x ~y station_type ~player =
   let climate = v.climate in
   ignore @@ Station.update_supply_demand station v.map ~climate ~simple_economy;
   update_player v player @@
-    Player.pay Income_statement_d.StructuresEquipment (Station.price_of station_type);
+    Player.pay `StructuresEquipment (Station.price_of station_type);
   [%upf v.stations <- stations];
   [%upf v.graph <- graph];
   [%upf v.track <- track];
@@ -204,7 +204,7 @@ let _build_tunnel v ~x ~y ~dir ~player =
     let after = Scan.scan track ~x ~y ~player in
     let graph = G.Track.handle_build_track_simple v.graph before after in
     let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-    update_player v player @@ Player.pay Income_statement_d.BridgeTunnel cost;
+    update_player v player @@ Player.pay `BridgeTunnel cost;
     [%upf v.graph <- graph];
     [%upf v.track <- track];
     [%upf v.blocks <- blocks];
@@ -218,7 +218,7 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
   _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
-  update_player v player @@ Player.pay Income_statement_d.BridgeTunnel (Bridge.price_of kind);
+  update_player v player @@ Player.pay `BridgeTunnel (Bridge.price_of kind);
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   [%upf v.blocks <- blocks];
@@ -332,7 +332,7 @@ let _improve_station v ~x ~y ~player ~upgrade =
       v.stations
   in
   update_player v player @@
-    Player.(pay Income_statement_d.StructuresEquipment @@ Station.price_of_upgrade upgrade);
+    Player.(pay `StructuresEquipment @@ Station.price_of_upgrade upgrade);
   [%upf v.stations <- stations];
   v
 
@@ -344,7 +344,7 @@ let _build_train v ((x, y) as station) engine cars other_station ~player =
   let train = Train.make station engine_t cars other_station ~dir ~player in
   let trains = Trainmap.add v.players.(player).trains train in
   update_player v player (fun player ->
-    let player = Player.pay Income_statement_d.Trains engine_t.price player in
+    let player = Player.pay `Train engine_t.price player in
     [%up {player with trains}]
   );
   let msg = TrainBuilt (Trainmap.Id.of_int (Trainmap.size v.players.(player).trains - 1)) in
@@ -423,7 +423,7 @@ let _train_set_type v ~train ~typ ~player =
 let _train_replace_engine v ~train ~engine ~player =
   let engine = Engine.t_of_make v.engines engine in
   update_player v player (fun player ->
-    let player = Player.pay Income_statement_d.Trains engine.price player in
+    let player = Player.pay `Train engine.price player in
     let trains =
       Trainmap.update player.trains train
         (fun train -> Train.replace_engine train engine)
