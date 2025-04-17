@@ -40,22 +40,22 @@ let default_monetary ~player difficulty =
 
 type ai_info = {
   opponent: Opponent.t;
-  build_order: (Utils.loc * Utils.loc) option;
+  build_order: (Utils.loc * Utils.loc) option;  (* order given to subservient company *)
   yearly_income: int; (* rough estimation of 8 * yearly income *)
 } [@@deriving yojson]
 
 type t = {
-  name: string option; (* custom name *)
+  name: string option; (* custom name for railroad *)
   mutable trains: Trainmap.t;
   stations: Utils.loc list; (* Stations ordered by creation order *)
   m: monetary;
   track_length: int;
   mutable dist_traveled: int;
-  ton_miles: (int * int);
-  freight_ton_miles: (Freight.t, int) Hashtbl.t;
-  goods_delivered: Goods.Set.t;
-  ai: ai_info option;
-  broker_timer: int option;  (* Time to see broker *)
+  ton_miles: int * int; (* goods delievered per mile per period *)
+  freight_ton_miles: int Freight.Map.t * int Freight.Map.t; (* per period *)
+  goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
+  ai: ai_info option;  (* Used by AIs only *)
+  broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
 } [@@deriving yojson]
 
@@ -201,6 +201,7 @@ let check_bankruptcy (v:t) =
   v.m.cash < C.max_cash_for_bankruptcy 
 
 let get_player players player_idx : t = players.(player_idx)
+let set players player_idx player = players.(player_idx) <- player
 
 let shares_owned_by_others players ~target_idx ~exclude_idx =
   Array.foldi (fun acc i player ->

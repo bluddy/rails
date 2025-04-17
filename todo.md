@@ -17,6 +17,7 @@
 - Wire up player updates
 - Deal with player ton-miles
 - Bug:
+  - Delivery + priority pickup: no delivery message
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu
   - Train revenue doesn't add to money

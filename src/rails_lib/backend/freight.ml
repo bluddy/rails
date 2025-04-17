@@ -91,6 +91,13 @@ module Set = Bitset.Make(struct
   let last = `Bulk
 end)
 
+module Map = Utils.Map.Make(struct
+  type nonrec t = t
+  let t_of_yojson = t_of_yojson
+  let yojson_of_t = yojson_of_t
+  let compare = compare
+end)
+
 type complex =
   | MailFreight
   | PassengerFreight
