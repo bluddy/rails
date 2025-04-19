@@ -55,8 +55,7 @@ type upgrade =
   | Hotel
   [@@deriving enum, show, yojson]
 
-let price_of_upgrade upgrade =
-  let p = match upgrade with
+let price_of_upgrade = function
   | MaintenanceShop -> 25
   | EngineShop -> 100 (* ? *)
   | SwitchingYard -> 50
@@ -66,8 +65,6 @@ let price_of_upgrade upgrade =
   | Restaurant -> 25
   | LivestockPens | GrapeStorage -> 25
   | Hotel -> 100
-  in
-  p * 1000
 
 module Upgrades = Bitset.Make(struct
   type t = upgrade [@@deriving yojson]

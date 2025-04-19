@@ -1004,8 +1004,9 @@ let render_main win (s:State.t) v =
     Fonts.Render.write win s.fonts ~color:Ega.bgreen ~idx:4 ~x:256 ~y:66 "B";
 
   let cash = B.get_cash s.backend ~player:0 in
-  let cash_s = Utils.show_cash ~spaces:6 ~region:s.backend.region cash in
-  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:66 cash_s;
+  let cash_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region:s.backend.region cash in
+  let color = if cash < 0 then Ega.bred else Ega.black in
+  Fonts.Render.write win s.fonts ~color ~idx:4 ~x:264 ~y:66 cash_s;
 
   let month, year = B.get_date s.backend in
   let date_s = Printf.sprintf "%s %d" (str_of_month.(month)) year in
