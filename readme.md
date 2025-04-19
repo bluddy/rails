@@ -23,8 +23,10 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Priority deliveries
 - [ ] Opponents and AI
 - [ ] Stock Market
-- [ ] Balance Sheet, Income Statement
+- [ ] Stock market chart
+- [x] Balance Sheet, Income Statement
 - [ ] History and accomplishments
+- [ ] Train efficiency report
 - [x] Flesh out train info screen (currently dummy)
 - [x] Station lights and train stopping mechanism
 - [ ] Map changes over time
