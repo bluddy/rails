@@ -4,7 +4,7 @@ module R = Renderer
 
 let compute_assets (b:Balance_sheet.t) =
   (* TODO: for some reason, we have different ways of rounding different assets of the balance sheet *)
-  b.operating_funds + b.treasury_stock + b.other_rr_stock + b.facilities + b.industries + b.real_estate + b.track + b.rolling_stock + b.outstanding_loans + b.stockholders_equity
+  b.operating_funds + b.treasury_stock + b.other_rr_stock + b.facilities + b.industries + b.real_estate + b.track + b.rolling_stock
 
 let compute_liabilities (b:Balance_sheet.t) =
   b.outstanding_loans + b.stockholders_equity
@@ -57,6 +57,7 @@ let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   let y = y + line + 2 in
   let assets = compute_assets b in
   write_money ~x:x_total ~y assets;
+
   let y = y + line in
   write ~x:x_left ~y "Liabilities:";
   let y = y + line in
