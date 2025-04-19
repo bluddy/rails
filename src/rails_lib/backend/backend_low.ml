@@ -96,6 +96,16 @@ module Train_update = struct
           IS.RevenueMap.empty
           cars_delivered
         in
+        let freight_ton_miles =
+          List.fold_left (fun acc (car, delivered) ->
+            if delivered then
+              let ton_miles = Train.car_delivery_ton_miles ~loc ~car ~region:v.region in
+              let freight = Freight.of_good car.good in
+              Freight.Map.incr freight ton_miles acc
+            else acc)
+          Freight.Map.empty
+          cars_delivered
+        in
         let other_income =
           let has_rest = Station.has_restaurant station in
           let has_hotel = Station.has_hotel station in
@@ -112,9 +122,9 @@ module Train_update = struct
           0
           cars_delivered
         in
-        cars_delivered, money_from_goods, other_income
+        cars_delivered, money_from_goods, freight_ton_miles, other_income
       in
-      let cars_delivered, money_from_goods, other_income = deliver_cargo () in
+      let cars_delivered, money_from_goods, freight_ton_miles, other_income = deliver_cargo () in
 
       let station_supply = station_info.supply in
       let add_converted_goods_to_station cars_delivered =
@@ -200,7 +210,7 @@ module Train_update = struct
       let goods_delivered_amt = Goods.Map.to_list goods_delivered in
       let total_goods = Goods.Map.total goods_delivered in
       let ui_msgs, data =
-        if total_goods > 0 then (
+        if total_goods > 0 then
           let complex_freight = Train.freight_set_of_cars train.cars |> Freight.complex_of_set in
           let msg =
             TrainArrival {
@@ -214,10 +224,10 @@ module Train_update = struct
               goods_amount=goods_delivered_amt;
             }
           in
-          let data = income_stmt in
+          let data = (income_stmt, freight_ton_miles) in
           [msg], Some data
-        ) else
-          ([], None)
+        else
+          [], None
       in
       Log.debug (fun f -> f "Wait_time(%d)" wait_time);
 
@@ -432,9 +442,12 @@ module Train_update = struct
         in
         _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, None, []
 
-let _update_player_with_data (player:Player.t) data =
+let _update_player_with_data (player:Player.t) data fiscal_period =
     match data with
-    | Some income_stmt -> Player.add_income_stmt income_stmt player
+    | Some (income_stmt, freight_ton_miles) ->
+        Player.add_income_stmt income_stmt player
+        |> Player.add_freight_ton_miles freight_ton_miles fiscal_period
+        
     | _ -> player
 
 let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
@@ -483,7 +496,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
           end else
             train, stations, None, []
         in
-        let player = _update_player_with_data player data in
+        let player = _update_player_with_data player data v.fiscal_period in
         train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
     in
@@ -492,7 +505,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
     let train, stations, data, ui_msgs = _handle_train_mid_tile ~idx ~cycle v train stations loc in
-    let player = _update_player_with_data player data in
+    let player = _update_player_with_data player data v.fiscal_period in
     train, stations, player, ui_msgs
   end
 

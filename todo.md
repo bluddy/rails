@@ -16,6 +16,7 @@
 - Check if we need to loop in _update_train (print out if we ever do multiple updates)
 - Wire up player updates
 - Deal with player ton-miles
+- Could division by 2 for money be to get a little more space in the bits?
 - Bug:
   - Delivery + priority pickup: no delivery message
   - Can't change light from f2/f3

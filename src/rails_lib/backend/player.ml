@@ -69,12 +69,20 @@ let default ~player difficulty =
     track_length = 0;
     dist_traveled=0;
     ton_miles=(0, 0);
-    freight_ton_miles=Hashtbl.create 10;
+    freight_ton_miles=(Freight.Map.empty, Freight.Map.empty);
     goods_delivered=Goods.Set.empty;
     ai=None;
     broker_timer=None;
     priority=None;
   }
+
+let read_by_period pair = function
+  | `First -> fst pair
+  | `Second -> snd pair
+
+let update_by_period pair ~f = function
+  | `First -> (f @@ fst pair, snd pair)
+  | `Second -> (fst pair, f @@ snd pair)
 
 let get_cash v = v.m.cash
 
@@ -416,3 +424,10 @@ let update players idx f =
   if p =!= p' then
     players.(idx) <- p';
   ()
+
+let add_freight_ton_miles ftm fiscal_period v =
+  let freight_ton_miles = update_by_period v.freight_ton_miles fiscal_period
+    ~f:(fun cur_ftm -> Freight.Map.merge_add cur_ftm ftm)
+  in
+  {v with freight_ton_miles}
+
