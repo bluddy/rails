@@ -28,13 +28,17 @@ end)
 
 type difficulty =
   [ `Investor | `Financier | `Mogul | `Tycoon ]
-  [@@deriving yojson, enum]
+  [@@deriving yojson, enum, ord]
 
 let show_difficulty = function
   | `Investor -> "Investor"
   | `Financier -> "Financier"
   | `Mogul -> "Mogul"
   | `Tycoon -> "Tycoon"
+
+let easy = function
+  | `Investor | `Financier -> true
+  | `Mogul | `Tycoon -> false
 
 type t = {
   speed: speed;
@@ -49,8 +53,4 @@ let default =
       [`DispatcherOps; `ComplexEconomy; `CutthroatCompetition];
     difficulty=`Tycoon;
   }
-
-let easy = function
-  | `Investor | `Financier -> true
-  | `Mogul | `Tycoon -> false
 
