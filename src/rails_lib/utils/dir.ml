@@ -13,6 +13,9 @@ type t =
 
 let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
 let dirlist_left = [Left; UpLeft; Up; UpRight; Right; DownRight; Down; DownLeft]
+let dir_array = Array.of_list dirlist
+
+let random r = Random.pick_array dir_array r
 
 module Infix = struct
   let (<) x y = compare x y < 0

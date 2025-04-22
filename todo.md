@@ -1,4 +1,6 @@
 # Tasks
+- Deal with region-based, duplicate tile to pixel mapping
+- Check default state of development_map and block_map
 - Make sure money gets deducted for new engine
   - Also for new train
   - Also for station, upgrade etc

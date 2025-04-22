@@ -67,3 +67,5 @@ let reference_year = 1740
 
 let build_industry_mult = 40
 
+let chance_destroy_resource = 9 (* 1 in 9 *)
+
