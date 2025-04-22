@@ -1,4 +1,5 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+open Containers
 
   type t = {
    (* int: random offset for suffix.
@@ -6,11 +7,15 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
       and we distribute random offsets with our cities into that list.
     *)
     map: (int, string * int) Utils.Hashtbl.t;
+    arr: (int * int) array; (* locations *)
     width: int;
     height: int;
   } [@@deriving yojson]
 
-  let make map width height = {map; width; height}
+  let make map width height =
+    let l = Hashtbl.map_list (fun offset _ -> Utils.x_y_of_offset width offset) map in
+    let arr = Array.of_list l in
+    {map; arr; width; height}
 
   let iter f v =
     Hashtbl.iter (fun offset city_s ->
@@ -32,4 +37,6 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
   let find_close v x y ~range =
     Utils.scan ~range ~x ~y ~width:v.width ~height:v.height
       ~f:(fun x y -> match find v x y with Some _ -> true | None -> false)
+
+  let random random v = Random.pick_array v.arr random
 

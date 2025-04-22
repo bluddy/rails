@@ -43,7 +43,7 @@ type ui_msg =
 type t = {
   mutable last_tick: int; (* last time we updated a cycle *)
   mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
-  mutable time: int;  (* In-game time, resets at end of year *)
+  mutable time: int;  (* In-game time, resets at end of fin period *)
   mutable year: int;
   pause: bool;  (* pause the backend. Do not advance time *)
   year_start: int;
@@ -56,6 +56,7 @@ type t = {
   mutable track: Trackmap.t;
   mutable graph: Track_graph.t;
   cities: Cities.t;
+  cities_to_ai: int LocMap.t;
   engines: Engine.t list;
   mutable stations: Station_map.t;
   mutable blocks: Block_map.t; (* map blocks btw stations *)

@@ -57,6 +57,7 @@ type t = {
   ai: ai_info option;  (* Used by AIs only *)
   broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
+  active_station: Utils.loc option; (* Whether we have a current active station *)
 } [@@deriving yojson]
 
 let default ~player difficulty =
@@ -74,6 +75,7 @@ let default ~player difficulty =
     ai=None;
     broker_timer=None;
     priority=None;
+    active_station=None;
   }
 
 let read_by_period pair = function

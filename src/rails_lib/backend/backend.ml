@@ -54,6 +54,7 @@ let default region resources ~random ~seed =
     map;
     region;
     cities;
+    cities_to_ai=Loc_map.empty;
     track;
     blocks=Block_map.make ();
     graph;
