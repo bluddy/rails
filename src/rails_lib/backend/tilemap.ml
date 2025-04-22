@@ -40,7 +40,7 @@ type pixel =
   | EnemyRR_pixel (* dummy *)
   | City_pixel
   | Mountain_pixel (* 15 *)
-  [@@deriving enum, eq]
+  [@@deriving enum, eq, ord, yojson]
 
 let height_of_pixel = function
   | Slum_pixel -> 1
@@ -96,6 +96,12 @@ let pixel_of_tile = function
   | Mountains -> Mountain_pixel
   | EnemyRR -> assert false
 
+let check_outside x y v =
+  x < 0 || x >= v.width || y < 0 || y >= v.height
+
+let check_inside x y v =
+  not @@ check_outside x y v
+
 let get_tile v x y = v.map.(Utils.calc_offset v.width x y)
 
 let set_tile v x y tile =
@@ -130,8 +136,7 @@ let get_mask ?(n=8) ?(diag=false) ~edge v ~f ~x ~y =
     if not diag && i land 1 = 1 then false else
     let x_off = x + Dir.x_offset.(i) in
     let y_off = y + Dir.y_offset.(i) in
-    if x_off < 0 || x_off >= v.width || y_off < 0 || y_off >= v.height then
-      edge
+    if check_outside x_off y_off v then edge
     else
       f (get_tile v x_off y_off)
   )
@@ -257,7 +262,7 @@ let create_heightmap v =
     List.foldi (fun sum i mult ->
       let dx, dy = Dir.x_offset.(i), Dir.y_offset.(i) in
       let x2, y2 = x + dx, y + dy in
-      if x2 < 0 || y2 < 0 || x2 >= v.width || y2 >= v.height then
+      if check_outside x2 y2 v then
         sum
       else
         let value = get_val x2 y2 in
@@ -361,7 +366,7 @@ let check_build_tunnel v ~x ~y ~dir =
    let base_dist = if Dir.is_diagonal dir then 3 else 2 in
    let start_height = get_tile_height v x y in
    let rec loop x y n =
-     if x < 0 || x >= v.width || y < 0 || y >= v.height then `OutOfBounds
+     if check_outside x y v then `OutOfBounds
      else if n > C.tunnel_max_length then `TooLong
      else
       match get_tile v x y with
@@ -379,7 +384,7 @@ let check_build_tunnel v ~x ~y ~dir =
 let check_build_track v ~x ~y ~dir ~difficulty =
    let tile1 = get_tile v x y in
    let x2, y2 = Dir.adjust dir x y in
-   if x2 < 0 || x2 >= v.width || y2 < 0 || y2 >= v.height then `Illegal
+   if check_outside x2 y2 v then `Illegal
    else
     let tile2 = get_tile v x2 y2 in
     match tile1, tile2 with
@@ -401,7 +406,7 @@ let check_build_track v ~x ~y ~dir ~difficulty =
     (* Bridge *)
     | t, River _ when Tile.is_ground t && Dir.is_cardinal dir ->
         let x3, y3 = Dir.adjust dir x2 y2 in
-        if x3 < 0 || x3 >= v.width || y3 < 0 || y3 >= v.height then `Illegal
+        if check_outside x3 y3 v then `Illegal
         else
           let tile3 = get_tile v x3 y3 in
           if Tile.is_ground tile3 then `Bridge
