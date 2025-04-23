@@ -36,8 +36,7 @@ let develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
     in
     let build = Random.int C.chance_destroy_resource random = 0 in
     if build then
-      let dir = Dir.random random in
-      let x2, y2 = Dir.adjust dir x y in
+      let x2, y2 = Dir.random_adjust x y random in
       if Tilemap.out_of_bounds x2 y2 tilemap then None, v
       else
         let pixel2 = Tilemap.get_tile tilemap x y |> Tilemap.pixel_of_tile in
@@ -85,6 +84,8 @@ let develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
   | OilWell_pixel -> develop_resource ()
   | _ -> develop_industry ()
 
+  (* NOTE: this function in the original has a bunch of dead code around
+     the active station, which is always cleared out *)
 let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~active_station
   ~cities ~cities_to_ai ~active_station ~total_development (v:t) =
   let age_factor = (year - C.reference_year_map_dev) / 16
@@ -92,33 +93,53 @@ let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~a
   in
   let age_factor = if Region.is_west_us region then age_factor / 2 else age_factor in
   let age_factor = age_factor * 2 + 1 in
-  let rec loop change_counter active_station total_dev =
-    let random_add_x_y x y =
-      let random_offset () = (Random.int age_factor random) - age_factor in
-      x + random_offset (), y + random_offset ()
-    in
-    let random_tile () =
-      let x = (Random.int (Tilemap.get_width tilemap) random) + 1 in
-      let y = (Random.int (Tilemap.get_height tilemap) random) + 1 in
-      let x =
-        (* Add a westward bias *)
-        if Region.is_east_us region && year < 1880 then
-          let dx = Random.int (x/2) random in
-          x - dx
-        else x
+
+  let rec loop ~num_dev ~acc_dev active_station =
+    if two_changes && num_dev >= 2 || (not two_changes) && num_dev >= 1 then
+      `Done
+    else
+      let random_add_x_y x y =
+        let random_offset () = (Random.int age_factor random) - age_factor in
+        x + random_offset (), y + random_offset ()
       in
-      x, y
-    in
-    let x, y = match active_station with
-      | Some (x, y) -> random_add_x_y x y
-      | None when total_dev land 0xE > 0 ->
-        let (x, y) as city = Cities.random random cities in
-        if Loc_map.mem city cities_to_ai then
-          random_add_x_y x y
+      let random_tile () =
+        let x = (Random.int (Tilemap.get_width tilemap) random) + 1 in
+        let y = (Random.int (Tilemap.get_height tilemap) random) + 1 in
+        let x =
+          (* Add a westward bias *)
+          if Region.is_east_us region && year < 1880 then
+            let dx = Random.int (x/2) random in
+            x - dx
+          else x
+        in
+        x, y
+      in
+      let x, y = match active_station with
+        | Some (x, y) -> random_add_x_y x y
+        | None when total_dev land 0xE > 0 ->
+          let (x, y) as city = Cities.random random cities in
+          if Loc_map.mem city cities_to_ai then
+            random_add_x_y x y
+          else
+            random_tile ()
+        | None -> random_tile ()
+      in
+      let rec search_loop x y =
+        if Tilemap.out_of_bounds x y tilemap then
+          loop ~num_changes ~acc_dev None
         else
-          random_tile ()
-      | None -> random_tile ()
-    in
+          let pixel = Tilemap.get x y tilemap in
+          match pixel with
+          | Ocean_pixel
+          | River_pixel -> loop ~num_changes ~acc_dev None
+          | _ ->
+              let res = develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
+              if not res then
+                let x, y = Dir.random_adjust x y random in
+                search_loop x y
+      in
+      search_loop x y
+
   in
   loop 0 active_station total_development
 

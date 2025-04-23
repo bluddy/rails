@@ -191,6 +191,10 @@ let adjust dir x y =
   let dx, dy = to_offsets dir in
   x + dx, y + dy
 
+let random_adjust x y r =
+  let dir = random r in
+  adjust dir x y
+
   (* 
      Convolution operator for height 
      1 2 3 2 1
