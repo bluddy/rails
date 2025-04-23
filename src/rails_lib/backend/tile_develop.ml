@@ -27,7 +27,7 @@ let _develop_pixel ~difficulty = function
   | City_pixel when not @@ B_options.easy difficulty -> Slum_pixel
   | x -> x
 
-let develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
+let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
   let pixel = Tilemap.pixel_of_tile tile in
   let develop_resource () =
     let clear_pixel = match pixel with
@@ -88,6 +88,7 @@ let develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
      the active station, which is always cleared out *)
 let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~active_station
   ~cities ~cities_to_ai ~active_station ~total_development (v:t) =
+
   let age_factor = (year - C.reference_year_map_dev) / 16
     |> Utils.clip ~min:3 ~max:9
   in
@@ -103,8 +104,8 @@ let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~a
         x + random_offset (), y + random_offset ()
       in
       let random_tile () =
-        let x = (Random.int (Tilemap.get_width tilemap) random) + 1 in
-        let y = (Random.int (Tilemap.get_height tilemap) random) + 1 in
+        let x = (Random.int (Tilemap.get_width tilemap - 2) random) + 1 in
+        let y = (Random.int (Tilemap.get_height tilemap - 2) random) + 1 in
         let x =
           (* Add a westward bias *)
           if Region.is_east_us region && year < 1880 then
@@ -133,10 +134,12 @@ let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~a
           | Ocean_pixel
           | River_pixel -> loop ~num_changes ~acc_dev None
           | _ ->
-              let res = develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
+              let res = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
               if not res then
                 let x, y = Dir.random_adjust x y random in
                 search_loop x y
+              else
+                loop ~num_dev ~acc_dev None
       in
       search_loop x y
 
