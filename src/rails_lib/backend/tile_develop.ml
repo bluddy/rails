@@ -15,6 +15,8 @@ type t = {
   develop: int PixelMap.t;
   (* The counterforce to development *)
   resist: int PixelMap.t;
+  (* Count of total development, reset every fin period *)
+  total_dev: int;
 }
 
 (* Natural development of urban growth *)
@@ -86,8 +88,8 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
 
   (* NOTE: this function in the original has a bunch of dead code around
      the active station, which is always cleared out *)
-let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~active_station
-  ~cities ~cities_to_ai ~active_station ~total_development (v:t) =
+let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
+  ~cities ~cities_to_ai ~active_station (v:t) =
 
   let age_factor = (year - C.reference_year_map_dev) / 16
     |> Utils.clip ~min:3 ~max:9
@@ -97,7 +99,7 @@ let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~a
 
   let rec loop ~num_dev ~acc_dev active_station v =
     if two_changes && num_dev >= 2 || (not two_changes) && num_dev >= 1 then
-      acc_dev, v
+      {v with total_dev = acc_dev}
     else
       let random_add_x_y x y =
         let random_offset () = (Random.int age_factor random) - age_factor in

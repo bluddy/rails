@@ -529,21 +529,20 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
     player.trains, stations, player, ui_msgs
 end
 
-let try_create_priority_shipment ?(force=false) v =
+let _try_create_priority_shipment ?(force=false) v player stations =
   (* Try to create a priority shipment:
      TODO: add condition: only after some track exists
      TODO: for all players? check if AI *)
-  let main_player = Player.get_player v.players C.player in
-  match main_player.priority with
+  match player.priority with
   | None when (v.cycle mod C.Cycles.priority_delivery = 0) || force ->
-      begin match Priority_shipment.try_to_create v.random v.stations v.cycle ~force with
+      begin match Priority_shipment.try_to_create v.random stations v.cycle ~force with
       | Some (stations, priority) ->
-        Player.update v.players C.player @@ Player.set_priority @@ Some priority;
-        v.stations <- stations;
-        Some (PriorityShipmentCreated{player=C.player; shipment=priority})
-      | None -> None
+          let player = Player.set_priority @@ Some priority in
+          let msgs = [PriorityShipmentCreated{player=C.player; shipment=priority}] in
+          stations, player, msgs
+      | None -> stations, player, []
       end
-  | _ -> None
+  | _ -> stations, player, []
 
 let _try_cancel_priority_shipments ?(force=false) v =
   (* Try to cancel and create corresponding messages *)
@@ -605,6 +604,13 @@ let check_priority_delivery v =
     ui_msgs
   | _ -> []
 
+let _try_to_develop_tiles v player =
+  Tile_develop.develop_tiles ~two_changes ~difficulty:v.option.difficulty
+    ~region:v.region ~random:v.random ~tilemap:v.tilemap ~year:v.year
+    ~active_station:player.active_station ~cities:v.cities
+    ~cities_to_ai:v.cities_to_ai player.development
+
+
 let _update_station_supply_demand v stations =
   if v.cycle mod C.Cycles.station_supply_demand = 0 then (
     let difficulty = v.options.difficulty in
@@ -638,18 +644,21 @@ let handle_cycle v =
   let time_step () =
     v.cycle <- v.cycle + 1;
 
-    (* Currenly only the main player has trains *)
+    (* TODO: make player logic work for all human players *)
+
     let main_player = Player.get_player v.players C.player in
 
     let trains, stations, player, tr_msgs = Train_update._update_all_trains v main_player in
 
     (* TODO: ai_routines *)
-    let pr_msgs = try_create_priority_shipment v |> Option.to_list in
+
+    let stations, player, pr_msgs = _try_create_priority_shipment v player stations in
+
+    let development = _try_to_develop_tiles v in
 
     let stations, sd_msgs = _update_station_supply_demand v stations in
 
     if player =!= main_player then Player.set v.players C.player player;
-
     [%upf v.stations <- stations];
     [%upf main_player.trains <- trains];
 
