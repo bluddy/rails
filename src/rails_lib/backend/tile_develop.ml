@@ -1,6 +1,7 @@
 (* Develop tiles over time *)
 
 open Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module C = Constants
 module Map = Utils.Map
@@ -17,7 +18,7 @@ type t = {
   resist: int PixelMap.t;
   (* Count of total development, reset every fin period *)
   total_devs: int;
-}
+} [@@deriving yojson]
 
 let default_dev =
   [
@@ -134,7 +135,7 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
 
   (* NOTE: this function in the original has a bunch of dead code around
      the active station, which is always cleared out *)
-let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
+let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
   ~cities ~cities_to_ai ~active_station (v:t) =
 
   let age_factor = (year - C.reference_year_map_dev) / 16
@@ -144,7 +145,7 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
   let age_factor = age_factor * 2 + 1 in
 
   let rec loop ~num_devs ~total_devs active_station v =
-    if two_changes && num_devs >= 2 || (not two_changes) && num_devs >= 1 then
+    if two_devs && num_devs >= 2 || (not two_devs) && num_devs >= 1 then
       {v with total_devs = total_devs}
     else
       let random_add_x_y x y =
@@ -177,17 +178,17 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
         if Tilemap.out_of_bounds x y tilemap then
           loop ~num_devs ~total_devs None v
         else
-          let pixel = Tilemap.get_tile x y tilemap in
-          match pixel with
-          | Tile.Ocean | River -> loop ~num_devs ~total_devs None
-          | _ ->
-              let res = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
+          match Tilemap.get_tile tilemap x y with
+          | Tile.Ocean _
+          | River _ -> loop ~num_devs ~total_devs None v
+          | tile ->
+              let res, v = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
               match res with
-              | Some (x, y, tile, go_again), v when go_again ->
+              | Some (x, y, tile, go_again) when go_again ->
                   Tilemap.set_tile tilemap x y tile;
                   let x, y = Dir.random_adjust x y random in
                   wander_loop x y ~num_devs:(num_devs + 1) ~total_devs:(total_devs + 1) v
-              | Some (x, y, tile, _), v ->
+              | Some (x, y, tile, _) ->
                   Tilemap.set_tile tilemap x y tile;
                   loop ~num_devs ~total_devs None v
               | None ->
@@ -196,7 +197,7 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
       wander_loop x y ~num_devs ~total_devs v
 
   in
-  loop 0 active_station total_development v
+  loop ~num_devs:0 ~total_devs:v.total_devs active_station v
 
 
 

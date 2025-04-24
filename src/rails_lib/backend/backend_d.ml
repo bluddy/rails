@@ -60,7 +60,7 @@ type t = {
   engines: Engine.t list;
   mutable stations: Station_map.t;
   mutable blocks: Block_map.t; (* map blocks btw stations *)
-  dev_state: Tile_develop.t;
+  mutable dev_state: Tile_develop.t;
   options: B_options.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;

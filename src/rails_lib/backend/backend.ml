@@ -66,6 +66,7 @@ let default region resources ~random ~seed =
     seed;
     west_us_route_done=false;
     pause=false;
+    dev_state=Tile_develop.default;
   }
 
 let get_speed v = v.options.speed
@@ -638,11 +639,14 @@ let _handle_cheat v player = function
       Player.modify_cash player @@ fun money -> money + 500);
     v
   | CreatePriorityShipment ->
-    let ui_msgs = Backend_low.try_create_priority_shipment v ~force:true in
-    Option.iter (send_ui_msg v) ui_msgs;
+    let player = Player.get_player v.players player in
+    let stations, player, ui_msgs = Backend_low._try_to_create_priority_shipment v ~force:true player v.stations in
+    [%upf v.stations <- stations];
+    Player.set v.players C.player player;
+    List.iter (send_ui_msg v) ui_msgs;
     v
   | CancelPriorityShipment ->
-    let ui_msgs = Backend_low.try_cancel_priority_shipments v ~force:true in
+    let ui_msgs = Backend_low._try_to_cancel_priority_shipments v ~force:true in
     List.iter (send_ui_msg v) ui_msgs;
     v
     

@@ -529,7 +529,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
     player.trains, stations, player, ui_msgs
 end
 
-let _try_to_create_priority_shipment ?(force=false) v player stations =
+let _try_to_create_priority_shipment ?(force=false) v (player:Player.t) stations =
   (* Try to create a priority shipment:
      TODO: add condition: only after some track exists
      TODO: for all players? check if AI *)
@@ -537,14 +537,14 @@ let _try_to_create_priority_shipment ?(force=false) v player stations =
   | None when (v.cycle mod C.Cycles.priority_delivery = 0) || force ->
       begin match Priority_shipment.try_to_create v.random stations v.cycle ~force with
       | Some (stations, priority) ->
-          let player = Player.set_priority @@ Some priority in
+          let player = Player.set_priority (Some priority) player in
           let msgs = [PriorityShipmentCreated{player=C.player; shipment=priority}] in
           stations, player, msgs
       | None -> stations, player, []
       end
   | _ -> stations, player, []
 
-let _try_cancel_priority_shipments ?(force=false) v =
+let _try_to_cancel_priority_shipments ?(force=false) v =
   (* Try to cancel and create corresponding messages *)
   let try_cancel_priority_shipment_all players ~cycle ~year region =
     (* Cancel priority and let us know which players' were canceled *)
@@ -604,21 +604,21 @@ let _check_priority_delivery v =
     ui_msgs
   | _ -> []
 
-let _try_to_develop_tiles v player =
+let _try_to_develop_tiles v (player:Player.t) =
   let age = v.year - v.year_start in
   if (v.cycle mod C.Cycles.priority_delivery = 0) &&
     (age < 25 || v.cycle land 0x8 > 0) then
       let two_devs = Region.is_us v.region && age < 40 in
-      let development =
-      Tile_develop.develop_tiles ~two_devs ~difficulty:v.option.difficulty
-        ~region:v.region ~random:v.random ~tilemap:v.tilemap ~year:v.year
+      let dev_state =
+      Tile_develop.develop_tiles ~two_devs ~difficulty:v.options.difficulty
+        ~region:v.region ~random:v.random ~tilemap:v.map ~year:v.year
         ~active_station:player.active_station ~cities:v.cities
-        ~cities_to_ai:v.cities_to_ai v.development
+        ~cities_to_ai:v.cities_to_ai v.dev_state
       in
       (* Clear active station *)
-      development, None
+      dev_state, None
   else
-    v.development, player.active_station
+    v.dev_state, player.active_station
 
 let _update_station_supply_demand v stations =
   if v.cycle mod C.Cycles.station_supply_demand = 0 then (
@@ -663,12 +663,14 @@ let handle_cycle v =
 
     let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
 
-    let development, active_station = _try_to_develop_tiles v player in
+    let dev_state, active_station = _try_to_develop_tiles v player in
 
     let stations, sd_msgs = _update_station_supply_demand v stations in
 
+    [%upf player.active_station <- active_station];
     [%upf player.trains <- trains];
     [%upf v.stations <- stations];
+    [%upf v.dev_state <- dev_state];
     if player =!= main_player then Player.set v.players C.player player;
 
     let br_msgs =
@@ -682,7 +684,7 @@ let handle_cycle v =
     in
     (* Cancel any expired priority shipments *)
     (* TODO: check data structure handling here *)
-    let cp_msgs = _try_cancel_priority_shipments v in
+    let cp_msgs = _try_to_cancel_priority_shipments v in
     let del_msgs = _check_priority_delivery v in
 
     let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs in

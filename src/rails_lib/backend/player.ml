@@ -58,7 +58,7 @@ type t = {
   broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
    (* A current active station, which causes high development *)
-  active_station: Utils.loc option;
+  mutable active_station: Utils.loc option;
 } [@@deriving yojson]
 
 let default ~player difficulty =
