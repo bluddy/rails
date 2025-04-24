@@ -74,8 +74,8 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
       if roll > resist_dev then
         let dev_val = PixelMap.get_or pixel2 develop ~default:0 in
         let tile2 = Tilemap.tile_of_pixel ~region ~x ~y ~pixel:pixel2 tilemap in
-        let _done = dev_val < 4 in (* Not sure why *)
-        Some(x, y, tile2, _done), v
+        let go_again = dev_val < 4 in (* Not sure why *)
+        Some(x, y, tile2, go_again), v
       else None, v
   in
   if dev_val < 0 then None, v
@@ -95,9 +95,9 @@ let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~a
   let age_factor = if Region.is_west_us region then age_factor / 2 else age_factor in
   let age_factor = age_factor * 2 + 1 in
 
-  let rec loop ~num_dev ~acc_dev active_station =
+  let rec loop ~num_dev ~acc_dev active_station v =
     if two_changes && num_dev >= 2 || (not two_changes) && num_dev >= 1 then
-      `Done
+      acc_dev, v
     else
       let random_add_x_y x y =
         let random_offset () = (Random.int age_factor random) - age_factor in
@@ -125,7 +125,7 @@ let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~a
             random_tile ()
         | None -> random_tile ()
       in
-      let rec search_loop x y =
+      let rec dev_loop x y ~num_dev ~acc_dev v =
         if Tilemap.out_of_bounds x y tilemap then
           loop ~num_changes ~acc_dev None
         else
@@ -135,16 +135,21 @@ let develop_tile_loop ~two_changes ~difficulty ~region ~random ~tilemap ~year ~a
           | River_pixel -> loop ~num_changes ~acc_dev None
           | _ ->
               let res = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
-              if not res then
-                let x, y = Dir.random_adjust x y random in
-                search_loop x y
-              else
-                loop ~num_dev ~acc_dev None
+              match res with
+              | Some (x, y, tile, go_again), v when go_again ->
+                  Tilemap.set_tile tilemap x y tile;
+                  let x, y = Dir.random_adjust x y random in
+                  dev_loop x y ~num_dev:(num_dev + 1) ~acc_dev:(acc_dev + 1) v
+              | Some (x, y, tile, _), v ->
+                  Tilemap.set_tile tilemap x y tile;
+                  loop ~num_dev ~acc_dev None v
+              | None ->
+                  loop ~num_dev ~acc_dev None v
       in
-      search_loop x y
+      dev_loop x y ~num_dev ~acc_dev v
 
   in
-  loop 0 active_station total_development
+  loop 0 active_station total_development v
 
 
 

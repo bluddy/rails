@@ -531,6 +531,7 @@ end
 
 let try_create_priority_shipment ?(force=false) v =
   (* Try to create a priority shipment:
+     TODO: add condition: only after some track exists
      TODO: for all players? check if AI *)
   let main_player = Player.get_player v.players C.player in
   match main_player.priority with
@@ -544,7 +545,7 @@ let try_create_priority_shipment ?(force=false) v =
       end
   | _ -> None
 
-let try_cancel_priority_shipments ?(force=false) v =
+let _try_cancel_priority_shipments ?(force=false) v =
   (* Try to cancel and create corresponding messages *)
   let try_cancel_priority_shipment_all players ~cycle ~year region =
     (* Cancel priority and let us know which players' were canceled *)
@@ -604,65 +605,68 @@ let check_priority_delivery v =
     ui_msgs
   | _ -> []
 
+let _update_station_supply_demand v stations =
+  if v.cycle mod C.Cycles.station_supply_demand = 0 then (
+    let difficulty = v.options.difficulty in
+    let climate = v.climate in
+    let simple_economy =
+      not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
+    in
+    let ui_msgs =
+      Station_map.fold 
+        (fun station old_msgs ->
+          Station.check_rate_war_lose_supplies station ~difficulty;
+          let msgs =
+            Station.update_supply_demand station v.map ~climate ~simple_economy
+          in
+          Station.lose_supplies station;
+          let msgs =
+            List.map (fun (good, add) ->
+                DemandChanged {x=station.x; y=station.y; good; add})
+              msgs
+          in
+          msgs @ old_msgs)
+      stations
+      ~init:[]
+    in
+    stations, ui_msgs
+  ) else
+    stations, []
+
 (** Most time-based work happens here **)
 let handle_cycle v =
   let time_step () =
     v.cycle <- v.cycle + 1;
+
     (* Currenly only the main player has trains *)
     let main_player = Player.get_player v.players C.player in
-    let trains, stations, player, ui_msgs = Train_update._update_all_trains v main_player in
+
+    let trains, stations, player, tr_msgs = Train_update._update_all_trains v main_player in
 
     (* TODO: ai_routines *)
-    let ui_msgs = (Option.to_list (try_create_priority_shipment v)) @ ui_msgs in
+    let pr_msgs = try_create_priority_shipment v |> Option.to_list in
 
-    let update_station_supply_demand () =
-      if v.cycle mod C.Cycles.station_supply_demand = 0 then (
-        let difficulty = v.options.difficulty in
-        let climate = v.climate in
-        let simple_economy =
-          not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
-        in
-        let ui_msgs =
-          Station_map.fold 
-            (fun station old_msgs ->
-              Station.check_rate_war_lose_supplies station ~difficulty;
-              let msgs =
-                Station.update_supply_demand station v.map ~climate ~simple_economy
-              in
-              Station.lose_supplies station;
-              let msgs =
-                List.map (fun (good, add) ->
-                    DemandChanged {x=station.x; y=station.y; good; add})
-                  msgs
-              in
-              msgs @ old_msgs)
-          stations
-          ~init:ui_msgs
-        in
-        stations, ui_msgs
-      ) else stations, ui_msgs
-    in
-    let stations, ui_msgs = update_station_supply_demand () in
+    let stations, sd_msgs = _update_station_supply_demand v stations in
 
     if player =!= main_player then Player.set v.players C.player player;
+
     [%upf v.stations <- stations];
     [%upf main_player.trains <- trains];
 
-    let ui_msgs =
+    let br_msgs =
       (* Check broker *)
       if Player.has_broker_timer main_player then (
-        let player', ui_msg = Player.incr_broker_timer main_player in
+        let player', send_msg = Player.incr_broker_timer main_player in
         Player.update v.players C.player (fun _ -> player');
-        if ui_msg then
-          (OpenStockBroker{player=C.player}) :: ui_msgs
-        else ui_msgs)
-      else ui_msgs
+        if send_msg then [(OpenStockBroker{player=C.player})]
+        else [])
+      else []
     in
     (* Cancel any expired priority shipments *)
-    let cancel_ui_msgs = try_cancel_priority_shipments v in
-    let delivered_priority_ui_msgs = check_priority_delivery v in
+    let cp_msgs = _try_cancel_priority_shipments v in
+    let del_msgs = check_priority_delivery v in
 
-    let ui_msgs = delivered_priority_ui_msgs @ cancel_ui_msgs @ ui_msgs in
+    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs in
 
     (* adjust time *)
     v.time <- v.time + 1;
