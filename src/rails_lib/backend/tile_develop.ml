@@ -16,7 +16,11 @@ type t = {
   (* The counterforce to development *)
   resist: int PixelMap.t;
   (* Count of total development, reset every fin period *)
-  total_dev: int;
+  total_devs: int;
+}
+
+let default = {
+  total_devs = 0;
 }
 
 (* Natural development of urban growth *)
@@ -64,14 +68,14 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
         |> PixelMap.add Ocean_pixel ocean_val
         |> PixelMap.add River_pixel river_val
       in
-      let total_dev = Tilemap.fold_range ~range:1 ~x ~y ~init:0 tilemap
+      let total_devs = Tilemap.fold_range ~range:1 ~x ~y ~init:0 tilemap
         ~f:(fun acc _ _ tile ->
             let pixel = Tilemap.pixel_of_tile tile in
             let x = PixelMap.get_or pixel v.develop ~default:0 in
             acc + x)
       in
       let resist_dev = PixelMap.get_or pixel v.resist ~default:0 in
-      let roll = Random.int (total_dev + 1) random in
+      let roll = Random.int (total_devs + 1) random in
       let v = [%up {v with develop}] in
       if roll > resist_dev then
         let dev_val = PixelMap.get_or pixel2 develop ~default:0 in
@@ -97,9 +101,9 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
   let age_factor = if Region.is_west_us region then age_factor / 2 else age_factor in
   let age_factor = age_factor * 2 + 1 in
 
-  let rec loop ~num_dev ~total_dev active_station v =
-    if two_changes && num_dev >= 2 || (not two_changes) && num_dev >= 1 then
-      {v with total_dev = total_dev}
+  let rec loop ~num_devs ~total_devs active_station v =
+    if two_changes && num_devs >= 2 || (not two_changes) && num_devs >= 1 then
+      {v with total_devs = total_devs}
     else
       let random_add_x_y x y =
         let random_offset () = (Random.int age_factor random) - age_factor in
@@ -119,7 +123,7 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
       in
       let x, y = match active_station with
         | Some (x, y) -> random_add_x_y x y
-        | None when total_dev land 0xE > 0 ->
+        | None when total_devs land 0xE > 0 ->
           let (x, y) as city = Cities.random random cities in
           if Loc_map.mem city cities_to_ai then
             random_add_x_y x y
@@ -127,28 +131,27 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
             random_tile ()
         | None -> random_tile ()
       in
-      let rec dev_loop x y ~num_dev ~total_dev v =
+      let rec wander_loop x y ~num_devs ~total_devs v =
         if Tilemap.out_of_bounds x y tilemap then
-          loop ~num_changes ~total_dev None
+          loop ~num_devs ~total_devs None v
         else
-          let pixel = Tilemap.get x y tilemap in
+          let pixel = Tilemap.get_tile x y tilemap in
           match pixel with
-          | Ocean_pixel
-          | River_pixel -> loop ~num_changes ~total_dev None
+          | Tile.Ocean | River -> loop ~num_devs ~total_devs None
           | _ ->
               let res = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
               match res with
               | Some (x, y, tile, go_again), v when go_again ->
                   Tilemap.set_tile tilemap x y tile;
                   let x, y = Dir.random_adjust x y random in
-                  dev_loop x y ~num_dev:(num_dev + 1) ~total_dev:(total_dev + 1) v
+                  wander_loop x y ~num_devs:(num_devs + 1) ~total_devs:(total_devs + 1) v
               | Some (x, y, tile, _), v ->
                   Tilemap.set_tile tilemap x y tile;
-                  loop ~num_dev ~total_dev None v
+                  loop ~num_devs ~total_devs None v
               | None ->
-                  loop ~num_dev ~total_dev None v
+                  loop ~num_devs ~total_devs None v
       in
-      dev_loop x y ~num_dev ~total_dev v
+      wander_loop x y ~num_devs ~total_devs v
 
   in
   loop 0 active_station total_development v
