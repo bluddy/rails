@@ -19,8 +19,50 @@ type t = {
   total_devs: int;
 }
 
+let default_dev =
+  [
+    Tilemap.Slum_pixel, 16;
+    Ocean_pixel, 1;
+    Clear_pixel, 2;
+    Woods_pixel, 0;
+    Harbor_pixel, 12;
+    CoalMine_pixel, 0;
+    Desert_pixel, 0;
+    Foothills_pixel, 0;
+    OilWell_pixel, 0;
+    River_pixel, 2;
+    Farm_pixel, 3;
+    Hills_pixel, 0;
+    Village_pixel, 8;
+    EnemyRR_pixel, 0;
+    City_pixel, 16;
+    Mountain_pixel, -2;
+  ]
+
+let default_resist =
+  [
+    Tilemap.Slum_pixel, 56;
+    Ocean_pixel, 0;
+    Clear_pixel, 0;
+    Woods_pixel, -3;
+    Harbor_pixel, -3;
+    CoalMine_pixel, 1;
+    Desert_pixel, -3;
+    Foothills_pixel, 3;
+    OilWell_pixel, 12;
+    River_pixel, 3;
+    Farm_pixel, 14;
+    Hills_pixel, -9;
+    Village_pixel, 21;
+    EnemyRR_pixel, 3;
+    City_pixel, 48;
+    Mountain_pixel, -15;
+  ]
+
 let default = {
   total_devs = 0;
+  develop = PixelMap.of_list default_dev;
+  resist = PixelMap.of_list default_resist;
 }
 
 (* Natural development of urban growth *)
