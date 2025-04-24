@@ -529,7 +529,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
     player.trains, stations, player, ui_msgs
 end
 
-let _try_create_priority_shipment ?(force=false) v player stations =
+let _try_to_create_priority_shipment ?(force=false) v player stations =
   (* Try to create a priority shipment:
      TODO: add condition: only after some track exists
      TODO: for all players? check if AI *)
@@ -573,7 +573,7 @@ let _try_cancel_priority_shipments ?(force=false) v =
     List.map (fun i -> PriorityShipmentCanceled{player=i}) players
   | _ -> []
     
-let check_priority_delivery v =
+let _check_priority_delivery v =
   (* Check if a priority shipment has been delivered *)
   let check_priority_delivery_all players stations ~cycle ~year region =
     (* Check for priority delivery completion *)
@@ -652,15 +652,15 @@ let handle_cycle v =
 
     (* TODO: ai_routines *)
 
-    let stations, player, pr_msgs = _try_create_priority_shipment v player stations in
+    let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
 
     let development = _try_to_develop_tiles v in
 
     let stations, sd_msgs = _update_station_supply_demand v stations in
 
-    if player =!= main_player then Player.set v.players C.player player;
+    [%upf player.trains <- trains];
     [%upf v.stations <- stations];
-    [%upf main_player.trains <- trains];
+    if player =!= main_player then Player.set v.players C.player player;
 
     let br_msgs =
       (* Check broker *)
@@ -672,8 +672,9 @@ let handle_cycle v =
       else []
     in
     (* Cancel any expired priority shipments *)
+    (* TODO: check data structure handling here *)
     let cp_msgs = _try_cancel_priority_shipments v in
-    let del_msgs = check_priority_delivery v in
+    let del_msgs = _check_priority_delivery v in
 
     let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs in
 
