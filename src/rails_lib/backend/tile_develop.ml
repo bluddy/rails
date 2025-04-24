@@ -97,9 +97,9 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
   let age_factor = if Region.is_west_us region then age_factor / 2 else age_factor in
   let age_factor = age_factor * 2 + 1 in
 
-  let rec loop ~num_dev ~acc_dev active_station v =
+  let rec loop ~num_dev ~total_dev active_station v =
     if two_changes && num_dev >= 2 || (not two_changes) && num_dev >= 1 then
-      {v with total_dev = acc_dev}
+      {v with total_dev = total_dev}
     else
       let random_add_x_y x y =
         let random_offset () = (Random.int age_factor random) - age_factor in
@@ -127,28 +127,28 @@ let develop_tiles ~two_changes ~difficulty ~region ~random ~tilemap ~year
             random_tile ()
         | None -> random_tile ()
       in
-      let rec dev_loop x y ~num_dev ~acc_dev v =
+      let rec dev_loop x y ~num_dev ~total_dev v =
         if Tilemap.out_of_bounds x y tilemap then
-          loop ~num_changes ~acc_dev None
+          loop ~num_changes ~total_dev None
         else
           let pixel = Tilemap.get x y tilemap in
           match pixel with
           | Ocean_pixel
-          | River_pixel -> loop ~num_changes ~acc_dev None
+          | River_pixel -> loop ~num_changes ~total_dev None
           | _ ->
               let res = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
               match res with
               | Some (x, y, tile, go_again), v when go_again ->
                   Tilemap.set_tile tilemap x y tile;
                   let x, y = Dir.random_adjust x y random in
-                  dev_loop x y ~num_dev:(num_dev + 1) ~acc_dev:(acc_dev + 1) v
+                  dev_loop x y ~num_dev:(num_dev + 1) ~total_dev:(total_dev + 1) v
               | Some (x, y, tile, _), v ->
                   Tilemap.set_tile tilemap x y tile;
-                  loop ~num_dev ~acc_dev None v
+                  loop ~num_dev ~total_dev None v
               | None ->
-                  loop ~num_dev ~acc_dev None v
+                  loop ~num_dev ~total_dev None v
       in
-      dev_loop x y ~num_dev ~acc_dev v
+      dev_loop x y ~num_dev ~total_dev v
 
   in
   loop 0 active_station total_development v

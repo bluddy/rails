@@ -605,11 +605,20 @@ let _check_priority_delivery v =
   | _ -> []
 
 let _try_to_develop_tiles v player =
-  Tile_develop.develop_tiles ~two_changes ~difficulty:v.option.difficulty
-    ~region:v.region ~random:v.random ~tilemap:v.tilemap ~year:v.year
-    ~active_station:player.active_station ~cities:v.cities
-    ~cities_to_ai:v.cities_to_ai player.development
-
+  let age = v.year - v.year_start in
+  if (v.cycle mod C.Cycles.priority_delivery = 0) &&
+    (age < 25 || v.cycle land 0x8 > 0) then
+      let two_devs = Region.is_us v.region && age < 40 in
+      let development =
+      Tile_develop.develop_tiles ~two_devs ~difficulty:v.option.difficulty
+        ~region:v.region ~random:v.random ~tilemap:v.tilemap ~year:v.year
+        ~active_station:player.active_station ~cities:v.cities
+        ~cities_to_ai:v.cities_to_ai v.development
+      in
+      (* Clear active station *)
+      development, None
+  else
+    v.development, player.active_station
 
 let _update_station_supply_demand v stations =
   if v.cycle mod C.Cycles.station_supply_demand = 0 then (
@@ -654,7 +663,7 @@ let handle_cycle v =
 
     let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
 
-    let development = _try_to_develop_tiles v in
+    let development, active_station = _try_to_develop_tiles v player in
 
     let stations, sd_msgs = _update_station_supply_demand v stations in
 
