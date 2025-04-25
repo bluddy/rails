@@ -73,3 +73,8 @@ let reference_year_map_dev = 1770
 
 let young_station_age = 20
 
+(* This is the number we roll to see if we maintain *)
+let maintain_max_roll = 1250
+
+let track_maintenance_single = 1
+let track_maintenance_double = 2

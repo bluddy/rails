@@ -475,3 +475,26 @@ let track_pieces v = Vector.length v.track
 
 let get_track_loc i v = Vector.get v.track i
 
+  (* The original code only selects random spots up to 1250.
+     I guess they assumed you'll never have more than this much track? *)
+let track_maintenance_random_spot trackmap random v =
+  let maintain_roll = Random.int C.maintain_max_roll random in
+  let len = Vector.length v.track in
+  (* We translate to 2 rolls, so all track counts for maintenance. But we keep the odds based on the
+     1250 number.
+     *)
+  if maintain_roll < len then (
+    let i = Random.int len random in
+    let (x, y) = Vector.get v.track i in
+    let expense = match Trackmap.get trackmap ~x ~y with
+      | Some track ->
+         let cost = if Track.acts_like_double track then C.track_maintenance_double else C.track_maintenance_single in
+         Dir.Set.fold (fun acc _ -> acc + cost) 0 track.dirs
+      | _ -> failwith "Trackmap incorrect behavior"
+    in
+    pay `TrackMaintenance expense v
+  ) else v
+
+  
+
+

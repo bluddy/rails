@@ -687,6 +687,7 @@ let handle_cycle v =
       if v.cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
         let dev_state, active_station = _try_to_develop_tiles v player in
+        let player = Player.track_maintenance_random_spot v.track v.random player in
         stations, player, dev_state, active_station, pr_msgs
       else
         stations, player, v.dev_state, player.active_station, []
