@@ -626,8 +626,8 @@ let _check_priority_delivery v =
 
 let _try_to_develop_tiles v (player:Player.t) =
   let age = v.year - v.year_start in
-  (* An odd test. Originally & with 0x8
-     Essentially runs the development half the time, for periods of 8 cycles
+  (* Originally & with 0x8
+     We're already filtering with mod 8 = 0, so this is effectively mod 16 after 25 years
    *)
   if age < 25 || v.cycle mod 16 >= 8 then
       let two_devs = Region.is_us v.region && age < 40 in

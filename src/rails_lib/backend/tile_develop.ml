@@ -173,13 +173,13 @@ let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
       in
       let x, y = match active_station with
         | Some (x, y) -> random_add_x_y x y
-        | None when v.total_devs land 0xE > 0 ->
+        | None when v.total_devs land 0xE <> 0 -> random_tile ()
+        | None ->
           let (x, y) as city = Cities.random random cities in
           if Loc_map.mem city cities_to_ai then
             random_add_x_y x y
           else
             random_tile ()
-        | None -> random_tile ()
       in
       let rec wander_loop x y num_devs v =
         if Tilemap.out_of_bounds x y tilemap then
