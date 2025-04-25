@@ -560,7 +560,7 @@ let get_car_dir (v:'a t) i = (History.get v.history (i+1)).dir
 
 let get_engine_cost v = v.engine.price
 
-let get_num_of_cars v = List.length v.cars
+let num_of_cars v = List.length v.cars
 
 let holds_priority_shipment v = v.holds_priority_shipment
 

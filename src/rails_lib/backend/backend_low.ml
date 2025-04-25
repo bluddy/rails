@@ -682,6 +682,15 @@ let handle_cycle v =
     let trains, stations, player, tr_msgs = Train_update._update_all_trains v main_player in
 
     (* TODO: ai_routines *)
+    let player =
+      if v.cycle mod C.Cycles.periodic_maintenance = 0 then
+        if ((v.cycle / C.Cycles.periodic_maintenance) mod 2) = 0 then
+          Player.pay_station_maintenance v.stations player
+        else
+          Player.pay_train_maintenance player
+      else
+        player
+    in
 
     let stations, player, dev_state, active_station, pr_msgs =
       if v.cycle mod C.Cycles.rare_bgnd_events = 0 then

@@ -505,5 +505,7 @@ let pay_station_maintenance station_map v =
   in
   pay `StationMaintenance expense v
 
-
+let pay_train_maintenance v =
+  let expense = Trainmap.total_maintenance v.trains in
+  pay `TrainMaintenance expense v
 

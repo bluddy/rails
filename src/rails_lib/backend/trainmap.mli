@@ -40,5 +40,7 @@ val total_engine_value: t -> int
 
 val total_car_value: t -> int
 
+val total_maintenance: t -> int
+
 val clear_priority_shipment: t -> t
 
