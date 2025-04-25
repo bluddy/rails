@@ -534,7 +534,7 @@ let _try_to_create_priority_shipment ?(force=false) v (player:Player.t) stations
      TODO: add condition: only after some track exists
      TODO: for all players? check if AI *)
   match player.priority with
-  | None when (v.cycle mod C.Cycles.priority_delivery = 0) || force ->
+  | None ->
       begin match Priority_shipment.try_to_create v.random stations v.cycle ~force with
       | Some (stations, priority) ->
           let player = Player.set_priority (Some priority) player in
@@ -606,8 +606,10 @@ let _check_priority_delivery v =
 
 let _try_to_develop_tiles v (player:Player.t) =
   let age = v.year - v.year_start in
-  if (v.cycle mod C.Cycles.priority_delivery = 0) &&
-    (age < 25 || v.cycle land 0x8 > 0) then
+  (* An odd test. Originally & with 0x8
+     Essentially runs the development half the time, for periods of 8 cycles
+   *)
+  if age < 25 || v.cycle mod 16 >= 8 then
       let two_devs = Region.is_us v.region && age < 40 in
       let dev_state =
       Tile_develop.develop_tiles ~two_devs ~difficulty:v.options.difficulty
@@ -661,9 +663,14 @@ let handle_cycle v =
 
     (* TODO: ai_routines *)
 
-    let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
-
-    let dev_state, active_station = _try_to_develop_tiles v player in
+    let stations, player, dev_state, active_station, pr_msgs =
+      if v.cycle mod C.Cycles.rare_bgnd_events = 0 then
+        let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
+        let dev_state, active_station = _try_to_develop_tiles v player in
+        stations, player, dev_state, active_station, pr_msgs
+      else
+        stations, player, v.dev_state, player.active_station, []
+    in
 
     let stations, sd_msgs = _update_station_supply_demand v stations in
 
