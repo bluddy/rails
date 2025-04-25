@@ -149,7 +149,7 @@ let incr_dist_traveled ~dist v =
   v.dist_traveled <- v.dist_traveled + dist;
   v
 
-let add_track ~length v =
+let add_track ~length ~base_length loc v =
   {v with track_length = v.track_length + length}
 
 let remove_track ~length v =
@@ -437,4 +437,25 @@ let add_freight_ton_miles ftm fiscal_period v =
 let set_active_station active_station v =
   Log.debug (fun f -> f "Active station set to %s" @@ Utils.show_loc active_station);
   {v with active_station=Some active_station}
+
+let _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map =
+  let base_length = if Dir.is_diagonal dir then 3 else 2 in
+  (* includes climate, for one piece of track *)
+  let track_expense = (base_length * 2 * ((Climate.to_enum climate) + 4)) / 4 in
+  let land_expense = Tilemap.track_land_expense map ~track_expense ~x ~y ~dir ~len in
+  base_length, track_expense, land_expense
+
+let update_and_pay_for_track ~x ~y ~len ~dir ~climate ~map v =
+  let base_length, track_expense, land_expense = _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map in
+  let track_length = v.track_length + len * base_length in
+  {v with track_length}
+  |> pay `Track (track_expense * len)
+  |> pay `RightOfWay land_expense
+
+let update_and_remove_track ~x ~y ~len ~dir ~climate ~map v =
+  (* This is the proper way to remove track. Effectively sells land *)
+  let base_length, _, land_revenue = _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map in
+  let track_length = v.track_length - len * base_length in
+  {v with track_length}
+  |> earn `Other land_revenue
 
