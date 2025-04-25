@@ -7,6 +7,8 @@ open! Utils.Infix
 let src = Logs.Src.create "player" ~doc:"Player"
 module Log = (val Logs.src_log src: Logs.LOG)
 
+module Vector = Utils.Vector
+
 type monetary = {
   cash: int; (* all x1000 *)
   bonds: int; (* money *)
@@ -49,7 +51,8 @@ type t = {
   mutable trains: Trainmap.t;
   stations: Utils.loc list; (* Stations ordered by creation order *)
   m: monetary;
-  track_length: int;
+  track_length: int; (* track length according to the game (not per tile) *)
+  track: Utils.loc Vector.vector; (* vector of track owned by player *)
   mutable dist_traveled: int;
   ton_miles: int * int; (* goods delievered per mile per period *)
   freight_ton_miles: int Freight.Map.t * int Freight.Map.t; (* per period *)
@@ -69,6 +72,7 @@ let default ~player difficulty =
     m = default_monetary ~player difficulty;
     trains;
     track_length = 0;
+    track=Vector.create ();
     dist_traveled=0;
     ton_miles=(0, 0);
     freight_ton_miles=(Freight.Map.empty, Freight.Map.empty);
@@ -148,12 +152,6 @@ let build_order v = match v.ai with
 let incr_dist_traveled ~dist v =
   v.dist_traveled <- v.dist_traveled + dist;
   v
-
-let add_track ~length ~base_length loc v =
-  {v with track_length = v.track_length + length}
-
-let remove_track ~length v =
-  {v with track_length = v.track_length - length}
 
 let add_station loc v =
   {v with stations=loc::v.stations}
@@ -445,12 +443,33 @@ let _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map =
   let land_expense = Tilemap.track_land_expense map ~track_expense ~x ~y ~dir ~len in
   base_length, track_expense, land_expense
 
+let _add_track x y ~len ~dir v =
+  Iter.fold (fun ((x, y) as loc) _ ->
+    Vector.push v.track loc;
+    Dir.adjust dir x y)
+  (x, y)
+  Iter.(0 -- (len - 1))
+  |> ignore
+
 let update_and_pay_for_track ~x ~y ~len ~dir ~climate ~map v =
   let base_length, track_expense, land_expense = _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map in
   let track_length = v.track_length + len * base_length in
+  let () = _add_track x y ~len ~dir v in
   {v with track_length}
   |> pay `Track (track_expense * len)
   |> pay `RightOfWay land_expense
+
+let _remove_track x y ~len ~dir v =
+  (* Inefficient, but how often do we delete track? *)
+  Iter.fold (fun ((x, y) as loc) _ ->
+    begin match Vector.find_idx (fun loc2 -> Utils.equal_loc loc loc2) v.track with
+    | Some idx -> Vector.remove_unordered v.track idx
+    | _ -> ()
+    end;
+    Dir.adjust dir x y)
+  (x, y)
+  Iter.(0 -- (len - 1))
+  |> ignore
 
 let update_and_remove_track ~x ~y ~len ~dir ~climate ~map v =
   (* This is the proper way to remove track. Effectively sells land *)
@@ -458,4 +477,8 @@ let update_and_remove_track ~x ~y ~len ~dir ~climate ~map v =
   let track_length = v.track_length - len * base_length in
   {v with track_length}
   |> earn `Other land_revenue
+
+let track_pieces v = Vector.length v.track
+
+let get_track_loc i v = Vector.get v.track i
 

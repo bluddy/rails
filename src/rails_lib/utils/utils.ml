@@ -212,6 +212,16 @@ module Vector = struct
       set v i x'
     )
 
+  let find_idx f (v:'a vector) =
+    let exception Found of int in
+    try
+      for i=0 to (length v) - 1 do
+         let x = get v i in
+         if f x then raise (Found i)
+      done;
+      None
+    with Found i -> Some i
+
   let rw_of_yojson _ = `RW
   let yojson_of_rw _ = `Null
   
