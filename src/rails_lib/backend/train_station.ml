@@ -9,7 +9,6 @@ module C = Constants
 let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
   (* dump unused goods at the station at this stage *)
   (* return time for changing cars *)
-  (* TODO: clear priority route cars *)
   match stop.consist_change with
   | None -> (* No adjustment *)
       0, 0, cars
