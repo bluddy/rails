@@ -113,7 +113,7 @@ type state =
 
 type periodic = {
   mutable dist_traveled: int;
-  mutable ton_miles: int;
+  ton_miles: int;
   revenue: int;
 } [@@deriving yojson, show]
 
@@ -149,6 +149,7 @@ type 'mut t = {
   priority_stop: stop option;
   had_maintenance: bool; (* this period *)
   maintenance_cost: int; (* per fin period *)
+  economic_activity: bool; (* Whether we picked up or dropped off goods *)
   periodic: periodic * periodic; (* data saved for periodic tracking *)
 } [@@deriving yojson, show]
 
@@ -242,6 +243,7 @@ let make ((x,y) as station) engine cars other_station ~dir ~player =
     hold_at_next_station=false;
     priority_stop=None;
     maintenance_cost=0;
+    economic_activity=false;
     periodic=(make_periodic (), make_periodic ());
     player;
   }
@@ -390,17 +392,13 @@ let get_revenue v period =
   let period = get_period v period in
   period.revenue
 
-let update_period v period f = match period, v.periodic with
-  | `First,  (p, x) -> {v with periodic=(f p, x)}
-  | `Second, (x, p) -> {v with periodic=(x, f p)}
+let update_periodic period periodic f = match period, periodic with
+  | `First,  (p, x) -> (f p, x)
+  | `Second, (x, p) -> (x, f p)
 
 let add_dist_traveled (v: rw t) add period =
   let period = get_period v period in
   period.dist_traveled <- period.dist_traveled + add
-
-let add_ton_miles (v: rw t) add period =
-  let period = get_period v period in
-  period.ton_miles <- period.ton_miles + add
 
 let is_full (v: 'a t) = List.for_all Car.is_full v.cars
 

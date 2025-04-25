@@ -457,3 +457,11 @@ let other_period = function
   | `First -> `Second
   | `Second -> `First
 
+let read_pair pair = function
+  | `First -> fst pair
+  | `Second -> snd pair
+
+let update_pair pair idx f = match idx with
+  | `First -> (f @@ fst pair, snd pair)
+  | `Second -> (fst pair, f @@ snd pair)
+

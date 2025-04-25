@@ -65,12 +65,11 @@ module Train_update = struct
           Station.set_priority_shipment station true
         else station
       in
-      (* TODO: deal with dist_shipped_cargo *)
-      let () =
+      let ton_miles =
         let dist = Utils.classic_dist loc train.last_station in
         let num_cars = List.length train.cars in
-        let total_dist = dist * num_cars in
-        Train.add_ton_miles train total_dist v.fiscal_period
+        dist * num_cars
+        (* Train.add_ton_miles train total_dist v.fiscal_period *)
       in
       let cars = train.cars in
 
@@ -186,11 +185,17 @@ module Train_update = struct
       in
 
       let wait_time = time_for_sold_goods + time_for_car_change + time_for_pickup in
+      let economic_activity = time_for_sold_goods > 0 || time_for_pickup > 0 || train.economic_activity in
 
       (* This function always naively switches to loading at station. Other conditions will be handled elsewhere *)
       let state = Train.LoadingAtStation {wait_time} in
 
-      let revenue = (IS.RevenueMap.total money_from_goods) + other_income - car_change_expense in
+      let goods_revenue = IS.RevenueMap.total money_from_goods in
+      let revenue = goods_revenue + other_income - car_change_expense in
+
+      let periodic = Train.update_periodic v.fiscal_period train.periodic
+        (fun p -> {p with ton_miles=p.ton_miles + ton_miles; revenue=p.revenue + goods_revenue;})
+      in
 
       let income_stmt =
         IS.default
@@ -236,7 +241,9 @@ module Train_update = struct
         had_maintenance;
         state;
         freight;
-        holds_priority_shipment
+        holds_priority_shipment;
+        economic_activity;
+        periodic;
       }
       in
       train, station, data, ui_msgs
