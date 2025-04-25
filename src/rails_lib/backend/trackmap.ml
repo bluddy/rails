@@ -109,10 +109,15 @@ let check_build_station v ~x ~y ~player station_type =
 let build_station v ~x ~y station_type =
   match get v ~x ~y with
   | Some ({kind=Track _; _} as t) ->
+      (* Do we build new track *)
+      let build_new_track_dir =
+        if Dir.Set.cardinal t.dirs <= 1 then
+          Some(Dir.Set.pop t.dirs |> fst |> Dir.opposite) else None
+      in
       let track = Track.straighten t in
       let station = {track with kind=Station(station_type)} in
       let v = set v ~x ~y ~t:station in
-      v
+      v, build_new_track_dir
   | _ -> assert false
 
   (* Check that a stretch of track is clear: tunnel or bridge

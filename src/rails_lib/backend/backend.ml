@@ -113,7 +113,7 @@ let check_build_station v ~x ~y ~player station_type =
 
 let _build_station v ~x ~y station_type ~player =
   let before = Scan.scan v.track ~x ~y ~player in
-  let track = Trackmap.build_station v.track ~x ~y station_type in
+  let track, build_new_track_dir = Trackmap.build_station v.track ~x ~y station_type in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_station v.graph ~x ~y before after in
   let blocks = Block_map.handle_build_station graph v.blocks track v.players.(player).trains (x,y) after in
@@ -163,6 +163,10 @@ let _build_station v ~x ~y station_type ~player =
   let loc = (x, y) in
   let stations = Station_map.add loc station v.stations in
   update_player v player @@ Player.add_station loc;
+  Option.iter (fun dir ->
+    update_player v player @@
+      Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.climate ~map:v.map
+  ) build_new_track_dir;
   (* Initialize supply and demand *)
   let simple_economy =
     not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
