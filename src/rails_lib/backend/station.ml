@@ -37,6 +37,12 @@ let price_of = function
   | `Station -> 100
   | `Terminal -> 200
 
+let maintenance_of_kind = function
+  | `SignalTower -> 1
+  | `Depot -> 2
+  | `Station -> 3
+  | `Terminal -> 4
+
 let is_big_station (x:kind) = match x with
   | `SignalTower -> false
   | _ -> true
@@ -334,6 +340,10 @@ let check_rate_war_lose_supplies v ~difficulty =
 let value_of station = match station.info with
   | None -> price_of `SignalTower
   | Some info -> price_of info.kind
+
+let maintenance_of station = match station.info with
+  | None -> maintenance_of_kind `SignalTower
+  | Some info -> maintenance_of_kind info.kind
 
   (* Call periodically per station -- impure for performance *)
   (* TODO: better to memoize demand/supply calculation and recompute when things change *)

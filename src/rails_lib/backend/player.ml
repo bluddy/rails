@@ -2,6 +2,7 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 module C = Constants
+module List = Utils.List
 open! Utils.Infix
 
 let src = Logs.Src.create "player" ~doc:"Player"
@@ -495,6 +496,14 @@ let track_maintenance_random_spot trackmap random v =
     pay `TrackMaintenance expense v
   ) else v
 
-  
+let pay_station_maintenance station_map v =
+  let expense =
+    List.sum (fun loc ->
+      let station = Station_map.get_exn loc station_map in
+      Station.maintenance_of station
+    ) v.stations
+  in
+  pay `StationMaintenance expense v
+
 
 

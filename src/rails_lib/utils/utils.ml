@@ -311,6 +311,8 @@ module List = struct
           loop (i-1) (y::acc) ys
     in
     loop i [] l0
+
+  let sum f v = List.fold_left (fun acc x -> acc + f x) 0 v
 end
 
 let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
