@@ -83,14 +83,6 @@ let default ~player difficulty =
     active_station=None;
   }
 
-let read_by_period pair = function
-  | `First -> fst pair
-  | `Second -> snd pair
-
-let update_by_period pair ~f = function
-  | `First -> (f @@ fst pair, snd pair)
-  | `Second -> (fst pair, f @@ snd pair)
-
 let get_cash v = v.m.cash
 
 let bonds v = v.m.bonds
@@ -143,6 +135,7 @@ let get_name v station_map cities = match v.name with
     | x::y::_ -> Printf.sprintf "%s & %s RR" y x
     | _ -> "RR"
 
+  (* "Game" reported track lenght, not track pieces *)
 let track_length v = v.track_length
 
 let build_order v = match v.ai with
@@ -427,8 +420,8 @@ let update players idx f =
   ()
 
 let add_freight_ton_miles ftm fiscal_period v =
-  let freight_ton_miles = update_by_period v.freight_ton_miles fiscal_period
-    ~f:(fun cur_ftm -> Freight.Map.merge_add cur_ftm ftm)
+  let freight_ton_miles = Utils.update_pair v.freight_ton_miles fiscal_period
+    (fun cur_ftm -> Freight.Map.merge_add cur_ftm ftm)
   in
   {v with freight_ton_miles}
 
