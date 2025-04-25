@@ -99,17 +99,29 @@ let send_ui_msg v msg =
   (* Mutation. Line up ui msg for when we can send it *)
   v.ui_msgs <- msg::v.ui_msgs
 
-let _player_pay_for_track v ~x ~y ~len ~dir ~player =
+let _calc_base_length_track_land_expense v ~x ~y ~len ~dir =
   let base_length = if Dir.is_diagonal dir then 3 else 2 in
   (* includes climate, for one piece of track *)
   let track_expense = (base_length * 2 * ((Climate.to_enum v.climate) + 4)) / 4 in
   let land_expense =
     Tilemap.track_land_expense v.map ~track_expense ~x ~y ~dir ~len
   in
+  base_length, track_expense, land_expense
+
+let _player_update_and_pay_for_track v ~x ~y ~len ~dir ~player =
+  let base_length, track_expense, land_expense = _calc_base_length_track_land_expense v ~x ~y ~len ~dir in
   let open Player in
   update_player v player @@ add_track ~length:(len * base_length);
   update_player v player @@ pay `Track (track_expense * len);
   update_player v player @@ pay `RightOfWay land_expense;
+  ()
+
+let _player_update_and_remove_track v ~x ~y ~len ~dir ~player =
+  (* This is the proper way to remove track. Effectively sells land *)
+  let base_length, _, land_revenue = _calc_base_length_track_land_expense v ~x ~y ~len ~dir in
+  let open Player in
+  update_player v player @@ remove_track ~length:(len * base_length);
+  update_player v player @@ earn `Other land_revenue;
   ()
 
 let get_cash v ~player = Player.get_cash v.players.(player)
@@ -176,6 +188,7 @@ let _build_station v ~x ~y station_type ~player =
   let stations = Station_map.add loc station v.stations in
   update_player v player @@ Player.add_station loc;
   if build_new_track then (
+    (* TODO: not sure this is right. Look up in build_station *)
     update_player v player @@ Player.add_track ~length:1
   );
   (* Initialize supply and demand *)
@@ -219,7 +232,7 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-  _player_pay_for_track v ~x ~y ~dir ~player ~len:2;
+  _player_update_and_pay_for_track v ~x ~y ~dir ~player ~len:2;
   update_player v player @@ Player.pay `BridgeTunnel (Bridge.price_of kind);
   [%upf v.graph <- graph];
   [%upf v.track <- track];
@@ -264,7 +277,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track v.graph ~x ~y before after in
   let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-  _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
+  _player_update_and_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   [%upf v.blocks <- blocks];
@@ -285,7 +298,7 @@ let _build_ferry v ~x ~y ~dir ~player =
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-  _player_pay_for_track v ~x ~y ~dir ~player ~len:1;
+  _player_update_and_pay_for_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   [%upf v.blocks <- blocks];
@@ -304,7 +317,8 @@ let _remove_station v ~x ~y ~dir ~player =
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
   let stations = Station_map.delete loc v.stations in
   update_player v player (Player.remove_station loc);
-  update_player v player (Player.add_track ~length:(-1));
+  (* TODO: Not sure this is right. Check this in build_station *)
+  update_player v player (Player.remove_track ~length:1);
   [%upf v.stations <- stations];
   [%upf v.blocks <- blocks];
   [%upf v.track <- track];
@@ -321,7 +335,7 @@ let _remove_track v ~x ~y ~dir ~player =
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
   let blocks = Block_map.handle_remove_track graph v.track v.players.(player).trains v.blocks before after in
-  update_player v player (Player.remove_track ~length:1);
+  _player_update_and_remove_track v ~x ~y ~dir ~player ~len:1;
   [%upf v.blocks <- blocks];
   [%upf v.track <- track];
   [%upf v.graph <- graph];
