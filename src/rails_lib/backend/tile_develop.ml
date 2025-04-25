@@ -3,6 +3,9 @@
 open Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
+let src = Logs.Src.create "tile_develop" ~doc:"Tile_develop"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 module C = Constants
 module Map = Utils.Map
 
@@ -184,13 +187,15 @@ let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
           | tile ->
               let res, v = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
               match res with
-              | Some (x, y, tile, go_again) when go_again ->
+              | Some (x, y, tile, true) ->
+                  Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
                   Tilemap.set_tile tilemap x y tile;
                   let x, y = Dir.random_adjust x y random in
                   wander_loop x y ~num_devs:(num_devs + 1) ~total_devs:(total_devs + 1) v
               | Some (x, y, tile, _) ->
+                  Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
                   Tilemap.set_tile tilemap x y tile;
-                  loop ~num_devs ~total_devs None v
+                  loop ~num_devs:(num_devs + 1) ~total_devs:(total_devs + 1) None v
               | None ->
                   loop ~num_devs ~total_devs None v
       in
