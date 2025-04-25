@@ -434,3 +434,7 @@ let add_freight_ton_miles ftm fiscal_period v =
   in
   {v with freight_ton_miles}
 
+let set_active_station active_station v =
+  {v with active_station=Some active_station}
+
+

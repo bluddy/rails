@@ -457,13 +457,18 @@ module Train_update = struct
         let train = _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir in
         train, stations, None, [], []
 
-let _update_player_with_data (player:Player.t) data fiscal_period =
-    match data with
-    | Some (income_stmt, freight_ton_miles) ->
-        Player.add_income_stmt income_stmt player
-        |> Player.add_freight_ton_miles freight_ton_miles fiscal_period
-        
-    | _ -> player
+let _update_player_with_data (player:Player.t) data active_stations fiscal_period random =
+    let player = match data with
+      | Some (income_stmt, freight_ton_miles) ->
+          Player.add_income_stmt income_stmt player
+          |> Player.add_freight_ton_miles freight_ton_miles fiscal_period
+      | _ -> player
+    in
+    if List.is_empty active_stations then player
+    else
+      (* Pick just one as our active station to giver a fair chance to all *)
+      let active_station = Random.pick_list active_stations random in
+      Player.set_active_station active_station player
 
 let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
   (* This is the regular update function for trains. Important stuff happens midtile
@@ -491,7 +496,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
         let update_val = update_val / region_div
           |> min Train.update_array_length
         in
-        let train, stations, data, ui_msgs =
+        let train, stations, data, active_stations, ui_msgs =
           if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
             let is_mid_tile =
               (train.x mod C.tile_w) = C.tile_w / 2 &&
@@ -505,13 +510,13 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
                 _handle_train_mid_tile ~idx ~cycle v train stations loc
             | false, true ->
                 travel_state.traveling_past_station <- false;
-                Train.advance train, stations, None, []
+                Train.advance train, stations, None, [], []
             | _ ->
-                Train.advance train, stations, None, []
+                Train.advance train, stations, None, [], []
           end else
-            train, stations, None, []
+            train, stations, None, [], []
         in
-        let player = _update_player_with_data player data v.fiscal_period in
+        let player = _update_player_with_data player data active_stations v.fiscal_period v.random in
         train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
     in
@@ -519,8 +524,8 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
 
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
-    let train, stations, data, ui_msgs = _handle_train_mid_tile ~idx ~cycle v train stations loc in
-    let player = _update_player_with_data player data v.fiscal_period in
+    let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle v train stations loc in
+    let player = _update_player_with_data player data active_stations v.fiscal_period v.random in
     train, stations, player, ui_msgs
   end
 
