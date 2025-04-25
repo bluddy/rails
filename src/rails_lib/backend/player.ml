@@ -435,6 +435,7 @@ let add_freight_ton_miles ftm fiscal_period v =
   {v with freight_ton_miles}
 
 let set_active_station active_station v =
+  Log.debug (fun f -> f "Active station set to %s" @@ Utils.show_loc active_station);
   {v with active_station=Some active_station}
 
 

@@ -79,6 +79,10 @@ let _develop_pixel ~difficulty = function
   | City_pixel when not @@ B_options.easy difficulty -> Slum_pixel
   | x -> x
 
+let _should_count = function
+  | `Count -> true
+  | _ -> false
+
 let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
   let pixel = Tilemap.pixel_of_tile tile in
   let develop_resource () =
@@ -95,12 +99,12 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
         if Tilemap.equal_pixel clear_pixel pixel2 then
           let new_tile = Tilemap.tile_of_pixel ~region ~x ~y ~pixel tilemap in
           if Tile.equal new_tile tile then
-            Some (x2, y2, new_tile, false), v
+            Some (x2, y2, new_tile, `DontGoAgain, `DontCount), v
           else None, v
         else None, v
     else (* destroy resource *)
       let clear_tile = Tilemap.tile_of_pixel ~region ~x ~y ~pixel:clear_pixel tilemap in
-      Some (x, y, clear_tile, false), v
+      Some (x, y, clear_tile, `DontGoAgain, `DontCount), v
   in
   let dev_val = PixelMap.get_or pixel v.develop ~default:0 in
 
@@ -126,8 +130,8 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
       if roll > resist_dev then
         let dev_val = PixelMap.get_or pixel2 develop ~default:0 in
         let tile2 = Tilemap.tile_of_pixel ~region ~x ~y ~pixel:pixel2 tilemap in
-        let go_again = dev_val < 4 in (* Not sure why *)
-        Some(x, y, tile2, go_again), v
+        let go_again = if dev_val < 4 then `GoAgain else `DontGoAgain in (* Not sure why *)
+        Some(x, y, tile2, go_again, `Count), v
       else None, v
   in
   if dev_val < 0 then None, v
@@ -147,9 +151,9 @@ let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
   let age_factor = if Region.is_west_us region then age_factor / 2 else age_factor in
   let age_factor = age_factor * 2 + 1 in
 
-  let rec loop ~num_devs ~total_devs active_station v =
+  let rec loop num_devs active_station v =
     if two_devs && num_devs >= 2 || (not two_devs) && num_devs >= 1 then
-      {v with total_devs = total_devs}
+      {v with total_devs = v.total_devs + num_devs}
     else
       let random_add_x_y x y =
         let random_offset () = (Random.int age_factor random) - age_factor in
@@ -169,7 +173,7 @@ let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
       in
       let x, y = match active_station with
         | Some (x, y) -> random_add_x_y x y
-        | None when total_devs land 0xE > 0 ->
+        | None when v.total_devs land 0xE > 0 ->
           let (x, y) as city = Cities.random random cities in
           if Loc_map.mem city cities_to_ai then
             random_add_x_y x y
@@ -177,32 +181,34 @@ let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
             random_tile ()
         | None -> random_tile ()
       in
-      let rec wander_loop x y ~num_devs ~total_devs v =
+      let rec wander_loop x y num_devs v =
         if Tilemap.out_of_bounds x y tilemap then
-          loop ~num_devs ~total_devs None v
+          loop num_devs None v
         else
           match Tilemap.get_tile tilemap x y with
           | Tile.Ocean _
-          | River _ -> loop ~num_devs ~total_devs None v
+          | River _ -> loop num_devs None v
           | tile ->
               let res, v = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
               match res with
-              | Some (x, y, tile, true) ->
+              | Some (x, y, tile, `GoAgain, count) ->
                   Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
                   Tilemap.set_tile tilemap x y tile;
                   let x, y = Dir.random_adjust x y random in
-                  wander_loop x y ~num_devs:(num_devs + 1) ~total_devs:(total_devs + 1) v
-              | Some (x, y, tile, _) ->
+                  let num_devs = if _should_count count then num_devs + 1 else num_devs in
+                  wander_loop x y num_devs v
+              | Some (x, y, tile, _, count) ->
                   Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
                   Tilemap.set_tile tilemap x y tile;
-                  loop ~num_devs:(num_devs + 1) ~total_devs:(total_devs + 1) None v
+                  let num_devs = if _should_count count then num_devs + 1 else num_devs in
+                  loop (num_devs + 1) None v
               | None ->
-                  loop ~num_devs ~total_devs None v
+                  loop num_devs None v
       in
-      wander_loop x y ~num_devs ~total_devs v
+      wander_loop x y num_devs v
 
   in
-  loop ~num_devs:0 ~total_devs:v.total_devs active_station v
+  loop 0 active_station v
 
 
 
