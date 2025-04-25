@@ -71,3 +71,5 @@ let chance_destroy_resource = 9 (* 1 in 9 *)
 
 let reference_year_map_dev = 1770
 
+let young_station_age = 20
+

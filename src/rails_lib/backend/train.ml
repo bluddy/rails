@@ -105,10 +105,10 @@ type state =
                    mutable traveling_past_station: bool;
                    block: Block_map_d.Id.t; 
                 }
-  | LoadingAtStation of {mutable wait_time: int} (* Normal loading time *)
+  | LoadingAtStation of {mutable wait_time: int} (* We always go through this state *)
   | WaitingForFullLoad (* In a station with Wait *)
-  | HoldingAtStation (* Held and waiting for unhold by player *)
-  | StoppedAtSignal of Dir.t (* Waiting at a hold signal *)
+  | HoldingAtStation (* Held and waiting for unhold by player. Before entering station *)
+  | StoppedAtSignal of Dir.t (* Waiting at a hold signal. After exiting station *)
   [@@deriving yojson, show]
 
 type periodic = {

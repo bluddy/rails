@@ -166,6 +166,8 @@ let update_with_info v f = match v.info with
 
 let get_age v year = year - v.year
 
+let young v year = get_age v year <= C.young_station_age
+
 let color_of_signal = function
   | _, OverrideProceed -> Ega.yellow
   | _, OverrideHold -> Ega.bred

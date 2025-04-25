@@ -290,7 +290,8 @@ module Train_update = struct
     in
     let stations = if station' =!= station then Station_map.add loc station stations else stations
     in
-    {train with last_station; priority_stop; stop}, stations, data, ui_msgs
+    let train = [%up {train with last_station; priority_stop; stop}] in
+    train, stations, data, ui_msgs
 
   let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) ((x, y) as loc) =
     let compute_dir_to_dest graph =
