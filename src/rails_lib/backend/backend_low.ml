@@ -681,7 +681,7 @@ let handle_cycle v =
 
     let trains, stations, player, tr_msgs = Train_update._update_all_trains v main_player in
 
-    (* TODO: ai_routines *)
+    (* TODO: ai_routines, events, climate update *)
     let player =
       if v.cycle mod C.Cycles.periodic_maintenance = 0 then
         if ((v.cycle / C.Cycles.periodic_maintenance) mod 2) = 0 then
