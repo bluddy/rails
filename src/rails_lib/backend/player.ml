@@ -12,7 +12,7 @@ module Vector = Utils.Vector
 
 type monetary = {
   cash: int; (* all x1000 *)
-  bonds: int; (* money *)
+  bonds: int;
   stock: Stocks.t;
   stockholders_equity : int; (* not sure how this changes *)
   owned_industry: int;
@@ -41,12 +41,6 @@ let default_monetary ~player difficulty =
     num_bankruptcies = 0;
 }
 
-type ai_info = {
-  opponent: Opponent.t;
-  build_order: (Utils.loc * Utils.loc) option;  (* order given to subservient company *)
-  yearly_income: int; (* rough estimation of 8 * yearly income *)
-} [@@deriving yojson]
-
 type t = {
   name: string option; (* custom name for railroad *)
   mutable trains: Trainmap.t;
@@ -58,7 +52,6 @@ type t = {
   ton_miles: int * int; (* goods delievered per mile per period *)
   freight_ton_miles: int Freight.Map.t * int Freight.Map.t; (* per period *)
   goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
-  ai: ai_info option;  (* Used by AIs only *)
   broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
    (* A current active station, which causes high development *)
@@ -78,7 +71,6 @@ let default ~player difficulty =
     ton_miles=(0, 0);
     freight_ton_miles=(Freight.Map.empty, Freight.Map.empty);
     goods_delivered=Goods.Set.empty;
-    ai=None;
     broker_timer=None;
     priority=None;
     active_station=None;
@@ -347,19 +339,6 @@ let total_owned_stock_value (players:t array) ~player_idx =
   0
   players
 
-    (* Update valuation only for AI players *)
-let update_ai_valuation players player_idx =
-  let player = players.(player_idx) in
-  let loans = player.m.bonds / 10 in
-  let cash = player.m.cash / 10 in
-  let income = match player.ai with
-    | Some ai_info -> ai_info.yearly_income
-    | _ -> 0
-  in
-  let stock_value = total_owned_stock_value players ~player_idx in
-  let net_worth = cash - loans + income * 2 + stock_value in
-  players.(player_idx) <- {player with m={player.m with net_worth}};
-  ()
 
 let declare_bankruptcy players player_idx ~difficulty =
   let player = get_player players player_idx in
