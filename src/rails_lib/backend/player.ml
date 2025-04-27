@@ -24,7 +24,7 @@ type monetary = {
   num_bankruptcies: int;
 } [@@deriving yojson]
 
-let default_monetary ~player difficulty =
+let default_monetary =
   {
     cash = 1000;
     bonds = 500;
@@ -56,15 +56,14 @@ type t = {
   mutable active_station: Utils.loc option;
 } [@@deriving yojson]
 
-let default ~player difficulty =
-  let trains = Trainmap.empty () in
+let default =
   {
     name=None;
     stations = [];
-    m = default_monetary ~player difficulty;
-    trains;
+    m = default_monetary;
+    trains = Trainmap.empty ();
     track_length = 0;
-    track=Vector.create ();
+    track = Vector.create ();
     dist_traveled=0;
     ton_miles=(0, 0);
     freight_ton_miles=(Freight.Map.empty, Freight.Map.empty);
@@ -78,7 +77,9 @@ let get_cash v = v.m.cash
 
 let bonds v = v.m.bonds
 
-let modify_cash v f = {v with m={v.m with cash = f v.m.cash}}
+let modify_cash f v = {v with m={v.m with cash = f v.m.cash}}
+
+let add_cash x v = modify_cash (fun cash -> cash + x) v
 
 let in_receivership v = v.m.in_receivership
 
@@ -191,7 +192,6 @@ let get_player players player_idx : t = players.(player_idx)
 let set players player_idx player = players.(player_idx) <- player
 
 let declare_bankruptcy players player_idx stocks ~difficulty =
-  let player = get_player players player_idx in
   let share_price = Stock_market.share_price player_idx stocks in
   Array.mapi (fun idx v -> 
     if idx = player_idx then

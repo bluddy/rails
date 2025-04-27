@@ -33,7 +33,7 @@ let default region resources ~random ~seed =
   let track = Trackmap.empty width height in
   let options = B_options.default in
   let stations = Station_map.empty in
-  let players = Array.init 1 (fun i -> Player.default ~player:i options.difficulty) in
+  let players = Array.init 1 (fun _ -> Player.default) in
   let year = match region with
     | EastUS -> 1830
     | WestUS -> 1866
@@ -42,8 +42,7 @@ let default region resources ~random ~seed =
   in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
-  let stocks = Stock_market.default
-    |> Stock_market.add_human_player ~player:0 difficulty
+  let stocks = Stock_market.default |> Stock_market.add_human_player ~player:0 options.difficulty
   in
   {
     time=0;
@@ -528,33 +527,31 @@ let _repay_bond v player_idx =
     v
   ) else v
 
-let can_buy_stock v ~player_idx ~target_idx =
-  Player.can_buy_stock v.players ~player_idx ~target_idx ~difficulty:v.options.difficulty
+let can_buy_stock v ~player_idx ~target =
+  let player = get_player v player_idx in
+  Stock_market.can_buy_stock ~player:player_idx ~target ~cash:(Player.get_cash player) ~difficulty:v.options.difficulty v.stocks
 
 let _buy_stock v player_idx ~stock = 
   let difficulty = v.options.difficulty in
-  begin match Player.buy_stock v.players ~player_idx ~target_idx:stock ~difficulty with
-  | `Bought cost ->
-      send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock; cost})
-  | `Takeover ->
-      send_ui_msg v @@ StockBroker(Takeover {player=player_idx; stock})
-  | _ -> ()
-  end;
-  v
+  let player = get_player v player_idx in
+  let cash = Player.get_cash player in
+  match Stock_market.buy_stock ~player:player_idx ~target:stock ~cash ~difficulty v.stocks with
+  | `Bought cost, stocks ->
+      update_player v player_idx (Player.add_cash @@ -cost);
+      send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock; cost});
+      {v with stocks}
+  | `Takeover money_map, stocks ->
+      Utils.IntMap.iter (fun player change -> update_player v player @@ Player.add_cash change) money_map;
+      send_ui_msg v @@ StockBroker(Takeover {player=player_idx; stock});
+      {v with stocks}
+  | _, stocks ->
+      [%up {v with stocks}]
 
 let _sell_stock v player_idx ~stock =
-  let player = get_player v player_idx in
-  let target_player = get_player v stock in
-  begin match Player.sell_stock player target_player player_idx ~target_idx:stock with
-  | Some(player2, cost, other_share_price) ->
-      update_player v player_idx (fun _ -> player2);
-      (* Update other company if necessary *)
-      Option.iter (fun share_price -> update_player v stock (fun player ->
-        Player.set_share_price player share_price)) other_share_price;
-      send_ui_msg v @@ StockBroker(StockSold {player=player_idx; stock; cost})
-  | _ -> ()
-  end;
-  v
+  let cost, stocks = Stock_market.sell_stock player_idx ~target:stock v.stocks in
+  update_player v player_idx @@ Player.add_cash cost;
+  send_ui_msg v @@ StockBroker(StockSold {player=player_idx; stock; cost});
+  [%up {v with stocks}]
 
 let check_bankruptcy v player_idx =
   let player = get_player v player_idx in

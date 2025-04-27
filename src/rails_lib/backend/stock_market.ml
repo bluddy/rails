@@ -136,7 +136,7 @@ let controls_company player ~target v =
 
 let controls_own_company player v = controls_company player ~target:player v
 
-let check_can_buy_stock ~player ~target ~cash ~difficulty v =
+let can_buy_stock ~player ~target ~cash ~difficulty v =
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
   (* Test if we have an 'anti-trust' problem *)
   let max_owned_companies = Utils.clip (B_options.difficulty_to_enum difficulty) ~min:1 ~max:3 in
@@ -175,7 +175,7 @@ let _sell_buy_stock player ~target ~buy v =
   cost, v
 
 let buy_stock ~player ~target ~difficulty ~cash v =
-  match check_can_buy_stock ~player ~target ~cash ~difficulty v with
+  match can_buy_stock ~player ~target ~cash ~difficulty v with
   | `Ok when player = target ->
     (* TODO: add_stock: code adds 10 for ai *)
     let cost, v = _sell_buy_stock player ~target ~buy:true v in
