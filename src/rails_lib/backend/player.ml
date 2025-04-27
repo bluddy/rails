@@ -190,28 +190,29 @@ let check_bankruptcy (v:t) =
 let get_player players player_idx : t = players.(player_idx)
 let set players player_idx player = players.(player_idx) <- player
 
-let declare_bankruptcy players player_idx ~difficulty =
+let declare_bankruptcy players player_idx stocks ~difficulty =
   let player = get_player players player_idx in
-  let share_price = Stocks.share_price player.m.stock in
+  let share_price = Stock_market.share_price player_idx stocks in
   Array.mapi (fun idx v -> 
     if idx = player_idx then
       let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
       let yearly_interest_payment =
         v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
       in
-      let stock = Stocks.set_total_shares v.m.stock 100
-        |> Stocks.reset_owned_shares
-      in
+      let stocks = stocks
+        |> Stock_market.set_total_shares ~player:player_idx 100
+        |> Stock_market.reset_owned_shares player_idx in
       let in_receivership = true in
       let num_bankruptcies = v.m.num_bankruptcies + 1 in
       {v with m = {
-        v.m with bonds; yearly_interest_payment; stock; in_receivership; num_bankruptcies}
-      }
+        v.m with bonds; yearly_interest_payment; in_receivership; num_bankruptcies}
+      }, stocks
     else
-      let sold_stock = (share_price * Stocks.owned_shares v.m.stock player_idx) / 2 in
+      (* Other players sell all stock in company and get partially compensated *)
+      let sold_stock = (share_price * Stock_market.owned_shares ~owner:idx ~owned:player_idx stocks) / 2 in
       let cash = v.m.cash + sold_stock in
-      let stock = Stocks.set_shares v.m.stock ~target_idx:player_idx ~num_shares:0 in
-      {v with m = {v.m with cash; stock}}
+      let stocks = Stock_market.set_owned_shares ~owner:idx ~owned:player_idx 0 stocks in
+      {v with m = {v.m with cash}}, stocks
   ) players
 
 let has_broker_timer player = Option.is_some player.broker_timer

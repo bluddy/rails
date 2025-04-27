@@ -15,7 +15,7 @@ type t = {
   ownership: (int IntMap.t) IntMap.t;
   prices: int IntMap.t; (* share prices *)
   totals: int IntMap.t; (* total number of shares *)
-}
+} [@@deriving yojson]
 
 let default = {
   ownership=IntMap.empty;
@@ -32,9 +32,9 @@ let add_human_player ~player difficulty v =
   {v with totals; prices}
 
 let owned_shares ~owner ~owned v =
-  match IntMap.get ~owner v.ownership with
-  | Some owneds -> 
-    Intmap.get_or ~default:0 owned owneds
+  match IntMap.get owner v.ownership with
+  | Some owned_map -> 
+    IntMap.get_or ~default:0 owned owned_map
   | None -> 0
 
 let self_owned_shares player v = owned_shares ~owner:player ~owned:player v
@@ -67,7 +67,7 @@ let treasury_share_value player v =
   let total_shares = total_shares player v in
   let treasury_shares = treasury_shares player v in
   let share_price = share_price player v in
-  compute_owned_share_value ~total_shares ~owned_shares:treasury_shares ~share_price
+  owned_share_value ~total_shares ~owned_shares:treasury_shares ~share_price
 
 let add_shares ~owner ~owned ~num v =
   let ownership =
@@ -80,7 +80,7 @@ let add_shares ~owner ~owned ~num v =
 
 let remove_shares ~owner ~owned ~num v = add_shares ~owner ~owned ~num:(-num) v
 
-let set_shares ~owner ~owned ~num v =
+let set_owned_shares ~owner ~owned num v =
   let ownership =
     IntMap.update owner (function
       | Some owneds -> IntMap.add owned num owneds |> Option.some
@@ -146,10 +146,10 @@ let check_can_buy_stock ~player ~target ~cash ~difficulty v =
     `Anti_trust_violation max_owned_companies
     (* TODO: double check the below buying out *)
   else if player <> target && public_shares = 0 &&
-       not (has_self_controlling_stake target v)
+       not (controls_own_company target v)
     then
       let share_price = share_price target v * 2 in
-      let shares_to_buy = shares_owned_by_all_companies target ~exclude:player in
+      let shares_to_buy = shares_owned_by_all_companies target ~exclude:player v in
       `Offer_takeover(share_price, shares_to_buy)
   else (* buy public shares *)
     (* TODO: what about buying the rest of *your* own shares? *)
@@ -158,7 +158,7 @@ let check_can_buy_stock ~player ~target ~cash ~difficulty v =
     if cash >= cost && public_shares > 0 then `Ok
     else `Error
 
-let _sell_buy_stock player ~target ~add_stock ~buy v =
+let _sell_buy_stock player ~target ~buy v =
   (* add_stock: for AI. Currently unused. TODO *)
   let share_price = share_price target v in
   let public_shares = public_shares target v in
@@ -172,59 +172,55 @@ let _sell_buy_stock player ~target ~add_stock ~buy v =
   let v = add_to_share_price ~player:target price_change v in
   let num = if buy then C.num_buy_shares else -C.num_buy_shares in
   let v = add_shares ~owner:player ~owned:target ~num v in
-  let cost = if buy then -cost else cost in
   cost, v
 
 let buy_stock ~player ~target ~difficulty ~cash v =
   match check_can_buy_stock ~player ~target ~cash ~difficulty v with
   | `Ok when player = target ->
     (* TODO: add_stock: code adds 10 for ai *)
-    let cost, v = _sell_buy_stock player ~target_idx ~add_stock:0 ~buy:true v in
-    `Bought cost, cash - cost, v
+    let cost, v = _sell_buy_stock player ~target ~buy:true v in
+    `Bought cost, v
 
   | `Offer_takeover(share_price, num_shares) when cash >= share_price * num_shares -> (* buy all *)
     (* Buy all stock for one player. Remove from all others *)
+    let money =
+      IntMap.mapi (fun owner owned_map ->
+        if owner = player then
+          (* Cost for buyer *)
+          -num_shares * share_price
+        else
+          let owned_shares = IntMap.get_or ~default:0 target owned_map in
+          owned_shares * share_price)
+        v.ownership
+    in
     let ownership =
       IntMap.mapi (fun owner owned_map ->
         IntMap.mapi (fun owned num ->
           if owned = target then
             if owner = owned then num + num_shares
-            else 0
+            else 0 
           else num)
         owned_map)
         v.ownership
     in
-    {v with ownership}
+    `Takeover money, {v with ownership}
 
-    Array.mapi_inplace (fun i player ->
-      let stock, cash = if i = player_idx then
-        Stocks.add_shares player.m.stock ~target_idx ~num_shares,
-        (get_cash player) - (share_price * num_shares)
-      else
-        let num_shares = Stocks.owned_shares player.m.stock target_idx in
-        Stocks.set_shares player.m.stock ~target_idx ~num_shares:0,
-        player.m.cash + num_shares * share_price
-      in
-      {player with m={player.m with stock; cash}}
-    ) players;
-    `Takeover
-
-  | _ -> `None
+  | _ -> `None, v
 
 let can_sell_stock player ~target v = owned_shares ~owner:player ~owned:target v > 0
 
 let sell_stock player ~target v =
-  if can_sell_stock v target_idx then
-    sell_buy_stock player ~target ~buy:false v
+  if can_sell_stock player ~target v then
+    _sell_buy_stock player ~target ~buy:false v
   else
     0, v
 
 let other_companies_controlled_by player v =
   match IntMap.get player v.ownership with
-  | None -> 0
+  | None -> []
   | Some owned_map ->
     let companies = IntMap.keys owned_map in
-    Iter.filter (fun company -> company <> player && controls_company player company) companies
+    Iter.filter (fun company -> company <> player && controls_company player ~target:company v) companies
     |> Iter.to_list
 
 let controls_any_other_company player v =
