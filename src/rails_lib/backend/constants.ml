@@ -78,3 +78,8 @@ let maintain_max_roll = 1250
 
 let track_maintenance_single = 1
 let track_maintenance_double = 2
+
+module Stock = struct
+  let starting_num = 100
+end
+

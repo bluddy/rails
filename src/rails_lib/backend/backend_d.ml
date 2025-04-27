@@ -62,6 +62,7 @@ type t = {
   mutable blocks: Block_map.t; (* map blocks btw stations *)
   mutable dev_state: Tile_develop.t;
   options: B_options.t;
+  stocks: Stock_market.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;
   seed: int;

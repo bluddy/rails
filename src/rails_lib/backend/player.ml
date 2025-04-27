@@ -13,7 +13,6 @@ module Vector = Utils.Vector
 type monetary = {
   cash: int; (* all x1000 *)
   bonds: int;
-  stock: Stocks.t;
   stockholders_equity : int; (* not sure how this changes *)
   owned_industry: int;
   yearly_interest_payment: int;
@@ -30,7 +29,6 @@ let default_monetary ~player difficulty =
     cash = 1000;
     bonds = 500;
     stockholders_equity = -500;
-    stock = Stocks.default_for_player ~player difficulty;
     owned_industry = 0;
     yearly_interest_payment = 20;
     net_worth = 500;

@@ -90,6 +90,8 @@ module Map = struct
         else acc)
         v2
         v3
+
+      let sum f v = fold (fun k v acc -> f k v + acc) v 0
   end
 end
 

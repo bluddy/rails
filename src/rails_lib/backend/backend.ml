@@ -42,6 +42,9 @@ let default region resources ~random ~seed =
   in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
+  let stocks = Stock_market.default
+    |> Stock_market.add_human_player ~player:0 difficulty
+  in
   {
     time=0;
     cycle=0;
@@ -67,6 +70,7 @@ let default region resources ~random ~seed =
     west_us_route_done=false;
     pause=false;
     dev_state=Tile_develop.default;
+    stocks;
   }
 
 let get_speed v = v.options.speed
