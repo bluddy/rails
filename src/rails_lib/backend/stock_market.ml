@@ -3,6 +3,9 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 
+let src = Logs.Src.create "stock_market" ~doc:"Stock_market"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 module IntMap = Utils.IntMap
 
 type t = {
@@ -94,6 +97,10 @@ let set_total_shares ~player total_shares v =
   let totals = IntMap.add player total_shares v.totals in
   {v with totals}
 
+let add_to_share_price ~player change v =
+  let prices = IntMap.incr player change v.prices in
+  {v with prices}
+
 let set_share_price ~player ~price v =
   let prices = IntMap.add player price v.prices in
   {v with prices}
@@ -141,46 +148,42 @@ let check_can_buy_stock ~player ~target ~cash ~difficulty v =
     (* TODO: double check the below buying out *)
   else if player <> target &&
        public_shares = 0 &&
-       Stocks.owned_shares v.m.stock target_idx < tgt_player.m.stock.total_shares / 2
+       not (has_self_controlling_stake target v)
     then
       let share_price = share_price target v * 2 in
       let shares_to_buy = shares_owned_by_all_companies target ~exclude:player in
       `Offer_takeover(share_price, shares_to_buy)
-  else
-    (* TODO: what about buying the rest of your own shares? *)
+  else (* buy public shares *)
+    (* TODO: what about buying the rest of *your* own shares? *)
     let share_price = share_price target v in
-    let can_buy = Stocks.owned_shares v.m.stock target_idx < get_total_shares tgt_player in
     let cost = share_price * C.num_buy_shares in
-    if cash >= cost && can_buy then `Ok
-  else `Error
+    if cash >= cost && public_shares > 0 then `Ok
+    else `Error
 
-let _sell_buy_calculations v target_player ~target_idx ~add_stock ~buy =
-  let share_price = target_player.m.stock.share_price in
-  let non_treasury_shares = Stocks.non_treasury_shares target_player.m.stock + add_stock in
+let _sell_buy_stock player ~target ~add_stock ~buy v =
+  let share_price = share_price target v in
+  let public_shares = public_shares target v in
   let cost = share_price * C.num_buy_shares in
   let price_change =
     let delta = if buy then 1 else 0 in
-    (cost / non_treasury_shares) + delta
+    (cost / public_shares) + delta
   in
   let price_change = if buy then price_change else -price_change in
-  Log.debug (fun f -> f "price change[%d] non-t-shares[%d] share_price=[%d]" price_change non_treasury_shares share_price);
-  let share_price2 = share_price + price_change in
-  let num_shares = if buy then C.num_buy_shares else -C.num_buy_shares in
-  let stock = Stocks.add_shares v.m.stock ~target_idx ~num_shares in
+  Log.debug (fun f -> f "price change[%d] public_shares[%d] share_price=[%d]" price_change public_shares share_price);
+  let v = add_to_share_price ~player price_change v in
+  let num = if buy then C.num_buy_shares else -C.num_buy_shares in
+  let v = add_shares ~owner:player ~ownee:target ~num v in
   let cost = if buy then -cost else cost in
-  let cash = v.m.cash + cost in
-  cash, stock, cost, share_price2
+  cost, share_price, v
 
-let buy_stock players ~player_idx ~target_idx ~difficulty =
-  let v = get_player players player_idx in
-  let tgt_player = get_player players target_idx in
-  match can_buy_stock players ~target_idx ~player_idx ~difficulty with
-  | `Ok when player_idx = target_idx ->
-    (* add_stock: code adds 10 for ai *)
-    let cash, stock, cost, share_price = _sell_buy_calculations v tgt_player ~target_idx ~add_stock:0 ~buy:true in
+let buy_stock ~player ~target ~difficulty ~cash v =
+  match check_can_buy_stock ~player ~target ~cash ~difficulty v with
+  | `Ok when player = target ->
+    (* TODO: add_stock: code adds 10 for ai *)
+    let cash, stock, cost, share_price = _sell_buy_stock player ~target_idx ~add_stock:0 ~buy:true v in
     let v = {v with m={v.m with cash; stock={stock with share_price}}} in
     players.(player_idx) <- v;
-    `Bought(cost)
+    `Bought cost
 
   | `Ok -> (* different companies *)
     let cash, stock, cost, share_price = _sell_buy_calculations v tgt_player ~target_idx ~add_stock:C.num_buy_shares ~buy:true in
