@@ -193,27 +193,30 @@ let set players player_idx player = players.(player_idx) <- player
 
 let declare_bankruptcy players player_idx stocks ~difficulty =
   let share_price = Stock_market.share_price player_idx stocks in
-  Array.mapi (fun idx v -> 
-    if idx = player_idx then
-      let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
-      let yearly_interest_payment =
-        v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
-      in
-      let stocks = stocks
-        |> Stock_market.set_total_shares ~player:player_idx 100
-        |> Stock_market.reset_owned_shares player_idx in
-      let in_receivership = true in
-      let num_bankruptcies = v.m.num_bankruptcies + 1 in
-      {v with m = {
-        v.m with bonds; yearly_interest_payment; in_receivership; num_bankruptcies}
-      }, stocks
-    else
-      (* Other players sell all stock in company and get partially compensated *)
-      let sold_stock = (share_price * Stock_market.owned_shares ~owner:idx ~owned:player_idx stocks) / 2 in
-      let cash = v.m.cash + sold_stock in
-      let stocks = Stock_market.set_owned_shares ~owner:idx ~owned:player_idx 0 stocks in
-      {v with m = {v.m with cash}}, stocks
-  ) players
+  let (_, stocks), players =
+    Array.fold_map (fun (idx, stocks) v -> 
+      if idx = player_idx then
+        let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
+        let yearly_interest_payment =
+          v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
+        in
+        let stocks = stocks
+          |> Stock_market.set_total_shares ~player:player_idx 100
+          |> Stock_market.reset_owned_shares player_idx in
+        let in_receivership = true in
+        let num_bankruptcies = v.m.num_bankruptcies + 1 in
+        let v = {v with m = {v.m with bonds; yearly_interest_payment; in_receivership; num_bankruptcies}} in
+        (idx+1, stocks), v
+      else
+        (* Other players sell all stock in company and get partially compensated *)
+        let sold_stock = (share_price * Stock_market.owned_shares ~owner:idx ~owned:player_idx stocks) / 2 in
+        let cash = v.m.cash + sold_stock in
+        let stocks = Stock_market.set_owned_shares ~owner:idx ~owned:player_idx 0 stocks in
+        (idx+1, stocks), {v with m = {v.m with cash}})
+    (0, stocks)
+    players
+  in
+  players, stocks
 
 let has_broker_timer player = Option.is_some player.broker_timer
 

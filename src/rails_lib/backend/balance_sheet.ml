@@ -18,23 +18,9 @@ let calc_real_estate region track_map tile_map ~player =
 
 let create (s:State.t) ~player_idx =
   let player = Backend.get_player s.backend player_idx in
-
   let operating_funds = Player.get_cash player in
-  let treasury_stock = Stocks.compute_treasury_stock player.m.stock in
-  let other_rr_stock =
-    Iter.fold (fun acc ai_player_idx ->
-      if ai_player_idx = C.player then acc
-      else
-        let ai_player = Backend.get_player s.backend ai_player_idx in
-        let ai_stock = ai_player.m.stock in
-        let owned_shares = Stocks.owned_shares ai_stock ai_player_idx in
-        let owned_value = Stocks.compute_owned_share_value
-           ~total_shares:ai_stock.total_shares ~owned_shares ~share_price:ai_stock.share_price
-        in
-        acc + owned_value)
-    0
-    Iter.(0 -- (Backend.num_players s.backend - 1))
-  in
+  let treasury_stock = Stock_market.treasury_share_value player_idx s.backend.stocks in
+  let other_rr_stock = Stock_market.total_owned_stock_value player_idx ~exclude_self:true s.backend.stocks in
   let facilities = 
     List.fold_left (fun acc loc ->
       let station = Station_map.get_exn loc s.backend.stations in

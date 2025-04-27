@@ -66,12 +66,12 @@ let make_menu b players stations cities region fonts =
       ]
     in
     let entries =
-      let owns_company i (s:State.t) =
-         Player.owns_company_by_idx s.backend.players ~player_idx:C.player ~company_idx:i
+      let controls_company i (s:State.t) =
+         Stock_market.controls_company C.player ~target:i s.backend.stocks 
       in
       List.map (fun company_idx ->
         make_entry
-          ~test_enabled:(owns_company company_idx)
+          ~test_enabled:(controls_company company_idx)
           (Backend.get_company_name b company_idx) @@
           `MsgBox(company_menu company_idx))
       companies
@@ -80,7 +80,7 @@ let make_menu b players stations cities region fonts =
   in
   let titles =
     let owns_some_company (s:State.t) =
-      Player.owns_some_company s.backend.players ~player_idx:C.player
+      Stock_market.controls_any_other_company C.player s.backend.stocks
     in
     let open Menu.Title in
     [
@@ -112,10 +112,13 @@ let render win (s:State.t) v =
   let y = 24 in
   let line = 8 in
 
-  let render_player player y =
+  let render_player player_idx player y =
     let name = Player.get_name player s.backend.stations s.backend.cities in
     (* TODO: render owned stock by player in ai *)
-    let is_ai, color = match player.ai with
+    let is_ai, color = 
+      (* TODO: fix rendering for AI *)
+      (*
+    match player.ai with
     | Some ai ->
       let color = Ega.green in
       write ~color ~x:x_left ~y @@ sp "%s's" @@ Opponent.show ai.opponent;
@@ -123,7 +126,7 @@ let render win (s:State.t) v =
       write ~color ~x:x_left ~y name;
       true, color
 
-    | None ->
+    | None -> *)
       write ~x:x_left ~y name;
       let y = y + line in
       write ~x:x_left ~y @@ sp "Track: %d miles" @@ player.track_length;
@@ -137,14 +140,14 @@ let render win (s:State.t) v =
     write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 player.m.net_worth;
     let per_s = if is_ai then "/" else " per " in
     write ~color ~x:x_right ~y @@ sp "Stock at %s.00%sshare"
-      (Utils.show_cash ~ks:false ~region player.m.stock.share_price) per_s;
+      (Utils.show_cash ~ks:false ~region @@ Stock_market.share_price player_idx s.backend.stocks) per_s;
     let y = y + line in
-    let treasury, non = Stocks.treasury_shares player.m.stock, Stocks.non_treasury_shares player.m.stock in
+    let treasury, non = Stock_market.treasury_shares player_idx s.backend.stocks, Stock_market.non_treasury_shares player_idx s.backend.stocks in
     write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" non treasury;
     y + line
   in
   let y =
-    Array.fold (fun y player -> render_player player y)
+    Array.foldi (fun y idx player -> render_player idx player y)
     y
     s.backend.players
   in
@@ -202,7 +205,8 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
     | Menu.On(`BuyStock stock) ->
       let difficulty = b.options.difficulty in
-      begin match Player.can_buy_stock b.players ~player_idx:C.player ~target_idx:stock ~difficulty with
+      let player = Player.get_player b.players C.player in
+      begin match Stock_market.can_buy_stock ~player:C.player ~target:stock ~cash:(Player.get_cash player) ~difficulty s.backend.stocks with
       | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
       | `Error -> false, v, B.Action.NoAction
       | `Anti_trust_violation max_num ->
@@ -243,11 +247,15 @@ let handle_event (s:State.t) v (event:Event.t) =
         false, {v with modal=Some(Confirm_menu(menu))}, nobaction
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
         let player = Backend.get_player b company_idx in
-        let build_order_s = Option.map_or ~default:"" (fun ((x1, y1), (x2, y2)) ->
+        (* TODO : AI *)
+        let build_order_s = ""
+          (*
+          Option.map_or ~default:"" (fun ((x1, y1), (x2, y2)) ->
           sp "\nSurveying route from\n%s to %s."
             (Cities.find_exn b.cities x1 y1 |> fst)
             (Cities.find_exn b.cities x2 y2 |> fst)) @@
           Player.build_order player
+          *)
         in
         let text = sp "%s\nRevenue YTD: %s\nYearly Interest: %s%s"
           (Player.get_name player b.stations b.cities)

@@ -228,9 +228,14 @@ let controls_any_other_company player v =
 
   (* Compute value of all stocks a player has in all companies, including itself *)
   (* TODO: double check we're accounting for deprecetiating stock prices *)
-let total_owned_stock_value player v =
+let total_owned_stock_value player ?(exclude_self=false) v =
   match IntMap.get player v.ownership with
   | None -> 0
   | Some owned -> 
-    IntMap.sum (fun owned num -> (share_price owned v) * num / 10) owned
+    IntMap.sum (fun owned num ->
+      if exclude_self && owned = player then 0 else
+      let share_price = share_price owned v in
+      let total_shares = total_shares owned v in
+      owned_share_value ~total_shares ~owned_shares:num ~share_price)
+      owned
 

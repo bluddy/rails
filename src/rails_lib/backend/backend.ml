@@ -558,16 +558,12 @@ let check_bankruptcy v player_idx =
   Player.check_bankruptcy player
 
 let _declare_bankruptcy v player_idx =
-  let players =
-    let player = Player.get_player v.players player_idx in
-    if Player.check_bankruptcy player then (
-      let players = Player.declare_bankruptcy v.players player_idx ~difficulty:v.options.difficulty in
-      send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
-      players
-    ) else 
-      v.players
-  in
-  [%up {v with players}]
+  let player = Player.get_player v.players player_idx in
+  if Player.check_bankruptcy player then (
+    let players, stocks = Player.declare_bankruptcy v.players player_idx ~difficulty:v.options.difficulty v.stocks in
+    send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
+    [%up {v with players; stocks}]
+  ) else v
 
 let get_date v = _month_of_time v.time, v.year
 
@@ -585,32 +581,31 @@ let get_company_name v player_idx =
   Player.get_name player v.stations v.cities
 
 let companies_controlled_by v player_idx =
-  Player.companies_controlled_by v.players ~player_idx
+  Stock_market.other_companies_controlled_by player_idx v.stocks
 
 let _operate_rr_take_money v ~player_idx ~company ~amount =
-  update_player v player_idx (fun player ->
-    Player.modify_cash player (fun cash -> cash + amount));
-  update_player v company (fun player ->
-    Player.modify_cash player (fun cash -> cash - amount));
-  Player.update_ai_valuation v.players player_idx;
+  update_player v player_idx @@ Player.add_cash amount;
+  update_player v company @@ Player.add_cash @@ -amount;
+  (* TODO: fix this *)
+  (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player=player_idx; company; amount});
   v
   
 let _operate_rr_give_money v ~player_idx ~company ~amount =
   let player = get_player v player_idx in
   if not @@ Player.in_receivership player then (
-    update_player v player_idx (fun player ->
-      Player.modify_cash player (fun cash -> cash - amount));
-    update_player v company (fun player ->
-      Player.modify_cash player (fun cash -> cash + amount))
+    update_player v player_idx @@ Player.add_cash @@ - amount;
+    update_player v company @@ Player.add_cash amount
   );
-  Player.update_ai_valuation v.players player_idx;
+  (* TODO: fix this *)
+  (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player=player_idx; amount});
   v
 
 let _operate_rr_repay_bond v ~player_idx ~company_idx =
   update_player v company_idx Player.repay_bond;
-  Player.update_ai_valuation v.players player_idx;
+  (* TODO: fix this *)
+  (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(AiBondRepaid {player=player_idx; company=company_idx});
   v
 
@@ -632,8 +627,7 @@ let _start_broker_timer v player_idx =
 
 let _handle_cheat v player = function
   | Cheat_d.Add500Cash ->
-    (update_player v player @@ fun player ->
-      Player.modify_cash player @@ fun money -> money + 500);
+    update_player v player @@ Player.add_cash 500;
     v
   | CreatePriorityShipment ->
     let player = Player.get_player v.players player in
