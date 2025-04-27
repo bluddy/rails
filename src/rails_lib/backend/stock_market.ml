@@ -10,7 +10,7 @@ module IntMap = Utils.IntMap
 
 type t = {
   (* Who owns how many shares in what company. By default, all shares are public
-     First level: owner. Second level: ownee
+     First level: owner. Second level: owned
      *)
   ownership: (int IntMap.t) IntMap.t;
   prices: int IntMap.t; (* share prices *)
@@ -31,15 +31,15 @@ let add_human_player ~player difficulty v =
   let prices = IntMap.add player (B_options.difficulty_to_enum difficulty + 7) v.prices in
   {v with totals; prices}
 
-let owned_shares ~owner ~ownee v =
+let owned_shares ~owner ~owned v =
   match IntMap.get ~owner v.ownership with
-  | Some ownees -> 
-    Intmap.get_or ~default:0 ownee ownees
+  | Some owneds -> 
+    Intmap.get_or ~default:0 owned owneds
   | None -> 0
 
-let self_owned_shares player v = owned_shares ~owner:player ~ownee:player v
+let self_owned_shares player v = owned_shares ~owner:player ~owned:player v
 
-let treasury_shares player v = owned_shares ~owner:player ~ownee:player v
+let treasury_shares player v = owned_shares ~owner:player ~owned:player v
 
 let total_shares player v = IntMap.get_or ~default:0 player v.totals
 
@@ -69,22 +69,22 @@ let treasury_share_value player v =
   let share_price = share_price player v in
   compute_owned_share_value ~total_shares ~owned_shares:treasury_shares ~share_price
 
-let add_shares ~owner ~ownee ~num v =
+let add_shares ~owner ~owned ~num v =
   let ownership =
     IntMap.update owner (function
-      | Some ownees -> IntMap.incr ownee num ownees |> Option.some
-      | None -> IntMap.empty |> IntMap.incr ownee num |> Option.some)
+      | Some owneds -> IntMap.incr owned num owneds |> Option.some
+      | None -> IntMap.empty |> IntMap.incr owned num |> Option.some)
     v.ownership
   in
   {v with ownership}
 
-let remove_shares ~owner ~ownee ~num v = add_shares ~owner ~ownee ~num:(-num) v
+let remove_shares ~owner ~owned ~num v = add_shares ~owner ~owned ~num:(-num) v
 
-let set_shares ~owner ~ownee ~num v =
+let set_shares ~owner ~owned ~num v =
   let ownership =
     IntMap.update owner (function
-      | Some ownees -> IntMap.add ownee num ownees |> Option.some
-      | None -> IntMap.empty |> IntMap.add ownee num |> Option.some)
+      | Some owneds -> IntMap.add owned num owneds |> Option.some
+      | None -> IntMap.empty |> IntMap.add owned num |> Option.some)
     v.ownership
   in
   {v with ownership}
@@ -108,17 +108,17 @@ let set_share_price ~player ~price v =
 let num_other_companies_owner_has_shares_in owner v =
   match IntMap.get owner v.ownership with
   | None -> 0
-  | Some ownees ->
+  | Some owneds ->
     IntMap.sum (fun player shares ->
       if owner <> player && shares > 0 then 1 else 0)
-      ownees
+      owneds
 
 let shares_owned_by_all_companies player ?exclude v =
-  IntMap.sum (fun owner ownees ->
+  IntMap.sum (fun owner owneds ->
      match exclude with
      | Some exclude when owner = exclude -> 0
      | _ ->
-        IntMap.sum (fun ownee shares -> if ownee = player then shares else 0) ownees
+        IntMap.sum (fun owned shares -> if owned = player then shares else 0) owneds
   ) v.ownership
 
 let shares_owned_by_other_companies player v =
@@ -129,25 +129,23 @@ let public_shares player v =
   let owned_shares = shares_owned_by_all_companies player v in
   total_shares player v - owned_shares
 
-let has_controlling_stake player ~target v =
-  let owned_shares = owned_shares ~owner:player ~ownee:target v in
+let controls_company player ~target v =
+  let owned_shares = owned_shares ~owner:player ~owned:target v in
   let total_shares = total_shares target v in
-  (* TODO: is this geq or gt? *)
   owned_shares > total_shares / 2
 
-let has_self_controlling_stake player v = has_controlling_stake player ~target:player v
+let controls_own_company player v = controls_company player ~target:player v
 
 let check_can_buy_stock ~player ~target ~cash ~difficulty v =
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
   (* Test if we have an 'anti-trust' problem *)
   let max_owned_companies = Utils.clip (B_options.difficulty_to_enum difficulty) ~min:1 ~max:3 in
   let public_shares = public_shares target v in
-  let v2 = add_shares ~owner:player ~ownee:target ~num:C.num_buy_shares v in
+  let v2 = add_shares ~owner:player ~owned:target ~num:C.num_buy_shares v in
   if num_other_companies_owner_has_shares_in player v2 > max_owned_companies then
     `Anti_trust_violation max_owned_companies
     (* TODO: double check the below buying out *)
-  else if player <> target &&
-       public_shares = 0 &&
+  else if player <> target && public_shares = 0 &&
        not (has_self_controlling_stake target v)
     then
       let share_price = share_price target v * 2 in
@@ -161,6 +159,7 @@ let check_can_buy_stock ~player ~target ~cash ~difficulty v =
     else `Error
 
 let _sell_buy_stock player ~target ~add_stock ~buy v =
+  (* add_stock: for AI. Currently unused. TODO *)
   let share_price = share_price target v in
   let public_shares = public_shares target v in
   let cost = share_price * C.num_buy_shares in
@@ -170,30 +169,33 @@ let _sell_buy_stock player ~target ~add_stock ~buy v =
   in
   let price_change = if buy then price_change else -price_change in
   Log.debug (fun f -> f "price change[%d] public_shares[%d] share_price=[%d]" price_change public_shares share_price);
-  let v = add_to_share_price ~player price_change v in
+  let v = add_to_share_price ~player:target price_change v in
   let num = if buy then C.num_buy_shares else -C.num_buy_shares in
-  let v = add_shares ~owner:player ~ownee:target ~num v in
+  let v = add_shares ~owner:player ~owned:target ~num v in
   let cost = if buy then -cost else cost in
-  cost, share_price, v
+  cost, v
 
 let buy_stock ~player ~target ~difficulty ~cash v =
   match check_can_buy_stock ~player ~target ~cash ~difficulty v with
   | `Ok when player = target ->
     (* TODO: add_stock: code adds 10 for ai *)
-    let cash, stock, cost, share_price = _sell_buy_stock player ~target_idx ~add_stock:0 ~buy:true v in
-    let v = {v with m={v.m with cash; stock={stock with share_price}}} in
-    players.(player_idx) <- v;
-    `Bought cost
+    let cost, v = _sell_buy_stock player ~target_idx ~add_stock:0 ~buy:true v in
+    `Bought cost, cash - cost, v
 
-  | `Ok -> (* different companies *)
-    let cash, stock, cost, share_price = _sell_buy_calculations v tgt_player ~target_idx ~add_stock:C.num_buy_shares ~buy:true in
-    let v = {v with m={v.m with cash; stock}} in
-    players.(player_idx) <- v;
-    players.(target_idx) <- set_share_price players.(target_idx) share_price;
-    `Bought(cost)
-
-  | `Offer_takeover(share_price, num_shares) when get_cash v >= share_price * num_shares -> (* buy all *)
+  | `Offer_takeover(share_price, num_shares) when cash >= share_price * num_shares -> (* buy all *)
     (* Buy all stock for one player. Remove from all others *)
+    let ownership =
+      IntMap.mapi (fun owner owned_map ->
+        IntMap.mapi (fun owned num ->
+          if owned = target then
+            if owner = owned then num + num_shares
+            else 0
+          else num)
+        owned_map)
+        v.ownership
+    in
+    {v with ownership}
+
     Array.mapi_inplace (fun i player ->
       let stock, cash = if i = player_idx then
         Stocks.add_shares player.m.stock ~target_idx ~num_shares,
@@ -209,49 +211,30 @@ let buy_stock ~player ~target ~difficulty ~cash v =
 
   | _ -> `None
 
-let can_sell_stock (v:t) target_idx =   
-  Stocks.owned_shares v.m.stock target_idx > 0
+let can_sell_stock player ~target v = owned_shares ~owner:player ~owned:target v > 0
 
-let sell_stock (v:t) target_player player_idx ~target_idx =
-  match can_sell_stock v target_idx with
-  | true when player_idx = target_idx ->
-    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:0 ~buy:false in
-    Some({v with m={v.m with cash; stock={stock with share_price}}}, cost, None)
+let sell_stock player ~target v =
+  if can_sell_stock v target_idx then
+    sell_buy_stock player ~target ~buy:false v
+  else
+    0, v
 
-  | true ->
-    let cash, stock, cost, share_price = _sell_buy_calculations v target_player ~target_idx ~add_stock:C.num_buy_shares ~buy:false in
-    Some({v with m={v.m with cash; stock}}, cost, Some share_price)
+let other_companies_controlled_by player v =
+  match IntMap.get player v.ownership with
+  | None -> 0
+  | Some owned_map ->
+    let companies = IntMap.keys owned_map in
+    Iter.filter (fun company -> company <> player && controls_company player company) companies
+    |> Iter.to_list
 
-  | false -> None
-
-let owns_company player ~company ~company_idx =
-  Stocks.owned_shares player.m.stock company_idx > Stocks.total_shares company.m.stock / 2
-
-let owns_company_by_idx (players:t array) ~player_idx ~company_idx =
-  let player = players.(player_idx) in
-  let company = players.(company_idx) in
-  owns_company player ~company ~company_idx
-
-let companies_controlled_by (players:t array) ~player_idx =
-  let player = players.(player_idx) in
-  Array.foldi (fun acc i company ->
-    if i <> player_idx && owns_company player ~company ~company_idx:i
-    then i::acc else acc)
-  []
-  players
-
-let owns_some_company (players: t array) ~player_idx =
-  let player = players.(player_idx) in
-  Array.foldi (fun acc i company ->
-    if i <> player_idx && owns_company player ~company ~company_idx:i
-    then acc || true else false)
-  false
-  players
+let controls_any_other_company player v =
+  not @@ List.is_empty @@ other_companies_controlled_by player v
 
   (* Compute value of all stocks a player has in all companies, including itself *)
-let total_owned_stock_value (players:t array) ~player_idx =
-  let player = players.(player_idx) in
-  Array.foldi (fun acc i company ->
-    acc + ((Stocks.owned_shares player.m.stock i) / 10) * Stocks.share_price company.m.stock)
-  0
-  players
+  (* TODO: double check we're accounting for deprecetiating stock prices *)
+let total_owned_stock_value player v =
+  match IntMap.get player v.ownership with
+  | None -> 0
+  | Some owned -> 
+    IntMap.sum (fun owned num -> (share_price owned v) * num / 10) owned
+

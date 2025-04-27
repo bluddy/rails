@@ -80,8 +80,6 @@ let bonds v = v.m.bonds
 
 let modify_cash v f = {v with m={v.m with cash = f v.m.cash}}
 
-let get_total_shares v = Stocks.total_shares v.m.stock
-
 let in_receivership v = v.m.in_receivership
 
 let pay expense money (v:t) =
@@ -128,10 +126,6 @@ let get_name v station_map cities = match v.name with
 
   (* "Game" reported track lenght, not track pieces *)
 let track_length v = v.track_length
-
-let build_order v = match v.ai with
-  | Some x -> x.build_order
-  | _ -> None
 
 let incr_dist_traveled ~dist v =
   v.dist_traveled <- v.dist_traveled + dist;
