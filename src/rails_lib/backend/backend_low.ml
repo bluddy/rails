@@ -635,7 +635,7 @@ let _try_to_develop_tiles v (player:Player.t) =
       Tile_develop.develop_tiles ~two_devs ~difficulty:v.options.difficulty
         ~region:v.region ~random:v.random ~tilemap:v.map ~year:v.year
         ~active_station:player.active_station ~cities:v.cities
-        ~cities_to_ai:v.cities_to_ai v.dev_state
+        ~cities_to_ai:v.ai.cities_to_ai v.dev_state
       in
       (* Clear active station *)
       dev_state, None

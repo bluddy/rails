@@ -56,7 +56,6 @@ let default region resources ~random ~seed =
     map;
     region;
     cities;
-    cities_to_ai=Loc_map.empty;
     track;
     blocks=Block_map.make ();
     graph;
@@ -70,6 +69,7 @@ let default region resources ~random ~seed =
     pause=false;
     dev_state=Tile_develop.default;
     stocks;
+    ai = Ai.default_t;
   }
 
 let get_speed v = v.options.speed

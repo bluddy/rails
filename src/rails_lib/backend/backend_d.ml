@@ -56,13 +56,13 @@ type t = {
   mutable track: Trackmap.t;
   mutable graph: Track_graph.t;
   cities: Cities.t;
-  cities_to_ai: int LocMap.t;
   engines: Engine.t list;
   mutable stations: Station_map.t;
   mutable blocks: Block_map.t; (* map blocks btw stations *)
   mutable dev_state: Tile_develop.t;
   options: B_options.t;
   stocks: Stock_market.t;
+  ai: Ai.t;
   mutable ui_msgs: ui_msg list;
   random: Utils.Random.State.t;
   seed: int;
