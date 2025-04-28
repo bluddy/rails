@@ -83,3 +83,5 @@ module Stock = struct
   let starting_num = 100
 end
 
+let ref_year_ai_route_value = 1710
+
