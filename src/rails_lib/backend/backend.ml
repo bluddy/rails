@@ -44,7 +44,7 @@ let default region resources ~random ~seed =
   let engines = Engine.of_region region |> Engine.randomize_year random in
   let stocks = Stock_market.default |> Stock_market.add_human_player ~player:0 options.difficulty in
   let params = {
-    year;
+    Params.year;
     year_start=year;
     fiscal_period=`First;
     climate=Normal;

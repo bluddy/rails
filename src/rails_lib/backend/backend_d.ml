@@ -39,19 +39,10 @@ type ui_msg =
   | IndustryBuilt of {player: int; tile: Tile.t}
   [@@deriving yojson]
 
-type params = {
-  year: int;
-  year_start: int;
-  fiscal_period: [`First | `Second];
-  climate: Climate.t;
-  west_us_route_done: bool;
-  region: Region.t;
-  options: B_options.t;
-} [@@deriving yojson]
 
   (* TODO: factor out time_based *)
 type t = {
-  params: params;
+  params: Params.t;
   mutable last_tick: int; (* last time we updated a cycle *)
   mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
   mutable time: int;  (* In-game time, resets at end of fin period *)
