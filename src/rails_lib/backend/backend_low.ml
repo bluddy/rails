@@ -258,24 +258,8 @@ module Train_update = struct
 
       (* TODO: young_station_reached if age <= 20 *)
       (* add income/2 to other_income type *)
-      (* add to dist_shipped_cargo *)
       (* check record delivery money-wise *)
-      (* check conversion and add to station *)
-      (* compute and track money *)
-      (* add to time at station *)
 
-      (* adjust: 
-        (* Update goods_shipped *)
-        (* Update freight_shipped *)
-        update goods_shipped_dist with station_dist * cars
-        add converted goods
-        money to income type, including hotel and restaurant
-        car goods level
-        station's cargo_money_array
-        train's money
-        train's fiscal period money
-        pickup from young station: affects pixel change algorithm
-        *)
       (* ui msgs: 
          first delivery of good (only >2 difficulty)
          first pickup of goods (only >2 difficulty)
