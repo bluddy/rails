@@ -83,8 +83,9 @@ let _should_count = function
   | `Count -> true
   | _ -> false
 
-let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
+let _develop_tile ~x ~y tile params ~random ~tilemap (v:t) =
   let pixel = Tilemap.pixel_of_tile tile in
+  let region = params.Params.region in
   let develop_resource () =
     let clear_pixel = match pixel with
       | Tilemap.CoalMine_pixel -> Tilemap.Hills_pixel
@@ -109,7 +110,7 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
   let dev_val = PixelMap.get_or pixel v.develop ~default:0 in
 
   let develop_industry () =
-    let pixel2 = _develop_pixel pixel ~difficulty in
+    let pixel2 = _develop_pixel pixel ~difficulty:params.options.difficulty in
     if Tilemap.equal_pixel pixel2 pixel then None, v
     else
       let develop =
@@ -142,13 +143,12 @@ let _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap (v:t) =
 
   (* NOTE: this function in the original has a bunch of dead code around
      the active station, which is always cleared out *)
-let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
-  ~cities ~cities_to_ai ~active_station (v:t) =
+let develop_tiles ~two_devs (params:Params.t) ~random ~tilemap ~cities ~cities_to_ai ~active_station (v:t) =
 
-  let age_factor = (year - C.reference_year_map_dev) / 16
+  let age_factor = (params.year - C.reference_year_map_dev) / 16
     |> Utils.clip ~min:3 ~max:9
   in
-  let age_factor = if Region.is_west_us region then age_factor / 2 else age_factor in
+  let age_factor = if Region.is_west_us params.region then age_factor / 2 else age_factor in
   let age_factor = age_factor * 2 + 1 in
 
   let rec loop num_devs active_station v =
@@ -164,7 +164,7 @@ let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
         let y = (Random.int (Tilemap.get_height tilemap - 2) random) + 1 in
         let x =
           (* Add a westward bias *)
-          if Region.is_east_us region && year < 1880 then
+          if Region.is_east_us params.region && params.year < 1880 then
             let dx = Random.int (x/2) random in
             x - dx
           else x
@@ -189,7 +189,7 @@ let develop_tiles ~two_devs ~difficulty ~region ~random ~tilemap ~year
           | Tile.Ocean _
           | River _ -> loop num_devs None v
           | tile ->
-              let res, v = _develop_tile ~x ~y tile ~difficulty ~region ~random ~tilemap v in
+              let res, v = _develop_tile ~x ~y tile params ~random ~tilemap v in
               match res with
               | Some (x, y, tile, `GoAgain, count) ->
                   Log.debug (fun f -> f "Economic development at (%d, %d)" x y);

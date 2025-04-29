@@ -616,8 +616,7 @@ let _try_to_develop_tiles v (player:Player.t) =
   if age < 25 || v.cycle mod 16 >= 8 then
       let two_devs = Region.is_us v.params.region && age < 40 in
       let dev_state =
-      Tile_develop.develop_tiles ~two_devs ~difficulty:v.params.options.difficulty
-        ~region:v.params.region ~random:v.random ~tilemap:v.map ~year:v.params.year
+      Tile_develop.develop_tiles ~two_devs v.params ~random:v.random ~tilemap:v.map 
         ~active_station:player.active_station ~cities:v.cities
         ~cities_to_ai:v.ai.cities_to_ai v.dev_state
       in
