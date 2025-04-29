@@ -85,3 +85,5 @@ end
 
 let ref_year_ai_route_value = 1710
 
+let ai_max_cash = 30000
+

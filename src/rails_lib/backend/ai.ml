@@ -5,6 +5,7 @@ open! Utils.Infix
 module C = Constants
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
+module IntMap = Utils.IntMap
 
 let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -25,10 +26,15 @@ type ai_player = {
   revenue_ytd: int;
 } [@@deriving yojson]
 
+type city_info = {
+  player: int;
+  rate_war: bool;
+} [@@deriving yojson]
+
   (* Global AI data *)
 type t = {
   routes: route Vector.vector;
-  cities_to_ai: int Loc_map.t;
+  cities_to_ai: city_info Loc_map.t;
   players: ai_player IntMap.t;
 } [@@deriving yojson]
 
@@ -51,31 +57,7 @@ let update_valuation player stocks v =
 
 let home_town v = fst v.cities
 
-  (* Simulate earning money on a route *)
-let route_earn_money route_num stocks ai_player climate difficulty player_net_worth v =
-  let city1, city2 = Vector.get v.routes route_num in
-  let value = route_value city1 city2 in
-  let total_shares = Stock_market.total_shares v.idx stocks in
-  let value =
-    let oppo = Opponent.Map.find v.opponent Opponent.Map.leaders in
-    let moneymaking = oppo.moneymaking in
-    value * (moneymaking + Climate.to_enum climate + 3)
-  in
-  (* Higher difficulty -> earns more *)
-  let div = if owned_by_player stocks v.idx then 10
-            else 10 - B_options.difficulty_to_enum difficulty in
-  let value = value / div in
-  let value =
-    (* NOTE: what about checking city1? *)
-    if Utils.equal_loc (home_town v) city2 &&
-        player_net_worth >= ai_player.net_worth
-    then value * 2 else value
-  in
-  let revenue_ytd = ai_player.revenue_ytd + value in
-  let cash = if ai_player.cash < 30000 then
-    ai_player.cash + value else ai_player.cash
-  in
-  {ai_player with revenue_ytd; cash}
+let has_rate_war city v = (Loc_map.get_exn city v.cities_to_ai).rate_war
 
 let route_value city1 city2 ~tilemap ~year ~region =
   let get_demand_supply (x, y) =
@@ -93,9 +75,30 @@ let route_value city1 city2 ~tilemap ~year ~region =
     ((3 * dx + dy) * value) / ((dx + dy) * 2)
   else value
 
-
-
-
-
-
+  (* Simulate earning money on a route *)
+let route_earn_money route_num stocks ai_player climate difficulty player_net_worth ~tilemap ~year ~region v =
+  let city1, city2 = Vector.get v.routes route_num in
+  let value = route_value city1 city2 ~tilemap ~year ~region in
+  (* NOTE: I think there's a bug in the original code here. It didn't check both
+     cities for a rate war but just one *)
+  let div = if has_rate_war city1 v || has_rate_war city2 v then 6 else 3 in
+  let value = value / div in
+  let value =
+    value * (ai_player.opponent.moneymaking + Climate.to_enum climate + 3)
+  in
+  (* Higher difficulty -> earns more *)
+  let div = if owned_by_player stocks ai_player.idx then 10
+            else 10 - B_options.difficulty_to_enum difficulty in
+  let value = value / div in
+  let value =
+    (* NOTE: what about checking city1? *)
+    if Utils.equal_loc (home_town ai_player) city2 &&
+        player_net_worth >= ai_player.net_worth
+    then value * 2 else value
+  in
+  let revenue_ytd = ai_player.revenue_ytd + value in
+  let cash = if ai_player.cash < C.ai_max_cash then
+    ai_player.cash + value else ai_player.cash
+  in
+  {ai_player with revenue_ytd; cash}
 

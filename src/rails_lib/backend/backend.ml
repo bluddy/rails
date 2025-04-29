@@ -69,7 +69,7 @@ let default region resources ~random ~seed =
     pause=false;
     dev_state=Tile_develop.default;
     stocks;
-    ai = Ai.default_t;
+    ai = Ai.default ();
   }
 
 let get_speed v = v.options.speed

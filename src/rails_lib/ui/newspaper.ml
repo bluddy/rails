@@ -22,7 +22,7 @@ let render win (s:State.t) v =
     show_kind v.kind;
   let tex = match v.opponent with
     | Some opponent ->
-      Hashtbl.find s.textures.opponents opponent
+      Hashtbl.find s.textures.opponents opponent.name
     | None ->
       Hashtbl.find s.textures.misc `Newspaper
   in

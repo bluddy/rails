@@ -166,6 +166,8 @@ module Hashtbl = struct
 
   let yojson_of_t conva convb t =
     yojson_of_hashtbl conva convb t
+
+  let sum f v = fold (fun k v acc -> acc + f k v) v 0
 end
 
 module Vector = struct

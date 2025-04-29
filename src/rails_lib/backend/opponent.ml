@@ -26,6 +26,7 @@ type name =
   [@@deriving yojson, ord]
 
 type t = {
+  name: name;
   valuation: int;
   loan_tolerance: int;
   moneymaking: int;
@@ -41,11 +42,11 @@ end)
 
 
 let map_of_leaders leaders =
-  let make valuation loan_tolerance moneymaking dist_div =
-    {valuation; loan_tolerance; moneymaking; dist_div}
+  let make name valuation loan_tolerance moneymaking dist_div =
+    {name; valuation; loan_tolerance; moneymaking; dist_div}
   in
   leaders
-  |> List.map (fun (a, b, c, d, e) -> a, make b c d e)
+  |> List.map (fun (a, b, c, d, e) -> a, make a b c d e)
   |> Map.of_list
 
 let us_leaders = [
