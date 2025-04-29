@@ -84,7 +84,7 @@ let route_earn_money route_num stocks ai_player climate difficulty player_net_wo
   let div = if has_rate_war city1 v || has_rate_war city2 v then 6 else 3 in
   let value = value / div in
   let value =
-    value * (ai_player.opponent.moneymaking + Climate.to_enum climate + 3)
+    value * (ai_player.opponent.rr_skill + Climate.to_enum climate + 3)
   in
   (* Higher difficulty -> earns more *)
   let div = if owned_by_player stocks ai_player.idx then 10

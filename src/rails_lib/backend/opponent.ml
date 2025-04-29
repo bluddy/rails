@@ -29,7 +29,7 @@ type t = {
   name: name;
   valuation: int;
   loan_tolerance: int;
-  moneymaking: int;
+  rr_skill: int;  (* Skill at operating railroads *)
   dist_div: int;
 } [@@deriving yojson]
 
@@ -42,8 +42,8 @@ end)
 
 
 let map_of_leaders leaders =
-  let make name valuation loan_tolerance moneymaking dist_div =
-    {name; valuation; loan_tolerance; moneymaking; dist_div}
+  let make name valuation loan_tolerance rr_skill dist_div =
+    {name; valuation; loan_tolerance; rr_skill; dist_div}
   in
   leaders
   |> List.map (fun (a, b, c, d, e) -> a, make a b c d e)
