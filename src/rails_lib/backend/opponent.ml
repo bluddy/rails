@@ -1,5 +1,5 @@
 
-type t =
+type name =
   | CorneliusVanderbilt
   | DanielDrew
   | JimFisk
@@ -23,6 +23,34 @@ type t =
   | HelmuthVonMoltke
   | BaronRothschild
   [@@deriving yojson]
+
+type us_leaders = [
+  CorneliusVanderbilt, 3, 3, 1, 1;
+  DanielDrew, 1, 3, 1, 2;
+  JimFisk, 0, 3, 0, 2;
+  JayGould, 0, 2, 0, 4;
+  ErastusCorning, 4, 1, 3, 0;
+  JPierpontMorgan, 2, 4, 2, 1;
+  JEdgarThompson, 2, 2, 4, 2;
+  JimHill, 4, 1, 2, 2;
+  JayCooke, 2, 4, 1, 0;
+  JohnForbes, 4, 2, 3, 1;
+]
+
+type eu_leaders = [
+  CzarNicholasII, 3, 2, 0, 1;
+  VILenin, 1, 2, 3, 4;
+  CharlesDeGaulle, 1, 2, 2, 3;
+  NapoleonIII, 3, 1, 0, 1;
+  OttoVonBismarck, 3, 1, 3, 3;
+  BenitoMussolini, 1, 1, 4, 3;
+  GeorgeStephenson, 4, 1, 3, 1;
+  RobertStephenson, 3, 2, 4, 0;
+  IsambardKBrunel, 4, 0, 4, 1;
+  GeorgeSHudson, 1, 4, 1, 4;
+  HelmuthVonMoltke, 3, 0, 4, 3;
+  BaronRothschild, 2, 4, 1, 3;
+]
 
 let show = function
   | CorneliusVanderbilt -> "Cornelius Vanderbilt"

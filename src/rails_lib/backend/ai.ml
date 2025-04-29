@@ -26,6 +26,7 @@ type player = {
 type t = {
   routes: route Vector.vector;
   cities_to_ai: int Loc_map.t;
+  players: player IntMap.t;
 } [@@deriving yojson]
 
 let default_t = {
@@ -50,8 +51,6 @@ let route_earn_money route_num stocks ai_player v =
   let value = route_value city1 city2 in
   let total_shares = Stock_market.total_shares v.idx stocks in
   if owned_by_player stocks v.idx then
-
-
 
   else
   ()
