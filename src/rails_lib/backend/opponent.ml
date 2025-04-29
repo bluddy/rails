@@ -27,10 +27,10 @@ type name =
 
 type t = {
   name: name;
-  valuation: int;
-  loan_tolerance: int;
-  rr_skill: int;  (* Skill at operating railroads *)
-  dist_div: int;
+  expansionist: int;
+  financial_skill: int;
+  management: int;  (* Skill at operating railroads *)
+  build_skill: int;
 } [@@deriving yojson]
 
 module Map = Utils.Map.Make(struct
@@ -42,8 +42,8 @@ end)
 
 
 let map_of_leaders leaders =
-  let make name valuation loan_tolerance rr_skill dist_div =
-    {name; valuation; loan_tolerance; rr_skill; dist_div}
+  let make name expansionist financial_skill management build_skill =
+    {name; expansionist; financial_skill; management; build_skill}
   in
   leaders
   |> List.map (fun (a, b, c, d, e) -> a, make a b c d e)
