@@ -1,3 +1,4 @@
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type name =
   | CorneliusVanderbilt
@@ -22,9 +23,32 @@ type name =
   | GeorgeSHudson
   | HelmuthVonMoltke
   | BaronRothschild
-  [@@deriving yojson]
+  [@@deriving yojson, ord]
 
-type us_leaders = [
+type t = {
+  valuation: int;
+  loan_tolerance: int;
+  moneymaking: int;
+  dist_div: int;
+} [@@deriving yojson]
+
+module Map = Utils.Map.Make(struct
+  type nonrec t = name
+  let compare = compare_name
+  let yojson_of_t = yojson_of_name
+  let t_of_yojson = name_of_yojson
+end)
+
+
+let map_of_leaders leaders =
+  let make valuation loan_tolerance moneymaking dist_div =
+    {valuation; loan_tolerance; moneymaking; dist_div}
+  in
+  leaders
+  |> List.map (fun (a, b, c, d, e) -> a, make b c d e)
+  |> Map.of_list
+
+let us_leaders = [
   CorneliusVanderbilt, 3, 3, 1, 1;
   DanielDrew, 1, 3, 1, 2;
   JimFisk, 0, 3, 0, 2;
@@ -35,9 +59,9 @@ type us_leaders = [
   JimHill, 4, 1, 2, 2;
   JayCooke, 2, 4, 1, 0;
   JohnForbes, 4, 2, 3, 1;
-]
+] |> map_of_leaders
 
-type eu_leaders = [
+let eu_leaders = [
   CzarNicholasII, 3, 2, 0, 1;
   VILenin, 1, 2, 3, 4;
   CharlesDeGaulle, 1, 2, 2, 3;
@@ -50,9 +74,11 @@ type eu_leaders = [
   GeorgeSHudson, 1, 4, 1, 4;
   HelmuthVonMoltke, 3, 0, 4, 3;
   BaronRothschild, 2, 4, 1, 3;
-]
+] |> map_of_leaders
 
-let show = function
+let leaders = Map.union (fun _ _ x -> Some x) us_leaders eu_leaders
+
+let show_name = function
   | CorneliusVanderbilt -> "Cornelius Vanderbilt"
   | DanielDrew -> "Daniel Drew"
   | JimFisk -> "Jim Fisk"

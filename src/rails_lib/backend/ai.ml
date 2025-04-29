@@ -12,7 +12,8 @@ module Log = (val Logs.src_log src: Logs.LOG)
 type route = (Utils.loc * Utils.loc)
              [@@deriving yojson]
 
-type player = {
+ (* An AI Player *)
+type ai_player = {
   idx: int;
   cash: int; (* all x1000 *)
   bonds: int;
@@ -20,18 +21,21 @@ type player = {
   build_order: (Utils.loc * Utils.loc) option;  (* order given to subservient company *)
   yearly_income: int; (* rough estimation of 8 * yearly income *)
   net_worth: int;
+  cities: Utils.loc * Utils.loc; (* first route and name *)
+  revenue_ytd: int;
 } [@@deriving yojson]
 
   (* Global AI data *)
 type t = {
   routes: route Vector.vector;
   cities_to_ai: int Loc_map.t;
-  players: player IntMap.t;
+  players: ai_player IntMap.t;
 } [@@deriving yojson]
 
-let default_t = {
-  routes = Vector.create ();
-  cities_to_ai = Loc_map.empty;
+let default () = {
+  routes=Vector.create ();
+  cities_to_ai=Loc_map.empty;
+  players=IntMap.empty;
 }
 
 let owned_by_player stocks company =
@@ -45,17 +49,33 @@ let update_valuation player stocks v =
   let net_worth = cash - loans + v.yearly_income * 2 + stock_value in
   {v with net_worth}
 
-  (* Simulate earning money *)
-let route_earn_money route_num stocks ai_player v =
+let home_town v = fst v.cities
+
+  (* Simulate earning money on a route *)
+let route_earn_money route_num stocks ai_player climate difficulty player_net_worth v =
   let city1, city2 = Vector.get v.routes route_num in
   let value = route_value city1 city2 in
   let total_shares = Stock_market.total_shares v.idx stocks in
-  if owned_by_player stocks v.idx then
-
-  else
-  ()
-
-
+  let value =
+    let oppo = Opponent.Map.find v.opponent Opponent.Map.leaders in
+    let moneymaking = oppo.moneymaking in
+    value * (moneymaking + Climate.to_enum climate + 3)
+  in
+  (* Higher difficulty -> earns more *)
+  let div = if owned_by_player stocks v.idx then 10
+            else 10 - B_options.difficulty_to_enum difficulty in
+  let value = value / div in
+  let value =
+    (* NOTE: what about checking city1? *)
+    if Utils.equal_loc (home_town v) city2 &&
+        player_net_worth >= ai_player.net_worth
+    then value * 2 else value
+  in
+  let revenue_ytd = ai_player.revenue_ytd + value in
+  let cash = if ai_player.cash < 30000 then
+    ai_player.cash + value else ai_player.cash
+  in
+  {ai_player with revenue_ytd; cash}
 
 let route_value city1 city2 ~tilemap ~year ~region =
   let get_demand_supply (x, y) =

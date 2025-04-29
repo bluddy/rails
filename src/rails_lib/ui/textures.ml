@@ -1032,7 +1032,7 @@ type t = {
   engine_detail: (Engine.make, R.Texture.t) Hashtbl.t;
   engine_anim: (Engine.make, TrainAnim.t) Hashtbl.t;
   car_anim: (Goods.t, (R.Texture.t * R.Texture.t)) Hashtbl.t;
-  opponents: (Opponent.t, R.Texture.t) Hashtbl.t;
+  opponents: (Opponent.name, R.Texture.t) Hashtbl.t;
   jobs: (Jobs.t, R.Texture.t) Hashtbl.t;
   misc: (Misc.t, R.Texture.t) Hashtbl.t;
   smoke: (Misc.smoke, R.Texture.t array) Hashtbl.t;
