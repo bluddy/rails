@@ -1,6 +1,7 @@
 open! Containers
 module C = Constants
 module R = Renderer
+module B = Backend
 
 open Income_statement_d
 
@@ -13,15 +14,15 @@ let render win (s:State.t) balance_sheet =
   let is, old_is = player.m.income_statement, player.m.total_income_statement in
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
   Fonts.Render.write_shadow win s.fonts ~idx:2 ~color:Ega.gray ~x:16 ~y:4 @@
-    Printf.sprintf "Income Statement: %d" s.backend.year;
-  let climate = Climate.show s.backend.climate in
+    Printf.sprintf "Income Statement: %d" @@ B.get_year s.backend;
+  let climate = Climate.show @@ B.get_climate s.backend in
   Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.gray ~x:80 ~y:23 @@
     Printf.sprintf "Economic Climate: %s" climate;
 
   let x_left, x_text, x_ytd, x_total = 16, 20, 160, 240 in
   let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
   let write_money ~x ~y money =
-    let money_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region:s.backend.region money in
+    let money_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region:(B.get_region s.backend) money in
     let color = if money < 0 then Ega.bred else Ega.black in
     write ~x ~y ~color money_s
   in

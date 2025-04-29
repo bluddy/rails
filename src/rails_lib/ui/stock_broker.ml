@@ -94,7 +94,7 @@ let make_menu b players stations cities region fonts =
 
 let make (s:State.t) =
   let b = s.backend in
-  let menu = make_menu b b.players b.stations b.cities b.region s.fonts in
+  let menu = make_menu b b.players b.stations b.cities (B.get_region b) s.fonts in
   {
     menu;
     modal = None;
@@ -107,7 +107,7 @@ let render win (s:State.t) v =
   R.draw_rect win ~x:2 ~y:(2 + C.menu_h) ~w:(dims.screen.w - 4) ~h:(dims.screen.h - 4 - C.menu_h) ~color:Ega.black ~fill:false;
   write ~x:100 ~y:12 "Financial Summaries";
 
-  let region = s.backend.region in
+  let region = B.get_region s.backend in
   let x_left, x_right = 8, 160 in
   let y = 24 in
   let line = 8 in
@@ -152,7 +152,7 @@ let render win (s:State.t) v =
     s.backend.players
   in
   let y = y + line in
-  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show s.backend.climate)
+  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show @@ B.get_climate s.backend)
     (Backend.get_interest_rate s.backend C.player);
 
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
@@ -187,8 +187,6 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
      | `Exit -> true, None, nobaction
      end
   
-  
-
 let handle_event (s:State.t) v (event:Event.t) =
   let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
   let nobaction = B.Action.NoAction in
@@ -204,7 +202,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player=C.player}
     | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
     | Menu.On(`BuyStock stock) ->
-      let difficulty = b.options.difficulty in
+      let difficulty = B.get_difficulty b in
       let player = Player.get_player b.players C.player in
       begin match Stock_market.can_buy_stock ~player:C.player ~target:stock ~cash:(Player.get_cash player) ~difficulty s.backend.stocks with
       | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
@@ -260,9 +258,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         let text = sp "%s\nRevenue YTD: %s\nYearly Interest: %s%s"
           (Player.get_name player b.stations b.cities)
           (Income_statement.total_revenue player.m.income_statement
-           |> Utils.show_cash ~region:b.region)
+           |> Utils.show_cash ~region:(B.get_region b))
           (player.m.yearly_interest_payment
-           |> Utils.show_cash ~region:b.region)
+           |> Utils.show_cash ~region:(B.get_region b))
           build_order_s
         in
         false, {v with modal=basic_msgbox text}, nobaction
@@ -290,7 +288,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
 let handle_msg (s:State.t) v ui_msg =
   (* Create a msgbox *)
-  let show_cash = Utils.show_cash ~show_neg:false ~region:s.backend.region in
+  let show_cash = Utils.show_cash ~show_neg:false ~region:(B.get_region s.backend) in
   let modal =
     let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
     match ui_msg with

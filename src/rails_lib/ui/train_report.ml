@@ -66,7 +66,7 @@ let make_menu fonts train_idx ~engine_make ~engines ~year =
 let open_car_menu (s:State.t) stop =
   let open Menu.MsgBox in
   let menu =
-    (Build_train.AddCars.create_menu ~fonts:s.fonts s.backend.region
+    (Build_train.AddCars.create_menu ~fonts:s.fonts (B.get_region s.backend)
       ~suffix:[make_entry "Caboose only" (`Action `Caboose)])
       |> do_open_menu s
   in
@@ -74,7 +74,7 @@ let open_car_menu (s:State.t) stop =
 
 let make (s:State.t) train_idx =
   let train = Trainmap.get s.backend.players.(0).trains train_idx in
-  let menu = make_menu s.fonts train_idx ~engines:s.backend.engines ~year:s.backend.year ~engine_make:train.engine.make in
+  let menu = make_menu s.fonts train_idx ~engines:s.backend.engines ~year:(B.get_year s.backend) ~engine_make:train.engine.make in
   {
     train=train_idx;
     menu;
@@ -89,11 +89,11 @@ let render win (s:State.t) (v:State.t t) : unit =
 
   | EngineInfo state ->
       Engine_info.render win state ~fonts:s.fonts ~textures:s.textures
-        ~region:s.backend.region
+        ~region:(B.get_region s.backend)
 
   | ChooseEngine ->
       Choose_engine.render win s ~engines:s.backend.engines
-        ~year:s.backend.year
+        ~year:(B.get_year s.backend)
 
   | Normal ->
     let train = Backend.get_train s.backend v.train ~player:0 in
@@ -126,7 +126,7 @@ let render win (s:State.t) (v:State.t t) : unit =
           sprintf ("at %s") (Station.get_name station)
     in
     let maintenance = Train.display_maintenance train
-      |> Utils.show_cash ~region:s.backend.region in
+      |> Utils.show_cash ~region:(B.get_region s.backend) in
     let engine_data_s = sprintf "(%s/%s)" train.engine.name maintenance in
     let status_s = match train.state with
       | LoadingAtStation _ -> "Speed: unloading/loading"
@@ -187,10 +187,11 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     let rev period =
       Train.get_revenue train period
-      |> Utils.show_cash ~spaces:6 ~region:s.backend.region
+      |> Utils.show_cash ~spaces:6 ~region:(B.get_region s.backend)
     in
-    let rev_l = rev s.backend.fiscal_period in
-    let rev_r = rev @@ Utils.other_period s.backend.fiscal_period in
+    let period = B.get_period s.backend in
+    let rev_l = rev period in
+    let rev_r = rev @@ Utils.other_period period in
     write Ega.green ~x:7 ~y:118 rev_l;
     write Ega.green ~x:256 ~y:118 rev_r;
 
@@ -296,10 +297,10 @@ let handle_event (s:State.t) v (event:Event.t) =
     false, v, nobaction
 
   | ChooseEngine, _ ->
-    begin match Choose_engine.handle_event event s.backend.engines ~year:s.backend.year with
+    begin match Choose_engine.handle_event event s.backend.engines ~year:(B.get_year s.backend) with
     | Some engine ->
       let menu =
-        make_menu s.fonts v.train ~engines:s.backend.engines ~year:s.backend.year ~engine_make:engine.make
+        make_menu s.fonts v.train ~engines:s.backend.engines ~year:(B.get_year s.backend) ~engine_make:engine.make
       in
       let baction =
         B.Action.TrainReplaceEngine {train=v.train; engine=engine.make; player=0}

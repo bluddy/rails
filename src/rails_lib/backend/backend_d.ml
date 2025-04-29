@@ -39,19 +39,24 @@ type ui_msg =
   | IndustryBuilt of {player: int; tile: Tile.t}
   [@@deriving yojson]
 
-  (* TODO: factor out time_based *)
-type t = {
-  mutable last_tick: int; (* last time we updated a cycle *)
-  mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
-  mutable time: int;  (* In-game time, resets at end of fin period *)
-  mutable year: int;
-  pause: bool;  (* pause the backend. Do not advance time *)
+type params = {
+  year: int;
   year_start: int;
   fiscal_period: [`First | `Second];
   climate: Climate.t;
   west_us_route_done: bool;
-  players: Player.t array; (* stats, money *)
   region: Region.t;
+  options: B_options.t;
+} [@@deriving yojson]
+
+  (* TODO: factor out time_based *)
+type t = {
+  params: params;
+  mutable last_tick: int; (* last time we updated a cycle *)
+  mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
+  mutable time: int;  (* In-game time, resets at end of fin period *)
+  pause: bool;  (* pause the backend. Do not advance time *)
+  players: Player.t array; (* stats, money *)
   map : Tilemap.t;
   mutable track: Trackmap.t;
   mutable graph: Track_graph.t;
@@ -60,7 +65,6 @@ type t = {
   mutable stations: Station_map.t;
   mutable blocks: Block_map.t; (* map blocks btw stations *)
   mutable dev_state: Tile_develop.t;
-  options: B_options.t;
   stocks: Stock_market.t;
   ai: Ai.t;
   mutable ui_msgs: ui_msg list;

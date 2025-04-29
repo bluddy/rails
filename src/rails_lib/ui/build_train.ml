@@ -2,6 +2,7 @@ open Containers
 open Utils.Infix
 
 module R = Renderer
+module B = Backend
 
 module AddCars = struct
   open Build_train_d
@@ -32,7 +33,7 @@ module AddCars = struct
       let engine = engine.Engine.make in
       Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:loc ~rail:`Back
     in
-    let menu = create_menu ~fonts:s.fonts s.backend.region in
+    let menu = create_menu ~fonts:s.fonts (B.get_region s.backend) in
     {
       anim;
       menu;
@@ -102,7 +103,7 @@ let nobaction = Backend.Action.NoAction
 let handle_event (s:State.t) v (event:Event.t) = match v with
   | `ChooseEngine ->
       let engine_opt =
-        Choose_engine.handle_event event s.backend.engines ~year:s.backend.year
+        Choose_engine.handle_event event s.backend.engines ~year:(B.get_year s.backend)
       in
       begin match engine_opt with
       | Some engine ->
@@ -120,7 +121,7 @@ let handle_event (s:State.t) v (event:Event.t) = match v with
 
 let render win (s:State.t) v = match v with
   | `ChooseEngine ->
-        Choose_engine.render win s ~engines:s.backend.engines ~year:s.backend.year
+        Choose_engine.render win s ~engines:s.backend.engines ~year:(B.get_year s.backend)
   | `AddCars state ->
         AddCars.render win s state 
 

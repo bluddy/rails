@@ -22,7 +22,7 @@ module Train_update = struct
     let height2 = Tilemap.get_tile_height v.map x2 y2 in
     let d_height = max 0 (height2 - height1) in
     let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
-    let d_height = if B_options.easy v.options.difficulty then d_height/2 else d_height in 
+    let d_height = if B_options.easy v.params.options.difficulty then d_height/2 else d_height in 
     let height_factor = match track.kind, track2.kind with
       | Bridge _ , _ -> 0
       | _, Tunnel -> 0
@@ -50,7 +50,7 @@ module Train_update = struct
     end;
     (* Bookkeeping *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
-    Train.add_dist_traveled train dist v.fiscal_period;
+    Train.add_dist_traveled train dist v.params.fiscal_period;
     update_player v train.player (Player.incr_dist_traveled ~dist);
     Train.advance train
 
@@ -85,9 +85,9 @@ module Train_update = struct
           List.fold_left (fun acc (car, delivered) ->
             if delivered then
               let money =
-                Train.car_delivery_money ~loc ~train ~car ~rates:station_info.rates ~region:v.region
-                ~west_us_route_done:v.west_us_route_done ~year:v.year ~year_start:v.year_start
-                ~difficulty:v.options.difficulty ~cycle:v.cycle
+                Train.car_delivery_money ~loc ~train ~car ~rates:station_info.rates ~region:v.params.region
+                ~west_us_route_done:v.params.west_us_route_done ~year:v.params.year ~year_start:v.params.year_start
+                ~difficulty:v.params.options.difficulty ~cycle:v.cycle
               in
               let freight = Freight.of_good car.good in
               IS.RevenueMap.incr freight money acc
@@ -98,7 +98,7 @@ module Train_update = struct
         let freight_ton_miles =
           List.fold_left (fun acc (car, delivered) ->
             if delivered then
-              let ton_miles = Train.car_delivery_ton_miles ~loc ~car ~region:v.region in
+              let ton_miles = Train.car_delivery_ton_miles ~loc ~car ~region:v.params.region in
               let freight = Freight.of_good car.good in
               Freight.Map.incr freight ton_miles acc
             else acc)
@@ -131,7 +131,7 @@ module Train_update = struct
           List.map (fun (car, delivered) -> 
             if delivered then 
               let conv_good =
-                Station.convert station_info (Train.Car.get_good car) v.region
+                Station.convert station_info (Train.Car.get_good car) v.params.region
               in
               match conv_good with
               | Some good -> Some (good, Train.Car.get_amount car)
@@ -193,7 +193,7 @@ module Train_update = struct
       let goods_revenue = IS.RevenueMap.total money_from_goods in
       let revenue = goods_revenue + other_income - car_change_expense in
 
-      let periodic = Train.update_periodic v.fiscal_period train.periodic
+      let periodic = Train.update_periodic v.params.fiscal_period train.periodic
         (fun p -> {p with ton_miles=p.ton_miles + ton_miles; revenue=p.revenue + goods_revenue;})
       in
 
@@ -516,7 +516,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
           end else
             train, stations, None, [], []
         in
-        let player = _update_player_with_data player data active_stations v.fiscal_period v.random in
+        let player = _update_player_with_data player data active_stations v.params.fiscal_period v.random in
         train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
     in
@@ -525,14 +525,14 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
     let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle v train stations loc in
-    let player = _update_player_with_data player data active_stations v.fiscal_period v.random in
+    let player = _update_player_with_data player data active_stations v.params.fiscal_period v.random in
     train, stations, player, ui_msgs
   end
 
     (* Run every cycle, updating every train's position and speed *)
   let _update_all_trains (v:t) (player:Player.t) =
     (* Log.debug (fun f -> f "update_all_trains"); *)
-    let cycle_check, region_div = if Region.is_us v.region then 16, 1 else 8, 2 in
+    let cycle_check, region_div = if Region.is_us v.params.region then 16, 1 else 8, 2 in
     let cycle_bit = 1 lsl (v.cycle mod 12) in
     let cycle = v.cycle in
     (* TODO: We update the high priority trains before the low priority *)
@@ -586,7 +586,7 @@ let _try_to_cancel_priority_shipments ?(force=false) v =
     clear_player_and_train_priority_shipments v cancel_players;
     cancel_players
   in
-  match try_cancel_priority_shipment_all v.players ~cycle:v.cycle ~year:v.year v.region with
+  match try_cancel_priority_shipment_all v.players ~cycle:v.cycle ~year:v.params.year v.params.region with
   | _::_ as players ->
     let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
     [%upf v.stations <- stations];
@@ -617,7 +617,7 @@ let _check_priority_delivery v =
     in
     deliver_players, ui_msgs
   in
-  match check_priority_delivery_all v.players v.stations ~cycle:v.cycle ~year:v.year v.region with
+  match check_priority_delivery_all v.players v.stations ~cycle:v.cycle ~year:v.params.year v.params.region with
   | _::_ as players, ui_msgs ->
     let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
     [%upf v.stations <- stations];
@@ -625,15 +625,15 @@ let _check_priority_delivery v =
   | _ -> []
 
 let _try_to_develop_tiles v (player:Player.t) =
-  let age = v.year - v.year_start in
+  let age = v.params.year - v.params.year_start in
   (* Originally & with 0x8
      We're already filtering with mod 8 = 0, so this is effectively mod 16 after 25 years
    *)
   if age < 25 || v.cycle mod 16 >= 8 then
-      let two_devs = Region.is_us v.region && age < 40 in
+      let two_devs = Region.is_us v.params.region && age < 40 in
       let dev_state =
-      Tile_develop.develop_tiles ~two_devs ~difficulty:v.options.difficulty
-        ~region:v.region ~random:v.random ~tilemap:v.map ~year:v.year
+      Tile_develop.develop_tiles ~two_devs ~difficulty:v.params.options.difficulty
+        ~region:v.params.region ~random:v.random ~tilemap:v.map ~year:v.params.year
         ~active_station:player.active_station ~cities:v.cities
         ~cities_to_ai:v.ai.cities_to_ai v.dev_state
       in
@@ -644,10 +644,10 @@ let _try_to_develop_tiles v (player:Player.t) =
 
 let _update_station_supply_demand v stations =
   if v.cycle mod C.Cycles.station_supply_demand = 0 then (
-    let difficulty = v.options.difficulty in
-    let climate = v.climate in
+    let difficulty = v.params.options.difficulty in
+    let climate = v.params.climate in
     let simple_economy =
-      not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
+      not @@ B_options.RealityLevels.mem v.params.options.reality_levels `ComplexEconomy 
     in
     let ui_msgs =
       Station_map.fold 
@@ -730,7 +730,7 @@ let handle_cycle v =
     v.time <- v.time + 1;
     let v = 
       if v.time >= Constants.year_ticks then
-        {v with year=v.year + 1; time=0}
+        {v with params={v.params with year=v.params.year + 1}; time=0}
       else v
     in
     v, ui_msgs

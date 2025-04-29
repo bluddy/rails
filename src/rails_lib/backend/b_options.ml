@@ -54,3 +54,7 @@ let default =
     difficulty=`Tycoon;
   }
 
+let difficulty v = v.difficulty
+
+let speed v = v.speed
+

@@ -672,7 +672,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           if cars >= 2 then (
             Ui_common.draw_ui_car win ~x:(x+5) ~y ~full:true good);
         )) @@
-        Goods.of_region s.backend.region
+        Goods.of_region (B.get_region s.backend)
       |> ignore;
       (* frame *)
       let color = Station.color_of_rates station in

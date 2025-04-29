@@ -42,39 +42,44 @@ let default region resources ~random ~seed =
   in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
-  let stocks = Stock_market.default |> Stock_market.add_human_player ~player:0 options.difficulty
-  in
-  {
-    time=0;
-    cycle=0;
-    last_tick=0;
+  let stocks = Stock_market.default |> Stock_market.add_human_player ~player:0 options.difficulty in
+  let params = {
     year;
     year_start=year;
     fiscal_period=`First;
     climate=Normal;
+    west_us_route_done=false;
+    region;
+    options;
+  }
+  in
+  {
+    params;
+    time=0;
+    cycle=0;
+    last_tick=0;
     players;
     map;
-    region;
     cities;
     track;
     blocks=Block_map.make ();
     graph;
     stations;
     engines;
-    options;
     ui_msgs = [];
     random;
     seed;
-    west_us_route_done=false;
     pause=false;
     dev_state=Tile_develop.default;
     stocks;
     ai = Ai.default ();
   }
 
-let get_speed v = v.options.speed
+let get_speed v = v.params.options.speed
 
-let _set_speed v speed = {v with options={v.options with speed}}
+let get_difficulty v = B_options.difficulty v.params.options
+
+let _set_speed v speed = {v with params={v.params with options={v.params.options with speed}}}
 
 let map_height v = Tilemap.get_height v.map
 
@@ -88,9 +93,17 @@ let get_cities v = Cities.to_list v.cities
 
 let get_station loc v = Station_map.get loc v.stations
 
-let get_region v = v.region
+let get_region v = v.params.region
+
+let get_year v = v.params.year
+
+let get_climate v = v.params.climate
+
+let get_period v = v.params.fiscal_period
 
 let get_map v = v.map
+
+let get_options v = v.params.options
 
 let get_tile_height v x y = Tilemap.get_tile_height v.map x y
 
@@ -122,7 +135,7 @@ let _build_station v ~x ~y station_type ~player =
   let blocks = Block_map.handle_build_station graph v.blocks track v.players.(player).trains (x,y) after in
   let station = match station_type with
   | `SignalTower ->
-    Station.make_signaltower ~x ~y ~year:v.year ~player
+    Station.make_signaltower ~x ~y ~year:v.params.year ~player
   | _ ->
     let city_xy = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
     let check_for_first_city () =
@@ -155,7 +168,7 @@ let _build_station v ~x ~y station_type ~player =
         name, Station.suffix_of_enum suffix_n
     in
     Station.make ~x ~y
-      ~year:v.year
+      ~year:v.params.year
       ~city_xy
       ~suffix
       ~city_name
@@ -168,13 +181,13 @@ let _build_station v ~x ~y station_type ~player =
   update_player v player @@ Player.add_station loc;
   Option.iter (fun dir ->
     update_player v player @@
-      Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.climate ~map:v.map
+      Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map
   ) build_new_track_dir;
   (* Initialize supply and demand *)
   let simple_economy =
-    not @@ B_options.RealityLevels.mem v.options.reality_levels `ComplexEconomy 
+    not @@ B_options.RealityLevels.mem v.params.options.reality_levels `ComplexEconomy 
   in
-  let climate = v.climate in
+  let climate = v.params.climate in
   ignore @@ Station.update_supply_demand station v.map ~climate ~simple_economy;
   update_player v player @@
     Player.pay `StructuresEquipment (Station.price_of station_type);
@@ -213,7 +226,7 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
   let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
   update_player v player (fun player ->
     player
-    |> Player.update_and_pay_for_track ~x ~y ~dir ~len:2 ~climate:v.climate ~map:v.map
+    |> Player.update_and_pay_for_track ~x ~y ~dir ~len:2 ~climate:v.params.climate ~map:v.map
     |> Player.pay `BridgeTunnel (Bridge.price_of kind));
   [%upf v.graph <- graph];
   [%upf v.track <- track];
@@ -222,7 +235,7 @@ let _build_bridge v ~x ~y ~dir ~player ~kind =
 
 let check_build_track v ~x ~y ~dir ~player =
   (* First check the tilemap, then the trackmap *)
-  let ret = Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.options.difficulty in
+  let ret = Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.params.options.difficulty in
   match ret with
   | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
   | `Ok | `Ferry | `Tunnel _ | `HighGrade _ when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
@@ -259,7 +272,7 @@ let _build_track (v:t) ~x ~y ~dir ~player =
   let graph = G.Track.handle_build_track v.graph ~x ~y before after in
   let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
   update_player v player @@
-    Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.climate ~map:v.map;
+    Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   [%upf v.blocks <- blocks];
@@ -281,7 +294,7 @@ let _build_ferry v ~x ~y ~dir ~player =
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
   update_player v player @@
-    Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.climate ~map:v.map;
+    Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
   [%upf v.graph <- graph];
   [%upf v.track <- track];
   [%upf v.blocks <- blocks];
@@ -302,7 +315,7 @@ let _remove_station v ~x ~y ~dir ~player =
   update_player v player (Player.remove_station loc);
   (* TODO: Not sure this is right. Check this in build_station *)
   update_player v player @@
-    Player.update_and_remove_track ~x ~y ~dir ~len:1 ~climate:v.climate ~map:v.map;
+    Player.update_and_remove_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
   [%upf v.stations <- stations];
   [%upf v.blocks <- blocks];
   [%upf v.track <- track];
@@ -320,7 +333,7 @@ let _remove_track v ~x ~y ~dir ~player =
   let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
   let blocks = Block_map.handle_remove_track graph v.track v.players.(player).trains v.blocks before after in
   update_player v player @@
-    Player.update_and_remove_track ~x ~y ~dir ~len:1 ~climate:v.climate ~map:v.map;
+    Player.update_and_remove_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
   [%upf v.blocks <- blocks];
   [%upf v.track <- track];
   [%upf v.graph <- graph];
@@ -457,9 +470,9 @@ let _station_set_signal v loc dir cmd =
   [%up {v with stations}]
 
 let _build_industry v ~player_idx (x, y) tile =
-  if Tilemap.check_build_industry_at v.map tile ~region:v.region ~x ~y then (
+  if Tilemap.check_build_industry_at v.map tile ~region:v.params.region ~x ~y then (
     Tilemap.set_tile v.map x y tile;
-    let cost = Tile.Info.build_cost_of_tile v.region tile in
+    let cost = Tile.Info.build_cost_of_tile v.params.region tile in
     update_player v player_idx (Player.build_industry cost);
     send_ui_msg v @@ IndustryBuilt {player=player_idx; tile};
     v
@@ -483,7 +496,7 @@ let reset_tick v =
 
   (* Returns ui_msgs and whether we have a cycle *)
 let handle_tick v cur_time =
-  let delay_mult = B_options.delay_mult_of_speed v.options.speed in
+  let delay_mult = B_options.delay_mult_of_speed v.params.options.speed in
   let tick_delta = delay_mult * C.tick_ms in
   let new_time = v.last_tick + tick_delta in
   let ui_msgs = v.ui_msgs in
@@ -502,7 +515,7 @@ let _month_of_time time = (time / C.month_ticks) mod 12
 
 let get_interest_rate v player_idx =
   let player = get_player v player_idx in
-  Player.get_interest_rate player v.climate v.region 
+  Player.get_interest_rate player v.params.climate v.params.region 
 
 let player_has_bond v player_idx =
   let player = get_player v player_idx in
@@ -510,10 +523,10 @@ let player_has_bond v player_idx =
 
 let _sell_bond v player_idx =
   let player = get_player v player_idx in
-  if Player.check_sell_bond player v.climate v.region then (
-    let interest_rate = Player.get_interest_rate player v.climate v.region in
+  if Player.check_sell_bond player v.params.climate v.params.region then (
+    let interest_rate = Player.get_interest_rate player v.params.climate v.params.region in
     (* Must be before we get new bond *)
-    update_player v player_idx (fun player -> Player.sell_bond player v.climate v.region);
+    update_player v player_idx (fun player -> Player.sell_bond player v.params.climate v.params.region);
     send_ui_msg v @@ StockBroker(BondSold{player=player_idx; interest_rate});
     v
   ) else v
@@ -529,10 +542,10 @@ let _repay_bond v player_idx =
 
 let can_buy_stock v ~player_idx ~target =
   let player = get_player v player_idx in
-  Stock_market.can_buy_stock ~player:player_idx ~target ~cash:(Player.get_cash player) ~difficulty:v.options.difficulty v.stocks
+  Stock_market.can_buy_stock ~player:player_idx ~target ~cash:(Player.get_cash player) ~difficulty:v.params.options.difficulty v.stocks
 
 let _buy_stock v player_idx ~stock = 
-  let difficulty = v.options.difficulty in
+  let difficulty = v.params.options.difficulty in
   let player = get_player v player_idx in
   let cash = Player.get_cash player in
   match Stock_market.buy_stock ~player:player_idx ~target:stock ~cash ~difficulty v.stocks with
@@ -560,12 +573,12 @@ let check_bankruptcy v player_idx =
 let _declare_bankruptcy v player_idx =
   let player = Player.get_player v.players player_idx in
   if Player.check_bankruptcy player then (
-    let players, stocks = Player.declare_bankruptcy v.players player_idx ~difficulty:v.options.difficulty v.stocks in
+    let players, stocks = Player.declare_bankruptcy v.players player_idx ~difficulty:v.params.options.difficulty v.stocks in
     send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
     [%up {v with players; stocks}]
   ) else v
 
-let get_date v = _month_of_time v.time, v.year
+let get_date v = _month_of_time v.time, v.params.year
 
 let get_time_of_day time =
   (* Get time of day representation *)
