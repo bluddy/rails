@@ -33,7 +33,7 @@ type city_info = {
 
   (* Global AI data *)
 type t = {
-  routes: route Vector.vector;
+  routes: route Vector.vector;  (* Routes for all AIs *)
   cities_to_ai: city_info Loc_map.t;
   players: ai_player IntMap.t;
 } [@@deriving yojson]
@@ -44,8 +44,17 @@ let default () = {
   players=IntMap.empty;
 }
 
+let num_routes v = Vector.length v.routes
+
+let get_route i v = Vector.get v.routes i
+
+let random_route_idx random v = 
+  Random.int (num_routes v) random
+
 let owned_by_player stocks company =
   Stock_market.controls_company C.player ~target:company stocks
+
+let player_of_city city v = Loc_map.get city v.cities_to_ai |> Option.map (fun x -> x.player)
 
     (* Update valuation only for AI players *)
 let update_valuation player stocks v =
@@ -76,8 +85,10 @@ let route_value city1 city2 ~tilemap ~(params:Params.t) =
   else value
 
   (* Simulate earning money on a route *)
-let route_earn_money route_idx stocks ai_player ~params player_net_worth ~tilemap v =
+let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap v =
   let city1, city2 = Vector.get v.routes route_idx in
+  let player_idx = Option.get_exn_or "AI player idx not found" @@ player_of_city city1 v in
+  let ai_player = IntMap.find player_idx v.players in
   let value = route_value city1 city2 ~tilemap ~params in
   (* NOTE: I think there's a bug in the original code here. It didn't check both
      cities for a rate war but just one *)
@@ -93,12 +104,26 @@ let route_earn_money route_idx stocks ai_player ~params player_net_worth ~tilema
   let value =
     (* NOTE: what about checking city1? *)
     if Utils.equal_loc (home_town ai_player) city2 &&
-        player_net_worth >= ai_player.net_worth
+        main_player_net_worth >= ai_player.net_worth
     then value * 2 else value
   in
   let revenue_ytd = ai_player.revenue_ytd + value in
   let cash = if ai_player.cash < C.ai_max_cash then
     ai_player.cash + value else ai_player.cash
   in
-  {ai_player with revenue_ytd; cash}
+  let ai_player = {ai_player with revenue_ytd; cash} in
+  let players = IntMap.add player_idx ai_player v.players in
+  {v with players}
+
+let ai_routines stocks ~params ~main_player_net_worth ~tilemap random v =
+  let earn_random_route v =
+    if Random.int 100 random <= num_routes v then
+      let route_idx = random_route_idx random v in
+      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap v
+    else v
+  in
+  ()
+
+
+
 
