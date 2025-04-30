@@ -40,3 +40,7 @@ open Containers
 
   let random random v = Random.pick_array v.arr random
 
+  let random_idx random v = Random.int (Array.length v.arr) random
+
+  let get_idx i v = v.arr.(i)
+

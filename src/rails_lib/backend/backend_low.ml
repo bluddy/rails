@@ -618,7 +618,7 @@ let _try_to_develop_tiles v (player:Player.t) =
       let dev_state =
       Tile_develop.develop_tiles ~two_devs v.params ~random:v.random ~tilemap:v.map 
         ~active_station:player.active_station ~cities:v.cities
-        ~cities_to_ai:v.ai.cities_to_ai v.dev_state
+        ~cities_to_ai:v.ai.ai_of_city v.dev_state
       in
       (* Clear active station *)
       dev_state, None

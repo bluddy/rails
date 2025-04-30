@@ -4,6 +4,7 @@
 
 let player = 0
 let max_num_players = 4
+let max_num_cities = 100
 
 let tick_ms = 15 (* ms *)
 

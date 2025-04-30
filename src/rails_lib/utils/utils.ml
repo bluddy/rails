@@ -4,8 +4,28 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 
+type loc = int * int
+  [@@deriving eq, ord, yojson, show]
+
+type locd = loc * Dir.t
+  [@@deriving eq, ord, yojson, show]
+
+type locu = loc * Dir.upper
+  [@@deriving eq, ord, yojson, show]
+
+let locu_of_locd (loc, d) = (loc, Dir.to_upper d)
+
+type locdpair = locd * locd
+  [@@deriving eq, ord, yojson, show]
+
 module type OrderedType = sig
   include Map.OrderedType
+  val t_of_yojson : Yojson.Safe.t -> t
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module type HashType = sig
+  include CCHashSet.ELEMENT
   val t_of_yojson : Yojson.Safe.t -> t
   val yojson_of_t : t -> Yojson.Safe.t
 end
@@ -47,6 +67,11 @@ module Set = struct
       to_list t |> yojson_of_list O.yojson_of_t
   end
 end
+
+module IntSet = Set.Make(struct
+  type t = int [@@deriving yojson]
+  let compare = (-)
+end)
 
 module Map = struct
   module type S = sig
@@ -100,34 +125,25 @@ module IntMap = Map.Make(struct
   let compare (x:int) y = x - y
 end)
 
-type loc = int * int
-  [@@deriving eq, ord, yojson, show]
+module LocMap = Map.Make(struct
+  type t = loc [@@deriving yojson]
+  let compare = compare_loc
+end)
 
-type locd = loc * Dir.t
-  [@@deriving eq, ord, yojson, show]
-
-type locu = loc * Dir.upper
-  [@@deriving eq, ord, yojson, show]
-
-let locu_of_locd (loc, d) = (loc, Dir.to_upper d)
-
-type locdpair = locd * locd
-  [@@deriving eq, ord, yojson, show]
-
-(* Expand CCHashSet *)
-module type S2 = sig
-  include CCHashSet.S
-  val choose: t -> elt option
-  val choose_exn: t -> elt
-  val is_empty: t -> bool
-end
 
 module HashSet = struct
-  module Make(E: CCHashSet.ELEMENT) : S2 with type elt = E.t = struct
+  module Make(E: HashType) = struct
     include CCHashSet.Make(E)
     let choose v = to_iter v |> Iter.head
     let choose_exn v = to_iter v |> Iter.head_exn
     let is_empty v = cardinal v = 0
+    let to_list v = to_iter v |> Iter.to_list
+
+    let t_of_yojson (json:Yojson.Safe.t) =
+      list_of_yojson E.t_of_yojson json |> of_list
+
+    let yojson_of_t v =
+      to_list v |> yojson_of_list E.yojson_of_t 
   end
 end
 
@@ -152,11 +168,6 @@ end)
   (* A canonical order for locdp *)
 let canonical_locdpair ((locd1, locd2) as p) =
    if compare_locd locd1 locd2 > 0 then locd2, locd1 else p
-
-module LocMap = Map.Make(struct
-  type t = loc [@@deriving yojson]
-  let compare = compare_loc
-end)
 
 module Hashtbl = struct
   include Hashtbl

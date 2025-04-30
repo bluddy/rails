@@ -6,11 +6,12 @@ module C = Constants
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
 module IntMap = Utils.IntMap
+module IntSet = Utils.IntSet
 
 let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-type route = (Utils.loc * Utils.loc)
+type route = (int * int)
              [@@deriving yojson]
 
  (* An AI Player *)
@@ -22,26 +23,23 @@ type ai_player = {
   build_order: (Utils.loc * Utils.loc) option;  (* order given to subservient company *)
   yearly_income: int; (* rough estimation of 8 * yearly income *)
   net_worth: int;
-  cities: Utils.loc * Utils.loc; (* first route and name *)
+  cities: int * int; (* first route and name *)
   revenue_ytd: int;
-} [@@deriving yojson]
-
-type city_info = {
-  player: int;
-  rate_war: bool;
 } [@@deriving yojson]
 
   (* Global AI data *)
 type t = {
   routes: route Vector.vector;  (* Routes for all AIs *)
-  cities_to_ai: city_info Loc_map.t;
-  players: ai_player IntMap.t;
+  ai_of_city: int IntMap.t; (* Each city can only have one ai *)
+  rate_war_at_city: IntSet.t;
+  ais: ai_player IntMap.t; (* AI player info *)
 } [@@deriving yojson]
 
 let default () = {
   routes=Vector.create ();
-  cities_to_ai=Loc_map.empty;
-  players=IntMap.empty;
+  ai_of_city=IntMap.empty;
+  rate_war_at_city=IntSet.empty;
+  ais=IntMap.empty;
 }
 
 let num_routes v = Vector.length v.routes
@@ -54,8 +52,6 @@ let random_route_idx random v =
 let owned_by_player stocks company =
   Stock_market.controls_company C.player ~target:company stocks
 
-let player_of_city city v = Loc_map.get city v.cities_to_ai |> Option.map (fun x -> x.player)
-
     (* Update valuation only for AI players *)
 let update_valuation player stocks v =
   let loans = v.bonds / 10 in
@@ -66,7 +62,9 @@ let update_valuation player stocks v =
 
 let home_town v = fst v.cities
 
-let has_rate_war city v = (Loc_map.get_exn city v.cities_to_ai).rate_war
+let has_rate_war city v = IntSet.mem city v.rate_war_at_city
+
+let ai_of_city city v = IntMap.get city v.ai_of_city
 
 let route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply (x, y) =
@@ -85,13 +83,12 @@ let route_value city1 city2 ~tilemap ~(params:Params.t) =
   else value
 
   (* Simulate earning money on a route *)
-let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap v =
+let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v =
   let city1, city2 = Vector.get v.routes route_idx in
-  let player_idx = Option.get_exn_or "AI player idx not found" @@ player_of_city city1 v in
-  let ai_player = IntMap.find player_idx v.players in
-  let value = route_value city1 city2 ~tilemap ~params in
-  (* NOTE: I think there's a bug in the original code here. It didn't check both
-     cities for a rate war but just one *)
+  let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
+  let ai_player = IntMap.find player_idx v.ais in
+  let city1_loc, city2_loc = Cities.get_idx city1 cities, Cities.get_idx city2 cities in
+  let value = route_value city1_loc city2_loc ~tilemap ~params in
   let div = if has_rate_war city1 v || has_rate_war city2 v then 6 else 3 in
   let value = value / div in
   let value =
@@ -103,7 +100,7 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap v =
   let value = value / div in
   let value =
     (* NOTE: what about checking city1? *)
-    if Utils.equal_loc (home_town ai_player) city2 &&
+    if (home_town ai_player) = city2 &&
         main_player_net_worth >= ai_player.net_worth
     then value * 2 else value
   in
@@ -112,17 +109,31 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap v =
     ai_player.cash + value else ai_player.cash
   in
   let ai_player = {ai_player with revenue_ytd; cash} in
-  let players = IntMap.add player_idx ai_player v.players in
-  {v with players}
+  let ais = IntMap.add player_idx ai_player v.ais in
+  {v with ais}
 
-let ai_routines stocks ~params ~main_player_net_worth ~tilemap random v =
+let ai_routines stocks ~params ~main_player_net_worth ~tilemap ~cities random v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
-      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap v
+      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v
     else v
   in
+  let v = earn_random_route v in
+  let v = earn_random_route v in
+  let city_idx =
+    let rec random_city_loop () =
+      let city_idx = Random.int C.max_num_cities random in
+      if IntMap.mem city_idx v.ai_of_city then
+        random_city_loop ()
+      else
+        city_idx
+    in
+    random_city_loop ()
+  in
+  let x, y = Cities.get_idx city_idx cities in
   ()
+  
 
 
 

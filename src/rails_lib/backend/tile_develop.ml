@@ -8,6 +8,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module C = Constants
 module Map = Utils.Map
+module IntMap = Utils.IntMap
 
 module PixelMap = Map.Make(struct
   type t = Tilemap.pixel [@@deriving yojson]
@@ -171,12 +172,14 @@ let develop_tiles ~two_devs (params:Params.t) ~random ~tilemap ~cities ~cities_t
         in
         x, y
       in
+      (* Develop active station, AI city, or random location *)
       let x, y = match active_station with
         | Some (x, y) -> random_add_x_y x y
         | None when v.total_devs land 0xE <> 0 -> random_tile ()
         | None ->
-          let (x, y) as city = Cities.random random cities in
-          if Loc_map.mem city cities_to_ai then
+          let city = Cities.random_idx random cities in
+          let x, y = Cities.get_idx city cities in
+          if IntMap.mem city cities_to_ai then
             random_add_x_y x y
           else
             random_tile ()
