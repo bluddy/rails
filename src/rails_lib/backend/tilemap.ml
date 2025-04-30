@@ -6,6 +6,7 @@ let src = Logs.Src.create "tilemap" ~doc:"Tilemap"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 module C = Constants
+module Hashtbl = Utils.Hashtbl
 
 let map_height_default = 192
 let map_width_default = 256
@@ -433,6 +434,10 @@ let collect_demand_supply v ~x ~y ~range =
     collect_amount tileinfo.supply supply_h;
     (demand_h, supply_h)
   )
+
+let demand_supply_sum v ~x ~y ~range =
+  let demand, supply = collect_demand_supply v ~x ~y ~range in
+  (Hashtbl.sum (fun _ i -> i) demand) + (Hashtbl.sum (fun _ i -> i) supply)
 
  (* track_cost already includes economic climate *) 
 let track_land_expense v ~track_expense ~x ~y ~dir ~len =

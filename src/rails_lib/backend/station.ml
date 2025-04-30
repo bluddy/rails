@@ -310,6 +310,8 @@ let get_city v = match v.info with
   | Some info -> Some(info.city)
   | _ -> None
 
+let get_loc v = v.x, v.y
+
 let get_supply_exn v = match v.info with
   | Some info -> info.supply
   | None -> failwith "not a proper station"

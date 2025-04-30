@@ -4,6 +4,7 @@
 
 let player = 0
 let max_num_players = 4
+let max_ai_players = 3
 let max_num_cities = 100
 
 let tick_ms = 15 (* ms *)
@@ -85,6 +86,7 @@ module Stock = struct
 end
 
 let ref_year_ai_route_value = 1710
+let ref_year_ai_build_value = 1770
 
 let ai_max_cash = 30000
 

@@ -17,14 +17,16 @@ type route = (int * int)
  (* An AI Player *)
 type ai_player = {
   idx: int;
+  opponent: Opponent.t;
+  city1: int; (* home city *)
+  city2: int option; (* first route. Determines name *)
   cash: int; (* all x1000 *)
   bonds: int;
-  opponent: Opponent.t;
   build_order: (Utils.loc * Utils.loc) option;  (* order given to subservient company *)
   yearly_income: int; (* rough estimation of 8 * yearly income *)
   net_worth: int;
-  cities: int * int; (* first route and name *)
   revenue_ytd: int;
+  expand_counter: int;  (* When the AI player wants to expand *)
 } [@@deriving yojson]
 
   (* Global AI data *)
@@ -60,16 +62,15 @@ let update_valuation player stocks v =
   let net_worth = cash - loans + v.yearly_income * 2 + stock_value in
   {v with net_worth}
 
-let home_town v = fst v.cities
-
-let has_rate_war city v = IntSet.mem city v.rate_war_at_city
-
 let ai_of_city city v = IntMap.get city v.ai_of_city
+
+let city_rate_war city v = IntSet.mem city v.rate_war_at_city
+
+let get_ai idx v = IntMap.get idx v.ais
 
 let route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply (x, y) =
-    let demand, supply = Tilemap.collect_demand_supply tilemap ~x ~y ~range:2 in
-    (Hashtbl.sum (fun _ i -> i) demand) + (Hashtbl.sum (fun _ i -> i) supply)
+    Tilemap.demand_supply_sum tilemap ~x ~y ~range:2
   in
   let total = get_demand_supply city1 + get_demand_supply city2 in
   let age = params.year - C.ref_year_ai_route_value in
@@ -82,14 +83,15 @@ let route_value city1 city2 ~tilemap ~(params:Params.t) =
     ((3 * dx + dy) * value) / ((dx + dy) * 2)
   else value
 
+
   (* Simulate earning money on a route *)
-let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v =
+let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities ~cycle v =
   let city1, city2 = Vector.get v.routes route_idx in
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = IntMap.find player_idx v.ais in
   let city1_loc, city2_loc = Cities.get_idx city1 cities, Cities.get_idx city2 cities in
   let value = route_value city1_loc city2_loc ~tilemap ~params in
-  let div = if has_rate_war city1 v || has_rate_war city2 v then 6 else 3 in
+  let div = if city_rate_war city1 v || city_rate_war city2 v then 6 else 3 in
   let value = value / div in
   let value =
     value * (ai_player.opponent.management + Climate.to_enum params.climate + 3)
@@ -98,11 +100,8 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~ci
   let div = if owned_by_player stocks ai_player.idx then 10
             else 10 - B_options.difficulty_to_enum params.options.difficulty in
   let value = value / div in
-  let value =
-    (* NOTE: what about checking city1? *)
-    if (home_town ai_player) = city2 &&
-        main_player_net_worth >= ai_player.net_worth
-    then value * 2 else value
+  let value = if ai_player.city1 = city2 && main_player_net_worth >= ai_player.net_worth
+              then value * 2 else value
   in
   let revenue_ytd = ai_player.revenue_ytd + value in
   let cash = if ai_player.cash < C.ai_max_cash then
@@ -112,29 +111,72 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~ci
   let ais = IntMap.add player_idx ai_player v.ais in
   {v with ais}
 
-let ai_routines stocks ~params ~main_player_net_worth ~tilemap ~cities random v =
+let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~cycle v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
-      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v
+      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities ~cycle v
     else v
   in
   let v = earn_random_route v in
   let v = earn_random_route v in
   let city_idx =
-    let rec random_city_loop () =
+    let rec empty_city_loop () =
       let city_idx = Random.int C.max_num_cities random in
       if IntMap.mem city_idx v.ai_of_city then
-        random_city_loop ()
+        empty_city_loop ()
       else
         city_idx
     in
-    random_city_loop ()
+    empty_city_loop ()
   in
-  let x, y = Cities.get_idx city_idx cities in
-  ()
-  
+  let (x, y) as loc = Cities.get_idx city_idx cities in
+  if Trackmap.has_track loc trackmap then v else (* no track at city *)
+  let ai_idx = Random.int C.max_ai_players random in
+  (* We have a target city and a company *)
+  if not @@ IntMap.mem ai_idx v.ais then
+      (* New company creation test at this city *)
+      let demand_supply = Tilemap.demand_supply_sum tilemap ~x ~y ~range:2 in
+      let age = (params.year - C.ref_year_ai_build_value) / 2 in
+      let value = demand_supply / age in
+      let cycles_value = 100 - (cycle mod 8192) / 128 in
+      if cycles_value >= value then v else
+      let closest_station = Station.find_nearest station_map loc in
+      let create = match closest_station with
+        | Some _ -> true
+        | None when ai_idx = 0 -> true (* No player station *)
+        | _ -> false
+      in
+      if not create then v else
+      let create = match closest_station with
+       | Some station when Station.is_proper_station station staion_map ->
+          Station.get_loc station 
+       | None -> true
+      in
+      if not create then v else
+      v
+      
 
+(* 
 
-
+  else
+    let player_controlled = Stock_market.controls_company C.player ~target:ai_idx stocks in
+    let city, city_x, city_y, done =
+      match get_ai ai_idx v with
+      | Some info when player_controlled && Option.is_none info.build_order ->
+          (* player_controller and no order-> bail here *)
+          city, city_x, city_y, true
+      | _ -> (*TODO: deal with player command *)
+          if exists ai_player then
+            let ai_player =
+              if cycles <> 0 then
+                let expand =
+                  let mult = if ai_player.net_worth >= player_net_worth then 1 else 2 in
+                  ai_player.opponent.expansionist + mult * 2
+                in
+                {ai_player with expand_counter=ai_player.expand_counter + expand}
+              else
+                ai_player
+          else
+*)
 

@@ -247,6 +247,8 @@ let has_station (x,y) v =
   | Some t -> Track.is_station t
   | None -> false
 
+let has_track (x,y) v = Option.is_some @@ get ~x ~y v 
+
 let calc_total_dist v ~player =
   IntMap.fold (fun _ track acc ->
     if track.Track.player = player then

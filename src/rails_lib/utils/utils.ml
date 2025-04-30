@@ -417,7 +417,6 @@ let classic_dist loc1 loc2 =
   let big, small = if dx > dy then dx, dy else dy, dx in
   big + small / 2
 
-
 (* Find one element from the left list that doesn't exist in the right list *)
 let diff1_l ~eq left right =
   List.find_map (fun x ->
