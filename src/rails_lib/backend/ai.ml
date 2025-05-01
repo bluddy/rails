@@ -86,7 +86,7 @@ let route_value city1 city2 ~tilemap ~(params:Params.t) =
   else value
 
   (* Simulate earning money on a route *)
-let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities ~cycle v =
+let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v =
   let city1, city2 = Vector.get v.routes route_idx in
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = IntMap.find player_idx v.ais in
@@ -116,7 +116,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
-      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities ~cycle v
+      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v
     else v
   in
   let random_city () =
@@ -162,7 +162,13 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
        | _ -> true (* We don't care if no station or signaltower *)
       in
       if not create then v else
-        v
+      let rec create_leader_loop () =
+        let leader = Opponent.random_of_region params.region random in
+        let exists = IntMap.fold (fun _ ai acc -> acc || Opponent.equal_name ai.opponent.name leader) v.ais false in
+        if exists then create_leader_loop () else leader
+      in
+      let leader = create_leader_loop () in
+      v
   else v
       
 
