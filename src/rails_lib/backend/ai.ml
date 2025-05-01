@@ -118,7 +118,7 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~ci
   let ais = IntMap.add player_idx ai_player v.ais in
   {v with ais}
 
-let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~cycle ~station_map ~timer v =
+let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~station_map v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
@@ -150,7 +150,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
       let demand_supply = Tilemap.demand_supply_sum tilemap ~x ~y ~range:2 in
       let age = (params.year - C.ref_year_ai_build_value) / 2 in
       let value = demand_supply / age in
-      let cycles_value = 100 - (cycle mod 8192) / 128 in
+      let cycles_value = 100 - (params.cycle mod 8192) / 128 in
       if cycles_value >= value then v else
       let closest_station = Station_map.find_nearest station_map loc in
       let create = match closest_station with
@@ -199,7 +199,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
         yearly_income=5;
         yearly_interest;
         net_worth=50;
-        revenue_ytd = (timer + 2000) / 20;
+        revenue_ytd = (params.time + 2000) / 20;
         expand_counter=20;
       } in
       let stocks = Stock_market.add_ai_player ~player:ai.idx stocks in
