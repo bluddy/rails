@@ -8,6 +8,9 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module IntMap = Utils.IntMap
 
+type price_history = int list (* reverse history of prices *)
+  [@@deriving yojson]
+
 type t = {
   (* Who owns how many shares in what company. By default, all shares are public
      First level: owner. Second level: owned
@@ -15,12 +18,14 @@ type t = {
   ownership: (int IntMap.t) IntMap.t;
   prices: int IntMap.t; (* share prices *)
   totals: int IntMap.t; (* total number of shares *)
+  price_histories: price_history IntMap.t; (* prices over time in fiscal periods *)
 } [@@deriving yojson]
 
 let default = {
   ownership=IntMap.empty;
   prices=IntMap.empty;
   totals=IntMap.empty;
+  price_histories=IntMap.empty;
 }
 
 let player_starting_share_price difficulty = 
@@ -29,12 +34,16 @@ let player_starting_share_price difficulty =
 let add_human_player ~player difficulty v =
   let totals = IntMap.add player C.Stock.starting_num v.totals in
   let prices = IntMap.add player (B_options.difficulty_to_enum difficulty + 7) v.prices in
-  {v with totals; prices}
+  let price_histories = IntMap.add player [] v.price_histories in
+  {v with totals; prices; price_histories}
 
-let add_ai_player ~player v =
+let add_ai_player ~player ~num_fin_periods v =
+  (* AI players come in late, so we need to complete their history *)
   let prices = IntMap.add player C.Stock.ai_share_price v.prices in
   let totals = IntMap.add player C.Stock.starting_num v.prices in
-  {v with totals; prices}
+  let history = if num_fin_periods > 0 then List.replicate 0 (num_fin_periods - 1) else [] in
+  let price_histories = IntMap.add player history v.price_histories in
+  {v with totals; prices; price_histories}
 
 let owned_shares ~owner ~owned v =
   match IntMap.get owner v.ownership with
