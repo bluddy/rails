@@ -24,6 +24,7 @@ type ai_player = {
   bonds: int;
   build_order: (Utils.loc * Utils.loc) option;  (* order given to subservient company *)
   yearly_income: int; (* rough estimation of 8 * yearly income *)
+  yearly_interest: int;
   net_worth: int;
   revenue_ytd: int;
   expand_counter: int;  (* When the AI player wants to expand *)
@@ -53,6 +54,11 @@ let random_route_idx random v =
 
 let owned_by_player stocks company =
   Stock_market.controls_company C.player ~target:company stocks
+
+let new_ai_idx v =
+  match IntMap.max_binding_opt v.ais with
+  | Some (i, _) -> i + 1
+  | _ -> 0
 
     (* Update valuation only for AI players *)
 let update_valuation player stocks v =
@@ -112,7 +118,7 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~ci
   let ais = IntMap.add player_idx ai_player v.ais in
   {v with ais}
 
-let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~cycle ~station_map v =
+let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~cycle ~station_map ~timer v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
@@ -156,8 +162,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
       let create = match closest_station with
        | Some station when Station.is_proper_station station ->
            (* Make sure we're not too close *)
-           let station_loc = Station.get_loc station in
-           let dx, dy = Utils.dxdy loc station_loc in
+           let dx, dy = Utils.dxdy loc (Station.get_loc station) in
            min dx dy > C.min_dist_btw_stations
        | _ -> true (* We don't care if no station or signaltower *)
       in
@@ -168,6 +173,36 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
         if exists then create_leader_loop () else leader
       in
       let leader = create_leader_loop () in
+      let opponent = Opponent.t_of_leader leader in
+      let create =
+        (* Now check that our leader can spawn this far from our station
+           The more build skill, the closer he wants to be? *)
+        match closest_station with
+        | Some station ->
+           let dist = Utils.classic_dist loc (Station.get_loc station) in
+           let value = 300 / (opponent.build_skill + 2) in
+           if value >= dist then true else false
+        | _ -> true
+      in
+      if not create then v else
+      let yearly_interest =
+        5 * (8 - opponent.financial_skill - Climate.to_enum params.climate)
+      in
+      let ai = {
+        idx = new_ai_idx v;
+        opponent;
+        city1=city_idx;
+        city2=None;
+        cash=900;
+        bonds=500;
+        build_order=None;
+        yearly_income=5;
+        yearly_interest;
+        net_worth=50;
+        revenue_ytd = (timer + 2000) / 20;
+        expand_counter=20;
+      } in
+      let stocks = Stock_market.add_ai_player ~player:ai.idx stocks in
       v
   else v
       

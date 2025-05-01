@@ -46,6 +46,7 @@ let default region resources ~random ~seed =
   let params = {
     Params.year;
     year_start=year;
+    num_fiscal_periods=0;
     fiscal_period=`First;
     climate=Normal;
     west_us_route_done=false;

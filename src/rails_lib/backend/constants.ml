@@ -85,6 +85,7 @@ let track_maintenance_double = 2
 
 module Stock = struct
   let starting_num = 100
+  let ai_share_price = 10
 end
 
 let ref_year_ai_route_value = 1710

@@ -5,6 +5,7 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 type t = {
   year: int;
   year_start: int;
+  num_fiscal_periods: int; (* Counts, like year, number of fiscal periods *)
   fiscal_period: [`First | `Second];
   climate: Climate.t;
   west_us_route_done: bool;

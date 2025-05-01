@@ -108,5 +108,5 @@ let random_of_region region random =
   let leaders = if Region.is_us region then us_leaders else eu_leaders in
   Random.pick_list leaders random |> fst
 
-
+let t_of_leader leader = Map.find leader leader_map
 

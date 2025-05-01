@@ -31,6 +31,11 @@ let add_human_player ~player difficulty v =
   let prices = IntMap.add player (B_options.difficulty_to_enum difficulty + 7) v.prices in
   {v with totals; prices}
 
+let add_ai_player ~player v =
+  let prices = IntMap.add player C.Stock.ai_share_price v.prices in
+  let totals = IntMap.add player C.Stock.starting_num v.prices in
+  {v with totals; prices}
+
 let owned_shares ~owner ~owned v =
   match IntMap.get owner v.ownership with
   | Some owned_map -> 
