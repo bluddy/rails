@@ -142,7 +142,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
   let v = earn_random_route v in
   let city_idx = random_city () in
   let (x, y) as loc = Cities.get_idx city_idx cities in
-  if Trackmap.has_track loc trackmap then v else (* Proceed only if no track at city *)
+  if Trackmap.has_track loc trackmap then `Update v else (* Proceed only if no track at city *)
   let ai_idx = random_ai () in
   (* We now have a target city and a company *)
   if not @@ ai_exists ai_idx v then
@@ -151,14 +151,14 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
       let age = (params.year - C.ref_year_ai_build_value) / 2 in
       let value = demand_supply / age in
       let cycles_value = 100 - (params.cycle mod 8192) / 128 in
-      if cycles_value >= value then v else
+      if cycles_value >= value then `Update v else
       let closest_station = Station_map.find_nearest station_map loc in
       let create = match closest_station with
         | Some _ -> true
         | None when ai_idx = 0 -> true (* No player station but first opponent can still exist *)
         | _ -> false (* don't create another AI if no player station *)
       in
-      if not create then v else
+      if not create then `Update v else
       let create = match closest_station with
        | Some station when Station.is_proper_station station ->
            (* Make sure we're not too close *)
@@ -166,7 +166,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
            min dx dy > C.min_dist_btw_stations
        | _ -> true (* We don't care if no station or signaltower *)
       in
-      if not create then v else
+      if not create then `Update v else
       let rec create_leader_loop () =
         let leader = Opponent.random_of_region params.region random in
         let exists = IntMap.fold (fun _ ai acc -> acc || Opponent.equal_name ai.opponent.name leader) v.ais false in
@@ -184,7 +184,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
            if value >= dist then true else false
         | _ -> true
       in
-      if not create then v else
+      if not create then `Update v else
       let yearly_interest =
         5 * (8 - opponent.financial_skill - Climate.to_enum params.climate)
       in
@@ -202,9 +202,12 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
         revenue_ytd = (params.time + 2000) / 20;
         expand_counter=20;
       } in
+      let v = IntMap.add ai.idx ai v.ais in
       let stocks = Stock_market.add_ai_player ~player:ai.idx stocks in
-      v
-  else v
+      let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city=loc} in
+      `CreateAI(v, stocks, ui_msg)
+
+  else `Update v
       
 
 (* 

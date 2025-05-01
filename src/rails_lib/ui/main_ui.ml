@@ -813,7 +813,7 @@ let handle_msgs (s:State.t) v ui_msgs =
   in
   let handle_msg v ui_msg =
     match v.mode, ui_msg with
-    | BuildTrain(`AddCars _), Backend.TrainBuilt idx ->
+    | BuildTrain(`AddCars _), Ui_msg.TrainBuilt idx ->
         let state = Train_report.make s idx in
         {v with mode=TrainReport state}
 
@@ -961,7 +961,7 @@ let render_main win (s:State.t) v =
   | _ -> ()
   end;
 
-  let draw_train_arrival_msg (msg:Backend_d.train_arrival_msg) =
+  let draw_train_arrival_msg (msg:Ui_msg.train_arrival_msg) =
     let msg_s: string =
       let b = Buffer.create 100 in 
       let buf_add = Buffer.add_string b in

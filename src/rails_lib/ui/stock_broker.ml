@@ -292,7 +292,7 @@ let handle_msg (s:State.t) v ui_msg =
   let modal =
     let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
     match ui_msg with
-    | Backend_d.StockBroker x -> begin match x with
+    | Ui_msg.StockBroker x -> begin match x with
       | BondSold {interest_rate; player} when player = C.player ->
           let text = sp "%s bond sold\nat %d%% interest." (show_cash C.bond_value) interest_rate in
           basic_msgbox text

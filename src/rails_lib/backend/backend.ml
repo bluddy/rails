@@ -7,6 +7,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module G = Track_graph
 module C = Constants
+module UIM = Ui_msg
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -16,7 +17,6 @@ module C = Constants
  *)
 
 type t = Backend_d.t [@@deriving yojson]
-type ui_msg = [%import: Backend_d.ui_msg]
 
 let default region resources ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
@@ -368,7 +368,7 @@ let _build_train v ((x, y) as station) engine cars other_station ~player =
     let player = Player.pay `Train engine_t.price player in
     [%up {player with trains}]
   );
-  let msg = TrainBuilt (Trainmap.Id.of_int (Trainmap.size v.players.(player).trains - 1)) in
+  let msg = UIM.TrainBuilt (Trainmap.Id.of_int (Trainmap.size v.players.(player).trains - 1)) in
   send_ui_msg v msg;
   v
 

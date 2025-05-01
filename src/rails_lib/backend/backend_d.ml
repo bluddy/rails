@@ -4,43 +4,6 @@ open! Utils
 open Utils.Infix
 (* Backend data *)
 
-type train_arrival_msg = {
-    player: int;
-    time: int;
-    train_name: string option;
-    freight: Freight.complex;
-    _type: Train.train_type;
-    train_num: int;
-    goods_amount: (Goods.t * int) list; (* goods delivered *)
-    revenue: int; (* x 1000 *)
-} [@@deriving yojson]
-
-type stock_broker_ui_msg = 
-  | BondSold of {player: int; interest_rate: int}
-  | BondRepaid of {player: int}
-  | StockBought of {player:int; stock: int; cost: int}
-  | StockSold of {player:int; stock: int; cost: int}
-  | BankruptcyDeclared of {player: int}
-  | Takeover of {player:int; stock: int}
-  | MoneyTransferredFrom of {player:int; company:int; amount:int}
-  | MoneyTransferredTo of {player:int; company:int; amount:int}
-  | AiBondRepaid of {player:int; company: int}
-  [@@deriving yojson]
-
-type ui_msg =
-  | TrainBuilt of Trainmap.Id.t
-  | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
-  | TrainArrival of train_arrival_msg
-  | StockBroker of stock_broker_ui_msg
-  | OpenStockBroker of {player: int}
-  | PriorityShipmentCreated of {player: int; shipment:Priority_shipment.t}
-  | PriorityShipmentDelivered of {player: int; shipment:Priority_shipment.t; bonus:int}
-  | PriorityShipmentCanceled of {player: int}
-  | IndustryBuilt of {player: int; tile: Tile.t}
-  [@@deriving yojson]
-
-
-  (* TODO: factor out time_based *)
 type t = {
   params: Params.t;
   mutable last_tick: int; (* last time we updated a cycle *)
@@ -56,7 +19,7 @@ type t = {
   mutable dev_state: Tile_develop.t;
   stocks: Stock_market.t;
   ai: Ai.t;
-  mutable ui_msgs: ui_msg list;
+  mutable ui_msgs: Ui_msg.t list;
   random: Utils.Random.State.t;
   seed: int;
 } [@@deriving yojson]

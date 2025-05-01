@@ -9,6 +9,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module G = Track_graph
 module C = Constants
 module IS = Income_statement
+module UIM = Ui_msg
 
 (* Low-level backend module. Deals with multiple modules at a time *)
 
@@ -216,7 +217,7 @@ module Train_update = struct
         if total_goods > 0 then
           let complex_freight = Train.freight_set_of_cars train.cars |> Freight.complex_of_set in
           let msg =
-            TrainArrival {
+            UIM.TrainArrival {
               player=train.player;
               time=v.params.time;
               freight=complex_freight;
@@ -540,7 +541,7 @@ let _try_to_create_priority_shipment ?(force=false) v (player:Player.t) stations
       begin match Priority_shipment.try_to_create v.random stations v.params.cycle ~force with
       | Some (stations, priority) ->
           let player = Player.set_priority (Some priority) player in
-          let msgs = [PriorityShipmentCreated{player=C.player; shipment=priority}] in
+          let msgs = [UIM.PriorityShipmentCreated{player=C.player; shipment=priority}] in
           stations, player, msgs
       | None -> stations, player, []
       end
@@ -572,7 +573,7 @@ let _try_to_cancel_priority_shipments ?(force=false) v =
   | _::_ as players ->
     let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
     [%upf v.stations <- stations];
-    List.map (fun i -> PriorityShipmentCanceled{player=i}) players
+    List.map (fun i -> UIM.PriorityShipmentCanceled{player=i}) players
   | _ -> []
     
 let _check_priority_delivery v =
@@ -594,7 +595,7 @@ let _check_priority_delivery v =
         let player = {player with trains; priority=None} in
         let player = Player.earn `Other bonus player in
         v.players.(i) <- player;
-        PriorityShipmentDelivered {player=i; shipment=priority; bonus}
+        UIM.PriorityShipmentDelivered {player=i; shipment=priority; bonus}
       ) deliver_players
     in
     deliver_players, ui_msgs
@@ -640,7 +641,7 @@ let _update_station_supply_demand v stations =
           Station.lose_supplies station;
           let msgs =
             List.map (fun (good, add) ->
-                DemandChanged {x=station.x; y=station.y; good; add})
+                UIM.DemandChanged {x=station.x; y=station.y; good; add})
               msgs
           in
           msgs @ old_msgs)
@@ -696,7 +697,7 @@ let handle_cycle v =
       if Player.has_broker_timer main_player then (
         let player', send_msg = Player.incr_broker_timer main_player in
         Player.update v.players C.player (fun _ -> player');
-        if send_msg then [(OpenStockBroker{player=C.player})]
+        if send_msg then [(UIM.OpenStockBroker{player=C.player})]
         else [])
       else []
     in
