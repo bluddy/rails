@@ -52,12 +52,12 @@ let default region resources ~random ~seed =
     west_us_route_done=false;
     region;
     options;
+    time=0;
+    cycle=0;
   }
   in
   {
     params;
-    time=0;
-    cycle=0;
     last_tick=0;
     players;
     map;
@@ -97,6 +97,12 @@ let get_station loc v = Station_map.get loc v.stations
 let get_region v = v.params.region
 
 let get_year v = v.params.year
+
+let get_time v = v.params.time
+
+let get_params v = v.params
+
+let get_cycle v = v.params.cycle
 
 let get_climate v = v.params.climate
 
@@ -579,7 +585,7 @@ let _declare_bankruptcy v player_idx =
     [%up {v with players; stocks}]
   ) else v
 
-let get_date v = _month_of_time v.time, v.params.year
+let get_date (v:Backend_d.t) = _month_of_time v.params.time, v.params.year
 
 let get_time_of_day time =
   (* Get time of day representation *)

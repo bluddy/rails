@@ -236,10 +236,10 @@ let has_priority player = Option.is_some player.priority
 
 let get_priority player = player.priority
 
-let check_cancel_priority_shipment player ~cycle ~year region =
+let check_cancel_priority_shipment player params =
   (* Priority shipments are cancelled when the bonus is < 20 *)
   Option.map_or ~default:false
-    (fun pr_data -> Priority_shipment.should_be_cancelled pr_data ~cycle ~year region)
+    (fun pr_data -> Priority_shipment.should_be_cancelled pr_data params)
     player.priority
 
 let check_priority_delivery player stations =

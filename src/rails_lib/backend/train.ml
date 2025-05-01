@@ -436,14 +436,14 @@ let car_delivery_ton_miles ~loc ~car ~region =
   let dist_amount = dist * (Car.get_amount car) in
   dist_amount / C.car_amount
 
-let car_delivery_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~difficulty ~year ~year_start ~cycle =
-  let mult = if Region.is_us region then 1 else 2 in
+let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
+  let mult = if Region.is_us params.region then 1 else 2 in
   let calc_dist = Utils.classic_dist loc (Car.get_source car) * mult in
-  let car_age = Car.get_age car cycle in
+  let car_age = Car.get_age car params.cycle in
   let reward = calc_dist * 16 / (car_age / 24) in
   let calc_dist =
     (* For west US, we override the car distance here for bonus purposes. *)
-    if Region.is_west_us region && not west_us_route_done then
+    if Region.is_west_us params.region && not params.west_us_route_done then
       let dx, dy = Utils.dxdy train.last_station loc in
       dx * 3 / 2 + dy / 2
     else calc_dist
@@ -451,10 +451,10 @@ let car_delivery_money ~loc ~train ~car ~rates ~region ~west_us_route_done ~diff
   let freight = Freight.to_enum @@ Car.get_freight car in
   let v1 = (calc_dist * (5 - freight) + 40 * freight + 40) / 8 in
   let fp2 = freight * freight * 2 in
-  let v3 = (year - 1790) / 10 + fp2 in
+  let v3 = (params.year - 1790) / 10 + fp2 in
   let v6 = (Car.get_amount car)/2 * (reward + fp2) * v1 / v3 in
-  let v12 = v6 / (year - year_start/3 - 1170) in
-  let money = (7 - B_options.difficulty_to_enum difficulty) * v12 / 3 in
+  let v12 = v6 / (params.year - params.year_start/3 - 1170) in
+  let money = (7 - B_options.difficulty_to_enum params.options.difficulty) * v12 / 3 in
   let money = match rates with
     | `Normal -> money
     | `Double -> 2 * money

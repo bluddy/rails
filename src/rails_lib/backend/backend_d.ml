@@ -44,8 +44,6 @@ type ui_msg =
 type t = {
   params: Params.t;
   mutable last_tick: int; (* last time we updated a cycle *)
-  mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
-  mutable time: int;  (* In-game time, resets at end of fin period *)
   pause: bool;  (* pause the backend. Do not advance time *)
   players: Player.t array; (* stats, money *)
   map : Tilemap.t;

@@ -85,9 +85,7 @@ module Train_update = struct
           List.fold_left (fun acc (car, delivered) ->
             if delivered then
               let money =
-                Train.car_delivery_money ~loc ~train ~car ~rates:station_info.rates ~region:v.params.region
-                ~west_us_route_done:v.params.west_us_route_done ~year:v.params.year ~year_start:v.params.year_start
-                ~difficulty:v.params.options.difficulty ~cycle:v.cycle
+                Train.car_delivery_money ~loc ~train ~car ~rates:station_info.rates ~params:v.params
               in
               let freight = Freight.of_good car.good in
               IS.RevenueMap.incr freight money acc
@@ -171,7 +169,7 @@ module Train_update = struct
       in
       let freight = Train.freight_of_cars cars in
       let time_for_pickup, cars, station =
-        Train_station.train_pickup_and_empty_station cars loc v.cycle station
+        Train_station.train_pickup_and_empty_station cars loc v.params.cycle station
       in
       (* Update whether we leave with priority shipment on train *)
       let holds_priority_shipment =
@@ -220,7 +218,7 @@ module Train_update = struct
           let msg =
             TrainArrival {
               player=train.player;
-              time=v.time;
+              time=v.params.time;
               freight=complex_freight;
               _type=train.typ;
               train_num=idx;
@@ -384,7 +382,7 @@ module Train_update = struct
               (* If we're not full, we need to see if we can offload more from the station *)
               let wait_time, cars, stations =
                 let station' = Station_map.get_exn loc stations in
-                let wait_time, cars, station = Train_station.train_pickup_and_empty_station train.cars loc v.cycle station' in
+                let wait_time, cars, station = Train_station.train_pickup_and_empty_station train.cars loc v.params.cycle station' in
                 let stations = if station =!= station' then Station_map.add loc station stations else stations in
                 wait_time, cars, stations
               in
@@ -517,8 +515,8 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
   let _update_all_trains (v:t) (player:Player.t) =
     (* Log.debug (fun f -> f "update_all_trains"); *)
     let cycle_check, region_div = if Region.is_us v.params.region then 16, 1 else 8, 2 in
-    let cycle_bit = 1 lsl (v.cycle mod 12) in
-    let cycle = v.cycle in
+    let cycle_bit = 1 lsl (v.params.cycle mod 12) in
+    let cycle = v.params.cycle in
     (* TODO: We update the high priority trains before the low priority *)
     (* Trains are in a vector, updated in-place *)
     let stations, player, ui_msgs =
@@ -539,7 +537,7 @@ let _try_to_create_priority_shipment ?(force=false) v (player:Player.t) stations
      TODO: for all players? check if AI *)
   match player.priority with
   | None ->
-      begin match Priority_shipment.try_to_create v.random stations v.cycle ~force with
+      begin match Priority_shipment.try_to_create v.random stations v.params.cycle ~force with
       | Some (stations, priority) ->
           let player = Player.set_priority (Some priority) player in
           let msgs = [PriorityShipmentCreated{player=C.player; shipment=priority}] in
@@ -550,12 +548,12 @@ let _try_to_create_priority_shipment ?(force=false) v (player:Player.t) stations
 
 let _try_to_cancel_priority_shipments ?(force=false) v =
   (* Try to cancel and create corresponding messages *)
-  let try_cancel_priority_shipment_all players ~cycle ~year region =
+  let try_cancel_priority_shipment_all players params =
     (* Cancel priority and let us know which players' were canceled *)
     let cancel_players =
       Array.foldi (fun acc i player ->
         if Player.has_priority player &&
-          (Player.check_cancel_priority_shipment player ~cycle ~year region || force)
+          (Player.check_cancel_priority_shipment player params || force)
         then i::acc else acc) []
       players
     in
@@ -570,7 +568,7 @@ let _try_to_cancel_priority_shipments ?(force=false) v =
     clear_player_and_train_priority_shipments v cancel_players;
     cancel_players
   in
-  match try_cancel_priority_shipment_all v.players ~cycle:v.cycle ~year:v.params.year v.params.region with
+  match try_cancel_priority_shipment_all v.players v.params with
   | _::_ as players ->
     let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
     [%upf v.stations <- stations];
@@ -579,7 +577,7 @@ let _try_to_cancel_priority_shipments ?(force=false) v =
     
 let _check_priority_delivery v =
   (* Check if a priority shipment has been delivered *)
-  let check_priority_delivery_all players stations ~cycle ~year region =
+  let check_priority_delivery_all players stations params =
     (* Check for priority delivery completion *)
     let deliver_players =
       Array.foldi (fun acc i player ->
@@ -591,7 +589,7 @@ let _check_priority_delivery v =
       List.map (fun i ->
         let player = v.players.(i) in
         let priority = Player.get_priority player |> Option.get_exn_or "Problem with priority" in
-        let bonus = Priority_shipment.compute_bonus priority ~cycle ~year region in
+        let bonus = Priority_shipment.compute_bonus priority params in
         let trains = Trainmap.clear_priority_shipment player.trains in
         let player = {player with trains; priority=None} in
         let player = Player.earn `Other bonus player in
@@ -601,7 +599,7 @@ let _check_priority_delivery v =
     in
     deliver_players, ui_msgs
   in
-  match check_priority_delivery_all v.players v.stations ~cycle:v.cycle ~year:v.params.year v.params.region with
+  match check_priority_delivery_all v.players v.stations v.params with
   | _::_ as players, ui_msgs ->
     let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
     [%upf v.stations <- stations];
@@ -613,7 +611,7 @@ let _try_to_develop_tiles v (player:Player.t) =
   (* Originally & with 0x8
      We're already filtering with mod 8 = 0, so this is effectively mod 16 after 25 years
    *)
-  if age < 25 || v.cycle mod 16 >= 8 then
+  if age < 25 || v.params.cycle mod 16 >= 8 then
       let two_devs = Region.is_us v.params.region && age < 40 in
       let dev_state =
       Tile_develop.develop_tiles ~two_devs v.params ~random:v.random ~tilemap:v.map 
@@ -626,7 +624,7 @@ let _try_to_develop_tiles v (player:Player.t) =
     v.dev_state, player.active_station
 
 let _update_station_supply_demand v stations =
-  if v.cycle mod C.Cycles.station_supply_demand = 0 then (
+  if v.params.cycle mod C.Cycles.station_supply_demand = 0 then (
     let difficulty = v.params.options.difficulty in
     let climate = v.params.climate in
     let simple_economy =
@@ -656,7 +654,7 @@ let _update_station_supply_demand v stations =
 (** Most time-based work happens here **)
 let handle_cycle v =
   let time_step () =
-    v.cycle <- v.cycle + 1;
+    v.params.cycle <- v.params.cycle + 1;
 
     (* TODO: make player logic work for all human players *)
 
@@ -666,8 +664,8 @@ let handle_cycle v =
 
     (* TODO: ai_routines, events, climate update *)
     let player =
-      if v.cycle mod C.Cycles.periodic_maintenance = 0 then
-        if ((v.cycle / C.Cycles.periodic_maintenance) mod 2) = 0 then
+      if v.params.cycle mod C.Cycles.periodic_maintenance = 0 then
+        if ((v.params.cycle / C.Cycles.periodic_maintenance) mod 2) = 0 then
           Player.pay_station_maintenance v.stations player
         else
           Player.pay_train_maintenance player
@@ -676,7 +674,7 @@ let handle_cycle v =
     in
 
     let stations, player, dev_state, active_station, pr_msgs =
-      if v.cycle mod C.Cycles.rare_bgnd_events = 0 then
+      if v.params.cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
         let dev_state, active_station = _try_to_develop_tiles v player in
         let player = Player.track_maintenance_random_spot v.track v.random player in
@@ -710,10 +708,11 @@ let handle_cycle v =
     let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs in
 
     (* adjust time *)
-    v.time <- v.time + 1;
+    v.params.time <- v.params.time + 1;
     let v = 
-      if v.time >= Constants.year_ticks then
-        {v with params={v.params with year=v.params.year + 1}; time=0}
+      if v.params.time >= Constants.year_ticks then
+        (* TODO: time should reset on fin period, not year *)
+        {v with params={v.params with year=v.params.year + 1; time=0}}
       else v
     in
     v, ui_msgs

@@ -11,4 +11,6 @@ type t = {
   west_us_route_done: bool;
   region: Region.t;
   options: B_options.t;
+  mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
+  mutable time: int;  (* In-game time, resets at end of fin period *)
 } [@@deriving yojson]

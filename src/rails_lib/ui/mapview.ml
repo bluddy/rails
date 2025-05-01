@@ -845,7 +845,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
   else
   (* Move smoke *)
   let smoke_plumes =
-    if s.backend.cycle mod 3 = 0 then (
+    if s.backend.params.cycle mod 3 = 0 then (
       List.iter (fun plume ->
         let x, y = Dir.adjust plume.dir plume.x plume.y in
         plume.x <- x;
@@ -870,7 +870,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
         Trainmap.foldi (fun i acc train ->
           if Engine.has_steam train.engine &&
              Train.get_speed train > 0 &&
-             (i * 3 + s.backend.cycle) mod 16 = 0 &&
+             (i * 3 + s.backend.params.cycle) mod 16 = 0 &&
              train.x >= start_x_map - C.draw_margin &&
              train.x <= end_x_map + C.draw_margin &&
              train.y >= start_y_map - C.draw_margin &&
