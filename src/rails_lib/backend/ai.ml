@@ -92,7 +92,7 @@ let route_value city1 city2 ~tilemap ~(params:Params.t) =
   else value
 
   (* Simulate earning money on a route *)
-let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v =
+let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~cities v =
   let city1, city2 = Vector.get v.routes route_idx in
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = IntMap.find player_idx v.ais in
@@ -118,11 +118,75 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~ci
   let ais = IntMap.add player_idx ai_player v.ais in
   {v with ais}
 
+
+let _try_create_ai ~tilemap ~station_map ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
+  (* New company creation test at this city *)
+  let x, y = loc in
+  let demand_supply = Tilemap.demand_supply_sum tilemap ~x ~y ~range:2 in
+  let age = (params.year - C.ref_year_ai_build_value) / 2 in
+  let value = demand_supply / age in
+  let cycles_value = 100 - (params.cycle mod 8192) / 128 in
+  if cycles_value >= value then `Update v else
+  let closest_station = Station_map.find_nearest station_map loc in
+  let create = match closest_station with
+    | Some _ -> true
+    | None when ai_idx = 0 -> true (* No player station but first opponent can still exist *)
+    | _ -> false (* don't create another AI if no player station *)
+  in
+  if not create then `Update v else
+  let create = match closest_station with
+   | Some station when Station.is_proper_station station ->
+       (* Make sure we're not too close *)
+       let dx, dy = Utils.dxdy loc (Station.get_loc station) in
+       min dx dy > C.min_dist_btw_stations
+   | _ -> true (* We don't care if no station or signaltower *)
+  in
+  if not create then `Update v else
+  let rec create_leader_loop () =
+    let leader = Opponent.random_of_region params.region random in
+    let exists = IntMap.fold (fun _ ai acc -> acc || Opponent.equal_name ai.opponent.name leader) v.ais false in
+    if exists then create_leader_loop () else leader
+  in
+  let leader = create_leader_loop () in
+  let opponent = Opponent.t_of_leader leader in
+  let create =
+    (* Now check that our leader can spawn this far from our station
+       The more build skill, the closer he wants to be? *)
+    match closest_station with
+    | Some station ->
+       let dist = Utils.classic_dist loc (Station.get_loc station) in
+       let value = 300 / (opponent.build_skill + 2) in
+       if value >= dist then true else false
+    | _ -> true
+  in
+  if not create then `Update v else
+  let yearly_interest =
+    5 * (8 - opponent.financial_skill - Climate.to_enum params.climate)
+  in
+  let ai = {
+    idx = new_ai_idx v;
+    opponent;
+    city1=city_idx;
+    city2=None;
+    cash=900;
+    bonds=500;
+    build_order=None;
+    yearly_income=5;
+    yearly_interest;
+    net_worth=50;
+    revenue_ytd = (params.time + 2000) / 20;
+    expand_counter=20;
+  } in
+  let v = IntMap.add ai.idx ai v.ais in
+  let stocks = Stock_market.add_ai_player ~player:ai.idx stocks in
+  let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city=loc} in
+  `CreateAI(v, stocks, ui_msg)
+
 let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~station_map v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
-      route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities v
+      _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~cities v
     else v
   in
   let random_city () =
@@ -146,66 +210,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
   let ai_idx = random_ai () in
   (* We now have a target city and a company *)
   if not @@ ai_exists ai_idx v then
-      (* New company creation test at this city *)
-      let demand_supply = Tilemap.demand_supply_sum tilemap ~x ~y ~range:2 in
-      let age = (params.year - C.ref_year_ai_build_value) / 2 in
-      let value = demand_supply / age in
-      let cycles_value = 100 - (params.cycle mod 8192) / 128 in
-      if cycles_value >= value then `Update v else
-      let closest_station = Station_map.find_nearest station_map loc in
-      let create = match closest_station with
-        | Some _ -> true
-        | None when ai_idx = 0 -> true (* No player station but first opponent can still exist *)
-        | _ -> false (* don't create another AI if no player station *)
-      in
-      if not create then `Update v else
-      let create = match closest_station with
-       | Some station when Station.is_proper_station station ->
-           (* Make sure we're not too close *)
-           let dx, dy = Utils.dxdy loc (Station.get_loc station) in
-           min dx dy > C.min_dist_btw_stations
-       | _ -> true (* We don't care if no station or signaltower *)
-      in
-      if not create then `Update v else
-      let rec create_leader_loop () =
-        let leader = Opponent.random_of_region params.region random in
-        let exists = IntMap.fold (fun _ ai acc -> acc || Opponent.equal_name ai.opponent.name leader) v.ais false in
-        if exists then create_leader_loop () else leader
-      in
-      let leader = create_leader_loop () in
-      let opponent = Opponent.t_of_leader leader in
-      let create =
-        (* Now check that our leader can spawn this far from our station
-           The more build skill, the closer he wants to be? *)
-        match closest_station with
-        | Some station ->
-           let dist = Utils.classic_dist loc (Station.get_loc station) in
-           let value = 300 / (opponent.build_skill + 2) in
-           if value >= dist then true else false
-        | _ -> true
-      in
-      if not create then `Update v else
-      let yearly_interest =
-        5 * (8 - opponent.financial_skill - Climate.to_enum params.climate)
-      in
-      let ai = {
-        idx = new_ai_idx v;
-        opponent;
-        city1=city_idx;
-        city2=None;
-        cash=900;
-        bonds=500;
-        build_order=None;
-        yearly_income=5;
-        yearly_interest;
-        net_worth=50;
-        revenue_ytd = (params.time + 2000) / 20;
-        expand_counter=20;
-      } in
-      let v = IntMap.add ai.idx ai v.ais in
-      let stocks = Stock_market.add_ai_player ~player:ai.idx stocks in
-      let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city=loc} in
-      `CreateAI(v, stocks, ui_msg)
+    _try_create_ai ~tilemap ~station_map ~params ~city_idx ~ai_idx ~stocks loc random v
 
   else `Update v
       
