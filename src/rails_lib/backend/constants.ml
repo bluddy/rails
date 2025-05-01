@@ -18,6 +18,8 @@ let tile_w = tile_dim
 let tile_h = tile_dim
 let train_max_size = 8
 
+let min_dist_btw_stations = 5 (* gt *)
+
 let car_amount = 160
 let car_cost = 5 (* cost of a car *)
 let car_full_demand = 64 

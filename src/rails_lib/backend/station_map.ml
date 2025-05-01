@@ -6,6 +6,7 @@ type t = Station.t Loc_map.t
   [@@deriving yojson]
 
 let find_nearest v loc =
+  (* NOTE: could be made more efficient with quadmap or array *)
   fold (fun (station:Station.t) acc ->
     let station_loc = (station.x, station.y) in
     let dist = Utils.classic_dist loc station_loc in

@@ -68,6 +68,8 @@ let city_rate_war city v = IntSet.mem city v.rate_war_at_city
 
 let get_ai idx v = IntMap.get idx v.ais
 
+let ai_exists idx v = IntMap.mem idx v.ais
+
 let route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply (x, y) =
     Tilemap.demand_supply_sum tilemap ~x ~y ~range:2
@@ -82,7 +84,6 @@ let route_value city1 city2 ~tilemap ~(params:Params.t) =
     let dy = abs @@ snd city1 - snd city2 in
     ((3 * dx + dy) * value) / ((dx + dy) * 2)
   else value
-
 
   (* Simulate earning money on a route *)
 let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities ~cycle v =
@@ -111,50 +112,58 @@ let route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~ci
   let ais = IntMap.add player_idx ai_player v.ais in
   {v with ais}
 
-let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~cycle v =
+let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~cycle ~station_map v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
       route_earn_money route_idx stocks ~params main_player_net_worth ~tilemap ~cities ~cycle v
     else v
   in
-  let v = earn_random_route v in
-  let v = earn_random_route v in
-  let city_idx =
-    let rec empty_city_loop () =
-      let city_idx = Random.int C.max_num_cities random in
-      if IntMap.mem city_idx v.ai_of_city then
-        empty_city_loop ()
-      else
-        city_idx
-    in
-    empty_city_loop ()
+  let random_city () =
+      let rec empty_city_loop () =
+        let city_idx = Cities.random_idx random cities in
+        if IntMap.mem city_idx v.ai_of_city then
+          empty_city_loop ()
+        else
+          city_idx
+      in
+      empty_city_loop ()
   in
+  let random_ai () = Random.int C.max_ai_players random in
+
+  (* Earn 2x in random routes *)
+  let v = earn_random_route v in
+  let v = earn_random_route v in
+  let city_idx = random_city () in
   let (x, y) as loc = Cities.get_idx city_idx cities in
-  if Trackmap.has_track loc trackmap then v else (* no track at city *)
-  let ai_idx = Random.int C.max_ai_players random in
-  (* We have a target city and a company *)
-  if not @@ IntMap.mem ai_idx v.ais then
+  if Trackmap.has_track loc trackmap then v else (* Proceed only if no track at city *)
+  let ai_idx = random_ai () in
+  (* We now have a target city and a company *)
+  if not @@ ai_exists ai_idx v then
       (* New company creation test at this city *)
       let demand_supply = Tilemap.demand_supply_sum tilemap ~x ~y ~range:2 in
       let age = (params.year - C.ref_year_ai_build_value) / 2 in
       let value = demand_supply / age in
       let cycles_value = 100 - (cycle mod 8192) / 128 in
       if cycles_value >= value then v else
-      let closest_station = Station.find_nearest station_map loc in
+      let closest_station = Station_map.find_nearest station_map loc in
       let create = match closest_station with
         | Some _ -> true
-        | None when ai_idx = 0 -> true (* No player station *)
-        | _ -> false
+        | None when ai_idx = 0 -> true (* No player station but first opponent can still exist *)
+        | _ -> false (* don't create another AI if no player station *)
       in
       if not create then v else
       let create = match closest_station with
-       | Some station when Station.is_proper_station station staion_map ->
-          Station.get_loc station 
-       | None -> true
+       | Some station when Station.is_proper_station station ->
+           (* Make sure we're not too close *)
+           let station_loc = Station.get_loc station in
+           let dx, dy = Utils.dxdy loc station_loc in
+           min dx dy > C.min_dist_btw_stations
+       | _ -> true (* We don't care if no station or signaltower *)
       in
       if not create then v else
-      v
+        v
+  else v
       
 
 (* 
