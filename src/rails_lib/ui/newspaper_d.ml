@@ -6,7 +6,7 @@ type kind =
   | LocalNews
 
 type 'state t = {
-  opponent: Opponent.t option;
+  opponent: Opponent.name option;
   kind: kind;
   msgbox: (unit, 'state) Menu.MsgBox.t;
 }

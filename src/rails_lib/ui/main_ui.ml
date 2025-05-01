@@ -855,6 +855,11 @@ let handle_msgs (s:State.t) v ui_msgs =
       let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
       {v with mode}
 
+    | Normal, NewCompany{opponent; city} ->
+      let text = Ai.new_ai_text opponent city s.backend.cities in
+      let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
+      {v with mode}
+
     | Normal, IndustryBuilt{player; tile} when player = C.player ->
       let tile_s = Tile.show tile in
       fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s

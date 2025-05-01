@@ -214,6 +214,13 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
 
   else `Update v
       
+let new_ai_text name city cities =
+  Printf.sprintf
+  "New Railroad company\n\
+   chartered in %s!\n\
+   President: %s.\n"
+   (Cities.get_name cities (fst city) (snd city))
+   (Opponent.show_name name)
 
 (* 
 
