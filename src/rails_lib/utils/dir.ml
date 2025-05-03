@@ -68,12 +68,12 @@ let opposite = function
   | Left -> Right
   | UpLeft -> DownRight
 
+let diff dir1 dir2 =
+  let diff = abs(to_enum dir1 - to_enum dir2) in
+  if diff > 4 then 8 - diff else diff
+
 let within_90 dir dir2 =
-  let dir = to_enum dir in
-  let dir2 = to_enum dir2 in
-  let diff = dir2 - dir in
-  let diff = if diff < 0 then diff + 8 else diff in
-  diff <= 2
+  diff dir dir2 <= 2
 
 let is_cardinal = function
   | Up
@@ -89,9 +89,6 @@ let is_diagonal = function
   | DownLeft -> true
   | _ -> false
 
-let diff dir1 dir2 =
-  let diff = abs(to_enum dir1 - to_enum dir2) in
-  if diff > 4 then 8 - diff else diff
 
 module Set = struct
   include Bitset.Make(struct
