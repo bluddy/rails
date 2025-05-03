@@ -328,6 +328,19 @@ module List = struct
     loop i [] l0
 
   let sum f v = List.fold_left (fun acc x -> acc + f x) 0 v
+
+  let comp_f op f l = match l with
+   | x::xs ->
+      List.fold_left (fun ((acc, _) as cur) x ->
+      let acc' = f x in
+      if op acc' acc then (acc', x) else cur)
+      (f x, x)
+      xs
+  | _ -> raise @@ Invalid_argument "Cannot handle empty list"
+
+  let min_f f l = comp_f (<) f l
+  let max_f f l = comp_f (>) f l
+    
 end
 
 let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
