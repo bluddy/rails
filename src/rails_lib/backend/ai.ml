@@ -250,3 +250,59 @@ let new_ai_text name city cities =
           else
 *)
 
+let _dir_from_dx_dy dx dy =
+  let adx, ady = abs dx, abs dy in
+  if 2 * ady < adx then
+    (* dx >> dy *)
+    if dx <= 0 then Dir.Right else Left
+  else if 2 * adx < ady then
+      (* dy >> dx *)
+      if dy <= 0 then Up else Down
+  else
+      match dx <= 0, dy <= 0 with
+      | true, true -> UpLeft
+      | true, false -> DownLeft
+      | false, true -> UpRight
+      | false, false -> DownRight
+
+(* This function starts with the station locations for src and targets *)
+let build_track src_loc tgt_loc company ~trackmap ~tilemap v =
+  (* Get general dir from deltas *)
+  let dx, dy = Utils.s_dxdy src_loc tgt_loc in
+  let tgt_dir = _dir_from_dx_dy dx dy in
+  let src_dir = Dir.opposite tgt_dir in
+  let src_at_station, tgt_at_station = true, true in
+
+  let costs = List.map (fun ((x, y) as loc, loc2) ->
+    let dx, dy = Utils.s_dxdy loc loc2 in
+    let dir = _dir_from_dx_dy dx dy in
+
+    let costs = List.map (fun adjust_dir_fn ->
+      let dir = adjust_dir_fn dir in
+      let x, y = Dir.adjust dir x y in
+      let tile = Tilemap.get_tile tilemap x y in
+      let cost, x, y = match tile with
+       | Tile.Harbor _ | Ocean _ -> 999, x, y
+       | River _ | Landing _ ->
+          (* Try crossing with bridge *)
+          let x, y = Dir.adjust dir x y in
+          begin match Tilemap.get_tile tilemap x y with
+          | Tile.River _ -> 99 + 32, x, y
+          | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y
+          | _ -> 32, x, y
+          end
+        | _ -> 0, x, y
+      in
+      ()
+    )
+    [Dir.ccw; Fun.id; Dir.cw]
+    in
+    ()
+  )
+  [
+    tgt_loc, src_loc;
+    src_loc, tgt_loc
+  ]
+  in
+
+  ()

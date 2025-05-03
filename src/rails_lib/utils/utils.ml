@@ -411,6 +411,9 @@ let string_of_num num =
 let dxdy (x1,y1) (x2,y2) =
   abs(x1-x2), abs(y1-y2)
 
+let s_dxdy (x1,y1) (x2,y2) =
+  x1-x2, y1-y2
+
   (* The way the original game approximates distance *)
 let classic_dist loc1 loc2 =
   let dx, dy = dxdy loc1 loc2 in
