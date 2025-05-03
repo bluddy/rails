@@ -7,6 +7,7 @@ module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
 module IntMap = Utils.IntMap
 module IntSet = Utils.IntSet
+module List = Utils.List
 
 let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -266,43 +267,59 @@ let _dir_from_dx_dy dx dy =
       | false, false -> DownRight
 
 (* This function starts with the station locations for src and targets *)
-let build_track src_loc tgt_loc company ~trackmap ~tilemap v =
+let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   (* Get general dir from deltas *)
   let dx, dy = Utils.s_dxdy src_loc tgt_loc in
-  let tgt_dir = _dir_from_dx_dy dx dy in
-  let src_dir = Dir.opposite tgt_dir in
+  let tgt_real_dir = _dir_from_dx_dy dx dy in
+  let src_real_dir = Dir.opposite tgt_real_dir in
   let src_at_station, tgt_at_station = true, true in
+  let real_dist = Utils.classic_dist src_loc tgt_loc in
 
-  let costs = List.map (fun ((x, y) as loc, loc2) ->
+  let costs = List.map (fun (((x, y) as loc), real_dir, ((x2, y2) as loc2), real_dir2) ->
     let dx, dy = Utils.s_dxdy loc loc2 in
     let dir = _dir_from_dx_dy dx dy in
 
-    let costs = List.map (fun adjust_dir_fn ->
-      let dir = adjust_dir_fn dir in
-      let x, y = Dir.adjust dir x y in
-      let tile = Tilemap.get_tile tilemap x y in
-      let cost, x, y = match tile with
-       | Tile.Harbor _ | Ocean _ -> 999, x, y
-       | River _ | Landing _ ->
-          (* Try crossing with bridge *)
-          let x, y = Dir.adjust dir x y in
-          begin match Tilemap.get_tile tilemap x y with
-          | Tile.River _ -> 99 + 32, x, y
-          | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y
-          | _ -> 32, x, y
-          end
-        | _ -> 0, x, y
+    let costs = List.map (fun dir_adjust ->
+      let cost =
+        if real_dist <= 2 && dir_adjust <> 0 then 999 else
+        let dir = Dir.add dir dir_adjust in
+        let x, y = Dir.adjust dir x y in
+        let tile = Tilemap.get_tile tilemap x y in
+        let cost, x, y = match tile with
+         | Tile.Harbor _ | Ocean _ -> 999, x, y
+         | River _ | Landing _ ->
+            (* Try crossing with bridge *)
+            let x, y = Dir.adjust dir x y in
+            begin match Tilemap.get_tile tilemap x y with
+            | Tile.River _ -> 99 + 32, x, y
+            | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y
+            | _ -> 32, x, y
+            end
+          | _ -> 0, x, y
+        in
+        let cost = if Trackmap.has_track (x, y) trackmap then cost + 64 else cost in
+        let dir_diff = Dir.diff dir real_dir in
+        (* Check 90 degrees *)
+        let cost = if dir_diff > 2 then cost + 99 else cost in
+        let cost = if dir_diff = 0 && real_dist > 4 then cost - 20 else cost in
+        (* Penalize indirect solutions with distance *)
+        let cost = if dir_adjust = 0 then cost else cost + 512 / (real_dist + 4) in
+        (* Account randomly for height diff *)
+        let h1 = Tilemap.get_tile_height tilemap x y in
+        let h2 = Tilemap.get_tile_height tilemap x2 y2 in
+        let h_diff = abs(h1 - h2) in
+        let roll = Random.int (2 * h_diff) random in
+        let cost = cost + roll in
+        cost
       in
-      ()
-    )
-    [Dir.ccw; Fun.id; Dir.cw]
+      dir_adjust, cost)
+    [-1; 0; 1]
     in
-    ()
+    List.min_f snd costs |> snd
   )
   [
-    tgt_loc, src_loc;
-    src_loc, tgt_loc
+    tgt_loc, tgt_real_dir, src_loc, src_real_dir;
+    src_loc, src_real_dir, tgt_loc, tgt_real_dir;
   ]
   in
-
-  ()
+   costs

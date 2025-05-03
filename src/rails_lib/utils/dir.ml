@@ -72,6 +72,11 @@ let diff dir1 dir2 =
   let diff = abs(to_enum dir1 - to_enum dir2) in
   if diff > 4 then 8 - diff else diff
 
+let add dir delta =
+  let enum = to_enum dir + delta in
+  let enum = if enum < 0 then enum + 8 else enum in
+  of_enum enum |> Option.get_exn_or "Invalid dir formed"
+
 let within_90 dir dir2 =
   diff dir dir2 <= 2
 
