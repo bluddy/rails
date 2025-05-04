@@ -285,22 +285,23 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
       let dir = _dir_from_dx_dy dx dy in
 
       let costs = List.map (fun dir_adjust ->
-        let cost =
-          if real_dist <= 2 && not @@ is_id dir_adjust then 999 else
+        let cost, is_river =
           let dir = (shift dir_adjust) dir in
           let x, y = Dir.adjust dir x y in
           let tile = Tilemap.get_tile tilemap x y in
-          let cost, x, y = match tile with
-           | Tile.Harbor _ | Ocean _ -> 999, x, y
+          let is_river = match tile with River _ | Landing _ -> `IsRiver | _ -> `NoRiver in
+          if real_dist <= 2 && not @@ is_id dir_adjust then 999, is_river else
+          let cost, x, y, is_river = match tile with
+           | Tile.Harbor _ | Ocean _ -> 999, x, y, `NoRiver
            | River _ | Landing _ ->
               (* Try crossing with bridge *)
               let x, y = Dir.adjust dir x y in
               begin match Tilemap.get_tile tilemap x y with
-              | Tile.River _ -> 99 + 32, x, y
-              | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y
-              | _ -> 32, x, y
+              | Tile.River _ -> 99 + 32, x, y, `NoRiver
+              | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y, `NoRiver
+              | _ -> 32, x, y, `IsRiver
               end
-            | _ -> 0, x, y
+            | _ -> 0, x, y, `NoRiver
           in
           let cost = if Trackmap.has_track (x, y) trackmap then cost + 64 else cost in
           let dir_diff = Dir.diff dir real_dir in
@@ -315,9 +316,9 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
           let h_diff = abs(h1 - h2) in
           let roll = Random.int (2 * h_diff) random in
           let cost = cost + roll in
-          cost
+          cost, is_river
         in
-        dir_adjust, cost)
+        (dir_adjust, is_river), cost)
       [`ccw; `id; `cw]
       in
       let min_cost = List.min_f snd costs |> snd in
