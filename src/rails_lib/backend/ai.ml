@@ -330,16 +330,16 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
     ]
   in
   let costs = search_for_min_costs () in
-  let loc1, real_dir1, loc2, dir_adjust =
-    if real_dist < 2 then
-      let dir_adjust = List.assoc ~eq:equal_tgt_src `Tgt costs |> fst in
-      tgt_loc, tgt_real_dir, src_loc, dir_adjust
-    else
-      let min_cost = List.min_f (fun x -> x |> snd |> snd) costs |> snd in
-      let dir_adjust = List.assoc ~eq:equal_tgt_src (fst min_cost) costs |> fst in
-      match fst min_cost with
-      | `Tgt -> tgt_loc, tgt_real_dir, src_loc, dir_adjust
-      | `Src -> src_loc, src_real_dir, src_loc, dir_adjust
+  let get_river i = List.nth costs i |> snd |> fst |> snd in
+  let get_fst_snd i = List.nth costs i |> fst in
+  let min_idx = match get_river 0, get_river 1 with
+    (* Highest priority -> crossing river *)
+    | `IsRiver, _ -> get_fst_snd 0
+    | _, `IsRiver -> get_fst_snd 1
+    (* Then, close *)
+    | _ when real_dist < 2 -> `Tgt
+    (* Then, go by minimum *)
+    | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
   in
   ()
 
