@@ -274,58 +274,62 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   let src_real_dir = Dir.opposite tgt_real_dir in
   let src_at_station, tgt_at_station = true, true in
   let real_dist = Utils.classic_dist src_loc tgt_loc in
+  let is_id = function `id -> true | _ -> false in
+  let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
 
-  let costs = List.map (fun (spec, ((x, y) as loc), real_dir, ((x2, y2) as loc2)) ->
-    let dx, dy = Utils.s_dxdy loc loc2 in
-    let dir = _dir_from_dx_dy dx dy in
+  let search_for_min_cost_step () =
 
-    let costs = List.map (fun dir_adjust ->
-      let is_id = function `id -> true | _ -> false in
-      let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
-      let cost =
-        if real_dist <= 2 && not @@ is_id dir_adjust then 999 else
-        let dir = (shift dir_adjust) dir in
-        let x, y = Dir.adjust dir x y in
-        let tile = Tilemap.get_tile tilemap x y in
-        let cost, x, y = match tile with
-         | Tile.Harbor _ | Ocean _ -> 999, x, y
-         | River _ | Landing _ ->
-            (* Try crossing with bridge *)
-            let x, y = Dir.adjust dir x y in
-            begin match Tilemap.get_tile tilemap x y with
-            | Tile.River _ -> 99 + 32, x, y
-            | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y
-            | _ -> 32, x, y
-            end
-          | _ -> 0, x, y
+    let costs = List.map (fun (spec, ((x, y) as loc), real_dir, ((x2, y2) as loc2)) ->
+      let dx, dy = Utils.s_dxdy loc loc2 in
+      let dir = _dir_from_dx_dy dx dy in
+
+      let costs = List.map (fun dir_adjust ->
+        let cost =
+          if real_dist <= 2 && not @@ is_id dir_adjust then 999 else
+          let dir = (shift dir_adjust) dir in
+          let x, y = Dir.adjust dir x y in
+          let tile = Tilemap.get_tile tilemap x y in
+          let cost, x, y = match tile with
+           | Tile.Harbor _ | Ocean _ -> 999, x, y
+           | River _ | Landing _ ->
+              (* Try crossing with bridge *)
+              let x, y = Dir.adjust dir x y in
+              begin match Tilemap.get_tile tilemap x y with
+              | Tile.River _ -> 99 + 32, x, y
+              | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y
+              | _ -> 32, x, y
+              end
+            | _ -> 0, x, y
+          in
+          let cost = if Trackmap.has_track (x, y) trackmap then cost + 64 else cost in
+          let dir_diff = Dir.diff dir real_dir in
+          (* Check 90 degrees *)
+          let cost = if dir_diff > 2 then cost + 99 else cost in
+          let cost = if dir_diff = 0 && real_dist > 4 then cost - 20 else cost in
+          (* Penalize indirect solutions with distance *)
+          let cost = if is_id dir_adjust then cost else cost + 512 / (real_dist + 4) in
+          (* Account randomly for height diff *)
+          let h1 = Tilemap.get_tile_height tilemap x y in
+          let h2 = Tilemap.get_tile_height tilemap x2 y2 in
+          let h_diff = abs(h1 - h2) in
+          let roll = Random.int (2 * h_diff) random in
+          let cost = cost + roll in
+          cost
         in
-        let cost = if Trackmap.has_track (x, y) trackmap then cost + 64 else cost in
-        let dir_diff = Dir.diff dir real_dir in
-        (* Check 90 degrees *)
-        let cost = if dir_diff > 2 then cost + 99 else cost in
-        let cost = if dir_diff = 0 && real_dist > 4 then cost - 20 else cost in
-        (* Penalize indirect solutions with distance *)
-        let cost = if is_id dir_adjust then cost else cost + 512 / (real_dist + 4) in
-        (* Account randomly for height diff *)
-        let h1 = Tilemap.get_tile_height tilemap x y in
-        let h2 = Tilemap.get_tile_height tilemap x2 y2 in
-        let h_diff = abs(h1 - h2) in
-        let roll = Random.int (2 * h_diff) random in
-        let cost = cost + roll in
-        cost
+        dir_adjust, cost)
+      [`ccw; `id; `cw]
       in
-      dir_adjust, cost)
-    [`ccw; `id; `cw]
+      let min_cost = List.min_f snd costs |> snd in
+      spec, min_cost
+    )
+    [
+      `Tgt, tgt_loc, tgt_real_dir, src_loc;
+      `Src, src_loc, src_real_dir, tgt_loc;
+    ]
     in
-    let min_cost = List.min_f snd costs |> snd in
-    spec, min_cost
-  )
-  [
-    `Tgt, tgt_loc, tgt_real_dir, src_loc;
-    `Src, src_loc, src_real_dir, tgt_loc;
-  ]
+    List.min_f (fun x -> x |> snd |> snd) costs |> snd
   in
-  let min_cost = List.min_f snd costs
+  let min_cost = search_for_min_cost_step ()
   in
   ()
 
