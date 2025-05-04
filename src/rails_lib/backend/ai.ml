@@ -266,6 +266,8 @@ let _dir_from_dx_dy dx dy =
       | false, true -> UpRight
       | false, false -> DownRight
 
+type tgt_src = [`Tgt | `Src] [@@deriving eq]
+
 (* This function starts with the station locations for src and targets *)
 let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   (* Get general dir from deltas *)
@@ -327,6 +329,16 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
     ]
   in
   let costs = search_for_min_costs () in
-  let min_cost = List.min_f (fun x -> x |> snd |> snd) costs |> snd in
+  let loc1, real_dir1, loc2, dir_adjust =
+    if real_dist < 2 then
+      let dir_adjust = List.assoc ~eq:equal_tgt_src `Tgt costs |> fst in
+      tgt_loc, tgt_real_dir, src_loc, dir_adjust
+    else
+      let min_cost = List.min_f (fun x -> x |> snd |> snd) costs |> snd in
+      let dir_adjust = List.assoc ~eq:equal_tgt_src (fst min_cost) costs |> fst in
+      match fst min_cost with
+      | `Tgt -> tgt_loc, tgt_real_dir, src_loc, dir_adjust
+      | `Src -> src_loc, src_real_dir, src_loc, dir_adjust
+  in
   ()
 
