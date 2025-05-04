@@ -280,9 +280,11 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
     let dir = _dir_from_dx_dy dx dy in
 
     let costs = List.map (fun dir_adjust ->
+      let is_id = function `id -> true | _ -> false in
+      let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
       let cost =
-        if real_dist <= 2 && dir_adjust <> 0 then 999 else
-        let dir = Dir.add dir dir_adjust in
+        if real_dist <= 2 && not @@ is_id dir_adjust then 999 else
+        let dir = (shift dir_adjust) dir in
         let x, y = Dir.adjust dir x y in
         let tile = Tilemap.get_tile tilemap x y in
         let cost, x, y = match tile with
@@ -303,7 +305,7 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
         let cost = if dir_diff > 2 then cost + 99 else cost in
         let cost = if dir_diff = 0 && real_dist > 4 then cost - 20 else cost in
         (* Penalize indirect solutions with distance *)
-        let cost = if dir_adjust = 0 then cost else cost + 512 / (real_dist + 4) in
+        let cost = if is_id dir_adjust then cost else cost + 512 / (real_dist + 4) in
         (* Account randomly for height diff *)
         let h1 = Tilemap.get_tile_height tilemap x y in
         let h2 = Tilemap.get_tile_height tilemap x2 y2 in
@@ -313,7 +315,7 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
         cost
       in
       dir_adjust, cost)
-    [-1; 0; 1]
+    [`ccw; `id; `cw]
     in
     let min_cost = List.min_f snd costs |> snd in
     spec, min_cost
@@ -323,4 +325,7 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
     `Src, src_loc, src_real_dir, tgt_loc;
   ]
   in
-  costs
+  let min_cost = List.min_f snd costs
+  in
+  ()
+
