@@ -279,8 +279,13 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
 
+  let idx_vars = [
+      `Tgt, (tgt_loc, tgt_real_dir, src_loc);
+      `Src, (src_loc, src_real_dir, tgt_loc);
+    ]
+  in
   let search_for_min_costs () =
-    List.map (fun (spec, ((x, y) as loc), real_dir, ((x2, y2) as loc2)) ->
+    List.map (fun (spec, (((x, y) as loc), real_dir, ((x2, y2) as loc2))) ->
       let dx, dy = Utils.s_dxdy loc loc2 in
       let dir = _dir_from_dx_dy dx dy in
 
@@ -324,22 +329,20 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
       let min_cost = List.min_f snd costs |> snd in
       spec, min_cost
     )
-    [
-      `Tgt, tgt_loc, tgt_real_dir, src_loc;
-      `Src, src_loc, src_real_dir, tgt_loc;
-    ]
+    idx_vars
   in
   let costs = search_for_min_costs () in
   let get_river i = List.nth costs i |> snd |> fst |> snd in
-  let get_fst_snd i = List.nth costs i |> fst in
   let min_idx = match get_river 0, get_river 1 with
     (* Highest priority -> crossing river *)
-    | `IsRiver, _ -> get_fst_snd 0
-    | _, `IsRiver -> get_fst_snd 1
+    | `IsRiver, _ -> `Tgt
+    | _, `IsRiver -> `Src
     (* Then, close *)
     | _ when real_dist < 2 -> `Tgt
     (* Then, go by minimum *)
     | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
   in
+  let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
+  let loc1, real_dir, loc2 = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
   ()
 
