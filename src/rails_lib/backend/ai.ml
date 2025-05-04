@@ -277,9 +277,8 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
 
-  let search_for_min_cost_step () =
-
-    let costs = List.map (fun (spec, ((x, y) as loc), real_dir, ((x2, y2) as loc2)) ->
+  let search_for_min_costs () =
+    List.map (fun (spec, ((x, y) as loc), real_dir, ((x2, y2) as loc2)) ->
       let dx, dy = Utils.s_dxdy loc loc2 in
       let dir = _dir_from_dx_dy dx dy in
 
@@ -326,10 +325,8 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
       `Tgt, tgt_loc, tgt_real_dir, src_loc;
       `Src, src_loc, src_real_dir, tgt_loc;
     ]
-    in
-    List.min_f (fun x -> x |> snd |> snd) costs |> snd
   in
-  let min_cost = search_for_min_cost_step ()
-  in
+  let costs = search_for_min_costs () in
+  let min_cost = List.min_f (fun x -> x |> snd |> snd) costs |> snd in
   ()
 
