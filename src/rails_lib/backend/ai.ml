@@ -275,7 +275,7 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   let src_at_station, tgt_at_station = true, true in
   let real_dist = Utils.classic_dist src_loc tgt_loc in
 
-  let costs = List.map (fun (((x, y) as loc), real_dir, ((x2, y2) as loc2), real_dir2) ->
+  let costs = List.map (fun (spec, ((x, y) as loc), real_dir, ((x2, y2) as loc2)) ->
     let dx, dy = Utils.s_dxdy loc loc2 in
     let dir = _dir_from_dx_dy dx dy in
 
@@ -315,11 +315,12 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
       dir_adjust, cost)
     [-1; 0; 1]
     in
-    List.min_f snd costs |> snd
+    let min_cost = List.min_f snd costs |> snd in
+    spec, min_cost
   )
   [
-    tgt_loc, tgt_real_dir, src_loc, src_real_dir;
-    src_loc, src_real_dir, tgt_loc, tgt_real_dir;
+    `Tgt, tgt_loc, tgt_real_dir, src_loc;
+    `Src, src_loc, src_real_dir, tgt_loc;
   ]
   in
-   costs
+  costs
