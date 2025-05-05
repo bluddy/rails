@@ -346,41 +346,60 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
     | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
   in
   let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
-  let loc1, dir1, loc2, at_station_flag = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
+  let loc, dir1, loc2, at_station_flag = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
 
   (* Build track going out *)
   let dir = shift dir_adjust @@ dir1 in
   let real_dist = Utils.classic_dist src_loc tgt_loc in
 
   (* NOTE: not implementing player-based code. It might be broken anyway due to increment company instruction *)
-  let t = Trackmap.get_loc loc1 trackmap in
+  let t = Trackmap.get_loc loc trackmap in
   let track_modify = match t, at_station_flag with
     (* We don't care about crossing our own track (AI doesn't follow the rules.
        However, we can't do it right when leaving a station *)
-    | Some track, `NotAtStation when track.player = company -> t
+    | Some track, `NotAtStation when track.player = company -> `Modify track
     (* We can build from a player station *)
-    | Some track, `AtStation when track.player = C.player -> t
-    | Some _, _ -> None
-    | None, _ -> Track.empty company @@ Track `Single |> Option.some
+    | Some track, `AtStation when track.player = C.player -> `Modify track
+    | Some _, _ -> `NoModify
+    | None, _ -> `Modify (Track.empty company @@ Track `Single)
   in
   let trackmap, ai_track = match track_modify with
-    | None -> trackmap, ai_track
-    | Some track ->
+    | `NoModify -> trackmap, ai_track
+    | `Modify track ->
        let track = Track.add_dir track ~dir in
-       let trackmap = Trackmap.set_loc loc1 track trackmap in
-       trackmap, loc1::ai_track
+       let trackmap = Trackmap.set_loc loc track trackmap in
+       trackmap, loc::ai_track
   in
 
   (* Test dir diagonals *)
   let diag_surrounded =
     if Dir.is_diagonal dir then
       (* Problem if we have track on *both* sides of us *)
-      let loc = Dir.adjust_loc (Dir.ccw dir) loc1 in
+      let loc = Dir.adjust_loc (Dir.ccw dir) loc in
       let has_track_ccw = Trackmap.has_track loc trackmap in
-      let loc = Dir.adjust_loc (Dir.cw dir) loc1 in
+      let loc = Dir.adjust_loc (Dir.cw dir) loc in
       let has_track_cw = Trackmap.has_track loc trackmap in
       has_track_ccw && has_track_cw
     else false
+  in
+
+  (* Move get tile *)
+  let loc = Dir.adjust_loc dir loc in
+  let at_station_flag = `NotAtStation in
+  let tile = Tilemap.tile_at loc tilemap in
+  let track = Trackmap.get_loc loc trackmap in
+  let trackmap, ai_track, at_station_flag = match tile, track with
+   (* These things are only allowed if we're almost there *)
+   | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> trackmap, ai_track, `Fail
+   | EnemyStation, _ -> trackmap, ai_track, `AtStation
+   | _, Some _ when real_dist > 1 -> trackmap, ai_track, at_station_flag
+   | _ when diag_surrounded && real_dist > 1 -> trackmap, ai_track, at_station_flag
+   | _ ->
+    (* Add track facing opposite way *)
+    let track = Track.empty company @@ Track `Single
+     |> Track.add_dir ~dir:(Dir.opposite dir) in
+    let trackmap = Trackmap.set_loc loc track trackmap in
+    trackmap, loc::ai_track, at_station_flag
   in
   ()
 

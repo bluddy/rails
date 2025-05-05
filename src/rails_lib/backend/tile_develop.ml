@@ -39,7 +39,7 @@ let default_dev =
     Farm_pixel, 3;
     Hills_pixel, 0;
     Village_pixel, 8;
-    EnemyRR_pixel, 0;
+    EnemyStation_pixel, 0;
     City_pixel, 16;
     Mountain_pixel, -2;
   ]
@@ -59,7 +59,7 @@ let default_resist =
     Farm_pixel, 14;
     Hills_pixel, -9;
     Village_pixel, 21;
-    EnemyRR_pixel, 3;
+    EnemyStation_pixel, 3;
     City_pixel, 48;
     Mountain_pixel, -15;
   ]

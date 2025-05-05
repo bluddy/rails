@@ -38,7 +38,7 @@ type pixel =
   | Farm_pixel     (* 10 *)
   | Hills_pixel
   | Village_pixel
-  | EnemyRR_pixel (* dummy *)
+  | EnemyStation_pixel (* Represents enemey stations, which can only be at proper city locations *)
   | City_pixel
   | Mountain_pixel (* 15 *)
   [@@deriving enum, eq, ord, yojson]
@@ -57,7 +57,7 @@ let height_of_pixel = function
   | Farm_pixel -> 1
   | Hills_pixel -> 4
   | Village_pixel -> 1
-  | EnemyRR_pixel -> 1
+  | EnemyStation_pixel -> 1
   | City_pixel -> 1
   | Mountain_pixel -> 8
 
@@ -95,12 +95,14 @@ let pixel_of_tile = function
   | Factory
   | City -> City_pixel
   | Mountains -> Mountain_pixel
-  | EnemyRR -> assert false
+  | EnemyStation -> EnemyStation_pixel
 
 let out_of_bounds x y v =
   x < 0 || x >= v.width || y < 0 || y >= v.height
 
 let get_tile v x y = v.map.(Utils.calc_offset v.width x y)
+
+let tile_at (x,y) v = get_tile v x y
 
 let set_tile v x y tile =
   v.map.(Utils.calc_offset v.width x y) <- tile
@@ -177,7 +179,7 @@ let tile_of_pixel ~region ~x ~y ~pixel v =
     | Mountain_pixel -> Mountains
     | Ocean_pixel ->
         Ocean(water_dirs ~edge:false ~f:not_water)
-    | EnemyRR_pixel -> assert false
+    | EnemyStation_pixel -> EnemyStation
   in
   (* NOTE: Does some region change the mappings?
       Otherwise why would clear pixels get complex mapping when they can't have anything? *)
