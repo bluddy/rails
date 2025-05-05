@@ -15,6 +15,8 @@ let empty width height =
 
 let get v ~x ~y = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
 
+let get_loc (x,y) v = get v ~x ~y
+
 let get_exn v ~x ~y = IntMap.find (Utils.calc_offset v.width x y) v.map 
 
   (* get, buf if there's nothing, create a track *)
@@ -25,6 +27,11 @@ let get_track_default ?(kind=(Track.Track `Single)) v ~x ~y ~player =
 let set v ~x ~y ~t =
   let map = IntMap.add (Utils.calc_offset v.width x y) t v.map in
   {v with map}
+
+let set_loc (x,y) t v = set v ~x ~y ~t
+
+let update_loc (x, y) f v =
+  {v with map=IntMap.update (Utils.calc_offset v.width x y) f v.map}
 
 let remove v ~x ~y =
   let map = IntMap.remove (Utils.calc_offset v.width x y) v.map in

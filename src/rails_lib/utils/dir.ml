@@ -193,6 +193,9 @@ let adjust dir x y =
   let dx, dy = to_offsets dir in
   x + dx, y + dy
 
+let adjust_loc dir (x, y) =
+  adjust dir x y
+
 let random_adjust x y r =
   let dir = random r in
   adjust dir x y

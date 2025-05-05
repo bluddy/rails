@@ -37,6 +37,7 @@ type t = {
   ai_of_city: int IntMap.t; (* Each city can only have one ai *)
   rate_war_at_city: IntSet.t;
   ais: ai_player IntMap.t; (* AI player info *)
+  ai_track: Utils.loc list;
 } [@@deriving yojson]
 
 let default () = {
@@ -44,6 +45,7 @@ let default () = {
   ai_of_city=IntMap.empty;
   rate_war_at_city=IntSet.empty;
   ais=IntMap.empty;
+  ai_track=[];
 }
 
 let num_routes v = Vector.length v.routes
@@ -271,6 +273,7 @@ type tgt_src = [`Tgt | `Src] [@@deriving eq]
 (* This function starts with the station locations for src and targets *)
 let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   (* Get general dir from deltas *)
+  let ai_track = v.ai_track in
   let dx, dy = Utils.s_dxdy src_loc tgt_loc in
   let tgt_real_dir = _dir_from_dx_dy dx dy in
   let src_real_dir = Dir.opposite tgt_real_dir in
@@ -280,12 +283,12 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
 
   let idx_vars = [
-      `Tgt, (tgt_loc, tgt_real_dir, src_loc);
-      `Src, (src_loc, src_real_dir, tgt_loc);
+      `Tgt, (tgt_loc, tgt_real_dir, src_loc, tgt_at_station);
+      `Src, (src_loc, src_real_dir, tgt_loc, src_at_station);
     ]
   in
   let search_for_min_costs () =
-    List.map (fun (spec, (((x, y) as loc), real_dir, ((x2, y2) as loc2))) ->
+    List.map (fun (spec, (((x, y) as loc), real_dir, ((x2, y2) as loc2), _)) ->
       let dx, dy = Utils.s_dxdy loc loc2 in
       let dir = _dir_from_dx_dy dx dy in
 
@@ -343,6 +346,26 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
     | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
   in
   let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
-  let loc1, real_dir, loc2 = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
+  let loc1, dir1, loc2, at_station_flag = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
+
+  let dir = shift dir_adjust @@ dir1 in
+  let loc = Dir.adjust_loc dir loc1 in
+  let real_dist = Utils.classic_dist src_loc tgt_loc in
+
+  (* NOTE: not implementing player-based code. It might be broken anyway due to increment company instruction *)
+  let t = Trackmap.get_loc loc trackmap in
+  let track_modify = match t with
+    (* Not sure what this condition means or if it's really used *)
+    | Some track when track.player = company && not at_station_flag -> t
+    | Some _ -> None
+    | None -> Track.empty company @@ Track `Single |> Option.some
+  in
+  let trackmap, ai_track = match track_modify with
+    | None -> trackmap, ai_track
+    | Some track ->
+       let track = Track.add_dir track ~dir in
+       let trackmap = Trackmap.set_loc loc track trackmap in
+       trackmap, loc::ai_track
+  in
   ()
 
