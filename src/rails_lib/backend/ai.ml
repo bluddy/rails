@@ -277,7 +277,7 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   let dx, dy = Utils.s_dxdy src_loc tgt_loc in
   let tgt_real_dir = _dir_from_dx_dy dx dy in
   let src_real_dir = Dir.opposite tgt_real_dir in
-  let src_at_station, tgt_at_station = true, true in
+  let src_at_station, tgt_at_station = `AtStation, `AtStation in
   let real_dist = Utils.classic_dist src_loc tgt_loc in
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
@@ -348,24 +348,39 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
   let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
   let loc1, dir1, loc2, at_station_flag = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
 
+  (* Build track going out *)
   let dir = shift dir_adjust @@ dir1 in
-  let loc = Dir.adjust_loc dir loc1 in
   let real_dist = Utils.classic_dist src_loc tgt_loc in
 
   (* NOTE: not implementing player-based code. It might be broken anyway due to increment company instruction *)
-  let t = Trackmap.get_loc loc trackmap in
-  let track_modify = match t with
-    (* Not sure what this condition means or if it's really used *)
-    | Some track when track.player = company && not at_station_flag -> t
-    | Some _ -> None
-    | None -> Track.empty company @@ Track `Single |> Option.some
+  let t = Trackmap.get_loc loc1 trackmap in
+  let track_modify = match t, at_station_flag with
+    (* We don't care about crossing our own track (AI doesn't follow the rules.
+       However, we can't do it right when leaving a station *)
+    | Some track, `NotAtStation when track.player = company -> t
+    (* We can build from a player station *)
+    | Some track, `AtStation when track.player = C.player -> t
+    | Some _, _ -> None
+    | None, _ -> Track.empty company @@ Track `Single |> Option.some
   in
   let trackmap, ai_track = match track_modify with
     | None -> trackmap, ai_track
     | Some track ->
        let track = Track.add_dir track ~dir in
-       let trackmap = Trackmap.set_loc loc track trackmap in
-       trackmap, loc::ai_track
+       let trackmap = Trackmap.set_loc loc1 track trackmap in
+       trackmap, loc1::ai_track
+  in
+
+  (* Test dir diagonals *)
+  let diag_surrounded =
+    if Dir.is_diagonal dir then
+      (* Problem if we have track on *both* sides of us *)
+      let loc = Dir.adjust_loc (Dir.ccw dir) loc1 in
+      let has_track_ccw = Trackmap.has_track loc trackmap in
+      let loc = Dir.adjust_loc (Dir.cw dir) loc1 in
+      let has_track_cw = Trackmap.has_track loc trackmap in
+      has_track_ccw && has_track_cw
+    else false
   in
   ()
 
