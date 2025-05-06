@@ -271,14 +271,10 @@ let _dir_from_dx_dy dx dy =
 type tgt_src = [`Tgt | `Src] [@@deriving eq]
 
 (* This function starts with the station locations for src and targets *)
-let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
+let build_track_btw_stations src_loc tgt_loc company ~trackmap ~tilemap random v =
   (* Get general dir from deltas *)
   let ai_track = v.ai_track in
-  let dx, dy = Utils.s_dxdy src_loc tgt_loc in
-  let tgt_real_dir = _dir_from_dx_dy dx dy in
-  let src_real_dir = Dir.opposite tgt_real_dir in
   let src_at_station, tgt_at_station = `AtStation, `AtStation in
-  let real_dist = Utils.classic_dist src_loc tgt_loc in
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
 
@@ -287,119 +283,138 @@ let build_track src_loc tgt_loc company ~trackmap ~tilemap random v =
       `Src, (src_loc, src_real_dir, tgt_loc, src_at_station);
     ]
   in
-  let search_for_min_costs () =
-    List.map (fun (spec, (((x, y) as loc), real_dir, ((x2, y2) as loc2), _)) ->
-      let dx, dy = Utils.s_dxdy loc loc2 in
-      let dir = _dir_from_dx_dy dx dy in
 
-      let costs = List.map (fun dir_adjust ->
-        let cost, is_river =
-          let dir = (shift dir_adjust) dir in
-          let x, y = Dir.adjust dir x y in
-          let tile = Tilemap.get_tile tilemap x y in
-          let is_river = match tile with River _ | Landing _ -> `IsRiver | _ -> `NoRiver in
-          if real_dist <= 2 && not @@ is_id dir_adjust then 999, is_river else
-          let cost, x, y, is_river = match tile with
-           | Tile.Harbor _ | Ocean _ -> 999, x, y, `NoRiver
-           | River _ | Landing _ ->
-              (* Try crossing with bridge *)
-              let x, y = Dir.adjust dir x y in
-              begin match Tilemap.get_tile tilemap x y with
-              | Tile.River _ -> 99 + 32, x, y, `NoRiver
-              | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y, `NoRiver
-              | _ -> 32, x, y, `IsRiver
-              end
-            | _ -> 0, x, y, `NoRiver
+  let rec connect_stations ~trackmap ~ai_track src_loc tgt_loc src_at_station tgt_at_station =
+    let dx, dy = Utils.s_dxdy src_loc tgt_loc in
+    let tgt_real_dir = _dir_from_dx_dy dx dy in
+    let src_real_dir = Dir.opposite tgt_real_dir in
+    let real_dist = Utils.classic_dist src_loc tgt_loc in
+
+    if real_dist = 0 then Some(trackmap, ai_track) else
+
+    let search_for_min_cost_dir () =
+      List.map (fun (spec, (((x, y) as loc), real_dir, ((x2, y2) as loc2), _)) ->
+        let dx, dy = Utils.s_dxdy loc loc2 in
+        let dir = _dir_from_dx_dy dx dy in
+
+        let costs = List.map (fun dir_adjust ->
+          let cost, is_river =
+            let dir = (shift dir_adjust) dir in
+            let x, y = Dir.adjust dir x y in
+            let tile = Tilemap.get_tile tilemap x y in
+            let is_river = match tile with River _ | Landing _ -> `IsRiver | _ -> `NoRiver in
+            if real_dist <= 2 && not @@ is_id dir_adjust then 999, is_river else
+            let cost, x, y, is_river = match tile with
+             | Tile.Harbor _ | Ocean _ -> 999, x, y, `NoRiver
+             | River _ | Landing _ ->
+                (* Try crossing with bridge *)
+                let x, y = Dir.adjust dir x y in
+                begin match Tilemap.get_tile tilemap x y with
+                | Tile.River _ -> 99 + 32, x, y, `NoRiver
+                | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y, `NoRiver
+                | _ -> 32, x, y, `IsRiver
+                end
+              | _ -> 0, x, y, `NoRiver
+            in
+            let cost = if Trackmap.has_track (x, y) trackmap then cost + 64 else cost in
+            let dir_diff = Dir.diff dir real_dir in
+            (* Check 90 degrees *)
+            let cost = if dir_diff > 2 then cost + 99 else cost in
+            let cost = if dir_diff = 0 && real_dist > 4 then cost - 20 else cost in
+            (* Penalize indirect solutions with distance *)
+            let cost = if is_id dir_adjust then cost else cost + 512 / (real_dist + 4) in
+            (* Account randomly for height diff *)
+            let h1 = Tilemap.get_tile_height tilemap x y in
+            let h2 = Tilemap.get_tile_height tilemap x2 y2 in
+            let h_diff = abs(h1 - h2) in
+            let roll = Random.int (2 * h_diff) random in
+            let cost = cost + roll in
+            cost, is_river
           in
-          let cost = if Trackmap.has_track (x, y) trackmap then cost + 64 else cost in
-          let dir_diff = Dir.diff dir real_dir in
-          (* Check 90 degrees *)
-          let cost = if dir_diff > 2 then cost + 99 else cost in
-          let cost = if dir_diff = 0 && real_dist > 4 then cost - 20 else cost in
-          (* Penalize indirect solutions with distance *)
-          let cost = if is_id dir_adjust then cost else cost + 512 / (real_dist + 4) in
-          (* Account randomly for height diff *)
-          let h1 = Tilemap.get_tile_height tilemap x y in
-          let h2 = Tilemap.get_tile_height tilemap x2 y2 in
-          let h_diff = abs(h1 - h2) in
-          let roll = Random.int (2 * h_diff) random in
-          let cost = cost + roll in
-          cost, is_river
+          (dir_adjust, is_river), cost)
+        [`ccw; `id; `cw]
         in
-        (dir_adjust, is_river), cost)
-      [`ccw; `id; `cw]
+        let min_cost = List.min_f snd costs |> snd in
+        spec, min_cost
+      )
+      idx_vars
+    in
+    let costs = search_for_min_cost_dir () in
+    let get_river i = List.nth costs i |> snd |> fst |> snd in
+    let min_idx = match get_river 0, get_river 1 with
+      (* Highest priority -> crossing river *)
+      | `IsRiver, _ -> `Tgt
+      | _, `IsRiver -> `Src
+      (* Then, close *)
+      | _ when real_dist < 2 -> `Tgt
+      (* Then, go by minimum *)
+      | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
+    in
+    let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
+    let loc, dir1, _, at_station_flag = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
+
+    (* Build track going out *)
+    let dir = shift dir_adjust @@ dir1 in
+    let real_dist = Utils.classic_dist src_loc tgt_loc in
+
+    let rec build_one_track () =
+      let t = Trackmap.get_loc loc trackmap in
+      let track_modify = match t, at_station_flag with
+        (* We don't care about crossing our own track (AI doesn't follow the rules.
+           However, we can't do it right when leaving a station *)
+        | Some track, `NotAtStation when track.player = company -> `Modify track
+        (* We can build from a player station *)
+        | Some track, `AtStation when track.player = C.player -> `Modify track
+        | Some _, _ -> `NoModify
+        | None, _ -> `Modify (Track.empty company @@ Track `Single)
       in
-      let min_cost = List.min_f snd costs |> snd in
-      spec, min_cost
-    )
-    idx_vars
-  in
-  let costs = search_for_min_costs () in
-  let get_river i = List.nth costs i |> snd |> fst |> snd in
-  let min_idx = match get_river 0, get_river 1 with
-    (* Highest priority -> crossing river *)
-    | `IsRiver, _ -> `Tgt
-    | _, `IsRiver -> `Src
-    (* Then, close *)
-    | _ when real_dist < 2 -> `Tgt
-    (* Then, go by minimum *)
-    | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
-  in
-  let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
-  let loc, dir1, loc2, at_station_flag = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
+      let trackmap, ai_track = match track_modify with
+        | `NoModify -> trackmap, ai_track
+        | `Modify track ->
+           let track = Track.add_dir track ~dir in
+           let trackmap = Trackmap.set_loc loc track trackmap in
+           trackmap, loc::ai_track
+      in
 
-  (* Build track going out *)
-  let dir = shift dir_adjust @@ dir1 in
-  let real_dist = Utils.classic_dist src_loc tgt_loc in
+      (* Test dir diagonals *)
+      let diag_surrounded =
+        if Dir.is_diagonal dir then
+          (* Problem if we have track on *both* sides of us *)
+          let loc = Dir.adjust_loc (Dir.ccw dir) loc in
+          let has_track_ccw = Trackmap.has_track loc trackmap in
+          let loc = Dir.adjust_loc (Dir.cw dir) loc in
+          let has_track_cw = Trackmap.has_track loc trackmap in
+          has_track_ccw && has_track_cw
+        else false
+      in
 
-  (* NOTE: not implementing player-based code. It might be broken anyway due to increment company instruction *)
-  let t = Trackmap.get_loc loc trackmap in
-  let track_modify = match t, at_station_flag with
-    (* We don't care about crossing our own track (AI doesn't follow the rules.
-       However, we can't do it right when leaving a station *)
-    | Some track, `NotAtStation when track.player = company -> `Modify track
-    (* We can build from a player station *)
-    | Some track, `AtStation when track.player = C.player -> `Modify track
-    | Some _, _ -> `NoModify
-    | None, _ -> `Modify (Track.empty company @@ Track `Single)
+      (* Move *)
+      let loc = Dir.adjust_loc dir loc in
+      let at_station_flag = `NotAtStation in
+      let tile = Tilemap.tile_at loc tilemap in
+      let track = Trackmap.get_loc loc trackmap in
+      let build_track_of_kind kind =
+        (* Add track facing opposite way *)
+        let track = Track.empty company @@ Track `Single
+         |> Track.add_dir ~dir:(Dir.opposite dir) in
+        let trackmap = Trackmap.set_loc loc track trackmap in
+        trackmap, loc::ai_track, at_station_flag, `Ok
+      in
+      let trackmap, ai_track, at_station_flag, ok = match tile, track with
+       (* These things are only allowed if we're almost there *)
+       | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> trackmap, ai_track, at_station_flag, `Fail
+       | _, Some _track when real_dist > 1 -> trackmap, ai_track, at_station_flag, `Fail
+       | EnemyStation, _ -> trackmap, ai_track, `AtStation, `Ok
+       | (River | Landing), _ -> build_track_of_kind @@ Track.Bridge Wood
+       | _ when diag_surrounded && real_dist > 1 -> trackmap, ai_track, at_station_flag, `Fail
+       | _ -> build_track_of_kind @@ Track.Track `Single
+      in
+      match tile with
+      (* Make sure we finish bridge in same direction *)
+      | River | Landing -> build_one_track ()
+      | _ ->
+    ()
   in
-  let trackmap, ai_track = match track_modify with
-    | `NoModify -> trackmap, ai_track
-    | `Modify track ->
-       let track = Track.add_dir track ~dir in
-       let trackmap = Trackmap.set_loc loc track trackmap in
-       trackmap, loc::ai_track
-  in
-
-  (* Test dir diagonals *)
-  let diag_surrounded =
-    if Dir.is_diagonal dir then
-      (* Problem if we have track on *both* sides of us *)
-      let loc = Dir.adjust_loc (Dir.ccw dir) loc in
-      let has_track_ccw = Trackmap.has_track loc trackmap in
-      let loc = Dir.adjust_loc (Dir.cw dir) loc in
-      let has_track_cw = Trackmap.has_track loc trackmap in
-      has_track_ccw && has_track_cw
-    else false
-  in
-
-  (* Move get tile *)
-  let loc = Dir.adjust_loc dir loc in
-  let at_station_flag = `NotAtStation in
-  let tile = Tilemap.tile_at loc tilemap in
-  let track = Trackmap.get_loc loc trackmap in
-  let trackmap, ai_track, at_station_flag = match tile, track with
-   (* These things are only allowed if we're almost there *)
-   | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> trackmap, ai_track, `Fail
-   | EnemyStation, _ -> trackmap, ai_track, `AtStation
-   | _, Some _ when real_dist > 1 -> trackmap, ai_track, at_station_flag
-   | _ when diag_surrounded && real_dist > 1 -> trackmap, ai_track, at_station_flag
-   | _ ->
-    (* Add track facing opposite way *)
-    let track = Track.empty company @@ Track `Single
-     |> Track.add_dir ~dir:(Dir.opposite dir) in
-    let trackmap = Trackmap.set_loc loc track trackmap in
-    trackmap, loc::ai_track, at_station_flag
-  in
-  ()
+  connect_stations ~ai_track:v.ai_track ~trackmap src_loc tgt_loc
+    src_at_station tgt_at_station
 
