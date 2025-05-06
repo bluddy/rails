@@ -349,15 +349,15 @@ let build_track_btw_stations src_loc tgt_loc ~company ~trackmap ~tilemap random 
       | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
     in
     let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
-    let loc, dir1, _, at_station_flag = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
+    let loc1, dir1, loc2, at_station = List.assoc ~eq:equal_tgt_src min_idx idx_vars in
 
     (* Build track going out *)
     let dir = shift dir_adjust @@ dir1 in
     let real_dist = Utils.classic_dist src_loc tgt_loc in
 
-    let rec build_one_track () =
-      let t = Trackmap.get_loc loc trackmap in
-      let track_modify = match t, at_station_flag with
+    let rec build_one_track ~trackmap ~ai_track loc1 loc2 at_station =
+      let t = Trackmap.get_loc loc1 trackmap in
+      let track_modify = match t, at_station with
         (* We don't care about crossing our own track (AI doesn't follow the rules.
            However, we can't do it right when leaving a station *)
         | Some track, `NotAtStation when track.player = company -> `Modify track
@@ -370,49 +370,52 @@ let build_track_btw_stations src_loc tgt_loc ~company ~trackmap ~tilemap random 
         | `NoModify -> trackmap, ai_track
         | `Modify track ->
            let track = Track.add_dir track ~dir in
-           let trackmap = Trackmap.set_loc loc track trackmap in
-           trackmap, loc::ai_track
+           let trackmap = Trackmap.set_loc loc1 track trackmap in
+           trackmap, loc1::ai_track
       in
 
       (* Test dir diagonals *)
       let diag_surrounded =
         if Dir.is_diagonal dir then
           (* Problem if we have track on *both* sides of us *)
-          let loc = Dir.adjust_loc (Dir.ccw dir) loc in
-          let has_track_ccw = Trackmap.has_track loc trackmap in
-          let loc = Dir.adjust_loc (Dir.cw dir) loc in
-          let has_track_cw = Trackmap.has_track loc trackmap in
+          let loc1 = Dir.adjust_loc (Dir.ccw dir) loc1 in
+          let has_track_ccw = Trackmap.has_track loc1 trackmap in
+          let loc1 = Dir.adjust_loc (Dir.cw dir) loc1 in
+          let has_track_cw = Trackmap.has_track loc1 trackmap in
           has_track_ccw && has_track_cw
         else false
       in
 
       (* Move *)
-      let loc = Dir.adjust_loc dir loc in
-      let at_station_flag = `NotAtStation in
-      let tile = Tilemap.tile_at loc tilemap in
-      let track = Trackmap.get_loc loc trackmap in
+      let loc1 = Dir.adjust_loc dir loc1 in
+      let at_station = `NotAtStation in
+      let tile = Tilemap.tile_at loc1 tilemap in
+      let track = Trackmap.get_loc loc1 trackmap in
       let build_track_of_kind kind =
         (* Add track facing opposite way *)
         let track = Track.empty company @@ Track `Single
          |> Track.add_dir ~dir:(Dir.opposite dir) in
-        let trackmap = Trackmap.set_loc loc track trackmap in
-        trackmap, loc::ai_track, at_station_flag, `Ok
+        let trackmap = Trackmap.set_loc loc1 track trackmap in
+        trackmap, loc1::ai_track, at_station, `Ok
       in
-      let trackmap, ai_track, at_station_flag, ok = match tile, track with
+      let trackmap, ai_track, at_station, ok = match tile, track with
        (* These things are only allowed if we're almost there *)
-       | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> trackmap, ai_track, at_station_flag, `Fail
-       | _, Some _track when real_dist > 1 -> trackmap, ai_track, at_station_flag, `Fail
+       | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> trackmap, ai_track, at_station, `Fail
+       | _, Some _track when real_dist > 1 -> trackmap, ai_track, at_station, `Fail
        | EnemyStation, _ -> trackmap, ai_track, `AtStation, `Ok
-       | (River | Landing), _ -> build_track_of_kind @@ Track.Bridge Wood
-       | _ when diag_surrounded && real_dist > 1 -> trackmap, ai_track, at_station_flag, `Fail
+       | (River _ | Landing _), _ -> build_track_of_kind @@ Track.Bridge Wood
+       | _ when diag_surrounded && real_dist > 1 -> trackmap, ai_track, at_station, `Fail
        | _ -> build_track_of_kind @@ Track.Track `Single
       in
-      match tile, min_idx with
+      match tile, min_idx, ok with
       (* Make sure we finish bridge in same direction *)
-      | (River | Landing), _ -> build_one_track ()
+      | _, _, `Fail -> None
+      | (River _ | Landing _), _, _ -> build_one_track ~trackmap ~ai_track loc1 loc2 at_station 
       (* Unflip src/tgt *)
-      | _, `Tgt -> connect_stations ~ai_track ~trackmap loc1 loc2 src_at_station tgt_at_station
-      | _, `Src -> connect_stations ~ai_track ~trackmap loc2 loc1 src_at_station tgt_at_station
+      | _, `Tgt, _ -> connect_stations ~ai_track ~trackmap loc1 loc2 at_station src_at_station
+      | _, `Src, _ -> connect_stations ~ai_track ~trackmap loc2 loc1 tgt_at_station at_station
+    in
+    build_one_track ~trackmap ~ai_track loc1 loc2 at_station 
   in
   connect_stations ~ai_track:v.ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
 
