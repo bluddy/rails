@@ -138,7 +138,7 @@ let _find_closest_player_station_check_distance ~loc ~station_map ~ai_idx =
   in
   closest_station, create
 
-let _try_create_ai ~tilemap ~station_map ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
+let _try_to_create_ai ~tilemap ~station_map ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
   (* New company creation test at this city *)
   let x, y = loc in
   let demand_supply = Tilemap.demand_supply_sum tilemap ~x ~y ~range:2 in
@@ -211,12 +211,12 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
   let v = earn_random_route v in
   let v = earn_random_route v in
   let city_idx = random_city () in
-  let (x, y) as loc = Cities.get_idx city_idx cities in
+  let loc = Cities.get_idx city_idx cities in
   if Trackmap.has_track loc trackmap then `Update v else (* Proceed only if no track at city *)
   let ai_idx = random_ai () in
   (* We now have a target city and a company *)
   if not @@ ai_exists ai_idx v then
-    _try_create_ai ~tilemap ~station_map ~params ~city_idx ~ai_idx ~stocks loc random v
+    _try_to_create_ai ~tilemap ~station_map ~params ~city_idx ~ai_idx ~stocks loc random v
   else
     let target_city = ()
     in
@@ -271,7 +271,7 @@ let _dir_from_dx_dy dx dy =
 type tgt_src = [`Tgt | `Src] [@@deriving eq]
 
 (* This function starts with the station locations for src and targets *)
-let build_track_btw_stations src_loc tgt_loc ~company ~trackmap ~tilemap random v =
+let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track =
   (* Get general dir from deltas *)
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
@@ -417,5 +417,17 @@ let build_track_btw_stations src_loc tgt_loc ~company ~trackmap ~tilemap random 
     in
     build_one_track ~trackmap ~ai_track loc1 loc2 at_station 
   in
-  connect_stations ~ai_track:v.ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
+  connect_stations ~ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
+
+let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap random v =
+  let src_loc = Cities.get_idx src_city cities in
+  let tgt_loc = match tgt_station_or_city with
+    | `City idx -> Cities.get_idx idx cities
+    | `Station loc -> loc
+  in
+  let dist = Utils.classic_dist src_loc tgt_loc in
+  let trackmap, ai_track =
+    _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random v
+  in
+  ()
 
