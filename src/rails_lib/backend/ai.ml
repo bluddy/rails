@@ -393,7 +393,7 @@ let build_track_btw_stations src_loc tgt_loc ~company ~trackmap ~tilemap random 
       let track = Trackmap.get_loc loc1 trackmap in
       let build_track_of_kind kind =
         (* Add track facing opposite way *)
-        let track = Track.empty company @@ Track `Single
+        let track = Track.empty company kind
          |> Track.add_dir ~dir:(Dir.opposite dir) in
         let trackmap = Trackmap.set_loc loc1 track trackmap in
         trackmap, loc1::ai_track, at_station, `Ok
