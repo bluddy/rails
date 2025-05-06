@@ -271,26 +271,24 @@ let _dir_from_dx_dy dx dy =
 type tgt_src = [`Tgt | `Src] [@@deriving eq]
 
 (* This function starts with the station locations for src and targets *)
-let build_track_btw_stations src_loc tgt_loc company ~trackmap ~tilemap random v =
+let build_track_btw_stations src_loc tgt_loc ~company ~trackmap ~tilemap random v =
   (* Get general dir from deltas *)
-  let ai_track = v.ai_track in
-  let src_at_station, tgt_at_station = `AtStation, `AtStation in
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
 
-  let idx_vars = [
-      `Tgt, (tgt_loc, tgt_real_dir, src_loc, tgt_at_station);
-      `Src, (src_loc, src_real_dir, tgt_loc, src_at_station);
-    ]
-  in
-
-  let rec connect_stations ~trackmap ~ai_track src_loc tgt_loc src_at_station tgt_at_station =
+  let rec connect_stations ~trackmap ~ai_track tgt_loc src_loc tgt_at_station src_at_station =
     let dx, dy = Utils.s_dxdy src_loc tgt_loc in
     let tgt_real_dir = _dir_from_dx_dy dx dy in
     let src_real_dir = Dir.opposite tgt_real_dir in
     let real_dist = Utils.classic_dist src_loc tgt_loc in
 
     if real_dist = 0 then Some(trackmap, ai_track) else
+
+    let idx_vars = [
+        `Tgt, (tgt_loc, tgt_real_dir, src_loc, tgt_at_station);
+        `Src, (src_loc, src_real_dir, tgt_loc, src_at_station);
+      ]
+    in
 
     let search_for_min_cost_dir () =
       List.map (fun (spec, (((x, y) as loc), real_dir, ((x2, y2) as loc2), _)) ->
@@ -409,12 +407,12 @@ let build_track_btw_stations src_loc tgt_loc company ~trackmap ~tilemap random v
        | _ when diag_surrounded && real_dist > 1 -> trackmap, ai_track, at_station_flag, `Fail
        | _ -> build_track_of_kind @@ Track.Track `Single
       in
-      match tile with
+      match tile, min_idx with
       (* Make sure we finish bridge in same direction *)
-      | River | Landing -> build_one_track ()
-      | _ ->
-    ()
+      | (River | Landing), _ -> build_one_track ()
+      (* Unflip src/tgt *)
+      | _, `Tgt -> connect_stations ~ai_track ~trackmap loc1 loc2 src_at_station tgt_at_station
+      | _, `Src -> connect_stations ~ai_track ~trackmap loc2 loc1 src_at_station tgt_at_station
   in
-  connect_stations ~ai_track:v.ai_track ~trackmap src_loc tgt_loc
-    src_at_station tgt_at_station
+  connect_stations ~ai_track:v.ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
 
