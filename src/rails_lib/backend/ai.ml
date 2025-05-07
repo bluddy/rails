@@ -77,17 +77,27 @@ let city_rate_war city v = IntSet.mem city v.rate_war_at_city
 
 let get_ai idx v = IntMap.get idx v.ais
 
+let get_ai_exn idx v = IntMap.find idx v.ais
+
 let modify_ai idx v f =
-  let ai = get_ai idx v in
+  let ai = get_ai_exn idx v in
   let ai2 = f ai in
   if ai2 === ai then v
   else
-    {v with ais=IntMap.add idx ai2 v.ais}
+    let ais = IntMap.add idx ai2 v.ais in
+    {v with ais}
 
-let get_income player v = get_ai player v |> fun x -> x.yearly_income
+let get_income player v =
+  get_ai_exn player v |> fun x -> x.yearly_income
 
 let name player ~cities v =
-  let p = get_ai player v
+  let p = get_ai_exn player v in
+  let city1_s = Cities.name_by_idx p.city1 cities in
+  match p.city2 with
+  | None -> city1_s ^ " RR"
+  | Some city2 -> 
+    let city2_s = Cities.name_by_idx city2 cities in
+    Printf.sprintf "%s & %s RR" city1_s city2_s
 
 let ai_exists idx v = IntMap.mem idx v.ais
 
@@ -431,13 +441,13 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
   in
   connect_stations ~ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
 
-let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap random v =
+let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap ~company random v =
   let src_loc = Cities.get_idx src_city cities in
   let tgt_loc = match tgt_station_or_city with
     | `City idx -> Cities.get_idx idx cities
     | `Station loc -> loc
   in
-  let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random v in
+  let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
   let trackmap, v = match ret with
     | Some (trackmap, ai_track) ->
         trackmap, {v with ai_track}

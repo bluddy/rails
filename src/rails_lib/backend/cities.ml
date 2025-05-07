@@ -27,6 +27,8 @@ open Containers
 
   let get_name v x y = find_exn v x y |> fst
 
+  let name_by_loc (x,y) v = get_name v x y
+
   let find v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
   let to_list v = CCHashtbl.to_list v.map
@@ -43,4 +45,8 @@ open Containers
   let random_idx random v = Random.int (Array.length v.arr) random
 
   let get_idx i v = v.arr.(i)
+
+  let name_by_idx i v =
+    let loc = get_idx i v in
+    name_by_loc loc v
 
