@@ -249,7 +249,7 @@ let new_ai_text name city cities =
   "New Railroad company\n\
    chartered in %s!\n\
    President: %s.\n"
-   (Cities.get_name cities (fst city) (snd city))
+   (Cities.name_by_loc city cities)
    (Opponent.show_name name)
 
 (* 
@@ -441,6 +441,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
   in
   connect_stations ~ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
 
+  (* src: always AI-owned. tgt: sometimes player-owned *)
 let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap ~company random v =
   let src_loc = Cities.get_idx src_city cities in
   let tgt_loc = match tgt_station_or_city with
@@ -448,18 +449,32 @@ let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap ~com
     | `Station loc -> loc
   in
   let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
-  let trackmap, v = match ret with
+  let trackmap, v, ui_msg = match ret with
     | Some (trackmap, ai_track) ->
-        trackmap, {v with ai_track}
+        (* Built *)
+        let ai_name = name company ~cities v in
+        let ui_msg = Ui_msg.AiConnected {ai_name; city1=src_loc; city2=tgt_loc} in
+        trackmap, {v with ai_track}, Some ui_msg
     | None ->
+        (* Failed to build *)
         let v =
           if get_income company v > 64 then
             modify_ai company v (fun p ->
             {p with expand_counter=p.expand_counter / 2})
           else v
         in
-        trackmap, v
+        trackmap, v, None
   in
   let dist = Utils.classic_dist src_loc tgt_loc in
   ()
+
+let new_route_text ai_name city1 city2 cities =
+  Printf.sprintf
+  "%s\n\
+  connects %s\n\
+  to %s"
+  ai_name
+ (Cities.name_by_loc city1 cities)
+ (Cities.name_by_loc city2 cities)
+
 
