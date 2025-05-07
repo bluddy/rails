@@ -86,6 +86,9 @@ let modify_ai idx v f =
 
 let get_income player v = get_ai player v |> fun x -> x.yearly_income
 
+let name player ~cities v =
+  let p = get_ai player v
+
 let ai_exists idx v = IntMap.mem idx v.ais
 
 let route_value city1 city2 ~tilemap ~(params:Params.t) =
@@ -436,7 +439,8 @@ let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap rand
   in
   let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random v in
   let trackmap, v = match ret with
-    | Some (trackmap, ai_track) -> trackmap, {v with ai_track}
+    | Some (trackmap, ai_track) ->
+        trackmap, {v with ai_track}
     | None ->
         let v =
           if get_income company v > 64 then
