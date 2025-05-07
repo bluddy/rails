@@ -77,6 +77,15 @@ let city_rate_war city v = IntSet.mem city v.rate_war_at_city
 
 let get_ai idx v = IntMap.get idx v.ais
 
+let modify_ai idx v f =
+  let ai = get_ai idx v in
+  let ai2 = f ai in
+  if ai2 === ai then v
+  else
+    {v with ais=IntMap.add idx ai2 v.ais}
+
+let get_income player v = get_ai player v |> fun x -> x.yearly_income
+
 let ai_exists idx v = IntMap.mem idx v.ais
 
 let route_value city1 city2 ~tilemap ~(params:Params.t) =
@@ -425,9 +434,18 @@ let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap rand
     | `City idx -> Cities.get_idx idx cities
     | `Station loc -> loc
   in
-  let dist = Utils.classic_dist src_loc tgt_loc in
-  let trackmap, ai_track =
-    _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random v
+  let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random v in
+  let trackmap, v = match ret with
+    | Some (trackmap, ai_track) -> trackmap, {v with ai_track}
+    | None ->
+        let v =
+          if get_income company v > 64 then
+            modify_ai company v (fun p ->
+            {p with expand_counter=p.expand_counter / 2})
+          else v
+        in
+        trackmap, v
   in
+  let dist = Utils.classic_dist src_loc tgt_loc in
   ()
 
