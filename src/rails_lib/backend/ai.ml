@@ -453,7 +453,8 @@ let _build_station src_city ~tgt_station_or_city ~cities ~trackmap ~tilemap ~com
     | Some (trackmap, ai_track) ->
         (* Built *)
         let ai_name = name company ~cities v in
-        let ui_msg = Ui_msg.AiConnected {ai_name; city1=src_loc; city2=tgt_loc} in
+        let opponent = (get_ai_exn company v).opponent.name in
+        let ui_msg = Ui_msg.AiConnected {opponent; ai_name; city1=src_loc; city2=tgt_loc} in
         trackmap, {v with ai_track}, Some ui_msg
     | None ->
         (* Failed to build *)
