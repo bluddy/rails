@@ -472,3 +472,7 @@ let set_priority_shipment v x =
         Some {info with holds_priority_shipment = x})
 
 let get_player v = v.player
+
+let set_rate_war x rates v =
+  update_with_info v
+    (fun info -> Some {info with rate_war=x; rates})

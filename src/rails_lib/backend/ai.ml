@@ -441,13 +441,18 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
   in
   connect_stations ~ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
 
-  (* src: always AI-owned. tgt: sometimes player-owned *)
-let _build_station src_city ~tgt_station_or_city ~cities ~stations ~trackmap ~tilemap ~company ~stocks random v =
+  (* src: always AI-owned. tgt: sometimes player-owned
+     We always supply a tgt_city, but sometimes it's really a tgt_station's
+     location
+   *)
+let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
+                  ~tilemap ~company ~stocks random v =
   let src_loc = Cities.get_idx src_city cities in
-  let tgt_loc, tgt_is_station = match tgt_station_or_city with
-    | `City idx -> Cities.get_idx idx cities, false
-    | `Station loc -> loc, true
+  let tgt_loc = match tgt_station with
+    | None -> Cities.get_idx tgt_city cities
+    | Some loc -> loc
   in
+  (* TODO: deal with city name of station *)
   let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
   let trackmap, v, success = match ret with
     | Some (trackmap, ai_track) ->
@@ -470,14 +475,41 @@ let _build_station src_city ~tgt_station_or_city ~cities ~stations ~trackmap ~ti
     else None
   in
   let stations =
-    let controlled_by_player = Stock_market.controls_company C.player ~target:company stocks in
-    if success && tgt_is_station && controlled_by_player then
+    let ai_controlled_by_player = Stock_market.controls_company C.player ~target:company stocks in
+    if success && Option.is_some tgt_station && ai_controlled_by_player then
       Station_map.update tgt_loc (Option.map Station.set_to_union_station) stations
     else stations
   in
-
-  let dist = Utils.classic_dist src_loc tgt_loc in
-
+  (* TODO: if not owned by player and connect to player, send rate war animation *)
+  let ai_player = get_ai_exn company v in
+  let ai_player = if success then
+    match ai_player.city2 with
+    | None -> {ai_player with city2=tgt_city}
+    | _ -> ai_player
+    else ai_player
+  in
+  let ai_player =
+    if success then (
+      let dist = Utils.classic_dist src_loc tgt_loc in
+      let v = (Climate.to_enum params.climate) - ai_player.opponent.expansionist + 6 in
+      let cost = v * dist * 3 + 100 in
+      let cash = ai_player.cash - cost in
+      let yearly_income = ai_player.yearly_income + dist * 5 in
+      let expand_counter = 0 in
+      let ai_of_city = IntMap.add tgt_city company v.ai_of_city in
+      Tilemap.set_tile_at_loc tgt_loc Tile.EnemyStation tilemap;
+      Vector.push v.routes (src_idx, tgt_idx);
+      let rate_war_at_city, station =
+        if not ai_controlled_by_player && Option.is_some tgt_station then
+          (* Rate war *)
+          let rate_war_at_city = IntSet.add tgt_idx v.rate_war_at_city in
+          let station = Station.set_rate_war true `Half station in
+        else
+          rate_war_at_city, station
+      in
+    ) else
+      ai_player
+  in
   ()
 
 let new_route_text ai_name city1 city2 cities =

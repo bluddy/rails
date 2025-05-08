@@ -107,6 +107,8 @@ let tile_at (x,y) v = get_tile v x y
 let set_tile v x y tile =
   v.map.(Utils.calc_offset v.width x y) <- tile
 
+let set_tile_at_loc (x,y) tile v = set_tile v x y tile
+
 let set_height v ~x ~y height =
   v.heightmap.(Utils.calc_offset v.width x y) <- height
 
