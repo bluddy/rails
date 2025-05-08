@@ -239,6 +239,11 @@ let set_override (v:t) dir override =
 
 let cancel_override (v:t) dir = set_override v dir NoOverride
 
+  (* When an owned company builds track into our >signaltower station,
+     it becomes a union station: effectively a terminal *)
+let set_to_union_station v =
+  update_with_info v (fun info -> Some {info with kind=`Terminal})
+
 let can_train_go (v:t) dir =
   (* Also returns whether we need to cancel override *)
   let signal = get_signal v dir in
