@@ -866,7 +866,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       {v with mode}
 
     | Normal, AiBuildOrderFailed{player; ai_name; src_city; tgt_city} when player = C.player ->
-      let text = Ai.build_order_fail_text city1 city2 s.backend.cities in
+      let text = Ai.build_order_fail_text ai_name src_city tgt_city s.backend.cities in
       let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
       {v with mode}
 

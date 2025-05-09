@@ -52,7 +52,7 @@ let show_name = function
 
 type t = {
   name: name;
-  expansionist: int;
+  expansionist: int;  (* TODO: might have to switch with build_skill *)
   financial_skill: int;
   management: int;  (* Skill at operating railroads *)
   build_skill: int;

@@ -27,7 +27,7 @@ open Containers
 
   let get_name v x y = find_exn v x y |> fst
 
-  let name_by_loc (x,y) v = get_name v x y
+  let name_of_loc (x,y) v = get_name v x y
 
   let find v x y = Hashtbl.find_opt v.map (Utils.calc_offset v.width x y)
 
