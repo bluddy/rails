@@ -36,6 +36,6 @@ type t =
   | PriorityShipmentCanceled of {player: int}
   | IndustryBuilt of {player: int; tile: Tile.t}
   | NewCompany of {opponent: Opponent.name; city: loc}
-  | AiConnected of {opponent: Opponent.name; ai_name: string; src_city: int; tgt_city: loc}
-  | AiBuildOrderFailed of {player: int; ai_name: string; src_city: int; tgt_city: int}
+  | AiConnected of {opponent: Opponent.name; ai_name: string; src_name: string; tgt_name: string}
+  | AiBuildOrderFailed of {player: int; ai_name: string; src_name: string; tgt_name: string}
   [@@deriving yojson]

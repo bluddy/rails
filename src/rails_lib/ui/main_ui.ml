@@ -860,15 +860,14 @@ let handle_msgs (s:State.t) v ui_msgs =
       let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
       {v with mode}
 
-    | Normal, AiConnected{opponent; ai_name; city1; city2} ->
-      let text = Ai.new_route_text ai_name city1 city2 s.backend.cities in
+    | Normal, AiConnected{opponent; ai_name; src_name; tgt_name} ->
+      let text = Ai.new_route_text ai_name src_name tgt_name in
       let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
       {v with mode}
 
-    | Normal, AiBuildOrderFailed{player; ai_name; src_city; tgt_city} when player = C.player ->
-      let text = Ai.build_order_fail_text ai_name src_city tgt_city s.backend.cities in
-      let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
-      {v with mode}
+    | Normal, AiBuildOrderFailed{player; ai_name; src_name; tgt_name} when player = C.player ->
+      let text = Ai.build_order_fail_text ai_name src_name tgt_name in
+      make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text |> fst
 
     | Normal, IndustryBuilt{player; tile} when player = C.player ->
       let tile_s = Tile.show tile in

@@ -46,7 +46,7 @@ open Containers
 
   let get_idx i v = v.arr.(i)
 
-  let name_by_idx i v =
+  let name_of_idx i v =
     let loc = get_idx i v in
-    name_by_loc loc v
+    name_of_loc loc v
 

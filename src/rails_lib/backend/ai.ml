@@ -92,11 +92,11 @@ let get_income player v =
 
 let name player ~cities v =
   let p = get_ai_exn player v in
-  let city1_s = Cities.name_by_idx p.city1 cities in
+  let city1_s = Cities.name_of_idx p.city1 cities in
   match p.city2 with
   | None -> city1_s ^ " RR"
   | Some city2 -> 
-    let city2_s = Cities.name_by_idx city2 cities in
+    let city2_s = Cities.name_of_idx city2 cities in
     Printf.sprintf "%s & %s RR" city1_s city2_s
 
 let ai_exists idx v = IntMap.mem idx v.ais
@@ -249,7 +249,7 @@ let new_ai_text name city cities =
   "New Railroad company\n\
    chartered in %s!\n\
    President: %s.\n"
-   (Cities.name_by_loc city cities)
+   (Cities.name_of_loc city cities)
    (Opponent.show_name name)
 
 let _dir_from_dx_dy dx dy =
@@ -425,9 +425,12 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
 let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
                   ~tilemap ~company ~stocks ~params random v =
   let src_loc = Cities.get_idx src_city cities in
-  let tgt_loc = match tgt_station with
-    | None -> Cities.get_idx tgt_city cities
-    | Some loc -> loc
+  let src_name = Cities.name_of_loc src_loc cities in
+  let tgt_loc, tgt_name = match tgt_station with
+    | None -> Cities.get_idx tgt_city cities, Cities.name_of_idx tgt_city cities
+    | Some loc ->
+      let station = Station_map.get_exn loc stations in
+      loc, Station.get_name station
   in
   let ai_controlled_by_player = Stock_market.controls_company C.player ~target:company stocks in
   let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
@@ -437,7 +440,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
     | Some (trackmap, ai_track) -> (* Built *)
         let ui_msg = 
           let opponent = (get_ai_exn company v).opponent.name in
-          Ui_msg.AiConnected {opponent; ai_name; src_city; tgt_city}
+          Ui_msg.AiConnected {opponent; ai_name; src_name; tgt_name}
         in
         let update_station f = Station_map.update tgt_loc (Option.map f) stations in
         let rate_war_at_city, stations = match ai_controlled_by_player, tgt_station with
@@ -482,7 +485,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
         in
         let build_order, ui_msg =
           if ai_controlled_by_player then
-            let ui_msg = Ui_msg.AiBuildOrderFailed{player=C.player; ai_name; src_city; tgt_city} in
+            let ui_msg = Ui_msg.AiBuildOrderFailed{player=C.player; ai_name; src_name; tgt_name} in
             None, Some ui_msg
           else
             ai_player.build_order, None
@@ -491,21 +494,17 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
         let v = if ai_player2 === ai_player then v else {v with ais=IntMap.add company ai_player2 v.ais} in
         trackmap, tilemap, v, stations, ui_msg
 
-let new_route_text ai_name src_city tgt_city cities =
+let new_route_text ai_name src_name tgt_name =
   Printf.sprintf
   "%s\n\
   connects %s\n\
   to %s"
-  ai_name
- (Cities.name_of_loc src_city cities)
- (Cities.name_of_loc tgt_city cities)
+  ai_name src_name tgt_name
 
-let build_order_fail_text ai_name src_city tgt_city cities =
+let build_order_fail_text ai_name src_name tgt_name =
   Printf.sprintf
   "%s\n\
   Survey from %s\n\
   to %s unsuccessful.\n"
-  ai_name
- (Cities.name_of_loc src_city cities)
- (Cities.name_of_loc tgt_city cities)
+  ai_name src_name tgt_name
 
