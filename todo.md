@@ -1,4 +1,6 @@
 # Tasks
+- Way we changed random things (e.g. track maintenance) isn't right
+  - Need to scale up to more track than 100% of original game
 - Deal with region-based, duplicate tile to pixel mapping
 - Check default state of development_map and block_map
 - Make sure money gets deducted for new engine

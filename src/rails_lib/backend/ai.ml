@@ -23,7 +23,7 @@ type ai_player = {
   city2: int option; (* first route. Determines name *)
   cash: int; (* all x1000 *)
   bonds: int;
-  build_order: (Utils.loc * Utils.loc) option;  (* order given to subservient company *)
+  build_order: (int * int) option;  (* order given to subservient company (city_idx, city_idx)*)
   yearly_income: int; (* rough estimation of 8 * yearly income *)
   yearly_interest: int;
   net_worth: int;
@@ -121,7 +121,7 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
   let city1, city2 = Vector.get v.routes route_idx in
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = IntMap.find player_idx v.ais in
-  let city1_loc, city2_loc = Cities.get_idx city1 cities, Cities.get_idx city2 cities in
+  let city1_loc, city2_loc = Cities.loc_of_idx city1 cities, Cities.loc_of_idx city2 cities in
   let value = route_value city1_loc city2_loc ~tilemap ~params in
   let div = if city_rate_war city1 v || city_rate_war city2 v then 6 else 3 in
   let value = value / div in
@@ -210,40 +210,6 @@ let _try_to_create_ai ~tilemap ~station_map ~(params:Params.t) ~city_idx ~ai_idx
   let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city=loc} in
   `CreateAI(v, stocks, ui_msg)
 
-let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~station_map v =
-  let earn_random_route v =
-    if Random.int 100 random <= num_routes v then
-      let route_idx = random_route_idx random v in
-      _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~cities v
-    else v
-  in
-  let random_city () =
-      let rec empty_city_loop () =
-        let city_idx = Cities.random_idx random cities in
-        if IntMap.mem city_idx v.ai_of_city then
-          empty_city_loop ()
-        else
-          city_idx
-      in
-      empty_city_loop ()
-  in
-  let random_ai () = Random.int C.max_ai_players random in
-
-  (* Earn 2x in random routes *)
-  let v = earn_random_route v in
-  let v = earn_random_route v in
-  let city_idx = random_city () in
-  let loc = Cities.get_idx city_idx cities in
-  if Trackmap.has_track loc trackmap then `Update v else (* Proceed only if no track at city *)
-  let ai_idx = random_ai () in
-  (* We now have a target city and a company *)
-  if not @@ ai_exists ai_idx v then
-    _try_to_create_ai ~tilemap ~station_map ~params ~city_idx ~ai_idx ~stocks loc random v
-  else
-    let target_city = ()
-    in
-    `Update v
-      
 let new_ai_text name city cities =
   Printf.sprintf
   "New Railroad company\n\
@@ -424,15 +390,15 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
    *)
 let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
                   ~tilemap ~company ~stocks ~params random v =
-  let src_loc = Cities.get_idx src_city cities in
+  let src_loc = Cities.loc_of_idx src_city cities in
   let src_name = Cities.name_of_loc src_loc cities in
   let tgt_loc, tgt_name = match tgt_station with
-    | None -> Cities.get_idx tgt_city cities, Cities.name_of_idx tgt_city cities
+    | None -> Cities.loc_of_idx tgt_city cities, Cities.name_of_idx tgt_city cities
     | Some loc ->
       let station = Station_map.get_exn loc stations in
       loc, Station.get_name station
   in
-  let ai_controlled_by_player = Stock_market.controls_company C.player ~target:company stocks in
+  let ai_controlled_by_player = owned_by_player stocks company in
   let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
   let ai_name = name company ~cities v in
   let ai_player = IntMap.find company v.ais in
@@ -508,3 +474,69 @@ let build_order_fail_text ai_name src_name tgt_name =
   to %s unsuccessful.\n"
   ai_name src_name tgt_name
 
+let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~station_map v =
+  let earn_random_route v =
+    if Random.int 100 random <= num_routes v then
+      let route_idx = random_route_idx random v in
+      _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~cities v
+    else v
+  in
+  let random_city () =
+      let rec empty_city_loop () =
+        let city_idx = Cities.random_idx random cities in
+        if IntMap.mem city_idx v.ai_of_city then
+          empty_city_loop ()
+        else
+          city_idx
+      in
+      empty_city_loop ()
+  in
+  let random_ai () = Random.int C.max_ai_players random in
+
+  (* Earn 2x in random routes *)
+  let v = earn_random_route v in
+  let v = earn_random_route v in
+  let city_idx = random_city () in
+  let loc = Cities.loc_of_idx city_idx cities in
+  if Trackmap.has_track loc trackmap then `Update v else (* Proceed only if no track at city *)
+  let ai_idx = random_ai () in
+  (* We now have a target city and a company *)
+  if not @@ ai_exists ai_idx v then
+    _try_to_create_ai ~tilemap ~station_map ~params ~city_idx ~ai_idx ~stocks loc random v
+  else
+    (* Use target city and company to expand *)
+    let ai_player = get_ai_exn ai_idx v in
+    let owned_by_player = owned_by_player stocks ai_idx in
+    (* If owned by player, do nothing but orders *)
+    if owned_by_player && Option.is_none ai_player.build_order then `Update v else
+    let expand_counter =
+      let value = if ai_player.net_worth >= main_player_net_worth then 2 else 4 in
+      ai_player.expand_counter + value * ai_player.opponent.expansionist
+    in
+    let find_closest_ai_city_to_other_city ~src_city ~ai =
+      let src_loc = Cities.loc_of_idx src_city cities in
+      IntMap.fold (fun tgt_city city_ai acc ->
+        if ai = city_ai then match acc with
+          | Some (min_dist, _) ->
+            let tgt_loc = Cities.loc_of_idx tgt_city cities in
+            let dist = Utils.classic_dist src_loc tgt_loc in
+            if dist < min_dist then Some(dist, tgt_city) else acc
+          | None ->
+            let tgt_loc = Cities.loc_of_idx tgt_city cities in
+            let dist = Utils.classic_dist src_loc tgt_loc in
+            Some (dist, tgt_city)
+        else acc)
+      v.ai_of_city
+      None
+      |> Option.map snd
+    in
+    let src_city, tgt_city = match ai_player.build_order with
+      | Some (city1, city2) when owned_by_player -> city1, city2
+      | _ ->
+        let src_city = find_closest_ai_city_to_other_city ~src_city:city_idx ~ai:ai_idx
+            |> Option.get_exn_or "missing closest AI city"
+        in
+        src_city, city_idx
+    in
+    ()
+      

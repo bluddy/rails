@@ -44,9 +44,9 @@ open Containers
 
   let random_idx random v = Random.int (Array.length v.arr) random
 
-  let get_idx i v = v.arr.(i)
+  let loc_of_idx i v = v.arr.(i)
 
   let name_of_idx i v =
-    let loc = get_idx i v in
+    let loc = loc_of_idx i v in
     name_of_loc loc v
 
