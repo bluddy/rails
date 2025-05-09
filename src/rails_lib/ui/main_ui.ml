@@ -865,6 +865,11 @@ let handle_msgs (s:State.t) v ui_msgs =
       let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
       {v with mode}
 
+    | Normal, AiBuildOrderFailed{player; ai_name; src_city; tgt_city} when player = C.player ->
+      let text = Ai.build_order_fail_text city1 city2 s.backend.cities in
+      let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
+      {v with mode}
+
     | Normal, IndustryBuilt{player; tile} when player = C.player ->
       let tile_s = Tile.show tile in
       fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s

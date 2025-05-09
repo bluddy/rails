@@ -458,7 +458,8 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
     | Some (trackmap, ai_track) ->
         (* Built *)
         trackmap, {v with ai_track}, true
-    | None -> (* Failed to build *)
+    | None ->
+      (* Failed to build *)
         let v =
           if get_income company v > 64 then
             modify_ai company v (fun p ->
@@ -497,7 +498,9 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
       let yearly_income = ai_player.yearly_income + dist * 5 in
       let expand_counter = 0 in
       let ai_of_city = IntMap.add tgt_city company v.ai_of_city in
+      (* Even for union station, apparently *)
       Tilemap.set_tile_at_loc tgt_loc Tile.EnemyStation tilemap;
+      (* Add AI route *)
       Vector.push v.routes (src_idx, tgt_idx);
       let rate_war_at_city, station =
         if not ai_controlled_by_player && Option.is_some tgt_station then
@@ -507,8 +510,11 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
         else
           rate_war_at_city, station
       in
-    ) else
-      ai_player
+    ) else if ai_controlled_by_player then
+        let build_order = None in
+        let ui_msg = AiBuildOrderFailed{player=C.player; src_city;  tgt_city} |> Option.some in
+      else
+        ai_player
   in
   ()
 
@@ -521,4 +527,12 @@ let new_route_text ai_name city1 city2 cities =
  (Cities.name_by_loc city1 cities)
  (Cities.name_by_loc city2 cities)
 
+let build_order_fail_text ai_name city1 city2 cities =
+  Printf.sprintf
+  "%s\n\
+  Survey from %s\n\
+  to %s unsuccessful.\n"
+  ai_name
+ (Cities.name_by_loc city1 cities)
+ (Cities.name_by_loc city2 cities)
 
