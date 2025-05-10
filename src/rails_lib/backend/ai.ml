@@ -515,22 +515,28 @@ let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~
     let src_loc, tgt_loc = Cities.loc_of_idx src_city cities, Cities.loc_of_idx tgt_city cities in
     let dist = Utils.classic_dist src_loc tgt_loc in
     let is_home_city = src_city = ai_player.city1 in
-    let first_check = ai_player.yearly_income <= 48 || not @@ Climate.strong params.Params.climate || is_home_city in
-    let demand_supply =Tilemap.demand_supply_sum_of_loc src_loc tilemap ~range:2 in 
-    let city_check = demand_supply > 0 in
-    let route_value_dist_check =
-      let route_value = _route_value src_loc tgt_loc ~tilemap ~params in
-      let mult = if is_home_city then 2 else 1 in
-      let route_value = route_value * mult in
-      let max_dist = (6 * route_value) / (Climate.plus_4 params.climate) + (ai_player.cash / 32) in
-      max_dist >= dist * 3
+    let combined_check =
+        owned_by_player ||
+        let first_check = ai_player.yearly_income <= 48 || not @@ Climate.strong params.Params.climate || is_home_city in
+        let demand_supply =Tilemap.demand_supply_sum_of_loc src_loc tilemap ~range:2 in 
+        let city_check = demand_supply > 0 in
+        let route_value_dist_check =
+          let route_value = _route_value src_loc tgt_loc ~tilemap ~params in
+          let mult = if is_home_city then 2 else 1 in
+          let route_value = route_value * mult in
+          let max_dist = (6 * route_value) / (Climate.plus_4 params.climate) + (ai_player.cash / 32) in
+          max_dist >= dist * 3
+        in
+        let bond_check = ai_player.opponent.financial_skill * 500 >= ai_player.bonds in 
+        first_check && city_check && route_value_dist_check && bond_check
     in
-    let bond_check = ai_player.opponent.financial_skill * 500 >= ai_player.bonds in 
+    if not combined_check then `Update v else
     let cash_check =
       let build_cost = Climate.plus_4 params.climate * dist * 3 + 100 in
       ai_player.cash > build_cost
     in
     let will_check = ai_player.expand_counter >= dist in
+    if not (cash_check && will_check) then `Update v else
     let station_check =
       let closest_station = Station_map.find_nearest stations loc in
       match closest_station with
