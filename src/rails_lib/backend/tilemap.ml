@@ -443,6 +443,8 @@ let demand_supply_sum v ~x ~y ~range =
   let demand, supply = collect_demand_supply v ~x ~y ~range in
   (Hashtbl.sum (fun _ i -> i) demand) + (Hashtbl.sum (fun _ i -> i) supply)
 
+let demand_supply_sum_of_loc (x,y) ~range v = demand_supply_sum v ~x ~y ~range
+
  (* track_cost already includes economic climate *) 
 let track_land_expense v ~track_expense ~x ~y ~dir ~len =
   let calc_cost x y =

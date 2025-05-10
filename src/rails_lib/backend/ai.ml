@@ -101,7 +101,7 @@ let name player ~cities v =
 
 let ai_exists idx v = IntMap.mem idx v.ais
 
-let route_value city1 city2 ~tilemap ~(params:Params.t) =
+let _route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply (x, y) =
     Tilemap.demand_supply_sum tilemap ~x ~y ~range:2
   in
@@ -122,7 +122,7 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = IntMap.find player_idx v.ais in
   let city1_loc, city2_loc = Cities.loc_of_idx city1 cities, Cities.loc_of_idx city2 cities in
-  let value = route_value city1_loc city2_loc ~tilemap ~params in
+  let value = _route_value city1_loc city2_loc ~tilemap ~params in
   let div = if city_rate_war city1 v || city_rate_war city2 v then 6 else 3 in
   let value = value / div in
   let value =
@@ -162,8 +162,7 @@ let _find_closest_player_station_check_distance ~loc ~station_map ~ai_idx =
 
 let _try_to_create_ai ~tilemap ~station_map ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
   (* New company creation test at this city *)
-  let x, y = loc in
-  let demand_supply = Tilemap.demand_supply_sum tilemap ~x ~y ~range:2 in
+  let demand_supply = Tilemap.demand_supply_sum_of_loc loc tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
@@ -506,6 +505,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
   else
     (* Use target city and company to expand *)
     let ai_player = get_ai_exn ai_idx v in
+    if ai_of_city city_idx v <> ai_idx then `Update v else
     let owned_by_player = owned_by_player stocks ai_idx in
     (* If owned by player, do nothing but orders *)
     if owned_by_player && Option.is_none ai_player.build_order then `Update v else
@@ -536,6 +536,22 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
         in
         src_city, city_idx
     in
-
+    let src_loc, tgt_loc = Cities.loc_of_idx src_city cities, Cities.loc_of_idx tgt_city cities in
+    let dist = Utils.classic_dist src_loc tgt_loc in
+    let is_home_city = src_city = ai_player.city1 in
+    let first_check = ai_player.yearly_income <= 48 || not @@ Climate.strong params.climate || is_home_city in
+    let city_check = Tilemap.demand_supply_sum_of_loc src_loc tilemap > 0 in
+    let route_value_dist_check =
+      let route_value = _route_value src_loc tgt_loc ~tilemap ~params in
+      let mult = if is_home_city then 2 else 1 in
+      let route_value = route_value * mult in
+      let max_dist = (6 * route_value) / (Climate.plus_4 params.climate) + (ai_player.cash / 32) in
+      max_dist >= dist * 3
+    in
+    let bond_check = ai_player.opponent.financial_skill * 500 >= ai_player.bonds in 
+    let cash_check =
+      let build_cost = Climate.plus_4 * dist * 3 + 100 in
+      ai_player.cash > build_cost
+    in
     ()
       
