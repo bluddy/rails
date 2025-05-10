@@ -483,3 +483,15 @@ let set_rate_war x rates v =
   update_with_info v
     (fun info -> Some {info with rate_war=x; rates})
 
+let total_picked_up_goods v = match v.info with
+  | None -> 0
+  | Some info ->
+    let goods = info.picked_up_goods in
+    Hashtbl.sum (fun _ num -> num) goods
+  
+let total_lost_supply v = match v.info with
+  | None -> 0
+  | Some info ->
+    let supply = info.lost_supply in
+    Hashtbl.sum (fun _ num -> num) supply
+

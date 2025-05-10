@@ -155,7 +155,7 @@ let _find_closest_player_station_check_distance ~loc ~station_map ~ai_idx =
    | Some station when Station.is_proper_station station ->
        (* Make sure we're not too close *)
        let dx, dy = Utils.dxdy loc (Station.get_loc station) in
-       min dx dy > C.min_dist_btw_stations
+       dx > C.min_dist_btw_stations || dy > C.min_dist_btw_stations
    | _ -> true (* We don't care if no station or signaltower *)
   in
   closest_station, create
@@ -540,7 +540,8 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
     let dist = Utils.classic_dist src_loc tgt_loc in
     let is_home_city = src_city = ai_player.city1 in
     let first_check = ai_player.yearly_income <= 48 || not @@ Climate.strong params.climate || is_home_city in
-    let city_check = Tilemap.demand_supply_sum_of_loc src_loc tilemap > 0 in
+    let demand_supply =Tilemap.demand_supply_sum_of_loc src_loc tilemap ~range:2 in 
+    let city_check = demand_supply > 0 in
     let route_value_dist_check =
       let route_value = _route_value src_loc tgt_loc ~tilemap ~params in
       let mult = if is_home_city then 2 else 1 in
@@ -552,6 +553,36 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
     let cash_check =
       let build_cost = Climate.plus_4 * dist * 3 + 100 in
       ai_player.cash > build_cost
+    in
+    let will_check = ai_player.expand_counter >= dist in
+    let station_check =
+      let closest_station = Station_map.find_nearest stations loc in
+      match closest_station with
+      | Some station when Station.is_proper_station station ->
+         (* Make sure we're not too close *)
+         let station_loc = Station.get_loc station in
+         let dx, dy = Utils.dxdy loc station_loc in
+         if dx > C.min_dist_btw_stations || dy > C.min_dist_btw_stations then
+           `FarEnough station_loc
+         else
+            `TooClose station_loc
+      | _ -> `CanBuild (* We don't care if no station or signaltower *)
+    in
+    let station_build_check = match station_check with
+      | `TooClose station_loc when player_owned -> true
+      | `TooClose ((x, y) as station_loc) when params.options.cutthroat -> 
+        let income_check = ai_player.yearly_income >= 75 in
+        let player_has_check = Stock_market.owned_shares ~owner:player ~owned:ai_idx stocks < 60 in
+        let lost_goods = Station.total_lost_supply station in
+        let picked_up_goods = Station.total_picked_up_goods station in 
+        let factor = if lost_goods <= picked_up_goods then 4 else 2 in
+        let value = factor * (track_dist * 4) / (ai_player.opponet.build_skill + 2) in
+        let age = (params.year - C.ref_year_ai_build_value) / 2 in
+        let decide = value < demand_supply / age in
+        let tgt_city_loc = Cities.find_close cities x y ~range:999 in
+        let tgt_city = Cities.loc_of_idx tgt_city_loc in
+        let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
+        _bulid_station
     in
     ()
       

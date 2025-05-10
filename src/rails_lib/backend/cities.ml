@@ -46,6 +46,9 @@ open Containers
 
   let loc_of_idx i v = v.arr.(i)
 
+  let idx_of_loc loc v =
+    Array.find_idx (fun x -> Utils.equal_loc loc x) v.arr |> Option.map fst
+
   let name_of_idx i v =
     let loc = loc_of_idx i v in
     name_of_loc loc v
