@@ -516,15 +516,13 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
     let find_closest_ai_city_to_other_city ~src_city ~ai =
       let src_loc = Cities.loc_of_idx src_city cities in
       IntMap.fold (fun tgt_city city_ai acc ->
-        if ai = city_ai then match acc with
-          | Some (min_dist, _) ->
-            let tgt_loc = Cities.loc_of_idx tgt_city cities in
-            let dist = Utils.classic_dist src_loc tgt_loc in
-            if dist < min_dist then Some(dist, tgt_city) else acc
-          | None ->
-            let tgt_loc = Cities.loc_of_idx tgt_city cities in
-            let dist = Utils.classic_dist src_loc tgt_loc in
-            Some (dist, tgt_city)
+        if ai = city_ai && not @@ city_rate_war tgt_city v then
+          let tgt_loc = Cities.loc_of_idx tgt_city cities in
+          let dist = Utils.classic_dist src_loc tgt_loc in
+          match acc with
+            | Some (min_dist, _) ->
+                  if dist < min_dist then Some(dist, tgt_city) else acc
+            | None -> Some (dist, tgt_city)
         else acc)
       v.ai_of_city
       None
@@ -534,9 +532,10 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
       | Some (city1, city2) when owned_by_player -> city1, city2
       | _ ->
         let src_city = find_closest_ai_city_to_other_city ~src_city:city_idx ~ai:ai_idx
-            |> Option.get_exn_or "missing closest AI city"
+          |> Option.get_exn_or "missing closest AI city"
         in
         src_city, city_idx
     in
+
     ()
       
