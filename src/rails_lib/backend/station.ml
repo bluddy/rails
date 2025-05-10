@@ -111,6 +111,7 @@ type info = {
   mutable convert_demand: Goods.Set.t; (* minimum for conversion *)
   supply: (Goods.t, int) Hashtbl.t;
   lost_supply: (Goods.t, int) Hashtbl.t;
+  picked_up_goods: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
   rate_war: bool;
@@ -276,6 +277,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
         demand=Goods.Set.empty;
         convert_demand=Goods.Set.empty;
         supply=Hashtbl.create 10;
+        picked_up_goods=Hashtbl.create 10;
         lost_supply=Hashtbl.create 10;
         kind=k;
         name;
@@ -319,6 +321,10 @@ let get_loc v = v.x, v.y
 
 let get_supply_exn v = match v.info with
   | Some info -> info.supply
+  | None -> failwith "not a proper station"
+
+let get_picked_up_goods_exn v = match v.info with
+  | Some info -> info.picked_up_goods
   | None -> failwith "not a proper station"
 
 let get_demand_exn v = match v.info with
@@ -476,3 +482,4 @@ let get_player v = v.player
 let set_rate_war x rates v =
   update_with_info v
     (fun info -> Some {info with rate_war=x; rates})
+
