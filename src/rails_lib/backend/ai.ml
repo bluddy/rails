@@ -204,10 +204,13 @@ let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~s
     revenue_ytd = (params.time + 2000) / 20;
     expand_counter=20;
   } in
-  let v = {v with ais=IntMap.add ai.idx ai v.ais} in
+  let ais = IntMap.add ai.idx ai v.ais in
+  let ai_of_city = IntMap.add city_idx ai_idx v.ai_of_city in
+  let v = {v with ais; ai_of_city} in
+  Tilemap.set_tile_at_loc loc Tile.EnemyStation tilemap;
   let stocks = Stock_market.add_ai_player ~player:ai.idx ~num_fin_periods:params.num_fiscal_periods stocks in
   let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city=loc} in
-  `CreateAI(v, stocks, ui_msg)
+  `CreateAI(tilemap, v, stocks, ui_msg)
 
 let new_ai_text name city cities =
   Printf.sprintf
