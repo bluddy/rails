@@ -143,31 +143,31 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
   let ais = IntMap.add player_idx ai_player v.ais in
   {v with ais}
 
-let _find_closest_player_station_check_distance ~loc ~station_map ~ai_idx =
-  let closest_station = Station_map.find_nearest station_map loc in
-  let create = match closest_station with
-    | Some _ -> true
-    | None when ai_idx = 0 -> true (* No player station but first opponent can still exist *)
-    | _ -> false (* don't create another AI if no player station *)
-  in
-  if not create then None, false else
-  let create = match closest_station with
-   | Some station when Station.is_proper_station station ->
-       (* Make sure we're not too close *)
-       let dx, dy = Utils.dxdy loc (Station.get_loc station) in
-       dx > C.min_dist_btw_stations || dy > C.min_dist_btw_stations
-   | _ -> true (* We don't care if no station or signaltower *)
-  in
-  closest_station, create
-
-let _try_to_create_ai ~tilemap ~station_map ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
+let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
   (* New company creation test at this city *)
   let demand_supply = Tilemap.demand_supply_sum_of_loc loc tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
   if cycles_value >= value then `Update v else
-  let closest_station, create = _find_closest_player_station_check_distance ~loc ~station_map ~ai_idx in
+  let find_closest_player_station_check_distance ~loc ~stations ~ai_idx =
+    let closest_station = Station_map.find_nearest stations loc in
+    let create = match closest_station with
+      | Some _ -> true
+      | None when ai_idx = 0 -> true (* No player station but first opponent can still exist *)
+      | _ -> false (* don't create another AI if no player station *)
+    in
+    if not create then None, false else
+    let create = match closest_station with
+     | Some station when Station.is_proper_station station ->
+         (* Make sure we're not too close *)
+         let dx, dy = Utils.dxdy loc (Station.get_loc station) in
+         dx > C.min_dist_btw_stations || dy > C.min_dist_btw_stations
+     | _ -> true (* We don't care if no station or signaltower *)
+    in
+    closest_station, create
+  in
+  let closest_station, create = find_closest_player_station_check_distance ~loc ~stations ~ai_idx in
   if not create then `Update v else
   let rec create_leader_loop () =
     let leader = Opponent.random_of_region params.region random in
@@ -474,7 +474,7 @@ let build_order_fail_text ai_name src_name tgt_name =
   to %s unsuccessful.\n"
   ai_name src_name tgt_name
 
-let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx ~ai_idx ~stocks ~main_player_net_worth loc random v =
+let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx ~ai_idx ~stocks ~player_net_worth loc random v =
   (* Use target city and company to expand *)
   let ai_player = get_ai_exn ai_idx v in
   match ai_of_city city_idx v with
@@ -485,7 +485,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
     if owned_by_player && Option.is_none ai_player.build_order then `Update v else
     let ai_player =
       let expand_counter =
-        let value = if ai_player.net_worth >= main_player_net_worth then 2 else 4 in
+        let value = if ai_player.net_worth >= player_net_worth then 2 else 4 in
         ai_player.expand_counter + value * ai_player.opponent.expansionist
       in
       {ai_player with expand_counter}
@@ -587,11 +587,11 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
           `Build (_build_station tgt_city src_city ~tgt_station:None ~cities
             ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
 
-let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~station_map v =
+let ai_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities random ~stations v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
-      _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~cities v
+      _route_earn_money route_idx ~stocks ~params player_net_worth ~tilemap ~cities v
     else v
   in
   let random_city () =
@@ -615,7 +615,7 @@ let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~citie
   let ai_idx = random_ai () in
   (* We now have a target city and a company *)
   if not @@ ai_exists ai_idx v then
-    _try_to_create_ai ~tilemap ~station_map ~params ~city_idx ~ai_idx ~stocks loc random v
+    _try_to_create_ai ~tilemap ~stations ~params ~city_idx ~ai_idx ~stocks loc random v
   else
-    _try_to_build_station ~tilemap ~station_map ~params ~city_idx ~ai_idx ~stocks loc random v
+    _try_to_build_station ~tilemap ~stations ~trackmap ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
 
