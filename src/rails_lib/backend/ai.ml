@@ -387,6 +387,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
      We always supply a tgt_city, but sometimes it's really a tgt_station's
      location
    *)
+  (* TODO: adjust player-owned flag logic for station *)
 let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
                   ~tilemap ~company ~stocks ~params random v =
   let src_loc = Cities.loc_of_idx src_city cities in
@@ -551,7 +552,10 @@ let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~
       | _ -> `CanBuild (* We don't care if no station or signaltower *)
     in
     let station_build_check = match station_check with
-      | `TooClose station_loc when player_owned -> Some station_loc
+      | `TooClose station_loc when player_owned ->
+          _build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
+            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
+
       | `TooClose ((x, y) as station_loc) when B_options.cutthroat params.options -> 
         let income_check = ai_player.yearly_income >= 75 in
         let player_share_check = Stock_market.owned_shares ~owner:player ~owned:ai_idx stocks < 60 in
@@ -563,15 +567,20 @@ let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~
           let age = (params.year - C.ref_year_ai_build_value) / 2 in
           value < demand_supply / age
         in
-        let tgt_city_check =
-          let tgt_city_loc = Cities.find_close cities x y ~range:999 in
-          let tgt_city = Cities.loc_of_idx tgt_city_loc in
-          ai_of_city tgt_city v |> Option.is_some
-        in
-        income_check && player_share_check && value_check && tgt_city_check
-      | `TooClose station_loc -> false
-      | `FarEnough station_loc -> Some station_loc
-      | `CanBuild -> None
+        let tgt_city_loc = Cities.find_close cities x y ~range:999 in
+        let tgt_city = Cities.loc_of_idx tgt_city_loc in
+        let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
+        if income_check && player_share_check && value_check && tgt_city_check then
+          _build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
+            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
+        else `Update v
+      | `TooClose _ -> `Update v
+      | `FarEnough station_loc ->
+          _build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
+            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
+      | `CanBuild ->
+          _build_station tgt_city src_city ~tgt_station:None ~cities
+            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
     in
     ()
 
