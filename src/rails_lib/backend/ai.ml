@@ -474,7 +474,7 @@ let build_order_fail_text ai_name src_name tgt_name =
   to %s unsuccessful.\n"
   ai_name src_name tgt_name
 
-let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~stocks ~main_player_net_worth loc random v =
+let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx ~ai_idx ~stocks ~main_player_net_worth loc random v =
   (* Use target city and company to expand *)
   let ai_player = get_ai_exn ai_idx v in
   match ai_of_city city_idx v with
@@ -559,17 +559,22 @@ let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~
       | `TooClose ((x, y) as station_loc) when B_options.cutthroat params.options -> 
         (* Rate war can only happen with cutthroat *)
         let income_check = ai_player.yearly_income >= 75 in
-        let player_share_check = Stock_market.owned_shares ~owner:player ~owned:ai_idx stocks < 60 in
+        (* Not sure why this is done *)
+        let player_share_check = Stock_market.owned_shares ~owner:C.player ~owned:ai_idx stocks < 60 in
         let value_check =
+          let station = Station_map.get_exn station_loc stations in
           let lost_goods = Station.total_lost_supply station in
           let picked_up_goods = Station.total_picked_up_goods station in 
           let factor = if lost_goods <= picked_up_goods then 4 else 2 in
-          let value = factor * (track_dist * 4) / (ai_player.opponet.build_skill + 2) in
+          (* High build skill -> lower value, better chance of building *)
+          let value = factor * ((dist * 4) / (ai_player.opponent.build_skill + 2)) in
           let age = (params.year - C.ref_year_ai_build_value) / 2 in
+          let demand_supply =Tilemap.demand_supply_sum_of_loc station_loc tilemap ~range:2 in 
           value < demand_supply / age
         in
-        let tgt_city_loc = Cities.find_close cities x y ~range:999 in
-        let tgt_city = Cities.loc_of_idx tgt_city_loc in
+        (* Find new target city (closest to station ) *)
+        let tgt_city_loc = Cities.find_close cities x y ~range:999 |> Option.get_exn_or "can't find any city" in
+        let tgt_city = Cities.idx_of_loc tgt_city_loc cities |> Option.get_exn_or "can't find idx of city loc" in
         let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
         if income_check && player_share_check && value_check && tgt_city_check then
           `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities

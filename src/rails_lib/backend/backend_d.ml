@@ -16,7 +16,7 @@ type t = {
   engines: Engine.t list;
   mutable stations: Station_map.t;
   mutable blocks: Block_map.t; (* map blocks btw stations *)
-  mutable dev_state: Tile_develop.t;
+  mutable dev_state: Tile_develop.t; (* State for gradual map developmnt *)
   stocks: Stock_market.t;
   ai: Ai.t;
   mutable ui_msgs: Ui_msg.t list;

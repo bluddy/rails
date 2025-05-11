@@ -1,4 +1,5 @@
 # Tasks
+- Switch city idxs in AI for locs. Don't rely on int idxs.
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game
 - Deal with region-based, duplicate tile to pixel mapping
