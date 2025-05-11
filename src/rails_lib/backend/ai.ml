@@ -551,20 +551,27 @@ let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~
       | _ -> `CanBuild (* We don't care if no station or signaltower *)
     in
     let station_build_check = match station_check with
-      | `TooClose station_loc when player_owned -> true
-      | `TooClose ((x, y) as station_loc) when params.options.cutthroat -> 
+      | `TooClose station_loc when player_owned -> Some station_loc
+      | `TooClose ((x, y) as station_loc) when B_options.cutthroat params.options -> 
         let income_check = ai_player.yearly_income >= 75 in
-        let player_has_check = Stock_market.owned_shares ~owner:player ~owned:ai_idx stocks < 60 in
-        let lost_goods = Station.total_lost_supply station in
-        let picked_up_goods = Station.total_picked_up_goods station in 
-        let factor = if lost_goods <= picked_up_goods then 4 else 2 in
-        let value = factor * (track_dist * 4) / (ai_player.opponet.build_skill + 2) in
-        let age = (params.year - C.ref_year_ai_build_value) / 2 in
-        let decide = value < demand_supply / age in
-        let tgt_city_loc = Cities.find_close cities x y ~range:999 in
-        let tgt_city = Cities.loc_of_idx tgt_city_loc in
-        let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
-        _bulid_station
+        let player_share_check = Stock_market.owned_shares ~owner:player ~owned:ai_idx stocks < 60 in
+        let value_check =
+          let lost_goods = Station.total_lost_supply station in
+          let picked_up_goods = Station.total_picked_up_goods station in 
+          let factor = if lost_goods <= picked_up_goods then 4 else 2 in
+          let value = factor * (track_dist * 4) / (ai_player.opponet.build_skill + 2) in
+          let age = (params.year - C.ref_year_ai_build_value) / 2 in
+          value < demand_supply / age
+        in
+        let tgt_city_check =
+          let tgt_city_loc = Cities.find_close cities x y ~range:999 in
+          let tgt_city = Cities.loc_of_idx tgt_city_loc in
+          ai_of_city tgt_city v |> Option.is_some
+        in
+        income_check && player_share_check && value_check && tgt_city_check
+      | `TooClose station_loc -> false
+      | `FarEnough station_loc -> Some station_loc
+      | `CanBuild -> None
     in
     ()
 

@@ -58,3 +58,5 @@ let difficulty v = v.difficulty
 
 let speed v = v.speed
 
+let cutthroat v = RealityLevels.mem v.reality_levels `CutthroatCompetition
+
