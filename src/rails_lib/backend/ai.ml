@@ -546,17 +546,18 @@ let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~
          let station_loc = Station.get_loc station in
          let dx, dy = Utils.dxdy loc station_loc in
          if dx > C.min_dist_btw_stations || dy > C.min_dist_btw_stations then
-           `FarEnough station_loc
+           `CanBuild
          else
             `TooClose station_loc
       | _ -> `CanBuild (* We don't care if no station or signaltower *)
     in
-    let station_build_check = match station_check with
-      | `TooClose station_loc when player_owned ->
-          _build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
-            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
+    match station_check with
+      | `TooClose station_loc when owned_by_player ->
+          `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
+            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
 
       | `TooClose ((x, y) as station_loc) when B_options.cutthroat params.options -> 
+        (* Rate war can only happen with cutthroat *)
         let income_check = ai_player.yearly_income >= 75 in
         let player_share_check = Stock_market.owned_shares ~owner:player ~owned:ai_idx stocks < 60 in
         let value_check =
@@ -571,18 +572,15 @@ let _try_to_build_station ~tilemap ~stations ~cities ~params ~city_idx ~ai_idx ~
         let tgt_city = Cities.loc_of_idx tgt_city_loc in
         let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
         if income_check && player_share_check && value_check && tgt_city_check then
-          _build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
-            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
+          `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
+            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
         else `Update v
-      | `TooClose _ -> `Update v
-      | `FarEnough station_loc ->
-          _build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
-            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
+
+      | `TooClose _ -> `Update v  (* Too close to build normally *)
+
       | `CanBuild ->
-          _build_station tgt_city src_city ~tgt_station:None ~cities
-            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v
-    in
-    ()
+          `Build (_build_station tgt_city src_city ~tgt_station:None ~cities
+            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
 
 let ai_routines ~stocks ~params ~main_player_net_worth ~tilemap ~trackmap ~cities random ~station_map v =
   let earn_random_route v =
