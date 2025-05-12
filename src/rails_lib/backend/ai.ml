@@ -38,7 +38,14 @@ type t = {
   rate_war_at_city: IntSet.t;
   ais: ai_player IntMap.t; (* AI player info *)
   ai_track: Utils.loc list;
+  mutable financial_ctr: int; (* Affects ai financial actions *)
+  last_ai_to_buy_player_stock: int option;
 } [@@deriving yojson]
+
+(* last_ai_to_buy is a weird one.
+   The game only seems to allow one company to own your stock at a time.
+   So saving the last ai to buy is kinda silly
+   *)
 
 let default () = {
   routes=Vector.create ();
@@ -46,6 +53,8 @@ let default () = {
   rate_war_at_city=IntSet.empty;
   ais=IntMap.empty;
   ai_track=[];
+  financial_ctr=0;
+  last_ai_to_buy_player_stock=None;
 }
 
 let num_routes v = Vector.length v.routes
@@ -621,4 +630,22 @@ let ai_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities ran
     _try_to_create_ai ~tilemap ~stations ~params ~city_idx ~ai_idx ~stocks loc random v
   else
     _try_to_build_station ~tilemap ~stations ~trackmap ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
+
+
+let ai_financial ~ai_idx ~stocks v =
+  (* Player-owned ais don't make financial decisions *)
+  let decision =
+    if not (ai_exists ai_idx v) || owned_by_player stocks ai_idx then `Nothing else
+    let ai_player = get_ai_exn ai_idx v in
+    let financial_ctr = v.financial_ctr + 1 in
+    
+
+
+  in
+  ()
+
+
+
+
+
 
