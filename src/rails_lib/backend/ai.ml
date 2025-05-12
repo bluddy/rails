@@ -24,11 +24,11 @@ type ai_player = {
   cash: int; (* all x1000 *)
   bonds: int;
   build_order: (int * int) option;  (* order given to subservient company (city_idx, city_idx)*)
-  yearly_income: int; (* rough estimation of 8 * yearly income *)
+  track_length: int;
   yearly_interest: int;
   net_worth: int;
   revenue_ytd: int;
-  expand_counter: int;  (* When the AI player wants to expand *)
+  expand_ctr: int;  (* When the AI player wants to expand *)
 } [@@deriving yojson]
 
   (* Global AI data *)
@@ -68,7 +68,7 @@ let update_valuation player stocks v =
   let loans = v.bonds / 10 in
   let cash = v.cash / 10 in
   let stock_value = Stock_market.total_owned_stock_value player stocks in
-  let net_worth = cash - loans + v.yearly_income * 2 + stock_value in
+  let net_worth = cash - loans + v.track_length * 2 + stock_value in
   {v with net_worth}
 
 let ai_of_city city v = IntMap.get city v.ai_of_city
@@ -87,8 +87,8 @@ let modify_ai idx v f =
     let ais = IntMap.add idx ai2 v.ais in
     {v with ais}
 
-let get_income player v =
-  get_ai_exn player v |> fun x -> x.yearly_income
+let get_track_len player v =
+  get_ai_exn player v |> fun x -> x.track_length
 
 let name player ~cities v =
   let p = get_ai_exn player v in
@@ -202,7 +202,7 @@ let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~s
     yearly_interest;
     net_worth=50;
     revenue_ytd = (params.time + 2000) / 20;
-    expand_counter=20;
+    expand_ctr=20;
   } in
   let ais = IntMap.add ai.idx ai v.ais in
   let ai_of_city = IntMap.add city_idx ai_idx v.ai_of_city in
@@ -435,22 +435,22 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
           let cost = v * dist * 3 + 100 in
           ai_player.cash - cost
         in
-        let yearly_income = ai_player.yearly_income + dist * 5 in
-        let expand_counter = 0 in
+        let track_length = ai_player.track_length + dist * 5 in
+        let expand_ctr = 0 in
         let ai_of_city = IntMap.add tgt_city company v.ai_of_city in
         Tilemap.set_tile_at_loc tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
         Vector.push v.routes (src_city, tgt_city); (* Add AI route *)
-        let ai_player = {ai_player with city2; cash; yearly_income; expand_counter} in
+        let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
         let ais = IntMap.add company ai_player v.ais in
-        let v = {ais; ai_of_city; ai_track; routes=v.routes; rate_war_at_city} in
+        let v = {v with ais; ai_of_city; ai_track; routes=v.routes; rate_war_at_city} in
         (* TODO: if not owned by player and connect to player, send rate war animation *)
         trackmap, tilemap, v, stations, Some ui_msg
     | None ->
       (* Failed to build *)
-        let expand_counter =
-          if get_income company v > 64 then
-            ai_player.expand_counter / 2
-          else ai_player.expand_counter
+        let expand_ctr =
+          if get_track_len company v > 64 then
+            ai_player.expand_ctr / 2
+          else ai_player.expand_ctr
         in
         let build_order, ui_msg =
           if ai_controlled_by_player then
@@ -459,7 +459,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
           else
             ai_player.build_order, None
         in
-        let ai_player2 = [%up {ai_player with build_order; expand_counter}] in
+        let ai_player2 = [%up {ai_player with build_order; expand_ctr}] in
         let v = if ai_player2 === ai_player then v else {v with ais=IntMap.add company ai_player2 v.ais} in
         trackmap, tilemap, v, stations, ui_msg
 
@@ -487,11 +487,11 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
     (* If owned by player, do nothing but orders *)
     if owned_by_player && Option.is_none ai_player.build_order then `Update v else
     let ai_player =
-      let expand_counter =
+      let expand_ctr =
         let value = if ai_player.net_worth >= player_net_worth then 2 else 4 in
-        ai_player.expand_counter + value * ai_player.opponent.expansionist
+        ai_player.expand_ctr + value * ai_player.opponent.expansionist
       in
-      {ai_player with expand_counter}
+      {ai_player with expand_ctr}
     in
     let src_city, tgt_city = match ai_player.build_order with
       | Some (city1, city2) when owned_by_player -> city1, city2
@@ -521,7 +521,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
     let is_home_city = src_city = ai_player.city1 in
     let combined_check =
         owned_by_player ||
-        let first_check = ai_player.yearly_income <= 48 || not @@ Climate.strong params.Params.climate || is_home_city in
+        let first_check = ai_player.track_length <= 48 || not @@ Climate.strong params.Params.climate || is_home_city in
         let demand_supply =Tilemap.demand_supply_sum_of_loc src_loc tilemap ~range:2 in 
         let city_check = demand_supply > 0 in
         let route_value_dist_check =
@@ -532,14 +532,14 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
           max_dist >= dist * 3
         in
         let bond_check = ai_player.opponent.financial_skill * 500 >= ai_player.bonds in 
-        first_check && city_check && route_value_dist_check && bond_check
+        (first_check && city_check && route_value_dist_check && bond_check)
     in
     if not combined_check then `Update v else
     let cash_check =
       let build_cost = Climate.plus_4 params.climate * dist * 3 + 100 in
       ai_player.cash > build_cost
     in
-    let will_check = ai_player.expand_counter >= dist in
+    let will_check = ai_player.expand_ctr >= dist in
     if not (cash_check && will_check) then `Update v else
     let station_check =
       let closest_station = Station_map.find_nearest stations loc in
@@ -561,7 +561,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
 
       | `TooClose ((x, y) as station_loc) when B_options.cutthroat params.options -> 
         (* Rate war can only happen with cutthroat *)
-        let income_check = ai_player.yearly_income >= 75 in
+        let track_check = ai_player.track_length >= 75 in
         (* Not sure why this is done *)
         let player_share_check = Stock_market.owned_shares ~owner:C.player ~owned:ai_idx stocks < 60 in
         let value_check =
@@ -579,7 +579,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
         let tgt_city_loc = Cities.find_close cities x y ~range:999 |> Option.get_exn_or "can't find any city" in
         let tgt_city = Cities.idx_of_loc tgt_city_loc cities |> Option.get_exn_or "can't find idx of city loc" in
         let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
-        if income_check && player_share_check && value_check && tgt_city_check then
+        if track_check && player_share_check && value_check && tgt_city_check then
           `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
             ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
         else `Update v
