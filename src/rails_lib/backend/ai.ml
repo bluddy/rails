@@ -638,7 +638,7 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
   (* Player-owned ais don't make financial decisions *)
   if not (ai_exists ai_idx v) || owned_by_player stocks ai_idx then `Nothing else
   let ai_player = get_ai_exn ai_idx v in
-  financial_ctr <- v.financial_ctr + 1;
+  v.financial_ctr <- v.financial_ctr + 1;
   let company_is_last_active = match v.last_ai_to_buy_player_stock with
     | Some idx when ai_idx = idx -> true
     | _ -> false
@@ -647,7 +647,7 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
     if cycle land 0xC0 = 0 then None else v.last_ai_to_buy_player_stock
   in
   let player_has_more_cash = player_cash > ai_player.cash in
-  let player_in_ai_shares = Stock_marker.owned_shares ~owner:C.player ~owned:ai_idx stocks in
+  let player_in_ai_shares = Stock_market.owned_shares ~owner:C.player ~owned:ai_idx stocks in
   let ai_treasury_shares = Stock_market.treasury_shares ai_idx stocks in
   let ai_controls_itself = Stock_market.controls_own_company ai_idx stocks in
   let ai_doing_badly =
@@ -687,7 +687,9 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
         player_loans_plus_shares > ai_loans_plus_shares
 
     | _-> false
-
+  in
+  let other_ai_in_player_shares =
+    Stock_market.other_companies_in_player_shares C.player ~exclude_owner:ai_idx stocks
   in
   `Nothing
 

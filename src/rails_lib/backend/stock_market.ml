@@ -253,3 +253,12 @@ let total_owned_stock_value player ?(exclude_self=false) v =
       owned_share_value ~total_shares ~owned_shares:num ~share_price)
       owned
 
+let other_companies_in_player_shares player ?exclude_owner v =
+  IntMap.sum (fun owner owned ->
+    match exclude_owner with
+    | Some exclude_owner when owner = exclude_owner -> 0
+    | _ -> IntMap.get_or player owned ~default:0
+  )
+  v.ownership
+
+
