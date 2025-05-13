@@ -631,6 +631,8 @@ let ai_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities ran
   else
     _try_to_build_station ~tilemap ~stations ~trackmap ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
 
+let ai_in_player_shares ai_idx stocks =
+  Stock_market.owned_shares ~owner:ai_idx ~owned:C.player stocks
 
 let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
   (* Player-owned ais don't make financial decisions *)
@@ -653,6 +655,39 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
              of shares *)
     let bonus = if player_has_more_cash then 1 else 0 in
     not (ai_controls_itself || player_in_ai_shares + bonus <= ai_treasury_shares)
+  in
+  let player_valuation =
+    (* NOTE: what about stock ownership? *)
+    player_cash + Stock_market.treasury_share_value C.player stocks
+  in
+  let ai_try_takeover =
+    let clip_100 = Utils.clip ~min:0 ~max:99 in
+    match last_ai_to_buy_player_stock with
+    | None when player_valuation > 250 -> 
+        let ai_in_player_shares = ai_in_player_shares ai_idx stocks / 10 in
+        let total_shares = Stock_market.total_shares C.player stocks / 10 in
+        let shares_to_control_player = total_shares / 2 - ai_in_player_shares + 1
+            |> clip_100
+        in
+        let share_price = Stock_market.share_price C.player stocks in
+        let cash_to_control_player = shares_to_control_player * share_price * 10 in
+        let missing_cash = cash_to_control_player - ai_player.cash in
+        let num_loans_needed = missing_cash / C.bond_value + 1 |> clip_100 in
+        let ai_loans_plus_shares = num_loans_needed + shares_to_control_player in
+
+        let player_treasury_shares = Stock_market.treasury_shares C.player stocks in
+        let shares_for_player_to_control_self =
+          total_shares / 2 - player_treasury_shares |> clip_100
+        in
+        let player_cash_to_own_self = shares_for_player_to_control_self * share_price * 10 in
+        let player_num_loans =
+          (player_cash_to_own_self - player_cash) / C.bond_value + 1 |> clip_100
+        in
+        let player_loans_plus_shares = player_num_loans + shares_for_player_to_control_self in
+        player_loans_plus_shares > ai_loans_plus_shares
+
+    | _-> false
+
   in
   `Nothing
 
