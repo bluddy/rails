@@ -207,7 +207,7 @@ let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~s
     cash=900;
     bonds=500;
     build_order=None;
-    yearly_income=5;
+    track_length=5;
     yearly_interest;
     net_worth=50;
     revenue_ytd = (params.time + 2000) / 20;
