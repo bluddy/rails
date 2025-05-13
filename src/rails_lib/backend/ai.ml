@@ -634,7 +634,7 @@ let ai_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities ran
 let ai_in_player_shares ai_idx stocks =
   Stock_market.owned_shares ~owner:ai_idx ~owned:C.player stocks
 
-let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
+let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~params v =
   (* Player-owned ais don't make financial decisions *)
   if not (ai_exists ai_idx v) || owned_by_player stocks ai_idx then `Nothing else
   let ai_player = get_ai_exn ai_idx v in
@@ -690,6 +690,10 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
   in
   let other_ai_in_player_shares =
     Stock_market.other_companies_in_player_shares C.player ~exclude_owner:ai_idx stocks
+  in
+  let ai_num_bonds = Region.num_bonds params.region ai_player.bonds in
+  let ai_loan_tolerance =
+    ai_num_bonds - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) + 8
   in
   `Nothing
 
