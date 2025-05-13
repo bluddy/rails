@@ -649,6 +649,8 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash v =
   let ai_treasury_shares = Stock_market.treasury_shares ai_idx stocks in
   let ai_controls_itself = Stock_market.controls_own_company ai_idx stocks in
   let ai_doing_badly =
+    (* NOTE: this seems like a bug. This bonus is too small compared to number
+             of shares *)
     let bonus = if player_has_more_cash then 1 else 0 in
     not (ai_controls_itself || player_in_ai_shares + bonus <= ai_treasury_shares)
   in
