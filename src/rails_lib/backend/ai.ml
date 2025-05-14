@@ -660,54 +660,65 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     (* NOTE: what about stock ownership? *)
     player_cash + Stock_market.treasury_share_value C.player stocks
   in
-  let ai_try_takeover =
+  let ai_takeover_loans_plus_shares, player_loans_to_own_self_plus_shares =
     let clip_100 = Utils.clip ~min:0 ~max:99 in
+    let ai_in_player_shares = ai_in_player_shares ai_idx stocks / 10 in
+    let total_shares = Stock_market.total_shares C.player stocks / 10 in
+    let shares_to_control_player = total_shares / 2 - ai_in_player_shares + 1
+        |> clip_100
+    in
+    let share_price = Stock_market.share_price C.player stocks in
+    let cash_to_control_player = shares_to_control_player * share_price * 10 in
+    let missing_cash = cash_to_control_player - ai_player.cash in
+    let num_loans_needed = missing_cash / C.bond_value + 1 |> clip_100 in
+    let ai_loans_plus_shares = num_loans_needed + shares_to_control_player in
+
+    let player_treasury_shares = Stock_market.treasury_shares C.player stocks in
+    let shares_for_player_to_control_self =
+      total_shares / 2 - player_treasury_shares |> clip_100
+    in
+    let player_cash_to_own_self = shares_for_player_to_control_self * share_price * 10 in
+    let player_num_loans =
+      (player_cash_to_own_self - player_cash) / C.bond_value + 1 |> clip_100
+    in
+    let player_loans_plus_shares = player_num_loans + shares_for_player_to_control_self in
+    ai_loans_plus_shares, player_loans_plus_shares
+  in
+  let ai_try_takeover =
     match last_ai_to_buy_player_stock with
     | None when player_valuation > 250 -> 
-        let ai_in_player_shares = ai_in_player_shares ai_idx stocks / 10 in
-        let total_shares = Stock_market.total_shares C.player stocks / 10 in
-        let shares_to_control_player = total_shares / 2 - ai_in_player_shares + 1
-            |> clip_100
-        in
-        let share_price = Stock_market.share_price C.player stocks in
-        let cash_to_control_player = shares_to_control_player * share_price * 10 in
-        let missing_cash = cash_to_control_player - ai_player.cash in
-        let num_loans_needed = missing_cash / C.bond_value + 1 |> clip_100 in
-        let ai_loans_plus_shares = num_loans_needed + shares_to_control_player in
-
-        let player_treasury_shares = Stock_market.treasury_shares C.player stocks in
-        let shares_for_player_to_control_self =
-          total_shares / 2 - player_treasury_shares |> clip_100
-        in
-        let player_cash_to_own_self = shares_for_player_to_control_self * share_price * 10 in
-        let player_num_loans =
-          (player_cash_to_own_self - player_cash) / C.bond_value + 1 |> clip_100
-        in
-        let player_loans_plus_shares = player_num_loans + shares_for_player_to_control_self in
-        player_loans_plus_shares > ai_loans_plus_shares
-
+         player_loans_to_own_self_plus_shares > ai_takeover_loans_plus_shares
     | _-> false
   in
   let other_ai_in_player_shares =
     Stock_market.other_companies_in_player_shares C.player ~exclude_owner:ai_idx stocks
   in
   let ai_num_bonds = Region.num_bonds params.region ai_player.bonds in
-  let ai_bond_resistance =
+  let bond_resistance =
     ai_num_bonds - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) + 8
   in
   let avoid_bonds =
     if ai_player.bonds = 0
        || player_in_ai_shares >= ai_treasury_shares then false else
-        let num_loans_approx = ai_player.bonds / C.bond_value in
-        let bond_sum_val =
-          Iter.fold (fun acc idx ->
-            let div = if Region.is_west_us params.region then 2 else 1 in
-            let value = idx / div - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) in
-            acc + (value * 5 + 40))
-          0
-          Iter.(0 -- num_loans_approx)
-        in
-        ai_player.yearly_interest > bond_sum_val
+      let num_loans_approx = ai_player.bonds / C.bond_value in
+      let bond_sum_val =
+        Iter.fold (fun acc idx ->
+          let div = if Region.is_west_us params.region then 2 else 1 in
+          let value = idx / div - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) in
+          acc + (value * 5 + 40))
+        0
+        Iter.(0 -- num_loans_approx)
+      in
+      ai_player.yearly_interest > bond_sum_val
+  in
+  let ai_share_price = Stock_market.share_price ai_idx stocks in
+
+  let take_out_bond =
+    let enough_cash = (6 - bond_resistance) * 100 <= ai_player.cash in
+    let can_afford_share = ai_share_price * 10 < ai_player.cash in
+
+
+
   in
   `Nothing
 
