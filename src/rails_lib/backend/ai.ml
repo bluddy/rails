@@ -660,15 +660,16 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     (* NOTE: what about stock ownership? *)
     player_cash + Stock_market.treasury_share_value C.player stocks
   in
-  let ai_takeover_loans_plus_shares, player_loans_to_own_self_plus_shares =
+  let player_share_price = Stock_market.share_price C.player stocks in
+  let ai_takeover_loans_plus_shares, player_loans_to_own_self_plus_shares,
+      shares_to_control_player, shares_for_player_to_control_self =
     let clip_100 = Utils.clip ~min:0 ~max:99 in
     let ai_in_player_shares = ai_in_player_shares ai_idx stocks / 10 in
     let total_shares = Stock_market.total_shares C.player stocks / 10 in
     let shares_to_control_player = total_shares / 2 - ai_in_player_shares + 1
         |> clip_100
     in
-    let share_price = Stock_market.share_price C.player stocks in
-    let cash_to_control_player = shares_to_control_player * share_price * 10 in
+    let cash_to_control_player = shares_to_control_player * player_share_price * 10 in
     let missing_cash = cash_to_control_player - ai_player.cash in
     let num_loans_needed = missing_cash / C.bond_value + 1 |> clip_100 in
     let ai_loans_plus_shares = num_loans_needed + shares_to_control_player in
@@ -677,12 +678,12 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     let shares_for_player_to_control_self =
       total_shares / 2 - player_treasury_shares |> clip_100
     in
-    let player_cash_to_own_self = shares_for_player_to_control_self * share_price * 10 in
+    let player_cash_to_own_self = shares_for_player_to_control_self * player_share_price * 10 in
     let player_num_loans =
       (player_cash_to_own_self - player_cash) / C.bond_value + 1 |> clip_100
     in
     let player_loans_plus_shares = player_num_loans + shares_for_player_to_control_self in
-    ai_loans_plus_shares, player_loans_plus_shares
+    ai_loans_plus_shares, player_loans_plus_shares, shares_to_control_player, shares_for_player_to_control_self
   in
   let ai_try_takeover =
     match last_ai_to_buy_player_stock with
@@ -714,12 +715,22 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   let ai_share_price = Stock_market.share_price ai_idx stocks in
 
   let take_out_bond =
-    let enough_cash = (6 - bond_resistance) * 100 <= ai_player.cash in
-    let can_afford_share = ai_share_price * 10 < ai_player.cash in
-
-
-
+    let enough_cash_vs_bond = (6 - bond_resistance) * 100 > ai_player.cash in
+    let reject_bond2 = avoid_bonds || bond_resistance >= 10 in
+    if enough_cash_vs_bond && reject_bond2 then false else
+    let ai_can_afford_own_share = ai_share_price * 10 < ai_player.cash in
+    let ai_can_afford_player_share = player_share_price * 10 < ai_player.cash in
+    if not ai_can_afford_own_share && ai_doing_badly && reject_bond2 then false else
+    let reject_bond4 = ai_try_takeover || ai_can_afford_player_share || reject_bond2 in
+    let bond_level_tolerated = ai_player.opponent.financial_skill >= ai_player.bonds / C.bond_value in
+    if (ai_takeover_loans_plus_shares <> shares_for_player_to_control_self
+      || ai_takeover_loans_plus_shares <= shares_to_control_player
+      || not bond_level_tolerated) && reject_bond4 then false else
+    if reject_bond2 then false
+    else true
   in
+  if take_out_bond then `TakeOutBond else
+  let earnings_per_share = (ai_player.revenue_ytd * 100) / (Stock_market.total_shares ai_idx stocks) in
   `Nothing
 
 
