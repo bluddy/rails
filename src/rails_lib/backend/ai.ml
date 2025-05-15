@@ -737,17 +737,17 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     && ai_treasury_shares + 10 < ai_total_shares
   in
   if buy_own_shares then `BuyOwnShares else
+  let ai_be_active =
+    let div = if company_is_last_active then 2 else 3 in
+    (* TODO: why 10? *)
+    let ai_share_advantage = ai_treasury_shares - player_in_ai_shares - 10 in
+    let ai_share_adv_value = ai_share_advantage * ai_share_price * (B_options.difficulty_enum params.options) in
+    let ai_value = ai_share_adv_value / div + ai_player.cash - ai_player.bonds in
+    (* TODO: is this a bug? What is this amount? Should it be ai_in_player_shares? *)
+    let player_value = (player_total_shares / 2 - ai_treasury_shares + 10) * player_share_price in
+    ai_value > player_value
+  in
   let buy_player_shares =
-    let ai_be_active =
-      let div = if company_is_last_active then 2 else 3 in
-      (* TODO: why 10? *)
-      let ai_share_advantage = ai_treasury_shares - player_in_ai_shares - 10 in
-      let ai_share_adv_value = ai_share_advantage * ai_share_price * (B_options.difficulty_enum params.options) in
-      let ai_value = ai_share_adv_value / div + ai_player.cash - ai_player.bonds in
-      (* TODO: is this a bug? What is this amount? Should it be ai_in_player_shares? *)
-      let player_value = (player_total_shares / 2 - ai_treasury_shares + 10) * player_share_price in
-      ai_value > player_value
-    in
     let ai_can_afford_player_share = player_share_price * 10 <= ai_player.cash in
     let player_controls_self = Stock_market.controls_own_company C.player stocks in
     let ai_controls_player = Stock_market.controls_company ai_idx ~target:C.player stocks in
@@ -755,12 +755,26 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     let other_ai_in_player_shares =
       Stock_market.other_companies_in_player_shares C.player ~exclude_owner:ai_idx stocks
     in
+    (* Only cutthroat will buy player shares *)
     (ai_try_takeover || ai_be_active) && ai_can_afford_player_share
     && B_options.cutthroat params.options && (not player_controls_self)
     && (not ai_controls_player) && Option.is_none last_ai_to_buy_player_stock
     && (not first_year) && other_ai_in_player_shares = 0 && ai_player.track_length > 32
   in
   if buy_player_shares then `BuyPlayerShares else
+  let decent_money_situtation = ai_player.cash + (Climate.to_enum params.climate) * 500 > 3000 in
+  if avoid_bonds || decent_money_situtation then `PayBackBond else
+  let ai_sell_own_stock =
+    let ai_more_self_shares = player_in_ai_shares + 20 < ai_treasury_shares in
+    let ai_has_bond = ai_player.bonds > 0 in
+    let worth_selling = earnings_per_share / 16 < ai_share_price in
+    let odd_year = params.year land 1 <> 0 in
+    if ai_more_self_shares && ai_has_bond && v.financial_ctr land 0x3C = 0 && odd_year && worth_selling then true else
+    if company_is_last_active && ai_be_active && ai_treasury_shares > 0 then true
+    else false
+  in
+  if ai_sell_own_stock then `SellOwnStock else
+
   `Nothing
 
 
