@@ -661,12 +661,12 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     player_cash + Stock_market.treasury_share_value C.player stocks
   in
   let player_share_price = Stock_market.share_price C.player stocks in
+  let player_total_shares = Stock_market.total_shares C.player stocks / 10 in
   let ai_takeover_loans_plus_shares, player_loans_to_own_self_plus_shares,
       shares_to_control_player, shares_for_player_to_control_self =
     let clip_100 = Utils.clip ~min:0 ~max:99 in
     let ai_in_player_shares = ai_in_player_shares ai_idx stocks / 10 in
-    let total_shares = Stock_market.total_shares C.player stocks / 10 in
-    let shares_to_control_player = total_shares / 2 - ai_in_player_shares + 1
+    let shares_to_control_player = player_total_shares / 2 - ai_in_player_shares + 1
         |> clip_100
     in
     let cash_to_control_player = shares_to_control_player * player_share_price * 10 in
@@ -676,7 +676,7 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
 
     let player_treasury_shares = Stock_market.treasury_shares C.player stocks in
     let shares_for_player_to_control_self =
-      total_shares / 2 - player_treasury_shares |> clip_100
+      player_total_shares / 2 - player_treasury_shares |> clip_100
     in
     let player_cash_to_own_self = shares_for_player_to_control_self * player_share_price * 10 in
     let player_num_loans =
@@ -740,6 +740,19 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     && ai_treasury_shares + 10 < ai_total_shares
   in
   if buy_own_shares then `BuyOwnShares else
+  let buy_player_stock =
+    let ai_be_active =
+      let div = if company_is_last_active then 2 else 3 in
+      (* TODO: why 10? *)
+      let ai_share_advantage = ai_treasury_shares - player_in_ai_shares - 10 in
+      let ai_share_adv_value = ai_share_advantage * ai_share_price * (B_options.difficulty_enum params.options) in
+      let ai_value = ai_share_adv_value / div + ai_player.cash - ai_player.bonds in
+      (* TODO: is this a bug? What is this amount? Should it be ai_in_player_shares? *)
+      let player_value = (player_total_shares / 2 - ai_treasury_shares + 10) * player_share_price in
+      ai_value > player_value
+    in
+    false
+  in
   `Nothing
 
 

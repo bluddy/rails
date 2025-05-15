@@ -56,6 +56,8 @@ let default =
 
 let difficulty v = v.difficulty
 
+let difficulty_enum v = difficulty_to_enum @@ difficulty v
+
 let speed v = v.speed
 
 let cutthroat v = RealityLevels.mem v.reality_levels `CutthroatCompetition
