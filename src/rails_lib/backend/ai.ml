@@ -691,9 +691,6 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
          player_loans_to_own_self_plus_shares > ai_takeover_loans_plus_shares
     | _-> false
   in
-  let other_ai_in_player_shares =
-    Stock_market.other_companies_in_player_shares C.player ~exclude_owner:ai_idx stocks
-  in
   let ai_num_bonds = Region.num_bonds params.region ai_player.bonds in
   let bond_resistance =
     ai_num_bonds - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) + 8
@@ -740,7 +737,7 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     && ai_treasury_shares + 10 < ai_total_shares
   in
   if buy_own_shares then `BuyOwnShares else
-  let buy_player_stock =
+  let buy_player_shares =
     let ai_be_active =
       let div = if company_is_last_active then 2 else 3 in
       (* TODO: why 10? *)
@@ -751,8 +748,19 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
       let player_value = (player_total_shares / 2 - ai_treasury_shares + 10) * player_share_price in
       ai_value > player_value
     in
-    false
+    let ai_can_afford_player_share = player_share_price * 10 <= ai_player.cash in
+    let player_controls_self = Stock_market.controls_own_company C.player stocks in
+    let ai_controls_player = Stock_market.controls_company ai_idx ~target:C.player stocks in
+    let first_year = params.year = params.start_year in
+    let other_ai_in_player_shares =
+      Stock_market.other_companies_in_player_shares C.player ~exclude_owner:ai_idx stocks
+    in
+    (ai_try_takeover || ai_be_active) && ai_can_afford_player_share
+    && B_options.cutthroat params.options && (not player_controls_self)
+    && (not ai_controls_player) && Option.is_none last_ai_to_buy_player_stock
+    && (not first_year) && other_ai_in_player_shares = 0 && ai_player.track_length > 32
   in
+  if buy_player_shares then `BuyPlayerShares else
   `Nothing
 
 
