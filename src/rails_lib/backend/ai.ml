@@ -713,12 +713,12 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
       ai_player.yearly_interest > bond_sum_val
   in
   let ai_share_price = Stock_market.share_price ai_idx stocks in
+  let ai_can_afford_own_share = ai_player.cash > ai_share_price * 10 in
 
   let take_out_bond =
     let enough_cash_vs_bond = (6 - bond_resistance) * 100 > ai_player.cash in
     let reject_bond2 = avoid_bonds || bond_resistance >= 10 in
     if enough_cash_vs_bond && reject_bond2 then false else
-    let ai_can_afford_own_share = ai_share_price * 10 < ai_player.cash in
     let ai_can_afford_player_share = player_share_price * 10 < ai_player.cash in
     if not ai_can_afford_own_share && ai_doing_badly && reject_bond2 then false else
     let reject_bond4 = ai_try_takeover || ai_can_afford_player_share || reject_bond2 in
@@ -730,7 +730,16 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     else true
   in
   if take_out_bond then `TakeOutBond else
-  let earnings_per_share = (ai_player.revenue_ytd * 100) / (Stock_market.total_shares ai_idx stocks) in
+  let ai_total_shares = Stock_market.total_shares ai_idx stocks in
+  let earnings_per_share = (ai_player.revenue_ytd * 100) / ai_total_shares in
+  (* Why add 10 here? *)
+  let buy_own_shares =
+    (ai_doing_badly || earnings_per_share / 20 > ai_share_price || ai_player.cash > 20000)
+    && ai_can_afford_own_share
+    && (player_in_ai_shares + ai_treasury_shares < ai_total_shares)
+    && ai_treasury_shares + 10 < ai_total_shares
+  in
+  if buy_own_shares then `BuyOwnShares else
   `Nothing
 
 
