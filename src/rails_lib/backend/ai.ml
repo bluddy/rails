@@ -779,7 +779,15 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     then `SellPlayerShares
     else `Nothing
 
-
+let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
+  match ai_financial  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
+  | `BuyOwnShares -> v, None
+  | `SellOwnShares -> v, None
+  | `BuyPlayerShares -> v, None
+  | `SellPlayerShares -> v, None
+  | `PayBackBond -> v, None
+  | `TakeOutBond -> v, None
+  | `Nothing -> v, None
 
 
 
