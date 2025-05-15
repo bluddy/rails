@@ -751,7 +751,7 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     let ai_can_afford_player_share = player_share_price * 10 <= ai_player.cash in
     let player_controls_self = Stock_market.controls_own_company C.player stocks in
     let ai_controls_player = Stock_market.controls_company ai_idx ~target:C.player stocks in
-    let first_year = params.year = params.start_year in
+    let first_year = params.year = params.year_start in
     let other_ai_in_player_shares =
       Stock_market.other_companies_in_player_shares C.player ~exclude_owner:ai_idx stocks
     in
@@ -773,9 +773,11 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     if company_is_last_active && ai_be_active && ai_treasury_shares > 0 then true
     else false
   in
-  if ai_sell_own_stock then `SellOwnStock else
-
-  `Nothing
+  if ai_sell_own_stock then `SellOwnShares else
+  if ai_in_player_shares ai_idx stocks > 0 && company_is_last_active
+    && (ai_player.bonds > 0 || Option.is_some last_ai_to_buy_player_stock || ai_player.cash < 100)
+    then `SellPlayerShares
+    else `Nothing
 
 
 
