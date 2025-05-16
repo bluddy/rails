@@ -780,14 +780,33 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     else `Nothing
 
 let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
+  let default = v, stocks, None in
   match ai_financial  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
-  | `BuyOwnShares -> v, None
-  | `SellOwnShares -> v, None
-  | `BuyPlayerShares -> v, None
-  | `SellPlayerShares -> v, None
-  | `PayBackBond -> v, None
-  | `TakeOutBond -> v, None
-  | `Nothing -> v, None
+  | `BuyOwnShares -> default
+  | `SellOwnShares ->
+    let profit, stocks = Stock_market.ai_sell_own_stock ~ai_idx stocks in
+    let v = modify_ai ai_idx v (fun ai_player ->
+      let cash = ai_player.cash + profit in
+      {ai_player with cash})
+    in
+    v, stocks, None
+  | `BuyPlayerShares -> default
+  | `SellPlayerShares -> default
+  | `PayBackBond ->
+      let v = modify_ai ai_idx v (fun ai_player ->
+        let cash = ai_player.cash - 500 in
+        let num_loans = ai_player.bonds / 500 in
+        let interest_delta = ai_player.yearly_interest / num_loans in
+        let yearly_interest = ai_player.yearly_interest - interest_delta in
+        let bonds = ai_player.bonds - 500 in
+        let cash = cash - 5 in
+        {ai_player with cash; bonds; yearly_interest}
+      )
+      in
+      v, stocks, None
+
+  | `TakeOutBond -> default
+  | `Nothing -> default
 
 
 
