@@ -1,4 +1,9 @@
 # Tasks
+- Deal with number idx for ais and players, specifically where they interact:
+  - player id
+  - stocks
+  - Presumably we can have 0 be player, and 1-3 be ai
+  - But for extension, we'll need better identification.
 - Switch city idxs in AI for locs. Don't rely on int idxs.
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game

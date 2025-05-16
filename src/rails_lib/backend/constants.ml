@@ -43,6 +43,7 @@ let slow_message_time = 150
 
 let menu_h = 8
 
+(* In the west US it's 1000, but the AI doesn't always use it in the original game *)
 let bond_value = 500
 let max_cash_for_bankruptcy = 500
 let min_bonds_for_bankruptcy = 500
@@ -61,6 +62,8 @@ module Cycles = struct
   let station_supply_demand = background_update * 32 (* 512 *)
   (* Since we don't spread out the supply addition, decay happens in the same cycle *)
   let supply_decay = 512
+
+  let ai_track = 16
 end
 
 let priority_min_dist = 6
