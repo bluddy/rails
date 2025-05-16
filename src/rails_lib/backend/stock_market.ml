@@ -172,8 +172,8 @@ let can_buy_stock ~player ~target ~cash ~difficulty v =
     if cash >= cost && public_shares > 0 then `Ok
     else `Error
 
+    (* TODO: check the logic here for sell. It might be wrong *)
 let _sell_buy_stock player ~target ~buy v =
-  (* add_stock: for AI. Currently unused. TODO *)
   let share_price = share_price target v in
   let public_shares = public_shares target v in
   let cost = share_price * C.num_buy_shares in
@@ -188,26 +188,23 @@ let _sell_buy_stock player ~target ~buy v =
   let v = add_shares ~owner:player ~owned:target ~num v in
   cost, v
 
-let ai_buy_player_stock ~ai_idx ~player v =
+let ai_buy_stock ~ai_idx ~player ~human v =
+  let modify = if human then (+) 1 else Fun.id in
   let cost = C.num_buy_shares * (share_price player v) in
   let player_treasury_shares = treasury_shares player v in
+  (* BUG: the original code add num_buy_shares here, probably copied from sell *)
   let non_treasury_shares = total_shares player v - player_treasury_shares in
-  let price_change = cost / non_treasury_shares + 1 in
+  let price_change = modify @@ cost / non_treasury_shares in
   let v = add_to_share_price ~player price_change v in
   let v = add_shares ~owner:ai_idx ~owned:player ~num:C.num_buy_shares v in
-  let cost = C.num_buy_shares * (share_price player v) + 1 in
+  let cost = modify @@ C.num_buy_shares * (share_price player v) in
   cost, v
 
+let ai_buy_player_stock ~ai_idx ~player v =
+  ai_buy_stock ~ai_idx ~player ~human:true v
+
 let ai_buy_own_stock ~ai_idx v =
-  let cost = C.num_buy_shares * (share_price ai_idx v) in
-  let ai_treasury_shares = treasury_shares ai_idx v in
-  (* BUG: the original code add num_buy_shares here, probably copied from sell *)
-  let non_treasury_shares = total_shares ai_idx v - ai_treasury_shares in
-  let price_delta = cost / non_treasury_shares in
-  let v = add_to_share_price ~player:ai_idx price_delta v in
-  let v = add_shares ~owner:ai_idx ~owned:ai_idx ~num:C.num_buy_shares v in
-  let cost = C.num_buy_shares * (share_price ai_idx v) in
-  cost, v
+  ai_buy_stock ~ai_idx ~player:ai_idx ~human:false v
 
 let ai_sell_own_stock ~ai_idx v =
   let v = remove_shares ~owner:ai_idx ~owned:ai_idx ~num:C.num_buy_shares v in
