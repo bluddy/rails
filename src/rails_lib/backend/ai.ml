@@ -599,7 +599,8 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
           `Build (_build_station tgt_city src_city ~tgt_station:None ~cities
             ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
 
-let ai_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities random ~stations v =
+(* Main AI routines for building track *)
+let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities random ~stations v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
@@ -631,10 +632,7 @@ let ai_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities ran
   else
     _try_to_build_station ~tilemap ~stations ~trackmap ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
 
-let ai_in_player_shares ai_idx stocks =
-  Stock_market.owned_shares ~owner:ai_idx ~owned:C.player stocks
-
-let ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
+let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   (* Player-owned ais don't make financial decisions *)
   if not (ai_exists ai_idx v) || owned_by_player stocks ai_idx then `Nothing else
   let ai_player = get_ai_exn ai_idx v in
@@ -662,6 +660,9 @@ let ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
   in
   let player_share_price = Stock_market.share_price C.player stocks in
   let player_total_shares = Stock_market.total_shares C.player stocks / 10 in
+  let ai_in_player_shares ai_idx stocks =
+    Stock_market.owned_shares ~owner:ai_idx ~owned:C.player stocks
+  in
   let ai_takeover_loans_plus_shares, player_loans_to_own_self_plus_shares,
       shares_to_control_player, shares_for_player_to_control_self =
     let clip_100 = Utils.clip ~min:0 ~max:99 in
@@ -782,7 +783,7 @@ let ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
 let financial_text ~cities ~region ui_msg v =
   let name ai_idx = get_name ai_idx ~cities v in
   match ui_msg with
-  | Ui_msg.AiBuySellOwnStock{ai_idx; price; buy} ->
+  | Ui_msg.AiBuySellOwnStock{ai_idx; price; buy; _} ->
       Printf.sprintf
         "%s\n\
         %s %d,000 shares of\n\
@@ -818,8 +819,8 @@ let financial_text ~cities ~region ui_msg v =
   | _ -> ""
 
 (* TODO: handle loss from takeover, probably in UI *)
-let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
-  match ai_financial_decision  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
+let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
+  match _ai_financial_decision  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
   | `BuyOwnShares ->
     let cost, stocks = Stock_market.ai_buy_own_stock ~ai_idx stocks in
     let price = Stock_market.share_price ai_idx stocks in
