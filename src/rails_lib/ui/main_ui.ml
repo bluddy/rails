@@ -821,6 +821,18 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state2 = Stock_broker.handle_msg s state ui_msg in
         if state2 === state then v else {v with mode=Stock_broker state2}
 
+    | Normal, DemandChanged{x; y; good; add} ->
+      let add_remove = if add then "now\naccepts" else "no longer\naccepts" in
+      let station = B.get_station (x, y) s.backend |> Option.get_exn_or "missing station" in
+      let text =
+        Printf.sprintf "%s\n... %s %s.\n"
+          (Station.get_name station)
+          add_remove
+          (Goods.show good)
+      in
+      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews text None) in
+      {v with mode}
+
     | Normal, (TrainArrival t) ->
         let msg_speed = train_arrival_msg_speed v in
         let v' =
@@ -867,13 +879,12 @@ let handle_msgs (s:State.t) v ui_msgs =
 
     | Normal, AiBuildOrderFailed{player; ai_name; src_name; tgt_name} when player = C.player ->
       let text = Ai.build_order_fail_text ai_name src_name tgt_name in
-      make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text |> fst
+      fst @@ make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text
 
     | Normal, IndustryBuilt{player; tile} when player = C.player ->
       let tile_s = Tile.show tile in
       fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s
 
-    (* TODO: handle demand changed msg *)
     | _ -> v
   in
   let v = List.fold_left handle_msg v ui_msgs in
