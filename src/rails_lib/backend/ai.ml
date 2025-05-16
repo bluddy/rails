@@ -99,7 +99,7 @@ let modify_ai idx v f =
 let get_track_len player v =
   get_ai_exn player v |> fun x -> x.track_length
 
-let name player ~cities v =
+let get_name player ~cities v =
   let p = get_ai_exn player v in
   let city1_s = Cities.name_of_idx p.city1 cities in
   match p.city2 with
@@ -412,7 +412,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
   in
   let ai_controlled_by_player = owned_by_player stocks company in
   let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
-  let ai_name = name company ~cities v in
+  let ai_name = get_name company ~cities v in
   let ai_player = IntMap.find company v.ais in
   match ret with
     | Some (trackmap, ai_track) -> (* Built *)
@@ -779,17 +779,56 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     then `SellPlayerShares
     else `Nothing
 
+let financial_text ~cities ~region ui_msg v =
+  let name ai_idx = get_name ai_idx ~cities v in
+  match ui_msg with
+  | Ui_msg.AiBuySellOwnStock{ai_idx; price; buy} ->
+      Printf.sprintf
+        "%s\n\
+        %s %d,000 shares of\n\
+        treasury stock.\n
+        Price %s to %s.00/share.\n"
+        (name ai_idx)
+        (if buy then "adds" else "sells")
+        C.num_buy_shares
+        (if buy then "rises" else "falls")
+        (Utils.show_cash ~region ~ks:false price) 
+  | AiTakesOutLoan{ai_idx} ->
+      Printf.sprintf
+        "%s\n\
+        takes out %s loan.\n" (* NOTE: always 500, even in west us *)
+        (name ai_idx)
+        (Utils.show_cash ~region C.bond_value)
+  | AiSellsPlayerStock {ai_idx; _} ->
+      Printf.sprintf
+        "%s\n\
+        sells %d,000 shares of\n\
+        your stock.\n"
+        (name ai_idx)
+        C.num_buy_shares
+  | AiBuyslayerStock {ai_idx; takeover; _} ->
+      Printf.sprintf
+        "%s\n\
+        buys %d,000 shares of\n\
+        your stock!\n\
+        %s"
+        (name ai_idx)
+        C.num_buy_shares
+        (if takeover then "Your RR has been\nTAKEN OVER!\n" else "")
+  | _ -> ""
+
 let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   let default = v, stocks, None in
   match ai_financial  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
   | `BuyOwnShares -> default
   | `SellOwnShares ->
     let profit, stocks = Stock_market.ai_sell_own_stock ~ai_idx stocks in
+    let price = Stock_market.share_price ai_idx stocks in
     let v = modify_ai ai_idx v (fun ai_player ->
       let cash = ai_player.cash + profit in
       {ai_player with cash})
     in
-    v, stocks, None
+    v, stocks, Ui_msg.AiBuySellOwnStock{ai_idx; price; buy=false} |> Option.some
   | `BuyPlayerShares -> default
   | `SellPlayerShares -> default
   | `PayBackBond ->
