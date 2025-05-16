@@ -634,7 +634,7 @@ let ai_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities ran
 let ai_in_player_shares ai_idx stocks =
   Stock_market.owned_shares ~owner:ai_idx ~owned:C.player stocks
 
-let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
+let ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   (* Player-owned ais don't make financial decisions *)
   if not (ai_exists ai_idx v) || owned_by_player stocks ai_idx then `Nothing else
   let ai_player = get_ai_exn ai_idx v in
@@ -692,7 +692,7 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     | _-> false
   in
   let ai_num_bonds = Region.num_bonds params.region ai_player.bonds in
-  let bond_resistance =
+  let bond_interest =
     ai_num_bonds - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) + 8
   in
   let avoid_bonds =
@@ -713,8 +713,8 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   let ai_can_afford_own_share = ai_player.cash > ai_share_price * 10 in
 
   let take_out_bond =
-    let enough_cash_vs_bond = (6 - bond_resistance) * 100 > ai_player.cash in
-    let reject_bond2 = avoid_bonds || bond_resistance >= 10 in
+    let enough_cash_vs_bond = (6 - bond_interest) * 100 > ai_player.cash in
+    let reject_bond2 = avoid_bonds || bond_interest >= 10 in
     if enough_cash_vs_bond && reject_bond2 then false else
     let ai_can_afford_player_share = player_share_price * 10 < ai_player.cash in
     if not ai_can_afford_own_share && ai_doing_badly && reject_bond2 then false else
@@ -726,7 +726,7 @@ let ai_financial ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
     if reject_bond2 then false
     else true
   in
-  if take_out_bond then `TakeOutBond else
+  if take_out_bond then `TakeOutBond(bond_interest) else
   let ai_total_shares = Stock_market.total_shares ai_idx stocks in
   let earnings_per_share = (ai_player.revenue_ytd * 100) / ai_total_shares in
   (* Why add 10 here? *)
@@ -793,7 +793,7 @@ let financial_text ~cities ~region ui_msg v =
         C.num_buy_shares
         (if buy then "rises" else "falls")
         (Utils.show_cash ~region ~ks:false price) 
-  | AiTakesOutLoan{ai_idx} ->
+  | AiTakesOutBond{ai_idx; _} ->
       Printf.sprintf
         "%s\n\
         takes out %s loan.\n" (* NOTE: always 500, even in west us *)
@@ -817,10 +817,20 @@ let financial_text ~cities ~region ui_msg v =
         (if takeover then "Your RR has been\nTAKEN OVER!\n" else "")
   | _ -> ""
 
+  (* TODO: handle loss from takeover *)
+
 let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   let default = v, stocks, None in
-  match ai_financial  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
-  | `BuyOwnShares -> default
+  match ai_financial_decision  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
+  | `BuyOwnShares ->
+    let cost, stocks = Stock_market.ai_buy_own_stock ~ai_idx stocks in
+    let price = Stock_market.share_price ai_idx stocks in
+    let v = modify_ai ai_idx v (fun ai_player ->
+      let cash = ai_player.cash - cost in
+      {ai_player with cash})
+    in
+    v, stocks, Ui_msg.AiBuySellOwnStock{ai_idx; price; buy=true} |> Option.some
+
   | `SellOwnShares ->
     let profit, stocks = Stock_market.ai_sell_own_stock ~ai_idx stocks in
     let price = Stock_market.share_price ai_idx stocks in
@@ -829,22 +839,36 @@ let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v 
       {ai_player with cash})
     in
     v, stocks, Ui_msg.AiBuySellOwnStock{ai_idx; price; buy=false} |> Option.some
+
   | `BuyPlayerShares -> default
   | `SellPlayerShares -> default
   | `PayBackBond ->
       let v = modify_ai ai_idx v (fun ai_player ->
-        let cash = ai_player.cash - 500 in
-        let num_loans = ai_player.bonds / 500 in
+        let cash = ai_player.cash - C.bond_value in
+        let num_loans = ai_player.bonds / C.bond_value in
         let interest_delta = ai_player.yearly_interest / num_loans in
         let yearly_interest = ai_player.yearly_interest - interest_delta in
-        let bonds = ai_player.bonds - 500 in
-        let cash = cash - 5 in
+        let bonds = ai_player.bonds - C.bond_value in
+        let cash = cash - 5 in (* Why? *)
         {ai_player with cash; bonds; yearly_interest}
       )
       in
       v, stocks, None
 
-  | `TakeOutBond -> default
+  | `TakeOutBond(bond_interest) ->
+    let v = modify_ai ai_idx v (fun ai_player ->
+      let cash = ai_player.cash + C.bond_value - 5 in
+      let yearly_interest = ai_player.yearly_interest + bond_interest * 5 in
+      let bonds = ai_player.bonds + C.bond_value in
+      {ai_player with cash; yearly_interest; bonds}
+    )
+    in
+    let ai_owns_some_player_stock = Stock_market.owned_shares ~owner:ai_idx ~owned:C.player stocks > 0 in
+    let ui_msg = if ai_owns_some_player_stock then
+      Ui_msg.AiTakesOutBond{player=C.player; ai_idx} |> Option.some else None
+    in
+    v, stocks, ui_msg
+
   | `Nothing -> default
 
 

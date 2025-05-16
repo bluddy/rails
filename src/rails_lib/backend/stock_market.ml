@@ -188,6 +188,16 @@ let _sell_buy_stock player ~target ~buy v =
   let v = add_shares ~owner:player ~owned:target ~num v in
   cost, v
 
+let ai_buy_own_stock ~ai_idx v =
+  let cost = C.num_buy_shares * (share_price ai_idx v) in
+  let ai_treasury_shares = owned_shares ~owner:ai_idx ~owned:ai_idx v in
+  let non_treasury_shares = total_shares ai_idx v - ai_treasury_shares + C.num_buy_shares in
+  let price_delta = cost / non_treasury_shares in
+  let v = add_to_share_price ~player:ai_idx (price_delta) v in
+  let v = add_shares ~owner:ai_idx ~owned:ai_idx ~num:C.num_buy_shares v in
+  let cost = C.num_buy_shares * (share_price ai_idx v) in
+  cost, v
+
 let ai_sell_own_stock ~ai_idx v =
   let v = remove_shares ~owner:ai_idx ~owned:ai_idx ~num:C.num_buy_shares v in
   let ai_treasury_shares = owned_shares ~owner:ai_idx ~owned:ai_idx v in

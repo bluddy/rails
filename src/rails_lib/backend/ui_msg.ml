@@ -39,7 +39,7 @@ type t =
   | AiConnected of {opponent: Opponent.name; ai_name: string; src_name: string; tgt_name: string}
   | AiBuildOrderFailed of {player: int; ai_name: string; src_name: string; tgt_name: string}
   | AiBuySellOwnStock of {ai_idx: int; price: int; buy: bool}
-  | AiTakesOutLoan of {ai_idx: int}  (* payback is secret *)
+  | AiTakesOutBond of {player: int; ai_idx: int}  (* msg to player only. payback is secret *)
   | AiSellsPlayerStock of {player: int; ai_idx: int}
   | AiBuyslayerStock of {player: int; ai_idx: int; takeover: bool}
   [@@deriving yojson]
