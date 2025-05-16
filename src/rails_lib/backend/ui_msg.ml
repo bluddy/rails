@@ -38,8 +38,9 @@ type t =
   | NewCompany of {opponent: Opponent.name; city: loc}
   | AiConnected of {opponent: Opponent.name; ai_name: string; src_name: string; tgt_name: string}
   | AiBuildOrderFailed of {player: int; ai_name: string; src_name: string; tgt_name: string}
-  | AiBuySellOwnStock of {ai_idx: int; price: int; buy: bool}
-  | AiTakesOutBond of {player: int; ai_idx: int}  (* msg to player only. payback is secret *)
-  | AiSellsPlayerStock of {player: int; ai_idx: int}
-  | AiBuyslayerStock of {player: int; ai_idx: int; takeover: bool}
+  | AiBuySellOwnStock of {ai_idx: int; price: int; buy: bool; opponent: Opponent.name}
+  | AiTakesOutBond of {player: int; ai_idx: int; opponent: Opponent.name}  (* msg to player only. payback is secret *)
+  | AiSellsPlayerStock of {player: int; ai_idx: int; opponent: Opponent.name}
+  | AiBuysPlayerStock of {player: int; ai_idx: int; takeover: bool; opponent: Opponent.name}
   [@@deriving yojson]
+

@@ -885,6 +885,16 @@ let handle_msgs (s:State.t) v ui_msgs =
       let tile_s = Tile.show tile in
       fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s
 
+    | Normal, (AiBuySellOwnStock {opponent;_} | AiBuysPlayerStock {opponent;_} | AiSellsPlayerStock {opponent;_}) ->
+      let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
+      let mode = Newspaper(Newspaper.make s Newspaper.FinancialNews text @@ Some opponent) in
+      {v with mode}
+
+    | Normal, AiTakesOutBond {opponent; player;_} when player=C.player ->
+      let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
+      let mode = Newspaper(Newspaper.make s Newspaper.FinancialNews text @@ Some opponent) in
+      {v with mode}
+
     | _ -> v
   in
   let v = List.fold_left handle_msg v ui_msgs in

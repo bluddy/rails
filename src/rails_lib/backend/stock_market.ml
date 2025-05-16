@@ -148,6 +148,13 @@ let controls_company player ~target v =
   let total_shares = total_shares target v in
   owned_shares > total_shares / 2
 
+let hostile_takeover ~ai_idx ~player v =
+  (* End of game for player *)
+  v
+  |> add_shares ~owner:ai_idx ~owned:player ~num:(treasury_shares player v)
+  |> set_owned_shares ~owner:player ~owned:ai_idx 0
+  |> set_owned_shares ~owner:player ~owned:player 0
+
 let controls_own_company player v = controls_company player ~target:player v
 
 let can_buy_stock ~player ~target ~cash ~difficulty v =
@@ -188,6 +195,11 @@ let _sell_buy_stock player ~target ~buy v =
   let v = add_shares ~owner:player ~owned:target ~num v in
   cost, v
 
+  (* TODO: compare logic to player buying/selling.
+     1: it should be public shares, not non-treasury-shares
+     2: the cost should be determined early, not afterwards
+     3: ai selling its own stock has a weird order of operations
+   *)
 let ai_buy_stock ~ai_idx ~player ~human v =
   let modify = if human then (+) 1 else Fun.id in
   let cost = C.num_buy_shares * (share_price player v) in
@@ -206,9 +218,21 @@ let ai_buy_player_stock ~ai_idx ~player v =
 let ai_buy_own_stock ~ai_idx v =
   ai_buy_stock ~ai_idx ~player:ai_idx ~human:false v
 
+  (* Weird inconsistency here. Should be fixed *)
+let ai_sell_player_stock ~ai_idx ~player v =
+  let cost = share_price player v * C.num_buy_shares in
+  (* Doesn't account for public shares *)
+  let player_treasury_shares = treasury_shares player v in
+  let non_treasury_shares = total_shares player v - player_treasury_shares in
+  let price_change = cost / non_treasury_shares in
+  let v = add_to_share_price ~player (-price_change) v in
+  let v = remove_shares ~owner:ai_idx ~owned:player ~num:C.num_buy_shares v in
+  let profit = (share_price player v) * C.num_buy_shares - 1 in
+  profit, v
+
 let ai_sell_own_stock ~ai_idx v =
   let v = remove_shares ~owner:ai_idx ~owned:ai_idx ~num:C.num_buy_shares v in
-  let ai_treasury_shares = owned_shares ~owner:ai_idx ~owned:ai_idx v in
+  let ai_treasury_shares = treasury_shares ai_idx v in
   let non_treasury_shares = total_shares ai_idx v - ai_treasury_shares + C.num_buy_shares in
   let price_delta = C.num_buy_shares * (share_price ai_idx v) / non_treasury_shares in
   let v = add_to_share_price ~player:ai_idx (-price_delta) v in

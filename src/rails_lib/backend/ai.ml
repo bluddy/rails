@@ -806,7 +806,7 @@ let financial_text ~cities ~region ui_msg v =
         your stock.\n"
         (name ai_idx)
         C.num_buy_shares
-  | AiBuyslayerStock {ai_idx; takeover; _} ->
+  | AiBuysPlayerStock {ai_idx; takeover; _} ->
       Printf.sprintf
         "%s\n\
         buys %d,000 shares of\n\
@@ -817,10 +817,8 @@ let financial_text ~cities ~region ui_msg v =
         (if takeover then "Your RR has been\nTAKEN OVER!\n" else "")
   | _ -> ""
 
-  (* TODO: handle loss from takeover *)
-
+(* TODO: handle loss from takeover, probably in UI *)
 let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
-  let default = v, stocks, None in
   match ai_financial_decision  ~ai_idx ~stocks ~cycle ~player_cash ~params v with
   | `BuyOwnShares ->
     let cost, stocks = Stock_market.ai_buy_own_stock ~ai_idx stocks in
@@ -829,7 +827,8 @@ let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v 
       let cash = ai_player.cash - cost in
       {ai_player with cash})
     in
-    v, stocks, Ui_msg.AiBuySellOwnStock{ai_idx; price; buy=true} |> Option.some
+    let opponent = (get_ai_exn ai_idx v).opponent.name in
+    v, stocks, player_cash, Ui_msg.AiBuySellOwnStock{opponent; ai_idx; price; buy=true} |> Option.some
 
   | `SellOwnShares ->
     let profit, stocks = Stock_market.ai_sell_own_stock ~ai_idx stocks in
@@ -838,10 +837,32 @@ let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v 
       let cash = ai_player.cash + profit in
       {ai_player with cash})
     in
-    v, stocks, Ui_msg.AiBuySellOwnStock{ai_idx; price; buy=false} |> Option.some
+    let opponent = (get_ai_exn ai_idx v).opponent.name in
+    v, stocks, player_cash, Ui_msg.AiBuySellOwnStock{opponent; ai_idx; price; buy=false} |> Option.some
 
-  | `BuyPlayerShares -> default
-  | `SellPlayerShares -> default
+  | `BuyPlayerShares ->
+    let cost, stocks = Stock_market.ai_buy_player_stock ~ai_idx ~player:C.player stocks in
+    let takeover = Stock_market.controls_company ai_idx ~target:C.player stocks in
+    let stocks = if takeover then Stock_market.hostile_takeover ~ai_idx ~player:C.player stocks else stocks in
+    let v = modify_ai ai_idx v (fun ai_player ->
+      let cash = ai_player.cash - cost in
+      let cash = if takeover then cash + player_cash else cash in
+      {ai_player with cash})
+    in
+    let v = {v with last_ai_to_buy_player_stock=Some ai_idx} in
+    let player_cash = if takeover then 0 else player_cash in
+    let opponent = (get_ai_exn ai_idx v).opponent.name in
+    v, stocks, player_cash, Ui_msg.AiBuysPlayerStock{opponent; player=C.player; ai_idx; takeover} |> Option.some
+
+  | `SellPlayerShares ->
+    let profit, stocks = Stock_market.ai_sell_player_stock ~ai_idx ~player:C.player stocks in
+    let v = modify_ai ai_idx v (fun ai_player ->
+      let cash = ai_player.cash + profit in
+      {ai_player with cash})
+    in
+    let opponent = (get_ai_exn ai_idx v).opponent.name in
+    v, stocks, player_cash, Ui_msg.AiSellsPlayerStock{opponent; player=C.player; ai_idx} |> Option.some
+
   | `PayBackBond ->
       let v = modify_ai ai_idx v (fun ai_player ->
         let cash = ai_player.cash - C.bond_value in
@@ -853,7 +874,7 @@ let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v 
         {ai_player with cash; bonds; yearly_interest}
       )
       in
-      v, stocks, None
+      v, stocks, player_cash, None
 
   | `TakeOutBond(bond_interest) ->
     let v = modify_ai ai_idx v (fun ai_player ->
@@ -865,12 +886,12 @@ let ai_financial_cycle ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v 
     in
     let ai_owns_some_player_stock = Stock_market.owned_shares ~owner:ai_idx ~owned:C.player stocks > 0 in
     let ui_msg = if ai_owns_some_player_stock then
-      Ui_msg.AiTakesOutBond{player=C.player; ai_idx} |> Option.some else None
+      let opponent = (get_ai_exn ai_idx v).opponent.name in
+      Ui_msg.AiTakesOutBond{opponent; player=C.player; ai_idx} |> Option.some else None
     in
-    v, stocks, ui_msg
+    v, stocks, player_cash, ui_msg
 
-  | `Nothing -> default
-
+  | `Nothing -> v, stocks, player_cash, None
 
 
 
