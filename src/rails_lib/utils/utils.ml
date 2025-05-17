@@ -121,8 +121,7 @@ module Map = struct
 end
 
 module IntMap = Map.Make(struct
-  type t = int [@@deriving yojson]
-  let compare (x:int) y = x - y
+  type t = int [@@deriving yojson, ord]
 end)
 
 module LocMap = Map.Make(struct
