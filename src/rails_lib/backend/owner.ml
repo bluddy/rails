@@ -17,6 +17,9 @@ let create ~human () =
   incr last;
   if human then Human idx else AI idx
 
+let create_ai () = create ~human:false ()
+let create_human () = create ~human:true ()
+
 module Map = UMap.Make(struct
   type nonrec t = t
   let compare = compare

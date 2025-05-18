@@ -17,7 +17,7 @@ type route = (int * int)
 
  (* An AI Player *)
 type ai_player = {
-  idx: int;
+  idx: Owner.t;
   opponent: Opponent.t;
   city1: int; (* home city *)
   city2: int option; (* first route. Determines name *)
@@ -34,12 +34,12 @@ type ai_player = {
   (* Global AI data *)
 type t = {
   routes: route Vector.vector;  (* Routes for all AIs *)
-  ai_of_city: int IntMap.t; (* Each city can only have one ai *)
+  ai_of_city: Owner.t IntMap.t; (* Each city can only have one ai *)
   rate_war_at_city: IntSet.t;
-  ais: ai_player IntMap.t; (* AI player info *)
+  ais: ai_player Owner.Map.t; (* AI player info *)
   ai_track: Utils.loc list;
   mutable financial_ctr: int; (* Affects ai financial actions *)
-  last_ai_to_buy_player_stock: int option;
+  last_ai_to_buy_player_stock: Owner.t option;
 } [@@deriving yojson]
 
 (* last_ai_to_buy is a weird one.
@@ -51,7 +51,7 @@ let default () = {
   routes=Vector.create ();
   ai_of_city=IntMap.empty;
   rate_war_at_city=IntSet.empty;
-  ais=IntMap.empty;
+  ais=Owner.Map.empty;
   ai_track=[];
   financial_ctr=0;
   last_ai_to_buy_player_stock=None;
@@ -67,10 +67,7 @@ let random_route_idx random v =
 let owned_by_player stocks company =
   Stock_market.controls_company C.player ~target:company stocks
 
-let new_ai_idx v =
-  match IntMap.max_binding_opt v.ais with
-  | Some (i, _) -> i + 1
-  | _ -> 0
+let new_ai_idx () = Owner.create_ai ()
 
     (* Update valuation only for AI players *)
 let update_valuation player stocks v =
@@ -84,16 +81,16 @@ let ai_of_city city v = IntMap.get city v.ai_of_city
 
 let city_rate_war city v = IntSet.mem city v.rate_war_at_city
 
-let get_ai idx v = IntMap.get idx v.ais
+let get_ai idx v = Owner.Map.get idx v.ais
 
-let get_ai_exn idx v = IntMap.find idx v.ais
+let get_ai_exn idx v = Owner.Map.find idx v.ais
 
 let modify_ai idx v f =
   let ai = get_ai_exn idx v in
   let ai2 = f ai in
   if ai2 === ai then v
   else
-    let ais = IntMap.add idx ai2 v.ais in
+    let ais = Owner.Map.add idx ai2 v.ais in
     {v with ais}
 
 let get_track_len player v =
@@ -108,7 +105,7 @@ let get_name player ~cities v =
     let city2_s = Cities.name_of_idx city2 cities in
     Printf.sprintf "%s & %s RR" city1_s city2_s
 
-let ai_exists idx v = IntMap.mem idx v.ais
+let ai_exists idx v = Owner.Map.mem idx v.ais
 
 let _route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply (x, y) =
@@ -129,7 +126,7 @@ let _route_value city1 city2 ~tilemap ~(params:Params.t) =
 let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~cities v =
   let city1, city2 = Vector.get v.routes route_idx in
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
-  let ai_player = IntMap.find player_idx v.ais in
+  let ai_player = Owner.Map.find player_idx v.ais in
   let city1_loc, city2_loc = Cities.loc_of_idx city1 cities, Cities.loc_of_idx city2 cities in
   let value = _route_value city1_loc city2_loc ~tilemap ~params in
   let div = if city_rate_war city1 v || city_rate_war city2 v then 6 else 3 in
@@ -149,7 +146,7 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
     ai_player.cash + value else ai_player.cash
   in
   let ai_player = {ai_player with revenue_ytd; cash} in
-  let ais = IntMap.add player_idx ai_player v.ais in
+  let ais = Owner.Map.add player_idx ai_player v.ais in
   {v with ais}
 
 let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
@@ -180,7 +177,7 @@ let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~s
   if not create then `Update v else
   let rec create_leader_loop () =
     let leader = Opponent.random_of_region params.region random in
-    let exists = IntMap.fold (fun _ ai acc -> acc || Opponent.equal_name ai.opponent.name leader) v.ais false in
+    let exists = Owner.Map.fold (fun _ ai acc -> acc || Opponent.equal_name ai.opponent.name leader) v.ais false in
     if exists then create_leader_loop () else leader
   in
   let leader = create_leader_loop () in
@@ -200,7 +197,7 @@ let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~s
     5 * (8 - opponent.financial_skill - Climate.to_enum params.climate)
   in
   let ai = {
-    idx = new_ai_idx v;
+    idx = new_ai_idx ();
     opponent;
     city1=city_idx;
     city2=None;
