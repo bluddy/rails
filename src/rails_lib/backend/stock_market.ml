@@ -6,8 +6,6 @@ module C = Constants
 let src = Logs.Src.create "stock_market" ~doc:"Stock_market"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-module IntMap = Utils.IntMap
-
 type price_history = int list (* reverse history of prices *)
   [@@deriving yojson]
 
@@ -15,51 +13,51 @@ type t = {
   (* Who owns how many shares in what company. By default, all shares are public
      First level: owner. Second level: owned
      *)
-  ownership: (int IntMap.t) IntMap.t;
-  prices: int IntMap.t; (* share prices *)
-  totals: int IntMap.t; (* total number of shares *)
-  price_histories: price_history IntMap.t; (* prices over time in fiscal periods *)
+  ownership: (int Owner.Map.t) Owner.Map.t;
+  prices: int Owner.Map.t; (* share prices *)
+  totals: int Owner.Map.t; (* total number of shares *)
+  price_histories: price_history Owner.Map.t; (* prices over time in fiscal periods *)
 } [@@deriving yojson]
 
 let default = {
-  ownership=IntMap.empty;
-  prices=IntMap.empty;
-  totals=IntMap.empty;
-  price_histories=IntMap.empty;
+  ownership=Owner.Map.empty;
+  prices=Owner.Map.empty;
+  totals=Owner.Map.empty;
+  price_histories=Owner.Map.empty;
 }
 
 let player_starting_share_price difficulty = 
     B_options.difficulty_to_enum difficulty + 7
 
 let add_human_player ~player difficulty v =
-  let totals = IntMap.add player C.Stock.starting_num v.totals in
-  let prices = IntMap.add player (B_options.difficulty_to_enum difficulty + 7) v.prices in
-  let price_histories = IntMap.add player [] v.price_histories in
+  let totals = Owner.Map.add player C.Stock.starting_num v.totals in
+  let prices = Owner.Map.add player (B_options.difficulty_to_enum difficulty + 7) v.prices in
+  let price_histories = Owner.Map.add player [] v.price_histories in
   {v with totals; prices; price_histories}
 
 let add_ai_player ~player ~num_fin_periods v =
   (* AI players come in late, so we need to complete their history *)
-  let prices = IntMap.add player C.Stock.ai_share_price v.prices in
-  let totals = IntMap.add player C.Stock.starting_num v.prices in
+  let prices = Owner.Map.add player C.Stock.ai_share_price v.prices in
+  let totals = Owner.Map.add player C.Stock.starting_num v.prices in
   let history = if num_fin_periods > 0 then List.replicate 0 (num_fin_periods - 1) else [] in
-  let price_histories = IntMap.add player history v.price_histories in
+  let price_histories = Owner.Map.add player history v.price_histories in
   {v with totals; prices; price_histories}
 
 let owned_shares ~owner ~owned v =
-  match IntMap.get owner v.ownership with
+  match Owner.Map.get owner v.ownership with
   | Some owned_map -> 
-    IntMap.get_or ~default:0 owned owned_map
+    Owner.Map.get_or ~default:0 owned owned_map
   | None -> 0
 
 let self_owned_shares player v = owned_shares ~owner:player ~owned:player v
 
 let treasury_shares player v = owned_shares ~owner:player ~owned:player v
 
-let total_shares player v = IntMap.get_or ~default:0 player v.totals
+let total_shares player v = Owner.Map.get_or ~default:0 player v.totals
 
 let non_treasury_shares player v = total_shares player v - treasury_shares player v
 
-let share_price player v = IntMap.get_or ~default:0 player v.prices
+let share_price player v = Owner.Map.get_or ~default:0 player v.prices
 
 let owned_share_value ~total_shares ~owned_shares ~share_price =
   (* We need to account for the cost of selling all our stock 10k shares at a time *)
@@ -85,9 +83,9 @@ let treasury_share_value player v =
 
 let add_shares ~owner ~owned ~num v =
   let ownership =
-    IntMap.update owner (function
-      | Some owneds -> IntMap.incr owned num owneds |> Option.some
-      | None -> IntMap.empty |> IntMap.incr owned num |> Option.some)
+    Owner.Map.update owner (function
+      | Some owneds -> Owner.Map.incr owned num owneds |> Option.some
+      | None -> Owner.Map.empty |> Owner.Map.incr owned num |> Option.some)
     v.ownership
   in
   {v with ownership}
@@ -96,43 +94,43 @@ let remove_shares ~owner ~owned ~num v = add_shares ~owner ~owned ~num:(-num) v
 
 let set_owned_shares ~owner ~owned num v =
   let ownership =
-    IntMap.update owner (function
-      | Some owneds -> IntMap.add owned num owneds |> Option.some
-      | None -> IntMap.empty |> IntMap.add owned num |> Option.some)
+    Owner.Map.update owner (function
+      | Some owneds -> Owner.Map.add owned num owneds |> Option.some
+      | None -> Owner.Map.empty |> Owner.Map.add owned num |> Option.some)
     v.ownership
   in
   {v with ownership}
 
 let reset_owned_shares player v =
-  let ownership = IntMap.remove player v.ownership in
+  let ownership = Owner.Map.remove player v.ownership in
   {v with ownership}
 
 let set_total_shares ~player total_shares v =
-  let totals = IntMap.add player total_shares v.totals in
+  let totals = Owner.Map.add player total_shares v.totals in
   {v with totals}
 
 let add_to_share_price ~player change v =
-  let prices = IntMap.incr player change v.prices in
+  let prices = Owner.Map.incr player change v.prices in
   {v with prices}
 
 let set_share_price ~player ~price v =
-  let prices = IntMap.add player price v.prices in
+  let prices = Owner.Map.add player price v.prices in
   {v with prices}
 
 let num_other_companies_owner_has_shares_in owner v =
-  match IntMap.get owner v.ownership with
+  match Owner.Map.get owner v.ownership with
   | None -> 0
   | Some owneds ->
-    IntMap.sum (fun player shares ->
-      if owner <> player && shares > 0 then 1 else 0)
+    Owner.Map.sum (fun player shares ->
+      if Owner.(owner <> player) && shares > 0 then 1 else 0)
       owneds
 
 let shares_owned_by_all_companies player ?exclude v =
-  IntMap.sum (fun owner owneds ->
+  Owner.Map.sum (fun owner owneds ->
      match exclude with
-     | Some exclude when owner = exclude -> 0
+     | Some exclude when Owner.(owner = exclude) -> 0
      | _ ->
-        IntMap.sum (fun owned shares -> if owned = player then shares else 0) owneds
+        Owner.Map.sum (fun owned shares -> if Owner.(owned = player) then shares else 0) owneds
   ) v.ownership
 
 let shares_owned_by_other_companies player v =
@@ -166,7 +164,7 @@ let can_buy_stock ~player ~target ~cash ~difficulty v =
   if num_other_companies_owner_has_shares_in player v2 > max_owned_companies then
     `Anti_trust_violation max_owned_companies
     (* TODO: double check the below buying out *)
-  else if player <> target && public_shares = 0 &&
+  else if Owner.(player <> target) && public_shares = 0 &&
        not (controls_own_company target v)
     then
       let share_price = share_price target v * 2 in
@@ -241,7 +239,7 @@ let ai_sell_own_stock ~ai_idx v =
 
 let buy_stock ~player ~target ~difficulty ~cash v =
   match can_buy_stock ~player ~target ~cash ~difficulty v with
-  | `Ok when player = target ->
+  | `Ok when Owner.(player = target) ->
     (* TODO: add_stock: code adds 10 for ai *)
     let cost, v = _sell_buy_stock player ~target ~buy:true v in
     `Bought cost, v
@@ -249,20 +247,20 @@ let buy_stock ~player ~target ~difficulty ~cash v =
   | `Offer_takeover(share_price, num_shares) when cash >= share_price * num_shares -> (* buy all *)
     (* Buy all stock for one player. Remove from all others *)
     let money =
-      IntMap.mapi (fun owner owned_map ->
-        if owner = player then
+      Owner.Map.mapi (fun owner owned_map ->
+        if Owner.(owner = player) then
           (* Cost for buyer *)
           -num_shares * share_price
         else
-          let owned_shares = IntMap.get_or ~default:0 target owned_map in
+          let owned_shares = Owner.Map.get_or ~default:0 target owned_map in
           owned_shares * share_price)
         v.ownership
     in
     let ownership =
-      IntMap.mapi (fun owner owned_map ->
-        IntMap.mapi (fun owned num ->
-          if owned = target then
-            if owner = owned then num + num_shares
+      Owner.Map.mapi (fun owner owned_map ->
+        Owner.Map.mapi (fun owned num ->
+          if Owner.(owned = target) then
+            if Owner.(owner = owned) then num + num_shares
             else 0 
           else num)
         owned_map)
@@ -281,11 +279,11 @@ let sell_stock player ~target v =
     0, v
 
 let other_companies_controlled_by player v =
-  match IntMap.get player v.ownership with
+  match Owner.Map.get player v.ownership with
   | None -> []
   | Some owned_map ->
-    let companies = IntMap.keys owned_map in
-    Iter.filter (fun company -> company <> player && controls_company player ~target:company v) companies
+    let companies = Owner.Map.keys owned_map in
+    Iter.filter (fun company -> Owner.(company <> player) && controls_company player ~target:company v) companies
     |> Iter.to_list
 
 let controls_any_other_company player v =
@@ -294,21 +292,21 @@ let controls_any_other_company player v =
   (* Compute value of all stocks a player has in all companies, including itself *)
   (* TODO: double check we're accounting for deprecetiating stock prices *)
 let total_owned_stock_value player ?(exclude_self=false) v =
-  match IntMap.get player v.ownership with
+  match Owner.Map.get player v.ownership with
   | None -> 0
   | Some owned -> 
-    IntMap.sum (fun owned num ->
-      if exclude_self && owned = player then 0 else
+    Owner.Map.sum (fun owned num ->
+      if exclude_self && Owner.(owned = player) then 0 else
       let share_price = share_price owned v in
       let total_shares = total_shares owned v in
       owned_share_value ~total_shares ~owned_shares:num ~share_price)
       owned
 
 let other_companies_in_player_shares player ?exclude_owner v =
-  IntMap.sum (fun owner owned ->
+  Owner.Map.sum (fun owner owned ->
     match exclude_owner with
-    | Some exclude_owner when owner = exclude_owner -> 0
-    | _ -> IntMap.get_or player owned ~default:0
+    | Some exclude_owner when Owner.(owner = exclude_owner) -> 0
+    | _ -> Owner.Map.get_or player owned ~default:0
   )
   v.ownership
 

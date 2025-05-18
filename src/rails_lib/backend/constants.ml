@@ -2,7 +2,7 @@
 (* Time *)
 (* Each time period is both 2 years and a 24 hour day *)
 
-let player = 0
+let player = Owner.create_human ()
 let max_num_players = 4
 let max_ai_players = 3
 let max_num_cities = 100
