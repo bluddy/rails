@@ -3,7 +3,7 @@ open! Containers
 open! Utils
 
 type train_arrival_msg = {
-    player: int;
+    player: Owner.t;
     time: int;
     train_name: string option;
     freight: Freight.complex;

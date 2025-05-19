@@ -52,7 +52,7 @@ module Train_update = struct
     (* Bookkeeping *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
     Train.add_dist_traveled train dist v.params.fiscal_period;
-    update_player v train.player (Player.incr_dist_traveled ~dist);
+    update_player_state v train.player (Player.incr_dist_traveled ~dist);
     Train.advance train
 
 
@@ -174,7 +174,7 @@ module Train_update = struct
       in
       (* Update whether we leave with priority shipment on train *)
       let holds_priority_shipment =
-        let player = Player.get_player v.players train.player in
+        let player = Player.get train.player v.players in
         match Player.get_priority player with
         | None -> false
         | Some priority_shipment ->
@@ -547,65 +547,61 @@ let _try_to_create_priority_shipment ?(force=false) v (player:Player.t) stations
       end
   | _ -> stations, player, []
 
-let _try_to_cancel_priority_shipments ?(force=false) v =
+let _cancel_expired_priority_shipments ?(force=false) players stations params =
   (* Try to cancel and create corresponding messages *)
-  let try_cancel_priority_shipment_all players params =
-    (* Cancel priority and let us know which players' were canceled *)
-    let cancel_players =
-      Array.foldi (fun acc i player ->
-        if Player.has_priority player &&
-          (Player.check_cancel_priority_shipment player params || force)
-        then i::acc else acc) []
+  (* Cancel priority and let us know which players' were canceled *)
+  let cancel_players =
+    Owner.Map.fold (fun idx player acc ->
+      if Player.has_priority player &&
+        (Player.check_cancel_priority_shipment player params || force)
+      then idx::acc else acc)
       players
-    in
-    let clear_player_and_train_priority_shipments v player_list =
-      List.iter (fun i ->
-        let player = v.players.(i) in
-        let trains = Trainmap.clear_priority_shipment player.trains in
-        let player = [%up {player with trains; priority=None}] in
-        v.players.(i) <- player
-      ) player_list
-    in
-    clear_player_and_train_priority_shipments v cancel_players;
-    cancel_players
+      []
   in
-  match try_cancel_priority_shipment_all v.players v.params with
-  | _::_ as players ->
-    let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
-    [%upf v.stations <- stations];
-    List.map (fun i -> UIM.PriorityShipmentCanceled{player=i}) players
-  | _ -> []
+  let clear_player_and_train_priority_shipments players player_list =
+    List.fold_left (fun acc idx ->
+      Player.update acc idx @@ fun player ->
+        let trains = Trainmap.clear_priority_shipment player.Player.trains in
+        [%up {player with trains; priority=None}])
+      players
+      player_list
+  in
+  let players = clear_player_and_train_priority_shipments players cancel_players in
+  if List.is_empty cancel_players then
+    players, stations, []
+  else
+    let stations = Station_map.clear_priority_shipment_for_all stations ~players:cancel_players in
+    let ui_msgs = List.map (fun i -> UIM.PriorityShipmentCanceled{player=i}) cancel_players in
+    players, stations, ui_msgs
     
-let _check_priority_delivery v =
+let _check_priority_delivery players stations params =
   (* Check if a priority shipment has been delivered *)
-  let check_priority_delivery_all players stations params =
-    (* Check for priority delivery completion *)
-    let deliver_players =
-      Array.foldi (fun acc i player ->
-        if Player.has_priority player && Player.check_priority_delivery player stations
-        then i::acc else acc) []
-      players
-    in
-    let ui_msgs =
-      List.map (fun i ->
-        let player = v.players.(i) in
-        let priority = Player.get_priority player |> Option.get_exn_or "Problem with priority" in
-        let bonus = Priority_shipment.compute_bonus priority params in
-        let trains = Trainmap.clear_priority_shipment player.trains in
-        let player = {player with trains; priority=None} in
-        let player = Player.earn `Other bonus player in
-        v.players.(i) <- player;
-        UIM.PriorityShipmentDelivered {player=i; shipment=priority; bonus}
-      ) deliver_players
-    in
-    deliver_players, ui_msgs
+  (* Check for priority delivery completion *)
+  let deliver_players =
+    Owner.Map.fold (fun idx player acc ->
+      if Player.has_priority player && Player.check_priority_delivery player stations
+      then idx::acc else acc)
+    players
+    []
   in
-  match check_priority_delivery_all v.players v.stations v.params with
-  | _::_ as players, ui_msgs ->
-    let stations = Station_map.clear_priority_shipment_for_all v.stations ~players in
-    [%upf v.stations <- stations];
-    ui_msgs
-  | _ -> []
+  let players, ui_msgs =
+    List.fold_map (fun players idx ->
+      let player = Player.get idx players in
+      let priority = Player.get_priority player |> Option.get_exn_or "Problem with priority" in
+      let bonus = Priority_shipment.compute_bonus priority params in
+      let trains = Trainmap.clear_priority_shipment player.trains in
+      let player = {player with trains; priority=None}
+        |> Player.earn `Other bonus in
+      let players = Player.set idx player players in
+      let ui_msg = UIM.PriorityShipmentDelivered {player=idx; shipment=priority; bonus} in
+      players, ui_msg)
+    players
+    deliver_players
+  in
+  if List.is_empty deliver_players then players, stations, ui_msgs
+  else
+    let stations = Station_map.clear_priority_shipment_for_all stations ~players:deliver_players in
+    players, stations, ui_msgs
 
 let _try_to_develop_tiles v (player:Player.t) =
   let age = v.params.year - v.params.year_start in
@@ -624,24 +620,21 @@ let _try_to_develop_tiles v (player:Player.t) =
   else
     v.dev_state, player.active_station
 
-let _update_station_supply_demand v stations =
-  if v.params.cycle mod C.Cycles.station_supply_demand = 0 then (
-    let difficulty = v.params.options.difficulty in
-    let climate = v.params.climate in
-    let simple_economy =
-      not @@ B_options.RealityLevels.mem v.params.options.reality_levels `ComplexEconomy 
-    in
+let _update_station_supply_demand player_idx stations map params =
+  if params.Params.cycle mod C.Cycles.station_supply_demand = 0 then (
+    let difficulty = params.options.difficulty in
+    let simple_economy = not @@ B_options.complex_economy params.options in
     let ui_msgs =
       Station_map.fold 
         (fun station old_msgs ->
           Station.check_rate_war_lose_supplies station ~difficulty;
           let msgs =
-            Station.update_supply_demand station v.map ~climate ~simple_economy
+            Station.update_supply_demand station map ~climate:params.climate ~simple_economy
           in
           Station.lose_supplies station;
           let msgs =
             List.map (fun (good, add) ->
-                UIM.DemandChanged {x=station.x; y=station.y; good; add})
+              UIM.DemandChanged {player=player_idx; x=station.x; y=station.y; good; add})
               msgs
           in
           msgs @ old_msgs)
@@ -684,12 +677,13 @@ let handle_cycle v =
         stations, player, v.dev_state, player.active_station, []
     in
 
-    let stations, sd_msgs = _update_station_supply_demand v stations in
+    let stations, sd_msgs = _update_station_supply_demand C.player stations v.map v.params in
 
     [%upf player.active_station <- active_station];
     [%upf player.trains <- trains];
     [%upf v.stations <- stations];
     [%upf v.dev_state <- dev_state];
+
     if player =!= main_player then Player.set v.players C.player player;
 
     let br_msgs =
@@ -701,10 +695,18 @@ let handle_cycle v =
         else [])
       else []
     in
+
+    (* TODO: only this part deals with all players for now *)
+    let players, stations = v.players, v.stations in
+
     (* Cancel any expired priority shipments *)
-    (* TODO: check data structure handling here *)
-    let cp_msgs = _try_to_cancel_priority_shipments v in
-    let del_msgs = _check_priority_delivery v in
+    let players, stations, cp_msgs = _cancel_expired_priority_shipments players stations v.params in
+
+    (* Check if we delivered priority deliveries *)
+    let players, stations, del_msgs = _check_priority_delivery players stations v.params in
+
+    [%upf v.stations <- stations];
+    [%upf v.players <- players];
 
     let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs in
 

@@ -132,8 +132,7 @@ let get_name v station_map cities = match v.name with
 let track_length v = v.track_length
 
 let incr_dist_traveled ~dist v =
-  v.dist_traveled <- v.dist_traveled + dist;
-  v
+  v.dist_traveled <- v.dist_traveled + dist
 
 let add_station loc v =
   {v with stations=loc::v.stations}
@@ -202,10 +201,6 @@ let set_bankrupt ~difficulty v =
   in
   v
 
-let get_player players player_idx : t = players.(player_idx)
-let set players player_idx player = players.(player_idx) <- player
-
-
 let has_broker_timer player = Option.is_some player.broker_timer
 
 let incr_broker_timer player =
@@ -233,13 +228,6 @@ let check_priority_delivery player stations =
   Option.map_or ~default:false
     (fun pr_data -> Priority_shipment.check_priority_delivery pr_data stations)
     player.priority
-
-let update players idx f =
-  let p = players.(idx) in
-  let p' = f p in
-  if p =!= p' then
-    players.(idx) <- p';
-  ()
 
 let add_freight_ton_miles ftm fiscal_period v =
   let freight_ton_miles = Utils.update_pair v.freight_ton_miles fiscal_period
@@ -329,4 +317,16 @@ let pay_station_maintenance station_map v =
 let pay_train_maintenance v =
   let expense = Trainmap.total_maintenance v.trains in
   pay `TrainMaintenance expense v
+
+let update v idx f =
+  let p = Owner.Map.find idx v in
+  let p' = f p in
+  if p =!= p' then
+    Owner.Map.add idx p' v
+  else v
+
+let get idx v = Owner.Map.find idx v
+
+let set idx player v =
+  Owner.Map.add idx player v
 
