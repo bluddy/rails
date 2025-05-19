@@ -71,7 +71,7 @@ let check_build_track v ~x ~y ~dir ~player =
     (* Check that we changed something *)
     if Track.equal_dirs track1 track12 && Track.equal_dirs track2 track22 then false
     else
-      track1.player = player && track2.player = player
+      Owner.(track1.player = player && track2.player = player)
       && Track.is_legal track12 && Track.is_legal track22
 
   (* do build. Assumes we already checked
@@ -94,7 +94,7 @@ let check_build_station v ~x ~y ~player station_type =
   if out_of_bounds v ~x ~y then `Illegal
   else match get v ~x ~y with
   | None -> `NoTrack
-  | Some ({kind=Track _;_} as t) when t.player = player && Track.is_straight t ->
+  | Some ({kind=Track _;_} as t) when Owner.(t.player = player) && Track.is_straight t ->
        let range = Station.to_range station_type in
        let match_fn j i =
          match get v ~x:j ~y:i with
@@ -149,7 +149,7 @@ let check_build_stretch v ~x ~y ~dir ~player ~length =
     in
     let test_track x y dir =
       match get v ~x ~y with
-      | Some track when track.player = player ->
+      | Some track when Owner.(track.player = player) ->
           let track = Track.add_dir track ~dir in
           Track.is_legal track
       | Some _ ->
@@ -206,7 +206,7 @@ let check_remove_track v ~x ~y ~dir ~player =
   | _, Some (x2, y2) ->
     let track1 = get_track_default v ~x ~y ~player in
     let track2 = get_track_default v ~x:x2 ~y:y2 ~player in
-    if track1.player <> player || track2.player <> player then false
+    if Owner.(track1.player <> player || track2.player <> player) then false
     else
       match track1.kind, track2.kind with
       | Bridge _, _ | _, Bridge _ -> true
@@ -229,7 +229,7 @@ let remove_track v ~x ~y ~dir ~player =
   let x2, y2 = Dir.adjust dir x y in
   let track1 = get_track_default v ~x ~y ~player in
   let v =
-    if track1.player = player then
+    if Owner.(track1.player = player) then
       match track1.kind with
       | Track _ | Ferry _ ->
           (* TODO: handle ixn *)
@@ -243,7 +243,7 @@ let remove_track v ~x ~y ~dir ~player =
   in
   let track2 = get_track_default v ~x:x2 ~y:y2 ~player in
   match track2.kind with
-  | Track _ | Ferry _ when track2.player = player ->
+  | Track _ | Ferry _ when Owner.(track2.player = player) ->
       remove_track_dir v ~x:x2 ~y:y2 ~dir:(Dir.opposite dir);
   | _ ->
       (* All other constructs remain whole with full dirs *)
@@ -258,7 +258,7 @@ let has_track (x,y) v = Option.is_some @@ get ~x ~y v
 
 let calc_total_dist v ~player =
   IntMap.fold (fun _ track acc ->
-    if track.Track.player = player then
+    if Owner.(track.Track.player = player) then
       acc + Track.calc_dist track
     else 
       acc)
@@ -267,7 +267,7 @@ let calc_total_dist v ~player =
 
 let calc_total_land_cost v ~player =
   IntMap.fold (fun _ track acc ->
-    if track.Track.player = player then
+    if Owner.(track.Track.player = player) then
       acc + Track.calc_dist track
     else 
       acc)

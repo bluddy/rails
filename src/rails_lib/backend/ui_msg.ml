@@ -14,33 +14,33 @@ type train_arrival_msg = {
 } [@@deriving yojson]
 
 type stock_broker_ui_msg = 
-  | BondSold of {player: int; interest_rate: int}
-  | BondRepaid of {player: int}
-  | StockBought of {player:int; stock: int; cost: int}
-  | StockSold of {player:int; stock: int; cost: int}
-  | BankruptcyDeclared of {player: int}
-  | Takeover of {player:int; stock: int}
-  | MoneyTransferredFrom of {player:int; company:int; amount:int}
-  | MoneyTransferredTo of {player:int; company:int; amount:int}
-  | AiBondRepaid of {player:int; company: int}
+  | BondSold of {player: Owner.t; interest_rate: int}
+  | BondRepaid of {player: Owner.t}
+  | StockBought of {player: Owner.t; stock: Owner.t; cost: int}
+  | StockSold of {player: Owner.t; stock: Owner.t; cost: int}
+  | BankruptcyDeclared of {player: Owner.t}
+  | Takeover of {player:Owner.t; stock: int}
+  | MoneyTransferredFrom of {player: Owner.t; company: Owner.t; amount: int}
+  | MoneyTransferredTo of {player: Owner.t; company: Owner.t; amount: int}
+  | AiBondRepaid of {player: Owner.t; company: Owner.t}
   [@@deriving yojson]
 
 type t =
   | TrainBuilt of Trainmap.Id.t
-  | DemandChanged of {x: int; y: int; good: Goods.t; add: bool}
+  | DemandChanged of {player: Owner.t; x: int; y: int; good: Goods.t; add: bool}
   | TrainArrival of train_arrival_msg
   | StockBroker of stock_broker_ui_msg
-  | OpenStockBroker of {player: int}
-  | PriorityShipmentCreated of {player: int; shipment:Priority_shipment.t}
-  | PriorityShipmentDelivered of {player: int; shipment:Priority_shipment.t; bonus:int}
-  | PriorityShipmentCanceled of {player: int}
-  | IndustryBuilt of {player: int; tile: Tile.t}
+  | OpenStockBroker of {player: Owner.t}
+  | PriorityShipmentCreated of {player: Owner.t; shipment:Priority_shipment.t}
+  | PriorityShipmentDelivered of {player: Owner.t; shipment:Priority_shipment.t; bonus:int}
+  | PriorityShipmentCanceled of {player: Owner.t}
+  | IndustryBuilt of {player: Owner.t; tile: Tile.t}
   | NewCompany of {opponent: Opponent.name; city: loc}
   | AiConnected of {opponent: Opponent.name; ai_name: string; src_name: string; tgt_name: string}
-  | AiBuildOrderFailed of {player: int; ai_name: string; src_name: string; tgt_name: string}
-  | AiBuySellOwnStock of {ai_idx: int; price: int; buy: bool; opponent: Opponent.name}
-  | AiTakesOutBond of {player: int; ai_idx: int; opponent: Opponent.name}  (* msg to player only. payback is secret *)
-  | AiSellsPlayerStock of {player: int; ai_idx: int; opponent: Opponent.name}
-  | AiBuysPlayerStock of {player: int; ai_idx: int; takeover: bool; opponent: Opponent.name}
+  | AiBuildOrderFailed of {player: Owner.t; ai_name: string; src_name: string; tgt_name: string}
+  | AiBuySellOwnStock of {ai_idx: Owner.t; price: int; buy: bool; opponent: Opponent.name}
+  | AiTakesOutBond of {player: Owner.t; ai_idx: Owner.t; opponent: Opponent.name}  (* msg to player only. payback is secret *)
+  | AiSellsPlayerStock of {player: Owner.t; ai_idx: Owner.t; opponent: Opponent.name}
+  | AiBuysPlayerStock of {player: Owner.t; ai_idx: Owner.t; takeover: bool; opponent: Opponent.name}
   [@@deriving yojson]
 

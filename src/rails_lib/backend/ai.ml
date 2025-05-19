@@ -110,7 +110,7 @@ let ai_exists idx v = Owner.Map.mem idx v.ais
 let random_or_none random v =
   (* Roll from 0 to max_ai_players. If we get a player, return it *)
   let roll = Random.int C.max_ai_players random in
-  Owner.Map.nth_key roll
+  Owner.Map.nth_key roll v.ais
 
 let _route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply (x, y) =
@@ -339,9 +339,9 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
       let track_modify = match t, at_station with
         (* We don't care about crossing our own track (AI doesn't follow the rules.
            However, we can't do it right when leaving a station *)
-        | Some track, `NotAtStation when track.player = company -> `Modify track
+        | Some track, `NotAtStation when Owner.(track.player = company) -> `Modify track
         (* We can build from a player station *)
-        | Some track, `AtStation when track.player = C.player -> `Modify track
+        | Some track, `AtStation when Owner.(track.player = C.player) -> `Modify track
         | Some _, _ -> `NoModify
         | None, _ -> `Modify (Track.empty company @@ Track `Single)
       in
@@ -493,7 +493,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
   (* Use target city and company to expand *)
   let ai_player = get_ai_exn ai_idx v in
   match ai_of_city city_idx v with
-  | Some company when company <> ai_idx -> `Update v
+  | Some company when Owner.(company <> ai_idx) -> `Update v
   | _ ->
     let owned_by_player = owned_by_player stocks ai_idx in
     (* If owned by player, do nothing but orders *)
@@ -511,7 +511,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
         let find_closest_ai_city_to_other_city ~src_city ~ai =
           let src_loc = Cities.loc_of_idx src_city cities in
           IntMap.fold (fun tgt_city city_ai acc ->
-            if ai = city_ai && not @@ city_rate_war tgt_city v then
+            if Owner.(ai = city_ai) && not @@ city_rate_war tgt_city v then
               let tgt_loc = Cities.loc_of_idx tgt_city cities in
               let dist = Utils.classic_dist src_loc tgt_loc in
               match acc with
@@ -639,7 +639,7 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
   let ai_player = get_ai_exn ai_idx v in
   v.financial_ctr <- v.financial_ctr + 1;
   let company_is_last_active = match v.last_ai_to_buy_player_stock with
-    | Some idx when ai_idx = idx -> true
+    | Some idx when Owner.(ai_idx = idx) -> true
     | _ -> false
   in
   let last_ai_to_buy_player_stock =

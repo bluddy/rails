@@ -42,6 +42,7 @@ let default_monetary =
 }
 
 type t = {
+  idx: Owner.t;
   name: string option; (* custom name for railroad *)
   mutable trains: Trainmap.t;
   stations: Utils.loc list; (* Stations ordered by creation order *)
@@ -58,8 +59,9 @@ type t = {
   mutable active_station: Utils.loc option;
 } [@@deriving yojson]
 
-let default =
+let default idx =
   {
+    idx;
     name=None;
     stations = [];
     m = default_monetary;
@@ -197,7 +199,7 @@ let declare_bankruptcy players player_idx stocks ~difficulty =
   let share_price = Stock_market.share_price player_idx stocks in
   let (_, stocks), players =
     Array.fold_map (fun (idx, stocks) v -> 
-      if idx = player_idx then
+      if Owner.(idx = player_idx) then
         let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
         let yearly_interest_payment =
           v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4

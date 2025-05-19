@@ -33,7 +33,7 @@ let default region resources ~random ~seed =
   let track = Trackmap.empty width height in
   let options = B_options.default in
   let stations = Station_map.empty in
-  let players = Array.init 1 (fun _ -> Player.default) in
+  let players = Owner.Map.singleton C.player @@ Player.default C.player in
   let year = match region with
     | EastUS -> 1830
     | WestUS -> 1866

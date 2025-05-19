@@ -23,7 +23,7 @@ type t =
     dirs: Dir.Set.t;
     kind: kind;
     ixn: bool;
-    player: int;
+    player: Owner.t;
   } [@@deriving yojson]
 
 let empty player kind = {

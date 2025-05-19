@@ -2,6 +2,7 @@ open Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Renderer
+module C = Constants
 
 module TileTex = struct
 
@@ -201,7 +202,7 @@ module Tracks = struct
       List.fold_left (fun (i,j) li ->
         let tex = get_tex extra i j in
         let dirs = Dir.Set.of_list li in
-        let track = Track.make dirs kind ~player:0 in
+        let track = Track.make dirs kind ~player:C.player in
         Track.Htbl.replace track_dict track tex;
         if j >= num_j - 1 then
           (i + 1, 0)
