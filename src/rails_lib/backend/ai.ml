@@ -107,6 +107,11 @@ let get_name player ~cities v =
 
 let ai_exists idx v = Owner.Map.mem idx v.ais
 
+let random_or_none random v =
+  (* Roll from 0 to max_ai_players. If we get a player, return it *)
+  let roll = Random.int C.max_ai_players random in
+  Owner.Map.nth_key roll
+
 let _route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply (x, y) =
     Tilemap.demand_supply_sum tilemap ~x ~y ~range:2
@@ -149,18 +154,18 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
   let ais = Owner.Map.add player_idx ai_player v.ais in
   {v with ais}
 
-let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~stocks loc random v =
+let _try_to_create_ai ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx ~stocks loc random v =
   (* New company creation test at this city *)
   let demand_supply = Tilemap.demand_supply_sum_of_loc loc tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
   if cycles_value >= value then `Update v else
-  let find_closest_player_station_check_distance ~loc ~stations ~ai_idx =
+  let find_closest_player_station_check_distance () =
     let closest_station = Station_map.find_nearest stations loc in
     let create = match closest_station with
       | Some _ -> true
-      | None when ai_idx = 0 -> true (* No player station but first opponent can still exist *)
+      | None when first_ai-> true (* No player station but first opponent can still exist *)
       | _ -> false (* don't create another AI if no player station *)
     in
     if not create then None, false else
@@ -173,7 +178,8 @@ let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~s
     in
     closest_station, create
   in
-  let closest_station, create = find_closest_player_station_check_distance ~loc ~stations ~ai_idx in
+  let closest_station, create =
+    find_closest_player_station_check_distance () in
   if not create then `Update v else
   let rec create_leader_loop () =
     let leader = Opponent.random_of_region params.region random in
@@ -210,8 +216,8 @@ let _try_to_create_ai ~tilemap ~stations ~(params:Params.t) ~city_idx ~ai_idx ~s
     revenue_ytd = (params.time + 2000) / 20;
     expand_ctr=20;
   } in
-  let ais = IntMap.add ai.idx ai v.ais in
-  let ai_of_city = IntMap.add city_idx ai_idx v.ai_of_city in
+  let ais = Owner.Map.add ai.idx ai v.ais in
+  let ai_of_city = IntMap.add city_idx ai.idx v.ai_of_city in
   let v = {v with ais; ai_of_city} in
   Tilemap.set_tile_at_loc loc Tile.EnemyStation tilemap;
   let stocks = Stock_market.add_ai_player ~player:ai.idx ~num_fin_periods:params.num_fiscal_periods stocks in
@@ -410,7 +416,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
   let ai_controlled_by_player = owned_by_player stocks company in
   let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
   let ai_name = get_name company ~cities v in
-  let ai_player = IntMap.find company v.ais in
+  let ai_player = Owner.Map.find company v.ais in
   match ret with
     | Some (trackmap, ai_track) -> (* Built *)
         let ui_msg = 
@@ -447,7 +453,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
         Tilemap.set_tile_at_loc tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
         Vector.push v.routes (src_city, tgt_city); (* Add AI route *)
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
-        let ais = IntMap.add company ai_player v.ais in
+        let ais = Owner.Map.add company ai_player v.ais in
         let v = {v with ais; ai_of_city; ai_track; routes=v.routes; rate_war_at_city} in
         (* TODO: if not owned by player and connect to player, send rate war animation *)
         trackmap, tilemap, v, stations, Some ui_msg
@@ -466,7 +472,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
             ai_player.build_order, None
         in
         let ai_player2 = [%up {ai_player with build_order; expand_ctr}] in
-        let v = if ai_player2 === ai_player then v else {v with ais=IntMap.add company ai_player2 v.ais} in
+        let v = if ai_player2 === ai_player then v else {v with ais=Owner.Map.add company ai_player2 v.ais} in
         trackmap, tilemap, v, stations, ui_msg
 
 let new_route_text ai_name src_name tgt_name =
@@ -614,19 +620,17 @@ let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~citi
       in
       empty_city_loop ()
   in
-  let random_ai () = Random.int C.max_ai_players random in
-
   (* Earn 2x in random routes *)
   let v = earn_random_route v in
   let v = earn_random_route v in
   let city_idx = random_city () in
   let loc = Cities.loc_of_idx city_idx cities in
   if Trackmap.has_track loc trackmap then `Update v else (* Proceed only if no track at city *)
-  let ai_idx = random_ai () in
-  (* We now have a target city and a company *)
-  if not @@ ai_exists ai_idx v then
-    _try_to_create_ai ~tilemap ~stations ~params ~city_idx ~ai_idx ~stocks loc random v
-  else
+  let first_ai = Owner.Map.is_empty v.ais in
+  match random_or_none random v with
+  | None ->
+    _try_to_create_ai ~tilemap ~stations ~params ~city_idx ~stocks ~first_ai loc random v
+  | Some ai_idx ->
     _try_to_build_station ~tilemap ~stations ~trackmap ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
 
 let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
