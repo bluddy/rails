@@ -532,13 +532,13 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
     player.trains, stations, player, ui_msgs
 end
 
-let _try_to_create_priority_shipment ?(force=false) v (player:Player.t) stations =
+let _try_to_create_priority_shipment ?(force=false) (player:Player.t) stations params random =
   (* Try to create a priority shipment:
      TODO: add condition: only after some track exists
      TODO: for all players? check if AI *)
   match player.priority with
   | None ->
-      begin match Priority_shipment.try_to_create v.random stations v.params.cycle ~force with
+      begin match Priority_shipment.try_to_create random stations params.Params.cycle ~force with
       | Some (stations, priority) ->
           let player = Player.set_priority (Some priority) player in
           let msgs = [UIM.PriorityShipmentCreated{player=C.player; shipment=priority}] in
@@ -652,9 +652,11 @@ let handle_cycle v =
 
     (* TODO: make player logic work for all human players *)
 
-    let main_player = Player.get_player v.players C.player in
+    let player_idx = C.player in
 
-    let trains, stations, player, tr_msgs = Train_update._update_all_trains v main_player in
+    let player1 = Player.get player_idx v.players in
+
+    let trains, stations, player, tr_msgs = Train_update._update_all_trains v player1 in
 
     (* TODO: ai_routines, events, climate update *)
     let player =
@@ -669,7 +671,7 @@ let handle_cycle v =
 
     let stations, player, dev_state, active_station, pr_msgs =
       if v.params.cycle mod C.Cycles.rare_bgnd_events = 0 then
-        let stations, player, pr_msgs = _try_to_create_priority_shipment v player stations in
+        let stations, player, pr_msgs = _try_to_create_priority_shipment player stations v.params v.random in
         let dev_state, active_station = _try_to_develop_tiles v player in
         let player = Player.track_maintenance_random_spot v.track v.random player in
         stations, player, dev_state, active_station, pr_msgs
@@ -684,20 +686,20 @@ let handle_cycle v =
     [%upf v.stations <- stations];
     [%upf v.dev_state <- dev_state];
 
-    if player =!= main_player then Player.set v.players C.player player;
-
-    let br_msgs =
+    let player, br_msgs =
       (* Check broker *)
-      if Player.has_broker_timer main_player then (
-        let player', send_msg = Player.incr_broker_timer main_player in
-        Player.update v.players C.player (fun _ -> player');
-        if send_msg then [(UIM.OpenStockBroker{player=C.player})]
-        else [])
-      else []
+      if Player.has_broker_timer player then
+        let player, send_msg = Player.incr_broker_timer player in
+        player,
+          if send_msg then [(UIM.OpenStockBroker{player=C.player})] else []
+      else player, []
     in
 
-    (* TODO: only this part deals with all players for now *)
     let players, stations = v.players, v.stations in
+
+    let players = if player =!= player1 then Player.set player_idx player players else players in
+
+    (* TODO: only this part deals with all players for now *)
 
     (* Cancel any expired priority shipments *)
     let players, stations, cp_msgs = _cancel_expired_priority_shipments players stations v.params in
