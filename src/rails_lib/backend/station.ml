@@ -155,7 +155,7 @@ type t = {
   y: int; (* in tiles *)
   year: int;
   info: info option;
-  player: int;
+  player: Owner.t;
   signals: signals;
 } [@@deriving yojson]
 
@@ -295,7 +295,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
   { x; y; year; info; player; signals}
 
 let add_upgrade v upgrade player =
-  if v.player <> player then v else
+  if Owner.(v.player <> player) then v else
   let info =
     match v.info with
     | Some ({upgrades;_} as info) ->

@@ -26,8 +26,7 @@ type monetary = {
   num_bankruptcies: int;
 } [@@deriving yojson]
 
-let default_monetary =
-  {
+let default_monetary = {
     cash = 1000;
     bonds = 500;
     stockholders_equity = -500;
@@ -190,6 +189,18 @@ let check_bankruptcy (v:t) =
   not v.m.in_receivership &&
   v.m.bonds > C.min_bonds_for_bankruptcy &&
   v.m.cash < C.max_cash_for_bankruptcy 
+
+let set_bankrupt ~difficulty v =  
+  let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
+  let yearly_interest_payment =
+    v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
+  in
+  let num_bankruptcies = v.m.num_bankruptcies + 1 in
+  let v = {v with m =
+    {v.m with bonds; yearly_interest_payment; in_receivership=true; num_bankruptcies}
+  }
+  in
+  v
 
 let get_player players player_idx : t = players.(player_idx)
 let set players player_idx player = players.(player_idx) <- player

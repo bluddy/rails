@@ -5,13 +5,14 @@ module SM = Block_map
 module TG = Track_graph
 module TS = Scan
 module TRM = Trainmap
+module C = Constants
 open Test_common
 
 let print (blocks:SM.t) = SM.show blocks |> print_string
 
 let trainmap = Trainmap.empty ()
 
-let player = 0
+let player = C.player
 
 let build_track (x,y) (tmap, graph, blocks) ~dirs =
   let before = TS.scan tmap ~x ~y ~player in

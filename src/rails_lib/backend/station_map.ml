@@ -41,7 +41,7 @@ let get_num_proper_stations v =
 let clear_priority_shipment_for_all v ~players =
   let open Station in
   Loc_map.map (function
-    | station when List.mem ~eq:Int.equal station.player players ->
+    | station when List.mem ~eq:Owner.equal station.player players ->
         Station.set_priority_shipment station false
     | station -> station)
     v

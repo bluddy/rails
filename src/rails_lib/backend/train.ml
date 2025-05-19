@@ -129,7 +129,7 @@ let is_wait = function `Wait -> true | `NoWait -> false
 type 'mut t = {
   mutable x: int; (* in map pixels *)
   mutable y: int; (* in map pixels *)
-  player: int;
+  player: Owner.t;
   state: state;
   (* Used for train/car drawing algorithm *)
   mutable pixels_from_midtile: int; (* 0-16 *)

@@ -85,6 +85,8 @@ let get_ai idx v = Owner.Map.get idx v.ais
 
 let get_ai_exn idx v = Owner.Map.find idx v.ais
 
+let ai_iter v = Owner.Map.keys v.ais
+
 let modify_ai idx v f =
   let ai = get_ai_exn idx v in
   let ai2 = f ai in
@@ -92,6 +94,9 @@ let modify_ai idx v f =
   else
     let ais = Owner.Map.add idx ai2 v.ais in
     {v with ais}
+
+let add_cash idx cash v =
+  modify_ai idx v (fun ai_player -> {ai_player with cash=ai_player.cash + cash})
 
 let get_track_len player v =
   get_ai_exn player v |> fun x -> x.track_length

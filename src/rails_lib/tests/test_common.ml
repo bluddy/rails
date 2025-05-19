@@ -3,9 +3,10 @@ module T = Track
 module TM = Trackmap
 module TG = Track_graph
 module TS = Scan
+module C = Constants
 
 let make_tm ?(track=Track.Track `Single) dirs = 
-  T.make (Dir.Set.of_list dirs) track ~player:0
+  T.make (Dir.Set.of_list dirs) track ~player:C.player
 
 let tmap = TM.empty 20 20
 
@@ -35,7 +36,7 @@ let square_track () =
   (* Dummy train for test purposes *)
 let dummy_train tile_loc dir =
   let engine = List.hd @@ Engine.of_region Region.WestUS in
-  Train.make tile_loc engine [] None ~dir ~player:0
+  Train.make tile_loc engine [] None ~dir ~player:C.player
 
 let print_graph g = TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string
 

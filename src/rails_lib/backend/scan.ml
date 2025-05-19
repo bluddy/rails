@@ -60,14 +60,14 @@ let _scan_for_ixn tracks ~x ~y ~dir ~double ~player =
     if dist > max_scan_dist then None else
     let oppo_dir = Dir.opposite dir in
     match Trackmap.get tracks ~x ~y with
-    | Some ({ixn = true; player; _} as track) when player = player2 ->
+    | Some ({ixn = true; player; _} as track) when Owner.(player = player2) ->
         (* Found ixn *)
         let double = double_acc && Track.acts_like_double track in
         Some (_make_ixn x y dist oppo_dir search_dir ~station:false ~double) 
-    | Some {kind = Station _; player; _} when player = player2 ->
+    | Some {kind = Station _; player; _} when Owner.(player = player2) ->
         (* Found station *)
         Some (_make_ixn x y dist oppo_dir search_dir ~station:true ~double:double_acc)
-    | Some track when track.player = player2 ->
+    | Some track when Owner.(track.player = player2) ->
         (* Find other dir and follow it *)
         let (let*) = Option.bind in
         let* other_dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in
@@ -98,7 +98,7 @@ let scan tracks ~x ~y ~player =
   let player2 = player in
   match Trackmap.get tracks ~x ~y with
   | None -> NoResult
-  | Some {player; _} when player <> player2 -> NoResult
+  | Some {player; _} when Owner.(player <> player2) -> NoResult
   | Some track ->
       let scan =
         let double = Track.acts_like_double track in
@@ -122,14 +122,14 @@ let scan_station_block tracks trains ~x ~y dir ~player =
     let not_been_here () = not @@ Hashtbl.mem seen_ixns loc in
     let train_idxs = Trainmap.get_at_loc loc trains in
     match Trackmap.get tracks ~x ~y with
-    | Some ({kind = Station _; _} as track) when not_been_here () && track.player = player ->
+    | Some ({kind = Station _; _} as track) when not_been_here () && Owner.(track.player = player) ->
         Hashtbl.replace seen_ixns loc ();
         (* Found station at edge: count just on incoming track *)
         let count = _train_count_in_ixn trains train_idxs oppo_dir in
         (* Station is always double *)
         count, true
 
-    | Some ({ixn = true; _} as track) when not_been_here () && track.player = player ->
+    | Some ({ixn = true; _} as track) when not_been_here () && Owner.(track.player = player) ->
         (* Found ixn: iterate over remaining dirs *)
         Hashtbl.replace seen_ixns loc ();
         let double = Track.acts_like_double track in
@@ -144,7 +144,7 @@ let scan_station_block tracks trains ~x ~y dir ~player =
           (count, double)
           other_dirs
 
-    | Some track when track.player = player ->
+    | Some track when Owner.(track.player = player) ->
         (* Find other dir and follow it *)
         let double = Track.acts_like_double track in
         let count = List.length train_idxs in

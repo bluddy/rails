@@ -5,7 +5,7 @@ module UMap = Utils.Map
 type t =
   | AI of int
   | Human of int
-  [@@deriving yojson, eq, ord]
+  [@@deriving yojson, eq, ord, show]
 
 let (=) = equal
 let (<>) x y = not (x = y) 
@@ -19,6 +19,8 @@ let create ~human () =
 
 let create_ai () = create ~human:false ()
 let create_human () = create ~human:true ()
+let is_human = function
+  | Human _ -> true | _ -> false
 
 module Map = UMap.Make(struct
   type nonrec t = t

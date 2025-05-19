@@ -1,6 +1,7 @@
 open Containers
 open Test_common
 module TG = Track_graph
+module C = Constants
 
 let graph () =
   TG.make ()
@@ -26,16 +27,16 @@ let graph () =
   |> TG.add_segment ~xyd1:(5,6,Dir.UpRight) ~xyd2:(7,8,DownLeft) ~dist:3
 
 let build_station (x, y) ~dirs (tmap, graph) =
-  let before = TS.scan tmap ~x ~y ~player:0 in
+  let before = TS.scan tmap ~x ~y ~player:C.player in
   let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
-  let after = TS.scan tmap ~x ~y ~player:0 in
+  let after = TS.scan tmap ~x ~y ~player:C.player in
   let graph = TG.Track.handle_build_station graph ~x ~y before after in
   tmap, graph
 
 let remove_station (x, y) (tmap, graph) =
-  let before = TS.scan tmap ~x ~y ~player:0 in
+  let before = TS.scan tmap ~x ~y ~player:C.player in
   let tmap = TM.remove ~x ~y tmap in
-  let after = TS.scan tmap ~x ~y ~player:0 in
+  let after = TS.scan tmap ~x ~y ~player:C.player in
   let graph = TG.Track.handle_remove_track graph ~x ~y before after in
   tmap, graph
 
@@ -77,7 +78,7 @@ let%expect_test "graph shortest path" =
   [%expect {| Some Dir.Up |}]
 
 let%expect_test "connected_stations_dirs" =
-  let t = Track.make Dir.Set.empty (Station `Station) ~player:0 in
+  let t = Track.make Dir.Set.empty (Station `Station) ~player:C.player in
   let map = Trackmap.empty 10 10
     |> Trackmap.set ~x:1 ~y:2 ~t
     |> Trackmap.set ~x:3 ~y:4 ~t
@@ -94,10 +95,10 @@ module Track = struct
   module TM = Trackmap
 
   let track dirs = 
-    Track.make (Dir.Set.of_list dirs) (Track `Single) ~player:0
+    Track.make (Dir.Set.of_list dirs) (Track `Single) ~player:C.player
 
   let station dirs = 
-    Track.make (Dir.Set.of_list dirs) (Station `Station) ~player:0
+    Track.make (Dir.Set.of_list dirs) (Station `Station) ~player:C.player
 
   let dirs = [Dir.Left; Right]
   let y = 2
@@ -113,10 +114,10 @@ module Track = struct
   let%expect_test "build_station at end of track" =
     (* x---- map *)
     let map = std_map () in
-    let scan1 = Scan.scan map ~x:5 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:5 ~y ~player:C.player in
     (* Add station x x---s *)
     let map = TM.set map ~x:5 ~y ~t:(station dirs) in
-    let scan2 = Scan.scan map ~x:5 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:5 ~y ~player:C.player in
     (* Corresponding graph *)
     let g = TG.make ()
       |> TG.add_ixn ~x:1 ~y
@@ -132,9 +133,9 @@ module Track = struct
     let map = std_map ()
       |> TM.set ~x:5 ~y ~t:(track @@ UpRight::dirs)
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
     let map = TM.set map ~x:3 ~y ~t:(station dirs) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
     (* Corresponding graph *)
     let g = TG.make ()
       |> TG.add_ixn ~x:1 ~y
@@ -153,9 +154,9 @@ module Track = struct
       |> TM.set ~x:4 ~y ~t:(track [Left])
       |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
     in
-    let scan1 = Scan.scan map ~x:4 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:4 ~y ~player:C.player in
     let map = TM.set map ~x:4 ~y ~t:(track [Left;Right]) in
-    let scan2 = Scan.scan map ~x:4 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:4 ~y ~player:C.player in
     let g = TG.make () in
     print_graph g;
     [%expect {| [] |}];
@@ -170,9 +171,9 @@ module Track = struct
       |> TM.set ~x:4 ~y ~t:(track [Left])
       |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
     in
-    let scan1 = Scan.scan map ~x:4 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:4 ~y ~player:C.player in
     let map = TM.set map ~x:4 ~y ~t:(track [Left;Right]) in
-    let scan2 = Scan.scan map ~x:4 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:4 ~y ~player:C.player in
     let g = TG.make () in
     print_graph g;
     [%expect {| [] |}];
@@ -183,9 +184,9 @@ module Track = struct
   let%expect_test "build_track create ixn at end" =
     (* x----  -> x---x *)
     let map = std_map () in
-    let scan1 = Scan.scan map ~x:5 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:5 ~y ~player:C.player in
     let map = TM.set map ~x:5 ~y ~t:(track [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:5 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:5 ~y ~player:C.player in
     let g = TG.make () in
     print_graph g;
     [%expect {| [] |}];
@@ -198,9 +199,9 @@ module Track = struct
     let map = std_map ()
       |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
     let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
@@ -216,9 +217,9 @@ module Track = struct
       |> TM.set ~x:1 ~y ~t:(station [Left; Right])
       |> TM.set ~x:5 ~y ~t:(station [Left; Right])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
     let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
@@ -237,9 +238,9 @@ module Track = struct
       |> TM.set ~x:4 ~y:(y-1) ~t:(track [DownLeft; UpRight])
       |> TM.set ~x:5 ~y:(y-2) ~t:(station [DownLeft; UpRight])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
     let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
@@ -254,9 +255,9 @@ module Track = struct
     let map = std_map ()
       |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
     let map = TM.remove map ~x:3 ~y in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
@@ -271,9 +272,9 @@ module Track = struct
     let map = std_map ()
       |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
     let map = TM.set map ~x:3 ~y ~t:(track [Left]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
@@ -288,9 +289,9 @@ module Track = struct
     let map = std_map ()
       |> TM.set ~x:5 ~y ~t:(station [Left; Right])
     in
-    let scan1 = Scan.scan map ~x:5 ~y ~player:0 in
+    let scan1 = Scan.scan map ~x:5 ~y ~player:C.player in
     let map = TM.set map ~x:5 ~y ~t:(track [Left]) in
-    let scan2 = Scan.scan map ~x:5 ~y ~player:0 in
+    let scan2 = Scan.scan map ~x:5 ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
@@ -306,9 +307,9 @@ module Track = struct
       |> TM.set ~x:5 ~y ~t:(station [Left; Right; UpRight])
     in
     let x = 5 in
-    let scan1 = Scan.scan map ~x ~y ~player:0 in
+    let scan1 = Scan.scan map ~x ~y ~player:C.player in
     let map = TM.set map ~x ~y ~t:(track [Left]) in
-    let scan2 = Scan.scan map ~x ~y ~player:0 in
+    let scan2 = Scan.scan map ~x ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4
     in
@@ -325,9 +326,9 @@ module Track = struct
       |> TM.set ~x:3 ~y ~t:(track [Left; Right; UpRight])
     in
     let x = 3 in
-    let scan1 = Scan.scan map ~x ~y ~player:0 in
+    let scan1 = Scan.scan map ~x ~y ~player:C.player in
     let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
-    let scan2 = Scan.scan map ~x ~y ~player:0 in
+    let scan2 = Scan.scan map ~x ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
       |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2
@@ -347,9 +348,9 @@ module Track = struct
       |> TM.set ~x:4 ~y:(y-1) ~t:(track [DownLeft; Up; UpRight])
     in
     let x = 3 in
-    let scan1 = Scan.scan map ~x ~y ~player:0 in
+    let scan1 = Scan.scan map ~x ~y ~player:C.player in
     let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
-    let scan2 = Scan.scan map ~x ~y ~player:0 in
+    let scan2 = Scan.scan map ~x ~y ~player:C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
       |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2

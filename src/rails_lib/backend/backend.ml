@@ -580,37 +580,22 @@ let check_bankruptcy v player_idx =
 let _declare_bankruptcy v player_idx =
   let player = Player.get_player v.players player_idx in
   if Player.check_bankruptcy player then (
-    let players, stocks = Player.declare_bankruptcy v.players player_idx ~difficulty:v.params.options.difficulty v.stocks in
-    send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
-    [%up {v with players; stocks}]
-  ) else v
+    let player_iter = Iter.append (Owner.Map.keys v.players) (Ai.ai_iter v.ai) in
+    let stocks, cash_map = Stock_market.declare_bankruptcy ~player_idx player_iter v.stocks in
+    let players, ais =
+      Owner.Map.fold (fun idx profit (players, ais) ->
+        if Owner.is_human idx then
+          update_player idx v.players @@ Player.add_cash profit, ais
+        else
+          players, Ai.add_cash idx profit v.ais)
+        (v.players, v.ais)
+        cash_map
+    in
+    let players = modify_player player_idx players @@ set_bankrupt ~difficulty:v.params.options.difficulty in
 
-let declare_bankruptcy players player_idx stocks ~difficulty =
-  let share_price = Stock_market.share_price player_idx stocks in
-  let (_, stocks), players =
-    Owner.Map.fold_map (fun stocks v -> 
-      if Owner.(idx = player_idx) then
-        let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
-        let yearly_interest_payment =
-          v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
-        in
-        let stocks = stocks
-          |> Stock_market.set_total_shares ~player:player_idx 100
-          |> Stock_market.reset_owned_shares player_idx in
-        let in_receivership = true in
-        let num_bankruptcies = v.m.num_bankruptcies + 1 in
-        let v = {v with m = {v.m with bonds; yearly_interest_payment; in_receivership; num_bankruptcies}} in
-        (idx+1, stocks), v
-      else
-        (* Other players sell all stock in company and get partially compensated *)
-        let sold_stock = (share_price * Stock_market.owned_shares ~owner:idx ~owned:player_idx stocks) / 2 in
-        let cash = v.m.cash + sold_stock in
-        let stocks = Stock_market.set_owned_shares ~owner:idx ~owned:player_idx 0 stocks in
-        (idx+1, stocks), {v with m = {v.m with cash}})
-    (0, stocks)
-    players
-  in
-  players, stocks
+    send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
+    [%up {v with players; stocks; ais}]
+  ) else v
 
 let get_date (v:Backend_d.t) = _month_of_time v.params.time, v.params.year
 

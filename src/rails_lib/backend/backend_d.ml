@@ -1,5 +1,4 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
-open Containers
 open! Utils
 open Utils.Infix
 (* Backend data *)
@@ -8,7 +7,7 @@ type t = {
   params: Params.t;
   mutable last_tick: int; (* last time we updated a cycle *)
   pause: bool;  (* pause the backend. Do not advance time *)
-  players: Player.t array; (* stats, money *)
+  players: Player.t Owner.Map.t; (* stats, money *)
   map : Tilemap.t;
   mutable track: Trackmap.t;
   mutable graph: Track_graph.t;
@@ -24,11 +23,12 @@ type t = {
   seed: int;
 } [@@deriving yojson]
 
-let update_player v player f =
-  let p = v.players.(player) in
+let update_player v idx f =
+  let p = Owner.Map.find idx v.players in
   let p' = f p in
   if p =!= p' then
-    v.players.(player) <- p';
-  ()
+    let players = Owner.Map.add idx p' v.players in
+    {v with players}
+  else v
 
 

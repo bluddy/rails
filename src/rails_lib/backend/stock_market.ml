@@ -310,6 +310,24 @@ let other_companies_in_player_shares player ?exclude_owner v =
   )
   v.ownership
 
-let declare_bankruptcy ~player_idx players stocks =
-  Owner.Map.mapi (fun idx own)
+let declare_bankruptcy ~player_idx players v =
+  (* Returns new stock market, cash for each player_idx *)
+  let share_price = share_price player_idx v in
+  Iter.fold (fun (stocks, cash) idx ->
+    if Owner.(idx = player_idx) then
+      let stocks = stocks
+        |> set_total_shares ~player:player_idx C.Stock.starting_num
+        |> reset_owned_shares player_idx
+      in
+      stocks, cash
+    else
+      (* Other players sell all stock in company and get partially compensated *)
+      let sold_stock = (share_price * owned_shares ~owner:idx ~owned:player_idx stocks) / 2 in
+      let cash = Owner.Map.add idx sold_stock cash in
+      let stocks = set_owned_shares ~owner:idx ~owned:player_idx 0 stocks in
+      stocks, cash
+  )
+  (v, Owner.Map.empty)
+  players
+
 
