@@ -585,6 +585,33 @@ let _declare_bankruptcy v player_idx =
     [%up {v with players; stocks}]
   ) else v
 
+let declare_bankruptcy players player_idx stocks ~difficulty =
+  let share_price = Stock_market.share_price player_idx stocks in
+  let (_, stocks), players =
+    Owner.Map.fold_map (fun stocks v -> 
+      if Owner.(idx = player_idx) then
+        let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
+        let yearly_interest_payment =
+          v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
+        in
+        let stocks = stocks
+          |> Stock_market.set_total_shares ~player:player_idx 100
+          |> Stock_market.reset_owned_shares player_idx in
+        let in_receivership = true in
+        let num_bankruptcies = v.m.num_bankruptcies + 1 in
+        let v = {v with m = {v.m with bonds; yearly_interest_payment; in_receivership; num_bankruptcies}} in
+        (idx+1, stocks), v
+      else
+        (* Other players sell all stock in company and get partially compensated *)
+        let sold_stock = (share_price * Stock_market.owned_shares ~owner:idx ~owned:player_idx stocks) / 2 in
+        let cash = v.m.cash + sold_stock in
+        let stocks = Stock_market.set_owned_shares ~owner:idx ~owned:player_idx 0 stocks in
+        (idx+1, stocks), {v with m = {v.m with cash}})
+    (0, stocks)
+    players
+  in
+  players, stocks
+
 let get_date (v:Backend_d.t) = _month_of_time v.params.time, v.params.year
 
 let get_time_of_day time =

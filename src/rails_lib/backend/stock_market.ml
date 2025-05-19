@@ -310,4 +310,6 @@ let other_companies_in_player_shares player ?exclude_owner v =
   )
   v.ownership
 
+let declare_bankruptcy ~player_idx players stocks =
+  Owner.Map.mapi (fun idx own)
 

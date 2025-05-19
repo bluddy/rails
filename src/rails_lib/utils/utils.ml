@@ -128,6 +128,14 @@ module Map = struct
 
     let bindings_array v =
       bindings v |> Array.of_list
+
+    let fold_map f acc v =
+      let acc = ref acc in
+      mapi (fun key value ->
+        let acc2, value2 = f !acc key value in
+        acc := acc2;
+        value2
+      ) v
   end
 end
 
