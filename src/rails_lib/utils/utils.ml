@@ -117,6 +117,17 @@ module Map = struct
         v3
 
       let sum f v = fold (fun k v acc -> f k v + acc) v 0
+
+    let nth_key n v =
+      let exception Found of key in
+      try
+        to_iter v
+        |> Iter.iteri (fun i (k,_) -> if n = i then raise @@ Found k);
+        None
+      with Found k -> Some k
+
+    let bindings_array v =
+      bindings v |> Array.of_list
   end
 end
 
