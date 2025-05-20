@@ -8,7 +8,8 @@ module LocdSet = Utils.LocdSet
  *)
 (* This is our return type representing an ixn. Will be used to introspect *)
 type ixn = {
-  loc: Utils.loc;
+  x: int; (* keep this x,y separate *)
+  y: int;
   dist: int;
   dir: Dir.t; (* out dir from station/ixn *)
   search_dir: Dir.t; (* search dir to get here *)
@@ -18,11 +19,11 @@ type ixn = {
 
 let max_scan_dist = 1000
 
-let equal_ixn res1 res2 = Utils.equal_loc res1.loc res2.loc
+let equal_ixn res1 res2 = res1.x = res2.x && res1.y = res2.y
 let nequal_ixn res1 res2 = not (equal_ixn res1 res2)
 
-let _make_ixn loc dist dir search_dir ~station ~double =
-  { loc; dist; dir; search_dir; station; double }
+let _make_ixn (x,y) dist dir search_dir ~station ~double =
+  { x; y; dist; dir; search_dir; station; double }
 
   (* Check more closely if the train is within the block
      dir: direction we should focus on
