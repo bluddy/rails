@@ -4,6 +4,9 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 module C = Constants
 
+let src = Logs.Src.create "station" ~doc:"Station"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 (* minimum level to be real demand *)
 let min_demand = C.car_full_demand
 (* minimum level for mail on simple economy mode *)
@@ -151,8 +154,7 @@ let default_signals = {
 }
 
 type t = {
-  x: int; (* in tiles *)
-  y: int; (* in tiles *)
+  loc: Utils.loc;
   year: int;
   info: info option;
   player: Owner.t;
@@ -254,10 +256,10 @@ let can_train_go (v:t) dir =
   | Go, _ -> true, `None
   | Stop, _ -> false, `None
 
-let make_signaltower ~x ~y ~year ~player =
-  { x; y; year; info=None; player; signals=default_signals}
+let make_signaltower x y ~year ~player =
+  { loc=(x, y); year; info=None; player; signals=default_signals}
 
-let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
+let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
   let name = match suffix with
     | Some suffix -> city_name^" "^show_suffix suffix
     | None -> city_name
@@ -292,7 +294,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
       } |> Option.some
   in
   let signals = default_signals in
-  { x; y; year; info; player; signals}
+  { loc=(x, y); year; info; player=player_idx; signals}
 
 let add_upgrade v upgrade player =
   if Owner.(v.player <> player) then v else
@@ -317,7 +319,7 @@ let get_city v = match v.info with
   | Some info -> Some(info.city)
   | _ -> None
 
-let get_loc v = v.x, v.y
+let get_loc v = v.loc
 
 let get_supply_exn v = match v.info with
   | Some info -> info.supply
@@ -359,25 +361,27 @@ let maintenance_of station = match station.info with
   | Some info -> maintenance_of_kind info.kind
 
   (* Call periodically per station -- impure for performance *)
-  (* TODO: better to memoize demand/supply calculation and recompute when things change *)
-let update_supply_demand v tilemap ~climate ~simple_economy =
-  let mult = 4 + Climate.to_enum climate in
+  (* TODO: see if we can make pure *)
+let update_supply_demand tilemap params v =
+  let mult = 4 + Climate.to_enum params.Params.climate in
   let modify_amount amount =
     amount * mult / 12
   in
   match v.info with
   | None -> []
   | Some info ->
-    Printf.printf "Updating demand/supply\n";
+    Log.debug (fun f -> f "Updating demand/supply");
     let temp_demand_h, temp_supply_h =
       let range = to_range info.kind in
-      Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range
+      Tilemap.collect_demand_supply v.loc tilemap ~range
     in
     (* Add supply to station *)
     Hashtbl.iter (fun good amount ->
       CCHashtbl.incr ~by:(modify_amount amount) info.supply good
     )
     temp_supply_h;
+
+    let simple_economy = B_options.simple_economy params.options in
 
     if simple_economy then (
       (* All other demand is 2x mail *)
