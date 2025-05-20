@@ -132,13 +132,14 @@ let check_build_station v ~x ~y ~player station_type =
   | `Ok -> Tilemap.check_build_station v.map ~x ~y
   | x -> x
 
-let _build_station v ~x ~y station_type ~player =
-  let before = Scan.scan v.track ~x ~y ~player in
-  let track, build_new_track_dir = Trackmap.build_station v.track ~x ~y station_type in
-  let after = Scan.scan track ~x ~y ~player in
-  let graph = G.Track.handle_build_station v.graph ~x ~y before after in
-  let trains = get_player v player |> Player.get_trains in
-  let blocks = Block_map.handle_build_station graph v.blocks track trains (x,y) after in
+let _build_station v loc station_type player_idx =
+  let before = Scan.scan v.track loc player_idx in
+  let track, build_new_track_dir = Trackmap.build_station v.track loc station_type in
+  let after = Scan.scan track loc player_idx in
+  let graph = G.Track.handle_build_station v.graph loc before after in
+  let player = get_player v player_idx in
+  let trains = Player.get_trains player in
+  let blocks = Block_map.handle_build_station ~player graph v.blocks track trains (x,y) after in
   let station = match station_type with
   | `SignalTower ->
     Station.make_signaltower ~x ~y ~year:v.params.year ~player
@@ -184,10 +185,10 @@ let _build_station v ~x ~y station_type ~player =
   in
   let loc = (x, y) in
   let stations = Station_map.add loc station v.stations in
-  let players = update_player v player @@ Player.add_station loc in
+  let players = Player.update v.players player @@ Player.add_station loc in
   let players = match build_new_track_dir with
     | Some dir ->
-      update_player v player @@
+      Player.update v.players player @@
         Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map
     | _ -> players
   in
@@ -197,13 +198,10 @@ let _build_station v ~x ~y station_type ~player =
   in
   let climate = v.params.climate in
   ignore @@ Station.update_supply_demand station v.map ~climate ~simple_economy;
-  update_player v player @@
-    Player.pay `StructuresEquipment (Station.price_of station_type);
-  [%upf v.stations <- stations];
-  [%upf v.graph <- graph];
-  [%upf v.track <- track];
-  [%upf v.blocks <- blocks];
-  v
+  let players =
+    Player.update v.players player @@ Player.pay `StructuresEquipment (Station.price_of station_type)
+  in
+  [%up {v with players; stations; graph; track; blocks}]
 
 let check_build_tunnel v ~x ~y ~dir ~player =
   let check length = Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length in
@@ -737,7 +735,7 @@ module Action = struct
       | BuildFerry {x; y; dir; player} ->
           _build_ferry backend ~x ~y ~dir ~player
       | BuildStation {x; y; kind; player} ->
-          _build_station backend ~x ~y kind ~player
+          _build_station backend (x,y) kind ~player
       | BuildBridge({x; y; dir; player}, kind) ->
           _build_bridge backend ~x ~y ~dir ~kind ~player
       | BuildTunnel({x; y; dir; player}, _length) ->
