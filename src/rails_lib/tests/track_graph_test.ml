@@ -78,7 +78,7 @@ let%expect_test "graph shortest path" =
   [%expect {| Some Dir.Up |}]
 
 let%expect_test "connected_stations_dirs" =
-  let t = Track.make Dir.Set.empty (Station `Station) ~player:C.player in
+  let t = Track.make Dir.Set.empty (Station `Station) C.player in
   let map = Trackmap.empty 10 10
     |> Trackmap.set (1, 2) t
     |> Trackmap.set (3, 4) t
@@ -95,10 +95,10 @@ module Track = struct
   module TM = Trackmap
 
   let track dirs = 
-    Track.make (Dir.Set.of_list dirs) (Track `Single) ~player:C.player
+    Track.make (Dir.Set.of_list dirs) (Track `Single) C.player
 
   let station dirs = 
-    Track.make (Dir.Set.of_list dirs) (Station `Station) ~player:C.player
+    Track.make (Dir.Set.of_list dirs) (Station `Station) C.player
 
   let dirs = [Dir.Left; Right]
   let y = 2
