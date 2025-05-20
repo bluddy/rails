@@ -46,7 +46,7 @@ let is_big_station v = match v.kind with
 
 let is_ixn v = v.ixn
 
-let make dirs kind ~player =
+let make dirs kind player =
   let ixn = _is_ixn dirs in
   {dirs; kind; ixn; player}
 

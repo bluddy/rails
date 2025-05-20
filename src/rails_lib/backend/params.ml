@@ -14,3 +14,16 @@ type t = {
   mutable cycle: int; (* ongoing counter used for all sorts of stuff *)
   mutable time: int;  (* In-game time, resets at end of fin period *)
 } [@@deriving yojson]
+
+let default = {
+  year=1830;
+  year_start=1830;
+  num_fiscal_periods=0;
+  fiscal_period=`First;
+  climate=Normal;
+  west_us_route_done=false;
+  region=Region.WestUS;
+  options=B_options.default;
+  time=0;
+  cycle=0;
+}
