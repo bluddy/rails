@@ -20,7 +20,7 @@ let get_loc (x,y) v = get v ~x ~y
 let get_exn v ~x ~y = IntMap.find (Utils.calc_offset v.width x y) v.map 
 
   (* get, buf if there's nothing, create a track *)
-let get_track_default ?(kind=(Track.Track `Single)) v loc player_idx =
+let get_track_default ?(kind=(Track.Track `Single)) loc player_idx v =
   get_loc loc v
   |> Option.get_lazy (fun () -> Track.empty player_idx kind)
 
@@ -51,21 +51,21 @@ let fold f v ~init =
   v.map
   init
 
-let out_of_bounds v (x, y) =
+let out_of_bounds (x, y) v =
   x < 0 || y < 0 || x >= v.width || y >= v.height
 
 (* Common function for moving by dir, with bounds check *)
-let move_dir_bounds v loc ~dir =
+let move_dir_bounds loc ~dir v =
   let loc2 = Dir.adjust_loc dir loc in
-  if out_of_bounds v loc2 then None
+  if out_of_bounds loc2 v then None
   else Some loc2
 
 let check_build_track v loc ~dir player_idx =
-  match out_of_bounds v loc, move_dir_bounds v loc ~dir with
+  match out_of_bounds loc v, move_dir_bounds loc ~dir v with
   | true, _ | _, None  -> false
   | _, Some loc2 ->
-    let track1 = get_track_default v loc player_idx in
-    let track2 = get_track_default v loc2 player_idx in
+    let track1 = get_track_default loc player_idx v in
+    let track2 = get_track_default loc2 player_idx v in
     let track12 = Track.add_dir track1 ~dir in
     let track22 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
     (* Check that we changed something *)
@@ -79,11 +79,11 @@ let check_build_track v loc ~dir player_idx =
      kind2: kind of track in to tile
    *)
 let build_track ?kind1 ?kind2 v loc ~dir player_idx =
-  match move_dir_bounds v loc ~dir with
+  match move_dir_bounds loc ~dir v with
   | None -> v
   | Some loc2 ->
-    let track1 = get_track_default ?kind:kind1 v loc player_idx in
-    let track2 = get_track_default ?kind:kind2 v loc2 player_idx in
+    let track1 = get_track_default ?kind:kind1 loc player_idx v in
+    let track2 = get_track_default ?kind:kind2 loc2 player_idx v in
     let track1 = Track.add_dir track1 ~dir in
     let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
     let v = set_loc loc track1 v in
@@ -91,7 +91,7 @@ let build_track ?kind1 ?kind2 v loc ~dir player_idx =
     v
 
 let check_build_station v ((x, y) as loc) player_idx station_type =
-  if out_of_bounds v loc then `Illegal
+  if out_of_bounds loc v then `Illegal
   else match get_loc loc v with
   | None -> `NoTrack
   | Some ({kind=Track _;_} as t) when Owner.(t.player = player_idx) && Track.is_straight t ->
@@ -131,25 +131,25 @@ let build_station v loc station_type =
      No track can be in the middle, but it's ok if track is at the end
      Length: includes middle stretch + last piece
    *)
-let check_build_stretch v (x, y) ~dir player_idx ~length =
+let check_build_stretch v ((x, y) as loc) ~dir player_idx ~length =
   let dx, dy = Dir.to_offsets dir in
-  let x1, y1 = x, y in
-  let x3, y3 = x + dx * length, y + dy * length in
+  let (x1, y1) as loc1 = loc in
+  let loc3 = x + dx * length, y + dy * length in
   (* check boundaries *)
-  if out_of_bounds v ~x ~y || out_of_bounds v ~x:x3 ~y:y3 then false
+  if out_of_bounds loc v || out_of_bounds loc3 v then false
   else (
     (* No track in between *)
-    let rec loop x y i =
+    let rec loop (x,y) i =
       if i <= 0 then true
       else
-        match get v ~x ~y with
+        match get_loc (x,y) v with
         | Some _ -> false
         | None ->
-            loop (x+dx) (y+dy) (i-1)
+            loop (x+dx, y+dy) (i-1)
     in
-    let test_track x y dir =
-      match get v ~x ~y with
-      | Some track when Owner.(track.player = player) ->
+    let test_track loc dir =
+      match get_loc loc v with
+      | Some track when Owner.(track.player = player_idx) ->
           let track = Track.add_dir track ~dir in
           Track.is_legal track
       | Some _ ->
@@ -159,64 +159,64 @@ let check_build_stretch v (x, y) ~dir player_idx ~length =
           (* no track = fine *)
           true
     in
-    test_track x1 y1 dir &&
-    loop (x1+dx) (y1+dy) (length-1) &&
-    test_track x3 y3 (Dir.opposite dir)
+    test_track loc1 dir &&
+    loop (x1 + dx, y1 + dy) (length-1) &&
+    test_track loc3 (Dir.opposite dir)
   )
 
     (* Used by bridge and tunnel *)
-let build_stretch v ~x ~y ~dir ~player ~n ~kind =
+let build_stretch ((x, y) as loc) ~dir player_idx ~n ~kind v =
   let dx, dy = Dir.to_offsets dir in
-  let x1, y1 = x, y in
-  let x3, y3 = x + dx * n, y + dy * n in
-  if out_of_bounds v ~x ~y || out_of_bounds v ~x:x3 ~y:y3 then v (* error *)
+  let (x1, y1) as loc1 = loc in
+  let loc3 = x + dx * n, y + dy * n in
+  if out_of_bounds loc v || out_of_bounds loc3 v then v (* error *)
   else (
-    let track1 = get_track_default v ~x:x1 ~y:y1 ~player
+    let track1 = get_track_default loc1 player_idx v
       |> Track.add_dir ~dir
     in
-    let v = set v ~x:x1 ~y:y1 ~t:track1 in
-    let track2 = Track.empty player kind
+    let v = set_loc loc1 track1 v in
+    let track2 = Track.empty player_idx kind
       |> Track.add_dir ~dir
       |> Track.add_dir ~dir:(Dir.opposite dir)
     in
-    let rec dig_tunnel ~x ~y i v =
+    let rec dig_tunnel ((x,y) as loc) i v =
       if i <= 0 then v
       else
-        let v = set v ~x ~y ~t:track2 in
-        dig_tunnel ~x:(x+dx) ~y:(y+dy) (i-1) v
+        let v = set_loc loc track2 v in
+        dig_tunnel (x+dx, y+dy) (i-1) v
     in
-    let v = dig_tunnel ~x:(x1+dx) ~y:(y1+dy) (n-1) v in
+    let v = dig_tunnel (x1+dx, y1+dy) (n-1) v in
     let track3 =
-      get_track_default v ~x:x3 ~y:y3 ~player
+      get_track_default loc3 player_idx v
       |> Track.add_dir ~dir:(Dir.opposite dir) in
-    let v = set v ~x:x3 ~y:y3 ~t:track3 in
+    let v = set_loc loc3 track3 v in
     v
   )
 
-let build_bridge v ~x ~y ~dir ~player ~kind =
-  build_stretch v ~x ~y ~dir ~player ~n:2 ~kind:(Track.Bridge kind)
+let build_bridge loc ~dir player_idx ~kind v =
+  build_stretch loc ~dir player_idx ~n:2 ~kind:(Track.Bridge kind) v
 
-let build_tunnel v ~x ~y ~dir ~player ~length =
-  build_stretch v ~x ~y ~dir ~player ~n:length ~kind:Track.Tunnel
+let build_tunnel loc ~dir player_idx ~length v =
+  build_stretch loc ~dir player_idx ~n:length ~kind:Track.Tunnel v
    
   (* Can work for all kinds of constructs *)
-let check_remove_track v loc ~dir ~player =
-  match out_of_bounds v loc, move_dir_bounds v loc ~dir with
+let check_remove_track loc ~dir player_idx v =
+  match out_of_bounds loc v, move_dir_bounds loc ~dir v with
   | true, _ | _, None  -> false
-  | _, Some (x2, y2) ->
-    let track1 = get_track_default v ~x ~y ~player in
-    let track2 = get_track_default v ~x:x2 ~y:y2 ~player in
-    if Owner.(track1.player <> player || track2.player <> player) then false
+  | _, Some loc2 ->
+    let track1 = get_track_default loc player_idx v in
+    let track2 = get_track_default loc2 player_idx v in
+    if Owner.(track1.player <> player_idx || track2.player <> player_idx) then false
     else
       match track1.kind, track2.kind with
-      | Bridge _, _ | _, Bridge _ -> true
-      | Tunnel, _ | _, Tunnel -> true
+      | Bridge _, _ | _, Bridge _
+      | Tunnel, _ | _, Tunnel
       | Station _, _ | _, Station _ -> true
       | _ ->
           Track.has_dir track1 ~dir || Track.has_dir track2 ~dir:(Dir.opposite dir)
 
-let remove_track v loc ~dir player_idx =
-  let remove_track_dir v loc ~dir =
+let remove_track loc ~dir player_idx v =
+  let remove_track_dir loc ~dir v =
     match get_loc loc v with
     | Some track ->
       let track = Track.remove_dir track ~dir in
@@ -227,13 +227,13 @@ let remove_track v loc ~dir player_idx =
     | None -> v
   in
   let loc2 = Dir.adjust_loc dir loc in
-  let track1 = get_track_default v loc ~player in
+  let track1 = get_track_default loc player_idx v in
   let v =
-    if Owner.(track1.player = player) then
+    if Owner.(track1.player = player_idx) then
       match track1.kind with
       | Track _ | Ferry _ ->
           (* TODO: handle ixn *)
-          remove_track_dir v loc ~dir;
+          remove_track_dir loc ~dir v;
       | Station _ ->
           (* TODO: handle station removal *)
           remove loc v
@@ -241,36 +241,32 @@ let remove_track v loc ~dir player_idx =
           remove loc v
     else v
   in
-  let track2 = get_track_default v loc2 ~player in
+  let track2 = get_track_default loc2 player_idx v in
   match track2.kind with
-  | Track _ | Ferry _ when Owner.(track2.player = player) ->
-      remove_track_dir v loc2 ~dir:(Dir.opposite dir);
+  | Track _ | Ferry _ when Owner.(track2.player = player_idx) ->
+      remove_track_dir loc2 ~dir:(Dir.opposite dir) v;
   | _ ->
       (* All other constructs remain whole with full dirs *)
       v
 
-let has_station (x,y) v =
-  match get ~x ~y v with
+let has_station loc v =
+  match get_loc loc v with
   | Some t -> Track.is_station t
   | None -> false
 
-let has_track (x,y) v = Option.is_some @@ get ~x ~y v 
+let has_track loc v = Option.is_some @@ get_loc loc v 
 
 let calc_total_dist v ~player =
-  IntMap.fold (fun _ track acc ->
+  IntMap.sum (fun _ track ->
     if Owner.(track.Track.player = player) then
-      acc + Track.calc_dist track
-    else 
-      acc)
+      Track.calc_dist track
+    else 0)
   v.map
-  0
 
 let calc_total_land_cost v ~player =
-  IntMap.fold (fun _ track acc ->
+  IntMap.sum (fun _ track ->
     if Owner.(track.Track.player = player) then
-      acc + Track.calc_dist track
-    else 
-      acc)
+      Track.calc_dist track
+    else 0)
   v.map
-  0
 
