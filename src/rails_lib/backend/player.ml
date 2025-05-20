@@ -120,7 +120,7 @@ let get_name v station_map cities = match v.name with
           match station.Station.info with 
           | Some info ->
             let x, y = info.city in
-            let city, _ = Cities.find_exn cities x y in
+            let city, _ = Cities.find_exn x y cities in
             city::acc
           | _ -> acc)
       v.stations

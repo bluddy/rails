@@ -18,9 +18,9 @@ module Train_update = struct
   let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~idx ~cycle loc ~dir =
     (* Speed factor computation from height delta and turn *)
     let height1 = Tilemap.get_tile_height loc v.map in
-    let x2, y2 = Dir.adjust dir x y in
-    let track2 = Trackmap.get_exn v.track ~x:x2 ~y:y2 in
-    let height2 = Tilemap.get_tile_height v.map x2 y2 in
+    let loc2 = Dir.adjust_loc dir loc in
+    let track2 = Trackmap.get_exn loc2 v.track in
+    let height2 = Tilemap.get_tile_height loc2 v.map in
     let d_height = max 0 (height2 - height1) in
     let d_height = if Dir.is_diagonal dir then d_height else d_height * 3/2 in
     let d_height = if B_options.easy v.params.options.difficulty then d_height/2 else d_height in 
@@ -36,7 +36,7 @@ module Train_update = struct
     Train.History.add train.history train.x train.y dir speed_factor;
     (* Compute and set target speed *)
     let target_speed, speed =
-      match Tilemap.get_tile v.map x y with
+      match Tilemap.get_tile loc v.map with
       | Ocean _ | Harbor _ -> 1, 1 
       | _ -> Train.compute_target_speed train ~idx ~cycle, Train.get_speed train
     in
@@ -283,7 +283,7 @@ module Train_update = struct
     let train = [%up {train with last_station; priority_stop; stop}] in
     train, stations, data, ui_msgs
 
-  let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) ((x, y) as loc) =
+  let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) loc =
     let compute_dir_to_dest graph =
       (* This is expensive *)
       let dest = Train.get_dest train in
@@ -319,12 +319,12 @@ module Train_update = struct
           economic_activity=false; (* reset *)
         }
       in
-      _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir, stations, active_stations
+      _update_train_target_speed v train track ~idx ~cycle loc ~dir, stations, active_stations
     ) else (
       {train with state=Train.StoppedAtSignal dir}, stations, []
     )
 
-  let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations ((x, y) as loc) =
+  let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
     (* All major computation happens mid-tile *)
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
     (* TODO: check for colocated trains (accidents/stop a train) *)
@@ -334,7 +334,7 @@ module Train_update = struct
       2. Wait timer from first arrival
       3. Prevent from leaving via manual signal hold
     *)
-    let track = Trackmap.get_exn v.track ~x ~y in
+    let track = Trackmap.get_exn loc v.track in
     let default_ret = train, stations, None, [], [] in
     match track.kind with
     | Station _ ->
@@ -428,7 +428,7 @@ module Train_update = struct
             ~ixn:loc ~cur_dir:train.dir ~dest 
             |> Option.get_exn_or "Cannot find route for train" 
         in
-        let train = _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir in
+        let train = _update_train_target_speed v train track ~idx ~cycle loc ~dir in
         train, stations, None, [], []
 
     | _ ->
@@ -437,7 +437,7 @@ module Train_update = struct
           Dir.Set.find_nearest train.dir track.dirs
           |> Option.get_exn_or "Cannot find track for train"
         in
-        let train = _update_train_target_speed v train track ~idx ~cycle ~x ~y ~dir in
+        let train = _update_train_target_speed v train track ~idx ~cycle loc ~dir in
         train, stations, None, [], []
 
 let _update_player_with_data (player:Player.t) data active_stations fiscal_period random =
@@ -623,18 +623,15 @@ let _try_to_develop_tiles v (player:Player.t) =
 let _update_station_supply_demand player_idx stations map params =
   if params.Params.cycle mod C.Cycles.station_supply_demand = 0 then (
     let difficulty = params.options.difficulty in
-    let simple_economy = not @@ B_options.complex_economy params.options in
     let ui_msgs =
       Station_map.fold 
         (fun station old_msgs ->
           Station.check_rate_war_lose_supplies station ~difficulty;
-          let msgs =
-            Station.update_supply_demand station map ~climate:params.climate ~simple_economy
-          in
+          let msgs = Station.update_supply_demand map params station in
           Station.lose_supplies station;
           let msgs =
             List.map (fun (good, add) ->
-              UIM.DemandChanged {player=player_idx; x=station.x; y=station.y; good; add})
+              UIM.DemandChanged {player=player_idx; x=fst station.loc; y=snd station.loc; good; add})
               msgs
           in
           msgs @ old_msgs)
