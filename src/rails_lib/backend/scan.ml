@@ -8,8 +8,7 @@ module LocdSet = Utils.LocdSet
  *)
 (* This is our return type representing an ixn. Will be used to introspect *)
 type ixn = {
-  x: int;
-  y: int;
+  loc: Utils.loc;
   dist: int;
   dir: Dir.t; (* out dir from station/ixn *)
   search_dir: Dir.t; (* search dir to get here *)
@@ -19,11 +18,11 @@ type ixn = {
 
 let max_scan_dist = 1000
 
-let equal_ixn res1 res2 = res1.x = res2.x && res1.y = res2.y
-let nequal_ixn res1 res2 = not (res1 = res2)
+let equal_ixn res1 res2 = Utils.equal_loc res1.loc res2.loc
+let nequal_ixn res1 res2 = not (equal_ixn res1 res2)
 
-let _make_ixn x y dist dir search_dir ~station ~double =
-  { x; y; dist; dir; search_dir; station; double }
+let _make_ixn loc dist dir search_dir ~station ~double =
+  { loc; dist; dir; search_dir; station; double }
 
   (* Check more closely if the train is within the block
      dir: direction we should focus on
@@ -53,21 +52,21 @@ let _train_count_in_ixn trains train_idxs dir =
 
   (* Scan for a new block ending in a station or ixn *)
   (* x, y: before movement *)
-let _scan_for_ixn tracks ~x ~y ~dir ~double ~player =
+let _scan_for_ixn tracks loc ~dir ~double player_idx =
   let search_dir = dir in
-  let player2 = player in
-  let rec loop_to_node x y dir double_acc ~dist =
+  let player2_idx = player_idx in
+  let rec loop_to_node loc dir double_acc ~dist =
     if dist > max_scan_dist then None else
     let oppo_dir = Dir.opposite dir in
     match Trackmap.get tracks ~x ~y with
-    | Some ({ixn = true; player; _} as track) when Owner.(player = player2) ->
+    | Some ({ixn = true; player; _} as track) when Owner.(player = player2_idx) ->
         (* Found ixn *)
         let double = double_acc && Track.acts_like_double track in
         Some (_make_ixn x y dist oppo_dir search_dir ~station:false ~double) 
-    | Some {kind = Station _; player; _} when Owner.(player = player2) ->
+    | Some {kind = Station _; player; _} when Owner.(player = player2_idx) ->
         (* Found station *)
         Some (_make_ixn x y dist oppo_dir search_dir ~station:true ~double:double_acc)
-    | Some track when Owner.(track.player = player2) ->
+    | Some track when Owner.(track.player = player2_idx) ->
         (* Find other dir and follow it *)
         let (let*) = Option.bind in
         let* other_dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in

@@ -13,22 +13,18 @@ let empty width height =
   let map = IntMap.empty in
   {map; width; height}
 
-let get v ~x ~y = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
+let get (x,y) v = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
 
-let get_loc (x,y) v = get v ~x ~y
-
-let get_exn v ~x ~y = IntMap.find (Utils.calc_offset v.width x y) v.map 
+let get_exn (x,y) v = IntMap.find (Utils.calc_offset v.width x y) v.map 
 
   (* get, buf if there's nothing, create a track *)
 let get_track_default ?(kind=(Track.Track `Single)) loc player_idx v =
-  get_loc loc v
+  get loc v
   |> Option.get_lazy (fun () -> Track.empty player_idx kind)
 
-let set v ~x ~y ~t =
+let set (x,y) t v =
   let map = IntMap.add (Utils.calc_offset v.width x y) t v.map in
   {v with map}
-
-let set_loc (x,y) t v = set v ~x ~y ~t
 
 let update_loc (x, y) f v =
   {v with map=IntMap.update (Utils.calc_offset v.width x y) f v.map}
@@ -86,18 +82,18 @@ let build_track ?kind1 ?kind2 v loc ~dir player_idx =
     let track2 = get_track_default ?kind:kind2 loc2 player_idx v in
     let track1 = Track.add_dir track1 ~dir in
     let track2 = Track.add_dir track2 ~dir:(Dir.opposite dir) in
-    let v = set_loc loc track1 v in
-    let v = set_loc loc2 track2 v in
+    let v = set loc track1 v in
+    let v = set loc2 track2 v in
     v
 
 let check_build_station v ((x, y) as loc) player_idx station_type =
   if out_of_bounds loc v then `Illegal
-  else match get_loc loc v with
+  else match get loc v with
   | None -> `NoTrack
   | Some ({kind=Track _;_} as t) when Owner.(t.player = player_idx) && Track.is_straight t ->
        let range = Station.to_range station_type in
        let match_fn j i =
-         match get_loc (j, i) v with
+         match get (j, i) v with
          | Some {kind=Station(st);_} ->
              let range2 = Station.to_range st in
              let range = range + range2 in
@@ -114,7 +110,7 @@ let check_build_station v ((x, y) as loc) player_idx station_type =
   | _ -> `Illegal
    
 let build_station v loc station_type =
-  match get_loc loc v with
+  match get loc v with
   | Some ({kind=Track _; _} as t) ->
       (* Do we build new track *)
       let build_new_track_dir =
@@ -123,7 +119,7 @@ let build_station v loc station_type =
       in
       let track = Track.straighten t in
       let station = {track with kind=Station(station_type)} in
-      let v = set_loc loc station v in
+      let v = set loc station v in
       v, build_new_track_dir
   | _ -> assert false
 
@@ -142,13 +138,13 @@ let check_build_stretch v ((x, y) as loc) ~dir player_idx ~length =
     let rec loop (x,y) i =
       if i <= 0 then true
       else
-        match get_loc (x,y) v with
+        match get (x,y) v with
         | Some _ -> false
         | None ->
             loop (x+dx, y+dy) (i-1)
     in
     let test_track loc dir =
-      match get_loc loc v with
+      match get loc v with
       | Some track when Owner.(track.player = player_idx) ->
           let track = Track.add_dir track ~dir in
           Track.is_legal track
@@ -174,7 +170,7 @@ let build_stretch ((x, y) as loc) ~dir player_idx ~n ~kind v =
     let track1 = get_track_default loc1 player_idx v
       |> Track.add_dir ~dir
     in
-    let v = set_loc loc1 track1 v in
+    let v = set loc1 track1 v in
     let track2 = Track.empty player_idx kind
       |> Track.add_dir ~dir
       |> Track.add_dir ~dir:(Dir.opposite dir)
@@ -182,14 +178,14 @@ let build_stretch ((x, y) as loc) ~dir player_idx ~n ~kind v =
     let rec dig_tunnel ((x,y) as loc) i v =
       if i <= 0 then v
       else
-        let v = set_loc loc track2 v in
+        let v = set loc track2 v in
         dig_tunnel (x+dx, y+dy) (i-1) v
     in
     let v = dig_tunnel (x1+dx, y1+dy) (n-1) v in
     let track3 =
       get_track_default loc3 player_idx v
       |> Track.add_dir ~dir:(Dir.opposite dir) in
-    let v = set_loc loc3 track3 v in
+    let v = set loc3 track3 v in
     v
   )
 
@@ -217,13 +213,13 @@ let check_remove_track loc ~dir player_idx v =
 
 let remove_track loc ~dir player_idx v =
   let remove_track_dir loc ~dir v =
-    match get_loc loc v with
+    match get loc v with
     | Some track ->
       let track = Track.remove_dir track ~dir in
       if Track.is_empty track then
         remove loc v
       else
-        set_loc loc track v
+        set loc track v
     | None -> v
   in
   let loc2 = Dir.adjust_loc dir loc in
@@ -250,11 +246,11 @@ let remove_track loc ~dir player_idx v =
       v
 
 let has_station loc v =
-  match get_loc loc v with
+  match get loc v with
   | Some t -> Track.is_station t
   | None -> false
 
-let has_track loc v = Option.is_some @@ get_loc loc v 
+let has_track loc v = Option.is_some @@ get loc v 
 
 let calc_total_dist v ~player =
   IntMap.sum (fun _ track ->
