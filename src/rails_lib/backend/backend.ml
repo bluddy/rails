@@ -42,7 +42,8 @@ let default region resources ~random ~seed =
   in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
-  let stocks = Stock_market.default |> Stock_market.add_human_player ~player:0 options.difficulty in
+  let stocks = Stock_market.default
+    |> Stock_market.add_human_player ~player:C.player options.difficulty in
   let params = {
     Params.year;
     year_start=year;
@@ -122,12 +123,9 @@ let send_ui_msg v msg =
   (* Mutation. Line up ui msg for when we can send it *)
   v.ui_msgs <- msg::v.ui_msgs
 
+let get_player v player = Player.get player v.players
 
-let get_cash v ~player = Player.get_cash v.players.(player)
-
-let num_players v = Array.length v.players
-
-let get_player v player = v.players.(player)
+let get_cash v ~player = get_player v player |> Player.get_cash
 
 let check_build_station v ~x ~y ~player station_type =
   match Trackmap.check_build_station v.track ~x ~y ~player station_type with
@@ -139,7 +137,8 @@ let _build_station v ~x ~y station_type ~player =
   let track, build_new_track_dir = Trackmap.build_station v.track ~x ~y station_type in
   let after = Scan.scan track ~x ~y ~player in
   let graph = G.Track.handle_build_station v.graph ~x ~y before after in
-  let blocks = Block_map.handle_build_station graph v.blocks track v.players.(player).trains (x,y) after in
+  let trains = get_player v player |> Player.get_trains in
+  let blocks = Block_map.handle_build_station graph v.blocks track trains (x,y) after in
   let station = match station_type with
   | `SignalTower ->
     Station.make_signaltower ~x ~y ~year:v.params.year ~player
@@ -185,11 +184,13 @@ let _build_station v ~x ~y station_type ~player =
   in
   let loc = (x, y) in
   let stations = Station_map.add loc station v.stations in
-  update_player v player @@ Player.add_station loc;
-  Option.iter (fun dir ->
-    update_player v player @@
-      Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map
-  ) build_new_track_dir;
+  let players = update_player v player @@ Player.add_station loc in
+  let players = match build_new_track_dir with
+    | Some dir ->
+      update_player v player @@
+        Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map
+    | _ -> players
+  in
   (* Initialize supply and demand *)
   let simple_economy =
     not @@ B_options.RealityLevels.mem v.params.options.reality_levels `ComplexEconomy 
