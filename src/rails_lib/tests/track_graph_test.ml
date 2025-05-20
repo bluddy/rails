@@ -207,25 +207,25 @@ module Track = struct
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}];
-    let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
+    let g = TG.Track.handle_build_track 3 y g scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"block":false}]] |}]
 
   let%expect_test "build_track create ixn in middle (with stations)" =
      (* s---s  -> s-x-s *)
     let map = std_map ()
-      |> TM.set ~x:1 ~y ~t:(station [Left; Right])
-      |> TM.set ~x:5 ~y ~t:(station [Left; Right])
+      |> TM.set (1, y) (station [Left; Right])
+      |> TM.set (5, y) (station [Left; Right])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
-    let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
+    let scan1 = Scan.scan map (3, y) C.player in
+    let map = TM.set (3, y) (track [Left; Right; UpRight]) map in
+    let scan2 = Scan.scan map (3, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}];
-    let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
+    let g = TG.Track.handle_build_track 3 y g scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"block":false}]] |}]
 
@@ -234,108 +234,108 @@ module Track = struct
           /          /
        x---x  -> x-x-x *)
     let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
-      |> TM.set ~x:4 ~y:(y-1) ~t:(track [DownLeft; UpRight])
-      |> TM.set ~x:5 ~y:(y-2) ~t:(station [DownLeft; UpRight])
+      |> TM.set (5, y) (track [Left; Right; UpRight])
+      |> TM.set (4, y-1) (track [DownLeft; UpRight])
+      |> TM.set (5, y-2) (station [DownLeft; UpRight])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
-    let map = TM.set map ~x:3 ~y ~t:(track [Left; Right; UpRight]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
+    let scan1 = Scan.scan map (3, y) C.player in
+    let map = TM.set (3, y) (track [Left; Right; UpRight]) map in
+    let scan2 = Scan.scan map (3, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}];
-    let g = TG.Track.handle_build_track g ~x:3 ~y scan1 scan2 in
+    let g = TG.Track.handle_build_track 3 y g scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"block":false}],[[5,0],[3,2],{"nodes":[[[3,2],["UpRight"]],[[5,0],["DownLeft"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"block":false}]] |}]
 
   let%expect_test "remove_track full" = 
      (* x---x  -> x- -x *)
     let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
+      |> TM.set (5, y) (track [Left; Right; UpRight])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
-    let map = TM.remove map ~x:3 ~y in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
+    let scan1 = Scan.scan map (3, y) C.player in
+    let map = TM.remove (3, y) map in
+    let scan2 = Scan.scan map (3, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}];
-    let g = TG.Track.handle_remove_track g ~x:3 ~y scan1 scan2 in
+    let g = TG.Track.handle_remove_track 3 y g scan1 scan2 in
     print_graph g;
     [%expect {| [] |}]
 
   let%expect_test "remove_track partial" = 
      (* x---x  -> x- -x *)
     let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
+      |> TM.set (5, y) (track [Left; Right; UpRight])
     in
-    let scan1 = Scan.scan map ~x:3 ~y ~player:C.player in
-    let map = TM.set map ~x:3 ~y ~t:(track [Left]) in
-    let scan2 = Scan.scan map ~x:3 ~y ~player:C.player in
+    let scan1 = Scan.scan map (3, y) C.player in
+    let map = TM.set (3, y) (track [Left]) map in
+    let scan2 = Scan.scan map (3, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}];
-    let g = TG.Track.handle_remove_track g ~x:3 ~y scan1 scan2 in
+    let g = TG.Track.handle_remove_track 3 y g scan1 scan2 in
     print_graph g;
     [%expect {| [] |}]
 
   let%expect_test "remove station" = 
      (* x---S  -> x--- *)
     let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(station [Left; Right])
+      |> TM.set (5, y) (station [Left; Right])
     in
-    let scan1 = Scan.scan map ~x:5 ~y ~player:C.player in
-    let map = TM.set map ~x:5 ~y ~t:(track [Left]) in
-    let scan2 = Scan.scan map ~x:5 ~y ~player:C.player in
+    let scan1 = Scan.scan map (5, y) C.player in
+    let map = TM.set (5, y) (track [Left]) map in
+    let scan2 = Scan.scan map (5, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(5,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}];
-    let g = TG.Track.handle_remove_track g ~x:5 ~y scan1 scan2 in
+    let g = TG.Track.handle_remove_track 5 y g scan1 scan2 in
     print_graph g;
     [%expect {| [] |}]
 
   let%expect_test "remove ixn" = 
      (* x---x  -> x--- *)
     let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(station [Left; Right; UpRight])
+      |> TM.set (5, y) (station [Left; Right; UpRight])
     in
     let x = 5 in
-    let scan1 = Scan.scan map ~x ~y ~player:C.player in
-    let map = TM.set map ~x ~y ~t:(track [Left]) in
-    let scan2 = Scan.scan map ~x ~y ~player:C.player in
+    let scan1 = Scan.scan map (x, y) C.player in
+    let map = TM.set (x, y) (track [Left]) map in
+    let scan2 = Scan.scan map (x, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(x,y,Left) ~dist:4
     in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}];
-    let g = TG.Track.handle_remove_track g ~x ~y scan1 scan2 in
+    let g = TG.Track.handle_remove_track x y g scan1 scan2 in
     print_graph g;
     [%expect {| [] |}]
 
   let%expect_test "remove ixn in middle" = 
      (* x-x-x  -> x---x*)
     let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
-      |> TM.set ~x:3 ~y ~t:(track [Left; Right; UpRight])
+      |> TM.set (5, y) (track [Left; Right; UpRight])
+      |> TM.set (3, y) (track [Left; Right; UpRight])
     in
     let x = 3 in
-    let scan1 = Scan.scan map ~x ~y ~player:C.player in
-    let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
-    let scan2 = Scan.scan map ~x ~y ~player:C.player in
+    let scan1 = Scan.scan map (x, y) C.player in
+    let map = TM.set (x, y) (track [Left;Right]) map in
+    let scan2 = Scan.scan map (x, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
       |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2
     in
     print_graph g;
     [%expect {| [[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"block":false}]] |}];
-    let g = TG.Track.handle_remove_track g ~x ~y scan1 scan2 in
+    let g = TG.Track.handle_remove_track x y g scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}]
 
@@ -343,14 +343,14 @@ module Track = struct
      (*  x         x
        x-x-x  -> x---x*)
     let map = std_map ()
-      |> TM.set ~x:5 ~y ~t:(track [Left; Right; UpRight])
-      |> TM.set ~x:3 ~y ~t:(track [Left; Right; UpRight])
-      |> TM.set ~x:4 ~y:(y-1) ~t:(track [DownLeft; Up; UpRight])
+      |> TM.set (5, y) (track [Left; Right; UpRight])
+      |> TM.set (3, y) (track [Left; Right; UpRight])
+      |> TM.set (4, y-1) (track [DownLeft; Up; UpRight])
     in
     let x = 3 in
-    let scan1 = Scan.scan map ~x ~y ~player:C.player in
-    let map = TM.set map ~x ~y ~t:(track [Left;Right]) in
-    let scan2 = Scan.scan map ~x ~y ~player:C.player in
+    let scan1 = Scan.scan map (x, y) C.player in
+    let map = TM.set (x, y) (track [Left;Right]) map in
+    let scan2 = Scan.scan map (x, y) C.player in
     let g = TG.make ()
       |> TG.add_segment ~xyd1:(1,y,Right) ~xyd2:(3,y,Left) ~dist:2
       |> TG.add_segment ~xyd1:(3,y,Right) ~xyd2:(5,y,Left) ~dist:2
@@ -358,7 +358,7 @@ module Track = struct
     in
     print_graph g;
     [%expect {| [[[4,1],[3,2],{"nodes":[[[3,2],["UpRight"]],[[4,1],["DownLeft"]]],"dist":1,"block":false}],[[5,2],[3,2],{"nodes":[[[3,2],["Right"]],[[5,2],["Left"]]],"dist":2,"block":false}],[[3,2],[1,2],{"nodes":[[[1,2],["Right"]],[[3,2],["Left"]]],"dist":2,"block":false}]] |}];
-    let g = TG.Track.handle_remove_track g ~x ~y scan1 scan2 in
+    let g = TG.Track.handle_remove_track x y g scan1 scan2 in
     print_graph g;
     [%expect {| [[[5,2],[1,2],{"nodes":[[[1,2],["Right"]],[[5,2],["Left"]]],"dist":4,"block":false}]] |}]
 
