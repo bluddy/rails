@@ -45,3 +45,7 @@ let clear_priority_shipment_for_all v ~players =
     | station -> station)
     v
 
+let have_engine_shop v =
+  find (fun v -> Station.has_upgrade v Station.EngineShop) v
+  |> Option.is_some
+

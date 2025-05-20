@@ -44,18 +44,7 @@ let default region resources ~random ~seed =
   let engines = Engine.of_region region |> Engine.randomize_year random in
   let stocks = Stock_market.default
     |> Stock_market.add_human_player ~player:C.player options.difficulty in
-  let params = {
-    Params.year;
-    year_start=year;
-    num_fiscal_periods=0;
-    fiscal_period=`First;
-    climate=Normal;
-    west_us_route_done=false;
-    region;
-    options;
-    time=0;
-    cycle=0;
-  }
+  let params = { Params.default with year; year_start=year; region }
   in
   {
     params;
@@ -87,9 +76,9 @@ let map_height v = Tilemap.get_height v.map
 
 let map_width v = Tilemap.get_width v.map
 
-let get_tile v x y = Tilemap.get_tile v.map x y
+let get_tile x y v = Tilemap.get_tile_xy x y v.map
 
-let get_track v x y = Trackmap.get v.track ~x ~y
+let get_track x y v = Trackmap.get_xy x y v.track
 
 let get_cities v = Cities.to_list v.cities
 
@@ -113,52 +102,44 @@ let get_map v = v.map
 
 let get_options v = v.params.options
 
-let get_tile_height v x y = Tilemap.get_tile_height v.map x y
+let get_tile_height x y v = Tilemap.get_tile_height_xy x y v.map
 
 let iter_cities f v = Cities.iter f v.cities
 
-let find_close_city v x y ~range = Cities.find_close v.cities x y ~range
+let find_close_city x y ~range v = Cities.find_close x y v.cities ~range
 
 let send_ui_msg v msg =
   (* Mutation. Line up ui msg for when we can send it *)
   v.ui_msgs <- msg::v.ui_msgs
 
-let get_player v player = Player.get player v.players
+let get_player player_idx v = Player.get player_idx v.players
 
-let get_cash v ~player = get_player v player |> Player.get_cash
+let get_cash player_idx v = get_player player_idx v |> Player.get_cash
 
-let check_build_station v ~x ~y ~player station_type =
-  match Trackmap.check_build_station v.track ~x ~y ~player station_type with
-  | `Ok -> Tilemap.check_build_station v.map ~x ~y
+let check_build_station x y player_idx station_type v =
+  let loc = (x, y) in
+  match Trackmap.check_build_station v.track loc player_idx station_type with
+  | `Ok -> Tilemap.check_build_station loc v.map
   | x -> x
 
-let _build_station v loc station_type player_idx =
+let _build_station ((x,y) as loc) station_type player_idx v =
   let before = Scan.scan v.track loc player_idx in
   let track, build_new_track_dir = Trackmap.build_station v.track loc station_type in
   let after = Scan.scan track loc player_idx in
-  let graph = G.Track.handle_build_station v.graph loc before after in
-  let player = get_player v player_idx in
+  let graph = G.Track.handle_build_station x y v.graph before after in
+  let player = get_player player_idx v in
   let trains = Player.get_trains player in
-  let blocks = Block_map.handle_build_station ~player graph v.blocks track trains (x,y) after in
+  let blocks = Block_map.handle_build_station player_idx graph v.blocks track trains loc after in
   let station = match station_type with
   | `SignalTower ->
-    Station.make_signaltower ~x ~y ~year:v.params.year ~player
+    Station.make_signaltower x y ~year:v.params.year player_idx
   | _ ->
-    let city_xy = find_close_city ~range:100 v x y |> Option.get_exn_or "error" in
-    let check_for_first_city () =
-      (* first one has engine shop *)
-      match
-        Station_map.filter 
-          (fun v -> Station.has_upgrade v Station.EngineShop)
-        v.stations 
-        |> Iter.head
-      with Some _ -> false | None -> true
-    in
-    let first = check_for_first_city () in
+    let city_xy = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
+    let first = not @@ Station_map.have_engine_shop v.stations in
     (* Get suffix if needed *)
     let city_name, suffix =
       let (x,y) = city_xy in
-      let name, offset = Cities.find_exn v.cities x y in
+      let name, offset = Cities.find_exn x y v.cities in
       let count =
         Station_map.fold (fun station count ->
           match Station.get_city station with
@@ -174,32 +155,20 @@ let _build_station v loc station_type player_idx =
         let suffix_n = (offset + count) mod Station.num_suffix in
         name, Station.suffix_of_enum suffix_n
     in
-    Station.make ~x ~y
-      ~year:v.params.year
-      ~city_xy
-      ~suffix
-      ~city_name
-      ~kind:station_type
-      ~player
-      ~first
+    Station.make x y ~year:v.params.year ~city_xy ~suffix ~city_name ~kind:station_type player_idx ~first
   in
   let loc = (x, y) in
   let stations = Station_map.add loc station v.stations in
-  let players = Player.update v.players player @@ Player.add_station loc in
-  let players = match build_new_track_dir with
-    | Some dir ->
-      Player.update v.players player @@
-        Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map
-    | _ -> players
-  in
   (* Initialize supply and demand *)
-  let simple_economy =
-    not @@ B_options.RealityLevels.mem v.params.options.reality_levels `ComplexEconomy 
-  in
-  let climate = v.params.climate in
-  ignore @@ Station.update_supply_demand station v.map ~climate ~simple_economy;
-  let players =
-    Player.update v.players player @@ Player.pay `StructuresEquipment (Station.price_of station_type)
+  ignore @@ Station.update_supply_demand v.map v.params station;
+  let players = Player.update v.players player_idx (fun player ->
+    let player = player
+      |> Player.add_station loc
+      |> Player.pay `StructuresEquipment (Station.price_of station_type)
+    in
+    match build_new_track_dir with
+    | Some dir -> Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map player
+    | _ -> player)
   in
   [%up {v with players; stations; graph; track; blocks}]
 

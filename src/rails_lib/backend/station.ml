@@ -256,8 +256,8 @@ let can_train_go (v:t) dir =
   | Go, _ -> true, `None
   | Stop, _ -> false, `None
 
-let make_signaltower x y ~year ~player =
-  { loc=(x, y); year; info=None; player; signals=default_signals}
+let make_signaltower x y ~year player_idx =
+  { loc=(x, y); year; info=None; player=player_idx; signals=default_signals}
 
 let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
   let name = match suffix with

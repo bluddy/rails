@@ -241,7 +241,7 @@ let set_active_station active_station v =
   Log.debug (fun f -> f "Active station set to %s" @@ Utils.show_loc active_station);
   {v with active_station=Some active_station}
 
-let _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map =
+let _calc_base_length_track_land_expense x y ~len ~dir ~climate map =
   let base_length = if Dir.is_diagonal dir then 3 else 2 in
   (* includes climate, for one piece of track *)
   let track_expense = (base_length * 2 * ((Climate.to_enum climate) + 4)) / 4 in
@@ -256,8 +256,8 @@ let _add_track x y ~len ~dir v =
   Iter.(0 -- (len - 1))
   |> ignore
 
-let update_and_pay_for_track ~x ~y ~len ~dir ~climate ~map v =
-  let base_length, track_expense, land_expense = _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map in
+let update_and_pay_for_track x y ~len ~dir ~climate map v =
+  let base_length, track_expense, land_expense = _calc_base_length_track_land_expense x y ~len ~dir ~climate map in
   let track_length = v.track_length + len * base_length in
   let () = _add_track x y ~len ~dir v in
   {v with track_length}
@@ -276,9 +276,9 @@ let _remove_track x y ~len ~dir v =
   Iter.(0 -- (len - 1))
   |> ignore
 
-let update_and_remove_track ~x ~y ~len ~dir ~climate ~map v =
+let update_and_remove_track x y ~len ~dir ~climate ~map v =
   (* This is the proper way to remove track. Effectively sells land *)
-  let base_length, _, land_revenue = _calc_base_length_track_land_expense ~x ~y ~len ~dir ~climate ~map in
+  let base_length, _, land_revenue = _calc_base_length_track_land_expense x y ~len ~dir ~climate map in
   let track_length = v.track_length - len * base_length in
   {v with track_length}
   |> earn `Other land_revenue
