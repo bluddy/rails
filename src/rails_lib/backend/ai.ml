@@ -118,8 +118,8 @@ let random_or_none random v =
   Owner.Map.nth_key roll v.ais
 
 let _route_value city1 city2 ~tilemap ~(params:Params.t) =
-  let get_demand_supply (x, y) =
-    Tilemap.demand_supply_sum tilemap ~x ~y ~range:2
+  let get_demand_supply loc =
+    Tilemap.demand_supply_sum loc ~range:2 tilemap 
   in
   let total = get_demand_supply city1 + get_demand_supply city2 in
   let age = params.year - C.ref_year_ai_route_value in
@@ -161,7 +161,7 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
 
 let _try_to_create_ai ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx ~stocks loc random v =
   (* New company creation test at this city *)
-  let demand_supply = Tilemap.demand_supply_sum_of_loc loc tilemap ~range:2 in
+  let demand_supply = Tilemap.demand_supply_sum loc tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
@@ -224,7 +224,7 @@ let _try_to_create_ai ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx 
   let ais = Owner.Map.add ai.idx ai v.ais in
   let ai_of_city = IntMap.add city_idx ai.idx v.ai_of_city in
   let v = {v with ais; ai_of_city} in
-  Tilemap.set_tile_at_loc loc Tile.EnemyStation tilemap;
+  Tilemap.set_tile loc Tile.EnemyStation tilemap;
   let stocks = Stock_market.add_ai_player ~player:ai.idx ~num_fin_periods:params.num_fiscal_periods stocks in
   let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city=loc} in
   `CreateAI(tilemap, v, stocks, ui_msg)
@@ -283,7 +283,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
           let cost, is_river =
             let dir = (shift dir_adjust) dir in
             let x, y = Dir.adjust dir x y in
-            let tile = Tilemap.get_tile tilemap x y in
+            let tile = Tilemap.get_tile_xy x y tilemap in
             let is_river = match tile with River _ | Landing _ -> `IsRiver | _ -> `NoRiver in
             if real_dist <= 2 && not @@ is_id dir_adjust then 999, is_river else
             let cost, x, y, is_river = match tile with
@@ -291,7 +291,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
              | River _ | Landing _ ->
                 (* Try crossing with bridge *)
                 let x, y = Dir.adjust dir x y in
-                begin match Tilemap.get_tile tilemap x y with
+                begin match Tilemap.get_tile_xy x y tilemap with
                 | Tile.River _ -> 99 + 32, x, y, `NoRiver
                 | Tile.Ocean _ | Tile.Harbor _ -> 999, x, y, `NoRiver
                 | _ -> 32, x, y, `IsRiver
@@ -306,8 +306,8 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
             (* Penalize indirect solutions with distance *)
             let cost = if is_id dir_adjust then cost else cost + 512 / (real_dist + 4) in
             (* Account randomly for height diff *)
-            let h1 = Tilemap.get_tile_height tilemap x y in
-            let h2 = Tilemap.get_tile_height tilemap x2 y2 in
+            let h1 = Tilemap.get_tile_height_xy x y tilemap in
+            let h2 = Tilemap.get_tile_height_xy x2 y2 tilemap in
             let h_diff = abs(h1 - h2) in
             let roll = Random.int (2 * h_diff) random in
             let cost = cost + roll in
@@ -373,7 +373,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
       (* Move *)
       let loc1 = Dir.adjust_loc dir loc1 in
       let at_station = `NotAtStation in
-      let tile = Tilemap.tile_at loc1 tilemap in
+      let tile = Tilemap.get_tile loc1 tilemap in
       let track = Trackmap.get loc1 trackmap in
       let build_track_of_kind kind =
         (* Add track facing opposite way *)
@@ -455,7 +455,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
         let track_length = ai_player.track_length + dist * 5 in
         let expand_ctr = 0 in
         let ai_of_city = IntMap.add tgt_city company v.ai_of_city in
-        Tilemap.set_tile_at_loc tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
+        Tilemap.set_tile tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
         Vector.push v.routes (src_city, tgt_city); (* Add AI route *)
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
         let ais = Owner.Map.add company ai_player v.ais in
@@ -539,7 +539,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
     let combined_check =
         owned_by_player ||
         let first_check = ai_player.track_length <= 48 || not @@ Climate.strong params.Params.climate || is_home_city in
-        let demand_supply =Tilemap.demand_supply_sum_of_loc src_loc tilemap ~range:2 in 
+        let demand_supply =Tilemap.demand_supply_sum src_loc tilemap ~range:2 in 
         let city_check = demand_supply > 0 in
         let route_value_dist_check =
           let route_value = _route_value src_loc tgt_loc ~tilemap ~params in
@@ -589,11 +589,11 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
           (* High build skill -> lower value, better chance of building *)
           let value = factor * ((dist * 4) / (ai_player.opponent.build_skill + 2)) in
           let age = (params.year - C.ref_year_ai_build_value) / 2 in
-          let demand_supply =Tilemap.demand_supply_sum_of_loc station_loc tilemap ~range:2 in 
+          let demand_supply =Tilemap.demand_supply_sum station_loc tilemap ~range:2 in 
           value < demand_supply / age
         in
         (* Find new target city (closest to station ) *)
-        let tgt_city_loc = Cities.find_close cities x y ~range:999 |> Option.get_exn_or "can't find any city" in
+        let tgt_city_loc = Cities.find_close x y cities ~range:999 |> Option.get_exn_or "can't find any city" in
         let tgt_city = Cities.idx_of_loc tgt_city_loc cities |> Option.get_exn_or "can't find idx of city loc" in
         let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
         if track_check && player_share_check && value_check && tgt_city_check then

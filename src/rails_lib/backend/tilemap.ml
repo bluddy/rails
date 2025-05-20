@@ -108,7 +108,8 @@ let set_tile (x,y) tile v = set_tile_xy x y tile v
 
 let set_height (x,y) height v = v.heightmap.(Utils.calc_offset v.width x y) <- height
 
-let get_tile_height (x, y) v = v.heightmap.(Utils.calc_offset v.width x y)
+let get_tile_height_xy x y v = v.heightmap.(Utils.calc_offset v.width x y)
+let get_tile_height (x, y) v = get_tile_height_xy x y v
 
   (* generic map over any array (tile or height) *)
 let map_gen ~width f arr =
