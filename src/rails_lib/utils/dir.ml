@@ -94,6 +94,8 @@ let is_diagonal = function
   | DownLeft -> true
   | _ -> false
 
+let diag_adjust_x x = (x * 3) / 2
+let diag_adjust dir x = if is_diagonal dir then diag_adjust_x x else x
 
 module Set = struct
   include Bitset.Make(struct
@@ -192,6 +194,10 @@ let to_offsets dir =
 let adjust dir x y =
   let dx, dy = to_offsets dir in
   x + dx, y + dy
+
+let adjust_offset_i offset ~x ~y =
+  let dx, dy = to_offsets_int offset in
+  dx + x, dy + y
 
 let adjust_loc dir (x, y) =
   adjust dir x y

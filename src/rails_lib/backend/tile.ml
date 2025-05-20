@@ -295,3 +295,5 @@ module Info = struct
     data.cost * C.build_industry_mult
 
 end
+
+let (=) = equal

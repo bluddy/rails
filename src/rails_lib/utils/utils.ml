@@ -361,7 +361,7 @@ module List = struct
     
 end
 
-let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
+let fold_range x y ~range ~width ~height ~read_f ~f ~init =
   let min_x = max 0 (x-range) in
   let max_x = min (width-1) (x+range) in
   let min_y = max 0 (y-range) in
@@ -375,7 +375,7 @@ let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
   done;
   !v
 
-let scan_unordered ~range ~x ~y ~width ~height ~f =
+let scan_unordered x y ~range ~width ~height ~f =
   let min_x = max 0 (x-range) in
   let max_x = min (width-1) (x+range) in
   let min_y = max 0 (y-range) in
@@ -401,7 +401,7 @@ let scan =
   let offsets =
     [Dir.Right; Down; Left; Up] |> List.map Dir.to_offsets
   in
-  let inner ~range ~x ~y ~width ~height ~f =
+  let inner x y ~range ~width ~height ~f =
     if f x y then Some (x, y)
     else
       let rec loop i =
