@@ -340,7 +340,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
     let real_dist = Utils.classic_dist src_loc tgt_loc in
 
     let rec build_one_track ~trackmap ~ai_track loc1 loc2 at_station =
-      let t = Trackmap.get_loc loc1 trackmap in
+      let t = Trackmap.get loc1 trackmap in
       let track_modify = match t, at_station with
         (* We don't care about crossing our own track (AI doesn't follow the rules.
            However, we can't do it right when leaving a station *)
@@ -354,7 +354,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
         | `NoModify -> trackmap, ai_track
         | `Modify track ->
            let track = Track.add_dir track ~dir in
-           let trackmap = Trackmap.set_loc loc1 track trackmap in
+           let trackmap = Trackmap.set loc1 track trackmap in
            trackmap, loc1::ai_track
       in
 
@@ -374,12 +374,12 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
       let loc1 = Dir.adjust_loc dir loc1 in
       let at_station = `NotAtStation in
       let tile = Tilemap.tile_at loc1 tilemap in
-      let track = Trackmap.get_loc loc1 trackmap in
+      let track = Trackmap.get loc1 trackmap in
       let build_track_of_kind kind =
         (* Add track facing opposite way *)
         let track = Track.empty company kind
          |> Track.add_dir ~dir:(Dir.opposite dir) in
-        let trackmap = Trackmap.set_loc loc1 track trackmap in
+        let trackmap = Trackmap.set loc1 track trackmap in
         trackmap, loc1::ai_track, at_station, `Ok
       in
       let trackmap, ai_track, at_station, ok = match tile, track with

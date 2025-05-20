@@ -58,25 +58,25 @@ let _scan_for_ixn tracks loc ~dir ~double player_idx =
   let rec loop_to_node loc dir double_acc ~dist =
     if dist > max_scan_dist then None else
     let oppo_dir = Dir.opposite dir in
-    match Trackmap.get tracks ~x ~y with
+    match Trackmap.get loc tracks with
     | Some ({ixn = true; player; _} as track) when Owner.(player = player2_idx) ->
         (* Found ixn *)
         let double = double_acc && Track.acts_like_double track in
-        Some (_make_ixn x y dist oppo_dir search_dir ~station:false ~double) 
+        Some (_make_ixn loc dist oppo_dir search_dir ~station:false ~double) 
     | Some {kind = Station _; player; _} when Owner.(player = player2_idx) ->
         (* Found station *)
-        Some (_make_ixn x y dist oppo_dir search_dir ~station:true ~double:double_acc)
+        Some (_make_ixn loc dist oppo_dir search_dir ~station:true ~double:double_acc)
     | Some track when Owner.(track.player = player2_idx) ->
         (* Find other dir and follow it *)
         let (let*) = Option.bind in
         let* other_dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in
-        let* x2, y2 = Trackmap.move_dir_bounds tracks ~x ~y ~dir:other_dir in
+        let* loc2 = Trackmap.move_dir_bounds loc tracks ~dir:other_dir in
         let double = double_acc && Track.acts_like_double track in
-        loop_to_node x2 y2 other_dir double ~dist:(dist + 1)
+        loop_to_node loc2 other_dir double ~dist:(dist + 1)
     | _ -> None
   in
-  let x2, y2 = Dir.adjust dir x y in
-  loop_to_node x2 y2 dir double ~dist:1
+  let loc2 = Dir.adjust_loc dir loc in
+  loop_to_node loc2 dir double ~dist:1
 
   (* Ixn/Station/Track: what we're pointing at.
      List: what we're connected to.
@@ -93,16 +93,16 @@ type t =
 (* Return a query about the block from a particular tile
    Get back a list of scan results
  *)
-let scan tracks ~x ~y ~player =
-  let player2 = player in
-  match Trackmap.get tracks ~x ~y with
+let scan tracks loc player_idx =
+  let player2_idx = player_idx in
+  match Trackmap.get loc tracks with
   | None -> NoResult
-  | Some {player; _} when Owner.(player <> player2) -> NoResult
+  | Some {player; _} when Owner.(player <> player2_idx) -> NoResult
   | Some track ->
       let scan =
         let double = Track.acts_like_double track in
         Dir.Set.fold (fun acc dir ->
-          match _scan_for_ixn tracks ~x ~y ~player ~dir ~double with
+          match _scan_for_ixn tracks loc player_idx ~dir ~double with
           | None -> acc
           | Some res -> res::acc)
         [] track.dirs
@@ -112,45 +112,46 @@ let scan tracks ~x ~y ~player =
       else Track scan
 
   (* Scan for number of trains in the station block. *)
-let scan_station_block tracks trains ~x ~y dir ~player =
+let scan_station_block tracks trains loc dir player_idx =
   let (let*) = Option.bind in
   let seen_ixns = Hashtbl.create 10 in
-  let rec loop x y dir =
-    let loc = (x, y) in
+  let rec loop loc dir =
     let oppo_dir = Dir.opposite dir in
-    let not_been_here () = not @@ Hashtbl.mem seen_ixns loc in
+    let not_been_here = not @@ Hashtbl.mem seen_ixns loc in
     let train_idxs = Trainmap.get_at_loc loc trains in
-    match Trackmap.get tracks ~x ~y with
-    | Some ({kind = Station _; _} as track) when not_been_here () && Owner.(track.player = player) ->
+    match Trackmap.get loc tracks with
+    | Some ({kind = Station _; _} as track) when not_been_here
+          && Owner.(track.player = player_idx) ->
         Hashtbl.replace seen_ixns loc ();
         (* Found station at edge: count just on incoming track *)
         let count = _train_count_in_ixn trains train_idxs oppo_dir in
         (* Station is always double *)
         count, true
 
-    | Some ({ixn = true; _} as track) when not_been_here () && Owner.(track.player = player) ->
+    | Some ({ixn = true; _} as track) when not_been_here
+          && Owner.(track.player = player_idx) ->
         (* Found ixn: iterate over remaining dirs *)
         Hashtbl.replace seen_ixns loc ();
         let double = Track.acts_like_double track in
         let count = List.length train_idxs in
         let other_dirs = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.to_list in
         List.fold_left (fun ((count, double) as acc) dir ->
-          match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
-          | Some (x2, y2) ->
-            let count2, double2 = loop x2 y2 dir in
+          match Trackmap.move_dir_bounds loc ~dir tracks with
+          | Some loc2 ->
+            let count2, double2 = loop loc2 dir in
             count + count2, double && double2
           | _ -> acc)
           (count, double)
           other_dirs
 
-    | Some track when Owner.(track.player = player) ->
+    | Some track when Owner.(track.player = player_idx) ->
         (* Find other dir and follow it *)
         let double = Track.acts_like_double track in
         let count = List.length train_idxs in
         let res =
           let* dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in
-          let* x2, y2 = Trackmap.move_dir_bounds tracks ~x ~y ~dir in
-          Option.return (loop x2 y2 dir)
+          let* loc2 = Trackmap.move_dir_bounds loc ~dir tracks in
+          Option.return (loop loc2 dir)
         in
         begin match res with
         | Some (count2, double2) -> count + count2, double && double2
@@ -161,14 +162,13 @@ let scan_station_block tracks trains ~x ~y dir ~player =
       (* Don't cancel double once we run out of track *)
       0, true
   in
-  let loc = x, y in
   let count, double =
-    match Trackmap.get tracks ~x ~y with
+    match Trackmap.get loc tracks with
     | Some track when Track.is_station track ->
         let train_idxs = Trainmap.get_at_loc loc trains in
         let count = _train_count_in_ixn trains train_idxs dir in
-        let count2, double = match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
-          | Some (x, y) -> loop x y dir
+        let count2, double = match Trackmap.move_dir_bounds loc ~dir tracks with
+          | Some loc -> loop loc dir
           | _ -> 0, true
         in
         count + count2, double
@@ -179,9 +179,9 @@ let scan_station_block tracks trains ~x ~y dir ~player =
         let double = Track.acts_like_double track in
         Dir.Set.fold (fun ((count, double) as acc) dir ->
           (* We only want to count in the dir we're going so we don't double-count*)
-          match Trackmap.move_dir_bounds tracks ~x ~y ~dir with
-          | Some (x, y) ->
-            let count2, double2 = loop x y dir in
+          match Trackmap.move_dir_bounds loc ~dir tracks with
+          | Some loc ->
+            let count2, double2 = loop loc dir in
             count + count2, double && double2
           | _ -> acc)
         (count, double)

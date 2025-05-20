@@ -494,7 +494,7 @@ let update_speed (v:rw t) ~cycle ~cycle_check ~cycle_bit =
 
   let adjust_loc_for_double_track trackmap x y dir =
     (* Handle double tracks *)
-    match Trackmap.get trackmap ~x:(x/C.tile_w) ~y:(y/C.tile_h) with 
+    match Trackmap.get (x/C.tile_w, y/C.tile_h) trackmap with 
     | Some track when Track.acts_like_double track ->
         let mult = match dir with
           | Dir.DownLeft | UpLeft -> 1
