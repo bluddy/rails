@@ -6,7 +6,7 @@ module TS = Scan
 module C = Constants
 
 let make_tm ?(track=Track.Track `Single) dirs = 
-  T.make (Dir.Set.of_list dirs) track ~player:C.player
+  T.make (Dir.Set.of_list dirs) track C.player
 
 let tmap = TM.empty 20 20
 

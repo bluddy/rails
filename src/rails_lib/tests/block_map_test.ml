@@ -15,39 +15,39 @@ let trainmap = Trainmap.empty ()
 let player = C.player
 
 let build_track (x,y) (tmap, graph, blocks) ~dirs =
-  let before = TS.scan tmap ~x ~y ~player in
-  let tmap = TM.set ~x ~y ~t:(make_tm dirs) tmap in
-  let after = TS.scan tmap ~x ~y ~player in
-  let graph = TG.Track.handle_build_track graph ~x ~y before after in
-  let blocks = SM.handle_build_track graph tmap trainmap blocks before after in
+  let before = TS.scan tmap (x, y) player in
+  let tmap = TM.set (x, y) (make_tm dirs) tmap in
+  let after = TS.scan tmap (x, y) player in
+  let graph = TG.Track.handle_build_track x y graph before after in
+  let blocks = SM.handle_build_track player graph tmap trainmap blocks before after in
   tmap, graph, blocks
 
 let remove_track ?(trainmap=trainmap) (x,y) (tmap, graph, blocks) =
-  let before = TS.scan tmap ~x ~y ~player in
-  let tmap = TM.remove ~x ~y tmap in
-  let after = TS.scan tmap ~x ~y ~player in
-  let graph = TG.Track.handle_remove_track graph ~x ~y before after in
-  let blocks = SM.handle_remove_track graph tmap trainmap blocks before after in
+  let before = TS.scan tmap (x, y) player in
+  let tmap = TM.remove (x, y) tmap in
+  let after = TS.scan tmap (x, y) player in
+  let graph = TG.Track.handle_remove_track x y graph before after in
+  let blocks = SM.handle_remove_track player graph tmap trainmap blocks before after in
   tmap, graph, blocks
 
 let build_station ?(trainmap=trainmap) loc ~dirs (tmap, graph, blocks) =
   let build_station_inner (x,y) tmap ~graph ~dirs =
-    let before = TS.scan tmap ~x ~y ~player in
-    let tmap = TM.set ~x ~y ~t:(make_tm dirs ~track:(Station `Depot)) tmap in
-    let after = TS.scan tmap ~x ~y ~player in
-    let graph = TG.Track.handle_build_station graph ~x ~y before after in
+    let before = TS.scan tmap (x, y) player in
+    let tmap = TM.set (x, y) (make_tm dirs ~track:(Station `Depot)) tmap in
+    let after = TS.scan tmap (x, y) player in
+    let graph = TG.Track.handle_build_station x y graph before after in
     tmap, graph, after
   in
   let tmap, graph, after = build_station_inner loc ~graph ~dirs tmap in
-  let blocks = SM.handle_build_station graph blocks tmap trainmap loc after in
+  let blocks = SM.handle_build_station player graph blocks tmap trainmap loc after in
   tmap, graph, blocks
 
 let remove_station (x,y) (tmap, graph, blocks) =
-  let before = TS.scan tmap ~x ~y ~player in
+  let before = TS.scan tmap (x, y) player in
   let blocks = SM.handle_remove_station graph tmap blocks (x,y) before in
-  let tmap = TM.remove ~x ~y tmap in
-  let after = TS.scan tmap ~x ~y ~player in
-  let graph = TG.Track.handle_remove_track graph ~x ~y before after in
+  let tmap = TM.remove (x, y) tmap in
+  let after = TS.scan tmap (x, y) player in
+  let graph = TG.Track.handle_remove_track x y graph before after in
   tmap, graph, blocks
 
 (* Test build_station
@@ -178,7 +178,7 @@ let%expect_test "build 2 stations separated by ixn" =
 let%expect_test "connect 2 station with road" =
   let graph, blocks = TG.make (), SM.make () in
   let tmap = build_road 5 15 tmap
-    |> TM.remove_track ~x:10 ~y:10 ~dir:Right ~player:0
+    |> TM.remove_track (10, 10) ~dir:Right C.player
   in
   let tmap, graph, blocks =
     (tmap, graph, blocks)
