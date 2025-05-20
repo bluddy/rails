@@ -112,7 +112,7 @@ let set_tile_at_loc (x,y) tile v = set_tile v x y tile
 let set_height v ~x ~y height =
   v.heightmap.(Utils.calc_offset v.width x y) <- height
 
-let get_tile_height v x y = v.heightmap.(Utils.calc_offset v.width x y)
+let get_tile_height (x, y) v = v.heightmap.(Utils.calc_offset v.width x y)
 
   (* generic map over any array (tile or height) *)
 let map_gen ~width f arr =
@@ -349,11 +349,10 @@ let set_pixel ~region v ~x ~y ~pixel =
   let tile = tile_of_pixel ~region ~x ~y ~pixel v in
   v.map.(Utils.calc_offset v.width x y) <- tile
 
-let get_grade v ~dir ~x ~y =
-  let dx, dy = Dir.to_offsets dir in
-  let x2, y2 = x + dx, y + dy in
-  let height1 = get_tile_height v x y in
-  let height2 = get_tile_height v x2 y2 in
+let get_grade loc ~dir v =
+  let loc2 = Dir.adjust_loc dir loc in
+  let height1 = get_tile_height loc v in
+  let height2 = get_tile_height loc2 v in
   let grade = abs(height1 - height2) in
   (* Even out grades for diagonals and non-diagonals *)
   if not (Dir.is_diagonal dir) then
@@ -363,9 +362,10 @@ let get_grade v ~dir ~x ~y =
 
     (* Get the length of a tunnel needed.
        We stop when we reach the same height more or less *)
-let check_build_tunnel v ~x ~y ~dir =
+let check_build_tunnel loc ~dir v =
    let dx, dy = Dir.to_offsets dir in
-   let base_dist = if Dir.is_diagonal dir then 3 else 2 in
+   let base_dist = C.track_length in
+   let base_dist = if Dir.is_diagonal dir then base_dist*3/2 else base_dist in
    let start_height = get_tile_height v x y in
    let rec loop x y n =
      if out_of_bounds x y v then `OutOfBounds

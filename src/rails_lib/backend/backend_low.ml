@@ -15,9 +15,9 @@ module UIM = Ui_msg
 
 module Train_update = struct
 
-  let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~idx ~cycle ~x ~y ~dir =
+  let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~idx ~cycle loc ~dir =
     (* Speed factor computation from height delta and turn *)
-    let height1 = Tilemap.get_tile_height v.map x y in
+    let height1 = Tilemap.get_tile_height loc v.map in
     let x2, y2 = Dir.adjust dir x y in
     let track2 = Trackmap.get_exn v.track ~x:x2 ~y:y2 in
     let height2 = Tilemap.get_tile_height v.map x2 y2 in
