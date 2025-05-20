@@ -1,6 +1,8 @@
 open Containers
 open Tilemap
 
+module C = Constants
+
 let debug = false
 
 (* MapGen is both in the backend and the frontend. Probably needs better splitting *)
@@ -164,11 +166,11 @@ let add_resource region ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
     let rec attempt i x y =
       (* In the game, we just intrude into the black border and nothing happens.
          Here we have to test *)
-      if i >= 2 || x < 0 || y < 0 || x >= 256 || y >= 192 then None else 
-      let pixel = Tilemap.get_pixel map ~x ~y in
-      let possible_tile = tile_of_pixel ~region ~x ~y ~pixel:resource_pixel map in
+      if i >= 2 || x < 0 || y < 0 || x >= C.map_width || y >= C.map_height then None else 
+      let pixel = Tilemap.get_pixel_xy x y map in
+      let possible_tile = tile_of_pixel_xy x y ~region ~pixel:resource_pixel map in
       if Tilemap.equal_pixel pixel land_pixel && Tile.equal possible_tile wanted_tile then (
-        Tilemap.set_pixel ~region map ~x ~y ~pixel:resource_pixel;
+        Tilemap.set_pixel_xy x y ~region map ~pixel:resource_pixel;
         Some (x, y)
       ) else
         let x = if y mod 2 = 1 then x + 1 else x - 1 in
@@ -327,9 +329,9 @@ let update_map_step r v ~map ~fonts ~done_fn =
   | `Mountains -> 
       begin match v.mountains with
       | (x, y)::rest ->
-          let pixel = Tilemap.get_pixel map ~x ~y in
+          let pixel = Tilemap.get_pixel_xy x y map in
           let pixel = pixel_apply_mountain pixel in
-          Tilemap.set_pixel ~region:v.region map ~x ~y ~pixel;
+          Tilemap.set_pixel_xy x y ~region:v.region ~pixel map;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with mountains=rest; new_pixels}, map
       | _ ->
@@ -360,9 +362,9 @@ let update_map_step r v ~map ~fonts ~done_fn =
   | `Cities ->
       begin match v.cities with
       | (x, y)::rest ->
-          let pixel = Tilemap.get_pixel map ~x ~y in
+          let pixel = Tilemap.get_pixel_xy x y map in
           let pixel = pixel_apply_city pixel in
-          Tilemap.set_pixel ~region:v.region map ~x ~y ~pixel;
+          Tilemap.set_pixel_xy x y ~region:v.region map ~pixel;
           let new_pixels = IntIntMap.add (x, y) pixel v.new_pixels in
           {v with cities=rest; new_pixels}, map
       | _ ->

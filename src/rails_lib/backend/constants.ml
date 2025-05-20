@@ -98,3 +98,6 @@ let ref_year_ai_build_value = 1770
 
 let ai_max_cash = 30000
 
+let map_width = 256
+let map_height = 192
+

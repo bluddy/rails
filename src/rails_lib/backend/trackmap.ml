@@ -13,25 +13,29 @@ let empty width height =
   let map = IntMap.empty in
   {map; width; height}
 
-let get (x,y) v = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
+let get_xy x y v = IntMap.find_opt (Utils.calc_offset v.width x y) v.map
+let get (x,y) v = get_xy x y v
 
-let get_exn (x,y) v = IntMap.find (Utils.calc_offset v.width x y) v.map 
+let get_xy_exn x y v = IntMap.find (Utils.calc_offset v.width x y) v.map 
+let get_exn (x,y) v = get_xy_exn x y v
 
   (* get, buf if there's nothing, create a track *)
 let get_track_default ?(kind=(Track.Track `Single)) loc player_idx v =
   get loc v
   |> Option.get_lazy (fun () -> Track.empty player_idx kind)
 
-let set (x,y) t v =
+let set_xy x y t v =
   let map = IntMap.add (Utils.calc_offset v.width x y) t v.map in
   {v with map}
+let set (x,y) t v = set_xy x y t v
 
 let update_loc (x, y) f v =
   {v with map=IntMap.update (Utils.calc_offset v.width x y) f v.map}
 
-let remove (x, y) v =
+let remove_xy x y v =
   let map = IntMap.remove (Utils.calc_offset v.width x y) v.map in
   {v with map}
+let remove (x, y) v = remove_xy x y v
 
 let iter v f =
   IntMap.iter (fun i track ->
@@ -42,13 +46,12 @@ let iter v f =
 let fold f v ~init =
   IntMap.fold (fun i track acc ->
     let loc = Utils.x_y_of_offset v.width i in
-    f loc track acc
-  )
+    f loc track acc)
   v.map
   init
 
-let out_of_bounds (x, y) v =
-  x < 0 || y < 0 || x >= v.width || y >= v.height
+let out_of_bounds_xy x y v = x < 0 || y < 0 || x >= v.width || y >= v.height
+let out_of_bounds (x, y) v = out_of_bounds_xy x y v
 
 (* Common function for moving by dir, with bounds check *)
 let move_dir_bounds loc ~dir v =
@@ -92,21 +95,15 @@ let check_build_station v ((x, y) as loc) player_idx station_type =
   | None -> `NoTrack
   | Some ({kind=Track _;_} as t) when Owner.(t.player = player_idx) && Track.is_straight t ->
        let range = Station.to_range station_type in
-       let match_fn j i =
-         match get (j, i) v with
+       let match_fn j i = match get_xy j i v with
          | Some {kind=Station(st);_} ->
              let range2 = Station.to_range st in
              let range = range + range2 in
              abs (j - x) < range && abs (i - y) < range
          | _ -> false
        in
-       let station_test =
-         Utils.scan ~range ~x ~y ~width:v.width ~height:v.height ~f:match_fn
-       in
-       begin match station_test with
-       | Some _ -> `TooClose
-       | None -> `Ok
-       end
+       let station_test = Utils.scan x y ~range ~width:v.width ~height:v.height ~f:match_fn in
+       if Option.is_some station_test then `TooClose else `Ok
   | _ -> `Illegal
    
 let build_station v loc station_type =
@@ -135,13 +132,13 @@ let check_build_stretch v ((x, y) as loc) ~dir player_idx ~length =
   if out_of_bounds loc v || out_of_bounds loc3 v then false
   else (
     (* No track in between *)
-    let rec loop (x,y) i =
-      if i <= 0 then true
+    let rec loop x y ~n =
+      if n <= 0 then true
       else
-        match get (x,y) v with
+        match get_xy x y v with
         | Some _ -> false
         | None ->
-            loop (x+dx, y+dy) (i-1)
+            loop (x+dx) (y+dy) ~n:(n-1)
     in
     let test_track loc dir =
       match get loc v with
@@ -156,7 +153,7 @@ let check_build_stretch v ((x, y) as loc) ~dir player_idx ~length =
           true
     in
     test_track loc1 dir &&
-    loop (x1 + dx, y1 + dy) (length-1) &&
+    loop (x1 + dx) (y1 + dy) ~n:(length-1) &&
     test_track loc3 (Dir.opposite dir)
   )
 
@@ -175,13 +172,13 @@ let build_stretch ((x, y) as loc) ~dir player_idx ~n ~kind v =
       |> Track.add_dir ~dir
       |> Track.add_dir ~dir:(Dir.opposite dir)
     in
-    let rec dig_tunnel ((x,y) as loc) i v =
-      if i <= 0 then v
+    let rec dig_tunnel x y ~n v =
+      if n <= 0 then v
       else
-        let v = set loc track2 v in
-        dig_tunnel (x+dx, y+dy) (i-1) v
+        let v = set_xy x y track2 v in
+        dig_tunnel (x+dx) (y+dy) ~n:(n-1) v
     in
-    let v = dig_tunnel (x1+dx, y1+dy) (n-1) v in
+    let v = dig_tunnel (x1+dx) (y1+dy) ~n:(n-1) v in
     let track3 =
       get_track_default loc3 player_idx v
       |> Track.add_dir ~dir:(Dir.opposite dir) in

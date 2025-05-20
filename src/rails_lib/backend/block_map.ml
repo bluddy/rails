@@ -127,7 +127,6 @@ let get_stations_with_ixn_scan ?exclude_ixns ixns graph trackmap =
 
 (* When we build a station, we create new station blocks on both ends of the station *)
 let handle_build_station player_idx graph v trackmap trains loc after =
-  let x, y = loc in
   (* Connected ixns *)
   let ixns = match after with
     | Scan.Station ixns -> ixns  (* 0/1/2 *)

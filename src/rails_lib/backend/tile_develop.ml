@@ -84,7 +84,7 @@ let _should_count = function
   | `Count -> true
   | _ -> false
 
-let _develop_tile ~x ~y tile params ~random ~tilemap (v:t) =
+let _develop_tile x y tile params ~random ~tilemap (v:t) =
   let pixel = Tilemap.pixel_of_tile tile in
   let region = params.Params.region in
   let develop_resource () =
@@ -95,17 +95,17 @@ let _develop_tile ~x ~y tile params ~random ~tilemap (v:t) =
     let build = Random.int C.chance_destroy_resource random = 0 in
     if build then
       let x2, y2 = Dir.random_adjust x y random in
-      if Tilemap.out_of_bounds x2 y2 tilemap then None, v
+      if Tilemap.out_of_bounds_xy x2 y2 tilemap then None, v
       else
-        let pixel2 = Tilemap.get_tile tilemap x y |> Tilemap.pixel_of_tile in
+        let pixel2 = Tilemap.get_tile_xy x y tilemap |> Tilemap.pixel_of_tile in
         if Tilemap.equal_pixel clear_pixel pixel2 then
-          let new_tile = Tilemap.tile_of_pixel ~region ~x ~y ~pixel tilemap in
+          let new_tile = Tilemap.tile_of_pixel_xy x y ~region ~pixel tilemap in
           if Tile.equal new_tile tile then
             Some (x2, y2, new_tile, `DontGoAgain, `DontCount), v
           else None, v
         else None, v
     else (* destroy resource *)
-      let clear_tile = Tilemap.tile_of_pixel ~region ~x ~y ~pixel:clear_pixel tilemap in
+      let clear_tile = Tilemap.tile_of_pixel_xy x y ~region ~pixel:clear_pixel tilemap in
       Some (x, y, clear_tile, `DontGoAgain, `DontCount), v
   in
   let dev_val = PixelMap.get_or pixel v.develop ~default:0 in
@@ -120,7 +120,7 @@ let _develop_tile ~x ~y tile params ~random ~tilemap (v:t) =
         |> PixelMap.add Ocean_pixel ocean_val
         |> PixelMap.add River_pixel river_val
       in
-      let total_devs = Tilemap.fold_range ~range:1 ~x ~y ~init:0 tilemap
+      let total_devs = Tilemap.fold_range x y ~range:1 ~init:0 tilemap
         ~f:(fun acc _ _ tile ->
             let pixel = Tilemap.pixel_of_tile tile in
             let x = PixelMap.get_or pixel v.develop ~default:0 in
@@ -131,7 +131,7 @@ let _develop_tile ~x ~y tile params ~random ~tilemap (v:t) =
       let v = [%up {v with develop}] in
       if roll > resist_dev then
         let dev_val = PixelMap.get_or pixel2 develop ~default:0 in
-        let tile2 = Tilemap.tile_of_pixel ~region ~x ~y ~pixel:pixel2 tilemap in
+        let tile2 = Tilemap.tile_of_pixel_xy x y ~region ~pixel:pixel2 tilemap in
         let go_again = if dev_val < 4 then `GoAgain else `DontGoAgain in (* Not sure why *)
         Some(x, y, tile2, go_again, `Count), v
       else None, v
@@ -185,33 +185,30 @@ let develop_tiles ~two_devs (params:Params.t) ~random ~tilemap ~cities ~cities_t
             random_tile ()
       in
       let rec wander_loop x y num_devs v =
-        if Tilemap.out_of_bounds x y tilemap then
+        if Tilemap.out_of_bounds_xy x y tilemap then
           loop num_devs None v
         else
-          match Tilemap.get_tile tilemap x y with
+          match Tilemap.get_tile_xy x y tilemap with
           | Tile.Ocean _
           | River _ -> loop num_devs None v
           | tile ->
-              let res, v = _develop_tile ~x ~y tile params ~random ~tilemap v in
+              let res, v = _develop_tile x y tile params ~random ~tilemap v in
               match res with
               | Some (x, y, tile, `GoAgain, count) ->
                   Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
-                  Tilemap.set_tile tilemap x y tile;
+                  Tilemap.set_tile_xy x y tile tilemap ;
                   let x, y = Dir.random_adjust x y random in
                   let num_devs = if _should_count count then num_devs + 1 else num_devs in
                   wander_loop x y num_devs v
               | Some (x, y, tile, _, count) ->
                   Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
-                  Tilemap.set_tile tilemap x y tile;
+                  Tilemap.set_tile_xy x y tile tilemap;
                   let num_devs = if _should_count count then num_devs + 1 else num_devs in
                   loop (num_devs + 1) None v
               | None ->
                   loop num_devs None v
       in
       wander_loop x y num_devs v
-
   in
   loop 0 active_station v
-
-
 
