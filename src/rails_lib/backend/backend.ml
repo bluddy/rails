@@ -8,6 +8,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module G = Track_graph
 module C = Constants
 module UIM = Ui_msg
+module Bool = Utils.Bool
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -118,7 +119,7 @@ let get_cash player_idx v = get_player player_idx v |> Player.get_cash
 
 let check_build_station x y player_idx station_type v =
   let loc = (x, y) in
-  match Trackmap.check_build_station v.track loc player_idx station_type with
+  match Trackmap.check_build_station loc player_idx station_type v.track with
   | `Ok -> Tilemap.check_build_station loc v.map
   | x -> x
 
@@ -172,59 +173,59 @@ let _build_station ((x,y) as loc) station_type player_idx v =
   in
   [%up {v with players; stations; graph; track; blocks}]
 
-let check_build_tunnel v ~x ~y ~dir ~player =
-  let check length = Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length in
-  match Tilemap.check_build_tunnel v.map ~x ~y ~dir with
+let check_build_tunnel loc ~dir player_idx v =
+  let check length = Trackmap.check_build_stretch loc ~dir player_idx ~length v.track in
+  match Tilemap.check_build_tunnel loc ~dir v.map with
   | `Tunnel(length, _, _) when not(check length) -> `HitsTrack
   | x -> x
 
-let _build_tunnel v ~x ~y ~dir ~player =
-  match check_build_tunnel v ~x ~y ~dir ~player with
+let _build_tunnel loc ~dir player_idx v =
+  match check_build_tunnel loc ~dir player_idx v with
   | `Tunnel(length, _, cost) ->
-    let before = Scan.scan v.track ~x ~y ~player in
-    let track = Trackmap.build_tunnel v.track ~x ~y ~dir ~player ~length in
-    let after = Scan.scan track ~x ~y ~player in
+    let before = Scan.scan v.track loc player_idx in
+    let track = Trackmap.build_tunnel loc ~dir player_idx ~length v.track in
+    let after = Scan.scan track loc player_idx in
     let graph = G.Track.handle_build_track_simple v.graph before after in
-    let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-    update_player v player @@ Player.pay `BridgeTunnel cost;
-    [%upf v.graph <- graph];
-    [%upf v.track <- track];
-    [%upf v.blocks <- blocks];
-    v
+    let blocks =
+      let trains = get_player player_idx v |> Player.get_trains in
+      Block_map.handle_build_track player_idx graph v.track trains v.blocks before after
+    in
+    let players = Player.update v.players player_idx @@ Player.pay `BridgeTunnel cost in
+    [%up {v with graph; track; blocks; players}]
   | _ -> v
 
-let _build_bridge v ~x ~y ~dir ~player ~kind =
-  let before = Scan.scan v.track ~x ~y ~player in
-  let track = Trackmap.build_bridge v.track ~x ~y ~dir ~player ~kind in
-  let after = Scan.scan track ~x ~y ~player in
+let _build_bridge ((x, y) as loc) ~dir player_idx ~kind v =
+  let before = Scan.scan v.track loc player_idx in
+  let track = Trackmap.build_bridge loc ~dir player_idx ~kind v.track in
+  let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-  update_player v player (fun player ->
+  let blocks =
+    let trains = get_player player_idx v |> Player.get_trains in
+    Block_map.handle_build_track player_idx graph v.track trains v.blocks before after
+  in
+  let players = Player.update v.players player_idx (fun player ->
     player
-    |> Player.update_and_pay_for_track ~x ~y ~dir ~len:2 ~climate:v.params.climate ~map:v.map
-    |> Player.pay `BridgeTunnel (Bridge.price_of kind));
-  [%upf v.graph <- graph];
-  [%upf v.track <- track];
-  [%upf v.blocks <- blocks];
-  v
+    |> Player.update_and_pay_for_track x y ~dir ~len:2 ~climate:v.params.climate v.map
+    |> Player.pay `BridgeTunnel (Bridge.price_of kind))
+  in
+  [%up {v with graph; track; blocks; players}]
 
-let check_build_track v ~x ~y ~dir ~player =
+let check_build_track loc ~dir player_idx v =
   (* First check the tilemap, then the trackmap *)
-  let ret = Tilemap.check_build_track v.map ~x ~y ~dir ~difficulty:v.params.options.difficulty in
-  match ret with
-  | `Bridge when Trackmap.check_build_stretch v.track ~x ~y ~dir ~player ~length:2 -> `Bridge
-  | `Ok | `Ferry | `Tunnel _ | `HighGrade _ when Trackmap.check_build_track v.track ~x ~y ~dir ~player -> ret
+  match Tilemap.check_build_track loc ~dir v.params v.map with
+  | `Bridge when Trackmap.check_build_stretch loc ~dir player_idx ~length:2 v.track -> `Bridge
+  | (`Ok | `Ferry | `Tunnel _ | `HighGrade _) as x when Trackmap.check_build_track loc ~dir player_idx v.track -> x
   | _ -> `Illegal
 
-let check_build_bridge v ~x ~y ~dir ~player =
-  match check_build_track v ~x ~y ~dir ~player with
+let check_build_bridge loc ~dir player_idx v =
+  match check_build_track loc ~dir player_idx v with
   | `Bridge -> `Ok
   | _ -> `Illegal
 
-let check_change_double_track v ~x ~y ~player double =
-  match Trackmap.get v.track ~x ~y with
-  | Some track when track.player = player && Track.is_doubleable track ->
-      not @@ Bool.equal double (Track.is_visually_double track)
+let check_change_double_track loc player_idx ~double v =
+  match Trackmap.get loc v.track with
+  | Some track when Owner.(track.player = player_idx) && Track.is_doubleable track ->
+      not @@ Bool.(double = Track.is_visually_double track)
   | _ -> false
 
 let _change_double_track (v:t) ~x ~y ~player double =

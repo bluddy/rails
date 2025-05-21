@@ -59,7 +59,7 @@ let move_dir_bounds loc ~dir v =
   if out_of_bounds loc2 v then None
   else Some loc2
 
-let check_build_track v loc ~dir player_idx =
+let check_build_track loc ~dir player_idx v =
   match out_of_bounds loc v, move_dir_bounds loc ~dir v with
   | true, _ | _, None  -> false
   | _, Some loc2 ->
@@ -77,7 +77,7 @@ let check_build_track v loc ~dir player_idx =
      kind1: kind of track in from tile
      kind2: kind of track in to tile
    *)
-let build_track ?kind1 ?kind2 v loc ~dir player_idx =
+let build_track ?kind1 ?kind2 loc ~dir player_idx v =
   match move_dir_bounds loc ~dir v with
   | None -> v
   | Some loc2 ->
@@ -89,7 +89,7 @@ let build_track ?kind1 ?kind2 v loc ~dir player_idx =
     let v = set loc2 track2 v in
     v
 
-let check_build_station v ((x, y) as loc) player_idx station_type =
+let check_build_station ((x, y) as loc) player_idx station_type v =
   if out_of_bounds loc v then `Illegal
   else match get loc v with
   | None -> `NoTrack
@@ -124,7 +124,7 @@ let build_station v loc station_type =
      No track can be in the middle, but it's ok if track is at the end
      Length: includes middle stretch + last piece
    *)
-let check_build_stretch v ((x, y) as loc) ~dir player_idx ~length =
+let check_build_stretch ((x, y) as loc) ~dir player_idx ~length v =
   let dx, dy = Dir.to_offsets dir in
   let (x1, y1) as loc1 = loc in
   let loc3 = x + dx * length, y + dy * length in

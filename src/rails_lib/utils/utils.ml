@@ -361,6 +361,11 @@ module List = struct
     
 end
 
+module Bool = struct
+  include Bool
+  let (=) = equal
+end
+
 let fold_range x y ~range ~width ~height ~read_f ~f ~init =
   let min_x = max 0 (x-range) in
   let max_x = min (width-1) (x+range) in
