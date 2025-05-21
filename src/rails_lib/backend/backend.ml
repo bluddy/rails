@@ -284,24 +284,23 @@ let _build_ferry ((x, y) as loc) ~dir player_idx v =
 let check_remove_track loc ~dir player_idx v =
   Trackmap.check_remove_track loc ~dir player_idx v.track 
 
-let _remove_station v ~x ~y ~dir ~player =
-  let loc = (x,y) in
-  let before = Scan.scan v.track ~x ~y ~player in
+let _remove_station ((x, y) as loc) ~dir player_idx v =
+  let track, graph, stations, blocks = v.track, v.graph, v.stations, v.blocks in
+  let before = Scan.scan track loc player_idx in
   (* Have to be careful with order here or we'll mess up state *)
-  let blocks = Block_map.handle_remove_station v.graph v.track v.blocks loc before in
-  let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
-  let after = Scan.scan track ~x ~y ~player in
-  let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
-  let stations = Station_map.delete loc v.stations in
-  update_player v player (Player.remove_station loc);
+  let blocks = Block_map.handle_remove_station graph track blocks loc before in
+  let track = Trackmap.remove_track loc player_idx ~dir track in
+  let after = Scan.scan track loc player_idx in
+  let graph = G.Track.handle_remove_track x y graph before after in
+  let stations = Station_map.delete loc stations in
   (* TODO: Not sure this is right. Check this in build_station *)
-  update_player v player @@
-    Player.update_and_remove_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
-  [%upf v.stations <- stations];
-  [%upf v.blocks <- blocks];
-  [%upf v.track <- track];
-  [%upf v.graph <- graph];
-  v
+  let players =
+    Player.update v.players player_idx (fun player ->
+      player
+      |> Player.remove_station loc
+      |> Player.update_and_remove_track x y ~len:1 ~dir ~climate:v.params.climate v.map)
+  in
+  [%up {v with stations; blocks; track; graph; players}]
 
 let _remove_track v ~x ~y ~dir ~player =
   let loc = (x,y) in

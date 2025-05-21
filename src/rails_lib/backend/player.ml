@@ -276,7 +276,7 @@ let _remove_track x y ~len ~dir v =
   Iter.(0 -- (len - 1))
   |> ignore
 
-let update_and_remove_track x y ~len ~dir ~climate ~map v =
+let update_and_remove_track x y ~len ~dir ~climate map v =
   (* This is the proper way to remove track. Effectively sells land *)
   let base_length, _, land_revenue = _calc_base_length_track_land_expense x y ~len ~dir ~climate map in
   let track_length = v.track_length - len * base_length in
