@@ -128,8 +128,7 @@ let _build_station ((x,y) as loc) station_type player_idx v =
   let track, build_new_track_dir = Trackmap.build_station v.track loc station_type in
   let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_build_station x y v.graph before after in
-  let player = get_player player_idx v in
-  let trains = Player.get_trains player in
+  let trains = get_player player_idx v |> Player.get_trains in
   let blocks = Block_map.handle_build_station player_idx graph v.blocks track trains loc after in
   let station = match station_type with
   | `SignalTower ->
@@ -188,7 +187,7 @@ let _build_tunnel loc ~dir player_idx v =
     let graph = G.Track.handle_build_track_simple v.graph before after in
     let blocks =
       let trains = get_player player_idx v |> Player.get_trains in
-      Block_map.handle_build_track player_idx graph v.track trains v.blocks before after
+      Block_map.handle_build_track player_idx graph track trains v.blocks before after
     in
     let players = Player.update v.players player_idx @@ Player.pay `BridgeTunnel cost in
     [%up {v with graph; track; blocks; players}]
@@ -201,7 +200,8 @@ let _build_bridge ((x, y) as loc) ~dir player_idx ~kind v =
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let blocks =
     let trains = get_player player_idx v |> Player.get_trains in
-    Block_map.handle_build_track player_idx graph v.track trains v.blocks before after
+    (* TODO: this was v.track. Check if it's now ok *)
+    Block_map.handle_build_track player_idx graph track trains v.blocks before after
   in
   let players = Player.update v.players player_idx (fun player ->
     player
@@ -230,30 +230,32 @@ let check_change_double_track loc player_idx ~double v =
 
 let _change_double_track loc player_idx ~double v =
   if check_change_double_track loc player_idx ~double v then (
-    let t = Trackmap.get_exn loc v.track
-       |> Track.change_to_double ~double
+    let track =
+      let t = Trackmap.get_exn loc v.track |> Track.change_to_double ~double in
+      Trackmap.set loc t v.track
     in
-    let track = Trackmap.set v.track ~x ~y ~t in
-    let after = Scan.scan track ~x ~y ~player in
-    let blocks = Block_map.handle_double_change v.graph track v.players.(player).trains v.blocks after in
-    [%upf v.track <- track];
-    [%upf v.blocks <- blocks];
-    v
+    let after = Scan.scan track loc player_idx in
+    let blocks =
+      let trains = get_player player_idx v |> Player.get_trains in
+      Block_map.handle_double_change player_idx v.graph track trains v.blocks after
+    in
+    [%up {v with track; blocks}]
   ) else v
     
-let _build_track (v:t) ~x ~y ~dir ~player =
+let _build_track ((x, y) as loc) ~dir player_idx v =
   (* Can either create a new edge or a new node (ixn) *)
-  let before = Scan.scan v.track ~x ~y ~player in
-  let track = Trackmap.build_track v.track ~x ~y ~dir ~player in
-  let after = Scan.scan track ~x ~y ~player in
-  let graph = G.Track.handle_build_track v.graph ~x ~y before after in
-  let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-  update_player v player @@
-    Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
-  [%upf v.graph <- graph];
-  [%upf v.track <- track];
-  [%upf v.blocks <- blocks];
-  v
+  let before = Scan.scan v.track loc player_idx in
+  let track = Trackmap.build_track loc ~dir player_idx v.track in
+  let after = Scan.scan track loc player_idx in
+  let graph = G.Track.handle_build_track x y v.graph before after in
+  let blocks =
+    let trains = Player.get player_idx v.players |> Player.get_trains in
+    Block_map.handle_build_track player_idx graph track trains v.blocks before after
+  in
+  let players = Player.update v.players player_idx @@
+    Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map
+  in
+  [%up {v with graph; track; blocks; players}]
 
 let _build_ferry v ~x ~y ~dir ~player =
   let before = Scan.scan v.track ~x ~y ~player in
