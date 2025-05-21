@@ -257,30 +257,32 @@ let _build_track ((x, y) as loc) ~dir player_idx v =
   in
   [%up {v with graph; track; blocks; players}]
 
-let _build_ferry v ~x ~y ~dir ~player =
-  let before = Scan.scan v.track ~x ~y ~player in
-  let tile1 = get_tile v x y in
-  let dx, dy = Dir.to_offsets dir in
-  let tile2 = get_tile v (x+dx) (y+dy) in
+let _build_ferry ((x, y) as loc) ~dir player_idx v =
+  let track, map = v.track, v.map in
+  let before = Scan.scan track loc player_idx in
+  let tile1 = Tilemap.get_tile loc map in
+  let loc2 = Dir.adjust dir x y in
+  let tile2 = Tilemap.get_tile loc2 map in
   let kind1, kind2 = match tile1, tile2 with
     | Tile.Ocean _ , Ocean _ -> Track.Ferry `Single, Track.Ferry `Single
     | Ocean _, _ -> Ferry `Single, Track `Single
     | _, Ocean _ -> Track `Single, Ferry `Single
     | _ -> assert false
   in
-  let track = Trackmap.build_track v.track ~x ~y ~dir ~player ~kind1 ~kind2 in
-  let after = Scan.scan track ~x ~y ~player in
+  let track = Trackmap.build_track loc ~dir player_idx ~kind1 ~kind2 v.track in
+  let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  let blocks = Block_map.handle_build_track graph v.track v.players.(player).trains v.blocks before after in
-  update_player v player @@
-    Player.update_and_pay_for_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
-  [%upf v.graph <- graph];
-  [%upf v.track <- track];
-  [%upf v.blocks <- blocks];
-  v
+  (* TODO: check if this needs v.track *)
+  let blocks =
+    let trains = Player.get player_idx v.players |> Player.get_trains in
+    Block_map.handle_build_track player_idx graph track trains v.blocks before after
+  in
+  let players = Player.update v.players player_idx @@
+    Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map in
+  [%up {v with graph; track; blocks; players}]
 
-let check_remove_track v ~x ~y ~dir ~player=
-  Trackmap.check_remove_track v.track ~x ~y ~dir ~player
+let check_remove_track loc ~dir player_idx v =
+  Trackmap.check_remove_track loc ~dir player_idx v.track 
 
 let _remove_station v ~x ~y ~dir ~player =
   let loc = (x,y) in
