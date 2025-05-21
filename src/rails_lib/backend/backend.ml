@@ -228,10 +228,11 @@ let check_change_double_track loc player_idx ~double v =
       not @@ Bool.(double = Track.is_visually_double track)
   | _ -> false
 
-let _change_double_track (v:t) ~x ~y ~player double =
-  if check_change_double_track v ~x ~y ~player double then (
-    let t = Trackmap.get_exn v.track ~x ~y in
-    let t = Track.change_to_double t double in
+let _change_double_track loc player_idx ~double v =
+  if check_change_double_track loc player_idx ~double v then (
+    let t = Trackmap.get_exn loc v.track
+       |> Track.change_to_double ~double
+    in
     let track = Trackmap.set v.track ~x ~y ~t in
     let after = Scan.scan track ~x ~y ~player in
     let blocks = Block_map.handle_double_change v.graph track v.players.(player).trains v.blocks after in
