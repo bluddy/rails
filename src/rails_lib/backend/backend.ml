@@ -9,6 +9,7 @@ module G = Track_graph
 module C = Constants
 module UIM = Ui_msg
 module Bool = Utils.Bool
+module IntMap = Utils.IntMap
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -467,79 +468,82 @@ let handle_tick v cur_time =
 let _month_of_time time = (time / C.month_ticks) mod 12
 
 let get_interest_rate v player_idx =
-  get_player player_idx v
-  |> Player.get_interest_rate v.params.climate v.params.region 
+  get_player player_idx v |> Player.get_interest_rate v.params
 
 let player_has_bond player_idx v =
   get_player player_idx v |> Player.has_bond
 
 let _sell_bond player_idx v =
-  let player = get_player v player_idx in
-  if Player.check_sell_bond player v.params.climate v.params.region then (
-    let interest_rate = Player.get_interest_rate player v.params.climate v.params.region in
+  let player = get_player player_idx v in
+  if Player.check_sell_bond v.params player then (
+    let interest_rate = Player.get_interest_rate v.params player in
     (* Must be before we get new bond *)
-    update_player v player_idx (fun player -> Player.sell_bond player v.params.climate v.params.region);
+    let v = update_player v player_idx (Player.sell_bond v.params) in
     send_ui_msg v @@ StockBroker(BondSold{player=player_idx; interest_rate});
     v
   ) else v
 
   (* TODO: evaluate ai company value *)
-let _repay_bond v player_idx =
-  let player = get_player v player_idx in
-  if Player.check_repay_bond player then (
-    update_player v player_idx Player.repay_bond;
+let _repay_bond player_idx v =
+  if Player.check_repay_bond (get_player player_idx v) then (
+    let v = update_player v player_idx Player.repay_bond in
     send_ui_msg v @@ StockBroker(BondRepaid{player=player_idx});
     v
   ) else v
 
-let can_buy_stock v ~player_idx ~target =
-  let player = get_player v player_idx in
-  Stock_market.can_buy_stock ~player:player_idx ~target ~cash:(Player.get_cash player) ~difficulty:v.params.options.difficulty v.stocks
+let can_buy_stock player_idx ~target v =
+  let player = get_player player_idx v in
+  let cash = Player.get_cash player in
+  Stock_market.can_buy_stock ~player:player_idx ~target ~cash v.params v.stocks
 
 let _buy_stock v player_idx ~stock = 
-  let difficulty = v.params.options.difficulty in
-  let player = get_player v player_idx in
+  let player = get_player player_idx v in
   let cash = Player.get_cash player in
-  match Stock_market.buy_stock ~player:player_idx ~target:stock ~cash ~difficulty v.stocks with
+  match Stock_market.buy_stock ~player:player_idx ~target:stock ~cash v.params v.stocks with
   | `Bought cost, stocks ->
-      update_player v player_idx (Player.add_cash @@ -cost);
+      let v = update_player v player_idx (Player.add_cash @@ -cost) in
       send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock; cost});
       {v with stocks}
   | `Takeover money_map, stocks ->
-      Utils.IntMap.iter (fun player change -> update_player v player @@ Player.add_cash change) money_map;
+      let players = 
+        Owner.Map.fold (fun player_idx change players ->
+          Player.update players player_idx @@ Player.add_cash change)
+        money_map
+        v.players
+      in
       send_ui_msg v @@ StockBroker(Takeover {player=player_idx; stock});
-      {v with stocks}
-  | _, stocks ->
+      [%up{v with stocks; players}]
+  | `None, stocks ->
       [%up {v with stocks}]
 
-let _sell_stock v player_idx ~stock =
+let _sell_stock player_idx ~stock v =
   let cost, stocks = Stock_market.sell_stock player_idx ~target:stock v.stocks in
-  update_player v player_idx @@ Player.add_cash cost;
+  let players = Player.update v.players player_idx @@ Player.add_cash cost in
   send_ui_msg v @@ StockBroker(StockSold {player=player_idx; stock; cost});
-  [%up {v with stocks}]
+  [%up {v with stocks; players}]
 
-let check_bankruptcy v player_idx =
-  let player = get_player v player_idx in
-  Player.check_bankruptcy player
+let check_bankruptcy v player_idx = get_player v player_idx |> Player.check_bankruptcy
 
-let _declare_bankruptcy v player_idx =
-  let player = Player.get_player v.players player_idx in
+let _declare_bankruptcy player_idx v =
+  let player = Player.get player_idx v.players in
   if Player.check_bankruptcy player then (
-    let player_iter = Iter.append (Owner.Map.keys v.players) (Ai.ai_iter v.ai) in
-    let stocks, cash_map = Stock_market.declare_bankruptcy ~player_idx player_iter v.stocks in
-    let players, ais =
+    let stocks, cash_map =
+      let player_iter = Iter.append (Owner.Map.keys v.players) (Ai.ai_iter v.ai) in
+      Stock_market.declare_bankruptcy ~player_idx player_iter v.stocks
+    in
+    let players, ai =
       Owner.Map.fold (fun idx profit (players, ais) ->
         if Owner.is_human idx then
-          update_player idx v.players @@ Player.add_cash profit, ais
+          let players = Player.update v.players idx @@ Player.add_cash profit in
+          players, ais
         else
-          players, Ai.add_cash idx profit v.ais)
-        (v.players, v.ais)
+          players, Ai.add_cash idx profit ais)
         cash_map
+        (v.players, v.ai)
     in
-    let players = modify_player player_idx players @@ set_bankrupt ~difficulty:v.params.options.difficulty in
-
+    let players = Player.update players player_idx @@ Player.set_bankrupt v.params in
     send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
-    [%up {v with players; stocks; ais}]
+    [%up {v with players; stocks; ai}]
   ) else v
 
 let get_date (v:Backend_d.t) = _month_of_time v.params.time, v.params.year
@@ -554,73 +558,73 @@ let get_time_of_day time =
   Printf.sprintf "%d:%02d %s" time_hours time_mins am_pm
 
 let get_company_name v player_idx =
-  let player = get_player v player_idx in
-  Player.get_name player v.stations v.cities
+  get_player player_idx v |> Player.get_name v.stations v.cities
 
-let companies_controlled_by v player_idx =
+let companies_controlled_by player_idx v =
   Stock_market.other_companies_controlled_by player_idx v.stocks
 
-let _operate_rr_take_money v ~player_idx ~company ~amount =
-  update_player v player_idx @@ Player.add_cash amount;
-  update_player v company @@ Player.add_cash @@ -amount;
+let _operate_rr_take_money player_idx ~company ~amount v =
+  let players = v.players in
+  let players = Player.update players player_idx @@ Player.add_cash amount in
+  let players = Player.update players company @@ Player.add_cash @@ -amount in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player=player_idx; company; amount});
-  v
+  [%up {v with players}]
   
 let _operate_rr_give_money v ~player_idx ~company ~amount =
-  let player = get_player v player_idx in
-  if not @@ Player.in_receivership player then (
-    update_player v player_idx @@ Player.add_cash @@ - amount;
-    update_player v company @@ Player.add_cash amount
-  );
+  let players = v.players in
+  let players = Player.update players player_idx @@ Player.add_cash @@ -amount in
+  let players = Player.update players company @@ Player.add_cash amount in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player=player_idx; amount});
-  v
+  [%up {v with players}]
 
-let _operate_rr_repay_bond v ~player_idx ~company_idx =
-  update_player v company_idx Player.repay_bond;
+let _operate_rr_repay_bond player_idx ~company_idx v =
+  let v = update_player v company_idx Player.repay_bond in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(AiBondRepaid {player=player_idx; company=company_idx});
   v
 
   (* TODO: RR build track *)
-let _operate_rr_build_track v ~player_idx ~company _src _dst =
+let _operate_rr_build_track player_idx ~company _src _dst v =
   let _player_idx, _company = player_idx, company in
   v
 
 let broker_timer_active v player_idx =
-  Player.has_broker_timer (get_player v player_idx)
+  Player.get player_idx v.players |> Player.has_broker_timer 
 
 let _start_broker_timer v player_idx =
   (* Only activate if no broker time active *)
   if not @@ broker_timer_active v player_idx then (
-    update_player v player_idx (fun player ->
-      Player.incr_broker_timer player |> fst);
-    v
+    update_player v player_idx (fun player -> fst @@ Player.incr_broker_timer player)
   ) else v
 
-let _handle_cheat v player = function
+let _handle_cheat v player_idx = function
   | Cheat_d.Add500Cash ->
-    update_player v player @@ Player.add_cash 500;
-    v
+    update_player v player_idx @@ Player.add_cash 500
+
   | CreatePriorityShipment ->
-    let player = Player.get_player v.players player in
-    let stations, player, ui_msgs = Backend_low._try_to_create_priority_shipment v ~force:true player v.stations in
-    [%upf v.stations <- stations];
-    Player.set v.players C.player player;
+    let player = Player.get player_idx v.players in
+    let stations, player, ui_msgs =
+      Backend_low._try_to_create_priority_shipment ~force:true player v.stations v.params v.random
+    in
+    let players = Player.set C.player player v.players in
     List.iter (send_ui_msg v) ui_msgs;
-    v
+    [%up {v with players; stations}]
+
   | CancelPriorityShipment ->
-    let ui_msgs = Backend_low._try_to_cancel_priority_shipments v ~force:true in
+    let players, stations, ui_msgs =
+      Backend_low._cancel_expired_priority_shipments ~force:true v.players v.stations v.params
+    in
     List.iter (send_ui_msg v) ui_msgs;
-    v
+    [%up {v with players; stations}]
     
 
-let get_priority_shipment v player =
-  let player = Player.get_player v.players player in
+let get_priority_shipment v player_idx =
+  let player = Player.get player_idx v.players in
   player.priority
 
 module Action = struct

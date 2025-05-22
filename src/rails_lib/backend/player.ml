@@ -108,7 +108,7 @@ let build_industry cost (v:t) =
   let owned_industry = v.m.owned_industry + cost in
   {v with m={v.m with owned_industry}}
 
-let get_name v station_map cities = match v.name with
+let get_name station_map cities v = match v.name with
   | Some name -> name
   | _ -> 
     (* Getting the name if it's not custom is... complicated *)
@@ -145,23 +145,23 @@ let remove_station loc v =
 
 let has_bond (v:t) = v.m.bonds > 0
 
-let get_interest_rate climate region v =
-  let bond_val = match region with
+let get_interest_rate params v =
+  let bond_val = match params.Params.region with
     | Region.WestUS -> 1000 (* Special treatment *)
     | _ -> 500
   in
   let num_bonds = v.m.bonds / bond_val in
-  num_bonds - (Climate.to_enum climate) + v.m.num_bankruptcies + 6
+  num_bonds - (Climate.to_enum params.climate) + v.m.num_bankruptcies + 6
 
-let check_sell_bond climate region v =
-  let interest_rate = get_interest_rate climate region v in
+let check_sell_bond params v =
+  let interest_rate = get_interest_rate params v in
   interest_rate < C.max_interest_rate && not v.m.in_receivership
     
-let sell_bond climate region (v:t) =
-  if check_sell_bond climate region v then (
+let sell_bond params (v:t) =
+  if check_sell_bond params v then (
     let bonds = v.m.bonds + C.bond_value in
     let cash = v.m.cash + C.bond_value in
-    let interest_rate = get_interest_rate climate region v in
+    let interest_rate = get_interest_rate params v in
     let base_payment = C.bond_value / 100 in
     let interest_increase = base_payment * interest_rate in
     let yearly_interest_payment = v.m.yearly_interest_payment + interest_increase in
@@ -191,10 +191,10 @@ let check_bankruptcy (v:t) =
   v.m.bonds > C.min_bonds_for_bankruptcy &&
   v.m.cash < C.max_cash_for_bankruptcy 
 
-let set_bankrupt ~difficulty v =  
+let set_bankrupt (params:Params.t) v =  
   let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
   let yearly_interest_payment =
-    v.m.yearly_interest_payment * (B_options.difficulty_to_enum difficulty) / 4
+    v.m.yearly_interest_payment * (B_options.difficulty_to_enum params.options.difficulty) / 4
   in
   let num_bankruptcies = v.m.num_bankruptcies + 1 in
   let v = {v with m =

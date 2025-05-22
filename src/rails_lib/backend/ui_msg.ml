@@ -19,7 +19,7 @@ type stock_broker_ui_msg =
   | StockBought of {player: Owner.t; stock: Owner.t; cost: int}
   | StockSold of {player: Owner.t; stock: Owner.t; cost: int}
   | BankruptcyDeclared of {player: Owner.t}
-  | Takeover of {player:Owner.t; stock: int}
+  | Takeover of {player:Owner.t; stock: Owner.t}
   | MoneyTransferredFrom of {player: Owner.t; company: Owner.t; amount: int}
   | MoneyTransferredTo of {player: Owner.t; company: Owner.t; amount: int}
   | AiBondRepaid of {player: Owner.t; company: Owner.t}

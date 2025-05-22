@@ -155,10 +155,10 @@ let hostile_takeover ~ai_idx ~player v =
 
 let controls_own_company player v = controls_company player ~target:player v
 
-let can_buy_stock ~player ~target ~cash ~difficulty v =
+let can_buy_stock ~player ~target ~cash (params:Params.t) v =
   (* TODO: In original code, it's < total_shares - 10. Not sure why *)
   (* Test if we have an 'anti-trust' problem *)
-  let max_owned_companies = Utils.clip (B_options.difficulty_to_enum difficulty) ~min:1 ~max:3 in
+  let max_owned_companies = Utils.clip (B_options.difficulty_to_enum params.options.difficulty) ~min:1 ~max:3 in
   let public_shares = public_shares target v in
   let v2 = add_shares ~owner:player ~owned:target ~num:C.num_buy_shares v in
   if num_other_companies_owner_has_shares_in player v2 > max_owned_companies then
@@ -237,8 +237,8 @@ let ai_sell_own_stock ~ai_idx v =
   let profit = (share_price ai_idx v) * C.num_buy_shares - 1 in
   profit, v
 
-let buy_stock ~player ~target ~difficulty ~cash v =
-  match can_buy_stock ~player ~target ~cash ~difficulty v with
+let buy_stock ~player ~target params ~cash v =
+  match can_buy_stock ~player ~target ~cash params v with
   | `Ok when Owner.(player = target) ->
     (* TODO: add_stock: code adds 10 for ai *)
     let cost, v = _sell_buy_stock player ~target ~buy:true v in
