@@ -467,14 +467,13 @@ let handle_tick v cur_time =
 let _month_of_time time = (time / C.month_ticks) mod 12
 
 let get_interest_rate v player_idx =
-  let player = get_player v player_idx in
-  Player.get_interest_rate player v.params.climate v.params.region 
+  get_player player_idx v
+  |> Player.get_interest_rate v.params.climate v.params.region 
 
-let player_has_bond v player_idx =
-  let player = get_player v player_idx in
-  Player.has_bond player
+let player_has_bond player_idx v =
+  get_player player_idx v |> Player.has_bond
 
-let _sell_bond v player_idx =
+let _sell_bond player_idx v =
   let player = get_player v player_idx in
   if Player.check_sell_bond player v.params.climate v.params.region then (
     let interest_rate = Player.get_interest_rate player v.params.climate v.params.region in

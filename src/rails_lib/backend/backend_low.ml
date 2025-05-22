@@ -553,7 +553,7 @@ let _cancel_expired_priority_shipments ?(force=false) players stations params =
   let cancel_players =
     Owner.Map.fold (fun idx player acc ->
       if Player.has_priority player &&
-        (Player.check_cancel_priority_shipment player params || force)
+        (Player.check_cancel_priority_shipment params player || force)
       then idx::acc else acc)
       players
       []
@@ -579,7 +579,7 @@ let _check_priority_delivery players stations params =
   (* Check for priority delivery completion *)
   let deliver_players =
     Owner.Map.fold (fun idx player acc ->
-      if Player.has_priority player && Player.check_priority_delivery player stations
+      if Player.has_priority player && Player.check_priority_delivery stations player 
       then idx::acc else acc)
     players
     []

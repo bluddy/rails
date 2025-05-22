@@ -145,7 +145,7 @@ let remove_station loc v =
 
 let has_bond (v:t) = v.m.bonds > 0
 
-let get_interest_rate v climate region =
+let get_interest_rate climate region v =
   let bond_val = match region with
     | Region.WestUS -> 1000 (* Special treatment *)
     | _ -> 500
@@ -153,15 +153,15 @@ let get_interest_rate v climate region =
   let num_bonds = v.m.bonds / bond_val in
   num_bonds - (Climate.to_enum climate) + v.m.num_bankruptcies + 6
 
-let check_sell_bond v climate region =
-  let interest_rate = get_interest_rate v climate region in
+let check_sell_bond climate region v =
+  let interest_rate = get_interest_rate climate region v in
   interest_rate < C.max_interest_rate && not v.m.in_receivership
     
-let sell_bond (v:t) climate region =
-  if check_sell_bond v climate region then (
+let sell_bond climate region (v:t) =
+  if check_sell_bond climate region v then (
     let bonds = v.m.bonds + C.bond_value in
     let cash = v.m.cash + C.bond_value in
-    let interest_rate = get_interest_rate v climate region in
+    let interest_rate = get_interest_rate climate region v in
     let base_payment = C.bond_value / 100 in
     let interest_increase = base_payment * interest_rate in
     let yearly_interest_payment = v.m.yearly_interest_payment + interest_increase in
@@ -198,10 +198,8 @@ let set_bankrupt ~difficulty v =
   in
   let num_bankruptcies = v.m.num_bankruptcies + 1 in
   let v = {v with m =
-    {v.m with bonds; yearly_interest_payment; in_receivership=true; num_bankruptcies}
-  }
-  in
-  v
+    {v.m with bonds; yearly_interest_payment; in_receivership=true; num_bankruptcies}}
+  in v
 
 let has_broker_timer player = Option.is_some player.broker_timer
 
@@ -219,17 +217,17 @@ let has_priority player = Option.is_some player.priority
 
 let get_priority player = player.priority
 
-let check_cancel_priority_shipment player params =
+let check_cancel_priority_shipment params v =
   (* Priority shipments are cancelled when the bonus is < 20 *)
   Option.map_or ~default:false
     (fun pr_data -> Priority_shipment.should_be_cancelled pr_data params)
-    player.priority
+    v.priority
 
-let check_priority_delivery player stations =
+let check_priority_delivery stations v =
   (* Return whether a priority delivery has been fulfilled *)
   Option.map_or ~default:false
     (fun pr_data -> Priority_shipment.check_priority_delivery pr_data stations)
-    player.priority
+    v.priority
 
 let add_freight_ton_miles ftm fiscal_period v =
   let freight_ton_miles = Utils.update_pair v.freight_ton_miles fiscal_period
