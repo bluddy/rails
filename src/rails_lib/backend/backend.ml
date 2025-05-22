@@ -421,27 +421,28 @@ let _station_set_signal loc dir cmd v =
   in
   [%up {v with stations}]
 
-let _build_industry v ~player_idx (x, y) tile =
-  if Tilemap.check_build_industry_at v.map tile ~region:v.params.region ~x ~y then (
-    Tilemap.set_tile v.map x y tile;
+let _build_industry ((x, y) as loc) tile player_idx v =
+  if Tilemap.check_build_industry_at x y tile v.map ~region:v.params.region then (
+    Tilemap.set_tile loc tile v.map;
     let cost = Tile.Info.build_cost_of_tile v.params.region tile in
-    update_player v player_idx (Player.build_industry cost);
+    let v = update_player v player_idx (Player.build_industry cost) in
     send_ui_msg v @@ IndustryBuilt {player=player_idx; tile};
     v
-  ) else
-    v
+  ) else v
   
-let _remove_train v idx ~player =
-  update_player v player (fun player ->
-    let train = Trainmap.get player.trains idx in
-    (match train.state with
-      | Traveling {block; _} ->
-        Block_map.block_decr_train block v.blocks
-      | _ -> ());
-    let trains = Trainmap.delete player.trains idx in
-    [%up {player with trains}]
-  );
-  v
+let _remove_train idx player_idx v =
+  let players =
+    Player.update v.players player_idx (fun player ->
+      let () =
+        let train = Trainmap.get player.trains idx in
+        match train.state with
+        | Traveling {block; _} -> Block_map.block_decr_train block v.blocks
+        | _ -> ()
+      in
+      let trains = Trainmap.delete idx player.trains in
+      [%up {player with trains}])
+  in
+  [%up {v with players}]
 
 let reset_tick v =
   v.last_tick <- 0
