@@ -51,7 +51,7 @@ module Train_update = struct
     end;
     (* Bookkeeping *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
-    Train.add_dist_traveled train dist v.params.fiscal_period;
+    Train.add_dist_traveled dist v.params.fiscal_period train;
     update_player_state v train.player (Player.incr_dist_traveled ~dist);
     Train.advance train
 
@@ -271,7 +271,7 @@ module Train_update = struct
       if Station.is_proper_station station' then (
         let train, station, data, ui_msgs =
           _train_station_handle_consist_and_maintenance v idx loc station' train in
-        let priority_stop, stop = Train.check_increment_stop train loc in
+        let priority_stop, stop = Train.check_increment_stop loc train in
         loc, priority_stop, stop, train, station, data, ui_msgs
       ) else (
         (* Just a signal tower. Keep traveling *)

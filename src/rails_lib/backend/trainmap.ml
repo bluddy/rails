@@ -153,7 +153,7 @@ let clear_priority_shipment v =
   let open Train in
   Vector.map_in_place (fun train ->
     if Train.holds_priority_shipment train then
-      Train.set_priority_shipment train false
+      Train.set_priority_shipment false train
     else train)
     v.trains;
   v

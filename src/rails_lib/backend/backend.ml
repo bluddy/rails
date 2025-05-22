@@ -350,11 +350,10 @@ let _build_train loc engine cars other_station player_idx v =
   send_ui_msg v msg;
   [%up {v with players}]
 
-let _remove_stop_car v ~train ~stop ~car ~player =
-  update_player v player (fun player ->
-    let trains =
-      Trainmap.update player.trains train
-        (fun train -> Train.remove_stop_car train stop car)
+let _remove_stop_car train ~stop ~car player_idx v =
+  Player.update v.players player_idx (fun player ->
+    let trains = Trainmap.update player.trains train
+      (fun train -> Train.remove_stop_car train stop car)
     in
     [%up {player with trains}]
   );

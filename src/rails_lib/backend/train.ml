@@ -255,7 +255,7 @@ let get_route v = v.route
 
 let get_stop v i = Vector.get v.route i
 
-let remove_stop_car (v:rw t) stop car =
+let remove_stop_car stop car (v:rw t) =
   let remove_car (stop:stop) =
     let consist_change = match stop.consist_change with
       | None -> None
@@ -275,7 +275,7 @@ let remove_stop_car (v:rw t) stop car =
       let priority_stop = Option.map remove_car v.priority_stop in
       {v with priority_stop}
 
-let add_stop_car (v:rw t) stop car =
+let add_stop_car stop car (v:rw t) =
   let add_car (stop:stop) =
     let consist_change = match stop.consist_change with
       | Some car_list -> Some(car_list @ [car])
@@ -291,7 +291,7 @@ let add_stop_car (v:rw t) stop car =
       let priority_stop = Option.map add_car v.priority_stop in
       {v with priority_stop}
 
-let remove_all_stop_cars (v:rw t) stop =
+let remove_all_stop_cars stop (v:rw t) =
   let remove_all_cars (stop:stop) = {stop with consist_change = Some []} in
   match stop with
   | `Stop stop_idx ->
@@ -319,7 +319,7 @@ let check_stop_station (v:'a t) stop loc =
   in
   not (check prev || check next)
 
-let set_stop_station (v:rw t) stop (x,y) =
+let set_stop_station stop (x,y) (v:rw t) =
   match stop with
   | `Stop i ->
       (* Check for lengthening *)
@@ -336,7 +336,7 @@ let set_stop_station (v:rw t) stop (x,y) =
       in
       {v with priority_stop=Some stop}
 
-let remove_stop (v:rw t) stop =
+let remove_stop stop (v:rw t) =
   match stop with
   | `Stop i ->
       Vector.remove_and_shift v.route i;
@@ -374,7 +374,7 @@ let get_max_speed_factor v =
   0
   v.cars
 
-let compute_target_speed v ~idx ~cycle =
+let compute_target_speed ~idx ~cycle v =
   let weight = get_weight v in
   let max_speed_factor = get_max_speed_factor v in
   let b = (max_speed_factor + 2) * (weight/160 + 1) in
@@ -384,20 +384,20 @@ let compute_target_speed v ~idx ~cycle =
   ((engine_speed * 8) + random + 80) / 80
   |> Utils.clip ~min:0 ~max:v.engine.max_speed
 
-let get_period v period = match period, v.periodic with
+let get_period period v = match period, v.periodic with
   | `First, (p, _) -> p
   | `Second, (_, p) -> p
 
-let get_revenue v period = 
-  let period = get_period v period in
+let get_revenue period v = 
+  let period = get_period period v in
   period.revenue
 
 let update_periodic period periodic f = match period, periodic with
   | `First,  (p, x) -> (f p, x)
   | `Second, (x, p) -> (x, f p)
 
-let add_dist_traveled (v: rw t) add period =
-  let period = get_period v period in
+let add_dist_traveled add period (v: rw t) =
+  let period = get_period period v in
   period.dist_traveled <- period.dist_traveled + add
 
 let is_full (v: 'a t) = List.for_all Car.is_full v.cars
@@ -411,7 +411,7 @@ let advance (v:rw t) =
   (* Log.debug (fun f -> f "Train at (%d, %d)" v.x v.y); *)
   v
 
-let check_increment_stop v (x,y) =
+let check_increment_stop (x,y) v =
   (* Increment the next stop on the route *)
   match v.priority_stop, Vector.get v.route v.stop |> snd with
   | Some stop, _ when stop.x = x && stop.y = y ->
@@ -468,7 +468,7 @@ let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
   in 
   money / 2 (* Seems like it's divided in the end *)
 
-let update_speed (v:rw t) ~cycle ~cycle_check ~cycle_bit =
+let update_speed ~cycle ~cycle_check ~cycle_bit (v:rw t) =
   (* Update current train speed based on target speed and cycle *)
   match v.state with
   | Traveling s ->
@@ -516,7 +516,7 @@ let update_speed (v:rw t) ~cycle ~cycle_check ~cycle_bit =
      if there's sufficient space for it. Otherwise it'll be in the next
      segment, and use that segment's direction history slot, etc.
    *)
-let calc_car_loc_in_pixels (v:'a t) trackmap total_pixels =
+let calc_car_loc_in_pixels trackmap total_pixels (v:'a t) =
   let move_back x y dir ~total_pixels ~move_pixels =
     let diag = Dir.is_diagonal dir in
     let x, y =
@@ -550,13 +550,13 @@ let calc_car_loc_in_pixels (v:'a t) trackmap total_pixels =
   let x, y = adjust_loc_for_double_track trackmap x y dir in
   x, y, dir
 
-let calc_car_loc (v:'a t) trackmap car_idx ~car_pixels =
+let calc_car_loc trackmap car_idx ~car_pixels (v:'a t) =
   (* Same function, with a per-car interface *)
   let total_pixels = car_pixels * (car_idx + 1) in
-  calc_car_loc_in_pixels v trackmap total_pixels
+  calc_car_loc_in_pixels trackmap total_pixels v 
 
 
-let get_car_dir (v:'a t) i = (History.get v.history (i+1)).dir
+let get_car_dir i (v:'a t) = (History.get v.history (i+1)).dir
 
 let get_engine_cost v = v.engine.price
 
@@ -564,7 +564,7 @@ let num_of_cars v = List.length v.cars
 
 let holds_priority_shipment v = v.holds_priority_shipment
 
-let set_priority_shipment v x = {v with holds_priority_shipment=x}
+let set_priority_shipment x v = {v with holds_priority_shipment=x}
 
 let can_hold_priority_shipment cars priority_freight =
   let freight_set = freight_set_of_cars cars in
