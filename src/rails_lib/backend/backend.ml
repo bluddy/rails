@@ -351,57 +351,37 @@ let _build_train loc engine cars other_station player_idx v =
   [%up {v with players}]
 
 let _remove_stop_car train ~stop ~car player_idx v =
-  Player.update v.players player_idx (fun player ->
-    let trains = Trainmap.update player.trains train
-      (fun train -> Train.remove_stop_car train stop car)
-    in
-    [%up {player with trains}]
-  );
-  v
+  let players = Player.update v.players player_idx (fun player ->
+    let trains = Trainmap.update player.trains train (Train.remove_stop_car stop car) in
+    [%up {player with trains}])
+  in
+  [%up {v with players}]
 
-let check_stop_station v ~train ~stop ~station ~player =
-  let train = Trainmap.get v.players.(player).trains train in
+let check_stop_station v ~train ~stop ~station player_idx =
+  let train =
+    let player = Player.get player_idx v.players in
+    Trainmap.get player.trains train
+  in
   Train.check_stop_station train stop station
 
-let _set_stop_station v ~train ~stop ~station ~player =
-  update_player v player (fun player ->
-    let trains =
-      Trainmap.update player.trains train
-        (fun train -> Train.set_stop_station train stop station)
-    in
-    [%up {player with trains}]
-  );
-  v
+let modify_train train player_idx v f =
+  let players = Player.update v.players player_idx (fun player ->
+    let trains = Trainmap.update player.trains train f in
+    [%up {player with trains}])
+  in
+  [%up {v with players}]
 
-let _remove_stop v ~train ~stop ~player =
-  update_player v player (fun player ->
-    let trains =
-      Trainmap.update player.trains train
-        (fun train -> Train.remove_stop train stop)
-    in
-    [%up {player with trains}]
-  );
-  v
+let _set_stop_station ~train ~stop ~station player_idx v =
+  modify_train train player_idx v (Train.set_stop_station stop station)
 
-let _add_stop_car v ~train ~stop ~car ~player =
-  update_player v player (fun player ->
-    let trains =
-      Trainmap.update player.trains train
-        (fun train -> Train.add_stop_car train stop car)
-    in
-    [%up {player with trains}]
-  );
-  v
+let _remove_stop ~train ~stop player_idx v =
+  modify_train train player_idx v (Train.remove_stop stop)
 
-let _remove_all_stop_cars v ~train ~stop ~player =
-  update_player v player (fun player ->
-    let trains =
-      Trainmap.update player.trains train
-        (fun train -> Train.remove_all_stop_cars train stop)
-    in
-    [%up {player with trains}]
-  );
-  v
+let _add_stop_car ~train ~stop ~car player_idx v =
+  modify_train train player_idx v (Train.add_stop_car stop car)
+
+let _remove_all_stop_cars ~train ~stop player_idx v =
+  modify_train train player_idx v (Train.remove_all_stop_cars stop)
 
 let get_num_trains v ~player = Trainmap.size v.players.(player).trains
 
