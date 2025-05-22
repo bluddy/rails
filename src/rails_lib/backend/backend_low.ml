@@ -63,7 +63,7 @@ module Train_update = struct
       (* Priority shipment arriving to station *)
       let station =
         if Train.holds_priority_shipment train && not @@ Station.holds_priority_shipment station then
-          Station.set_priority_shipment station true
+          Station.set_priority_shipment true station
         else station
       in
       let ton_miles =
@@ -299,11 +299,11 @@ module Train_update = struct
     let dir = compute_dir_to_dest v.graph in
     let station = Station_map.get_exn loc stations in
     (* Second check of this. No matter *)
-    let can_go, cancel_override = Station.can_train_go station dir in
+    let can_go, cancel_override = Station.can_train_go dir station in
     if can_go then (
       let stations = match cancel_override with
         | `Cancel_override ->
-          let station = Station.cancel_override station dir in
+          let station = Station.cancel_override dir station in
           Station_map.add loc station stations
         | _ -> stations
       in
@@ -408,7 +408,7 @@ module Train_update = struct
               (* This happens after we've already 'exited' *)
               let station = Station_map.get_exn loc v.stations in
               (* Check here as well to avoid expensive computation *)
-              let can_go, _ = Station.can_train_go station dir in
+              let can_go, _ = Station.can_train_go dir station in
               if can_go then
                 let train, stations, active_stations = _exit_station ~idx ~cycle v train stations track loc in
                 train, stations, None, active_stations, []

@@ -222,7 +222,7 @@ let has_hotel v = has_upgrade v Hotel
 let get_signal (v:t) dir =
   if Dir.is_lower dir then v.signals.lower else v.signals.upper
 
-let set_signal (v:t) dir signal =
+let set_signal dir signal (v:t) =
   let signals =
     if Dir.is_lower dir then
       {v.signals with lower=(signal, snd v.signals.lower)}
@@ -231,7 +231,7 @@ let set_signal (v:t) dir signal =
   in
   {v with signals}
 
-let set_override (v:t) dir override =
+let set_override dir override (v:t) =
   let signals =
     if Dir.is_lower dir then
       {v.signals with lower=(fst v.signals.lower, override)}
@@ -240,14 +240,14 @@ let set_override (v:t) dir override =
   in
   {v with signals}
 
-let cancel_override (v:t) dir = set_override v dir NoOverride
+let cancel_override dir (v:t) = set_override dir NoOverride v 
 
   (* When an owned company builds track into our >signaltower station,
      it becomes a union station: effectively a terminal *)
 let set_to_union_station v =
   update_with_info v (fun info -> Some {info with kind=`Terminal})
 
-let can_train_go (v:t) dir =
+let can_train_go dir (v:t) =
   (* Also returns whether we need to cancel override *)
   let signal = get_signal v dir in
   match signal with
@@ -334,7 +334,7 @@ let get_demand_exn v = match v.info with
   | None -> failwith "not a proper station"
 
    (* some supplies are lost every tick in a rate war. *)
-let check_rate_war_lose_supplies v ~difficulty =
+let check_rate_war_lose_supplies ~difficulty v =
   match v.info with
   | Some info when info.rate_war ->
       let div = match difficulty with
@@ -473,7 +473,7 @@ let holds_priority_shipment v =
     (fun x -> x.holds_priority_shipment)
     v.info
 
-let set_priority_shipment v x =
+let set_priority_shipment x v =
   update_with_info v
   (fun info ->
     if Bool.equal info.holds_priority_shipment x then

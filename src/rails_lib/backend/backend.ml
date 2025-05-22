@@ -383,44 +383,32 @@ let _add_stop_car ~train ~stop ~car player_idx v =
 let _remove_all_stop_cars ~train ~stop player_idx v =
   modify_train train player_idx v (Train.remove_all_stop_cars stop)
 
-let get_num_trains v ~player = Trainmap.size v.players.(player).trains
+let get_num_trains player_idx v =
+  let player = Player.get player_idx v.players in
+  Trainmap.size player.trains
 
-let get_train v idx ~player = Trainmap.get v.players.(player).trains idx
+let get_train idx player_idx v =
+  let player = Player.get player_idx v.players in
+  Trainmap.get player.trains idx
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
-let _train_set_type v ~train ~typ ~player =
-  update_player v player (fun player ->
-    let trains =
-      Trainmap.update player.trains train (fun train -> Train.set_type train typ)
-    in
-    [%up {player with trains}]
-  );
-  v
+let _train_set_type ~train ~typ player_idx v =
+  modify_train train player_idx v (Train.set_type typ)
 
-let _train_replace_engine v ~train ~engine ~player =
-  let engine = Engine.t_of_make v.engines engine in
-  update_player v player (fun player ->
+let _train_replace_engine ~train ~engine player_idx v =
+  let players = Player.update v.players player_idx (fun player ->
+    let engine = Engine.t_of_make v.engines engine in
     let player = Player.pay `Train engine.price player in
-    let trains =
-      Trainmap.update player.trains train
-        (fun train -> Train.replace_engine train engine)
-    in
-    [%up {player with trains}]
-  );
-  v
+    let trains = Trainmap.update player.trains train (Train.replace_engine engine) in
+    [%up {player with trains}])
+  in
+  [%up {v with players}]
 
-let _train_toggle_stop_wait v ~train ~stop ~player =
-  update_player v player (fun player ->
-    let trains =
-      Trainmap.update player.trains train
-        (fun train -> Train.toggle_stop_wait train stop)
-    in
-    [%up {player with trains}]
-  );
-  v
+let _train_toggle_stop_wait ~train ~stop player_idx v =
+  modify_train train player_idx v (Train.toggle_stop_wait stop)
 
-let _station_set_signal v loc dir cmd =
+let _station_set_signal loc dir cmd v =
   (* the user can only set the override *)
   let signal = match cmd with
   | `Normal -> Station.NoOverride
@@ -428,7 +416,7 @@ let _station_set_signal v loc dir cmd =
   | `Proceed -> OverrideProceed
   in
   let stations = Station_map.update loc 
-    (Option.map (fun station -> Station.set_override station dir signal))
+    (Option.map (fun station -> Station.set_override dir signal station ))
     v.stations
   in
   [%up {v with stations}]

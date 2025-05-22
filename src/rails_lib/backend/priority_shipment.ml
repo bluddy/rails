@@ -38,7 +38,7 @@ let _create random stations cycle =
         let freight = Random.pick_array Freight.all_freight random in
         let deadline = cycle - 1000 in
         let shipment = {src_loc; dst_loc; freight; deadline} in
-        let src_station = Station.set_priority_shipment src_station true in
+        let src_station = Station.set_priority_shipment true src_station in
         let stations = Station_map.add src_loc src_station stations in
         Some (stations, shipment)
 

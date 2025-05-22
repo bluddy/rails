@@ -164,8 +164,8 @@ let is_traveling v = match v.state with
   | Traveling _ -> true
   | _ -> false
 
-let set_type v typ = {v with typ}
-let replace_engine v engine = {v with engine; maintenance_cost=0}
+let set_type typ v = {v with typ}
+let replace_engine engine v = {v with engine; maintenance_cost=0}
 
 let display_speed v = C.speed_mult * get_speed v
 
@@ -343,7 +343,7 @@ let remove_stop stop (v:rw t) =
       v
   | `Priority -> {v with priority_stop=None}
 
-let toggle_stop_wait (v:rw t) stop =
+let toggle_stop_wait stop (v:rw t) =
   Vector.modify_at_idx v.route stop (fun (wait, stop) ->
     let wait2 = match wait with `Wait -> `NoWait | `NoWait -> `Wait in
     (wait2, stop)
