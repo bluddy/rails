@@ -296,7 +296,7 @@ let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
   let signals = default_signals in
   { loc=(x, y); year; info; player=player_idx; signals}
 
-let add_upgrade v upgrade player =
+let add_upgrade upgrade player v =
   if Owner.(v.player <> player) then v else
   let info =
     match v.info with

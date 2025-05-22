@@ -10,9 +10,9 @@ val empty : unit -> t
 
 val get: t -> Id.t -> ro Train.t
 
-val add : t -> rw Train.t -> t
+val add : rw Train.t -> t -> t
 
-val delete : t -> Id.t -> t
+val delete : Id.t -> t -> t
 
 val update: t -> Id.t -> (rw Train.t -> rw Train.t) -> t
 

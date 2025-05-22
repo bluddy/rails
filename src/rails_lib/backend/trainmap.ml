@@ -51,14 +51,14 @@ let _get v idx =
 let get v idx : ro Train.t =
   Vector.get (_freeze_all v.trains) @@ Id.to_int idx
 
-let add v train =
+let add train v =
   Vector.push v.trains train;
   let train_id = Id.of_int @@ Vector.size v.trains - 1 in
   let loc = _calc_train_loc train in
   _add_train_loc v loc train_id;
   v
 
-let delete v idx =
+let delete idx v =
   (* We need the train for the loc *)
   let loc = get v idx |> _calc_train_loc in
   _remove_train_loc v loc idx;

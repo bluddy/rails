@@ -302,48 +302,53 @@ let _remove_station ((x, y) as loc) ~dir player_idx v =
   in
   [%up {v with stations; blocks; track; graph; players}]
 
-let _remove_track v ~x ~y ~dir ~player =
-  let loc = (x,y) in
-  let is_station = Trackmap.has_station loc v.track in
-  if is_station then _remove_station v ~x ~y ~dir ~player else
-  let before = Scan.scan v.track ~x ~y ~player in
+let _remove_track ((x,y) as loc) ~dir player_idx v =
+  let track, graph, blocks, players = v.track, v.graph, v.blocks, v.players in
+  let is_station = Trackmap.has_station loc track in
+  if is_station then _remove_station loc ~dir player_idx v else
+  let before = Scan.scan v.track loc player_idx in
   (* Have to be careful with order here or we'll mess up state *)
-  let track = Trackmap.remove_track v.track ~x ~y ~dir ~player in
-  let after = Scan.scan track ~x ~y ~player in
-  let graph = G.Track.handle_remove_track v.graph ~x ~y before after in
-  let blocks = Block_map.handle_remove_track graph v.track v.players.(player).trains v.blocks before after in
-  update_player v player @@
-    Player.update_and_remove_track ~x ~y ~dir ~len:1 ~climate:v.params.climate ~map:v.map;
-  [%upf v.blocks <- blocks];
-  [%upf v.track <- track];
-  [%upf v.graph <- graph];
-  v
-
-let _improve_station v ~x ~y ~player ~upgrade =
-  let stations = 
-    Station_map.update (x,y)
-      (Option.map @@ fun station -> Station.add_upgrade station upgrade player)
-      v.stations
+  let track = Trackmap.remove_track loc ~dir player_idx track in
+  let after = Scan.scan track loc player_idx in
+  let graph = G.Track.handle_remove_track x y graph before after in
+  let blocks =
+    let trains = Player.get player_idx players |> Player.get_trains in
+    Block_map.handle_remove_track player_idx graph track trains blocks before after
   in
-  update_player v player @@
-    Player.(pay `StructuresEquipment @@ Station.price_of_upgrade upgrade);
-  [%upf v.stations <- stations];
-  v
+  let players = Player.update players player_idx @@
+    Player.update_and_remove_track x y ~len:1 ~dir ~climate:v.params.climate v.map
+  in
+  [%up {v with track; graph; blocks; players}]
 
-let _build_train v ((x, y) as station) engine cars other_station ~player =
-  let engine_t = Engine.t_of_make v.engines engine in
-  (* TODO: Temporary solution for getting track dir *)
-  let track = Trackmap.get v.track ~x ~y |> Option.get_exn_or "trackmap" in
-  let dir, _ = Dir.Set.pop track.dirs in
-  let train = Train.make station engine_t cars other_station ~dir ~player in
-  let trains = Trainmap.add v.players.(player).trains train in
-  update_player v player (fun player ->
+let _improve_station loc player_idx ~upgrade v =
+  let stations = 
+    Station_map.update loc (Option.map @@ Station.add_upgrade upgrade player_idx) v.stations
+  in
+  let players = Player.update v.players player_idx @@
+    Player.(pay `StructuresEquipment @@ Station.price_of_upgrade upgrade)
+  in
+  [%up {v with stations; players}]
+
+let _build_train loc engine cars other_station player_idx v =
+  let players =
+    let engine_t = Engine.t_of_make v.engines engine in
+    let train =
+      (* TODO: Temporary solution for getting track dir *)
+      let track = Trackmap.get loc v.track |> Option.get_exn_or "trackmap" in
+      let dir, _ = Dir.Set.pop track.dirs in
+      Train.make loc engine_t cars other_station ~dir player_idx
+    in
+    Player.update v.players player_idx (fun player ->
+    let trains = Trainmap.add train player.trains in
     let player = Player.pay `Train engine_t.price player in
-    [%up {player with trains}]
-  );
-  let msg = UIM.TrainBuilt (Trainmap.Id.of_int (Trainmap.size v.players.(player).trains - 1)) in
+    [%up {player with trains}])
+  in
+  let msg =
+    let trains = Player.get player_idx players |> Player.get_trains in
+    UIM.TrainBuilt (Trainmap.Id.of_int (Trainmap.size trains - 1))
+  in
   send_ui_msg v msg;
-  v
+  [%up {v with players}]
 
 let _remove_stop_car v ~train ~stop ~car ~player =
   update_player v player (fun player ->

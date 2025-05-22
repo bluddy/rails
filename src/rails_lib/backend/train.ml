@@ -209,7 +209,7 @@ let get_car_goods_count cars =
   List.iter (fun car -> Hashtbl.incr ~by:1 h car.Car.good) cars;
   h
 
-let make ((x,y) as station) engine cars other_station ~dir ~player =
+let make ((x,y) as station) engine cars other_station ~dir player =
   let route = [`NoWait, make_stop x y None] in
   let route = match other_station with
     | Some (x,y) -> [`NoWait, make_stop x y None] @ route
