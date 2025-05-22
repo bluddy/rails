@@ -572,7 +572,7 @@ let _operate_rr_take_money player_idx ~company ~amount v =
   send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player=player_idx; company; amount});
   [%up {v with players}]
   
-let _operate_rr_give_money v ~player_idx ~company ~amount =
+let _operate_rr_give_money player_idx ~company ~amount v =
   let players = v.players in
   let players = Player.update players player_idx @@ Player.add_cash @@ -amount in
   let players = Player.update players company @@ Player.add_cash amount in
@@ -593,16 +593,16 @@ let _operate_rr_build_track player_idx ~company _src _dst v =
   let _player_idx, _company = player_idx, company in
   v
 
-let broker_timer_active v player_idx =
+let broker_timer_active player_idx v =
   Player.get player_idx v.players |> Player.has_broker_timer 
 
-let _start_broker_timer v player_idx =
+let _start_broker_timer player_idx v =
   (* Only activate if no broker time active *)
-  if not @@ broker_timer_active v player_idx then (
+  if not @@ broker_timer_active player_idx v then (
     update_player v player_idx (fun player -> fst @@ Player.incr_broker_timer player)
   ) else v
 
-let _handle_cheat v player_idx = function
+let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->
     update_player v player_idx @@ Player.add_cash 500
 
@@ -637,40 +637,47 @@ module Action = struct
     | RRRepayBond
     [@@deriving show]
 
+  type msg = {
+    x: int;
+    y: int;
+    dir: Dir.t;
+    player: Owner.t;
+  } [@@deriving show]
+
   type t =
     | NoAction
     | Pause
     | Unpause
-    | BuildTrack of Utils.msg
-    | BuildFerry of Utils.msg
-    | BuildStation of {x: int; y: int; kind: Station.kind; player: int}
-    | BuildBridge of Utils.msg * Bridge.t
-    | BuildTunnel of Utils.msg * int (* length: 3 or 2 * length *)
-    | RemoveTrack of Utils.msg
-    | DoubleTrack of {x: int; y: int; double: bool; player: int}
-    | ImproveStation of {x:int; y:int; player: int; upgrade: Station.upgrade}
+    | BuildTrack of msg
+    | BuildFerry of msg
+    | BuildStation of {x: int; y: int; kind: Station.kind; player: Owner.t}
+    | BuildBridge of msg * Bridge.t
+    | BuildTunnel of msg * int (* length: 3 or 2 * length *)
+    | RemoveTrack of msg
+    | DoubleTrack of {x: int; y: int; double: bool; player: Owner.t}
+    | ImproveStation of {x:int; y:int; player: Owner.t; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
     | BuildTrain of {engine: Engine.make; cars: Goods.t list;
-                     station: int * int; other_station: (int * int) option; player: int} 
-    | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int; player: int}
-    | RemoveStop of {train: Trainmap.Id.t; stop: stop; player: int}
-    | AddStopCar of {train: Trainmap.Id.t; stop: stop; car: Goods.t; player: int}
-    | RemoveStopCar of {train: Trainmap.Id.t; stop: stop; car: int; player: int}
-    | RemoveAllStopCars of {train: Trainmap.Id.t; stop: stop; player: int}
-    | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type; player: int}
-    | RemoveTrain of {idx: Trainmap.Id.t; player: int}
-    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: int}
-    | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: int}
-    | BuildIndustry of {player: int; x: int; y: int; tile: Tile.t}
-    | CallBroker of {player: int}
+                     station: int * int; other_station: (int * int) option; player: Owner.t} 
+    | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int; player: Owner.t}
+    | RemoveStop of {train: Trainmap.Id.t; stop: stop; player: Owner.t}
+    | AddStopCar of {train: Trainmap.Id.t; stop: stop; car: Goods.t; player: Owner.t}
+    | RemoveStopCar of {train: Trainmap.Id.t; stop: stop; car: int; player: Owner.t}
+    | RemoveAllStopCars of {train: Trainmap.Id.t; stop: stop; player: Owner.t}
+    | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type; player: Owner.t}
+    | RemoveTrain of {idx: Trainmap.Id.t; player: Owner.t}
+    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: Owner.t}
+    | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: Owner.t}
+    | BuildIndustry of {player: Owner.t; x: int; y: int; tile: Tile.t}
+    | CallBroker of {player: Owner.t}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
-    | SellBond of {player: int}
-    | RepayBond of {player: int}
-    | Declare_bankruptcy of {player: int}
-    | BuyStock of {player: int; stock: int}
-    | SellStock of {player: int; stock: int}
-    | OperateRR of {player: int; company: int; action: operate_rr}
-    | Cheat of int * Cheat_d.t (* player *)
+    | SellBond of {player: Owner.t}
+    | RepayBond of {player: Owner.t}
+    | Declare_bankruptcy of {player: Owner.t}
+    | BuyStock of {player: Owner.t; stock: Owner.t}
+    | SellStock of {player: Owner.t; stock: Owner.t}
+    | OperateRR of {player: Owner.t; company: Owner.t; action: operate_rr}
+    | Cheat of Owner.t * Cheat_d.t (* player *)
     | Quit_game
     [@@deriving show]
 
@@ -681,71 +688,71 @@ module Action = struct
       if has_action msg then Log.debug (fun f -> f "Received msg %s" (show msg));
       match msg with
       | BuildTrack {x; y; dir; player} ->
-          _build_track backend ~x ~y ~dir ~player
+          _build_track (x,y) ~dir player backend 
       | BuildFerry {x; y; dir; player} ->
-          _build_ferry backend ~x ~y ~dir ~player
+          _build_ferry (x,y) ~dir player backend
       | BuildStation {x; y; kind; player} ->
-          _build_station backend (x,y) kind ~player
+          _build_station (x,y) kind player backend
       | BuildBridge({x; y; dir; player}, kind) ->
-          _build_bridge backend ~x ~y ~dir ~kind ~player
+          _build_bridge (x,y) ~dir ~kind player backend
       | BuildTunnel({x; y; dir; player}, _length) ->
-          _build_tunnel backend ~x ~y ~dir ~player
+          _build_tunnel (x,y) ~dir player backend
       | RemoveTrack {x; y; dir; player} ->
-          _remove_track backend ~x ~y ~dir ~player
+          _remove_track (x,y) ~dir player backend
       | DoubleTrack {x; y; double; player} ->
-          _change_double_track backend ~x ~y ~player double
+          _change_double_track (x,y) player ~double backend
       | ImproveStation {x; y; player; upgrade} ->
-          _improve_station backend ~x ~y ~player ~upgrade
+          _improve_station (x,y) player ~upgrade backend
       | SetSpeed speed ->
           _set_speed backend speed
       | BuildTrain {engine; cars; station; other_station; player} ->
-          _build_train backend station engine cars other_station ~player
+          _build_train station engine cars other_station player backend
       | RemoveStopCar {train; stop; car; player} ->
-          _remove_stop_car backend ~train ~stop ~car ~player
+          _remove_stop_car train ~stop ~car player backend
       | SetStopStation {train; stop; station; player} ->
-          _set_stop_station backend ~train ~stop ~station ~player
+          _set_stop_station ~train ~stop ~station player backend
       | RemoveStop {train; stop; player} ->
-          _remove_stop backend ~train ~stop ~player
+          _remove_stop ~train ~stop player backend
       | RemoveAllStopCars {train; stop; player} ->
-          _remove_all_stop_cars backend ~train ~stop ~player
+          _remove_all_stop_cars ~train ~stop player backend
       | AddStopCar {train; stop; car; player} ->
-          _add_stop_car backend ~train ~stop ~car ~player
+          _add_stop_car ~train ~stop ~car player backend
       | TrainSetType {train; typ; player} ->
-          _train_set_type backend ~train ~typ ~player
+          _train_set_type ~train ~typ player backend
       | RemoveTrain {idx; player} ->
-          _remove_train backend idx ~player
+          _remove_train idx player backend
       | TrainReplaceEngine {train; engine; player} ->
-          _train_replace_engine backend ~train ~engine ~player
+          _train_replace_engine ~train ~engine player backend
       | TrainToggleStopWait {train; stop; player} ->
-          _train_toggle_stop_wait backend ~train ~stop ~player
+          _train_toggle_stop_wait ~train ~stop player backend
       | StationSetSignal {x; y; dir; cmd} ->
-          _station_set_signal backend (x, y) dir cmd
+          _station_set_signal (x, y) dir cmd backend
       | BuildIndustry{player; x; y; tile} ->
-          _build_industry backend ~player_idx:player (x, y) tile
+          _build_industry (x, y) tile player backend
       | CallBroker{player} ->
-          _start_broker_timer backend player
+          _start_broker_timer player backend
       | SellBond{player} ->
-          _sell_bond backend player
+          _sell_bond player backend
       | RepayBond{player}->
-          _repay_bond backend player
+          _repay_bond player backend
       | BuyStock{player; stock} ->
           _buy_stock backend player ~stock
       | SellStock{player; stock} ->
-          _sell_stock backend player ~stock
+          _sell_stock player ~stock backend
       | Declare_bankruptcy{player} ->
-          _declare_bankruptcy backend player
+          _declare_bankruptcy player backend 
       | OperateRR{player; company; action=RRTakeMoney x} ->
-          _operate_rr_take_money backend ~player_idx:player ~company ~amount:x
+          _operate_rr_take_money player ~company ~amount:x backend
       | OperateRR{player; company; action=RRGiveMoney x} ->
-          _operate_rr_give_money backend ~player_idx:player ~company ~amount:x
+          _operate_rr_give_money player ~company ~amount:x backend
       | OperateRR{player; company; action=RRBuildTrack(src,dst)} ->
-          _operate_rr_build_track backend ~player_idx:player ~company src dst
+          _operate_rr_build_track player ~company src dst backend
       | OperateRR{player; company; action=RRRepayBond} ->
-          _operate_rr_repay_bond backend ~player_idx:player ~company_idx:company
+          _operate_rr_repay_bond player ~company_idx:company backend
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend
-      | Cheat (player, x) -> _handle_cheat backend player x
+      | Cheat (player, x) -> _handle_cheat player x backend
       | Quit_game -> backend
     in
     List.fold_left run_single backend msgs

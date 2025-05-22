@@ -283,13 +283,6 @@ type point = {
   y: int;
 }
 
-type msg = {
-  x: int;
-  y: int;
-  dir: Dir.t;
-  player: int;
-} [@@deriving show]
-
 let clip v ~min ~max =
   if v >= min then 
     if v <= max then
