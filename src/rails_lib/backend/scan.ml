@@ -47,7 +47,7 @@ let _train_count_in_ixn trains train_idxs dir =
     | _ -> false
   in
   List.fold_left (fun cnt train_idx ->
-    if _is_train_in_ixn trains train_idx dir then cnt + 1 else cnt)
+    if _is_train_in_ixn train_idx trains dir then cnt + 1 else cnt)
     0
     train_idxs
 

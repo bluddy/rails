@@ -353,7 +353,7 @@ let _build_train loc engine cars other_station player_idx v =
 
 let _remove_stop_car train ~stop ~car player_idx v =
   let players = Player.update v.players player_idx (fun player ->
-    let trains = Trainmap.update player.trains train (Train.remove_stop_car stop car) in
+    let trains = Trainmap.update train player.trains (Train.remove_stop_car stop car) in
     [%up {player with trains}])
   in
   [%up {v with players}]
@@ -361,13 +361,13 @@ let _remove_stop_car train ~stop ~car player_idx v =
 let check_stop_station ~train ~stop ~station player_idx v =
   let train =
     let player = Player.get player_idx v.players in
-    Trainmap.get player.trains train
+    Trainmap.get train player.trains 
   in
   Train.check_stop_station train stop station
 
 let modify_train train player_idx v f =
   let players = Player.update v.players player_idx (fun player ->
-    let trains = Trainmap.update player.trains train f in
+    let trains = Trainmap.update train player.trains f in
     [%up {player with trains}])
   in
   [%up {v with players}]
@@ -388,9 +388,12 @@ let get_num_trains player_idx v =
   let player = Player.get player_idx v.players in
   Trainmap.size player.trains
 
+let get_trains player_idx v =
+  Player.get player_idx v.players |> Player.get_trains
+
 let get_train idx player_idx v =
-  let player = Player.get player_idx v.players in
-  Trainmap.get player.trains idx
+  let trains = Player.get player_idx v.players |> Player.get_trains in
+  Trainmap.get idx trains 
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
@@ -401,7 +404,7 @@ let _train_replace_engine ~train ~engine player_idx v =
   let players = Player.update v.players player_idx (fun player ->
     let engine = Engine.t_of_make v.engines engine in
     let player = Player.pay `Train engine.price player in
-    let trains = Trainmap.update player.trains train (Train.replace_engine engine) in
+    let trains = Trainmap.update train player.trains (Train.replace_engine engine) in
     [%up {player with trains}])
   in
   [%up {v with players}]
@@ -435,7 +438,7 @@ let _remove_train idx player_idx v =
   let players =
     Player.update v.players player_idx (fun player ->
       let () =
-        let train = Trainmap.get player.trains idx in
+        let train = Trainmap.get idx player.trains in
         match train.state with
         | Traveling {block; _} -> Block_map.block_decr_train block v.blocks
         | _ -> ()

@@ -37,7 +37,9 @@ let make_menu fonts train_idx ~engine_make ~engines ~year =
   let train_type_menu =
     let open MsgBox in
     let check_type typ (s:State.t) =
-      let train = Trainmap.get s.backend.players.(0).trains train_idx in
+      let train =
+        let trains = Backend.get_player C.player s.backend |> Player.get_trains in
+        Trainmap.get trains train_idx in
       Train.equal_train_type typ train.typ
     in
     make ~fonts ~x:100 ~y:8 [
@@ -73,7 +75,9 @@ let open_car_menu (s:State.t) stop =
   Some(menu, stop)
 
 let make (s:State.t) train_idx =
-  let train = Trainmap.get s.backend.players.(0).trains train_idx in
+  let train =
+    let trains = Backend.get_player C.player s.backend |> Player.get_trains in
+    Trainmap.get trains train_idx in
   let menu = make_menu s.fonts train_idx ~engines:s.backend.engines ~year:(B.get_year s.backend) ~engine_make:train.engine.make in
   {
     train=train_idx;

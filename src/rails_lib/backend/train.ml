@@ -58,7 +58,7 @@ module History = struct
     (* Log.debug (fun f -> f "Add: %s" (show v)); *)
     ()
 
-  let get v i =
+  let get i v =
     let idx = Utils.modulo (v.idx - i) @@ Array.length v.history in
     v.history.(idx)
 end
@@ -369,7 +369,7 @@ let get_weight v =
 let get_max_speed_factor v =
   List.foldi (fun speed_factor i _ ->
     (* BUGFIX: i/2 is a weird choice: indexing into history. Maybe to reduce effect of long trains? *)
-    let history = History.get v.history i in
+    let history = History.get i v.history in
     max speed_factor history.History.speed_factor)
   0
   v.cars
@@ -536,7 +536,7 @@ let calc_car_loc_in_pixels trackmap total_pixels (v:'a t) =
     x, y, total_pixels
   in
   let rec segment_loop x y i ~total_pixels ~move_pixels =
-    let hist = History.get v.history i in
+    let hist = History.get i v.history in
     (* Move to center *)
     let x, y, total_pixels = move_back x y hist.dir ~total_pixels ~move_pixels in
     if total_pixels <= 0 then 
@@ -556,7 +556,7 @@ let calc_car_loc trackmap car_idx ~car_pixels (v:'a t) =
   calc_car_loc_in_pixels trackmap total_pixels v 
 
 
-let get_car_dir i (v:'a t) = (History.get v.history (i+1)).dir
+let get_car_dir i (v:'a t) = (History.get (i+1) v.history).dir
 
 let get_engine_cost v = v.engine.price
 

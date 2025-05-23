@@ -8,13 +8,13 @@ type t [@@deriving yojson]
 
 val empty : unit -> t
 
-val get: t -> Id.t -> ro Train.t
+val get: Id.t -> t -> ro Train.t
 
 val add : rw Train.t -> t -> t
 
 val delete : Id.t -> t -> t
 
-val update: t -> Id.t -> (rw Train.t -> rw Train.t) -> t
+val update: Id.t -> t -> (rw Train.t -> rw Train.t) -> t
 
 val size: t -> int
 
