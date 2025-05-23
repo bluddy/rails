@@ -106,6 +106,12 @@ let get_options v = v.params.options
 
 let get_tile_height x y v = Tilemap.get_tile_height_xy x y v.map
 
+let get_trains player_idx v =
+  Player.get player_idx v.players |> Player.get_trains
+
+let get_train idx player_idx v =
+  Trainmap.get idx @@ get_trains player_idx v
+
 let iter_cities f v = Cities.iter f v.cities
 
 let find_close_city x y ~range v = Cities.find_close x y v.cities ~range
@@ -129,7 +135,7 @@ let _build_station ((x,y) as loc) station_type player_idx v =
   let track, build_new_track_dir = Trackmap.build_station v.track loc station_type in
   let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_build_station x y v.graph before after in
-  let trains = get_player player_idx v |> Player.get_trains in
+  let trains = get_trains player_idx v in
   let blocks = Block_map.handle_build_station player_idx graph v.blocks track trains loc after in
   let station = match station_type with
   | `SignalTower ->
@@ -187,7 +193,7 @@ let _build_tunnel loc ~dir player_idx v =
     let after = Scan.scan track loc player_idx in
     let graph = G.Track.handle_build_track_simple v.graph before after in
     let blocks =
-      let trains = get_player player_idx v |> Player.get_trains in
+      let trains = get_trains player_idx v in
       Block_map.handle_build_track player_idx graph track trains v.blocks before after
     in
     let players = Player.update v.players player_idx @@ Player.pay `BridgeTunnel cost in
@@ -200,7 +206,7 @@ let _build_bridge ((x, y) as loc) ~dir player_idx ~kind v =
   let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let blocks =
-    let trains = get_player player_idx v |> Player.get_trains in
+    let trains = get_trains player_idx v in
     (* TODO: this was v.track. Check if it's now ok *)
     Block_map.handle_build_track player_idx graph track trains v.blocks before after
   in
@@ -237,7 +243,7 @@ let _change_double_track loc player_idx ~double v =
     in
     let after = Scan.scan track loc player_idx in
     let blocks =
-      let trains = get_player player_idx v |> Player.get_trains in
+      let trains = get_trains player_idx v in
       Block_map.handle_double_change player_idx v.graph track trains v.blocks after
     in
     [%up {v with track; blocks}]
@@ -250,7 +256,7 @@ let _build_track ((x, y) as loc) ~dir player_idx v =
   let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_build_track x y v.graph before after in
   let blocks =
-    let trains = Player.get player_idx v.players |> Player.get_trains in
+    let trains = get_trains player_idx v in
     Block_map.handle_build_track player_idx graph track trains v.blocks before after
   in
   let players = Player.update v.players player_idx @@
@@ -275,7 +281,7 @@ let _build_ferry ((x, y) as loc) ~dir player_idx v =
   let graph = G.Track.handle_build_track_simple v.graph before after in
   (* TODO: check if this needs v.track *)
   let blocks =
-    let trains = Player.get player_idx v.players |> Player.get_trains in
+    let trains = get_trains player_idx v in
     Block_map.handle_build_track player_idx graph track trains v.blocks before after
   in
   let players = Player.update v.players player_idx @@
@@ -313,7 +319,7 @@ let _remove_track ((x,y) as loc) ~dir player_idx v =
   let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_remove_track x y graph before after in
   let blocks =
-    let trains = Player.get player_idx players |> Player.get_trains in
+    let trains = get_trains player_idx v in
     Block_map.handle_remove_track player_idx graph track trains blocks before after
   in
   let players = Player.update players player_idx @@
@@ -345,7 +351,7 @@ let _build_train loc engine cars other_station player_idx v =
     [%up {player with trains}])
   in
   let msg =
-    let trains = Player.get player_idx players |> Player.get_trains in
+    let trains = get_trains player_idx v in
     UIM.TrainBuilt (Trainmap.Id.of_int (Trainmap.size trains - 1))
   in
   send_ui_msg v msg;
@@ -387,13 +393,6 @@ let _remove_all_stop_cars ~train ~stop player_idx v =
 let get_num_trains player_idx v =
   let player = Player.get player_idx v.players in
   Trainmap.size player.trains
-
-let get_trains player_idx v =
-  Player.get player_idx v.players |> Player.get_trains
-
-let get_train idx player_idx v =
-  let trains = Player.get player_idx v.players |> Player.get_trains in
-  Trainmap.get idx trains 
   
 let trackmap_iter v f = Trackmap.iter v.track f
 
