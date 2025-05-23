@@ -65,7 +65,7 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
 
   (* Write stop text *)
   let trains = Backend.get_player player s.backend |> Player.get_trains in
-  let train = Trainmap.get trains v.train in
+  let train = Trainmap.get v.train trains in
   let route = Train.get_route train in
   (* TODO: wait *)
   Vector.iteri (fun i (_, (stop:Train.stop)) ->

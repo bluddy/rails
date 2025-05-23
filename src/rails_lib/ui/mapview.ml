@@ -214,7 +214,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         else
           false
       in
-      let trains = B.get_player C.player s.backend |> Player.get_trains in
+      let trains = B.get_trains C.player s.backend in
       Trainmap.find_ret_index (fun train ->
         (* Test cars *)
         let on_car = 
@@ -428,7 +428,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       )
     );
     (* Draw trains *)
-    let trains = B.get_player C.player s.backend |> Player.get_trains in
+    let trains = B.get_trains C.player s.backend in
     Trainmap.iter (fun train ->
       (* NOTE: Is the 2nd black point necessary? *)
       List.iter (fun (pixels, color) ->
@@ -567,7 +567,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     v.draw_buffer;
 
     (* draw current trains *)
-    let trains = B.get_player C.player s.backend |> Player.get_trains in
+    let trains = B.get_trains C.player s.backend in
     Trainmap.iteri (fun train_num train ->
       let should_write_to_buffer =
         match Hashtbl.find_opt v.draw_buffer train_num with

@@ -9,12 +9,12 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let sp = Printf.sprintf
 
-let make_menu b players stations cities region fonts =
+let make_menu (b:Backend.t) players stations cities region fonts =
   let open Menu in
   let open MsgBox in
   let cash_menu =
-    let check_bankruptcy (s:State.t) = Backend.check_bankruptcy s.backend C.player in
-    let check_bond (s:State.t) = Backend.player_has_bond s.backend C.player in
+    let check_bankruptcy (s:State.t) = Backend.check_bankruptcy C.player s.backend in
+    let check_bond (s:State.t) = Backend.player_has_bond C.player s.backend in
     let open MsgBox in
     make ~fonts ~x:16 ~y:8 [
       make_entry (sp "&Sell %s bond" @@ Utils.show_cash ~region 500)  @@ `Action `SellBond;
@@ -23,19 +23,20 @@ let make_menu b players stations cities region fonts =
     ]
   in
   let create_stock_menu ~x ~y action f =
-    let l =
-      Array.to_iter players |> Iter.mapi (fun i player ->
+    let player_entry =
+      let s = Printf.sprintf "%s 10,000 shares Treasury stock" action in
+      (make_entry s @@ `Action(f C.player))
+    in
+    let ai_entries =
+      (Ai.ai_iter b.ai |> Iter.map (fun i ->
         let s =
-          if i = C.player then
-            Printf.sprintf "%s 10,000 shares Treasury stock" action
-          else
-            let name = Player.get_name player stations cities in
-            Printf.sprintf "%s 10,000 shares of %s" action name
+          let name = Ai.get_name i ~cities b.ai in
+          Printf.sprintf "%s 10,000 shares of %s" action name
         in
         make_entry s @@ `Action(f i)
-      ) |> Iter.to_list
+      ) |> Iter.to_list)
     in
-    make ~fonts ~x ~y l
+    make ~fonts ~x ~y @@ player_entry::ai_entries
   in
   let sell_stock_menu =
     create_stock_menu ~x:2 ~y:8 "Sell" (fun i -> `SellStock i)
