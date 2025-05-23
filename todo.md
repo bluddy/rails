@@ -1,10 +1,10 @@
 # Tasks
+- Stock broker: print ownership of AI stock
 - Deal with number idx for ais and players, specifically where they interact:
   - player id
   - stocks
-  - Presumably we can have 0 be player, and 1-3 be ai
-  - But for extension, we'll need better identification.
 - Switch city idxs in AI for locs. Don't rely on int idxs.
+- Money -> use money type
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game
 - Deal with region-based, duplicate tile to pixel mapping
@@ -22,10 +22,8 @@
 - Check /2 for different things with money (e.g. pay)
 - Figure out ton-miles for freight/per period
   - Seems to involve per-car computation
-- Remove bitset premature optimization
 - Check if we need to loop in _update_train (print out if we ever do multiple updates)
 - Wire up player updates
-- Deal with player ton-miles
 - Could division by 2 for money be to get a little more space in the bits?
 - Bug:
   - Delivery + priority pickup: no delivery message
