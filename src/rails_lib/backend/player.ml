@@ -78,6 +78,8 @@ let default idx =
 
 let get_cash v = v.m.cash
 
+let net_worth v = v.m.net_worth
+
 let bonds v = v.m.bonds
 
 let modify_cash f v = {v with m={v.m with cash = f v.m.cash}}

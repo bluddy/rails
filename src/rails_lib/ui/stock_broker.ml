@@ -9,12 +9,13 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let sp = Printf.sprintf
 
-let make_menu (b:Backend.t) players stations cities region fonts =
+let make_menu (b:Backend.t) cities region fonts =
   let open Menu in
   let open MsgBox in
+  let player_idx = C.player in
   let cash_menu =
-    let check_bankruptcy (s:State.t) = Backend.check_bankruptcy C.player s.backend in
-    let check_bond (s:State.t) = Backend.player_has_bond C.player s.backend in
+    let check_bankruptcy (s:State.t) = Backend.check_bankruptcy player_idx s.backend in
+    let check_bond (s:State.t) = Backend.player_has_bond player_idx s.backend in
     let open MsgBox in
     make ~fonts ~x:16 ~y:8 [
       make_entry (sp "&Sell %s bond" @@ Utils.show_cash ~region 500)  @@ `Action `SellBond;
@@ -25,7 +26,7 @@ let make_menu (b:Backend.t) players stations cities region fonts =
   let create_stock_menu ~x ~y action f =
     let player_entry =
       let s = Printf.sprintf "%s 10,000 shares Treasury stock" action in
-      (make_entry s @@ `Action(f C.player))
+      (make_entry s @@ `Action(f player_idx))
     in
     let ai_entries =
       (Ai.ai_iter b.ai |> Iter.map (fun i ->
@@ -45,14 +46,14 @@ let make_menu (b:Backend.t) players stations cities region fonts =
     create_stock_menu ~x:2 ~y:8 "Buy" (fun i -> `BuyStock i)
   in
   let operate_rr_menu =
-    let companies = Backend.companies_controlled_by b C.player in
+    let companies = Backend.companies_controlled_by player_idx b in
     let company_menu company_idx =
       let has_money_to_take x _ =
-        let cash = Backend.get_player b company_idx |> Player.get_cash in
+        let cash = Backend.get_player company_idx b |> Player.get_cash in
         cash >= x
       in
       let has_money_to_give x _ =
-        let cash = Backend.get_player b C.player |> Player.get_cash in
+        let cash = Backend.get_player player_idx b |> Player.get_cash in
         cash >= x
       in
       make ~fonts [
@@ -68,7 +69,7 @@ let make_menu (b:Backend.t) players stations cities region fonts =
     in
     let entries =
       let controls_company i (s:State.t) =
-         Stock_market.controls_company C.player ~target:i s.backend.stocks 
+         Stock_market.controls_company player_idx ~target:i s.backend.stocks 
       in
       List.map (fun company_idx ->
         make_entry
@@ -81,7 +82,7 @@ let make_menu (b:Backend.t) players stations cities region fonts =
   in
   let titles =
     let owns_some_company (s:State.t) =
-      Stock_market.controls_any_other_company C.player s.backend.stocks
+      Stock_market.controls_any_other_company player_idx s.backend.stocks
     in
     let open Menu.Title in
     [
@@ -95,13 +96,14 @@ let make_menu (b:Backend.t) players stations cities region fonts =
 
 let make (s:State.t) =
   let b = s.backend in
-  let menu = make_menu b b.players b.stations b.cities (B.get_region b) s.fonts in
+  let menu = make_menu b b.cities (B.get_region b) s.fonts in
   {
     menu;
     modal = None;
   }
 
 let render win (s:State.t) v =
+  let player_idx = C.player in
   R.paint_screen win ~color:Ega.white;
   let dims = s.ui.dims in
   let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
@@ -113,8 +115,8 @@ let render win (s:State.t) v =
   let y = 24 in
   let line = 8 in
 
-  let render_player player_idx player y =
-    let name = Player.get_name player s.backend.stations s.backend.cities in
+  let render_player (player_idx:Owner.t) (player:Player.t) y =
+    let name = Player.get_name s.backend.stations s.backend.cities player in
     (* TODO: render owned stock by player in ai *)
     let is_ai, color = 
       (* TODO: fix rendering for AI *)
@@ -130,15 +132,15 @@ let render win (s:State.t) v =
     | None -> *)
       write ~x:x_left ~y name;
       let y = y + line in
-      write ~x:x_left ~y @@ sp "Track: %d miles" @@ player.track_length;
+      write ~x:x_left ~y @@ sp "Track: %d miles" @@ Player.track_length player;
       false, Ega.black
     in
-    let cash_s = Utils.show_cash ~region ~spaces:7 player.m.cash in
+    let cash_s = Utils.show_cash ~region ~spaces:7 @@ Player.get_cash player in
     write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
     let y = y + line in
-    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 player.m.bonds;
+    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 @@ Player.bonds player;
     let y = y + line in
-    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 player.m.net_worth;
+    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 @@ Player.net_worth player;
     let per_s = if is_ai then "/" else " per " in
     write ~color ~x:x_right ~y @@ sp "Stock at %s.00%sshare"
       (Utils.show_cash ~ks:false ~region @@ Stock_market.share_price player_idx s.backend.stocks) per_s;
@@ -154,7 +156,7 @@ let render win (s:State.t) v =
   in
   let y = y + line in
   write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show @@ B.get_climate s.backend)
-    (Backend.get_interest_rate s.backend C.player);
+    (Backend.get_interest_rate s.backend player_idx);
 
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
 
