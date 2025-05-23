@@ -3,6 +3,7 @@ open Utils.Infix
 
 module R = Renderer
 module B = Backend
+module C = Constants
 
 module AddCars = struct
   open Build_train_d
@@ -28,10 +29,9 @@ module AddCars = struct
         |> Iter.head_exn
       with Invalid_argument _ -> invalid_arg "No station with engine found"
     in
-    let loc = station.x, station.y in
     let anim =
       let engine = engine.Engine.make in
-      Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:loc ~rail:`Back
+      Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:station.loc ~rail:`Back
     in
     let menu = create_menu ~fonts:s.fonts (B.get_region s.backend) in
     {
@@ -72,7 +72,7 @@ module AddCars = struct
                                    cars=v.anim.cars;
                                    station;
                                    other_station;
-                                   player=0}
+                                   player=C.player}
     else
       v, nobaction
 

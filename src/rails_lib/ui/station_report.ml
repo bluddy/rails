@@ -191,7 +191,7 @@ let render win (s:State.t) loc ~show_demand =
       10
     in
     (* Priority shipment *)
-    let goods_s = Backend.get_player s.backend C.player
+    let goods_s = Backend.get_player C.player s.backend 
       |> Player.get_priority
       |> Priority_shipment.station_waiting_delivery_text ~loc
     in

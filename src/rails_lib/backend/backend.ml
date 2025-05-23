@@ -358,7 +358,7 @@ let _remove_stop_car train ~stop ~car player_idx v =
   in
   [%up {v with players}]
 
-let check_stop_station v ~train ~stop ~station player_idx =
+let check_stop_station ~train ~stop ~station player_idx v =
   let train =
     let player = Player.get player_idx v.players in
     Trainmap.get player.trains train

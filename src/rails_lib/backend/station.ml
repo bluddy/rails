@@ -481,7 +481,7 @@ let set_priority_shipment x v =
     else
         Some {info with holds_priority_shipment = x})
 
-let get_player v = v.player
+let get_player_idx v = v.player
 
 let set_rate_war x rates v =
   update_with_info v

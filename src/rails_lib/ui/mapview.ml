@@ -115,8 +115,8 @@ let set_const_box_to_loc v ~x ~y =
 let const_box_on_woodbridge ?cursor_x ?cursor_y backend v =
   let cursor_x = Option.get_or ~default:v.const_box_x cursor_x in
   let cursor_y = Option.get_or ~default:v.const_box_y cursor_y in
-  match B.get_track backend cursor_x cursor_y with
-  | Some track when track.player = 0 ->
+  match B.get_track cursor_x cursor_y backend with
+  | Some track when Owner.(track.player = C.player) ->
       begin match track.kind with
       | Bridge Wood -> true
       | _ -> false
@@ -128,8 +128,8 @@ let const_box_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
   let cursor_x_tile = Option.get_or ~default:v.const_box_x cursor_x_tile in
   let cursor_y_tile = Option.get_or ~default:v.const_box_y cursor_y_tile in
   (* check if we're clicking on a station *)
-  match B.get_track backend cursor_x_tile cursor_y_tile with
-  | Some track when track.player = 0 ->
+  match B.get_track cursor_x_tile cursor_y_tile backend with
+  | Some track when Owner.(track.player = C.player) ->
       begin match track.kind with
       | Station (`Depot | `Station | `Terminal) -> true
       | Station `SignalTower when all -> true
@@ -137,13 +137,13 @@ let const_box_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
       end
   | _ -> false
 
-let const_box_on_signal backend tile_x tile_y delta_x delta_y =
+let const_box_on_signal backend tile_x tile_y ~dx ~dy =
   (* assumes we are on a station *)
   (* offsets: delta relative to tile *)
-  let midpoint_x, midpoint_y = 8, 8 in
-  let delta_x, delta_y = delta_x - midpoint_x, delta_y - midpoint_y in
+  let midpoint_x, midpoint_y = C.tile_dim/2, C.tile_dim/2 in
+  let delta_x, delta_y = dx - midpoint_x, dy - midpoint_y in
   match B.get_track backend tile_x tile_y with
-  | Some {kind=Station _; player; dirs; _} when player = 0 ->
+  | Some {kind=Station _; player; dirs; _} when Owner.(player = C.player) ->
     Dir.Set.find_opt dirs (function
       | Up when delta_x > 0 && delta_y < 0 -> true
       | UpRight when delta_x > 0 && delta_y >= -2 && delta_y <= 2 -> true
@@ -168,9 +168,9 @@ let get_build_mode v = v.build_mode
 
 let get_survey v = v.survey
 
-let set_survey v b = {v with survey=b}
+let set_survey b v = {v with survey=b}
 
-let update_option v option value =
+let update_option option value v =
   let options = 
     if value then
       Options.add v.options option
@@ -214,27 +214,28 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         else
           false
       in
+      let trains = B.get_player C.player s.backend |> Player.get_trains in
       Trainmap.find_ret_index (fun train ->
         (* Test cars *)
         let on_car = 
           Utils.List.findi (fun i _ ->
-            let x, y, _ = Train.calc_car_loc train s.backend.track ~car_pixels i in
+            let x, y, _ = Train.calc_car_loc s.backend.track ~car_pixels i train in
             test_loc x y
           ) train.cars
         in
         let on_engine () =
-          let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track 0 in
+          let x, y, _ = Train.calc_car_loc_in_pixels s.backend.track 0 train in
           test_loc x y
         in
         Option.is_some on_car || on_engine ()
-      ) s.backend.players.(0).trains
+      ) trains
     in
     begin match v.zoom, button with
     | Zoom4, `Left when cursor_x_tile = v.const_box_x && cursor_y_tile = v.const_box_y ->
         (* second click, after focusing the cursor on that tile *)
         if const_box_on_station s.backend v then
           let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
-          match const_box_on_signal s.backend cursor_x_tile cursor_y_tile (x - screen_x) (y - screen_y) with
+          match const_box_on_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
           | Some dir -> (* signal click *)
             v, `SignalMenu (cursor_x_tile, cursor_y_tile, dir, x, y)
           | None -> (* station click *)
@@ -242,7 +243,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         else begin match cursor_on_train x y ~car_pixels:12 ~dist:10 with
           | Some train_idx -> v, `EditTrain train_idx
           | _ -> (* tile click *)
-            let tile = B.get_tile s.backend cursor_x_tile cursor_y_tile in
+            let tile = B.get_tile cursor_x_tile cursor_y_tile s.backend in
             v, `ShowTileInfo (cursor_x_tile, cursor_y_tile, tile)
           end
     | Zoom4, `Left ->
@@ -274,7 +275,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             | Some train_idx -> v, `EditTrain train_idx
             | _ ->
               (* tile info *)
-              let tile = B.get_tile s.backend cursor_x_tile cursor_y_tile in
+              let tile = B.get_tile cursor_x_tile cursor_y_tile s.backend in
               v, `ShowTileInfo (cursor_x_tile, cursor_y_tile, tile)
             end
         end
@@ -314,11 +315,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match key_to_dir key with
     | Some dir ->
         let move i = move_const_box v dir i in
-        let msg () = Utils.{x=v.const_box_x; y=v.const_box_y; dir; player=0} in
+        let msg () = Backend.Action.{x=v.const_box_x; y=v.const_box_y; dir; player=C.player} in
         if build then (
           if v.build_mode then
             (* Build track *)
-            match B.check_build_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~dir ~player:0 with
+            match B.check_build_track (v.const_box_x, v.const_box_y) ~dir C.player s.backend with
             | `Ok -> move 1, `BuildTrack(msg ())
             | `Ferry -> move 1, `BuildFerry(msg ())
             | `HighGrade g -> v, `HighGradeTrack(msg (), g, false)
@@ -327,7 +328,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             | `Illegal -> v, `NoAction
           else
             (* Remove Track *)
-            match B.check_remove_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~dir ~player:0 with
+            match B.check_remove_track (v.const_box_x, v.const_box_y) ~dir C.player s.backend with
             | true -> move 1, `RemoveTrack(msg ())
             | false -> v, `NoAction
         ) else
@@ -340,14 +341,14 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           | Some station when Station.is_proper_station station ->
             v, `StationView (v.const_box_x, v.const_box_y)
           | _ ->
-            let tile = B.get_tile s.backend v.const_box_x v.const_box_y in
+            let tile = B.get_tile v.const_box_x v.const_box_y s.backend in
             v, `ShowTileInfo (v.const_box_x, v.const_box_y, tile)
           end
       | Event.K1 when build &&
-            B.check_change_double_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~player:0 false ->
+            B.check_change_double_track (v.const_box_x, v.const_box_y) C.player ~double:false s.backend ->
               v, `DoubleTrack(false, v.const_box_x, v.const_box_y, 0)
       | Event.K2 when build &&
-            B.check_change_double_track s.backend ~x:v.const_box_x ~y:v.const_box_y ~player:0 true ->
+            B.check_change_double_track (v.const_box_x, v.const_box_y) C.player ~double:true s.backend ->
               v, `DoubleTrack(true, v.const_box_x, v.const_box_y, 0)
       | _ -> v, `NoAction
   in
@@ -395,7 +396,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let tiles = tile_textures_of_zoom s zoom in
     (* Check for alternate tile *)
     let alt = ((tile_x + tile_y) land 1) > 0 in
-    let tile = B.get_tile s.backend tile_x tile_y in
+    let tile = B.get_tile tile_x tile_y s.backend in
     let tex = Textures.TileTex.find tiles ~region:(B.get_region s.backend) ~alt tile in
     R.Texture.render win tex ~x:screen_x ~y:screen_y
   in
@@ -426,11 +427,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         R.draw_point win ~x ~y ~color:Ega.black
       )
     );
-    (* Draw train *)
+    (* Draw trains *)
+    let trains = B.get_player C.player s.backend |> Player.get_trains in
     Trainmap.iter (fun train ->
       (* NOTE: Is the 2nd black point necessary? *)
       List.iter (fun (pixels, color) ->
-        let x_map, y_map, _ = Train.calc_car_loc_in_pixels train s.backend.track pixels in
+        let x_map, y_map, _ = Train.calc_car_loc_in_pixels s.backend.track pixels train in
         (* Must use tile_dim: tile_div changes by zoom *)
         let x_tile, y_tile = x_map / C.tile_dim, y_map / C.tile_dim in
         if x_tile >= from_x && x_tile <= from_x_end && y_tile >= from_y && y_tile <= from_y_end then (
@@ -438,12 +440,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           R.draw_point win ~color ~x ~y
         ))
       [0, Ega.white; 16, Ega.black]
-    ) s.backend.players.(0).trains
+    ) trains
   in
   let draw_track_zoom4 ~tile_x ~tile_y ~screen_x ~screen_y =
     (* draw an individual piece of tile *)
     let track_h = s.State.textures.tracks in
-    match B.get_track s.backend tile_x tile_y with
+    match B.get_track tile_x tile_y s.backend with
     | Some track when Track.is_visually_double track ->
       let tex = Textures.Tracks.find track_h track in
       let (x1, y1), (x2, y2) = Track.double_track_offsets track in
@@ -462,7 +464,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       Dir.Set.iter (fun dir ->
         let has_connection_in_dir = 
           let tile_x2, tile_y2 = Dir.adjust dir tile_x tile_y in
-          match B.get_track s.backend tile_x2 tile_y2 with
+          match B.get_track tile_x2 tile_y2 s.backend with
           | Some track when Track.has_dir track ~dir:(Dir.opposite dir) -> true
           | _ -> false
         in
@@ -481,7 +483,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_tracks_zoom2_3 mult zoom_station =
     iter_screen @@ fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
-      match B.get_track s.backend tile_x tile_y with
+      match B.get_track tile_x tile_y s.backend with
       | Some track ->
         let x = v.dims.x + x * tile_w + tile_w2 in
         let y = v.dims.y + y * tile_h + tile_h2 in
@@ -492,9 +494,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           Dir.Set.iter (fun dir ->
             (* Only draw signal if we have track in this direction *)
             let tile_x, tile_y = Dir.adjust dir tile_x tile_y in
-            match B.get_track s.backend tile_x tile_y with
-            | None -> ()
-            | Some _ -> 
+            if Option.is_some @@ B.get_track tile_x tile_y s.backend then (
               let signal = Station.get_signal station dir in
               let dir90 = dir |> Dir.cw |> Dir.cw in
               let dx, dy = Dir.to_offsets dir90 in
@@ -506,8 +506,8 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
               (* draw light *)
               let color = Station.color_of_signal signal in
               R.draw_rect win ~color ~x:(x-1) ~y:(y-1) ~w:2 ~h:2 ~fill:true
-          )
-          track.dirs
+            );
+          ) track.dirs
         in
         let draw_zoom4_station () =
           match zoom_station with
@@ -567,6 +567,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     v.draw_buffer;
 
     (* draw current trains *)
+    let trains = B.get_player C.player s.backend |> Player.get_trains in
     Trainmap.iteri (fun train_num train ->
       let should_write_to_buffer =
         match Hashtbl.find_opt v.draw_buffer train_num with
@@ -590,20 +591,20 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       (* Draw cars *)
       let draw_buffer = 
         List.foldi (fun draw_list i car ->
-          let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track @@ (i+1)*8 in
+          let x, y, _ = Train.calc_car_loc_in_pixels s.backend.track ((i+1)*8) train in
           let color = Train.Car.get_freight car |> Freight.to_color ~full:true in
           draw_car_or_engine color x y;
           if should_write_to_buffer then (x,y,color)::draw_list else []
         ) [] train.cars
       in
       (* Draw engine *)
-      let x, y, _ = Train.calc_car_loc_in_pixels train s.backend.track 0 in
+      let x, y, _ = Train.calc_car_loc_in_pixels s.backend.track 0 train in
       draw_car_or_engine Ega.black x y;
       let draw_buffer =
         if should_write_to_buffer then (x,y,Ega.black)::draw_buffer else []
       in
       if should_write_to_buffer then set_draw_buffer draw_buffer;
-    ) s.backend.players.(0).trains;
+    ) trains;
   in
   let draw_stationboxes mult size =
     (* mult and size are in tiles! *)
@@ -611,7 +612,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let copy_to_tile_buffer () =
       iter_screen @@ fun x y ->
         let tile_x, tile_y = start_x + x, start_y + y in
-        if Option.is_some @@ B.get_track s.backend tile_x tile_y then
+        if Option.is_some @@ B.get_track tile_x tile_y s.backend then
           Tilebuffer.set v.tile_buffer x y ~value:(-1)
     in copy_to_tile_buffer ();
     (* We need to find an empty screen location to draw the station boxes *)
@@ -679,8 +680,10 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:false ~color;
 
       (* Priority shipment *)
-      let player = Station.get_player station in
-      let priority = B.get_player s.backend player |> Player.get_priority in
+      let priority =
+        let player_idx = Station.get_player_idx station in
+        B.get_player player_idx s.backend |> Player.get_priority
+      in
       Option.iter (fun priority ->
         let draw_letter letter =
           let color = Freight.to_color ~full:true priority.Priority_shipment.freight in
@@ -699,7 +702,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let (tile_x, tile_y) as loc = start_x + x, start_y + y in
       if tile_x >= start_x && tile_x < end_x - size &&
          tile_y >= start_y && tile_y < end_y - size then (
-        B.get_track s.backend tile_x tile_y
+        B.get_track tile_x tile_y s.backend 
         |> Option.iter (fun track ->
           if Track.is_big_station track then
             let station = Station_map.get_exn loc s.backend.stations in
@@ -739,7 +742,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       (* Draw cars *)
       List.iteri (fun i car ->
         let car_x, car_y, car_dir =
-          Train.calc_car_loc ~car_pixels:12 train s.backend.track i
+          Train.calc_car_loc ~car_pixels:12 s.backend.track i train 
         in
         if is_in_view car_x car_y then (
           let freight = Freight.of_good car.Train.Car.good in
@@ -760,7 +763,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         R.Texture.render win tex ~x ~y
       )
     )
-    s.backend.players.(0).trains;
+    (B.get_player C.player s.backend |> Player.get_trains);
     (* Draw smoke *)
     let smoke_texs = Hashtbl.find s.textures.Textures.smoke `SmokeTop in
     let offset_x, offset_y = (-C.tile_w/2) - 2, -2 in
@@ -775,10 +778,10 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
   let draw_survey_zoom4 () =
     iter_screen (fun x y ->
       let map_x, map_y = start_x + x, start_y + y in
-      match B.get_tile s.backend map_x map_y with
+      match B.get_tile map_x map_y s.backend with
       | Tile.Ocean _ -> ()
       | _ ->
-        let height = (B.get_tile_height s.backend map_x map_y) / 2 |> string_of_int in
+        let height = (B.get_tile_height map_x map_y s.backend ) / 2 |> string_of_int in
         let x, y = x * tile_w + 4 + v.dims.x, y * tile_h + 4 + v.dims.y in
         Fonts.Render.write win s.fonts height ~idx:3 ~x ~y ~color:Ega.white
     )
@@ -883,7 +886,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
             acc
         )
         ~init:smoke_plumes
-        s.backend.players.(0).trains
+        (B.get_player C.player s.backend |> Player.get_trains)
       in
       smoke_plumes
     | _ -> smoke_plumes
