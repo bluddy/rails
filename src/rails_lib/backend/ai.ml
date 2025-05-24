@@ -99,6 +99,8 @@ let get_cash idx v = get_ai_exn idx v |> fun player -> player.cash
 
 let get_bonds idx v = get_ai_exn idx v |> fun player -> player.bonds
 
+let get_net_worth idx v = get_ai_exn idx v |> fun player -> player.net_worth
+
 let add_cash idx cash v =
   modify_ai idx v (fun ai_player -> {ai_player with cash=ai_player.cash + cash})
 
