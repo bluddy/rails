@@ -115,25 +115,23 @@ let render win (s:State.t) v =
   let y = 24 in
   let line = 8 in
 
-  let render_player (player_idx:Owner.t) backend y =
+  let render_player_info (player_idx:Owner.t) backend y =
     let name = B.get_name player_idx backend in
     (* TODO: render owned stock by player in ai *)
     let is_ai, color = 
-      (* TODO: fix rendering for AI *)
-      (*
-    match player.ai with
-    | Some ai ->
-      let color = Ega.green in
-      write ~color ~x:x_left ~y @@ sp "%s's" @@ Opponent.show ai.opponent;
-      let y = y + line in
-      write ~color ~x:x_left ~y name;
-      true, color
-
-    | None -> *)
-      write ~x:x_left ~y name;
-      let y = y + line in
-      write ~x:x_left ~y @@ sp "Track: %d miles" @@ B.get_track_length player_idx backend;
-      false, Ega.black
+      if Owner.is_human player_idx then (
+        write ~x:x_left ~y name;
+        let y = y + line in
+        write ~x:x_left ~y @@ sp "Track: %d miles" @@ B.get_track_length player_idx backend;
+        false, Ega.black
+      ) else (
+        let ai = Ai.get_ai_exn player_idx backend.ai in
+        let color = Ega.green in
+        write ~color ~x:x_left ~y @@ sp "%s's" @@ Opponent.show ai.opponent;
+        let y = y + line in
+        write ~color ~x:x_left ~y name;
+        true, color
+      )
     in
     let cash_s = Utils.show_cash ~region ~spaces:7 @@ B.get_cash player_idx backend in
     write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
@@ -149,14 +147,20 @@ let render win (s:State.t) v =
     write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" non treasury;
     y + line
   in
-  let y =
-    Iter.fold (fun y player_idx -> render_player player_idx s.backend y)
-    y
-    @@ B.players_and_ai s.backend
-  in
+  let y = Iter.fold (fun y player_idx -> render_player_info player_idx s.backend y) y @@ B.players_and_ai s.backend in
   let y = y + line in
   write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show @@ B.get_climate s.backend)
     (Backend.get_interest_rate s.backend player_idx);
+
+  let x, y = 50, 194 in
+  let render_opponent player_idx textures (b:Backend.t) y =
+    if Owner.is_human player_idx then y else
+    let ai = Ai.get_ai_exn player_idx b.ai in
+    let tex = Hashtbl.find textures ai.opponent.name in
+    R.Texture.render win ~x ~y tex;
+    y + 10
+  in
+  Iter.fold (fun y player_idx -> render_opponent player_idx s.textures.opponents s.backend y) y @@ B.players_and_ai s.backend |> ignore;
 
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
 
