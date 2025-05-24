@@ -74,7 +74,7 @@ let make_menu (b:Backend.t) cities region fonts =
       List.map (fun company_idx ->
         make_entry
           ~test_enabled:(controls_company company_idx)
-          (Backend.get_company_name b company_idx) @@
+          (Backend.get_name company_idx b) @@
           `MsgBox(company_menu company_idx))
       companies
     in
@@ -115,8 +115,8 @@ let render win (s:State.t) v =
   let y = 24 in
   let line = 8 in
 
-  let render_player (player_idx:Owner.t) (player:Player.t) y =
-    let name = Player.get_name s.backend.stations s.backend.cities player in
+  let render_player (player_idx:Owner.t) backend y =
+    let name = B.get_name player_idx backend in
     (* TODO: render owned stock by player in ai *)
     let is_ai, color = 
       (* TODO: fix rendering for AI *)
@@ -132,15 +132,15 @@ let render win (s:State.t) v =
     | None -> *)
       write ~x:x_left ~y name;
       let y = y + line in
-      write ~x:x_left ~y @@ sp "Track: %d miles" @@ Player.track_length player;
+      write ~x:x_left ~y @@ sp "Track: %d miles" @@ B.get_track_length player_idx v;
       false, Ega.black
     in
-    let cash_s = Utils.show_cash ~region ~spaces:7 @@ Player.get_cash player in
+    let cash_s = Utils.show_cash ~region ~spaces:7 @@ B.get_cash player_idx v in
     write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
     let y = y + line in
-    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 @@ Player.bonds player;
+    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 @@ B.get_bonds player_idx v;
     let y = y + line in
-    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 @@ Player.net_worth player;
+    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 @@ B.get_net_worth player_idx v;
     let per_s = if is_ai then "/" else " per " in
     write ~color ~x:x_right ~y @@ sp "Stock at %s.00%sshare"
       (Utils.show_cash ~ks:false ~region @@ Stock_market.share_price player_idx s.backend.stocks) per_s;
@@ -150,9 +150,9 @@ let render win (s:State.t) v =
     y + line
   in
   let y =
-    Array.foldi (fun y idx player -> render_player idx player y)
+    Iter.fold (fun y player_idx -> render_player player_idx s.backend y)
     y
-    s.backend.players
+    @@ B.players_and_ai s.backend
   in
   let y = y + line in
   write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show @@ B.get_climate s.backend)

@@ -101,11 +101,10 @@ let get_bonds idx v = get_ai_exn idx v |> fun player -> player.bonds
 
 let get_net_worth idx v = get_ai_exn idx v |> fun player -> player.net_worth
 
+let get_track_length idx v = get_ai_exn idx v |> fun player -> player.track_length
+
 let add_cash idx cash v =
   modify_ai idx v (fun ai_player -> {ai_player with cash=ai_player.cash + cash})
-
-let get_track_len player v =
-  get_ai_exn player v |> fun x -> x.track_length
 
 let get_name player ~cities v =
   let p = get_ai_exn player v in
@@ -471,7 +470,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
     | None ->
       (* Failed to build *)
         let expand_ctr =
-          if get_track_len company v > 64 then
+          if get_track_length company v > 64 then
             ai_player.expand_ctr / 2
           else ai_player.expand_ctr
         in

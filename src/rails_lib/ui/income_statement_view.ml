@@ -10,7 +10,7 @@ let relevant_expenses = [
 ]
 
 let render win (s:State.t) balance_sheet =
-  let player = Backend.get_player s.backend C.player in
+  let player = Backend.get_player C.player s.backend in
   let is, old_is = player.m.income_statement, player.m.total_income_statement in
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
   Fonts.Render.write_shadow win s.fonts ~idx:2 ~color:Ega.gray ~x:16 ~y:4 @@

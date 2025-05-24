@@ -122,6 +122,7 @@ let send_ui_msg v msg =
 
 let get_player player_idx v = Player.get player_idx v.players
 
+(* Functions that turn either to a player or to AI *)
 let get_player_ai player_f ai_f player_idx v =
   if Owner.is_human player_idx then
     get_player player_idx v |> player_f
@@ -133,6 +134,15 @@ let get_cash player_idx v = get_player_ai Player.get_cash Ai.get_cash player_idx
 let get_bonds player_idx v = get_player_ai Player.bonds Ai.get_bonds player_idx v
 
 let get_net_worth player_idx v = get_player_ai Player.net_worth Ai.get_net_worth player_idx v
+
+let get_name player_idx v =
+  get_player_ai (Player.get_name v.stations v.cities) (Ai.get_name ~cities:v.cities) player_idx v
+
+let get_track_length player_idx v =
+  get_player_ai Player.track_length Ai.get_track_length player_idx v
+
+let players_and_ai v =
+  Iter.append (Owner.Map.keys v.players) (Ai.ai_iter v.ai)
 
 let check_build_station x y player_idx station_type v =
   let loc = (x, y) in
@@ -568,9 +578,6 @@ let get_time_of_day time =
   let time_mins = minutes mod 60 in
   let am_pm = if hours >= 12 then "PM" else "AM" in
   Printf.sprintf "%d:%02d %s" time_hours time_mins am_pm
-
-let get_company_name v player_idx =
-  get_player player_idx v |> Player.get_name v.stations v.cities
 
 let companies_controlled_by player_idx v =
   Stock_market.other_companies_controlled_by player_idx v.stocks
