@@ -122,7 +122,18 @@ let send_ui_msg v msg =
 
 let get_player player_idx v = Player.get player_idx v.players
 
-let get_cash player_idx v = get_player player_idx v |> Player.get_cash
+let get_cash player_idx v =
+  if Owner.is_human player_idx then
+    get_player player_idx v |> Player.get_cash
+  else
+    Ai.get_cash player_idx v.ai
+
+let get_bonds player_idx v =
+  if Owner.is_human player_idx then
+    get_player player_idx v |> Player.bonds
+  else
+    Ai.get_bonds player_idx v.ai
+
 
 let check_build_station x y player_idx station_type v =
   let loc = (x, y) in

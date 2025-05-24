@@ -11,13 +11,14 @@ let compute_liabilities (b:Balance_sheet.t) =
   b.outstanding_loans + b.stockholders_equity
 
 let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
-  let player = Backend.get_player s.backend C.player in
+  let player_idx = C.player in
+  let player = Backend.get_player player_idx s.backend in
   let b, pb = balance_sheet, player.m.last_balance_sheet in
   let x_left, x_text, x_total, x_ytd = 8, 16, 128, 224 in
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
   Fonts.Render.write_shadow win s.fonts ~idx:2 ~color:Ega.gray ~x:32 ~y:8 @@
     Printf.sprintf "Balance Sheet: %d" (B.get_year s.backend);
-  let rr_name = Player.get_name player s.backend.stations s.backend.cities in
+  let rr_name = Player.get_name s.backend.stations s.backend.cities player in
   let y = 24 in
   let line = 8 in
   let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in

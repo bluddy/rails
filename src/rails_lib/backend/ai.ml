@@ -95,6 +95,10 @@ let modify_ai idx v f =
     let ais = Owner.Map.add idx ai2 v.ais in
     {v with ais}
 
+let get_cash idx v = get_ai_exn idx v |> fun player -> player.cash
+
+let get_bonds idx v = get_ai_exn idx v |> fun player -> player.bonds
+
 let add_cash idx cash v =
   modify_ai idx v (fun ai_player -> {ai_player with cash=ai_player.cash + cash})
 
