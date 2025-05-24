@@ -285,7 +285,7 @@ let _find_clicked_stop (train:ro Train.t) click_y =
     train.route
 
 let handle_event (s:State.t) v (event:Event.t) =
-  let player = C.player in
+  let player_idx = C.player in
   match v.screen, v.car_menu with
   | TrainRouteOrders state, _ ->
       let exit, state2, b_action = Train_route_orders.handle_event s state event in
@@ -307,7 +307,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         make_menu s.fonts v.train ~engines:s.backend.engines ~year:(B.get_year s.backend) ~engine_make:engine.make
       in
       let baction =
-        B.Action.TrainReplaceEngine {train=v.train; engine=engine.make; player}
+        B.Action.TrainReplaceEngine {train=v.train; engine=engine.make; player_idx}
       in
       false, {v with screen=Normal; menu}, baction
     | _ -> 
@@ -319,9 +319,9 @@ let handle_event (s:State.t) v (event:Event.t) =
       let car_menu2, action = Menu.MsgBox.update s car_menu event in
       let car_menu, b_action = match action with
         | Menu.On(`Caboose) ->
-            None, Backend.Action.RemoveAllStopCars({train=v.train; stop; player})
+            None, Backend.Action.RemoveAllStopCars({train=v.train; stop; player_idx})
         | Menu.On(`AddCar car) ->
-            None, Backend.Action.AddStopCar({train=v.train; stop; car; player})
+            None, Backend.Action.AddStopCar({train=v.train; stop; car; player_idx})
         | Menu.NoAction when Event.pressed_esc event ->
             None, nobaction
         | Menu.On(`Done) ->
@@ -335,7 +335,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | Normal, _ ->
       let menu, action, event = Menu.Global.update s v.menu event in
-      let train = Backend.get_train v.train player s.backend in
+      let train = Backend.get_train v.train player_idx s.backend in
       let line_h = 10 in
       let xstart = 160 in
       let car_w = 20 in
@@ -351,7 +351,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | `AddCarMenu stop ->
             false, v.screen, open_car_menu s stop, nobaction
         | `DeleteCar (stop, car) ->
-            let b_action = Backend.Action.RemoveStopCar{train=v.train; stop; car; player} in
+            let b_action = Backend.Action.RemoveStopCar{train=v.train; stop; car; player_idx} in
             false, v.screen, None, b_action
         | `None ->
             false, v.screen, None, nobaction
@@ -365,7 +365,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             false, screen, None, nobaction
 
         | Menu.On(`Type typ), _ ->
-            false, v.screen, None, B.Action.TrainSetType{train=v.train; typ; player}
+            false, v.screen, None, B.Action.TrainSetType{train=v.train; typ; player_idx}
 
         | Menu.On(`EngineInfo engine_make), _ ->
             let engine = Engine.t_of_make s.backend.engines engine_make in
@@ -373,7 +373,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             false, screen, None, nobaction
 
         | Menu.On(`RetireTrain), _ ->
-            true, v.screen, None, B.Action.RemoveTrain {idx=v.train; player}
+            true, v.screen, None, B.Action.RemoveTrain {idx=v.train; player_idx}
 
         | Menu.On(`ReplaceEngine), _ ->
             false, ChooseEngine, None, nobaction
@@ -409,7 +409,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           let stop = _find_clicked_stop train y in
           let b_action = match stop with
             | Some stop ->
-                Backend.Action.TrainToggleStopWait{train=v.train; stop; player}
+                Backend.Action.TrainToggleStopWait{train=v.train; stop; player_idx}
             | None -> nobaction
           in
           false, v.screen, None, b_action

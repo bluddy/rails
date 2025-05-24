@@ -541,7 +541,7 @@ let _try_to_create_priority_shipment ?(force=false) (player:Player.t) stations p
       begin match Priority_shipment.try_to_create random stations params.Params.cycle ~force with
       | Some (stations, priority) ->
           let player = Player.set_priority (Some priority) player in
-          let msgs = [UIM.PriorityShipmentCreated{player=C.player; shipment=priority}] in
+          let msgs = [UIM.PriorityShipmentCreated{player_idx=C.player; shipment=priority}] in
           stations, player, msgs
       | None -> stations, player, []
       end
@@ -571,7 +571,7 @@ let _cancel_expired_priority_shipments ?(force=false) players stations params =
     players, stations, []
   else
     let stations = Station_map.clear_priority_shipment_for_all stations ~players:cancel_players in
-    let ui_msgs = List.map (fun i -> UIM.PriorityShipmentCanceled{player=i}) cancel_players in
+    let ui_msgs = List.map (fun i -> UIM.PriorityShipmentCanceled{player_idx=i}) cancel_players in
     players, stations, ui_msgs
     
 let _check_priority_delivery players stations params =
@@ -585,15 +585,15 @@ let _check_priority_delivery players stations params =
     []
   in
   let players, ui_msgs =
-    List.fold_map (fun players idx ->
-      let player = Player.get idx players in
+    List.fold_map (fun players player_idx ->
+      let player = Player.get player_idx players in
       let priority = Player.get_priority player |> Option.get_exn_or "Problem with priority" in
       let bonus = Priority_shipment.compute_bonus priority params in
       let trains = Trainmap.clear_priority_shipment player.trains in
       let player = {player with trains; priority=None}
         |> Player.earn `Other bonus in
-      let players = Player.set idx player players in
-      let ui_msg = UIM.PriorityShipmentDelivered {player=idx; shipment=priority; bonus} in
+      let players = Player.set player_idx player players in
+      let ui_msg = UIM.PriorityShipmentDelivered {player_idx; shipment=priority; bonus} in
       players, ui_msg)
     players
     deliver_players
@@ -631,7 +631,7 @@ let _update_station_supply_demand player_idx stations map params =
           Station.lose_supplies station;
           let msgs =
             List.map (fun (good, add) ->
-              UIM.DemandChanged {player=player_idx; x=fst station.loc; y=snd station.loc; good; add})
+              UIM.DemandChanged {player_idx; x=fst station.loc; y=snd station.loc; good; add})
               msgs
           in
           msgs @ old_msgs)
@@ -688,7 +688,7 @@ let handle_cycle v =
       if Player.has_broker_timer player then
         let player, send_msg = Player.incr_broker_timer player in
         player,
-          if send_msg then [(UIM.OpenStockBroker{player=C.player})] else []
+          if send_msg then [(UIM.OpenStockBroker{player_idx})] else []
       else player, []
     in
 

@@ -72,7 +72,7 @@ module AddCars = struct
                                    cars=v.anim.cars;
                                    station;
                                    other_station;
-                                   player=C.player}
+                                   player_idx=C.player}
     else
       v, nobaction
 

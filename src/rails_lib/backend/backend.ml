@@ -45,7 +45,7 @@ let default region resources ~random ~seed =
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
   let stocks = Stock_market.default
-    |> Stock_market.add_human_player ~player:C.player options.difficulty in
+    |> Stock_market.add_human_player C.player options.difficulty in
   let params = { Params.default with year; year_start=year; region }
   in
   {
@@ -449,7 +449,7 @@ let _build_industry ((x, y) as loc) tile player_idx v =
     Tilemap.set_tile loc tile v.map;
     let cost = Tile.Info.build_cost_of_tile v.params.region tile in
     let v = update_player v player_idx (Player.build_industry cost) in
-    send_ui_msg v @@ IndustryBuilt {player=player_idx; tile};
+    send_ui_msg v @@ IndustryBuilt {player_idx; tile};
     v
   ) else v
   
@@ -501,7 +501,7 @@ let _sell_bond player_idx v =
     let interest_rate = Player.get_interest_rate v.params player in
     (* Must be before we get new bond *)
     let v = update_player v player_idx (Player.sell_bond v.params) in
-    send_ui_msg v @@ StockBroker(BondSold{player=player_idx; interest_rate});
+    send_ui_msg v @@ StockBroker(BondSold{player_idx; interest_rate});
     v
   ) else v
 
@@ -509,22 +509,22 @@ let _sell_bond player_idx v =
 let _repay_bond player_idx v =
   if Player.check_repay_bond (get_player player_idx v) then (
     let v = update_player v player_idx Player.repay_bond in
-    send_ui_msg v @@ StockBroker(BondRepaid{player=player_idx});
+    send_ui_msg v @@ StockBroker(BondRepaid{player_idx});
     v
   ) else v
 
 let can_buy_stock player_idx ~target v =
   let player = get_player player_idx v in
   let cash = Player.get_cash player in
-  Stock_market.can_buy_stock ~player:player_idx ~target ~cash v.params v.stocks
+  Stock_market.can_buy_stock player_idx ~target ~cash v.params v.stocks
 
 let _buy_stock v player_idx ~stock = 
   let player = get_player player_idx v in
   let cash = Player.get_cash player in
-  match Stock_market.buy_stock ~player:player_idx ~target:stock ~cash v.params v.stocks with
+  match Stock_market.buy_stock player_idx ~target:stock ~cash v.params v.stocks with
   | `Bought cost, stocks ->
       let v = update_player v player_idx (Player.add_cash @@ -cost) in
-      send_ui_msg v @@ StockBroker(StockBought {player=player_idx; stock; cost});
+      send_ui_msg v @@ StockBroker(StockBought {player_idx; stock; cost});
       {v with stocks}
   | `Takeover money_map, stocks ->
       let players = 
@@ -533,7 +533,7 @@ let _buy_stock v player_idx ~stock =
         money_map
         v.players
       in
-      send_ui_msg v @@ StockBroker(Takeover {player=player_idx; stock});
+      send_ui_msg v @@ StockBroker(Takeover {player_idx; stock});
       [%up{v with stocks; players}]
   | `None, stocks ->
       [%up {v with stocks}]
@@ -541,7 +541,7 @@ let _buy_stock v player_idx ~stock =
 let _sell_stock player_idx ~stock v =
   let cost, stocks = Stock_market.sell_stock player_idx ~target:stock v.stocks in
   let players = Player.update v.players player_idx @@ Player.add_cash cost in
-  send_ui_msg v @@ StockBroker(StockSold {player=player_idx; stock; cost});
+  send_ui_msg v @@ StockBroker(StockSold {player_idx; stock; cost});
   [%up {v with stocks; players}]
 
 let check_bankruptcy v player_idx = get_player v player_idx |> Player.check_bankruptcy
@@ -551,7 +551,7 @@ let _declare_bankruptcy player_idx v =
   if Player.check_bankruptcy player then (
     let stocks, cash_map =
       let player_iter = Iter.append (Owner.Map.keys v.players) (Ai.ai_iter v.ai) in
-      Stock_market.declare_bankruptcy ~player_idx player_iter v.stocks
+      Stock_market.declare_bankruptcy player_idx player_iter v.stocks
     in
     let players, ai =
       Owner.Map.fold (fun idx profit (players, ais) ->
@@ -564,7 +564,7 @@ let _declare_bankruptcy player_idx v =
         (v.players, v.ai)
     in
     let players = Player.update players player_idx @@ Player.set_bankrupt v.params in
-    send_ui_msg v @@ StockBroker(BankruptcyDeclared {player=player_idx});
+    send_ui_msg v @@ StockBroker(BankruptcyDeclared {player_idx});
     [%up {v with players; stocks; ai}]
   ) else v
 
@@ -588,7 +588,7 @@ let _operate_rr_take_money player_idx ~company ~amount v =
   let players = Player.update players company @@ Player.add_cash @@ -amount in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
-  send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player=player_idx; company; amount});
+  send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player_idx; company; amount});
   [%up {v with players}]
   
 let _operate_rr_give_money player_idx ~company ~amount v =
@@ -597,14 +597,14 @@ let _operate_rr_give_money player_idx ~company ~amount v =
   let players = Player.update players company @@ Player.add_cash amount in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
-  send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player=player_idx; amount});
+  send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player_idx; amount});
   [%up {v with players}]
 
 let _operate_rr_repay_bond player_idx ~company_idx v =
   let v = update_player v company_idx Player.repay_bond in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
-  send_ui_msg v @@ StockBroker(AiBondRepaid {player=player_idx; company=company_idx});
+  send_ui_msg v @@ StockBroker(AiBondRepaid {player_idx; company=company_idx});
   v
 
   (* TODO: RR build track *)
@@ -660,7 +660,7 @@ module Action = struct
     x: int;
     y: int;
     dir: Dir.t;
-    player: Owner.t;
+    player_idx: Owner.t;
   } [@@deriving show]
 
   type t =
@@ -669,33 +669,33 @@ module Action = struct
     | Unpause
     | BuildTrack of msg
     | BuildFerry of msg
-    | BuildStation of {x: int; y: int; kind: Station.kind; player: Owner.t}
+    | BuildStation of {x: int; y: int; kind: Station.kind; player_idx: Owner.t}
     | BuildBridge of msg * Bridge.t
     | BuildTunnel of msg * int (* length: 3 or 2 * length *)
     | RemoveTrack of msg
-    | DoubleTrack of {x: int; y: int; double: bool; player: Owner.t}
-    | ImproveStation of {x:int; y:int; player: Owner.t; upgrade: Station.upgrade}
+    | DoubleTrack of {x: int; y: int; double: bool; player_idx: Owner.t}
+    | ImproveStation of {x:int; y:int; player_idx: Owner.t; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
     | BuildTrain of {engine: Engine.make; cars: Goods.t list;
-                     station: int * int; other_station: (int * int) option; player: Owner.t} 
-    | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int; player: Owner.t}
-    | RemoveStop of {train: Trainmap.Id.t; stop: stop; player: Owner.t}
-    | AddStopCar of {train: Trainmap.Id.t; stop: stop; car: Goods.t; player: Owner.t}
-    | RemoveStopCar of {train: Trainmap.Id.t; stop: stop; car: int; player: Owner.t}
-    | RemoveAllStopCars of {train: Trainmap.Id.t; stop: stop; player: Owner.t}
-    | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type; player: Owner.t}
-    | RemoveTrain of {idx: Trainmap.Id.t; player: Owner.t}
-    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player: Owner.t}
-    | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player: Owner.t}
-    | BuildIndustry of {player: Owner.t; x: int; y: int; tile: Tile.t}
-    | CallBroker of {player: Owner.t}
+                     station: int * int; other_station: (int * int) option; player_idx: Owner.t} 
+    | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int; player_idx: Owner.t}
+    | RemoveStop of {train: Trainmap.Id.t; stop: stop; player_idx: Owner.t}
+    | AddStopCar of {train: Trainmap.Id.t; stop: stop; car: Goods.t; player_idx: Owner.t}
+    | RemoveStopCar of {train: Trainmap.Id.t; stop: stop; car: int; player_idx: Owner.t}
+    | RemoveAllStopCars of {train: Trainmap.Id.t; stop: stop; player_idx: Owner.t}
+    | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type; player_idx: Owner.t}
+    | RemoveTrain of {idx: Trainmap.Id.t; player_idx: Owner.t}
+    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player_idx: Owner.t}
+    | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player_idx: Owner.t}
+    | BuildIndustry of {player_idx: Owner.t; x: int; y: int; tile: Tile.t}
+    | CallBroker of {player_idx: Owner.t}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
-    | SellBond of {player: Owner.t}
-    | RepayBond of {player: Owner.t}
-    | Declare_bankruptcy of {player: Owner.t}
-    | BuyStock of {player: Owner.t; stock: Owner.t}
-    | SellStock of {player: Owner.t; stock: Owner.t}
-    | OperateRR of {player: Owner.t; company: Owner.t; action: operate_rr}
+    | SellBond of {player_idx: Owner.t}
+    | RepayBond of {player_idx: Owner.t}
+    | Declare_bankruptcy of {player_idx: Owner.t}
+    | BuyStock of {player_idx: Owner.t; stock: Owner.t}
+    | SellStock of {player_idx: Owner.t; stock: Owner.t}
+    | OperateRR of {player_idx: Owner.t; company: Owner.t; action: operate_rr}
     | Cheat of Owner.t * Cheat_d.t (* player *)
     | Quit_game
     [@@deriving show]
@@ -706,72 +706,72 @@ module Action = struct
     let run_single backend msg =
       if has_action msg then Log.debug (fun f -> f "Received msg %s" (show msg));
       match msg with
-      | BuildTrack {x; y; dir; player} ->
-          _build_track (x,y) ~dir player backend 
-      | BuildFerry {x; y; dir; player} ->
-          _build_ferry (x,y) ~dir player backend
-      | BuildStation {x; y; kind; player} ->
-          _build_station (x,y) kind player backend
-      | BuildBridge({x; y; dir; player}, kind) ->
-          _build_bridge (x,y) ~dir ~kind player backend
-      | BuildTunnel({x; y; dir; player}, _length) ->
-          _build_tunnel (x,y) ~dir player backend
-      | RemoveTrack {x; y; dir; player} ->
-          _remove_track (x,y) ~dir player backend
-      | DoubleTrack {x; y; double; player} ->
-          _change_double_track (x,y) player ~double backend
-      | ImproveStation {x; y; player; upgrade} ->
-          _improve_station (x,y) player ~upgrade backend
+      | BuildTrack {x; y; dir; player_idx} ->
+          _build_track (x,y) ~dir player_idx backend 
+      | BuildFerry {x; y; dir; player_idx} ->
+          _build_ferry (x,y) ~dir player_idx backend
+      | BuildStation {x; y; kind; player_idx} ->
+          _build_station (x,y) kind player_idx backend
+      | BuildBridge({x; y; dir; player_idx}, kind) ->
+          _build_bridge (x,y) ~dir ~kind player_idx backend
+      | BuildTunnel({x; y; dir; player_idx}, _length) ->
+          _build_tunnel (x,y) ~dir player_idx backend
+      | RemoveTrack {x; y; dir; player_idx} ->
+          _remove_track (x,y) ~dir player_idx backend
+      | DoubleTrack {x; y; double; player_idx} ->
+          _change_double_track (x,y) player_idx ~double backend
+      | ImproveStation {x; y; player_idx; upgrade} ->
+          _improve_station (x,y) player_idx ~upgrade backend
       | SetSpeed speed ->
           _set_speed backend speed
-      | BuildTrain {engine; cars; station; other_station; player} ->
-          _build_train station engine cars other_station player backend
-      | RemoveStopCar {train; stop; car; player} ->
-          _remove_stop_car train ~stop ~car player backend
-      | SetStopStation {train; stop; station; player} ->
-          _set_stop_station ~train ~stop ~station player backend
-      | RemoveStop {train; stop; player} ->
-          _remove_stop ~train ~stop player backend
-      | RemoveAllStopCars {train; stop; player} ->
-          _remove_all_stop_cars ~train ~stop player backend
-      | AddStopCar {train; stop; car; player} ->
-          _add_stop_car ~train ~stop ~car player backend
-      | TrainSetType {train; typ; player} ->
-          _train_set_type ~train ~typ player backend
-      | RemoveTrain {idx; player} ->
-          _remove_train idx player backend
-      | TrainReplaceEngine {train; engine; player} ->
-          _train_replace_engine ~train ~engine player backend
-      | TrainToggleStopWait {train; stop; player} ->
-          _train_toggle_stop_wait ~train ~stop player backend
+      | BuildTrain {engine; cars; station; other_station; player_idx} ->
+          _build_train station engine cars other_station player_idx backend
+      | RemoveStopCar {train; stop; car; player_idx} ->
+          _remove_stop_car train ~stop ~car player_idx backend
+      | SetStopStation {train; stop; station; player_idx} ->
+          _set_stop_station ~train ~stop ~station player_idx backend
+      | RemoveStop {train; stop; player_idx} ->
+          _remove_stop ~train ~stop player_idx backend
+      | RemoveAllStopCars {train; stop; player_idx} ->
+          _remove_all_stop_cars ~train ~stop player_idx backend
+      | AddStopCar {train; stop; car; player_idx} ->
+          _add_stop_car ~train ~stop ~car player_idx backend
+      | TrainSetType {train; typ; player_idx} ->
+          _train_set_type ~train ~typ player_idx backend
+      | RemoveTrain {idx; player_idx} ->
+          _remove_train idx player_idx backend
+      | TrainReplaceEngine {train; engine; player_idx} ->
+          _train_replace_engine ~train ~engine player_idx backend
+      | TrainToggleStopWait {train; stop; player_idx} ->
+          _train_toggle_stop_wait ~train ~stop player_idx backend
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal (x, y) dir cmd backend
-      | BuildIndustry{player; x; y; tile} ->
-          _build_industry (x, y) tile player backend
-      | CallBroker{player} ->
-          _start_broker_timer player backend
-      | SellBond{player} ->
-          _sell_bond player backend
-      | RepayBond{player}->
-          _repay_bond player backend
-      | BuyStock{player; stock} ->
-          _buy_stock backend player ~stock
-      | SellStock{player; stock} ->
-          _sell_stock player ~stock backend
-      | Declare_bankruptcy{player} ->
-          _declare_bankruptcy player backend 
-      | OperateRR{player; company; action=RRTakeMoney x} ->
-          _operate_rr_take_money player ~company ~amount:x backend
-      | OperateRR{player; company; action=RRGiveMoney x} ->
-          _operate_rr_give_money player ~company ~amount:x backend
-      | OperateRR{player; company; action=RRBuildTrack(src,dst)} ->
-          _operate_rr_build_track player ~company src dst backend
-      | OperateRR{player; company; action=RRRepayBond} ->
-          _operate_rr_repay_bond player ~company_idx:company backend
+      | BuildIndustry{player_idx; x; y; tile} ->
+          _build_industry (x, y) tile player_idx backend
+      | CallBroker{player_idx} ->
+          _start_broker_timer player_idx backend
+      | SellBond{player_idx} ->
+          _sell_bond player_idx backend
+      | RepayBond{player_idx}->
+          _repay_bond player_idx backend
+      | BuyStock{player_idx; stock} ->
+          _buy_stock backend player_idx ~stock
+      | SellStock{player_idx; stock} ->
+          _sell_stock player_idx ~stock backend
+      | Declare_bankruptcy{player_idx} ->
+          _declare_bankruptcy player_idx backend 
+      | OperateRR{player_idx; company; action=RRTakeMoney x} ->
+          _operate_rr_take_money player_idx ~company ~amount:x backend
+      | OperateRR{player_idx; company; action=RRGiveMoney x} ->
+          _operate_rr_give_money player_idx ~company ~amount:x backend
+      | OperateRR{player_idx; company; action=RRBuildTrack(src,dst)} ->
+          _operate_rr_build_track player_idx ~company src dst backend
+      | OperateRR{player_idx; company; action=RRRepayBond} ->
+          _operate_rr_repay_bond player_idx ~company_idx:company backend
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend
-      | Cheat (player, x) -> _handle_cheat player x backend
+      | Cheat (player_idx, x) -> _handle_cheat player_idx x backend
       | Quit_game -> backend
     in
     List.fold_left run_single backend msgs

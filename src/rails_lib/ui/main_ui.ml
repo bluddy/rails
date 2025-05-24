@@ -389,8 +389,9 @@ let confirm_build_site_menu fonts =
 let train_roster_iter (s:State.t) v f =
   let train_h = v.dims.train_ui_train_h in
   let max_fit_trains = v.dims.train_ui.h / train_h in
+  let player_idx = C.player in
   let max_draw_trains = min max_fit_trains @@
-    (Trainmap.size s.backend.players.(0).trains) - v.train_ui_start
+    (Trainmap.size @@ B.get_trains player_idx s.backend) - v.train_ui_start
   in
   Iter.iter (fun i ->
     f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
@@ -401,8 +402,9 @@ let handle_train_roster_event (s:State.t) v event =
   let ui_train_find f =
     let train_h = v.dims.train_ui_train_h in
     let max_fit_trains = v.dims.train_ui.h / train_h in
+    let player_idx = C.player in
     let max_draw_trains = min max_fit_trains @@
-      (Trainmap.size s.backend.players.(0).trains) - v.train_ui_start
+      (Trainmap.size @@ B.get_trains player_idx s.backend) - v.train_ui_start
     in
     Iter.find (fun i ->
       f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
@@ -463,6 +465,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       | _ -> {v with mode=build_fn {modal with menu}}, B.Action.NoAction
       end
   in
+  let player_idx = C.player in
   let modal_screen_no_input v event =
     if Event.is_left_click event || Event.key_modal_dismiss event then
       {v with mode=Normal}, nobaction
@@ -477,8 +480,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       let menu, menu_action, event = Menu.Global.update s v.menu event in
       let v = if menu =!= v.menu then {v with menu} else v in
       let view = match menu_action with
-        | On(`Survey)  -> Mapview.set_survey v.view true
-        | Off(`Survey) -> Mapview.set_survey v.view false
+        | On(`Survey)  -> Mapview.set_survey true v.view 
+        | Off(`Survey) -> Mapview.set_survey false v.view
         | _ -> v.view
       in
       let v, view_action = handle_train_roster_event s v event in
@@ -513,7 +516,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with view=Mapview.set_build_mode v.view false}, nobaction 
         | On `ImproveStation upgrade, _ ->
             let x, y = Mapview.get_cursor_pos v.view in
-            {v with mode=StationReport(x, y)}, ImproveStation{x; y; player=0; upgrade}
+            {v with mode=StationReport(x, y)}, ImproveStation{x; y; player_idx; upgrade}
         | On `Save_game, _ ->
             save_game s;
             v, nobaction
@@ -544,23 +547,23 @@ let handle_event (s:State.t) v (event:Event.t) =
             let options = {options with features} in
             {v with options}, nobaction
         | On (`Options option), _ ->
-            {v with view=Mapview.update_option v.view option true}, nobaction
+            {v with view=Mapview.update_option option true v.view }, nobaction
         | On (`Balance_sheet), _ ->
-            let b = Balance_sheet.create s ~player_idx:0 in
+            let b = Balance_sheet.create s player_idx in
             {v with mode=Balance_sheet b}, nobaction
         | On (`Income_statement), _ ->
-            let b = Balance_sheet.create s ~player_idx:0 in
+            let b = Balance_sheet.create s player_idx in
             {v with mode=Income_statement b}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
             {v with mode=Efficiency_report}, nobaction
         | On (`Call_broker), _ ->
-            v, B.Action.CallBroker{player=C.player}
+            v, B.Action.CallBroker{player_idx}
         | On (`Cheat x), _ ->
             v, B.Action.Cheat(C.player, x)
         | Off (`Options option), _ ->
-            {v with view=Mapview.update_option v.view option false}, nobaction
+            {v with view=Mapview.update_option option false v.view}, nobaction
         | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
         | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
         | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
@@ -581,9 +584,9 @@ let handle_event (s:State.t) v (event:Event.t) =
             let entries =
               let tilename = match tile with
               | City | Village ->
-                  begin match B.find_close_city s.backend x y ~range:4 with
+                  begin match B.find_close_city x y ~range:4 s.backend with
                   | Some (x,y) ->
-                      let city, _ = Cities.find_exn s.backend.cities x y in
+                      let city, _ = Cities.find_exn x y s.backend.cities in
                       Printf.sprintf "%s (%s)" (Tile.show tile) city
                   | None -> Tile.show tile
                   end
@@ -651,8 +654,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, `StationView(x, y) ->
             {v with mode=StationReport(x, y)}, nobaction
 
-        | _, `DoubleTrack(double, x, y, player) ->
-            v, B.Action.DoubleTrack{x; y; double; player}
+        | _, `DoubleTrack(double, x, y, player_idx) ->
+            v, B.Action.DoubleTrack{x; y; double; player_idx}
 
         | _ ->
             v, nobaction
@@ -677,9 +680,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun modal station_kind ->
             let exit_mode () = {v with mode=modal.last}, nobaction in
             let x, y = Mapview.get_cursor_pos v.view in
-            match Backend.check_build_station s.backend ~x ~y ~player:0 station_kind with
+            match Backend.check_build_station x y player_idx station_kind s.backend with
             | `Ok ->
-                let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player=0} in
+                let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
                 {v with mode=modal.last}, backend_action
                 (* TODO: handle other cases *)
             | _ -> exit_mode ()
@@ -690,8 +693,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> BuildBridge x)
         (fun modal bridge_kind ->
             let msg = modal.data in
-            let x, y, dir, player = msg.x, msg.y, msg.dir, msg.player in
-            match Backend.check_build_bridge s.backend ~x ~y ~dir ~player with
+            let x, y, dir, player_idx = msg.x, msg.y, msg.dir, msg.player_idx in
+            match Backend.check_build_bridge (x, y) ~dir player_idx s.backend with
             | `Ok -> 
                 let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
                 let view = Mapview.move_const_box v.view dir 2 in
@@ -704,12 +707,12 @@ let handle_event (s:State.t) v (event:Event.t) =
         let fonts = s.fonts in
         handle_modal_menu_events build_menu
         (fun x -> BuildHighGrade x)
-        (fun ({data={x;y;dir;player} as msg;_} as modal) -> function
+        (fun ({data={x;y;dir;player_idx} as msg;_} as modal) -> function
           | `BuildTrack ->
               let view = Mapview.move_const_box v.view dir 1 in
               {v with mode=modal.last; view}, B.Action.BuildTrack msg
           | `BuildTunnel ->
-              match B.check_build_tunnel s.backend ~x ~y ~player ~dir with
+              match B.check_build_tunnel (x, y) player_idx ~dir s.backend with
               | `Tunnel(length, disp_length, cost) ->
                   let menu =
                     build_tunnel_menu ~length:disp_length ~cost
@@ -756,7 +759,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> BuildIndustry(`ChooseIndustry x))
         (fun _ wanted_tile ->
           let (x, y) = Mapview.get_cursor_pos v.view in
-          let site = Tilemap.search_for_industry_site s.backend.map wanted_tile ~region:(B.get_region s.backend) ~x ~y in
+          let site = Tilemap.search_for_industry_site x y wanted_tile ~region:(B.get_region s.backend) s.backend.map in
           match site with
           | None -> make_msgbox ~x:144 ~y:24 s v ~fonts:s.fonts "No suitable site found.\nTry another location."
           | Some (x, y) ->
@@ -770,7 +773,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> BuildIndustry(`ConfirmBuild x))
         (fun modal ()  ->
           let tile, x, y = modal.data in
-          {v with mode=Normal}, B.Action.BuildIndustry{player=C.player; x; y; tile})
+          {v with mode=Normal}, B.Action.BuildIndustry{player_idx; x; y; tile})
 
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event in
@@ -804,6 +807,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 (* Handle incoming messages from backend *)
 let handle_msgs (s:State.t) v ui_msgs =
   let old_mode, old_menu = v.mode, v.menu in
+  let main_player_idx = C.player in
   let train_arrival_msg_speed v : [`Fast | `Slow] option =
     match v.options.message_speed with
     | `Off -> None
@@ -821,7 +825,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state2 = Stock_broker.handle_msg s state ui_msg in
         if state2 === state then v else {v with mode=Stock_broker state2}
 
-    | Normal, DemandChanged{x; y; good; add} ->
+    | Normal, DemandChanged{x; y; good; add; player_idx} when Owner.(player_idx = main_player_idx)->
       let add_remove = if add then "now\naccepts" else "no longer\naccepts" in
       let station = B.get_station (x, y) s.backend |> Option.get_exn_or "missing station" in
       let text =
@@ -849,20 +853,20 @@ let handle_msgs (s:State.t) v ui_msgs =
         in
         if v === v' then v else v'
 
-    | Normal, OpenStockBroker{player} when player = C.player ->
+    | Normal, OpenStockBroker{player_idx} when Owner.(player_idx = main_player_idx) ->
       let state = Stock_broker.make s in
       {v with mode=Stock_broker state}
 
-    | Normal, PriorityShipmentCanceled{player} when player = C.player ->
+    | Normal, PriorityShipmentCanceled{player_idx} when Owner.(player_idx = main_player_idx) ->
       let mode = Newspaper(Newspaper.make s Newspaper.LocalNews Priority_shipment.cancel_text None) in
       {v with mode}
 
-    | Normal, PriorityShipmentCreated{player; shipment} when player = C.player ->
+    | Normal, PriorityShipmentCreated{player_idx; shipment} when Owner.(player_idx = main_player_idx) ->
       let heading, text = Priority_shipment.create_text shipment (B.get_region s.backend) s.backend.stations in
       let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
       {v with mode}
 
-    | Normal, PriorityShipmentDelivered{player; shipment; bonus} when player = C.player ->
+    | Normal, PriorityShipmentDelivered{player_idx; shipment; bonus} when Owner.(player_idx = main_player_idx) ->
       let heading, text = Priority_shipment.delivery_text shipment (B.get_region s.backend) s.backend.stations bonus in
       let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
       {v with mode}
@@ -877,11 +881,11 @@ let handle_msgs (s:State.t) v ui_msgs =
       let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
       {v with mode}
 
-    | Normal, AiBuildOrderFailed{player; ai_name; src_name; tgt_name} when player = C.player ->
+    | Normal, AiBuildOrderFailed{player_idx; ai_name; src_name; tgt_name} when Owner.(player_idx = main_player_idx) ->
       let text = Ai.build_order_fail_text ai_name src_name tgt_name in
       fst @@ make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text
 
-    | Normal, IndustryBuilt{player; tile} when player = C.player ->
+    | Normal, IndustryBuilt{player_idx; tile} when Owner.(player_idx = main_player_idx) ->
       let tile_s = Tile.show tile in
       fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s
 
@@ -890,7 +894,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       let mode = Newspaper(Newspaper.make s Newspaper.FinancialNews text @@ Some opponent) in
       {v with mode}
 
-    | Normal, AiTakesOutBond {opponent; player;_} when player=C.player ->
+    | Normal, AiTakesOutBond {opponent; player_idx;_} when Owner.(player_idx=main_player_idx) ->
       let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
       let mode = Newspaper(Newspaper.make s Newspaper.FinancialNews text @@ Some opponent) in
       {v with mode}
@@ -931,7 +935,7 @@ let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Se
 let draw_train_roster win (s:State.t) v =
   train_roster_iter s v
   (fun y_bot idx ->
-    let train = Trainmap.get s.backend.players.(0).trains (Trainmap.Id.of_int idx) in
+    let train = B.get_train (Trainmap.Id.of_int idx) C.player s.backend in
     (* Speed line *)
     let x = v.dims.train_ui.x + 1 in
     let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
@@ -968,6 +972,7 @@ let draw_train_roster win (s:State.t) v =
 
 let render_main win (s:State.t) v =
   let dims = v.dims in
+  let player_idx = C.player in
   (* Render main view *)
   let build_station = match v.mode with
     | BuildStation _ -> true
@@ -1035,7 +1040,7 @@ let render_main win (s:State.t) v =
   let y = y + dims.minimap.h in
   R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
 
-  if Backend.broker_timer_active s.backend C.player then
+  if Backend.broker_timer_active player_idx s.backend then
     Fonts.Render.write win s.fonts ~color:Ega.bgreen ~idx:4 ~x:256 ~y:66 "B";
 
   let region = B.get_region s.backend in

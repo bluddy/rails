@@ -310,16 +310,17 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     | C -> Some DownRight
     | _ -> None
   in
+  let player_idx = C.player in
 
   let handle_key_zoom4 v key ~build =
     match key_to_dir key with
     | Some dir ->
         let move i = move_const_box v dir i in
-        let msg () = Backend.Action.{x=v.const_box_x; y=v.const_box_y; dir; player=C.player} in
+        let msg () = Backend.Action.{x=v.const_box_x; y=v.const_box_y; dir; player_idx} in
         if build then (
           if v.build_mode then
             (* Build track *)
-            match B.check_build_track (v.const_box_x, v.const_box_y) ~dir C.player s.backend with
+            match B.check_build_track (v.const_box_x, v.const_box_y) ~dir player_idx s.backend with
             | `Ok -> move 1, `BuildTrack(msg ())
             | `Ferry -> move 1, `BuildFerry(msg ())
             | `HighGrade g -> v, `HighGradeTrack(msg (), g, false)
@@ -328,7 +329,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             | `Illegal -> v, `NoAction
           else
             (* Remove Track *)
-            match B.check_remove_track (v.const_box_x, v.const_box_y) ~dir C.player s.backend with
+            match B.check_remove_track (v.const_box_x, v.const_box_y) ~dir player_idx s.backend with
             | true -> move 1, `RemoveTrack(msg ())
             | false -> v, `NoAction
         ) else
@@ -345,10 +346,10 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             v, `ShowTileInfo (v.const_box_x, v.const_box_y, tile)
           end
       | Event.K1 when build &&
-            B.check_change_double_track (v.const_box_x, v.const_box_y) C.player ~double:false s.backend ->
+            B.check_change_double_track (v.const_box_x, v.const_box_y) player_idx ~double:false s.backend ->
               v, `DoubleTrack(false, v.const_box_x, v.const_box_y, 0)
       | Event.K2 when build &&
-            B.check_change_double_track (v.const_box_x, v.const_box_y) C.player ~double:true s.backend ->
+            B.check_change_double_track (v.const_box_x, v.const_box_y) player_idx ~double:true s.backend ->
               v, `DoubleTrack(true, v.const_box_x, v.const_box_y, 0)
       | _ -> v, `NoAction
   in
@@ -844,6 +845,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
 
 let handle_tick (s:State.t) (v:t) _time is_cycle =
  (* We only run by backend cycles *)
+  let player_idx = C.player in
   if not is_cycle then v
   else
   (* Move smoke *)
@@ -886,7 +888,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
             acc
         )
         ~init:smoke_plumes
-        (B.get_player C.player s.backend |> Player.get_trains)
+        (B.get_trains player_idx s.backend)
       in
       smoke_plumes
     | _ -> smoke_plumes

@@ -132,15 +132,15 @@ let render win (s:State.t) v =
     | None -> *)
       write ~x:x_left ~y name;
       let y = y + line in
-      write ~x:x_left ~y @@ sp "Track: %d miles" @@ B.get_track_length player_idx v;
+      write ~x:x_left ~y @@ sp "Track: %d miles" @@ B.get_track_length player_idx backend;
       false, Ega.black
     in
-    let cash_s = Utils.show_cash ~region ~spaces:7 @@ B.get_cash player_idx v in
+    let cash_s = Utils.show_cash ~region ~spaces:7 @@ B.get_cash player_idx backend in
     write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
     let y = y + line in
-    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 @@ B.get_bonds player_idx v;
+    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 @@ B.get_bonds player_idx backend;
     let y = y + line in
-    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 @@ B.get_net_worth player_idx v;
+    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 @@ B.get_net_worth player_idx backend;
     let per_s = if is_ai then "/" else " per " in
     write ~color ~x:x_right ~y @@ sp "Stock at %s.00%sshare"
       (Utils.show_cash ~ks:false ~region @@ Stock_market.share_price player_idx s.backend.stocks) per_s;
@@ -169,6 +169,7 @@ let render win (s:State.t) v =
   ()
 
 let handle_modal_event (s:State.t) modal (event:Event.t) =
+  let player_idx = C.player in
   let nobaction = B.Action.NoAction in
   match modal with
   | MsgBox msgbox -> 
@@ -184,8 +185,8 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
      | `Stay modal -> false, Some (Confirm_menu modal), nobaction
-     | `Activate(`BuyStock stock) -> false, None, B.Action.BuyStock{player=C.player; stock}
-     | `Activate(`Declare_bankruptcy) -> false, None, B.Action.Declare_bankruptcy{player=C.player}
+     | `Activate(`BuyStock stock) -> false, None, B.Action.BuyStock{player_idx; stock}
+     | `Activate(`Declare_bankruptcy) -> false, None, B.Action.Declare_bankruptcy{player_idx}
      | `Activate `None -> false, Some modal, nobaction
      | `Exit -> true, None, nobaction
      end
@@ -194,6 +195,7 @@ let handle_event (s:State.t) v (event:Event.t) =
   let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
   let nobaction = B.Action.NoAction in
   let b = s.backend in
+  let player_idx = C.player in
   match v.modal with
   | Some modal ->
     let exit, modal, bk_action = handle_modal_event s modal event in
@@ -202,13 +204,12 @@ let handle_event (s:State.t) v (event:Event.t) =
   | None ->
     let menu, menu_action, event = Menu.Global.update s v.menu event in
     let exit, v, bk_action = match menu_action with
-    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player=C.player}
-    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player=C.player}
+    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player_idx}
+    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player_idx}
     | Menu.On(`BuyStock stock) ->
       let difficulty = B.get_difficulty b in
-      let player = Player.get_player b.players C.player in
-      begin match Stock_market.can_buy_stock ~player:C.player ~target:stock ~cash:(Player.get_cash player) ~difficulty s.backend.stocks with
-      | `Ok -> false, v, B.Action.BuyStock {player=C.player; stock}
+      begin match Stock_market.can_buy_stock player_idx ~target:stock ~cash:(B.get_cash player_idx b) b.params b.stocks with
+      | `Ok -> false, v, B.Action.BuyStock {player_idx; stock}
       | `Error -> false, v, B.Action.NoAction
       | `Anti_trust_violation max_num ->
           let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
@@ -234,7 +235,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           false, {v with modal=Some(Confirm_menu(menu))}, nobaction
       end
     | Menu.On(`SellStock stock) ->
-        false, v, B.Action.SellStock {player=C.player; stock}
+        false, v, B.Action.SellStock {player_idx; stock}
     | Menu.On(`Declare_bankruptcy) ->
         let menu =
           let text = "Are you sure you want\nto declare bankruptcy?" in
@@ -247,7 +248,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         in
         false, {v with modal=Some(Confirm_menu(menu))}, nobaction
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
-        let player = Backend.get_player b company_idx in
+        let player = B.get_player company_idx b in
         (* TODO : AI *)
         let build_order_s = ""
           (*
@@ -259,7 +260,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           *)
         in
         let text = sp "%s\nRevenue YTD: %s\nYearly Interest: %s%s"
-          (Player.get_name player b.stations b.cities)
+          (B.get_name company_idx b)
           (Income_statement.total_revenue player.m.income_statement
            |> Utils.show_cash ~region:(B.get_region b))
           (player.m.yearly_interest_payment
@@ -269,17 +270,17 @@ let handle_event (s:State.t) v (event:Event.t) =
         false, {v with modal=basic_msgbox text}, nobaction
 
     | Menu.On(`OperateRR (company, `TakeMoney amount)) ->
-        false, v, OperateRR{player=C.player; company; action=RRTakeMoney amount}
+        false, v, OperateRR{player_idx; company; action=RRTakeMoney amount}
 
     | Menu.On(`OperateRR (company, `GiveMoney amount)) ->
-        false, v, OperateRR{player=C.player; company; action=RRGiveMoney amount}
+        false, v, OperateRR{player_idx; company; action=RRGiveMoney amount}
 
       (* TODO: fill this in *)
     | Menu.On(`OperateRR (company, `BuildTrack)) ->
-        false, v, OperateRR{player=C.player; company; action=RRBuildTrack((0,0),(0,0))}
+        false, v, OperateRR{player_idx; company; action=RRBuildTrack((0,0),(0,0))}
 
     | Menu.On(`OperateRR (company, `RepayBond)) ->
-        false, v, OperateRR{player=C.player; company; action=RRRepayBond}
+        false, v, OperateRR{player_idx; company; action=RRRepayBond}
       
     | _ when Event.key_modal_dismiss event ->
         true, v, nobaction
@@ -296,42 +297,42 @@ let handle_msg (s:State.t) v ui_msg =
     let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
     match ui_msg with
     | Ui_msg.StockBroker x -> begin match x with
-      | BondSold {interest_rate; player} when player = C.player ->
+      | BondSold {interest_rate; player_idx} when Owner.(player_idx = C.player) ->
           let text = sp "%s bond sold\nat %d%% interest." (show_cash C.bond_value) interest_rate in
           basic_msgbox text
-      | BondRepaid {player} when player = C.player ->
+      | BondRepaid {player_idx} when Owner.(player_idx = C.player) ->
           let text = sp "%s bond repaid." (show_cash C.bond_value) in
           basic_msgbox text
-      | StockSold {player; stock; cost} when player = C.player && stock = player ->
+      | StockSold {player_idx; stock; cost} when Owner.(player_idx = C.player && stock = player_idx) ->
           let text = sp "10,000 shares of\ncompany stock sold for\n------ %s ------." (show_cash cost) in
           basic_msgbox text
-      | StockSold {player; stock; cost} when player = C.player ->
+      | StockSold {player_idx; stock; cost} when Owner.(player_idx = C.player) ->
           let text = sp "10,000 shares of\n%s\nstock sold\n for %s."
-            (B.get_company_name s.backend stock) (show_cash cost)
+            (B.get_name stock s.backend) (show_cash cost)
           in
           basic_msgbox text
-      | StockBought{player; stock; cost} when player = C.player && stock = player ->
+      | StockBought{player_idx; stock; cost} when Owner.(player_idx = C.player && stock = player_idx) ->
           let text = sp "10,000 shares of company\nstock purchased for\n------ %s ------." (show_cash cost) in
           basic_msgbox text
-      | StockBought{player; stock; cost} when player = C.player ->
+      | StockBought{player_idx; stock; cost} when Owner.(player_idx = C.player) ->
           let text = sp "10,000 shares of\n%s\nstock purchased for %s."
-            (B.get_company_name s.backend stock) (show_cash cost)
+            (B.get_name stock s.backend) (show_cash cost)
           in
           basic_msgbox text
-      | Takeover {player; stock} when player = C.player ->
-          let text = sp "You take control of the\n%s!" (B.get_company_name s.backend stock) in
+      | Takeover {player_idx; stock} when Owner.(player_idx = C.player) ->
+          let text = sp "You take control of the\n%s!" (B.get_name stock s.backend ) in
           basic_msgbox text
-      | MoneyTransferredFrom {player; company; amount} when player = C.player ->
-          let text = sp "%s transferred from\n%s" (show_cash amount) (B.get_company_name s.backend company) in
+      | MoneyTransferredFrom {player_idx; company; amount} when Owner.(player_idx = C.player) ->
+          let text = sp "%s transferred from\n%s" (show_cash amount) (B.get_name company s.backend ) in
           basic_msgbox text
-      | MoneyTransferredTo {player; company; amount} when player = C.player ->
-          let text = sp "%s transferred to\n%s" (show_cash amount) (B.get_company_name s.backend company) in
+      | MoneyTransferredTo {player_idx; company; amount} when Owner.(player_idx = C.player) ->
+          let text = sp "%s transferred to\n%s" (show_cash amount) (B.get_name company s.backend) in
           basic_msgbox text
-      | AiBondRepaid {player; _} when player = C.player ->
+      | AiBondRepaid {player_idx; _} when Owner.(player_idx = C.player) ->
           let text = sp "%s bond repaid." (show_cash 500) in
           basic_msgbox text
-      | BankruptcyDeclared {player} when player = C.player ->
-          let company_name = Backend.get_company_name s.backend player in
+      | BankruptcyDeclared {player_idx} when Owner.(player_idx = C.player) ->
+          let company_name = Backend.get_name player_idx s.backend in
           let text = sp "%s\nBankruptcy declared!" company_name in
           Some(Newspaper(Newspaper.make s Newspaper.FinancialNews text None))
       | _ -> None

@@ -162,14 +162,14 @@ let nobaction = Backend.Action.NoAction
 
   (* returns v and whether we exit *)
 let handle_event (s:State.t) v (event:Event.t) =
-  let player = C.player in
+  let player_idx = C.player in
   let remove_stop () =
     let stop = match v.state with
       | `EditPriority -> `Priority
       | `EditStop i -> `Stop i
       | _ -> assert false
     in
-    let b_action = Backend.Action.RemoveStop {train=v.train; stop; player} in
+    let b_action = Backend.Action.RemoveStop {train=v.train; stop; player_idx} in
     false, v, b_action
   in
   match event, v.selected_station, v.state with
@@ -204,14 +204,14 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditPriority ->
       let b_action =
-        Backend.Action.SetStopStation {train=v.train; stop=`Priority; station; player}
+        Backend.Action.SetStopStation {train=v.train; stop=`Priority; station; player_idx}
       in
       false, v, b_action
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditStop stop  ->
       let b_action =
-        if Backend.check_stop_station ~train:v.train ~stop ~station player s.backend then
-          Backend.Action.SetStopStation {train=v.train; stop=`Stop stop; station; player}
+        if Backend.check_stop_station ~train:v.train ~stop ~station player_idx s.backend then
+          Backend.Action.SetStopStation {train=v.train; stop=`Stop stop; station; player_idx}
         else nobaction
       in
       false, v, b_action
