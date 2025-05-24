@@ -48,7 +48,7 @@ let scale_xy x y v =
 let scale_loc (x,y) v = scale_xy x y v
 
 let render win (s:State.t) (v:Train_report_d.train_route_orders) =
-  let player = C.player in
+  let player_idx = C.player in
   let write ?(color=Ega.black) ?(active_color=Ega.white) ?(idx=1) =
     Fonts.Render.write win s.fonts ~idx ~color ~active_color
   in
@@ -64,7 +64,7 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
     s.backend.graph;
 
   (* Write stop text *)
-  let trains = Backend.get_player player s.backend |> Player.get_trains in
+  let trains = Backend.get_player player_idx s.backend |> Player.get_trains in
   let train = Trainmap.get v.train trains in
   let route = Train.get_route train in
   (* TODO: wait *)
@@ -89,7 +89,7 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   Station_map.iter (fun (station:Station.t) ->
     if Station.is_proper_station station then
       let color =
-        match v.selected_station, Backend.get_priority_shipment s.backend player with
+        match v.selected_station, Backend.get_priority_shipment player_idx s.backend with
         | Some loc, _ when Utils.equal_loc loc station.loc && v.flash_on -> Ega.white
         | Some loc, _ when Utils.equal_loc loc station.loc -> Ega.black
         | _, Some {src_loc;_} when Utils.equal_loc src_loc station.loc -> Ega.bgreen

@@ -642,7 +642,7 @@ let _handle_cheat player_idx cheat v = match cheat with
     [%up {v with players; stations}]
     
 
-let get_priority_shipment v player_idx =
+let get_priority_shipment player_idx v =
   let player = Player.get player_idx v.players in
   player.priority
 

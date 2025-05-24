@@ -347,10 +347,10 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           end
       | Event.K1 when build &&
             B.check_change_double_track (v.const_box_x, v.const_box_y) player_idx ~double:false s.backend ->
-              v, `DoubleTrack(false, v.const_box_x, v.const_box_y, 0)
+              v, `DoubleTrack(false, v.const_box_x, v.const_box_y, player_idx)
       | Event.K2 when build &&
             B.check_change_double_track (v.const_box_x, v.const_box_y) player_idx ~double:true s.backend ->
-              v, `DoubleTrack(true, v.const_box_x, v.const_box_y, 0)
+              v, `DoubleTrack(true, v.const_box_x, v.const_box_y, player_idx)
       | _ -> v, `NoAction
   in
 

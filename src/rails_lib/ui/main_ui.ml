@@ -1044,7 +1044,7 @@ let render_main win (s:State.t) v =
     Fonts.Render.write win s.fonts ~color:Ega.bgreen ~idx:4 ~x:256 ~y:66 "B";
 
   let region = B.get_region s.backend in
-  let cash = B.get_cash s.backend ~player:0 in
+  let cash = B.get_cash player_idx s.backend in
   let cash_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region cash in
   let color = if cash < 0 then Ega.bred else Ega.black in
   Fonts.Render.write win s.fonts ~color ~idx:4 ~x:264 ~y:66 cash_s;
@@ -1060,7 +1060,7 @@ let render_main win (s:State.t) v =
 
   (* Priority time remaining *)
   let draw_priority () =
-    match Backend.get_priority_shipment s.backend C.player with
+    match Backend.get_priority_shipment player_idx s.backend with
     | Some priority ->
       let bonus = Priority_shipment.compute_bonus priority @@ B.get_params s.backend in
       let bonus_s = Printf.sprintf "bonus: %d,000" bonus in
