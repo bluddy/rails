@@ -62,7 +62,9 @@ let num_routes v = Vector.length v.routes
 let get_route i v = Vector.get v.routes i
 
 let random_route_idx random v = 
-  Random.int (num_routes v) random
+  if num_routes v > 0 then
+    Random.int (num_routes v) random |> Option.some
+  else None
 
 let owned_by_player stocks company =
   Stock_market.controls_company C.player ~target:company stocks
@@ -619,8 +621,9 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~
 let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
-      let route_idx = random_route_idx random v in
-      _route_earn_money route_idx ~stocks ~params player_net_worth ~tilemap ~cities v
+      match random_route_idx random v with
+      | Some route_idx -> _route_earn_money route_idx ~stocks ~params player_net_worth ~tilemap ~cities v
+      | None -> v
     else v
   in
   let random_city () =
