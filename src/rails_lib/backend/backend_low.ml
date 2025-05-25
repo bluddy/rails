@@ -603,7 +603,7 @@ let _check_priority_delivery players stations params =
     let stations = Station_map.clear_priority_shipment_for_all stations ~players:deliver_players in
     players, stations, ui_msgs
 
-let _try_to_develop_tiles v (player:Player.t) =
+let _develop_tiles v (player:Player.t) =
   let age = v.params.year - v.params.year_start in
   (* Originally & with 0x8
      We're already filtering with mod 8 = 0, so this is effectively mod 16 after 25 years
@@ -621,31 +621,30 @@ let _try_to_develop_tiles v (player:Player.t) =
     v.dev_state, player.active_station
 
 let _update_station_supply_demand player_idx stations map params =
-  if params.Params.cycle mod C.Cycles.station_supply_demand = 0 then (
-    let difficulty = params.options.difficulty in
-    let ui_msgs =
-      Station_map.fold 
-        (fun station old_msgs ->
-          Station.check_rate_war_lose_supplies station ~difficulty;
-          let msgs = Station.update_supply_demand map params station in
-          Station.lose_supplies station;
-          let msgs =
-            List.map (fun (good, add) ->
-              UIM.DemandChanged {player_idx; x=fst station.loc; y=snd station.loc; good; add})
-              msgs
-          in
-          msgs @ old_msgs)
-      stations
-      ~init:[]
-    in
-    stations, ui_msgs
-  ) else
-    stations, []
+  let difficulty = params.Params.options.difficulty in
+  let ui_msgs =
+    Station_map.fold 
+      (fun station old_msgs ->
+        Station.check_rate_war_lose_supplies station ~difficulty;
+        let msgs = Station.update_supply_demand map params station in
+        Station.lose_supplies station;
+        let msgs =
+          List.map (fun (good, add) ->
+            UIM.DemandChanged {player_idx; x=fst station.loc; y=snd station.loc; good; add})
+            msgs
+        in
+        msgs @ old_msgs)
+    stations
+    ~init:[]
+  in
+  stations, ui_msgs
 
 (** Most time-based work happens here **)
 let handle_cycle v =
   let time_step () =
     v.params.cycle <- v.params.cycle + 1;
+
+    let cycle = v.params.cycle in
 
     (* TODO: make player logic work for all human players *)
 
@@ -657,8 +656,8 @@ let handle_cycle v =
 
     (* TODO: AI routines, events, climate update *)
     let player =
-      if v.params.cycle mod C.Cycles.periodic_maintenance = 0 then
-        if ((v.params.cycle / C.Cycles.periodic_maintenance) mod 2) = 0 then
+      if cycle mod C.Cycles.periodic_maintenance = 0 then
+        if ((cycle / C.Cycles.periodic_maintenance) mod 2) = 0 then
           Player.pay_station_maintenance v.stations player
         else
           Player.pay_train_maintenance player
@@ -667,16 +666,20 @@ let handle_cycle v =
     in
 
     let stations, player, dev_state, active_station, pr_msgs =
-      if v.params.cycle mod C.Cycles.rare_bgnd_events = 0 then
+      if cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, pr_msgs = _try_to_create_priority_shipment player stations v.params v.random in
-        let dev_state, active_station = _try_to_develop_tiles v player in
+        let dev_state, active_station = _develop_tiles v player in
         let player = Player.track_maintenance_random_spot v.track v.random player in
         stations, player, dev_state, active_station, pr_msgs
       else
         stations, player, v.dev_state, player.active_station, []
     in
 
-    let stations, sd_msgs = _update_station_supply_demand C.player stations v.map v.params in
+    let stations, sd_msgs =
+      if cycle mod C.Cycles.station_supply_demand = 0 then (
+        _update_station_supply_demand C.player stations v.map v.params
+      ) else stations, []
+    in
 
     [%upf player.active_station <- active_station];
     [%upf player.trains <- trains];
