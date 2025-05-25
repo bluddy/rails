@@ -260,18 +260,18 @@ let _dir_from_dx_dy dx dy =
 type tgt_src = [`Tgt | `Src] [@@deriving eq]
 
 (* This function starts with the station locations for src and targets *)
-let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track =
+let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random ~ai_track =
   (* Get general dir from deltas *)
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
 
-  let rec connect_stations ~trackmap ~ai_track tgt_loc src_loc tgt_at_station src_at_station =
+  let rec connect_stations ~tracks ~ai_track tgt_loc src_loc tgt_at_station src_at_station =
     let dx, dy = Utils.s_dxdy src_loc tgt_loc in
     let tgt_real_dir = _dir_from_dx_dy dx dy in
     let src_real_dir = Dir.opposite tgt_real_dir in
     let real_dist = Utils.classic_dist src_loc tgt_loc in
 
-    if real_dist = 0 then Some(trackmap, ai_track) else
+    if real_dist = 0 then Some(tracks, ai_track) else
 
     let idx_vars = [
         `Tgt, (tgt_loc, tgt_real_dir, src_loc, tgt_at_station);
@@ -303,7 +303,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
                 end
               | _ -> 0, x, y, `NoRiver
             in
-            let cost = if Trackmap.has_track (x, y) trackmap then cost + 64 else cost in
+            let cost = if Trackmap.has_track (x, y) tracks then cost + 64 else cost in
             let dir_diff = Dir.diff dir real_dir in
             (* Check 90 degrees *)
             let cost = if dir_diff > 2 then cost + 99 else cost in
@@ -344,8 +344,8 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
     let dir = shift dir_adjust @@ dir1 in
     let real_dist = Utils.classic_dist src_loc tgt_loc in
 
-    let rec build_one_track ~trackmap ~ai_track loc1 loc2 at_station =
-      let t = Trackmap.get loc1 trackmap in
+    let rec build_one_track ~tracks ~ai_track loc1 loc2 at_station =
+      let t = Trackmap.get loc1 tracks in
       let track_modify = match t, at_station with
         (* We don't care about crossing our own track (AI doesn't follow the rules.
            However, we can't do it right when leaving a station *)
@@ -355,12 +355,12 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
         | Some _, _ -> `NoModify
         | None, _ -> `Modify (Track.empty company @@ Track `Single)
       in
-      let trackmap, ai_track = match track_modify with
-        | `NoModify -> trackmap, ai_track
+      let tracks, ai_track = match track_modify with
+        | `NoModify -> tracks, ai_track
         | `Modify track ->
            let track = Track.add_dir track ~dir in
-           let trackmap = Trackmap.set loc1 track trackmap in
-           trackmap, loc1::ai_track
+           let tracks = Trackmap.set loc1 track tracks in
+           tracks, loc1::ai_track
       in
 
       (* Test dir diagonals *)
@@ -368,9 +368,9 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
         if Dir.is_diagonal dir then
           (* Problem if we have track on *both* sides of us *)
           let loc1 = Dir.adjust_loc (Dir.ccw dir) loc1 in
-          let has_track_ccw = Trackmap.has_track loc1 trackmap in
+          let has_track_ccw = Trackmap.has_track loc1 tracks in
           let loc1 = Dir.adjust_loc (Dir.cw dir) loc1 in
-          let has_track_cw = Trackmap.has_track loc1 trackmap in
+          let has_track_cw = Trackmap.has_track loc1 tracks in
           has_track_ccw && has_track_cw
         else false
       in
@@ -379,41 +379,41 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random
       let loc1 = Dir.adjust_loc dir loc1 in
       let at_station = `NotAtStation in
       let tile = Tilemap.get_tile loc1 tilemap in
-      let track = Trackmap.get loc1 trackmap in
+      let track = Trackmap.get loc1 tracks in
       let build_track_of_kind kind =
         (* Add track facing opposite way *)
         let track = Track.empty company kind
          |> Track.add_dir ~dir:(Dir.opposite dir) in
-        let trackmap = Trackmap.set loc1 track trackmap in
-        trackmap, loc1::ai_track, at_station, `Ok
+        let tracks = Trackmap.set loc1 track tracks in
+        tracks, loc1::ai_track, at_station, `Ok
       in
-      let trackmap, ai_track, at_station, ok = match tile, track with
+      let tracks, ai_track, at_station, ok = match tile, track with
        (* These things are only allowed if we're almost there *)
-       | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> trackmap, ai_track, at_station, `Fail
-       | _, Some _track when real_dist > 1 -> trackmap, ai_track, at_station, `Fail
-       | EnemyStation, _ -> trackmap, ai_track, `AtStation, `Ok
+       | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> tracks, ai_track, at_station, `Fail
+       | _, Some _track when real_dist > 1 -> tracks, ai_track, at_station, `Fail
+       | EnemyStation, _ -> tracks, ai_track, `AtStation, `Ok
        | (River _ | Landing _), _ -> build_track_of_kind @@ Track.Bridge Wood
-       | _ when diag_surrounded && real_dist > 1 -> trackmap, ai_track, at_station, `Fail
+       | _ when diag_surrounded && real_dist > 1 -> tracks, ai_track, at_station, `Fail
        | _ -> build_track_of_kind @@ Track.Track `Single
       in
       match tile, min_idx, ok with
       (* Make sure we finish bridge in same direction *)
       | _, _, `Fail -> None
-      | (River _ | Landing _), _, _ -> build_one_track ~trackmap ~ai_track loc1 loc2 at_station 
+      | (River _ | Landing _), _, _ -> build_one_track ~tracks ~ai_track loc1 loc2 at_station 
       (* Unflip src/tgt *)
-      | _, `Tgt, _ -> connect_stations ~ai_track ~trackmap loc1 loc2 at_station src_at_station
-      | _, `Src, _ -> connect_stations ~ai_track ~trackmap loc2 loc1 tgt_at_station at_station
+      | _, `Tgt, _ -> connect_stations ~ai_track ~tracks loc1 loc2 at_station src_at_station
+      | _, `Src, _ -> connect_stations ~ai_track ~tracks loc2 loc1 tgt_at_station at_station
     in
-    build_one_track ~trackmap ~ai_track loc1 loc2 at_station 
+    build_one_track ~tracks ~ai_track loc1 loc2 at_station 
   in
-  connect_stations ~ai_track ~trackmap src_loc tgt_loc `AtStation `AtStation
+  connect_stations ~ai_track ~tracks src_loc tgt_loc `AtStation `AtStation
 
   (* src: always AI-owned. tgt: sometimes player-owned
      We always supply a tgt_city, but sometimes it's really a tgt_station's
      location
    *)
   (* TODO: adjust player-owned flag logic for station *)
-let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
+let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
                   ~tilemap ~company ~stocks ~params random v =
   let src_loc = Cities.loc_of_idx src_city cities in
   let src_name = Cities.name_of_loc src_loc cities in
@@ -424,11 +424,11 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
       loc, Station.get_name station
   in
   let ai_controlled_by_player = owned_by_player stocks company in
-  let ret = _build_track_btw_stations tgt_loc src_loc ~company ~trackmap ~tilemap random ~ai_track:v.ai_track in
+  let ret = _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random ~ai_track:v.ai_track in
   let ai_name = get_name company ~cities v in
   let ai_player = Owner.Map.find company v.ais in
   match ret with
-    | Some (trackmap, ai_track) -> (* Built *)
+    | Some (tracks, ai_track) -> (* Built *)
         let ui_msg = 
           let opponent = (get_ai_exn company v).opponent.name in
           Ui_msg.AiConnected {opponent; ai_name; src_name; tgt_name}
@@ -466,7 +466,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
         let ais = Owner.Map.add company ai_player v.ais in
         let v = {v with ais; ai_of_city; ai_track; routes=v.routes; rate_war_at_city} in
         (* TODO: if not owned by player and connect to player, send rate war animation *)
-        trackmap, tilemap, v, stations, Some ui_msg
+        tracks, tilemap, v, stations, Some ui_msg
     | None ->
       (* Failed to build *)
         let expand_ctr =
@@ -483,7 +483,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~trackmap
         in
         let ai_player2 = [%up {ai_player with build_order; expand_ctr}] in
         let v = if ai_player2 === ai_player then v else {v with ais=Owner.Map.add company ai_player2 v.ais} in
-        trackmap, tilemap, v, stations, ui_msg
+        tracks, tilemap, v, stations, ui_msg
 
 let new_route_text ai_name src_name tgt_name =
   Printf.sprintf
@@ -499,7 +499,7 @@ let build_order_fail_text ai_name src_name tgt_name =
   to %s unsuccessful.\n"
   ai_name src_name tgt_name
 
-let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx ~ai_idx ~stocks ~player_net_worth loc random v =
+let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~ai_idx ~stocks ~player_net_worth loc random v =
   (* Use target city and company to expand *)
   let ai_player = get_ai_exn ai_idx v in
   match ai_of_city city_idx v with
@@ -579,7 +579,7 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
     match station_check with
       | `TooClose station_loc when owned_by_player ->
           `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
-            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
+            ~stations ~tracks ~tilemap ~company:ai_idx ~stocks ~params random v)
 
       | `TooClose ((x, y) as station_loc) when B_options.cutthroat params.options -> 
         (* Rate war can only happen with cutthroat *)
@@ -603,17 +603,17 @@ let _try_to_build_station ~tilemap ~stations ~trackmap ~cities ~params ~city_idx
         let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
         if track_check && player_share_check && value_check && tgt_city_check then
           `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
-            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
+            ~stations ~tracks ~tilemap ~company:ai_idx ~stocks ~params random v)
         else `Update v
 
       | `TooClose _ -> `Update v  (* Too close to build normally *)
 
       | `CanBuild ->
           `Build (_build_station tgt_city src_city ~tgt_station:None ~cities
-            ~stations ~trackmap ~tilemap ~company:ai_idx ~stocks ~params random v)
+            ~stations ~tracks ~tilemap ~company:ai_idx ~stocks ~params random v)
 
 (* Main AI routines for building track *)
-let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~cities random ~stations v =
+let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       let route_idx = random_route_idx random v in
@@ -635,13 +635,13 @@ let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~trackmap ~citi
   let v = earn_random_route v in
   let city_idx = random_city () in
   let loc = Cities.loc_of_idx city_idx cities in
-  if Trackmap.has_track loc trackmap then `Update v else (* Proceed only if no track at city *)
+  if Trackmap.has_track loc tracks then `Update v else (* Proceed only if no track at city *)
   let first_ai = Owner.Map.is_empty v.ais in
   match random_or_none random v with
   | None ->
     _try_to_create_ai ~tilemap ~stations ~params ~city_idx ~stocks ~first_ai loc random v
   | Some ai_idx ->
-    _try_to_build_station ~tilemap ~stations ~trackmap ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
+    _try_to_build_station ~tilemap ~stations ~tracks ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
 
 let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   (* Player-owned ais don't make financial decisions *)
@@ -908,4 +908,12 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
   | `Nothing -> v, stocks, player_cash, None
 
 
+let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
+  match ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v with
+  | `Build(tracks, tilemap, v, stations, ui_msg) ->
+      tracks, tilemap, stations, stocks, v, Option.to_list ui_msg
+  | `CreateAI(tilemap, v, stocks, ui_msg) ->
+      tracks, tilemap, stations, stocks, v, [ui_msg]
+  | `Update v ->
+      tracks, tilemap, stations, stocks, v, []
 
