@@ -655,7 +655,6 @@ let handle_cycle v =
 
     let trains, stations, player, tr_msgs = Train_update._update_all_trains v player in
 
-
     (* TODO: AI routines, events, climate update *)
     let player =
       if cycle mod C.Cycles.periodic_maintenance = 0 then
@@ -667,25 +666,25 @@ let handle_cycle v =
         player
     in
 
-    let players = v.players in
+    let players, track, stocks, map, ai = v.players, v.track, v.stocks, v.map, v.ai in
 
     let stations, player, dev_state, active_station, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, pr_msgs = _try_to_create_priority_shipment player stations v.params v.random in
         let dev_state, active_station = _develop_tiles v player in
-        let player = Player.track_maintenance_random_spot v.track v.random player in
+        let player = Player.track_maintenance_random_spot track v.random player in
         stations, player, dev_state, active_station, pr_msgs
       else
         stations, player, v.dev_state, player.active_station, []
     in
 
     let track, map, stations, stocks, ai, ai_msgs =
-      let player_net_worth = Player.get player_idx v.players |> Player.net_worth in
+      let player_net_worth = Player.get player_idx players |> Player.net_worth in
       if cycle mod C.Cycles.ai_track = 0 then
-          Ai.ai_track_routines ~stocks:v.stocks ~params:v.params ~player_net_worth
-            ~tilemap:v.map ~tracks:v.track ~cities:v.cities ~stations v.random v.ai
+          Ai.ai_track_routines ~stocks ~params:v.params ~player_net_worth
+            ~tilemap:map ~tracks:track ~cities:v.cities ~stations v.random ai
       else
-        v.track, v.map, v.stations, v.stocks, v.ai, []
+        track, map, stations, stocks, ai, []
     in
 
     let stations, sd_msgs =
