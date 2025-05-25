@@ -913,7 +913,7 @@ let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities
   | `Build(tracks, tilemap, v, stations, ui_msg) ->
       tracks, tilemap, stations, stocks, v, Option.to_list ui_msg
   | `CreateAI(tilemap, v, stocks, ui_msg) ->
-      tracks, tilemap, stations, stocks, v, [ui_msg]
+      tracks, tilemap, stations, stocks, v,  [ui_msg]
   | `Update v ->
       tracks, tilemap, stations, stocks, v, []
 

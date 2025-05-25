@@ -650,9 +650,11 @@ let handle_cycle v =
 
     let player_idx = C.player in
 
-    let player1 = Player.get player_idx v.players in
+    let player = Player.get player_idx v.players in
+    let player1 = player in
 
-    let trains, stations, player, tr_msgs = Train_update._update_all_trains v player1 in
+    let trains, stations, player, tr_msgs = Train_update._update_all_trains v player in
+
 
     (* TODO: AI routines, events, climate update *)
     let player =
@@ -665,6 +667,8 @@ let handle_cycle v =
         player
     in
 
+    let players = v.players in
+
     let stations, player, dev_state, active_station, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, pr_msgs = _try_to_create_priority_shipment player stations v.params v.random in
@@ -675,16 +679,20 @@ let handle_cycle v =
         stations, player, v.dev_state, player.active_station, []
     in
 
-    let stations, sd_msgs =
-      if cycle mod C.Cycles.station_supply_demand = 0 then (
-        _update_station_supply_demand C.player stations v.map v.params
-      ) else stations, []
+    let track, map, stations, stocks, ai, ai_msgs =
+      let player_net_worth = Player.get player_idx v.players |> Player.net_worth in
+      if cycle mod C.Cycles.ai_track = 0 then
+          Ai.ai_track_routines ~stocks:v.stocks ~params:v.params ~player_net_worth
+            ~tilemap:v.map ~tracks:v.track ~cities:v.cities ~stations v.random v.ai
+      else
+        v.track, v.map, v.stations, v.stocks, v.ai, []
     in
 
-    [%upf player.active_station <- active_station];
-    [%upf player.trains <- trains];
-    [%upf v.stations <- stations];
-    [%upf v.dev_state <- dev_state];
+    let stations, sd_msgs =
+      if cycle mod C.Cycles.station_supply_demand = 0 then (
+        _update_station_supply_demand C.player stations map v.params
+      ) else stations, []
+    in
 
     let player, br_msgs =
       (* Check broker *)
@@ -695,7 +703,7 @@ let handle_cycle v =
       else player, []
     in
 
-    let players, stations = v.players, v.stations in
+    let player = [%up {player with active_station; trains}] in
 
     let players = if player =!= player1 then Player.set player_idx player players else players in
 
@@ -707,10 +715,9 @@ let handle_cycle v =
     (* Check if we delivered priority deliveries *)
     let players, stations, del_msgs = _check_priority_delivery players stations v.params in
 
-    [%upf v.stations <- stations];
-    [%upf v.players <- players];
+    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks}] in
 
-    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs in
+    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs in
 
     (* adjust time *)
     v.params.time <- v.params.time + 1;
