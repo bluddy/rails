@@ -666,11 +666,11 @@ let handle_cycle v =
         player
     in
 
-    let players, track, stocks, map, ai = v.players, v.track, v.stocks, v.map, v.ai in
+    let players, track, stocks, map, ai, params = v.players, v.track, v.stocks, v.map, v.ai, v.params in
 
     let stations, player, dev_state, active_station, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
-        let stations, player, pr_msgs = _try_to_create_priority_shipment player stations v.params v.random in
+        let stations, player, pr_msgs = _try_to_create_priority_shipment player stations params v.random in
         let dev_state, active_station = _develop_tiles v player in
         let player = Player.track_maintenance_random_spot track v.random player in
         stations, player, dev_state, active_station, pr_msgs
@@ -681,7 +681,7 @@ let handle_cycle v =
     let track, map, stations, stocks, ai, ai_msgs =
       let player_net_worth = Player.get player_idx players |> Player.net_worth in
       if cycle mod C.Cycles.ai_track = 0 then
-          Ai.ai_track_routines ~stocks ~params:v.params ~player_net_worth
+          Ai.ai_track_routines ~stocks ~params ~player_net_worth
             ~tilemap:map ~tracks:track ~cities:v.cities ~stations v.random ai
       else
         track, map, stations, stocks, ai, []
@@ -689,8 +689,20 @@ let handle_cycle v =
 
     let stations, sd_msgs =
       if cycle mod C.Cycles.station_supply_demand = 0 then (
-        _update_station_supply_demand C.player stations map v.params
+        _update_station_supply_demand C.player stations map params
       ) else stations, []
+    in
+
+    let ai, stocks, cash, fin_msgs =
+      let cash = Player.get_cash player in
+      let default = ai, stocks, cash, [] in
+      if cycle mod C.Cycles.ai_financial = 0 then
+        let choice = (cycle / C.Cycles.ai_financial) mod (C.max_ai_players + 1) in
+        match Ai.nth_or_none choice ai with
+        | None -> default
+        | Some ai_idx ->
+          Ai.ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash:cash ~params ai 
+      else default
     in
 
     let player, br_msgs =
@@ -702,7 +714,8 @@ let handle_cycle v =
       else player, []
     in
 
-    let player = [%up {player with active_station; trains}] in
+    let m = [%up {player.m with cash}] in
+    let player = [%up {player with active_station; trains; m}] in
 
     let players = if player =!= player1 then Player.set player_idx player players else players in
 
@@ -716,7 +729,7 @@ let handle_cycle v =
 
     let v = [%up {v with players; stations; dev_state; map; track; ai; stocks}] in
 
-    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs in
+    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @ fin_msgs in
 
     (* adjust time *)
     v.params.time <- v.params.time + 1;

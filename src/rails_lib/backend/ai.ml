@@ -117,10 +117,13 @@ let get_name player ~cities v =
 
 let ai_exists idx v = Owner.Map.mem idx v.ais
 
+let nth_or_none n v =
+  Owner.Map.nth_key n v.ais
+
 let random_or_none random v =
-  (* Roll from 0 to max_ai_players. If we get a player, return it *)
-  let roll = Random.int C.max_ai_players random in
-  Owner.Map.nth_key roll v.ais
+  (* Roll from 0 to max_ai_players + 1. If we get a player, return it *)
+  let roll = Random.int (C.max_ai_players + 1) random in
+  nth_or_none roll v
 
 let _route_value city1 city2 ~tilemap ~(params:Params.t) =
   let get_demand_supply loc =
@@ -842,7 +845,7 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
       {ai_player with cash})
     in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
-    v, stocks, player_cash, Ui_msg.AiBuySellOwnStock{opponent; ai_idx; price; buy=true} |> Option.some
+    v, stocks, player_cash, [Ui_msg.AiBuySellOwnStock{opponent; ai_idx; price; buy=true}]
 
   | `SellOwnShares ->
     let profit, stocks = Stock_market.ai_sell_own_stock ~ai_idx stocks in
@@ -852,7 +855,7 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
       {ai_player with cash})
     in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
-    v, stocks, player_cash, Ui_msg.AiBuySellOwnStock{opponent; ai_idx; price; buy=false} |> Option.some
+    v, stocks, player_cash, [Ui_msg.AiBuySellOwnStock{opponent; ai_idx; price; buy=false}]
 
   | `BuyPlayerShares ->
     let cost, stocks = Stock_market.ai_buy_player_stock ~ai_idx ~player_idx stocks in
@@ -866,7 +869,7 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
     let v = {v with last_ai_to_buy_player_stock=Some ai_idx} in
     let player_cash = if takeover then 0 else player_cash in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
-    v, stocks, player_cash, Ui_msg.AiBuysPlayerStock{opponent; player_idx; ai_idx; takeover} |> Option.some
+    v, stocks, player_cash, [Ui_msg.AiBuysPlayerStock{opponent; player_idx; ai_idx; takeover}]
 
   | `SellPlayerShares ->
     let profit, stocks = Stock_market.ai_sell_player_stock ~ai_idx ~player_idx stocks in
@@ -875,7 +878,7 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
       {ai_player with cash})
     in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
-    v, stocks, player_cash, Ui_msg.AiSellsPlayerStock{opponent; player_idx; ai_idx} |> Option.some
+    v, stocks, player_cash, [Ui_msg.AiSellsPlayerStock{opponent; player_idx; ai_idx}]
 
   | `PayBackBond ->
       let v = modify_ai ai_idx v (fun ai_player ->
@@ -888,7 +891,7 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
         {ai_player with cash; bonds; yearly_interest}
       )
       in
-      v, stocks, player_cash, None
+      v, stocks, player_cash, []
 
   | `TakeOutBond(bond_interest) ->
     let v = modify_ai ai_idx v (fun ai_player ->
@@ -901,11 +904,11 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
     let ai_owns_some_player_stock = Stock_market.owned_shares ai_idx ~owned:player_idx stocks > 0 in
     let ui_msg = if ai_owns_some_player_stock then
       let opponent = (get_ai_exn ai_idx v).opponent.name in
-      Ui_msg.AiTakesOutBond{opponent; player_idx; ai_idx} |> Option.some else None
+      [Ui_msg.AiTakesOutBond{opponent; player_idx; ai_idx}] else []
     in
     v, stocks, player_cash, ui_msg
 
-  | `Nothing -> v, stocks, player_cash, None
+  | `Nothing -> v, stocks, player_cash, []
 
 
 let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =

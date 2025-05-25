@@ -66,6 +66,8 @@ module Cycles = struct
   let supply_decay = 512
 
   let ai_track = 16
+  let ai_financial = 16
+  let ai_financial_choice = 4 (* 0-2 AIs or 3=nothing *)
 end
 
 let priority_min_dist = 6
