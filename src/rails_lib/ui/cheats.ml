@@ -15,5 +15,6 @@ let make_menu fonts =
     make_entry "Money" @@ `MsgBox money_menu;
     make_entry "Priority Shipment" @@ `Action(`Cheat(CreatePriorityShipment));
     make_entry "Cancel Priority" @@ `Action(`Cheat(CancelPriorityShipment));
+    make_entry "Create AI" @@ `Action(`Cheat CreateAi);
   ]
   

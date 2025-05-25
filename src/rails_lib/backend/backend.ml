@@ -640,6 +640,15 @@ let _handle_cheat player_idx cheat v = match cheat with
     in
     List.iter (send_ui_msg v) ui_msgs;
     [%up {v with players; stations}]
+
+  | CreateAi ->
+    let player_net_worth = get_net_worth player_idx v in
+    let track, map, stations, stocks, ai, ui_msgs =
+      Ai.ai_track_routines ~force_create:true ~stocks:v.stocks ~params:v.params ~player_net_worth
+          ~tilemap:v.map ~tracks:v.track ~cities:v.cities ~stations:v.stations v.random v.ai
+    in
+    List.iter (send_ui_msg v) ui_msgs;
+    [%up {v with track; map; stations; stocks; ai}]
     
 
 let get_priority_shipment player_idx v =

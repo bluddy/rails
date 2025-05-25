@@ -169,13 +169,13 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
   let ais = Owner.Map.add player_idx ai_player v.ais in
   {v with ais}
 
-let _try_to_create_ai ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx ~stocks loc random v =
+let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx ~stocks loc random v =
   (* New company creation test at this city *)
   let demand_supply = Tilemap.demand_supply_sum loc tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
-  if cycles_value >= value then `Update v else
+  if cycles_value >= value && not force then `Update v else
   let find_closest_player_station_check_distance () =
     let closest_station = Station_map.find_nearest stations loc in
     let create = match closest_station with
@@ -195,7 +195,7 @@ let _try_to_create_ai ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx 
   in
   let closest_station, create =
     find_closest_player_station_check_distance () in
-  if not create then `Update v else
+  if not create && not force then `Update v else
   let rec create_leader_loop () =
     let leader = Opponent.random_of_region params.region random in
     let exists = Owner.Map.fold (fun _ ai acc -> acc || Opponent.equal_name ai.opponent.name leader) v.ais false in
@@ -213,7 +213,7 @@ let _try_to_create_ai ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx 
        if value >= dist then true else false
     | _ -> true
   in
-  if not create then `Update v else
+  if not create && not force then `Update v else
   let yearly_interest =
     5 * (8 - opponent.financial_skill - Climate.to_enum params.climate)
   in
@@ -618,7 +618,7 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~
             ~stations ~tracks ~tilemap ~company:ai_idx ~stocks ~params random v)
 
 (* Main AI routines for building track *)
-let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
+let ai_track_routines ?(force_create=false) ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       match random_route_idx random v with
@@ -645,7 +645,7 @@ let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities
   let first_ai = Owner.Map.is_empty v.ais in
   match random_or_none random v with
   | None ->
-    _try_to_create_ai ~tilemap ~stations ~params ~city_idx ~stocks ~first_ai loc random v
+    _try_to_create_ai ~force:force_create ~tilemap ~stations ~params ~city_idx ~stocks ~first_ai loc random v
   | Some ai_idx ->
     _try_to_build_station ~tilemap ~stations ~tracks ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
 
@@ -914,8 +914,8 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
   | `Nothing -> v, stocks, player_cash, []
 
 
-let ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
-  match ai_track_routines ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v with
+let ai_track_routines ?force_create ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
+  match ai_track_routines ?force_create ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v with
   | `Build(tracks, tilemap, v, stations, ui_msg) ->
       tracks, tilemap, stations, stocks, v, Option.to_list ui_msg
   | `CreateAI(tilemap, v, stocks, ui_msg) ->

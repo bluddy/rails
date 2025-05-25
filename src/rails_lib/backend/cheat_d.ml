@@ -4,4 +4,5 @@ open! Containers
   | Add500Cash
   | CreatePriorityShipment
   | CancelPriorityShipment
+  | CreateAi
   [@@deriving show, yojson]
