@@ -26,6 +26,8 @@
 - Wire up player updates
 - Could division by 2 for money be to get a little more space in the bits?
 - Bug:
+  - Portraits have white bg instead of black
+  - No space between entries on stock broker
   - Delivery + priority pickup: no delivery message
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu
