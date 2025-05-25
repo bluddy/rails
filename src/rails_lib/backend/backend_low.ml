@@ -722,10 +722,10 @@ let handle_cycle v =
     (* TODO: only this part deals with all players for now *)
 
     (* Cancel any expired priority shipments *)
-    let players, stations, cp_msgs = _cancel_expired_priority_shipments players stations v.params in
+    let players, stations, cp_msgs = _cancel_expired_priority_shipments players stations params in
 
     (* Check if we delivered priority deliveries *)
-    let players, stations, del_msgs = _check_priority_delivery players stations v.params in
+    let players, stations, del_msgs = _check_priority_delivery players stations params in
 
     let v = [%up {v with players; stations; dev_state; map; track; ai; stocks}] in
 
