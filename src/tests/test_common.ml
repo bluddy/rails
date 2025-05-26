@@ -1,11 +1,16 @@
 open! Containers
-module T = Track
-module TM = Trackmap
-module TG = Track_graph
-module TS = Scan
-module C = Constants
+module R = Rails_lib
+module T = R.Track
+module TM = R.Trackmap
+module TG = R.Track_graph
+module TS = R.Scan
+module C = R.Constants
+module Dir = R.Dir
+module Engine = R.Engine
+module Train = R.Train
+module Region = R.Region
 
-let make_tm ?(track=Track.Track `Single) dirs = 
+let make_tm ?(track=T.Track `Single) dirs = 
   T.make (Dir.Set.of_list dirs) track C.player
 
 let tmap = TM.empty 20 20

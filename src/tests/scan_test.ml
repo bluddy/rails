@@ -1,10 +1,15 @@
 open! Containers
-open Dir
-module TM = Trackmap
-module S = Scan
+module R = Rails_lib
+open R.Dir
+module TM = R.Trackmap
+module S = R.Scan
+module Dir = R.Dir
+module T = R.Track
+module Bridge = R.Bridge
+module Trainmap = R.Trainmap
 open Test_common
 
-let player = Constants.player
+let player = R.Constants.player
 
 let print_map (map:TM.t) = TM.yojson_of_t map |> Yojson.Safe.to_string |> print_string
 
@@ -12,13 +17,13 @@ let print scan = S.show scan |> print_string
 
 let track ?(double=false) dirs = 
   let dbl = if double then `Double else `Single in
-  Track.make (Dir.Set.of_list dirs) (Track dbl) player
+  T.make (Dir.Set.of_list dirs) (T.Track dbl) player
 
 let bridge dirs b_type = 
-  Track.make (Dir.Set.of_list dirs) (Bridge b_type) player
+  T.make (Dir.Set.of_list dirs) (T.Bridge b_type) player
 
 let station dirs =
-  Track.make (Dir.Set.of_list dirs) (Station `Terminal) player
+  T.make (Dir.Set.of_list dirs) (T.Station `Terminal) player
 
 let%expect_test "print map" =
   let dirs = [Left; Right] in
@@ -183,7 +188,7 @@ let%expect_test "scan map 3 stations in a row" =
            station = true; double = false }
          ]) |}]
 
-let print_sscan s = Pair.pp Int.pp Track.pp_double Format.std_formatter s
+let print_sscan s = Pair.pp Int.pp T.pp_double Format.std_formatter s
 
 let%expect_test "train_scan map one train" =
   let tracks = TM.empty 20 20
@@ -198,7 +203,7 @@ let%expect_test "train_scan map one train" =
 
 let%expect_test "train_scan map double" =
   let tracks = TM.empty 20 20
-    |> build_road ~track:(Track.Track `Double) ~y:10 5 15 
+    |> build_road ~track:(T.Track `Double) ~y:10 5 15 
   in
   let trains = Trainmap.empty () in
   let trains = Trainmap.add (dummy_train (8, 10) Right) trains in
@@ -263,7 +268,7 @@ let%expect_test "train_scan map two trains, station in middle" =
 
 let%expect_test "train_scan double map two trains, station in middle" =
   let tracks = TM.empty 20 20
-    |> build_road ~track:(Track.Track `Double) ~y:10 5 15 
+    |> build_road ~track:(T.Track `Double) ~y:10 5 15 
     |> TM.set (10, 10) (station [Left;Right])
   in
   let trains = Trainmap.empty ()

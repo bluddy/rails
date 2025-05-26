@@ -1,16 +1,21 @@
 open! Containers
-open Track
-module TM = Trackmap
-module SM = Block_map
-module TG = Track_graph
-module TS = Scan
-module TRM = Trainmap
-module C = Constants
+module R = Rails_lib
+open R.Track
+module TM = R.Trackmap
+module SM = R.Block_map
+module TG = R.Track_graph
+module TS = R.Scan
+module TRM = R.Trainmap
+module C = R.Constants
+module Utils = R.Utils
+module Trainmap = R.Trainmap
+module Block_map = R.Block_map
+module Track = R.Track
 open Test_common
 
 let print (blocks:SM.t) = SM.show blocks |> print_string
 
-let trainmap = Trainmap.empty ()
+let trainmap = TRM.empty ()
 
 let player = C.player
 

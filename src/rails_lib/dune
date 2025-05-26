@@ -3,6 +3,7 @@
   (name rails_lib)
   (libraries iter containers containers-data gen imagelib imagelib.unix tsdl owl-base ocamlgraph logs logs.fmt)
   (inline_tests)
+  (wrapped true)
   (preprocess
     (staged_pps ppx_import ppx_deriving.show ppx_deriving.enum ppx_deriving.eq ppx_deriving.ord ppx_hash ppx_yojson_conv ppx_expect ppx_inline_test ppx_update)
     )

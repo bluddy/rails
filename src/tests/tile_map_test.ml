@@ -1,5 +1,9 @@
-open Tilemap
 open Containers
+module R = Rails_lib
+open R.Tilemap
+module Tile = R.Tile
+module Dir = R.Dir
+module Params = R.Params
 
 let map (width,height) = 
   let map = Array.make (width * height) Tile.Clear in

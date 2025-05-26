@@ -1,7 +1,13 @@
 open Containers
+module R = Rails_lib
 open Test_common
-module TG = Track_graph
-module C = Constants
+module TG = R.Track_graph
+module C = R.Constants
+module Dir = R.Dir
+module Utils = R.Utils
+module T = R.Track
+module Trackmap = R.Trackmap
+module Scan = R.Scan
 
 let graph () =
   TG.make ()
@@ -78,7 +84,7 @@ let%expect_test "graph shortest path" =
   [%expect {| Some Dir.Up |}]
 
 let%expect_test "connected_stations_dirs" =
-  let t = Track.make Dir.Set.empty (Station `Station) C.player in
+  let t = T.make Dir.Set.empty (Station `Station) C.player in
   let map = Trackmap.empty 10 10
     |> Trackmap.set (1, 2) t
     |> Trackmap.set (3, 4) t
@@ -95,10 +101,10 @@ module Track = struct
   module TM = Trackmap
 
   let track dirs = 
-    Track.make (Dir.Set.of_list dirs) (Track `Single) C.player
+    T.make (Dir.Set.of_list dirs) (Track `Single) C.player
 
   let station dirs = 
-    Track.make (Dir.Set.of_list dirs) (Station `Station) C.player
+    T.make (Dir.Set.of_list dirs) (Station `Station) C.player
 
   let dirs = [Dir.Left; Right]
   let y = 2
