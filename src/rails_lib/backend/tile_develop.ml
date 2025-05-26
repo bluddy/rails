@@ -177,10 +177,9 @@ let develop_tiles ~two_devs (params:Params.t) ~random ~tilemap ~cities ~cities_t
         | Some (x, y) -> random_add_x_y x y
         | None when v.total_devs land 0xE <> 0 -> random_tile ()
         | None ->
-          let city = Cities.random_idx random cities in
-          let x, y = Cities.loc_of_idx city cities in
-          if IntMap.mem city cities_to_ai then
-            random_add_x_y x y
+          let city = Cities.random random cities in
+          if Utils.LocMap.mem city cities_to_ai then
+            random_add_x_y (fst city) (snd city)
           else
             random_tile ()
       in

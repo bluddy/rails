@@ -11,6 +11,7 @@ module List = Utils.List
 module U = Utils
 
 module LocMap = U.LocMap
+module LocSet = U.LocSet
 
 let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -38,7 +39,7 @@ type ai_player = {
 type t = {
   routes: route Vector.vector;  (* Routes for all AIs *)
   ai_of_city: Owner.t LocMap.t; (* Each city can only have one ai *)
-  rate_war_at_city: IntSet.t;
+  rate_war_at_city: LocSet.t;
   ais: ai_player Owner.Map.t; (* AI player info *)
   ai_track: U.loc list;
   mutable financial_ctr: int; (* Affects ai financial actions *)
@@ -52,8 +53,8 @@ type t = {
 
 let default () = {
   routes=Vector.create ();
-  ai_of_city=IntMap.empty;
-  rate_war_at_city=IntSet.empty;
+  ai_of_city=LocMap.empty;
+  rate_war_at_city=LocSet.empty;
   ais=Owner.Map.empty;
   ai_track=[];
   financial_ctr=0;
@@ -82,9 +83,9 @@ let update_valuation player stocks v =
   let net_worth = cash - loans + v.track_length * 2 + stock_value in
   {v with net_worth}
 
-let ai_of_city city v = IntMap.get city v.ai_of_city
+let ai_of_city city v = LocMap.get city v.ai_of_city
 
-let city_rate_war city v = IntSet.mem city v.rate_war_at_city
+let city_rate_war city v = LocSet.mem city v.rate_war_at_city
 
 let get_ai idx v = Owner.Map.get idx v.ais
 
@@ -113,11 +114,11 @@ let add_cash idx cash v =
 
 let get_name player ~cities v =
   let p = get_ai_exn player v in
-  let city1_s = Cities.name_of_idx p.city1 cities in
+  let city1_s = Cities.name_of_loc p.city1 cities in
   match p.city2 with
   | None -> city1_s ^ " RR"
   | Some city2 -> 
-    let city2_s = Cities.name_of_idx city2 cities in
+    let city2_s = Cities.name_of_loc city2 cities in
     Printf.sprintf "%s & %s RR" city1_s city2_s
 
 let ai_exists idx v = Owner.Map.mem idx v.ais
@@ -146,12 +147,11 @@ let _route_value city1 city2 ~tilemap ~(params:Params.t) =
   else value
 
   (* Simulate earning money on a route *)
-let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~cities v =
+let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap v =
   let city1, city2 = Vector.get v.routes route_idx in
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = Owner.Map.find player_idx v.ais in
-  let city1_loc, city2_loc = Cities.loc_of_idx city1 cities, Cities.loc_of_idx city2 cities in
-  let value = _route_value city1_loc city2_loc ~tilemap ~params in
+  let value = _route_value city1 city2 ~tilemap ~params in
   let div = if city_rate_war city1 v || city_rate_war city2 v then 6 else 3 in
   let value = value / div in
   let value =
@@ -161,7 +161,7 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
   let div = if owned_by_player stocks ai_player.idx then 10
             else 10 - B_options.difficulty_to_enum params.options.difficulty in
   let value = value / div in
-  let value = if ai_player.city1 = city2 && main_player_net_worth >= ai_player.net_worth
+  let value = if U.equal_loc ai_player.city1 city2 && main_player_net_worth >= ai_player.net_worth
               then value * 2 else value
   in
   let revenue_ytd = ai_player.revenue_ytd + value in
@@ -172,15 +172,15 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap ~
   let ais = Owner.Map.add player_idx ai_player v.ais in
   {v with ais}
 
-let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Params.t) ~city_idx ~stocks loc random v =
+let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Params.t) ~city ~stocks random v =
   (* New company creation test at this city *)
-  let demand_supply = Tilemap.demand_supply_sum loc tilemap ~range:2 in
+  let demand_supply = Tilemap.demand_supply_sum city tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
   if cycles_value >= value && not force then `Update v else
   let find_closest_player_station_check_distance () =
-    let closest_station = Station_map.find_nearest stations loc in
+    let closest_station = Station_map.find_nearest stations city in
     let create = match closest_station with
       | Some _ -> true
       | None when first_ai-> true (* No player station but first opponent can still exist *)
@@ -190,7 +190,7 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
     let create = match closest_station with
      | Some station when Station.is_proper_station station ->
          (* Make sure we're not too close *)
-         let dx, dy = Utils.dxdy loc (Station.get_loc station) in
+         let dx, dy = Utils.dxdy city (Station.get_loc station) in
          dx > C.min_dist_btw_stations || dy > C.min_dist_btw_stations
      | _ -> true (* We don't care if no station or signaltower *)
     in
@@ -211,7 +211,7 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
        The more build skill, the closer he wants to be? *)
     match closest_station with
     | Some station ->
-       let dist = Utils.classic_dist loc (Station.get_loc station) in
+       let dist = Utils.classic_dist city (Station.get_loc station) in
        let value = 300 / (opponent.build_skill + 2) in
        if value >= dist then true else false
     | _ -> true
@@ -223,7 +223,7 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
   let ai = {
     idx = new_ai_idx ();
     opponent;
-    city1=city_idx;
+    city1=city;
     city2=None;
     cash=900;
     bonds=500;
@@ -235,11 +235,11 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
     expand_ctr=20;
   } in
   let ais = Owner.Map.add ai.idx ai v.ais in
-  let ai_of_city = IntMap.add city_idx ai.idx v.ai_of_city in
+  let ai_of_city = LocMap.add city ai.idx v.ai_of_city in
   let v = {v with ais; ai_of_city} in
-  Tilemap.set_tile loc Tile.EnemyStation tilemap;
+  Tilemap.set_tile city Tile.EnemyStation tilemap;
   let stocks = Stock_market.add_ai_player ai.idx ~num_fin_periods:params.num_fiscal_periods stocks in
-  let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city=loc} in
+  let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city} in
   `CreateAI(tilemap, v, stocks, ui_msg)
 
 let new_ai_text name city cities =
@@ -423,10 +423,10 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random ~
   (* TODO: adjust player-owned flag logic for station *)
 let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
                   ~tilemap ~company ~stocks ~params random v =
-  let src_loc = Cities.loc_of_idx src_city cities in
+  let src_loc = src_city in
   let src_name = Cities.name_of_loc src_loc cities in
   let tgt_loc, tgt_name = match tgt_station with
-    | None -> Cities.loc_of_idx tgt_city cities, Cities.name_of_idx tgt_city cities
+    | None -> tgt_city, Cities.name_of_loc tgt_city cities
     | Some loc ->
       let station = Station_map.get_exn loc stations in
       loc, Station.get_name station
@@ -447,7 +447,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
               v.rate_war_at_city, update_station Station.set_to_union_station
           | false, Some _ ->
               (* Rate war *)
-              let rate_war_at_city = IntSet.add tgt_city v.rate_war_at_city in
+              let rate_war_at_city = LocSet.add tgt_city v.rate_war_at_city in
               let stations = update_station (Station.set_rate_war true `Half) in
               rate_war_at_city, stations
           | _ ->
@@ -467,7 +467,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
         in
         let track_length = ai_player.track_length + dist * 5 in
         let expand_ctr = 0 in
-        let ai_of_city = IntMap.add tgt_city company v.ai_of_city in
+        let ai_of_city = LocMap.add tgt_city company v.ai_of_city in
         Tilemap.set_tile tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
         Vector.push v.routes (src_city, tgt_city); (* Add AI route *)
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
@@ -507,10 +507,10 @@ let build_order_fail_text ai_name src_name tgt_name =
   to %s unsuccessful.\n"
   ai_name src_name tgt_name
 
-let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~ai_idx ~stocks ~player_net_worth loc random v =
+let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_idx ~stocks ~player_net_worth random v =
   (* Use target city and company to expand *)
   let ai_player = get_ai_exn ai_idx v in
-  match ai_of_city city_idx v with
+  match ai_of_city city v with
   | Some company when Owner.(company <> ai_idx) -> `Update v
   | _ ->
     let owned_by_player = owned_by_player stocks ai_idx in
@@ -527,11 +527,9 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~
       | Some (city1, city2) when owned_by_player -> city1, city2
       | _ ->
         let find_closest_ai_city_to_other_city ~src_city ~ai =
-          let src_loc = Cities.loc_of_idx src_city cities in
-          IntMap.fold (fun tgt_city city_ai acc ->
+          LocMap.fold (fun tgt_city city_ai acc ->
             if Owner.(ai = city_ai) && not @@ city_rate_war tgt_city v then
-              let tgt_loc = Cities.loc_of_idx tgt_city cities in
-              let dist = Utils.classic_dist src_loc tgt_loc in
+              let dist = Utils.classic_dist src_city tgt_city in
               match acc with
                 | Some (min_dist, _) ->
                       if dist < min_dist then Some(dist, tgt_city) else acc
@@ -541,14 +539,14 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~
           None
           |> Option.map snd
         in
-        let src_city = find_closest_ai_city_to_other_city ~src_city:city_idx ~ai:ai_idx
+        let src_city = find_closest_ai_city_to_other_city ~src_city:city ~ai:ai_idx
           |> Option.get_exn_or "missing closest AI city"
         in
-        src_city, city_idx
+        src_city, city
     in
-    let src_loc, tgt_loc = Cities.loc_of_idx src_city cities, Cities.loc_of_idx tgt_city cities in
+    let src_loc, tgt_loc = src_city, tgt_city in
     let dist = Utils.classic_dist src_loc tgt_loc in
-    let is_home_city = src_city = ai_player.city1 in
+    let is_home_city = U.equal_loc src_city ai_player.city1 in
     let combined_check =
         owned_by_player ||
         let first_check = ai_player.track_length <= 48 || not @@ Climate.strong params.Params.climate || is_home_city in
@@ -572,12 +570,12 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~
     let will_check = ai_player.expand_ctr >= dist in
     if not (cash_check && will_check) then `Update v else
     let station_check =
-      let closest_station = Station_map.find_nearest stations loc in
+      let closest_station = Station_map.find_nearest stations city in
       match closest_station with
       | Some station when Station.is_proper_station station ->
          (* Make sure we're not too close *)
          let station_loc = Station.get_loc station in
-         let dx, dy = Utils.dxdy loc station_loc in
+         let dx, dy = Utils.dxdy city station_loc in
          if dx > C.min_dist_btw_stations || dy > C.min_dist_btw_stations then
            `CanBuild
          else
@@ -606,8 +604,7 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city_idx ~
           value < demand_supply / age
         in
         (* Find new target city (closest to station ) *)
-        let tgt_city_loc = Cities.find_close x y cities ~range:999 |> Option.get_exn_or "can't find any city" in
-        let tgt_city = Cities.idx_of_loc tgt_city_loc cities |> Option.get_exn_or "can't find idx of city loc" in
+        let tgt_city = Cities.find_close x y cities ~range:999 |> Option.get_exn_or "can't find any city" in
         let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
         if track_check && player_share_check && value_check && tgt_city_check then
           `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
@@ -625,14 +622,14 @@ let ai_track_routines ?(force_create=false) ~stocks ~params ~player_net_worth ~t
   let earn_random_route v =
     if Random.int 100 random <= num_routes v then
       match random_route_idx random v with
-      | Some route_idx -> _route_earn_money route_idx ~stocks ~params player_net_worth ~tilemap ~cities v
+      | Some route_idx -> _route_earn_money route_idx ~stocks ~params player_net_worth ~tilemap v
       | None -> v
     else v
   in
   let random_city () =
       let rec empty_city_loop () =
-        let city_idx = Cities.random_idx random cities in
-        if IntMap.mem city_idx v.ai_of_city then
+        let city_idx = Cities.random random cities in
+        if LocMap.mem city_idx v.ai_of_city then
           empty_city_loop ()
         else
           city_idx
@@ -642,15 +639,14 @@ let ai_track_routines ?(force_create=false) ~stocks ~params ~player_net_worth ~t
   (* Earn 2x in random routes *)
   let v = earn_random_route v in
   let v = earn_random_route v in
-  let city_idx = random_city () in
-  let loc = Cities.loc_of_idx city_idx cities in
-  if Trackmap.has_track loc tracks then `Update v else (* Proceed only if no track at city *)
+  let city = random_city () in
+  if Trackmap.has_track city tracks then `Update v else (* Proceed only if no track at city *)
   let first_ai = Owner.Map.is_empty v.ais in
   match random_or_none random v with
   | None ->
-    _try_to_create_ai ~force:force_create ~tilemap ~stations ~params ~city_idx ~stocks ~first_ai loc random v
+    _try_to_create_ai ~force:force_create ~tilemap ~stations ~params ~city ~stocks ~first_ai random v
   | Some ai_idx ->
-    _try_to_build_station ~tilemap ~stations ~tracks ~params ~city_idx ~cities ~ai_idx ~stocks ~player_net_worth loc random v
+    _try_to_build_station ~tilemap ~stations ~tracks ~params ~city ~cities ~ai_idx ~stocks ~player_net_worth random v
 
 let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   (* Player-owned ais don't make financial decisions *)

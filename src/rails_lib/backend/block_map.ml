@@ -1,6 +1,6 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
-module LocuSet = Utils.LocuSet
+module LocuHSet = Utils.LocuHSet
 open Block_map_d
 
 let src = Logs.Src.create "blocks" ~doc:"Blocks"
@@ -117,7 +117,7 @@ let get_stations_with_ixn_scan ?exclude_ixns ixns graph trackmap =
   let loc = (ixns.Scan.x, ixns.y) in
   if Trackmap.has_station loc trackmap then
     (* Handle case where ixn is station *)
-    LocuSet.singleton (loc, Dir.to_upper ixns.dir)
+    LocuHSet.singleton (loc, Dir.to_upper ixns.dir)
   else
     match exclude_ixns with
     | Some exclude_ixns ->
@@ -136,8 +136,8 @@ let handle_build_station player_idx graph v trackmap trains loc after =
     List.filter_map (fun ixns ->
       let stations = get_stations_with_ixn_scan ixns graph trackmap in
       (* Remove current loc_dir if it somehow found its way in: it doesn't count *)
-      LocuSet.remove stations (loc, Dir.to_upper ixns.search_dir);
-      match LocuSet.cardinal stations with
+      LocuHSet.remove stations (loc, Dir.to_upper ixns.search_dir);
+      match LocuHSet.cardinal stations with
       | 0 -> None
       | _ -> Some(ixns.search_dir, stations))
     ixns
@@ -152,7 +152,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
     (* Found only one id. Add one new one and add to both ends *)
   | [dir, loc_dirs] -> 
       (* Add to existing id, update double info *)
-      let loc_dir = LocuSet.choose_exn loc_dirs in
+      let loc_dir = LocuHSet.choose_exn loc_dirs in
       let block_id = get_station_block loc_dir v in
       add_station (loc, Dir.to_upper dir) block_id v;
       let _, double = Scan.scan_station_block trackmap trains loc dir player_idx in
@@ -169,9 +169,9 @@ let handle_build_station player_idx graph v trackmap trains loc after =
 
       (* Deal with the case of both sides connected to each other only.
          In this case, we haven't even put them in the block map yet *)
-      if LocuSet.cardinal loc_dirs1 = 1 && LocuSet.cardinal loc_dirs2 = 1 &&
-          LocuSet.mem loc_dirs1 (loc, Dir.to_upper dir2) &&
-          LocuSet.mem loc_dirs2 (loc, Dir.to_upper dir1) then begin
+      if LocuHSet.cardinal loc_dirs1 = 1 && LocuHSet.cardinal loc_dirs2 = 1 &&
+          LocuHSet.mem loc_dirs1 (loc, Dir.to_upper dir2) &&
+          LocuHSet.mem loc_dirs2 (loc, Dir.to_upper dir1) then begin
         (* Add them both in under a single block *)
         let block_id = new_block v in
         add_station (loc, Dir.to_upper dir2) block_id v;
@@ -183,15 +183,15 @@ let handle_build_station player_idx graph v trackmap trains loc after =
       end else begin
         (* Normal case *)
         (* Remove these since they're not helpful *)
-        LocuSet.remove loc_dirs1 (loc, Dir.to_upper dir2);
-        LocuSet.remove loc_dirs2 (loc, Dir.to_upper dir1);
-        let loc_dir1 = LocuSet.choose_exn loc_dirs1 in
-        let loc_dir2 = LocuSet.choose_exn loc_dirs2 in
+        LocuHSet.remove loc_dirs1 (loc, Dir.to_upper dir2);
+        LocuHSet.remove loc_dirs2 (loc, Dir.to_upper dir1);
+        let loc_dir1 = LocuHSet.choose_exn loc_dirs1 in
+        let loc_dir2 = LocuHSet.choose_exn loc_dirs2 in
         let block_id1 = get_station_block loc_dir1 v in
         let block_id2 = get_station_block loc_dir2 v in
         (* Check if it's the same block. They should have nothing in common *)
-        let intersect = LocuSet.inter loc_dirs1 loc_dirs2 in
-        if LocuSet.cardinal intersect > 0 then (
+        let intersect = LocuHSet.inter loc_dirs1 loc_dirs2 in
+        if LocuHSet.cardinal intersect > 0 then (
           (* Same block on both sides *)
           add_station (loc, Dir.to_upper dir1) block_id1 v;
           add_station (loc, Dir.to_upper dir2) block_id1 v;
@@ -207,7 +207,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
           (* On second end, create a new id and apply it to all stations *)
           let block_id = new_block v in
           add_station (loc, Dir.to_upper dir2) block_id v;
-          LocuSet.iter (fun loc_dir -> add_station loc_dir block_id v) loc_dirs2;
+          LocuHSet.iter (fun loc_dir -> add_station loc_dir block_id v) loc_dirs2;
           let count, double = Scan.scan_station_block trackmap trains loc dir2 player_idx in
           set_block_double block_id double v;
           set_block_train_count block_id ~count v;
@@ -241,12 +241,12 @@ let handle_build_station player_idx graph v trackmap trains loc after =
     (fun (ixn1_res, ixn2_res) ->
       let stations1 = get_stations_with_ixn_scan ixn1_res graph trackmap in
       let stations2 = get_stations_with_ixn_scan ixn2_res graph trackmap in
-      if LocuSet.cardinal stations1 = 0 || LocuSet.cardinal stations2 = 0 then
+      if LocuHSet.cardinal stations1 = 0 || LocuHSet.cardinal stations2 = 0 then
         (* If either set is empty, do nothing: we're not connecting to any station *)
         v
       else (
-        let station1 = LocuSet.choose_exn stations1 in
-        let station2 = LocuSet.choose_exn stations2 in
+        let station1 = LocuHSet.choose_exn stations1 in
+        let station2 = LocuHSet.choose_exn stations2 in
         let id1 = get_station_block station1 v in
         let id2 = get_station_block station2 v in
         if not @@ Id.equal id1 id2 then (
@@ -283,13 +283,13 @@ let handle_build_station player_idx graph v trackmap trains loc after =
         let set1 = get_stations_with_ixn_scan ixn1s graph trackmap in
         let set2 = get_stations_with_ixn_scan ixn2s graph trackmap in
         (* Nothing to do if we have any empty station sets or if they're the same block still *)
-        if LocuSet.equal set1 set2 || LocuSet.is_empty set1 || LocuSet.is_empty set2 then
+        if LocuHSet.equal set1 set2 || LocuHSet.is_empty set1 || LocuHSet.is_empty set2 then
           v
         else
           (* Separate blocks *)
-          let mem_set1 = LocuSet.choose_exn set1 in
+          let mem_set1 = LocuHSet.choose_exn set1 in
           let block1 = get_station_block mem_set1 v in
-          let mem_set2 = LocuSet.choose_exn set2 in
+          let mem_set2 = LocuHSet.choose_exn set2 in
           let block2 = get_station_block mem_set2 v in
           if not @@ Id.equal block1 block2 then
             (* They're already different blocks *)
@@ -305,7 +305,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
             (* Create a new block for the split block *)
             let block2 = new_block v in
             (* Assign block2 to all set2 stations *)
-            LocuSet.iter (fun locd -> add_station locd block2 v) set2;
+            LocuHSet.iter (fun locd -> add_station locd block2 v) set2;
             let count, double =
               Scan.scan_station_block trackmap trains (ixn2s.x, ixn2s.y) ixn2s.dir player_idx
             in
@@ -344,7 +344,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
       empty_dirs @
       List.filter_map (fun ixns ->
         let stations = get_stations_with_ixn_scan ixns graph trackmap in
-        if LocuSet.is_empty stations then
+        if LocuHSet.is_empty stations then
             Some ixns.search_dir
         else None)
       ixns
@@ -372,7 +372,7 @@ let handle_double_change player_idx graph trackmap trains v (after:Scan.t) =
             (* Handle case where ixn is station *)
             Some (loc, Dir.to_upper ixn.dir)
           else
-            Track_graph.connected_stations_dirs graph trackmap [loc] |> LocuSet.choose
+            Track_graph.connected_stations_dirs graph trackmap [loc] |> LocuHSet.choose
         in
         get_station_block station_locu v |> Option.return
       in

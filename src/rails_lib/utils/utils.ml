@@ -73,6 +73,11 @@ module IntSet = Set.Make(struct
   let compare = (-)
 end)
 
+module LocSet = Set.Make(struct
+  type t = loc [@@deriving yojson]
+  let compare = compare_loc
+end)
+
 module Map = struct
   module type S = sig
     include CCMap.S
