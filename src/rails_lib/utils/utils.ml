@@ -4,8 +4,28 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module CharMap = Map.Make(struct type t = char let compare x y = Char.to_int x - Char.to_int y end) 
 
+type loc = int * int
+  [@@deriving eq, ord, yojson, show]
+
+type locd = loc * Dir.t
+  [@@deriving eq, ord, yojson, show]
+
+type locu = loc * Dir.upper
+  [@@deriving eq, ord, yojson, show]
+
+let locu_of_locd (loc, d) = (loc, Dir.to_upper d)
+
+type locdpair = locd * locd
+  [@@deriving eq, ord, yojson, show]
+
 module type OrderedType = sig
   include Map.OrderedType
+  val t_of_yojson : Yojson.Safe.t -> t
+  val yojson_of_t : t -> Yojson.Safe.t
+end
+
+module type HashType = sig
+  include CCHashSet.ELEMENT
   val t_of_yojson : Yojson.Safe.t -> t
   val yojson_of_t : t -> Yojson.Safe.t
 end
@@ -47,6 +67,11 @@ module Set = struct
       to_list t |> yojson_of_list O.yojson_of_t
   end
 end
+
+module IntSet = Set.Make(struct
+  type t = int [@@deriving yojson]
+  let compare = (-)
+end)
 
 module Map = struct
   module type S = sig
@@ -90,42 +115,53 @@ module Map = struct
         else acc)
         v2
         v3
+
+      let sum f v = fold (fun k v acc -> f k v + acc) v 0
+
+    let nth_key n v =
+      let exception Found of key in
+      try
+        to_iter v
+        |> Iter.iteri (fun i (k,_) -> if n = i then raise @@ Found k);
+        None
+      with Found k -> Some k
+
+    let bindings_array v =
+      bindings v |> Array.of_list
+
+    let fold_map f acc v =
+      let acc = ref acc in
+      mapi (fun key value ->
+        let acc2, value2 = f !acc key value in
+        acc := acc2;
+        value2
+      ) v
   end
 end
 
 module IntMap = Map.Make(struct
-  type t = int [@@deriving yojson]
-  let compare (x:int) y = x - y
+  type t = int [@@deriving yojson, ord]
 end)
 
-type loc = int * int
-  [@@deriving eq, ord, yojson, show]
+module LocMap = Map.Make(struct
+  type t = loc [@@deriving yojson]
+  let compare = compare_loc
+end)
 
-type locd = loc * Dir.t
-  [@@deriving eq, ord, yojson, show]
-
-type locu = loc * Dir.upper
-  [@@deriving eq, ord, yojson, show]
-
-let locu_of_locd (loc, d) = (loc, Dir.to_upper d)
-
-type locdpair = locd * locd
-  [@@deriving eq, ord, yojson, show]
-
-(* Expand CCHashSet *)
-module type S2 = sig
-  include CCHashSet.S
-  val choose: t -> elt option
-  val choose_exn: t -> elt
-  val is_empty: t -> bool
-end
 
 module HashSet = struct
-  module Make(E: CCHashSet.ELEMENT) : S2 with type elt = E.t = struct
+  module Make(E: HashType) = struct
     include CCHashSet.Make(E)
     let choose v = to_iter v |> Iter.head
     let choose_exn v = to_iter v |> Iter.head_exn
     let is_empty v = cardinal v = 0
+    let to_list v = to_iter v |> Iter.to_list
+
+    let t_of_yojson (json:Yojson.Safe.t) =
+      list_of_yojson E.t_of_yojson json |> of_list
+
+    let yojson_of_t v =
+      to_list v |> yojson_of_list E.yojson_of_t 
   end
 end
 
@@ -151,11 +187,6 @@ end)
 let canonical_locdpair ((locd1, locd2) as p) =
    if compare_locd locd1 locd2 > 0 then locd2, locd1 else p
 
-module LocMap = Map.Make(struct
-  type t = loc [@@deriving yojson]
-  let compare = compare_loc
-end)
-
 module Hashtbl = struct
   include Hashtbl
 
@@ -164,6 +195,8 @@ module Hashtbl = struct
 
   let yojson_of_t conva convb t =
     yojson_of_hashtbl conva convb t
+
+  let sum f v = fold (fun k v acc -> acc + f k v) v 0
 end
 
 module Vector = struct
@@ -212,6 +245,16 @@ module Vector = struct
       set v i x'
     )
 
+  let find_idx f (v:'a vector) =
+    let exception Found of int in
+    try
+      for i=0 to (length v) - 1 do
+         let x = get v i in
+         if f x then raise (Found i)
+      done;
+      None
+    with Found i -> Some i
+
   let rw_of_yojson _ = `RW
   let yojson_of_rw _ = `Null
   
@@ -239,13 +282,6 @@ type point = {
   x: int;
   y: int;
 }
-
-type msg = {
-  x: int;
-  y: int;
-  dir: Dir.t;
-  player: int;
-} [@@deriving show]
 
 let clip v ~min ~max =
   if v >= min then 
@@ -301,9 +337,29 @@ module List = struct
           loop (i-1) (y::acc) ys
     in
     loop i [] l0
+
+  let sum f v = List.fold_left (fun acc x -> acc + f x) 0 v
+
+  let comp_f op f l = match l with
+   | x::xs ->
+      List.fold_left (fun ((acc, _) as cur) x ->
+      let acc' = f x in
+      if op acc' acc then (acc', x) else cur)
+      (f x, x)
+      xs
+  | _ -> raise @@ Invalid_argument "Cannot handle empty list"
+
+  let min_f f l = comp_f (<) f l
+  let max_f f l = comp_f (>) f l
+    
 end
 
-let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
+module Bool = struct
+  include Bool
+  let (=) = equal
+end
+
+let fold_range x y ~range ~width ~height ~read_f ~f ~init =
   let min_x = max 0 (x-range) in
   let max_x = min (width-1) (x+range) in
   let min_y = max 0 (y-range) in
@@ -317,7 +373,7 @@ let fold_range ~range ~x ~y ~width ~height ~read_f ~f ~init =
   done;
   !v
 
-let scan_unordered ~range ~x ~y ~width ~height ~f =
+let scan_unordered x y ~range ~width ~height ~f =
   let min_x = max 0 (x-range) in
   let max_x = min (width-1) (x+range) in
   let min_y = max 0 (y-range) in
@@ -343,7 +399,7 @@ let scan =
   let offsets =
     [Dir.Right; Down; Left; Up] |> List.map Dir.to_offsets
   in
-  let inner ~range ~x ~y ~width ~height ~f =
+  let inner x y ~range ~width ~height ~f =
     if f x y then Some (x, y)
     else
       let rec loop i =
@@ -384,12 +440,14 @@ let string_of_num num =
 let dxdy (x1,y1) (x2,y2) =
   abs(x1-x2), abs(y1-y2)
 
+let s_dxdy (x1,y1) (x2,y2) =
+  x1-x2, y1-y2
+
   (* The way the original game approximates distance *)
 let classic_dist loc1 loc2 =
   let dx, dy = dxdy loc1 loc2 in
   let big, small = if dx > dy then dx, dy else dy, dx in
   big + small / 2
-
 
 (* Find one element from the left list that doesn't exist in the right list *)
 let diff1_l ~eq left right =
@@ -456,4 +514,12 @@ let show_cash ?(ks=true) ?(show_neg=true) ?(spaces=0) ?region cash =
 let other_period = function
   | `First -> `Second
   | `Second -> `First
+
+let read_pair pair = function
+  | `First -> fst pair
+  | `Second -> snd pair
+
+let update_pair pair idx f = match idx with
+  | `First -> (f @@ fst pair, snd pair)
+  | `Second -> (fst pair, f @@ snd pair)
 

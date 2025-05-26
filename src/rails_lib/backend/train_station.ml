@@ -9,7 +9,6 @@ module C = Constants
 let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
   (* dump unused goods at the station at this stage *)
   (* return time for changing cars *)
-  (* TODO: clear priority route cars *)
   match stop.consist_change with
   | None -> (* No adjustment *)
       0, 0, cars
@@ -92,9 +91,13 @@ let train_pickup_and_empty_station cars loc cycle station =
         pickup_amounts
         cars
     in
+    let picked_up_goods = Station.get_picked_up_goods_exn station in
     let () =
       List.iter2 (fun car amount ->
-        Hashtbl.decr station_supply (T.Car.get_good car) ~by:amount)
+        let good = T.Car.get_good car in
+        Hashtbl.decr station_supply good ~by:amount;
+        Hashtbl.incr picked_up_goods good ~by:amount;
+      )
       cars
       pickup_amounts
     in
@@ -110,6 +113,6 @@ let train_stops_at (station:Station.t) train =
   (* Check if a train stops at a station for any reason *)
   match station.info with
   | Some station_info when train_class_stops_at station_info train -> true
-  | Some _ when Utils.equal_loc (Train.get_dest train) (station.x, station.y) -> true
+  | Some _ when Utils.equal_loc (Train.get_dest train) @@ Station.get_loc station -> true
   | _ -> false
 

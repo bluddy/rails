@@ -13,6 +13,8 @@ type window = {
   opt_rect: Sdl.rect option; (* reduce allocation *)
 }
 
+let do_hide_cursor = false  (* It's buggy on WSL *)
+
 let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
@@ -33,7 +35,7 @@ let create w h ~zoom =
     | Ok x -> print_endline @@ Printf.sprintf "set show cursor: %b" x
     | _ -> print_endline "Failed to hide cursor"
   in
-  hide_cursor ();
+  if do_hide_cursor then hide_cursor ();
   Sdl.set_window_grab window true;
   Sdl.render_set_scale renderer zoom zoom |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in

@@ -18,6 +18,10 @@ let is_us = function
   | Britain
   | Europe -> false
 
+let is_east_us = function
+  | EastUS -> true
+  | _ -> false
+
 let is_west_us = function
   | WestUS -> true
   | _ -> false
@@ -30,3 +34,11 @@ let is_europe = function
 let dist_mult = function
   | Europe -> 2
   | _ -> 1
+
+let num_bonds region amount =
+  let div = match region with
+    | WestUS -> 1000
+    | _ -> 500
+  in
+  amount / div
+

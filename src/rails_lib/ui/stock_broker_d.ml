@@ -3,10 +3,10 @@ open! Containers
 type msg = [
   | `SellBond
   | `RepayBond
-  | `BuyStock of int (* player *)
-  | `SellStock of int (* player *)
+  | `BuyStock of Owner.t (* player *)
+  | `SellStock of Owner.t (* player *)
   | `Declare_bankruptcy
-  | `OperateRR of int * (* company *)
+  | `OperateRR of Owner.t * (* company *)
       [ `FinancialReport
       | `TakeMoney of int
       | `GiveMoney of int 
@@ -17,7 +17,7 @@ type msg = [
   (* For the "are you sure" menu *)
 type confirm_msg = [
   | `None
-  | `BuyStock of int
+  | `BuyStock of Owner.t
   | `Declare_bankruptcy
   ]
 

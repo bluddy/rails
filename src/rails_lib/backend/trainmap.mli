@@ -8,13 +8,13 @@ type t [@@deriving yojson]
 
 val empty : unit -> t
 
-val get: t -> Id.t -> ro Train.t
+val get: Id.t -> t -> ro Train.t
 
-val add : t -> rw Train.t -> t
+val add : rw Train.t -> t -> t
 
-val delete : t -> Id.t -> t
+val delete : Id.t -> t -> t
 
-val update: t -> Id.t -> (rw Train.t -> rw Train.t) -> t
+val update: Id.t -> t -> (rw Train.t -> rw Train.t) -> t
 
 val size: t -> int
 
@@ -39,6 +39,8 @@ val get_at_loc: Utils.loc -> t -> Id.t list
 val total_engine_value: t -> int
 
 val total_car_value: t -> int
+
+val total_maintenance: t -> int
 
 val clear_priority_shipment: t -> t
 

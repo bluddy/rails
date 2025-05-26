@@ -13,6 +13,9 @@ type t =
 
 let dirlist = [Up; UpRight; Right; DownRight; Down; DownLeft; Left; UpLeft]
 let dirlist_left = [Left; UpLeft; Up; UpRight; Right; DownRight; Down; DownLeft]
+let dir_array = Array.of_list dirlist
+
+let random r = Random.pick_array dir_array r
 
 module Infix = struct
   let (<) x y = compare x y < 0
@@ -65,12 +68,17 @@ let opposite = function
   | Left -> Right
   | UpLeft -> DownRight
 
+let diff dir1 dir2 =
+  let diff = abs(to_enum dir1 - to_enum dir2) in
+  if diff > 4 then 8 - diff else diff
+
+let add dir delta =
+  let enum = to_enum dir + delta in
+  let enum = if enum < 0 then enum + 8 else enum in
+  of_enum enum |> Option.get_exn_or "Invalid dir formed"
+
 let within_90 dir dir2 =
-  let dir = to_enum dir in
-  let dir2 = to_enum dir2 in
-  let diff = dir2 - dir in
-  let diff = if diff < 0 then diff + 8 else diff in
-  diff <= 2
+  diff dir dir2 <= 2
 
 let is_cardinal = function
   | Up
@@ -86,9 +94,8 @@ let is_diagonal = function
   | DownLeft -> true
   | _ -> false
 
-let diff dir1 dir2 =
-  let diff = abs(to_enum dir1 - to_enum dir2) in
-  if diff > 4 then 8 - diff else diff
+let diag_adjust_x x = (x * 3) / 2
+let diag_adjust dir x = if is_diagonal dir then diag_adjust_x x else x
 
 module Set = struct
   include Bitset.Make(struct
@@ -187,6 +194,17 @@ let to_offsets dir =
 let adjust dir x y =
   let dx, dy = to_offsets dir in
   x + dx, y + dy
+
+let adjust_offset_i offset ~x ~y =
+  let dx, dy = to_offsets_int offset in
+  dx + x, dy + y
+
+let adjust_loc dir (x, y) =
+  adjust dir x y
+
+let random_adjust x y r =
+  let dir = random r in
+  adjust dir x y
 
   (* 
      Convolution operator for height 

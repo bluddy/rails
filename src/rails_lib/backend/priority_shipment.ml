@@ -38,7 +38,7 @@ let _create random stations cycle =
         let freight = Random.pick_array Freight.all_freight random in
         let deadline = cycle - 1000 in
         let shipment = {src_loc; dst_loc; freight; deadline} in
-        let src_station = Station.set_priority_shipment src_station true in
+        let src_station = Station.set_priority_shipment true src_station in
         let stations = Station_map.add src_loc src_station stations in
         Some (stations, shipment)
 
@@ -57,20 +57,20 @@ let try_to_create ?(force=false) random stations cycle =
     _create random stations cycle
   else None
 
-let compute_bonus pr_data ~cycle ~year region =
+let compute_bonus pr_data (params:Params.t) =
   let dist = Utils.classic_dist pr_data.src_loc pr_data.dst_loc in
-  let time_factor = cycle - pr_data.deadline
+  let time_factor = params.cycle - pr_data.deadline
     |> Utils.clip ~min:(32 * dist) ~max:31999
   in
   let bonus_var = dist * 16 / (time_factor / 64 + 1) in
-  let age = (year - C.reference_year) / 4 in
+  let age = (params.year - C.reference_year) / 4 in
   let result = (dist + 32) * bonus_var * 8 / age in
   let bonus = Utils.clip ~min:0 ~max:999 result in
-  let bonus = if Region.is_europe region then bonus + bonus / 2  else bonus in
+  let bonus = if Region.is_europe params.region then bonus + bonus / 2  else bonus in
   bonus
 
-let should_be_cancelled pr_data ~cycle ~year region =
-  compute_bonus pr_data ~cycle ~year region < C.priority_min_bonus
+let should_be_cancelled pr_data params =
+  compute_bonus pr_data params < C.priority_min_bonus
 
 let check_priority_delivery pr_data stations =
   let dest_loc = pr_data.dst_loc in

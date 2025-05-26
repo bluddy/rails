@@ -28,13 +28,17 @@ end)
 
 type difficulty =
   [ `Investor | `Financier | `Mogul | `Tycoon ]
-  [@@deriving yojson, enum]
+  [@@deriving yojson, enum, ord]
 
 let show_difficulty = function
   | `Investor -> "Investor"
   | `Financier -> "Financier"
   | `Mogul -> "Mogul"
   | `Tycoon -> "Tycoon"
+
+let easy = function
+  | `Investor | `Financier -> true
+  | `Mogul | `Tycoon -> false
 
 type t = {
   speed: speed;
@@ -50,7 +54,14 @@ let default =
     difficulty=`Tycoon;
   }
 
-let easy = function
-  | `Investor | `Financier -> true
-  | `Mogul | `Tycoon -> false
+let difficulty v = v.difficulty
+
+let difficulty_enum v = difficulty_to_enum @@ difficulty v
+
+let speed v = v.speed
+
+let cutthroat v = RealityLevels.mem v.reality_levels `CutthroatCompetition
+
+let complex_economy v = RealityLevels.mem v.reality_levels `ComplexEconomy 
+let simple_economy v = not @@ complex_economy v
 

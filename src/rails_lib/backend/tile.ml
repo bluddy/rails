@@ -24,7 +24,7 @@ type t =
   | PowerPlant (* 20 US, Europe *)
   | OilWell (* US *)
   | Refinery (* US *)
-  | EnemyRR
+  | EnemyStation
   | River of Dir.Set.t (* directions of river *)
   | Ocean of Dir.Set.t (* 25 *) (* dirs are directions of land *)
   | Harbor of Dir.Set.t (* same as ocean *)
@@ -66,7 +66,7 @@ let show = function
   | PowerPlant -> "Power Plant"
   | OilWell -> "Oil Well"
   | Refinery -> "Refinery"
-  | EnemyRR -> "Enemy RR"
+  | EnemyStation -> "Enemy Station"
   | River _ -> "River"
   | Ocean _ -> "Ocean"
   | Harbor _ -> "Harbor"
@@ -105,7 +105,7 @@ let to_enum = function
   | PowerPlant  -> 19
   | OilWell  -> 20
   | Refinery  -> 21
-  | EnemyRR -> 22
+  | EnemyStation -> 22
   | River _ -> 23
   | Ocean _ -> 24
   | Harbor _ -> 25
@@ -295,3 +295,5 @@ module Info = struct
     data.cost * C.build_industry_mult
 
 end
+
+let (=) = equal

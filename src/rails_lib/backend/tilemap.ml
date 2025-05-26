@@ -6,6 +6,7 @@ let src = Logs.Src.create "tilemap" ~doc:"Tilemap"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 module C = Constants
+module Hashtbl = Utils.Hashtbl
 
 let map_height_default = 192
 let map_width_default = 256
@@ -37,7 +38,7 @@ type pixel =
   | Farm_pixel     (* 10 *)
   | Hills_pixel
   | Village_pixel
-  | EnemyRR_pixel (* dummy *)
+  | EnemyStation_pixel (* Represents enemey stations, which can only be at proper city locations *)
   | City_pixel
   | Mountain_pixel (* 15 *)
   [@@deriving enum, eq, ord, yojson]
@@ -56,7 +57,7 @@ let height_of_pixel = function
   | Farm_pixel -> 1
   | Hills_pixel -> 4
   | Village_pixel -> 1
-  | EnemyRR_pixel -> 1
+  | EnemyStation_pixel -> 1
   | City_pixel -> 1
   | Mountain_pixel -> 8
 
@@ -94,23 +95,21 @@ let pixel_of_tile = function
   | Factory
   | City -> City_pixel
   | Mountains -> Mountain_pixel
-  | EnemyRR -> assert false
+  | EnemyStation -> EnemyStation_pixel
 
-let check_outside x y v =
-  x < 0 || x >= v.width || y < 0 || y >= v.height
+let out_of_bounds_xy x y v = x < 0 || x >= v.width || y < 0 || y >= v.height
+let out_of_bounds (x, y) v = out_of_bounds_xy x y v
 
-let check_inside x y v =
-  not @@ check_outside x y v
+let get_tile_xy x y v = v.map.(Utils.calc_offset v.width x y)
+let get_tile (x,y) v = get_tile_xy x y v
 
-let get_tile v x y = v.map.(Utils.calc_offset v.width x y)
+let set_tile_xy x y tile v = v.map.(Utils.calc_offset v.width x y) <- tile
+let set_tile (x,y) tile v = set_tile_xy x y tile v
 
-let set_tile v x y tile =
-  v.map.(Utils.calc_offset v.width x y) <- tile
+let set_height (x,y) height v = v.heightmap.(Utils.calc_offset v.width x y) <- height
 
-let set_height v ~x ~y height =
-  v.heightmap.(Utils.calc_offset v.width x y) <- height
-
-let get_tile_height v x y = v.heightmap.(Utils.calc_offset v.width x y)
+let get_tile_height_xy x y v = v.heightmap.(Utils.calc_offset v.width x y)
+let get_tile_height (x, y) v = get_tile_height_xy x y v
 
   (* generic map over any array (tile or height) *)
 let map_gen ~width f arr =
@@ -122,33 +121,31 @@ let map_gen ~width f arr =
 let map f v = map_gen ~width:v.width f v.map
 
   (* Fold over a range of the tilemap *)
-let fold_range ~range ~x ~y ~f ~init v =
-  Utils.fold_range ~width:v.width ~height:v.height ~read_f:(get_tile v) 
-    ~range ~f ~init ~x ~y
+let fold_range x y ~range ~f ~init v =
+  Utils.fold_range x y ~width:v.width ~height:v.height ~read_f:(fun x y -> get_tile_xy x y v) ~range ~f ~init
 
   (* Get mask around a certain point based on a function
      edge: behavior along edges of map
      diag: use diagonals
     *)
-let get_mask ?(n=8) ?(diag=false) ~edge v ~f ~x ~y =
+let get_mask x y ?(n=8) ?(diag=false) ~edge v ~f =
   Iter.map (fun i ->
     (* check for diagonal *)
     if not diag && i land 1 = 1 then false else
-    let x_off = x + Dir.x_offset.(i) in
-    let y_off = y + Dir.y_offset.(i) in
-    if check_outside x_off y_off v then edge
+    let loc2 = Dir.adjust_offset_i i ~x ~y in
+    if out_of_bounds loc2 v then edge
     else
-      f (get_tile v x_off y_off)
+      f @@ get_tile loc2 v
   )
   Iter.(0--(n-1))
 
 (* seed: 15 bits from time
    pixel: pixel at this position
  *)
-let tile_of_pixel ~region ~x ~y ~pixel v =
+let tile_of_pixel_xy x y ~region ~pixel v =
   let seed = v.seed in
   let water_dirs ~edge ~f =
-    let mask = get_mask ~edge ~f ~x ~y v in
+    let mask = get_mask x y ~edge ~f v in
     Dir.Set.of_mask mask
   in
   let is_water = function
@@ -179,7 +176,7 @@ let tile_of_pixel ~region ~x ~y ~pixel v =
     | Mountain_pixel -> Mountains
     | Ocean_pixel ->
         Ocean(water_dirs ~edge:false ~f:not_water)
-    | EnemyRR_pixel -> assert false
+    | EnemyStation_pixel -> EnemyStation
   in
   (* NOTE: Does some region change the mappings?
       Otherwise why would clear pixels get complex mapping when they can't have anything? *)
@@ -256,13 +253,14 @@ let tile_of_pixel ~region ~x ~y ~pixel v =
   in
   alternative_tile region us_tile
 
+let tile_of_pixel (x, y) ~region ~pixel v = tile_of_pixel_xy x y ~region ~pixel v
+
 let create_heightmap v =
   (* Convolution operation *)
   let convolve x y get_val =
     List.foldi (fun sum i mult ->
-      let dx, dy = Dir.x_offset.(i), Dir.y_offset.(i) in
-      let x2, y2 = x + dx, y + dy in
-      if check_outside x2 y2 v then
+      let (x2, y2) as loc2 = Dir.adjust_offset_i i ~x ~y in
+      if out_of_bounds loc2 v then
         sum
       else
         let value = get_val x2 y2 in
@@ -301,8 +299,8 @@ let of_ndarray ?(width=256) ?(height=192) ~region ~seed ndarray =
     for x=0 to v.width-1 do
       let value = Ndarray.get ndarray [|y; x|] in
       let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum value in
-      let tile = tile_of_pixel ~region ~x ~y ~pixel v in
-      set_tile v x y tile
+      let tile = tile_of_pixel_xy x y ~region ~pixel v in
+      set_tile_xy x y tile v
     done
   done;
 
@@ -311,8 +309,8 @@ let of_ndarray ?(width=256) ?(height=192) ~region ~seed ndarray =
     for x=0 to v.width-1 do
       let value = Ndarray.get ndarray [|y; x|] in
       let pixel = Option.get_exn_or "Bad pixel" @@ pixel_of_enum value in
-      let tile = tile_of_pixel ~region ~x ~y ~pixel v in
-      set_tile v x y tile
+      let tile = tile_of_pixel_xy x y ~region ~pixel v in
+      set_tile_xy x y tile v
     done
   done;
   v
@@ -340,62 +338,60 @@ let to_img (map:t) =
   let ndarray = to_ndarray map.map in
   Pic.img_of_ndarray ndarray
 
-let get_pixel map ~x ~y =
-  get_tile map x y |> pixel_of_tile
+let get_pixel_xy x y v = get_tile_xy x y v |> pixel_of_tile
+let get_pixel (x,y) v = get_pixel_xy x y v
 
-let set_pixel ~region v ~x ~y ~pixel =
-  let tile = tile_of_pixel ~region ~x ~y ~pixel v in
+let set_pixel_xy x y ~region ~pixel v =
+  let tile = tile_of_pixel_xy x y  ~region ~pixel v in
   v.map.(Utils.calc_offset v.width x y) <- tile
+let set_pixel (x,y) ~region ~pixel v = set_pixel_xy x y ~region ~pixel v
 
-let get_grade v ~dir ~x ~y =
-  let dx, dy = Dir.to_offsets dir in
-  let x2, y2 = x + dx, y + dy in
-  let height1 = get_tile_height v x y in
-  let height2 = get_tile_height v x2 y2 in
+let get_grade loc ~dir v =
+  let loc2 = Dir.adjust_loc dir loc in
+  let height1 = get_tile_height loc v in
+  let height2 = get_tile_height loc2 v in
   let grade = abs(height1 - height2) in
   (* Even out grades for diagonals and non-diagonals *)
-  if not (Dir.is_diagonal dir) then
-    (grade * 3) / 2
-  else
-    grade
+  (* TODO: check this *)
+  if not @@ Dir.is_diagonal dir then Dir.diag_adjust_x grade else grade
 
     (* Get the length of a tunnel needed.
        We stop when we reach the same height more or less *)
-let check_build_tunnel v ~x ~y ~dir =
+let check_build_tunnel ((x,y) as loc) ~dir v =
    let dx, dy = Dir.to_offsets dir in
-   let base_dist = if Dir.is_diagonal dir then 3 else 2 in
-   let start_height = get_tile_height v x y in
-   let rec loop x y n =
-     if check_outside x y v then `OutOfBounds
+   let base_dist = Dir.diag_adjust dir C.track_length in
+   let start_height = get_tile_height loc v in
+   let rec loop loc n =
+     if out_of_bounds loc v then `OutOfBounds
      else if n > C.tunnel_max_length then `TooLong
      else
-      match get_tile v x y with
+      match get_tile loc v with
       | Ocean _ | River _ | Landing _ | Harbor _ -> `HitWater
       | _ -> 
-        let height = get_tile_height v x y in
+        let height = get_tile_height loc v in
         if height <= start_height + 8 then
           (* we're done *)
           `Tunnel(n, n * base_dist, n * base_dist * C.tunnel_cost)
         else
-          loop (x+dx) (y+dy) (n+1)
+          loop (x+dx, y+dy) (n+1)
    in
-   loop (x+dx) (y+dy) 1
+   loop (x+dx, y+dy) 1
 
-let check_build_track v ~x ~y ~dir ~difficulty =
-   let tile1 = get_tile v x y in
-   let x2, y2 = Dir.adjust dir x y in
-   if check_outside x2 y2 v then `Illegal
+let check_build_track loc ~dir (params:Params.t) v =
+   let tile1 = get_tile loc v in
+   let loc2 = Dir.adjust_loc dir loc in
+   if out_of_bounds loc2 v then `Illegal
    else
-    let tile2 = get_tile v x2 y2 in
+    let tile2 = get_tile loc2 v in
     match tile1, tile2 with
     (* Cannot build over river, or ocean to river *)
     | Ocean _, Ocean _ -> `Ferry
     | (Ocean _, t | t, Ocean _) when Tile.is_ground t -> `Ferry
     | t1, t2 when Tile.is_ground t1 && Tile.is_ground t2 ->
-        let height1 = get_tile_height v x y in
-        let height2 = get_tile_height v x2 y2 in
-        let grade = get_grade v ~x ~y ~dir in
-        let grade = if B_options.easy difficulty then grade/2 else grade in
+        let height1 = get_tile_height loc v in
+        let height2 = get_tile_height loc2 v in
+        let grade = get_grade loc v ~dir in
+        let grade = if B_options.easy params.options.difficulty then grade/2 else grade in
         if grade > 12 then
           if height2 > height1 && height1 > C.tunnel_min_height then
             `Tunnel grade
@@ -405,22 +401,22 @@ let check_build_track v ~x ~y ~dir ~difficulty =
           `Ok
     (* Bridge *)
     | t, River _ when Tile.is_ground t && Dir.is_cardinal dir ->
-        let x3, y3 = Dir.adjust dir x2 y2 in
-        if check_outside x3 y3 v then `Illegal
+        let loc3 = Dir.adjust_loc dir loc2 in
+        if out_of_bounds loc3 v then `Illegal
         else
-          let tile3 = get_tile v x3 y3 in
+          let tile3 = get_tile loc3 v in
           if Tile.is_ground tile3 then `Bridge
           else `Illegal
     | _, _ -> `Illegal
 
-let check_build_station v ~x ~y =
-  let tile = get_tile v x y in
+let check_build_station loc v =
+  let tile = get_tile loc v in
   if Tile.is_ground tile then `Ok
   else `Illegal
 
   (* Collect demand and supply in the vicinity of a tile *)
-let collect_demand_supply v ~x ~y ~range =
-  fold_range v ~x ~y ~range ~init:(Hashtbl.create 10, Hashtbl.create 10)
+let collect_demand_supply_xy x y ~range v =
+  fold_range x y ~range ~init:(Hashtbl.create 10, Hashtbl.create 10) v
   ~f:(fun (demand_h, supply_h) _ _ tile ->
     let tileinfo = Tile.Info.get v.region tile in
     let collect_amount source target_h =
@@ -436,11 +432,16 @@ let collect_demand_supply v ~x ~y ~range =
     collect_amount tileinfo.supply supply_h;
     (demand_h, supply_h)
   )
+let collect_demand_supply (x, y) ~range v = collect_demand_supply_xy x y ~range v
+
+let demand_supply_sum loc ~range v =
+  let demand, supply = collect_demand_supply loc v ~range in
+  (Hashtbl.sum (fun _ i -> i) demand) + (Hashtbl.sum (fun _ i -> i) supply)
 
  (* track_cost already includes economic climate *) 
-let track_land_expense v ~track_expense ~x ~y ~dir ~len =
+let track_land_expense ~track_expense ~x ~y ~dir ~len v =
   let calc_cost x y =
-    let tile = get_tile v x y in
+    let tile = get_tile_xy x y v in
     let info = Tile.Info.get v.region tile in
     info.cost * track_expense / 3
   in
@@ -457,16 +458,16 @@ let track_land_expense v ~track_expense ~x ~y ~dir ~len =
   expense
 
   (* Check whether we can build at a tile *)
-let check_build_industry_at v wanted_tile ~region ~x ~y =
-  match get_pixel v ~x ~y with
+let check_build_industry_at x y wanted_tile ~region v =
+  match get_pixel_xy x y v with
   | Woods_pixel | Clear_pixel | Farm_pixel | Desert_pixel ->
-    let possible_tile1 = tile_of_pixel ~region ~x ~y ~pixel:Village_pixel v in
-    let possible_tile2 = tile_of_pixel ~region ~x ~y ~pixel:City_pixel v in
-    Tile.equal possible_tile1 wanted_tile || Tile.equal possible_tile2 wanted_tile
+    let possible_tile1 = tile_of_pixel_xy ~region x y ~pixel:Village_pixel v in
+    let possible_tile2 = tile_of_pixel_xy ~region x y ~pixel:City_pixel v in
+    Tile.(possible_tile1 = wanted_tile || possible_tile2 = wanted_tile)
   | _ -> false
 
   (* Search for a site to build a specific tile (industry) *)
-let search_for_industry_site v wanted_tile ~region ~x ~y =
-  Utils.scan ~range:3 ~x ~y ~width:(get_width v) ~height:(get_height v)
-    ~f:(fun x y -> check_build_industry_at v wanted_tile ~region ~x ~y)
+let search_for_industry_site x y wanted_tile ~region v =
+  Utils.scan x y ~range:3 ~width:(get_width v) ~height:(get_height v)
+    ~f:(fun x y -> check_build_industry_at x y wanted_tile ~region v)
 

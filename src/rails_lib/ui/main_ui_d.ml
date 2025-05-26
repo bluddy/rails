@@ -95,9 +95,9 @@ and 'state mode =
   | ModalMsgbox of ('state, unit, unit) modalmenu
   | Newspaper of 'state Newspaper_d.t
   | BuildStation of ('state, Station.kind, unit) modalmenu
-  | BuildBridge of ('state, Bridge.t, Utils.msg) modalmenu
-  | BuildHighGrade of ('state, [`BuildTunnel | `BuildTrack], Utils.msg) modalmenu
-  | BuildTunnel of ('state, bool, Utils.msg * int) modalmenu
+  | BuildBridge of ('state, Bridge.t, Backend.Action.msg) modalmenu
+  | BuildHighGrade of ('state, [`BuildTunnel | `BuildTrack], Backend.Action.msg) modalmenu
+  | BuildTunnel of ('state, bool, Backend.Action.msg * int) modalmenu
   | SignalMenu of ('state, [`Normal|`Hold|`Proceed], int * int * Dir.t) modalmenu (* x,y,dir *)
   | StationReport of int * int (* x, y *)
   | BuildTrain of [
@@ -126,7 +126,7 @@ type 'state t = {
   mode: 'state mode; (* determines mode of operation *)
   train_ui_start: int; (* which train we start showing in the UI *)
   (* Top-right UI arrival message, time to display *)
-  train_arrival_msgs: (Backend_d.train_arrival_msg * int ref) list;
+  train_arrival_msgs: (Ui_msg.train_arrival_msg * int ref) list;
   mutable view: Mapview_d.t;
 }
 

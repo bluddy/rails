@@ -4,6 +4,9 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 module C = Constants
 
+let src = Logs.Src.create "station" ~doc:"Station"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 (* minimum level to be real demand *)
 let min_demand = C.car_full_demand
 (* minimum level for mail on simple economy mode *)
@@ -36,6 +39,12 @@ let price_of = function
   | `Depot -> 50
   | `Station -> 100
   | `Terminal -> 200
+
+let maintenance_of_kind = function
+  | `SignalTower -> 1
+  | `Depot -> 2
+  | `Station -> 3
+  | `Terminal -> 4
 
 let is_big_station (x:kind) = match x with
   | `SignalTower -> false
@@ -105,6 +114,7 @@ type info = {
   mutable convert_demand: Goods.Set.t; (* minimum for conversion *)
   supply: (Goods.t, int) Hashtbl.t;
   lost_supply: (Goods.t, int) Hashtbl.t;
+  picked_up_goods: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
   rate_war: bool;
@@ -144,11 +154,10 @@ let default_signals = {
 }
 
 type t = {
-  x: int; (* in tiles *)
-  y: int; (* in tiles *)
+  loc: Utils.loc;
   year: int;
   info: info option;
-  player: int;
+  player: Owner.t;
   signals: signals;
 } [@@deriving yojson]
 
@@ -165,6 +174,8 @@ let update_with_info v f = match v.info with
   | _ -> v
 
 let get_age v year = year - v.year
+
+let young v year = get_age v year <= C.young_station_age
 
 let color_of_signal = function
   | _, OverrideProceed -> Ega.yellow
@@ -211,7 +222,7 @@ let has_hotel v = has_upgrade v Hotel
 let get_signal (v:t) dir =
   if Dir.is_lower dir then v.signals.lower else v.signals.upper
 
-let set_signal (v:t) dir signal =
+let set_signal dir signal (v:t) =
   let signals =
     if Dir.is_lower dir then
       {v.signals with lower=(signal, snd v.signals.lower)}
@@ -220,7 +231,7 @@ let set_signal (v:t) dir signal =
   in
   {v with signals}
 
-let set_override (v:t) dir override =
+let set_override dir override (v:t) =
   let signals =
     if Dir.is_lower dir then
       {v.signals with lower=(fst v.signals.lower, override)}
@@ -229,9 +240,14 @@ let set_override (v:t) dir override =
   in
   {v with signals}
 
-let cancel_override (v:t) dir = set_override v dir NoOverride
+let cancel_override dir (v:t) = set_override dir NoOverride v 
 
-let can_train_go (v:t) dir =
+  (* When an owned company builds track into our >signaltower station,
+     it becomes a union station: effectively a terminal *)
+let set_to_union_station v =
+  update_with_info v (fun info -> Some {info with kind=`Terminal})
+
+let can_train_go dir (v:t) =
   (* Also returns whether we need to cancel override *)
   let signal = get_signal v dir in
   match signal with
@@ -240,10 +256,10 @@ let can_train_go (v:t) dir =
   | Go, _ -> true, `None
   | Stop, _ -> false, `None
 
-let make_signaltower ~x ~y ~year ~player =
-  { x; y; year; info=None; player; signals=default_signals}
+let make_signaltower x y ~year player_idx =
+  { loc=(x, y); year; info=None; player=player_idx; signals=default_signals}
 
-let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
+let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
   let name = match suffix with
     | Some suffix -> city_name^" "^show_suffix suffix
     | None -> city_name
@@ -263,6 +279,7 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
         demand=Goods.Set.empty;
         convert_demand=Goods.Set.empty;
         supply=Hashtbl.create 10;
+        picked_up_goods=Hashtbl.create 10;
         lost_supply=Hashtbl.create 10;
         kind=k;
         name;
@@ -277,10 +294,10 @@ let make ~x ~y ~year ~city_xy ~city_name ~suffix ~kind ~player ~first =
       } |> Option.some
   in
   let signals = default_signals in
-  { x; y; year; info; player; signals}
+  { loc=(x, y); year; info; player=player_idx; signals}
 
-let add_upgrade v upgrade player =
-  if v.player <> player then v else
+let add_upgrade upgrade player v =
+  if Owner.(v.player <> player) then v else
   let info =
     match v.info with
     | Some ({upgrades;_} as info) ->
@@ -302,8 +319,14 @@ let get_city v = match v.info with
   | Some info -> Some(info.city)
   | _ -> None
 
+let get_loc v = v.loc
+
 let get_supply_exn v = match v.info with
   | Some info -> info.supply
+  | None -> failwith "not a proper station"
+
+let get_picked_up_goods_exn v = match v.info with
+  | Some info -> info.picked_up_goods
   | None -> failwith "not a proper station"
 
 let get_demand_exn v = match v.info with
@@ -311,7 +334,7 @@ let get_demand_exn v = match v.info with
   | None -> failwith "not a proper station"
 
    (* some supplies are lost every tick in a rate war. *)
-let check_rate_war_lose_supplies v ~difficulty =
+let check_rate_war_lose_supplies ~difficulty v =
   match v.info with
   | Some info when info.rate_war ->
       let div = match difficulty with
@@ -333,26 +356,32 @@ let value_of station = match station.info with
   | None -> price_of `SignalTower
   | Some info -> price_of info.kind
 
+let maintenance_of station = match station.info with
+  | None -> maintenance_of_kind `SignalTower
+  | Some info -> maintenance_of_kind info.kind
+
   (* Call periodically per station -- impure for performance *)
-  (* TODO: better to memoize demand/supply calculation and recompute when things change *)
-let update_supply_demand v tilemap ~climate ~simple_economy =
-  let mult = 4 + Climate.to_enum climate in
+  (* TODO: see if we can make pure *)
+let update_supply_demand tilemap params v =
+  let mult = 4 + Climate.to_enum params.Params.climate in
   let modify_amount amount =
     amount * mult / 12
   in
   match v.info with
   | None -> []
   | Some info ->
-    Printf.printf "Updating demand/supply\n";
+    Log.debug (fun f -> f "Updating demand/supply");
     let temp_demand_h, temp_supply_h =
       let range = to_range info.kind in
-      Tilemap.collect_demand_supply tilemap ~x:v.x ~y:v.y ~range
+      Tilemap.collect_demand_supply v.loc tilemap ~range
     in
     (* Add supply to station *)
     Hashtbl.iter (fun good amount ->
       CCHashtbl.incr ~by:(modify_amount amount) info.supply good
     )
     temp_supply_h;
+
+    let simple_economy = B_options.simple_economy params.options in
 
     if simple_economy then (
       (* All other demand is 2x mail *)
@@ -444,7 +473,7 @@ let holds_priority_shipment v =
     (fun x -> x.holds_priority_shipment)
     v.info
 
-let set_priority_shipment v x =
+let set_priority_shipment x v =
   update_with_info v
   (fun info ->
     if Bool.equal info.holds_priority_shipment x then
@@ -452,4 +481,21 @@ let set_priority_shipment v x =
     else
         Some {info with holds_priority_shipment = x})
 
-let get_player v = v.player
+let get_player_idx v = v.player
+
+let set_rate_war x rates v =
+  update_with_info v
+    (fun info -> Some {info with rate_war=x; rates})
+
+let total_picked_up_goods v = match v.info with
+  | None -> 0
+  | Some info ->
+    let goods = info.picked_up_goods in
+    Hashtbl.sum (fun _ num -> num) goods
+  
+let total_lost_supply v = match v.info with
+  | None -> 0
+  | Some info ->
+    let supply = info.lost_supply in
+    Hashtbl.sum (fun _ num -> num) supply
+

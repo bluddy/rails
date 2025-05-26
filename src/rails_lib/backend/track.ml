@@ -23,7 +23,7 @@ type t =
     dirs: Dir.Set.t;
     kind: kind;
     ixn: bool;
-    player: int;
+    player: Owner.t;
   } [@@deriving yojson]
 
 let empty player kind = {
@@ -46,7 +46,7 @@ let is_big_station v = match v.kind with
 
 let is_ixn v = v.ixn
 
-let make dirs kind ~player =
+let make dirs kind player =
   let ixn = _is_ixn dirs in
   {dirs; kind; ixn; player}
 
@@ -139,7 +139,7 @@ let is_doubleable v =
   | Ferry _ when not @@ TrackSet.mem undoubleable_dirs v.dirs -> true
   | _ -> false
 
-let change_to_double v double =
+let change_to_double ~double v =
   let kind = match v.kind with
     | Track _ when double -> Track `Double
     | Track _ -> Track `Single

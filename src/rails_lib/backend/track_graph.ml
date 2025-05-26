@@ -124,15 +124,13 @@ type t = G.t [@@deriving yojson]
 
 let make () = G.create ()
 
-let add_ixn v ~x ~y =
+let add_ixn ((x, y) as loc) v =
   Log.debug (fun f -> f "Graph: Adding ixn at (%d,%d)" x y);
-  let loc = x, y in
   G.add_vertex v loc;
   v
 
-let remove_ixn v ~x ~y =
+let remove_ixn ((x, y) as loc) v =
   Log.debug (fun f -> f "Graph: Removing ixn at (%d,%d)" x y);
-  let loc = x, y in
   G.remove_vertex v loc;
   v
 
@@ -273,7 +271,7 @@ module Track = struct
   (* Routines to handle building/tearing down of track graph *)
   open Scan
 
-  let handle_build_station graph ~x ~y scan1 scan2 =
+  let handle_build_station x y graph scan1 scan2 =
     (* We just don't add stations until they've been hooked up *)
     let add_to_edge ixn1 _ ixn3 ixn4 =
       graph
@@ -322,7 +320,7 @@ module Track = struct
 
   (* Handle graph management for building track.
       Complicated because we can have ixns everywhere.  *)
-  let handle_build_track graph ~x ~y scan1 scan2 =
+  let handle_build_track x y graph scan1 scan2 =
     match scan1, scan2 with
         (* Unfinished edge. Connect an intersection.
           x---       ->    x---x *)
@@ -372,7 +370,7 @@ module Track = struct
         (* All other cases require no graph changes *)
       | _ -> graph
 
-  let handle_remove_track graph ~x ~y scan1 scan2 =
+  let handle_remove_track x y graph scan1 scan2 =
     match scan1, scan2 with
         (* Was edge. Now disconnected
           x---x       ->    x- -x *)
@@ -387,12 +385,12 @@ module Track = struct
           x---S       ->    x---
           x---S---x   ->    x--- ---x *)
       | Station _, (Track [_] | NoResult) ->
-          remove_ixn ~x ~y graph
+          remove_ixn (x, y) graph
 
         (* Was ixn. Now deleted.
           x---+       ->    x--- *)
       | Ixn [_], (Track [_] | NoResult) ->
-          remove_ixn ~x ~y graph
+          remove_ixn (x, y) graph
 
         (* Was 2 ixn. Now edge
           x---+---x   ->    x-------x *)
@@ -406,7 +404,7 @@ module Track = struct
       | Ixn _, Track [ixn3; ixn4]
       | Station [_; _], Track[ixn3; ixn4] ->
           graph
-          |> remove_ixn ~x ~y
+          |> remove_ixn (x, y)
           |> add_segment ~xyd1:(ixn3.x,ixn3.y,ixn3.dir) ~xyd2:(ixn4.x,ixn4.y,ixn4.dir) ~dist:(ixn3.dist + ixn4.dist)
 
       | _ -> graph

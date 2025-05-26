@@ -6,9 +6,9 @@ type t = Station.t Loc_map.t
   [@@deriving yojson]
 
 let find_nearest v loc =
+  (* NOTE: could be made more efficient with quadmap or array *)
   fold (fun (station:Station.t) acc ->
-    let station_loc = (station.x, station.y) in
-    let dist = Utils.classic_dist loc station_loc in
+    let dist = Utils.classic_dist loc @@ Station.get_loc station in
     match acc with
     | Some (_, min_dist) when dist < min_dist -> Some(station, dist)
     | None -> Some(station, dist)
@@ -37,11 +37,15 @@ let get_num_proper_stations v =
     v
     ~init:0
 
-let clear_priority_shipment_for_all v ~players =
+let clear_priority_shipment_for_all ~players v =
   let open Station in
   Loc_map.map (function
-    | station when List.mem ~eq:Int.equal station.player players ->
-        Station.set_priority_shipment station false
+    | station when List.mem ~eq:Owner.equal station.player players ->
+        Station.set_priority_shipment false station
     | station -> station)
     v
+
+let have_engine_shop v =
+  find (fun v -> Station.has_upgrade v Station.EngineShop) v
+  |> Option.is_some
 

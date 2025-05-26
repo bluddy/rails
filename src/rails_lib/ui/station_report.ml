@@ -1,6 +1,7 @@
 open Containers
 module R = Renderer
 module C = Constants
+module B = Backend
 
 (* Station view screen *)
 
@@ -14,7 +15,7 @@ let render win (s:State.t) loc ~show_demand =
   let storage_x = 285 in
 
   let hash =
-    if Region.is_us s.backend.region then s.textures.station_us
+    if Region.is_us (B.get_region s.backend) then s.textures.station_us
     else s.textures.station_en
   in
   let get_tex x =
@@ -190,7 +191,7 @@ let render win (s:State.t) loc ~show_demand =
       10
     in
     (* Priority shipment *)
-    let goods_s = Backend.get_player s.backend C.player
+    let goods_s = Backend.get_player C.player s.backend 
       |> Player.get_priority
       |> Priority_shipment.station_waiting_delivery_text ~loc
     in

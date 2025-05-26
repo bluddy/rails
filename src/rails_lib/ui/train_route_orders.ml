@@ -40,12 +40,15 @@ let make graph train state : Train_report_d.train_route_orders =
   }
 
   (* Function used to scale to the screen *)
-let scale_xy v x y =
+let scale_xy x y v =
   let x = (x - v.map_x) * 120 / v.map_dim in
   let y = (y - v.map_y) * 100 / v.map_dim in
   (x,y)
 
+let scale_loc (x,y) v = scale_xy x y v
+
 let render win (s:State.t) (v:Train_report_d.train_route_orders) =
+  let player_idx = C.player in
   let write ?(color=Ega.black) ?(active_color=Ega.white) ?(idx=1) =
     Fonts.Render.write win s.fonts ~idx ~color ~active_color
   in
@@ -54,21 +57,21 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   R.draw_rect win ~x:1 ~y:1 ~w:255 ~h:198 ~color:Ega.green ~fill:true;
 
   (* Draw connections *)
-  Track_graph.G.iter_edges (fun (x1,y1) (x2,y2) ->
-    let x1, y1 = scale_xy v x1 y1 in
-    let x2, y2 = scale_xy v x2 y2 in
+  Track_graph.G.iter_edges (fun loc1 loc2 ->
+    let x1, y1 = scale_loc loc1 v in
+    let x2, y2 = scale_loc loc2 v in
     R.draw_line win ~x1 ~y1 ~x2 ~y2 ~color:Ega.gray)
     s.backend.graph;
 
   (* Write stop text *)
-  let player = 0 in
-  let train = Trainmap.get s.backend.players.(player).trains v.train in
+  let trains = Backend.get_player player_idx s.backend |> Player.get_trains in
+  let train = Trainmap.get v.train trains in
   let route = Train.get_route train in
   (* TODO: wait *)
   Vector.iteri (fun i (_, (stop:Train.stop)) ->
     let station = Station_map.get_exn (stop.x, stop.y) s.backend.stations in
     let name = Printf.sprintf "%d.%s" (i+1) (Station.get_name station) in
-    let x, y = scale_xy v stop.x stop.y in
+    let x, y = scale_xy stop.x stop.y v in
     write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   ) route;
 
@@ -77,7 +80,7 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   | Some stop -> 
     let station = Station_map.get_exn (stop.x, stop.y) s.backend.stations in
     let name = Printf.sprintf "P:%s" (Station.get_name station) in
-    let x, y = scale_xy v stop.x stop.y in
+    let x, y = scale_xy stop.x stop.y v in
     write name ~x:(x-2) ~y:(y+3) ~color:Ega.bgreen
   | None -> ()
   end;
@@ -86,14 +89,14 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   Station_map.iter (fun (station:Station.t) ->
     if Station.is_proper_station station then
       let color =
-        match v.selected_station, Backend.get_priority_shipment s.backend C.player with
-        | Some (x,y), _ when x = station.x && y = station.y && v.flash_on -> Ega.white
-        | Some (x,y), _ when x = station.x && y = station.y -> Ega.black
-        | _, Some {src_loc=(x,y);_} when x = station.x && y = station.y -> Ega.bgreen
-        | _, Some {dst_loc=(x,y);_} when x = station.x && y = station.y -> Ega.bgreen
+        match v.selected_station, Backend.get_priority_shipment player_idx s.backend with
+        | Some loc, _ when Utils.equal_loc loc station.loc && v.flash_on -> Ega.white
+        | Some loc, _ when Utils.equal_loc loc station.loc -> Ega.black
+        | _, Some {src_loc;_} when Utils.equal_loc src_loc station.loc -> Ega.bgreen
+        | _, Some {dst_loc;_} when Utils.equal_loc dst_loc station.loc -> Ega.bgreen
         | _ -> Ega.gray
       in
-      let x, y = scale_xy v station.x station.y in
+      let x, y = scale_loc station.loc v in
       R.draw_rect win ~x:(x-1) ~y:(y-1) ~w:3 ~h:3 ~color ~fill:true
   ) s.backend.stations;
 
@@ -159,26 +162,27 @@ let nobaction = Backend.Action.NoAction
 
   (* returns v and whether we exit *)
 let handle_event (s:State.t) v (event:Event.t) =
+  let player_idx = C.player in
   let remove_stop () =
     let stop = match v.state with
       | `EditPriority -> `Priority
       | `EditStop i -> `Stop i
       | _ -> assert false
     in
-    let b_action = Backend.Action.RemoveStop {train=v.train; stop; player=0} in
+    let b_action = Backend.Action.RemoveStop {train=v.train; stop; player_idx} in
     false, v, b_action
   in
   match event, v.selected_station, v.state with
   | Event.MouseMotion mouse, _, _ ->
     let selected_station =
       Station_map.fold (fun (station:Station.t) closest ->
-        let x, y = scale_xy v station.x station.y in
-        let dist = Utils.classic_dist (x,y) (mouse.x,mouse.y) in
+        let loc = scale_loc station.loc v in
+        let dist = Utils.classic_dist loc (mouse.x, mouse.y) in
         match closest with
         | None when Station.is_proper_station station && dist < selection_dist ->
-            Some ((station.x, station.y), dist)
+            Some (station.loc, dist)
         | Some (_, min_dist) when Station.is_proper_station station && dist < selection_dist && dist < min_dist ->
-            Some ((station.x, station.y), dist)
+            Some (station.loc, dist)
         | _ -> closest
       )
       s.backend.stations
@@ -200,14 +204,14 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditPriority ->
       let b_action =
-        Backend.Action.SetStopStation {train=v.train; stop=`Priority; station; player=0}
+        Backend.Action.SetStopStation {train=v.train; stop=`Priority; station; player_idx}
       in
       false, v, b_action
 
   | Event.MouseButton {button=`Left; down=true; _}, Some station, `EditStop stop  ->
       let b_action =
-        if Backend.check_stop_station s.backend ~train:v.train ~stop ~station ~player:0 then
-          Backend.Action.SetStopStation {train=v.train; stop=`Stop stop; station; player=0}
+        if Backend.check_stop_station ~train:v.train ~stop ~station player_idx s.backend then
+          Backend.Action.SetStopStation {train=v.train; stop=`Stop stop; station; player_idx}
         else nobaction
       in
       false, v, b_action

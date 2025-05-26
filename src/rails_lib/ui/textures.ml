@@ -2,6 +2,7 @@ open Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Renderer
+module C = Constants
 
 module TileTex = struct
 
@@ -201,7 +202,7 @@ module Tracks = struct
       List.fold_left (fun (i,j) li ->
         let tex = get_tex extra i j in
         let dirs = Dir.Set.of_list li in
-        let track = Track.make dirs kind ~player:0 in
+        let track = Track.make dirs kind C.player in
         Track.Htbl.replace track_dict track tex;
         if j >= num_j - 1 then
           (i + 1, 0)
@@ -1032,7 +1033,7 @@ type t = {
   engine_detail: (Engine.make, R.Texture.t) Hashtbl.t;
   engine_anim: (Engine.make, TrainAnim.t) Hashtbl.t;
   car_anim: (Goods.t, (R.Texture.t * R.Texture.t)) Hashtbl.t;
-  opponents: (Opponent.t, R.Texture.t) Hashtbl.t;
+  opponents: (Opponent.name, R.Texture.t) Hashtbl.t;
   jobs: (Jobs.t, R.Texture.t) Hashtbl.t;
   misc: (Misc.t, R.Texture.t) Hashtbl.t;
   smoke: (Misc.smoke, R.Texture.t array) Hashtbl.t;
