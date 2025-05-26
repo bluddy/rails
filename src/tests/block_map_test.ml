@@ -68,9 +68,10 @@ let%expect_test "build station" =
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 0 -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Double };
-      stations = ((10, 10), `Lower) -> 1, ((10, 10), `Upper) -> 0 } |}]
+    { Block_map_d.info = 0 -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Double };
+      stations = ((10, 10), `Lower) -> 1, ((10, 10), `Upper) -> 0 }
+    |}]
 
 let%expect_test "build station between ixns" =
   let graph, blocks = TG.make (), SM.make () in
@@ -83,9 +84,10 @@ let%expect_test "build station between ixns" =
   in
   print blocks;
   [%expect{|
-    { Block_map.info = 0 -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Double };
-      stations = ((10, 10), `Lower) -> 1, ((10, 10), `Upper) -> 0 } |}]
+    { Block_map_d.info = 0 -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Double };
+      stations = ((10, 10), `Lower) -> 1, ((10, 10), `Upper) -> 0 }
+    |}]
 
 let%expect_test "build second station" =
   let graph, blocks = TG.make (), SM.make () in
@@ -98,11 +100,12 @@ let%expect_test "build second station" =
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Single }, 1
-      -> { Block_map.count = 0; double = `Double };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Single }, 1
+      -> { Block_map_d.count = 0; double = `Double };
       stations = ((10, 10), `Lower) -> 1, ((5, 10), `Lower) -> 0,
-      ((5, 10), `Upper) -> 2, ((10, 10), `Upper) -> 0 } |}]
+      ((5, 10), `Upper) -> 2, ((10, 10), `Upper) -> 0 }
+    |}]
 
 let%expect_test "build 3 stations left to right " =
   let graph, blocks = TG.make (), SM.make () in
@@ -116,13 +119,14 @@ let%expect_test "build 3 stations left to right " =
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 3
-      -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 3
+      -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 2, ((15, 10), `Lower) -> 3,
       ((10, 10), `Lower) -> 2, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
-      ((10, 10), `Upper) -> 1 } |}]
+      ((10, 10), `Upper) -> 1 }
+    |}]
 
 let%expect_test "build 2 stations and then one in the middle" =
   let graph, blocks = TG.make (), SM.make () in
@@ -137,11 +141,12 @@ let%expect_test "build 2 stations and then one in the middle" =
   [%expect {| [[[15,10],[5,10],{"nodes":[[[5,10],["Right"]],[[15,10],["Left"]]],"dist":10,"block":false}]] |}];
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
-      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}];
   (* Now the middle station *)
   let _, graph, blocks =
     build_station (10,10) ~dirs tgs in
@@ -149,13 +154,14 @@ let%expect_test "build 2 stations and then one in the middle" =
   [%expect {| [[[10,10],[5,10],{"nodes":[[[5,10],["Right"]],[[10,10],["Left"]]],"dist":5,"block":false}],[[15,10],[10,10],{"nodes":[[[10,10],["Right"]],[[15,10],["Left"]]],"dist":5,"block":false}]] |}];
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 3
-      -> { Block_map.count = 0; double = `Single }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 3
+      -> { Block_map_d.count = 0; double = `Single }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 3, ((15, 10), `Lower) -> 2,
       ((10, 10), `Lower) -> 3, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
-      ((10, 10), `Upper) -> 1 } |}]
+      ((10, 10), `Upper) -> 1 }
+    |}]
 
 (* build 2 stations separated by ixn *)
 let%expect_test "build 2 stations separated by ixn" =
@@ -170,11 +176,12 @@ let%expect_test "build 2 stations separated by ixn" =
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
-      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}]
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}]
 
 
 (* Test build_track
@@ -192,22 +199,24 @@ let%expect_test "connect 2 station with road" =
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 3
-      -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Double };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 3
+      -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Double };
       stations = ((15, 10), `Upper) -> 2, ((15, 10), `Lower) -> 3,
-      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}];
   let _, _, blocks =
     build_track (10, 10) (tmap, graph, blocks) ~dirs:[Left;Right]
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 3 -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 3 -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 3,
-      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}]
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}]
 
 
 (* Test remove_track
@@ -223,20 +232,22 @@ let%expect_test "2 connected stations, disconnect road" =
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
-      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}];
   let _, _, blocks = remove_track (10, 10) (tmap, graph, blocks) in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 3
-      -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 3
+      -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 3, ((15, 10), `Lower) -> 2,
-      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}]
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}]
 
 (* Test remove_station
    graph trackmap block_map loc scan1 scan2
@@ -251,18 +262,20 @@ let%expect_test "2 connected stations, disconnect one" =
   in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
-      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}];
   let _, _, blocks =
     remove_station (5, 10) (tmap, graph, blocks) in
   print blocks;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 0; double = `Single };
-      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2 } |}]
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 0; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2 }
+    |}]
 
 let%expect_test "4 connected stations in a square, disconnect one" =
   let graph, blocks = TG.make (), SM.make () in
@@ -274,69 +287,75 @@ let%expect_test "4 connected stations in a square, disconnect one" =
   in
   print @@ Utils.thd3 tgs;
   [%expect{|
-    { Block_map.info = 0 -> { Block_map.count = 0; double = `Single };
-      stations = ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 0 } |}];
+    { Block_map_d.info = 0 -> { Block_map_d.count = 0; double = `Single };
+      stations = ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 0 }
+    |}];
 
   let tgs = build_station (14, 5) ~dirs:[Left; Right] tgs in
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 0 -> { Block_map.count = 0; double = `Single }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 0 -> { Block_map_d.count = 0; double = `Single }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((14, 5), `Lower) -> 1, ((14, 5), `Upper) -> 0, ((6, 5), `Lower)
-      -> 0, ((6, 5), `Upper) -> 1 } |}];
+      -> 0, ((6, 5), `Upper) -> 1 }
+    |}];
 
   let tgs = build_station (14, 15) ~dirs:[Left; Right] tgs in
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 0
-      -> { Block_map.count = 0; double = `Single }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 0
+      -> { Block_map_d.count = 0; double = `Single }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((14, 15), `Lower) -> 2, ((14, 15), `Upper) -> 1,
       ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0, ((6, 5), `Lower) -> 0,
-      ((6, 5), `Upper) -> 1 } |}];
+      ((6, 5), `Upper) -> 1 }
+    |}];
 
   let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 3
-      -> { Block_map.count = 0; double = `Single }, 0
-      -> { Block_map.count = 0; double = `Single }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 3
+      -> { Block_map_d.count = 0; double = `Single }, 0
+      -> { Block_map_d.count = 0; double = `Single }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((14, 15), `Lower) -> 2, ((14, 15), `Upper) -> 3,
       ((6, 15), `Lower) -> 3, ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0,
-      ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1, ((6, 15), `Upper) -> 1 } |}];
+      ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1, ((6, 15), `Upper) -> 1 }
+    |}];
 
   let tgs = remove_station (14, 15) tgs in
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 3
-      -> { Block_map.count = 0; double = `Single }, 0
-      -> { Block_map.count = 0; double = `Single }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 3
+      -> { Block_map_d.count = 0; double = `Single }, 0
+      -> { Block_map_d.count = 0; double = `Single }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((6, 15), `Lower) -> 3, ((14, 5), `Lower) -> 2,
       ((14, 5), `Upper) -> 0, ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1,
-      ((6, 15), `Upper) -> 1 } |}];
+      ((6, 15), `Upper) -> 1 }
+    |}];
 
   let tgs = remove_station (6, 15) tgs in
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 0
-      -> { Block_map.count = 0; double = `Single }, 1
-      -> { Block_map.count = 0; double = `Single };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 0
+      -> { Block_map_d.count = 0; double = `Single }, 1
+      -> { Block_map_d.count = 0; double = `Single };
       stations = ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0, ((6, 5), `Lower)
-      -> 0, ((6, 5), `Upper) -> 1 } |}];
+      -> 0, ((6, 5), `Upper) -> 1 }
+    |}];
 
   let tgs = remove_station (6, 5) tgs in
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 0
-      -> { Block_map.count = 0; double = `Single };
-      stations = ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0 } |}];
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 0
+      -> { Block_map_d.count = 0; double = `Single };
+      stations = ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0 }
+    |}];
 
   let tgs = remove_station (14, 5) tgs in
   print @@ Utils.thd3 tgs;
-  [%expect {|
-    { Block_map.info = ; stations =  } |}];
+  [%expect {| { Block_map_d.info = ; stations =  } |}];
   ()
 
 
@@ -358,13 +377,14 @@ let%expect_test "3 connected stations in a line, trains and double track" =
   ignore @@ Block_map.block_incr_train locu blocks;
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Single }, 3
-      -> { Block_map.count = 0; double = `Double }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 2; double = `Double };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 3
+      -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 2; double = `Double };
       stations = ((15, 10), `Upper) -> 2, ((15, 10), `Lower) -> 3,
       ((10, 10), `Lower) -> 2, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
-      ((10, 10), `Upper) -> 1 } |}]
+      ((10, 10), `Upper) -> 1 }
+    |}]
   
   (* TODO *)
 let%expect_test "2 connected stations in a line, trains, add station" =
@@ -385,21 +405,23 @@ let%expect_test "2 connected stations in a line, trains, add station" =
   ignore @@ Block_map.block_incr_train locu blocks;
   print @@ Utils.thd3 tgs;
   [%expect {|
-  { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 0
-    -> { Block_map.count = 0; double = `Double }, 1
-    -> { Block_map.count = 2; double = `Single };
-    stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
-    ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 } |}];
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 2; double = `Single };
+      stations = ((15, 10), `Upper) -> 1, ((15, 10), `Lower) -> 2,
+      ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0 }
+    |}];
   let tgs = tgs
     |> build_station ~trainmap (10, 10) ~dirs:[Left; Right]
   in
   print @@ Utils.thd3 tgs;
   [%expect {|
-    { Block_map.info = 2 -> { Block_map.count = 0; double = `Double }, 3
-      -> { Block_map.count = 0; double = `Single }, 0
-      -> { Block_map.count = 0; double = `Double }, 1
-      -> { Block_map.count = 2; double = `Double };
+    { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Double }, 3
+      -> { Block_map_d.count = 0; double = `Single }, 0
+      -> { Block_map_d.count = 0; double = `Double }, 1
+      -> { Block_map_d.count = 2; double = `Double };
       stations = ((15, 10), `Upper) -> 3, ((15, 10), `Lower) -> 2,
       ((10, 10), `Lower) -> 3, ((5, 10), `Lower) -> 1, ((5, 10), `Upper) -> 0,
-      ((10, 10), `Upper) -> 1 } |}]
+      ((10, 10), `Upper) -> 1 }
+    |}]
 
