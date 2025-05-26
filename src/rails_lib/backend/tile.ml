@@ -190,6 +190,7 @@ module Info = struct
       Ocean empty, make 10;
       Farm, make 3;
       Slums, make 4;
+      EnemyStation, make 0;
   ]
 
   let us_list = (std_list @ [
