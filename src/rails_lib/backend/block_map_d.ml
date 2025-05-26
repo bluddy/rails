@@ -1,6 +1,5 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
-module LocuSet = Utils.LocuSet
 
 module Id = Int_id.Make(struct end)
 

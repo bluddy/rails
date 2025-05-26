@@ -85,7 +85,7 @@ let%expect_test "connected_stations_dirs" =
     |> Trackmap.set (5, 6) t
   in
   let g = graph () in
-  let res = TG.connected_stations_dirs g map [1,2] |> Utils.LocuSet.elements in
+  let res = TG.connected_stations_dirs g map [1,2] |> Utils.LocuHSet.elements in
   List.pp (Pair.pp (Pair.pp Int.pp Int.pp) Dir.pp_upper) Format.std_formatter res;
   [%expect {|
     5, 6, `Upper, 3, 4,

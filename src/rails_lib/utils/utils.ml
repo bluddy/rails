@@ -165,7 +165,7 @@ module HashSet = struct
   end
 end
 
-module LocSet = HashSet.Make(struct
+module LocHSet = HashSet.Make(struct
   type t = loc [@@deriving yojson]
   let equal = equal_loc
   let hash = Hashtbl.hash
@@ -177,7 +177,7 @@ module LocdSet = HashSet.Make(struct
   let hash = Hashtbl.hash
 end)
 
-module LocuSet = HashSet.Make(struct
+module LocuHSet = HashSet.Make(struct
   type t = locu [@@deriving yojson]
   let equal = equal_locu
   let hash = Hashtbl.hash

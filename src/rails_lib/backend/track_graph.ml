@@ -206,8 +206,7 @@ let shortest_path ~src ~dest v =
   | (_,edge,_)::_ -> Edge.dir_of_xy src edge
   | _ -> None
 
-module LocdSet = Utils.LocdSet
-module LocSet = Utils.LocSet
+module LocHSet = Utils.LocHSet
 
   (* Get stations directly connected to a particular ixn or station
      using the track graph.
@@ -215,33 +214,33 @@ module LocSet = Utils.LocSet
      exclude_ixns: exclude these ixns from the search
    *)
 let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
-  let stations = LocuSet.create 10 in
+  let stations = LocuHSet.create 10 in
   let rec loop ixns =
-    let next_ixns = LocSet.create 10 in
+    let next_ixns = LocHSet.create 10 in
     (* Iterate over ixns we built up *)
-    LocSet.iter (fun ixn ->
-      if LocSet.mem seen_ixns ixn then ()
+    LocHSet.iter (fun ixn ->
+      if LocHSet.mem seen_ixns ixn then ()
       else ( 
         (* loop over attached ixn/dirs *)
         iter_succ_ixn_dirs (fun ixn dir ->
           if Trackmap.has_station ixn trackmap then 
             (* Add to results *)
-            LocuSet.insert stations (ixn, Dir.to_upper dir)
+            LocuHSet.insert stations (ixn, Dir.to_upper dir)
           else 
             (* To be handled in next iteration *)
-            LocSet.insert next_ixns ixn)
+            LocHSet.insert next_ixns ixn)
         ~ixn
         graph
       );
       (* Mark that we saw this ixn *)
-      LocSet.insert seen_ixns ixn)
+      LocHSet.insert seen_ixns ixn)
       ixns;
     (* Check if done: no more ixns to examine *)
-    if LocSet.cardinal next_ixns = 0 then (
+    if LocHSet.cardinal next_ixns = 0 then (
      (* Remove starting ixns which might have snuck in *)
-      LocSet.iter (fun ixn ->
-        LocuSet.remove stations (ixn, `Upper);
-        LocuSet.remove stations (ixn, `Lower);
+      LocHSet.iter (fun ixn ->
+        LocuHSet.remove stations (ixn, `Upper);
+        LocuHSet.remove stations (ixn, `Lower);
       ) start_ixns;
       stations
     ) else
@@ -250,20 +249,20 @@ let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
   loop start_ixns
 
 let connected_stations_dirs_exclude_dir ~exclude_dir graph trackmap ixn =
-  let start_ixns = LocSet.create 5 in
+  let start_ixns = LocHSet.create 5 in
   (* Prevent loops *)
-  let seen_ixns = LocSet.create 5 in
+  let seen_ixns = LocHSet.create 5 in
   find_ixn_from_ixn_dir graph ~ixn ~dir:exclude_dir
-  |> Option.iter (LocSet.insert seen_ixns);
-  LocSet.insert start_ixns ixn;
+  |> Option.iter (LocHSet.insert seen_ixns);
+  LocHSet.insert start_ixns ixn;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 let connected_stations_dirs ?(exclude_ixns=[]) graph trackmap ixns =
-  let start_ixns = LocSet.create 5 in
+  let start_ixns = LocHSet.create 5 in
   (* Prevent loops *)
-  let seen_ixns = LocSet.create 5 in
-  List.iter (LocSet.insert seen_ixns) exclude_ixns;
-  List.iter (LocSet.insert start_ixns) ixns;
+  let seen_ixns = LocHSet.create 5 in
+  List.iter (LocHSet.insert seen_ixns) exclude_ixns;
+  List.iter (LocHSet.insert start_ixns) ixns;
   _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap
 
 module Track = struct

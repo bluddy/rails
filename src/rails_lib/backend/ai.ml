@@ -8,22 +8,25 @@ module Hashtbl = Utils.Hashtbl
 module IntMap = Utils.IntMap
 module IntSet = Utils.IntSet
 module List = Utils.List
+module U = Utils
+
+module LocMap = U.LocMap
 
 let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-type route = (int * int)
+type route = (U.loc * U.loc)
              [@@deriving yojson]
 
  (* An AI Player *)
 type ai_player = {
   idx: Owner.t;
   opponent: Opponent.t;
-  city1: int; (* home city *)
-  city2: int option; (* first route. Determines name *)
+  city1: U.loc; (* home city *)
+  city2: U.loc option; (* first route. Determines name *)
   cash: int; (* all x1000 *)
   bonds: int;
-  build_order: (int * int) option;  (* order given to subservient company (city_idx, city_idx)*)
+  build_order: (U.loc * U.loc) option;  (* order given to subservient company (city_idx, city_idx)*)
   track_length: int;
   yearly_interest: int;
   net_worth: int;
@@ -34,10 +37,10 @@ type ai_player = {
   (* Global AI data *)
 type t = {
   routes: route Vector.vector;  (* Routes for all AIs *)
-  ai_of_city: Owner.t IntMap.t; (* Each city can only have one ai *)
+  ai_of_city: Owner.t LocMap.t; (* Each city can only have one ai *)
   rate_war_at_city: IntSet.t;
   ais: ai_player Owner.Map.t; (* AI player info *)
-  ai_track: Utils.loc list;
+  ai_track: U.loc list;
   mutable financial_ctr: int; (* Affects ai financial actions *)
   last_ai_to_buy_player_stock: Owner.t option;
 } [@@deriving yojson]

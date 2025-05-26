@@ -20,7 +20,6 @@ depends: [
   "tsdl"
   "owl-base"
   "ocamlgraph"
-  "fmt"
   "logs"
   "ppx_import"
   "ppx_deriving"
