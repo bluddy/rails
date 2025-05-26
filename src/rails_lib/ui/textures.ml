@@ -823,28 +823,35 @@ module Opponents = struct
       Hashtbl.replace hash key tex
     in
     let open Opponent in
-    tex CorneliusVanderbilt 0 0;
-    tex DanielDrew 40 0;
-    tex JimFisk 80 0;
-    tex JayGould 120 0;
-    tex ErastusCorning 160 0;
-    tex JPierpontMorgan 200 0;
-    tex JEdgarThompson 240 0;
-    tex JimHill 280 0;
-    tex JayCooke 0 50;
-    tex JohnForbes 40 50;
-    tex CzarNicholasII 80 50;
-    tex VILenin 120 50;
-    tex CharlesDeGaulle 160 50;
-    tex NapoleonIII 200 50;
-    tex OttoVonBismarck 240 50;
-    tex BenitoMussolini 280 50;
-    tex GeorgeStephenson 0 99;
-    tex RobertStephenson 40 99;
-    tex IsambardKBrunel 80 99;
-    tex GeorgeSHudson 120 99;
-    tex HelmuthVonMoltke 160 99;
-    tex BaronRothschild 200 99;
+    let y = 0 in
+    let x = ref 0 in
+    let incr_x x = let x1 = !x in x := !x + 40; x1 in
+    tex CorneliusVanderbilt (incr_x x) y;
+    tex DanielDrew (incr_x x) y;
+    tex JimFisk (incr_x x) y;
+    tex JayGould (incr_x x) y;
+    tex JayCooke (incr_x x) y;
+    tex JPierpontMorgan (incr_x x) y;
+    tex JohnForbes (incr_x x) y;
+    tex JimHill (incr_x x) y;
+    let y = 50 in
+    let x = ref 0 in
+    tex CzarNicholasII (incr_x x) y;
+    tex VILenin (incr_x x) y;
+    tex CharlesDeGaulle (incr_x x) y;
+    tex NapoleonIII (incr_x x) y;
+    tex OttoVonBismarck (incr_x x) y;
+    tex BenitoMussolini (incr_x x) y;
+    tex GeorgeStephenson (incr_x x) y;
+    tex RobertStephenson (incr_x x) y;
+    let y = 99 in
+    let x = ref 0 in
+    tex IsambardKBrunel (incr_x x) y;
+    tex GeorgeSHudson (incr_x x) y;
+    tex HelmuthVonMoltke (incr_x x) y;
+    tex ErastusCorning (incr_x x) y;
+    tex JEdgarThompson (incr_x x) y;
+    tex BaronRothschild (incr_x x) y;
     hash
 end
 
