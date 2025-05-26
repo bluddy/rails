@@ -1,0 +1,6 @@
+(library
+  (name rails_lib_test)
+  (inline_tests)
+  (preprocess (pps ppx_expect))
+  (libraries containers rails_lib)
+  )
