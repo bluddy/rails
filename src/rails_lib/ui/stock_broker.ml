@@ -145,14 +145,14 @@ let render win (s:State.t) v =
     let y = y + line in
     let treasury, non = Stock_market.treasury_shares player_idx s.backend.stocks, Stock_market.non_treasury_shares player_idx s.backend.stocks in
     write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" non treasury;
-    y + line
+    y + line + line
   in
   let y = Iter.fold (fun y player_idx -> render_player_info player_idx s.backend y) y @@ B.players_and_ai s.backend in
   let y = y + line in
   write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show @@ B.get_climate s.backend)
     (Backend.get_interest_rate s.backend player_idx);
 
-  let x, y = 50, 194 in
+  let x, y = 194, 50 in
   let render_opponent player_idx textures (b:Backend.t) y =
     if Owner.is_human player_idx then y else
     let ai = Ai.get_ai_exn player_idx b.ai in
