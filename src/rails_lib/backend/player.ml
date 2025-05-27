@@ -13,12 +13,12 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module Vector = Utils.Vector
 
 type monetary = {
-  cash: int; (* all x1000 *)
-  bonds: int;
-  stockholders_equity : int; (* not sure how this changes *)
-  owned_industry: int;
-  yearly_interest_payment: int;
-  net_worth: int;
+  cash: Money.t; (* all x1000 *)
+  bonds: Money.t;
+  stockholders_equity : Money.t; (* not sure how this changes *)
+  owned_industry: Money.t;
+  yearly_interest_payment: Money.t;
+  net_worth: Money.t;
   in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
   total_income_statement: Income_statement_d.t;
@@ -27,12 +27,12 @@ type monetary = {
 } [@@deriving yojson]
 
 let default_monetary = {
-    cash = 1000;
-    bonds = 500;
-    stockholders_equity = -500;
+    cash = Money.of_int 1000;
+    bonds = Money.of_int 500;
+    stockholders_equity = Money.of_int @@ -500;
     owned_industry = 0;
-    yearly_interest_payment = 20;
-    net_worth = 500;
+    yearly_interest_payment = Money.of_int 20;
+    net_worth = Money.of_int 500;
     in_receivership = false;
     income_statement = Income_statement_d.default;
     total_income_statement = Income_statement_d.default;

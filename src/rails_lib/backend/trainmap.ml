@@ -110,6 +110,8 @@ let fold (f: 'a -> ro Train.t -> 'a) (v:t) ~init = Vector.fold f init @@ _freeze
 
 let sum f v = fold (fun acc train -> acc + f train) ~init:0 v
 
+let sum_money f v = fold (fun acc train -> Money.(acc + f train)) ~init:Money.zero v
+
 let foldi (f: int -> 'a -> ro Train.t -> 'a) (v:t) ~init = Vector.foldi f init @@ _freeze_all v.trains
 
 (* R/W *)
@@ -139,13 +141,14 @@ let find_ret_index (f:ro Train.t -> bool) (v:t) =
 let get_at_loc loc (v:t) =
   Hashtbl.find_opt v.tile_idx loc |> Option.get_or ~default:[]
 
-let total_engine_value (v:t) = sum Train.get_engine_cost v
+let total_engine_value (v:t) = sum_money Train.get_engine_cost v
 
-let total_car_value (v:t) = C.car_cost * sum Train.num_of_cars v
+let total_car_value (v:t) = Money.(C.car_cost * (sum Train.num_of_cars v))
 
-let total_maintenance (v:t) = sum (fun train ->
-  let num_cars = Train.num_of_cars train in
-  ((train.maintenance_cost / 2 + num_cars) / 2) + 1)
+let total_maintenance (v:t) =
+  sum_money (fun train ->
+    let num_cars = Train.num_of_cars train in
+    Money.(((train.maintenance_cost / 2 +~ num_cars) / 2) +~ 1))
   v
 
 let clear_priority_shipment v =

@@ -3,8 +3,11 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 include Income_statement_d
 
+let combine = Money.add
+let zero = Money.zero
+
 let deduct expense money v =
-  let expenses = ExpenseMap.incr expense money v.expenses in
+  let expenses = ExpenseMap.incr_f ~combine ~zero expense money v.expenses in
   {v with expenses}
 
 let add_revenue revenue money v =

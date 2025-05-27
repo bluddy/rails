@@ -119,7 +119,7 @@ type info = {
   upgrades: Upgrades.t;
   rate_war: bool;
   rates: [`Normal | `Double | `Half];
-  cargo_revenue: int Goods.Map.t; (* revenue for each cargo type at this station *)
+  cargo_revenue: Money.t Goods.Map.t; (* revenue for each cargo type at this station *)
   holds_priority_shipment: bool;
 } [@@deriving yojson]
 
@@ -456,8 +456,8 @@ let lose_supplies v =
 let total_goods_revenue v =
   match v.info with
   | Some info ->
-    Goods.Map.fold (fun _ i sum -> sum + i) info.cargo_revenue 0
-  | _ -> 0
+    Goods.Map.fold (fun _ i sum -> Money.(sum + i)) info.cargo_revenue Money.zero
+  | _ -> Money.zero
 
 let color_of_rates v = match v.info with
   | Some info -> begin match info.rates with

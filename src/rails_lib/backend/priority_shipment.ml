@@ -114,7 +114,7 @@ let delivery_text shipment region stations money =
   in
   let msg2 = Printf.sprintf
     "%s Delivery Bonus!"
-    (Utils.show_cash ~region money)
+    (Money.print ~region money)
   in
   msg1, msg2
 

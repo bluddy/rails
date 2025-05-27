@@ -45,7 +45,7 @@ type t = {
   name: string;
   max_speed: int;   (* in 5s *)
   horsepower: int; (* in 500s *)
-  price: int; (* In 1000s *)
+  price: Money.t; (* In 1000s *)
   year: int;
 } [@@deriving yojson, show]
 
@@ -59,7 +59,7 @@ let make make _type name max_speed horsepower price year = {
   name;
   max_speed=max_speed/5; (* To fit the original *)
   horsepower=horsepower/500;
-  price=price/1000;
+  price=Money.of_int @@ price/1000;
   year }
 
 let us_engines = 

@@ -6,7 +6,7 @@ module C = Constants
 let src = Logs.Src.create "stock_market" ~doc:"Stock_market"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-type price_history = int list (* reverse history of prices *)
+type price_history = Money.t list (* reverse history of prices *)
   [@@deriving yojson]
 
 type t = {
@@ -14,7 +14,7 @@ type t = {
      First level: owner. Second level: owned
      *)
   ownership: (int Owner.Map.t) Owner.Map.t;
-  prices: int Owner.Map.t; (* share prices *)
+  prices: Money.t Owner.Map.t; (* share prices *)
   totals: int Owner.Map.t; (* total number of shares *)
   price_histories: price_history Owner.Map.t; (* prices over time in fiscal periods *)
 } [@@deriving yojson]
@@ -31,7 +31,7 @@ let player_starting_share_price difficulty =
 
 let add_human_player player_idx difficulty v =
   let totals = Owner.Map.add player_idx C.Stock.starting_num v.totals in
-  let prices = Owner.Map.add player_idx (B_options.difficulty_to_enum difficulty + 7) v.prices in
+  let prices = Owner.Map.add player_idx (Money.of_int @@ B_options.difficulty_to_enum difficulty + 7) v.prices in
   let price_histories = Owner.Map.add player_idx [] v.price_histories in
   {v with totals; prices; price_histories}
 

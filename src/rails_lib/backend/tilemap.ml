@@ -371,7 +371,7 @@ let check_build_tunnel ((x,y) as loc) ~dir v =
         let height = get_tile_height loc v in
         if height <= start_height + 8 then
           (* we're done *)
-          `Tunnel(n, n * base_dist, n * base_dist * C.tunnel_cost)
+          `Tunnel(n, n * base_dist, Money.(C.tunnel_cost * n * base_dist))
         else
           loop (x+dx, y+dy) (n+1)
    in

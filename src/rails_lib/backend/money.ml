@@ -36,9 +36,17 @@ let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?region (cash:t) =
   );
   Buffer.contents b
 
-  let (+) = (+)
-  let (-) = (-)
-  let (/) (x:t) (y:int) : t = of_int @@ (to_int x) / y
-  let ( * ) (x:t) (y:int) : t = of_int @@ (to_int x) * y
+  let (+~) x y = to_int x + y |> of_int
+  let (+) x y = to_int x + to_int y |> of_int
+  let add = (+)
+  let (-~) x y = to_int x - y |> of_int
+  let (-) x y = to_int x - to_int y |> of_int
+  let sub = (-)
+  let (/) (x:t) (y:int) : t = (to_int x) / y |> of_int
+  let div = (/)
+  let ( * ) (x:t) (y:int) : t = (to_int x) * y |> of_int
+  let mult = ( * )
+
+  let zero = of_int 0
 
 

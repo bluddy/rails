@@ -22,7 +22,7 @@ let render win v ~fonts ~textures ~region =
   let open Printf in
   let spd_str = sprintf "Maximum Speed: %d mph." (v.engine.max_speed * 5) in
   let hp_str = sprintf "Power at Drawbar: %dhp" (v.engine.horsepower * 500) in
-  let price = sprintf "Price: %s" (Utils.show_cash ~region v.engine.price) in
+  let price = sprintf "Price: %s" (Money.print ~region v.engine.price) in
   let str = sprintf "%s\n%s\n%s" spd_str hp_str price in
   write ~x:80 ~y:88 str;
   write ~x:80 ~y:120 "Rated Train Speed / %Grade:";

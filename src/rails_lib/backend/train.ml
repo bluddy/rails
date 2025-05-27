@@ -148,7 +148,7 @@ type 'mut t = {
   route: (wait * stop) Utils.Vector.vector; (* route stops *)
   priority_stop: stop option;
   had_maintenance: bool; (* this period *)
-  maintenance_cost: int; (* per fin period *)
+  maintenance_cost: Money.t; (* per fin period *)
   economic_activity: bool; (* Whether we picked up or dropped off goods *)
   periodic: periodic * periodic; (* data saved for periodic tracking *)
 } [@@deriving yojson, show]
@@ -165,12 +165,12 @@ let is_traveling v = match v.state with
   | _ -> false
 
 let set_type typ v = {v with typ}
-let replace_engine engine v = {v with engine; maintenance_cost=0}
+let replace_engine engine v = {v with engine; maintenance_cost=Money.zero}
 
 let display_speed v = C.speed_mult * get_speed v
 
 let display_maintenance v =
-  v.maintenance_cost / 2 + List.length v.cars + C.min_maintenance_cost
+  Money.(v.maintenance_cost / 2 +~ List.length v.cars + C.min_maintenance_cost)
 
 let reset_pixels_from_midtile (train: rw t) =
   train.pixels_from_midtile <- 0
@@ -242,7 +242,7 @@ let make ((x,y) as station) engine cars other_station ~dir player =
     had_maintenance=false;
     hold_at_next_station=false;
     priority_stop=None;
-    maintenance_cost=0;
+    maintenance_cost=Money.zero;
     economic_activity=false;
     periodic=(make_periodic (), make_periodic ());
     player;

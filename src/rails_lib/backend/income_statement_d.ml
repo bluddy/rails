@@ -53,8 +53,8 @@ module RevenueMap = Utils.Map.Make(struct
   end)
 
 type t = {
-  expenses: int ExpenseMap.t;
-  revenues: int RevenueMap.t;
+  expenses: Money.t ExpenseMap.t;
+  revenues: Money.t RevenueMap.t;
 } [@@deriving yojson]
 
 let default = {

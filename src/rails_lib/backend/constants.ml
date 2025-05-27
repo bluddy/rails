@@ -21,20 +21,20 @@ let train_max_size = 8
 let min_dist_btw_stations = 5 (* gt *)
 
 let car_amount = 160
-let car_cost = 5 (* cost of a car *)
+let car_cost = Money.of_int 5 (* cost of a car *)
 let car_full_demand = 64 
 
 (* How much to divide by to get a human-readable amount of goods *)
 let goods_div = 4
 
 let speed_mult = 5 (* multiply speed by this *)
-let min_maintenance_cost = 2
+let min_maintenance_cost = Money.of_int 2
 
 let track_length = 2
 
 let tunnel_min_height = 80 (* height needed for tunnel *)
 let tunnel_max_length = 9
-let tunnel_cost = 20 (* per mile *)
+let tunnel_cost = Money.of_int 20 (* per mile *)
 
 let draw_margin = 4
 
@@ -46,9 +46,9 @@ let slow_message_time = 150
 let menu_h = 8
 
 (* In the west US it's 1000, but the AI doesn't always use it in the original game *)
-let bond_value = 500
-let max_cash_for_bankruptcy = 500
-let min_bonds_for_bankruptcy = 500
+let bond_value = Money.of_int 500
+let max_cash_for_bankruptcy = Money.of_int 500
+let min_bonds_for_bankruptcy = Money.of_int 500
 let max_interest_rate = 9 (* At 9%, we can no longer sell bonds *)
 
 let num_buy_shares = 10
@@ -98,7 +98,7 @@ end
 let ref_year_ai_route_value = 1710
 let ref_year_ai_build_value = 1770
 
-let ai_max_cash = 30000
+let ai_max_cash = Money.of_int 30000
 
 let map_width = 256
 let map_height = 192

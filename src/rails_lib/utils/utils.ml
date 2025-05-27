@@ -104,14 +104,17 @@ module Map = struct
 
     let total v = fold (fun _ x acc -> acc + x) v 0
 
-    let incr k x v =
-      let x2 = get_or k v ~default:0 in
-      add k (x + x2) v
+    let incr_f ~combine ~zero k x v =
+      let x2 = get_or k v ~default:zero in
+      add k (combine x x2) v
 
-    let merge_add v1 v2 =
+    let incr k x v =
+      incr_f ~combine:(+) ~zero:0 k x v
+
+    let merge_f ~combine ~zero v1 v2 =
       let v3 = fold (fun key x1 acc ->
-        let x2 = get_or key v2 ~default:0 in
-        add key (x1 + x2) acc)
+        let x2 = get_or key v2 ~default:zero in
+        add key (combine x1 x2) acc)
         v1
         v2
       in
@@ -120,6 +123,9 @@ module Map = struct
         else acc)
         v2
         v3
+
+    let merge_add v1 v2 =
+      merge_f ~combine:(+) ~zero:0 v1 v2
 
       let sum f v = fold (fun k v acc -> f k v + acc) v 0
 
@@ -490,31 +496,6 @@ let thd3 (_,_,x) = x
 
 let map_fst f (x, y) = (f x, y)
 let map_snd f (x, y) = (x, f y)
-
-let show_cash ?(ks=true) ?(show_neg=true) ?(spaces=0) ?region cash =
-  (* show_neg: have a negative symbol
-     spaces: spaces to use for the upper thousands
-     region: determines money symbol to use
-  *)
-  let b = Buffer.create 20 in
-  begin match region with
-  | None -> ()
-  | Some region ->
-    Buffer.add_char b (Region.money_symbol region)
-  end;
-  let cash = if not show_neg then abs cash else cash in
-  let money_s = Printf.sprintf "%#d" cash
-    |> String.map (function '_' -> ',' | x -> x)
-  in
-  let len = String.length money_s in
-  for _=0 to spaces - 1 - len do
-    Buffer.add_char b ' ';
-  done;
-  Buffer.add_string b money_s;
-  if ks then (
-    Buffer.add_string b ",000"
-  );
-  Buffer.contents b
 
 let other_period = function
   | `First -> `Second
