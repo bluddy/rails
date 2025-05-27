@@ -129,7 +129,7 @@ let render win (s:State.t) (v:State.t t) : unit =
           sprintf ("at %s") (Station.get_name station)
     in
     let maintenance = Train.display_maintenance train
-      |> Utils.show_cash ~region:(B.get_region s.backend) in
+      |> Money.print ~region:(B.get_region s.backend) in
     let engine_data_s = sprintf "(%s/%s)" train.engine.name maintenance in
     let status_s = match train.state with
       | LoadingAtStation _ -> "Speed: unloading/loading"
@@ -190,7 +190,7 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     let rev period =
       Train.get_revenue period train 
-      |> Utils.show_cash ~spaces:6 ~region:(B.get_region s.backend)
+      |> Money.print ~spaces:6 ~region:(B.get_region s.backend)
     in
     let period = B.get_period s.backend in
     let rev_l = rev period in

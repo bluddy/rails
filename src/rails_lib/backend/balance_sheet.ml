@@ -2,7 +2,6 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 module B = Backend
-module M = Money
 module List = Utils.List
 
 include Balance_sheet_d
@@ -34,7 +33,7 @@ let create (s:State.t) player_idx =
   let real_estate = calc_real_estate (B.get_region s.backend) s.backend.track s.backend.map player_idx in
   let dist = Trackmap.calc_total_dist s.backend.track ~player:C.player in
   let track_miles = dist * Region.dist_mult (B.get_region s.backend) in
-  let track = dist * 3 / 2 in
+  let track = dist * 3 / 2 |> M.of_int in
   let engine_cost = Trainmap.total_engine_value player.trains in
   let car_cost = Trainmap.total_car_value player.trains in
   let rolling_stock = M.(engine_cost + car_cost) in

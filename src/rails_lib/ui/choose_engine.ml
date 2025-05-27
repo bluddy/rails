@@ -1,5 +1,7 @@
 open Containers
 module R = Renderer
+module M = Money
+module B = Backend
 
 (* Choose engine screen: select with mouse only *)
 let engine_start_y = 24
@@ -36,10 +38,11 @@ let render win (s:State.t) ~engines ~year =
   (* Write details *)
   let font = Fonts.get_font s.fonts 4 in
   let _ =
+    let region = B.get_region s.backend in
     List.fold_left (fun y engine ->
-      let price = Utils.string_of_num (engine.Engine.price * 1000) in
-      let str = Printf.sprintf "%s\n%d mph %dhp $%s"
-        engine.name (engine.max_speed * 5) (engine.horsepower * 500) price
+      let str = Printf.sprintf "%s\n%d mph %dhp %s"
+        engine.Engine.name (engine.max_speed * 5) (engine.horsepower * 500) @@
+        M.print ~region engine.Engine.price
       in
       Fonts.Font.write win font ~color:Ega.cyan str ~x:164 ~y;
       y + engine_each_y)

@@ -2,13 +2,14 @@ open! Containers
 module C = Constants
 module R = Renderer
 module B = Backend
+module M = Money
 
 let compute_assets (b:Balance_sheet.t) =
   (* TODO: for some reason, we have different ways of rounding different assets of the balance sheet *)
-  b.operating_funds + b.treasury_stock + b.other_rr_stock + b.facilities + b.industries + b.real_estate + b.track + b.rolling_stock
+  M.(b.operating_funds + b.treasury_stock + b.other_rr_stock + b.facilities + b.industries + b.real_estate + b.track + b.rolling_stock)
 
 let compute_liabilities (b:Balance_sheet.t) =
-  b.outstanding_loans + b.stockholders_equity
+  M.(b.outstanding_loans + b.stockholders_equity)
 
 let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   let player_idx = C.player in
@@ -23,14 +24,14 @@ let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   let line = 8 in
   let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
   let write_money ~x ~y money =
-    let money_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region:(B.get_region s.backend) money in
-    let color = if money < 0 then Ega.bred else Ega.black in
+    let money_s = M.print ~show_neg:false ~spaces:6 ~region:(B.get_region s.backend) money in
+    let color = if M.(money < zero) then Ega.bred else Ega.black in
     write ~x ~y ~color money_s
   in
   let write_total_and_ytd ~y text money oldval =
     write ~x:x_text ~y text;
     write_money ~x:x_total ~y money;
-    let ytd_money = money - oldval in
+    let ytd_money = M.(money - oldval) in
     write_money ~x:x_ytd ~y ytd_money
   in
   write ~x:80 ~y rr_name;
@@ -67,8 +68,8 @@ let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   let y = y + line in
   write_total_and_ytd ~y "Stockholders Equity:" b.stockholders_equity pb.stockholders_equity;
   let y = y + line + line in
-  let profit = assets + compute_liabilities b in
-  let old_profit = compute_assets pb + compute_liabilities pb in
+  let profit = M.(assets + compute_liabilities b) in
+  let old_profit = M.(compute_assets pb + compute_liabilities pb) in
   write_total_and_ytd ~y "PROFIT:" profit old_profit;
   ()
 

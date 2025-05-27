@@ -8,6 +8,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module R = Renderer
 module B = Backend
 module C = Constants
+module M = Money
 
 let save_game (state:State.t) =
   let s1 = Backend.yojson_of_t state.backend |> Yojson.Safe.to_string in
@@ -131,7 +132,7 @@ let main_menu fonts menu_h region =
     let entry str upgrade =
       let price_s =
         let cash = Station.price_of_upgrade upgrade in
-        Printf.sprintf " (%s)" (Utils.show_cash ~region cash)
+        Printf.sprintf " (%s)" (M.print ~region cash)
       in
       make_entry (str^price_s) ~test_enabled:(check_upgrade ~flip:true upgrade)
         (`Checkbox(`ImproveStation upgrade, check_upgrade upgrade))
@@ -292,7 +293,7 @@ let build_station_menu fonts region =
   let open Menu in
   let open MsgBox in
   let open Printf in
-  let price station = Station.price_of station |> Utils.show_cash ~region in
+  let price station = Station.price_of station |> M.print ~region in
   make ~fonts ~heading:"Type of facility?" ~x:176 ~y:16
   [
     make_entry "&CANCEL" @@ `Action(None);
@@ -309,7 +310,7 @@ let build_industry_menu fonts region =
   let entries = Tile.Info.map_industry region @@
     fun (tile, info) ->
       make_entry
-        (sprintf "%s  %s" (Tile.show tile) (Utils.show_cash ~region @@ info.cost * C.build_industry_mult)) @@
+        (sprintf "%s  %s" (Tile.show tile) M.(print ~region @@ info.cost * C.build_industry_mult)) @@
         `Action(Some tile)
   in
   make ~fonts ~heading:"Build..." ~x:176 ~y:16 @@
@@ -331,10 +332,7 @@ let build_bridge_menu fonts region =
   let open MsgBox in
   let open Bridge in
   let open Printf in
-  let price bridge =
-    Bridge.price_of bridge
-    |> Utils.show_cash ~region 
-  in
+  let price bridge = Bridge.price_of bridge |> M.print ~region in
   make ~fonts ~heading:"Type of bridge?" ~x:176 ~y:16
   [
     make_entry "&CANCEL" @@ `Action(None);
@@ -365,9 +363,7 @@ let build_tunnel_menu fonts ~length ~cost ~region =
   let open Menu in
   let open MsgBox in
   let heading =
-    Printf.sprintf "%d mile tunnel required.\nCost: %s"
-      length
-      (Utils.show_cash ~region cost)
+    Printf.sprintf "%d mile tunnel required.\nCost: %s" length (M.print ~region cost)
   in
   let entries =
   [
@@ -597,7 +593,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                 static_entry ~color:Ega.white tilename;
                 static_entry ~color:Ega.white "Right-of-Way costs";
                 static_entry ~color:Ega.white @@
-                  Printf.sprintf "%s per mile" (Utils.show_cash ~region:(B.get_region s.backend) info.cost);
+                  Printf.sprintf "%s per mile" (M.print ~region:(B.get_region s.backend) info.cost);
               ]
               in
               let demand = match info.demand with
@@ -1023,7 +1019,7 @@ let render_main win (s:State.t) v =
          buf_add @@ Goods.short_descr_of good amount)
         msg.goods_amount;
       buf_add "\nRev: ";
-      buf_add @@ Utils.show_cash msg.revenue;
+      buf_add @@ M.print msg.revenue;
       Buffer.contents b
     in
     let x, y = (dims.minimap.x+1), (dims.minimap.y+1) in
@@ -1045,8 +1041,8 @@ let render_main win (s:State.t) v =
 
   let region = B.get_region s.backend in
   let cash = B.get_cash player_idx s.backend in
-  let cash_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region cash in
-  let color = if cash < 0 then Ega.bred else Ega.black in
+  let cash_s = M.print ~show_neg:false ~spaces:6 ~region cash in
+  let color = if M.(cash < zero) then Ega.bred else Ega.black in
   Fonts.Render.write win s.fonts ~color ~idx:4 ~x:264 ~y:66 cash_s;
 
   let month, year = B.get_date s.backend in
@@ -1063,7 +1059,7 @@ let render_main win (s:State.t) v =
     match Backend.get_priority_shipment player_idx s.backend with
     | Some priority ->
       let bonus = Priority_shipment.compute_bonus priority @@ B.get_params s.backend in
-      let bonus_s = Printf.sprintf "bonus: %d,000" bonus in
+      let bonus_s = Printf.sprintf "bonus: %d,000" @@ M.to_int bonus in
       Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3 ~x:258 ~y:194 bonus_s;
     | _ -> ()
   in
