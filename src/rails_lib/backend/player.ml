@@ -30,7 +30,7 @@ let default_monetary = {
     cash = Money.of_int 1000;
     bonds = Money.of_int 500;
     stockholders_equity = Money.of_int @@ -500;
-    owned_industry = 0;
+    owned_industry = Money.zero;
     yearly_interest_payment = Money.of_int 20;
     net_worth = Money.of_int 500;
     in_receivership = false;
@@ -84,7 +84,7 @@ let bonds v = v.m.bonds
 
 let modify_cash f v = {v with m={v.m with cash = f v.m.cash}}
 
-let add_cash x v = modify_cash (fun cash -> cash + x) v
+let add_cash x v = modify_cash (fun cash -> Money.(cash + x)) v
 
 let in_receivership v = v.m.in_receivership
 
@@ -92,22 +92,22 @@ let get_trains v = v.trains
 
 let pay expense money (v:t) =
   let income_statement = Income_statement.deduct expense money v.m.income_statement in
-  let cash = v.m.cash - money in
+  let cash = Money.(v.m.cash - money) in
   {v with m = {v.m with cash; income_statement}}
 
 let earn revenue money (v:t) =
   let income_statement = Income_statement.add_revenue revenue money v.m.income_statement in
-  let cash = v.m.cash + money in
+  let cash = Money.(v.m.cash + money) in
   {v with m = {v.m with cash; income_statement}}
 
 let add_income_stmt income_stmt (v:t) =
   let income_statement = Income_statement.merge v.m.income_statement income_stmt in
-  let cash = v.m.cash + Income_statement.total income_stmt in
+  let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
-  let owned_industry = v.m.owned_industry + cost in
+  let owned_industry = Money.(v.m.owned_industry + cost) in
   {v with m={v.m with owned_industry}}
 
 let get_name station_map cities v = match v.name with
@@ -145,14 +145,14 @@ let remove_station loc v =
   let stations = List.filter (fun loc2 -> not @@ Utils.equal_loc loc loc2) v.stations in
   [%up {v with stations}]
 
-let has_bond (v:t) = v.m.bonds > 0
+let has_bond (v:t) = Money.(v.m.bonds > Money.zero)
 
 let get_interest_rate params v =
   let bond_val = match params.Params.region with
-    | Region.WestUS -> 1000 (* Special treatment *)
-    | _ -> 500
+    | Region.WestUS -> Money.of_int 1000 (* Special treatment *)
+    | _ -> Money.of_int 500
   in
-  let num_bonds = v.m.bonds / bond_val in
+  let num_bonds = Money.(v.m.bonds /~ bond_val) in
   num_bonds - (Climate.to_enum params.climate) + v.m.num_bankruptcies + 6
 
 let check_sell_bond params v =
@@ -161,6 +161,7 @@ let check_sell_bond params v =
     
 let sell_bond params (v:t) =
   if check_sell_bond params v then (
+    let open Money in
     let bonds = v.m.bonds + C.bond_value in
     let cash = v.m.cash + C.bond_value in
     let interest_rate = get_interest_rate params v in
@@ -172,31 +173,34 @@ let sell_bond params (v:t) =
   ) else v
 
 let check_repay_bond (v:t) =
-  let has_bond = v.m.bonds > 0 in
+  let open Money in
+  let has_bond = v.m.bonds > zero in
   let has_cash = v.m.cash > C.bond_value in
   has_bond && (has_cash || not v.m.in_receivership)
 
 let repay_bond (v:t) =
   if check_repay_bond v then
-    let num_bonds = v.m.bonds / C.bond_value in
+    let open Money in
+    let num_bonds = v.m.bonds /~ C.bond_value in
     let interest_saving = v.m.yearly_interest_payment / num_bonds in
     let yearly_interest_payment = v.m.yearly_interest_payment - interest_saving in
     let bonds = v.m.bonds - C.bond_value in
     let v = pay `InterestFees C.bond_value v in
     (* Get rid of bankruptcy if needed *)
-    let in_receivership = if bonds = 0 then false else v.m.in_receivership in
+    let in_receivership = if bonds = Money.zero then false else v.m.in_receivership in
     {v with m = {v.m with bonds; yearly_interest_payment; in_receivership}}
   else v
 
 let check_bankruptcy (v:t) =
+  let open Money in
   not v.m.in_receivership &&
   v.m.bonds > C.min_bonds_for_bankruptcy &&
   v.m.cash < C.max_cash_for_bankruptcy 
 
 let set_bankrupt (params:Params.t) v =  
-  let bonds = ((v.m.bonds + 500) / 1000) * 500 in  (* bonds / 2 rounded up *)
+  let bonds = Money.(((v.m.bonds + of_int 500) / 1000) * 500) in  (* bonds / 2 rounded up *)
   let yearly_interest_payment =
-    v.m.yearly_interest_payment * (B_options.difficulty_to_enum params.options.difficulty) / 4
+    Money.(v.m.yearly_interest_payment * (B_options.difficulty_to_enum params.options.difficulty) / 4)
   in
   let num_bankruptcies = v.m.num_bankruptcies + 1 in
   let v = {v with m =
@@ -244,7 +248,7 @@ let set_active_station active_station v =
 let _calc_base_length_track_land_expense x y ~len ~dir ~climate map =
   let base_length = if Dir.is_diagonal dir then 3 else 2 in
   (* includes climate, for one piece of track *)
-  let track_expense = (base_length * 2 * ((Climate.to_enum climate) + 4)) / 4 in
+  let track_expense = (base_length * 2 * ((Climate.to_enum climate) + 4)) / 4 |> Money.of_int in
   let land_expense = Tilemap.track_land_expense map ~track_expense ~x ~y ~dir ~len in
   base_length, track_expense, land_expense
 
@@ -261,7 +265,7 @@ let update_and_pay_for_track x y ~len ~dir ~climate map v =
   let track_length = v.track_length + len * base_length in
   let () = _add_track x y ~len ~dir v in
   {v with track_length}
-  |> pay `Track (track_expense * len)
+  |> pay `Track (Money.(track_expense * len))
   |> pay `RightOfWay land_expense
 
 let _remove_track x y ~len ~dir v =
@@ -302,7 +306,7 @@ let track_maintenance_random_spot trackmap random v =
     let expense = match Trackmap.get loc trackmap with
       | Some track ->
          let cost = if Track.acts_like_double track then C.track_maintenance_double else C.track_maintenance_single in
-         Dir.Set.fold (fun acc _ -> acc + cost) 0 track.dirs
+         Dir.Set.fold (fun acc _ -> Money.(acc + cost)) Money.zero track.dirs
       | _ -> failwith "Trackmap incorrect behavior"
     in
     pay `TrackMaintenance expense v
@@ -310,7 +314,7 @@ let track_maintenance_random_spot trackmap random v =
 
 let pay_station_maintenance station_map v =
   let expense =
-    List.sum (fun loc ->
+    List.sum_cash (fun loc ->
       let station = Station_map.get_exn loc station_map in
       Station.maintenance_of station
     ) v.stations

@@ -2,6 +2,7 @@ open! Containers
 module C = Constants
 module R = Renderer
 module B = Backend
+module M = Money
 
 open Income_statement_d
 
@@ -22,8 +23,8 @@ let render win (s:State.t) balance_sheet =
   let x_left, x_text, x_ytd, x_total = 16, 20, 160, 240 in
   let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
   let write_money ~x ~y money =
-    let money_s = Utils.show_cash ~show_neg:false ~spaces:6 ~region:(B.get_region s.backend) money in
-    let color = if money < 0 then Ega.bred else Ega.black in
+    let money_s = Money.print ~show_neg:false ~spaces:6 ~region:(B.get_region s.backend) money in
+    let color = if M.(money < zero) then Ega.bred else Ega.black in
     write ~x ~y ~color money_s
   in
   let write_total_and_ytd ?text ~y money oldval =

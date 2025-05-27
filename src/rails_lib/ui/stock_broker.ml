@@ -3,6 +3,7 @@ open Stock_broker_d
 module C = Constants
 module R = Renderer
 module B = Backend
+module M = Money
 
 let src = Logs.Src.create "stock_broker" ~doc:"Stock_broker"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -18,8 +19,8 @@ let make_menu (b:Backend.t) cities region fonts =
     let check_bond (s:State.t) = Backend.player_has_bond player_idx s.backend in
     let open MsgBox in
     make ~fonts ~x:16 ~y:8 [
-      make_entry (sp "&Sell %s bond" @@ Utils.show_cash ~region 500)  @@ `Action `SellBond;
-      make_entry ~test_enabled:check_bond (sp "&Buy %s bond" @@ Utils.show_cash ~region 500) @@ `Action `RepayBond;
+      make_entry (sp "&Sell %s bond" @@ M.print ~region @@ M.of_int 500)  @@ `Action `SellBond;
+      make_entry ~test_enabled:check_bond (sp "&Buy %s bond" @@ M.print ~region @@ M.of_int 500) @@ `Action `RepayBond;
       make_entry ~test_enabled:check_bankruptcy "Declare Bankruptcy" @@ `Action `Declare_bankruptcy;
     ]
   in
@@ -50,19 +51,22 @@ let make_menu (b:Backend.t) cities region fonts =
     let company_menu company_idx =
       let has_money_to_take x _ =
         let cash = Backend.get_player company_idx b |> Player.get_cash in
-        cash >= x
+        M.(cash >= x)
       in
       let has_money_to_give x _ =
         let cash = Backend.get_player player_idx b |> Player.get_cash in
-        cash >= x
+        M.(cash >= x)
       in
       make ~fonts [
         make_entry "Financial Report" @@ `Action(`OperateRR(company_idx, `FinancialReport));
-        make_entry (sp "Take %s" @@ Utils.show_cash ~region 100) @@ `Action(`OperateRR(company_idx, `TakeMoney 100));
-        make_entry ~test_enabled:(has_money_to_give 500)(sp "Take %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `TakeMoney 250));
-        make_entry ~test_enabled:(has_money_to_take 2000) (sp "Take %s" @@ Utils.show_cash ~region 500) @@ `Action(`OperateRR(company_idx, `TakeMoney 500));
-        make_entry (sp "Give %s" @@ Utils.show_cash ~region 100) @@ `Action(`OperateRR(company_idx, `GiveMoney 100));
-        make_entry ~test_enabled:(has_money_to_give 500) (sp "Give %s" @@ Utils.show_cash ~region 250) @@ `Action(`OperateRR(company_idx, `GiveMoney 200));
+        make_entry (sp "Take %s" @@ M.print ~region @@ M.of_int 100) @@ `Action(`OperateRR(company_idx, `TakeMoney 100));
+        make_entry ~test_enabled:(has_money_to_give @@ M.of_int 500)(sp "Take %s" @@ M.print ~region @@ M.of_int 250)
+          @@ `Action(`OperateRR(company_idx, `TakeMoney 250));
+        make_entry ~test_enabled:(has_money_to_take @@ M.of_int 2000) (sp "Take %s" @@ M.print ~region @@ M.of_int 500)
+          @@ `Action(`OperateRR(company_idx, `TakeMoney 500));
+        make_entry (sp "Give %s" @@ M.print ~region @@ M.of_int 100) @@ `Action(`OperateRR(company_idx, `GiveMoney 100));
+        make_entry ~test_enabled:(has_money_to_give @@ M.of_int 500) (sp "Give %s" @@ M.print ~region @@ M.of_int 250)
+          @@ `Action(`OperateRR(company_idx, `GiveMoney 200));
         make_entry "Build Track" @@ `Action(`OperateRR(company_idx, `BuildTrack));
         make_entry "Repay Bond" @@ `Action(`OperateRR(company_idx, `RepayBond));
       ]
@@ -133,15 +137,15 @@ let render win (s:State.t) v =
         true, color
       )
     in
-    let cash_s = Utils.show_cash ~region ~spaces:7 @@ B.get_cash player_idx backend in
+    let cash_s = M.print ~region ~spaces:7 @@ B.get_cash player_idx backend in
     write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
     let y = y + line in
-    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ Utils.show_cash ~region ~spaces:6 @@ B.get_bonds player_idx backend;
+    write ~color ~x:x_right ~y @@ sp "Bonds:%s" @@ M.print ~region ~spaces:6 @@ B.get_bonds player_idx backend;
     let y = y + line in
-    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ Utils.show_cash ~region ~spaces:8 @@ B.get_net_worth player_idx backend;
+    write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ M.print ~region ~spaces:8 @@ B.get_net_worth player_idx backend;
     let per_s = if is_ai then "/" else " per " in
     write ~color ~x:x_right ~y @@ sp "Stock at %s.00%sshare"
-      (Utils.show_cash ~ks:false ~region @@ Stock_market.share_price player_idx s.backend.stocks) per_s;
+      (M.print ~ks:false ~region @@ Stock_market.share_price player_idx s.backend.stocks) per_s;
     let y = y + line in
     let treasury, non = Stock_market.treasury_shares player_idx s.backend.stocks, Stock_market.non_treasury_shares player_idx s.backend.stocks in
     write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" non treasury;
@@ -227,8 +231,8 @@ let handle_event (s:State.t) v (event:Event.t) =
           let open MsgBox in
           let menu =
             let text = Printf.sprintf "Management demands %s.00\n per share for treasury stock.\nTotal Cost: %s.\n"
-               (Utils.show_cash ~ks:false share_price)
-               (Utils.show_cash @@ share_price * shares_to_buy)
+               (M.print ~ks:false share_price)
+               (M.print @@ M.(share_price * shares_to_buy))
             in
             make ~fonts:s.fonts ~x:180 ~y:8 [
               static_entry ~color:Ega.white text;
@@ -266,18 +270,18 @@ let handle_event (s:State.t) v (event:Event.t) =
         let text = sp "%s\nRevenue YTD: %s\nYearly Interest: %s%s"
           (B.get_name company_idx b)
           (Income_statement.total_revenue player.m.income_statement
-           |> Utils.show_cash ~region:(B.get_region b))
+           |> M.print ~region:(B.get_region b))
           (player.m.yearly_interest_payment
-           |> Utils.show_cash ~region:(B.get_region b))
+           |> M.print ~region:(B.get_region b))
           build_order_s
         in
         false, {v with modal=basic_msgbox text}, nobaction
 
     | Menu.On(`OperateRR (company, `TakeMoney amount)) ->
-        false, v, OperateRR{player_idx; company; action=RRTakeMoney amount}
+        false, v, OperateRR{player_idx; company; action=RRTakeMoney(M.of_int amount)}
 
     | Menu.On(`OperateRR (company, `GiveMoney amount)) ->
-        false, v, OperateRR{player_idx; company; action=RRGiveMoney amount}
+        false, v, OperateRR{player_idx; company; action=RRGiveMoney(M.of_int amount)}
 
       (* TODO: fill this in *)
     | Menu.On(`OperateRR (company, `BuildTrack)) ->
@@ -296,7 +300,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
 let handle_msg (s:State.t) v ui_msg =
   (* Create a msgbox *)
-  let show_cash = Utils.show_cash ~show_neg:false ~region:(B.get_region s.backend) in
+  let show_cash = M.print ~show_neg:false ~region:(B.get_region s.backend) in
   let modal =
     let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
     match ui_msg with
@@ -333,7 +337,7 @@ let handle_msg (s:State.t) v ui_msg =
           let text = sp "%s transferred to\n%s" (show_cash amount) (B.get_name company s.backend) in
           basic_msgbox text
       | AiBondRepaid {player_idx; _} when Owner.(player_idx = C.player) ->
-          let text = sp "%s bond repaid." (show_cash 500) in
+          let text = sp "%s bond repaid." (show_cash @@ M.of_int 500) in
           basic_msgbox text
       | BankruptcyDeclared {player_idx} when Owner.(player_idx = C.player) ->
           let company_name = Backend.get_name player_idx s.backend in
@@ -344,5 +348,4 @@ let handle_msg (s:State.t) v ui_msg =
     | _ -> None
   in
   [%up {v with modal}]
-
 

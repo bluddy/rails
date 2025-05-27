@@ -2,6 +2,8 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
 module B = Backend
+module M = Money
+module List = Utils.List
 
 include Balance_sheet_d
 
@@ -12,10 +14,10 @@ let calc_real_estate region track_map tile_map player_idx =
       let info = Tile.Info.get region tile in
       let cost = info.cost in
       let track_dist = Track.calc_dist ~use_double:false track in
-      acc + track_dist * cost
+      M.(cost * track_dist + acc)
     else acc)
   track_map
-  ~init:0
+  ~init:M.zero
 
 let create (s:State.t) player_idx =
   let player = B.get_player player_idx s.backend in
@@ -23,10 +25,9 @@ let create (s:State.t) player_idx =
   let treasury_stock = Stock_market.treasury_share_value player_idx s.backend.stocks in
   let other_rr_stock = Stock_market.total_owned_stock_value player_idx ~exclude_self:true s.backend.stocks in
   let facilities = 
-    List.fold_left (fun acc loc ->
+    List.sum_cash (fun loc ->
       let station = Station_map.get_exn loc s.backend.stations in
-      acc + Station.value_of station + Station.total_upgrade_value station)
-    0
+      M.(Station.value_of station + Station.total_upgrade_value station))
     player.stations
   in
   let industries = player.m.owned_industry in
@@ -36,8 +37,8 @@ let create (s:State.t) player_idx =
   let track = dist * 3 / 2 in
   let engine_cost = Trainmap.total_engine_value player.trains in
   let car_cost = Trainmap.total_car_value player.trains in
-  let rolling_stock = engine_cost + car_cost in
-  let outstanding_loans = -player.m.bonds in
+  let rolling_stock = M.(engine_cost + car_cost) in
+  let outstanding_loans = M.neg player.m.bonds in
   let stockholders_equity = player.m.stockholders_equity in
   {
     operating_funds;

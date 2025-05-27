@@ -158,12 +158,14 @@ module Info = struct
   end)
 
   type nonrec t = {
-    cost: int;
+    cost: Money.t;
     supply: (Goods.t * int) list;
     demand: (Goods.t * int) list;
   }
 
-  let make ?(supply=[]) ?(demand=[]) cost = {
+  let make ?(supply=[]) ?(demand=[]) cost =
+  let cost = Money.of_int cost in
+  {
     cost;
     supply=supply;
     demand=demand;
@@ -293,7 +295,7 @@ module Info = struct
 
   let build_cost_of_tile region tile =
     let data = get region tile in
-    data.cost * C.build_industry_mult
+    Money.(data.cost * C.build_industry_mult)
 
 end
 

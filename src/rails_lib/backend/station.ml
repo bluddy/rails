@@ -13,6 +13,8 @@ let min_demand = C.car_full_demand
 let min_demand_mail_simple = min_demand / 2
 let max_supply_with_upgrade = min_demand * 20
 
+let moi = Money.of_int
+
 type kind =
   [
   | `SignalTower
@@ -35,16 +37,17 @@ let to_range = function
   | `Terminal -> 3
 
 let price_of = function
-  | `SignalTower -> 25
-  | `Depot -> 50
-  | `Station -> 100
-  | `Terminal -> 200
+  | `SignalTower -> moi 25
+  | `Depot -> moi 50
+  | `Station -> moi 100
+  | `Terminal -> moi 200
 
 let maintenance_of_kind = function
-  | `SignalTower -> 1
-  | `Depot -> 2
-  | `Station -> 3
-  | `Terminal -> 4
+  | `SignalTower -> moi 1
+  | `Depot -> moi 2
+  | `Station -> moi 3
+  | `Terminal -> moi 4
+
 
 let is_big_station (x:kind) = match x with
   | `SignalTower -> false
@@ -65,15 +68,15 @@ type upgrade =
   [@@deriving enum, show, yojson]
 
 let price_of_upgrade = function
-  | MaintenanceShop -> 25
-  | EngineShop -> 100 (* ? *)
-  | SwitchingYard -> 50
-  | ColdStorage -> 25
-  | GoodsStorage | ArmsStorage -> 25
-  | PostOffice -> 50
-  | Restaurant -> 25
-  | LivestockPens | GrapeStorage -> 25
-  | Hotel -> 100
+  | MaintenanceShop -> moi 25
+  | EngineShop -> moi 100 (* ? *)
+  | SwitchingYard -> moi 50
+  | ColdStorage -> moi 25
+  | GoodsStorage | ArmsStorage -> moi 25
+  | PostOffice -> moi 50
+  | Restaurant -> moi 25
+  | LivestockPens | GrapeStorage -> moi 25
+  | Hotel -> moi 100
 
 module Upgrades = Bitset.Make(struct
   type t = upgrade [@@deriving yojson]
@@ -208,10 +211,7 @@ let has_upgrade v upgrade =
   Upgrades.mem upgrades upgrade
 
 let total_upgrade_value v =
-  Upgrades.fold (fun acc upgrade ->
-    acc + price_of_upgrade upgrade)
-    0 @@
-    get_upgrades v
+  Upgrades.fold (fun acc upgrade -> Money.(acc + price_of_upgrade upgrade)) Money.zero @@ get_upgrades v
 
 let can_maintain v =
   has_upgrade v EngineShop || has_upgrade v MaintenanceShop

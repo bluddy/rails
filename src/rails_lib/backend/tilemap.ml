@@ -443,16 +443,17 @@ let track_land_expense ~track_expense ~x ~y ~dir ~len v =
   let calc_cost x y =
     let tile = get_tile_xy x y v in
     let info = Tile.Info.get v.region tile in
-    info.cost * track_expense / 3
+    (* Really this is a ratio of the track expense *)
+    Money.(info.cost *~ track_expense / 3)
   in
   let _, _, expense =
     Iter.fold (fun (x, y, expense) _ ->
       let cost1 = calc_cost x y in
       let x2, y2 = Dir.adjust dir x y in
       let cost2 = calc_cost x2 y2 in
-      (x2, y2, expense + cost1 + cost2)
+      (x2, y2, Money.(expense + cost1 + cost2))
     )
-    (x, y, 0)
+    (x, y, Money.zero)
     Iter.(0 -- (len-1))
   in
   expense

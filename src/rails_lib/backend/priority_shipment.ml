@@ -1,6 +1,7 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 module C = Constants
+module M = Money
 
 type t = {
   freight: Freight.t;
@@ -67,10 +68,10 @@ let compute_bonus pr_data (params:Params.t) =
   let result = (dist + 32) * bonus_var * 8 / age in
   let bonus = Utils.clip ~min:0 ~max:999 result in
   let bonus = if Region.is_europe params.region then bonus + bonus / 2  else bonus in
-  bonus
+  bonus |> M.of_int
 
 let should_be_cancelled pr_data params =
-  compute_bonus pr_data params < C.priority_min_bonus
+  M.(compute_bonus pr_data params < C.priority_min_bonus)
 
 let check_priority_delivery pr_data stations =
   let dest_loc = pr_data.dst_loc in

@@ -7,6 +7,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
 module C = Constants
+module M = Money
 
 let max_stops = 4
 
@@ -114,7 +115,7 @@ type state =
 type periodic = {
   mutable dist_traveled: int;
   ton_miles: int;
-  revenue: int;
+  revenue: Money.t;
 } [@@deriving yojson, show]
 
 type rw = Utils.Infix.rw
@@ -220,7 +221,7 @@ let make ((x,y) as station) engine cars other_station ~dir player =
   let make_periodic () = {
       dist_traveled=0;
       ton_miles=0;
-      revenue=0;
+      revenue=M.zero;
     }
   in
   let v = {
@@ -466,7 +467,7 @@ let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
     | Passengers -> money * 3 / 2
     | _ -> money
   in 
-  money / 2 (* Seems like it's divided in the end *)
+  money / 2 |> M.of_int (* Seems like it's divided in the end *)
 
 let update_speed ~cycle ~cycle_check ~cycle_bit (v:rw t) =
   (* Update current train speed based on target speed and cycle *)

@@ -11,7 +11,7 @@ let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
   (* return time for changing cars *)
   match stop.consist_change with
   | None -> (* No adjustment *)
-      0, 0, cars
+      0, Money.zero, cars
   | Some stop_cars ->
       let train_cars_by_good = 
         let h = Hashtbl.create 10 in
@@ -43,7 +43,7 @@ let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
         train_cars_by_good
         0
       in
-      let expense = (added_cars - removed_cars) * C.car_cost in
+      let expense = Money.mult C.car_cost (added_cars - removed_cars) in
       let work_done = removed_cars + added_cars in
       work_done, expense, train_cars
                            

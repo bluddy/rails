@@ -9,6 +9,7 @@ module IntMap = Utils.IntMap
 module IntSet = Utils.IntSet
 module List = Utils.List
 module U = Utils
+module M = Money
 
 module LocMap = U.LocMap
 module LocSet = U.LocSet
@@ -25,13 +26,13 @@ type ai_player = {
   opponent: Opponent.t;
   city1: U.loc; (* home city *)
   city2: U.loc option; (* first route. Determines name *)
-  cash: int; (* all x1000 *)
-  bonds: int;
+  cash: Money.t; (* all x1000 *)
+  bonds: Money.t;
   build_order: (U.loc * U.loc) option;  (* order given to subservient company (city_idx, city_idx)*)
   track_length: int;
-  yearly_interest: int;
-  net_worth: int;
-  revenue_ytd: int;
+  yearly_interest: Money.t;
+  net_worth: Money.t;
+  revenue_ytd: Money.t;
   expand_ctr: int;  (* When the AI player wants to expand *)
 } [@@deriving yojson]
 
@@ -77,10 +78,11 @@ let new_ai_idx () = Owner.create_ai ()
 
     (* Update valuation only for AI players *)
 let update_valuation player stocks v =
+  let open M in
   let loans = v.bonds / 10 in
   let cash = v.cash / 10 in
   let stock_value = Stock_market.total_owned_stock_value player stocks in
-  let net_worth = cash - loans + v.track_length * 2 + stock_value in
+  let net_worth = cash - loans +~ (Int.mul v.track_length 2) + stock_value in
   {v with net_worth}
 
 let ai_of_city city v = LocMap.get city v.ai_of_city
@@ -110,7 +112,7 @@ let get_net_worth idx v = get_ai_exn idx v |> fun player -> player.net_worth
 let get_track_length idx v = get_ai_exn idx v |> fun player -> player.track_length
 
 let add_cash idx cash v =
-  modify_ai idx v (fun ai_player -> {ai_player with cash=ai_player.cash + cash})
+  modify_ai idx v (fun ai_player -> {ai_player with cash=M.(ai_player.cash + cash)})
 
 let get_name player ~cities v =
   let p = get_ai_exn player v in
@@ -139,12 +141,15 @@ let _route_value city1 city2 ~tilemap ~(params:Params.t) =
   let age = params.year - C.ref_year_ai_route_value in
   (* More demanding over time *)
   let value = total / age in
-  if Region.is_west_us params.region then
-    (* east-west routes have more value *)
-    let dx = abs @@ fst city1 - fst city2 in
-    let dy = abs @@ snd city1 - snd city2 in
-    ((3 * dx + dy) * value) / ((dx + dy) * 2)
-  else value
+  let value =
+    if Region.is_west_us params.region then
+      (* east-west routes have more value *)
+      let dx = abs @@ fst city1 - fst city2 in
+      let dy = abs @@ snd city1 - snd city2 in
+      ((3 * dx + dy) * value) / ((dx + dy) * 2)
+    else value
+  in
+  value |> M.of_int
 
   (* Simulate earning money on a route *)
 let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap v =
@@ -153,17 +158,16 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap v
   let ai_player = Owner.Map.find player_idx v.ais in
   let value = _route_value city1 city2 ~tilemap ~params in
   let div = if city_rate_war city1 v || city_rate_war city2 v then 6 else 3 in
-  let value = value / div in
-  let value =
-    value * (ai_player.opponent.management + Climate.to_enum params.climate + 3)
-  in
+  let value = M.div value div in
+  let value = M.mult value (ai_player.opponent.management + Climate.to_enum params.climate + 3) in
   (* Higher difficulty -> earns more *)
   let div = if owned_by_player stocks ai_player.idx then 10
             else 10 - B_options.difficulty_to_enum params.options.difficulty in
-  let value = value / div in
-  let value = if U.equal_loc ai_player.city1 city2 && main_player_net_worth >= ai_player.net_worth
-              then value * 2 else value
+  let value = M.div value div in
+  let value = if U.equal_loc ai_player.city1 city2 && Money.(main_player_net_worth >= ai_player.net_worth)
+              then M.(value * 2) else value
   in
+  let open M in
   let revenue_ytd = ai_player.revenue_ytd + value in
   let cash = if ai_player.cash < C.ai_max_cash then
     ai_player.cash + value else ai_player.cash
@@ -218,20 +222,20 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
   in
   if not create && not force then `Update v else
   let yearly_interest =
-    5 * (8 - opponent.financial_skill - Climate.to_enum params.climate)
+    5 * (8 - opponent.financial_skill - Climate.to_enum params.climate) |> M.of_int
   in
   let ai = {
     idx = new_ai_idx ();
     opponent;
     city1=city;
     city2=None;
-    cash=900;
-    bonds=500;
+    cash=M.of_int 900;
+    bonds=M.of_int 500;
     build_order=None;
     track_length=5;
     yearly_interest;
-    net_worth=50;
-    revenue_ytd = (params.time + 2000) / 20;
+    net_worth=M.of_int 50;
+    revenue_ytd = (params.time + 2000) / 20 |> M.of_int;
     expand_ctr=20;
   } in
   let ais = Owner.Map.add ai.idx ai v.ais in
@@ -462,8 +466,8 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
         let dist = Utils.classic_dist src_loc tgt_loc in
         let cash =
           let v = (Climate.to_enum params.Params.climate) - ai_player.opponent.expansionist + 6 in
-          let cost = v * dist * 3 + 100 in
-          ai_player.cash - cost
+          let cost = v * dist * 3 + 100 |> M.of_int in
+          M.(ai_player.cash - cost)
         in
         let track_length = ai_player.track_length + dist * 5 in
         let expand_ctr = 0 in
@@ -518,7 +522,7 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_i
     if owned_by_player && Option.is_none ai_player.build_order then `Update v else
     let ai_player =
       let expand_ctr =
-        let value = if ai_player.net_worth >= player_net_worth then 2 else 4 in
+        let value = if M.(ai_player.net_worth >= player_net_worth) then 2 else 4 in
         ai_player.expand_ctr + value * ai_player.opponent.expansionist
       in
       {ai_player with expand_ctr}
@@ -555,17 +559,17 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_i
         let route_value_dist_check =
           let route_value = _route_value src_loc tgt_loc ~tilemap ~params in
           let mult = if is_home_city then 2 else 1 in
-          let route_value = route_value * mult in
-          let max_dist = (6 * route_value) / (Climate.plus_4 params.climate) + (ai_player.cash / 32) in
+          let route_value = M.mult route_value mult in
+          let max_dist = M.((route_value * 6) / (Climate.plus_4 params.climate) + (ai_player.cash / 32)) |> M.to_int in
           max_dist >= dist * 3
         in
-        let bond_check = ai_player.opponent.financial_skill * 500 >= ai_player.bonds in 
+        let bond_check = ai_player.opponent.financial_skill * 500 >= (ai_player.bonds |> M.to_int) in 
         (first_check && city_check && route_value_dist_check && bond_check)
     in
     if not combined_check then `Update v else
     let cash_check =
-      let build_cost = Climate.plus_4 params.climate * dist * 3 + 100 in
-      ai_player.cash > build_cost
+      let build_cost = Climate.plus_4 params.climate * dist * 3 + 100 |> M.of_int in
+      M.(ai_player.cash > build_cost)
     in
     let will_check = ai_player.expand_ctr >= dist in
     if not (cash_check && will_check) then `Update v else
@@ -661,7 +665,7 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
   let last_ai_to_buy_player_stock =
     if cycle land 0xC0 = 0 then None else v.last_ai_to_buy_player_stock
   in
-  let player_has_more_cash = player_cash > ai_player.cash in
+  let player_has_more_cash = M.(player_cash > ai_player.cash) in
   let player_in_ai_shares = Stock_market.owned_shares player_idx ~owned:ai_idx stocks in
   let ai_treasury_shares = Stock_market.treasury_shares ai_idx stocks in
   let ai_controls_itself = Stock_market.controls_own_company ai_idx stocks in
@@ -673,7 +677,7 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
   in
   let player_valuation =
     (* NOTE: what about stock ownership? *)
-    player_cash + Stock_market.treasury_share_value player_idx stocks
+    M.(player_cash + Stock_market.treasury_share_value player_idx stocks)
   in
   let player_share_price = Stock_market.share_price player_idx stocks in
   let player_total_shares = Stock_market.total_shares player_idx stocks / 10 in
@@ -687,36 +691,36 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
     let shares_to_control_player = player_total_shares / 2 - ai_in_player_shares + 1
         |> clip_100
     in
-    let cash_to_control_player = shares_to_control_player * player_share_price * 10 in
-    let missing_cash = cash_to_control_player - ai_player.cash in
-    let num_loans_needed = missing_cash / C.bond_value + 1 |> clip_100 in
+    let cash_to_control_player = M.(player_share_price * shares_to_control_player * 10) in
+    let missing_cash = M.(cash_to_control_player - ai_player.cash) in
+    let num_loans_needed = M.(missing_cash /~ C.bond_value) + 1 |> clip_100 in
     let ai_loans_plus_shares = num_loans_needed + shares_to_control_player in
 
     let player_treasury_shares = Stock_market.treasury_shares player_idx stocks in
     let shares_for_player_to_control_self =
       player_total_shares / 2 - player_treasury_shares |> clip_100
     in
-    let player_cash_to_own_self = shares_for_player_to_control_self * player_share_price * 10 in
+    let player_cash_to_own_self = M.(player_share_price * shares_for_player_to_control_self * 10) in
     let player_num_loans =
-      (player_cash_to_own_self - player_cash) / C.bond_value + 1 |> clip_100
+      M.((player_cash_to_own_self - player_cash) /~ C.bond_value) + 1 |> clip_100
     in
     let player_loans_plus_shares = player_num_loans + shares_for_player_to_control_self in
     ai_loans_plus_shares, player_loans_plus_shares, shares_to_control_player, shares_for_player_to_control_self
   in
   let ai_try_takeover =
     match last_ai_to_buy_player_stock with
-    | None when player_valuation > 250 -> 
+    | None when M.(player_valuation > M.of_int 250) -> 
          player_loans_to_own_self_plus_shares > ai_takeover_loans_plus_shares
     | _-> false
   in
-  let ai_num_bonds = Region.num_bonds params.region ai_player.bonds in
+  let ai_num_bonds = Region.num_bonds params.region (M.to_int ai_player.bonds) in
   let bond_interest =
-    ai_num_bonds - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) + 8
+    ai_num_bonds - ai_player.opponent.financial_skill - (Climate.to_enum params.climate) + 8 |> M.of_int
   in
   let avoid_bonds =
-    if ai_player.bonds = 0
+    if M.(ai_player.bonds = zero)
        || player_in_ai_shares >= ai_treasury_shares then false else
-      let num_loans_approx = ai_player.bonds / C.bond_value in
+      let num_loans_approx = M.(ai_player.bonds /~ C.bond_value) in
       let bond_sum_val =
         Iter.fold (fun acc idx ->
           let div = if Region.is_west_us params.region then 2 else 1 in
@@ -724,20 +728,21 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
           acc + (value * 5 + 40))
         0
         Iter.(0 -- num_loans_approx)
+        |> M.of_int
       in
-      ai_player.yearly_interest > bond_sum_val
+      M.(ai_player.yearly_interest > bond_sum_val)
   in
   let ai_share_price = Stock_market.share_price ai_idx stocks in
-  let ai_can_afford_own_share = ai_player.cash > ai_share_price * 10 in
+  let ai_can_afford_own_share = M.(ai_player.cash > ai_share_price * 10) in
 
   let take_out_bond =
-    let enough_cash_vs_bond = (6 - bond_interest) * 100 > ai_player.cash in
-    let reject_bond2 = avoid_bonds || bond_interest >= 10 in
+    let enough_cash_vs_bond = M.((of_int 6 - bond_interest) * 100 > ai_player.cash) in
+    let reject_bond2 = avoid_bonds || M.(bond_interest >= M.of_int 10) in
     if enough_cash_vs_bond && reject_bond2 then false else
-    let ai_can_afford_player_share = player_share_price * 10 < ai_player.cash in
+    let ai_can_afford_player_share = M.(player_share_price * 10 < ai_player.cash) in
     if not ai_can_afford_own_share && ai_doing_badly && reject_bond2 then false else
     let reject_bond4 = ai_try_takeover || ai_can_afford_player_share || reject_bond2 in
-    let bond_level_tolerated = ai_player.opponent.financial_skill >= ai_player.bonds / C.bond_value in
+    let bond_level_tolerated = ai_player.opponent.financial_skill >= M.(ai_player.bonds /~ C.bond_value) in
     if (ai_takeover_loans_plus_shares <> shares_for_player_to_control_self
       || ai_takeover_loans_plus_shares <= shares_to_control_player
       || not bond_level_tolerated) && reject_bond4 then false else
@@ -746,27 +751,27 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
   in
   if take_out_bond then `TakeOutBond(bond_interest) else
   let ai_total_shares = Stock_market.total_shares ai_idx stocks in
-  let earnings_per_share = (ai_player.revenue_ytd * 100) / ai_total_shares in
+  let earnings_per_share = M.((ai_player.revenue_ytd * 100) / ai_total_shares) in
   (* Why add 10 here? *)
   let buy_own_shares =
-    (ai_doing_badly || earnings_per_share / 20 > ai_share_price || ai_player.cash > 20000)
+    (ai_doing_badly || M.(earnings_per_share / 20 > ai_share_price) || M.(ai_player.cash > of_int 20000))
     && ai_can_afford_own_share
     && (player_in_ai_shares + ai_treasury_shares < ai_total_shares)
     && ai_treasury_shares + 10 < ai_total_shares
   in
   if buy_own_shares then `BuyOwnShares else
   let ai_be_active =
-    let div = if company_is_last_active then 2 else 3 in
+    let divide = if company_is_last_active then 2 else 3 in
     (* TODO: why 10? *)
     let ai_share_advantage = ai_treasury_shares - player_in_ai_shares - 10 in
-    let ai_share_adv_value = ai_share_advantage * ai_share_price * (B_options.difficulty_enum params.options) in
-    let ai_value = ai_share_adv_value / div + ai_player.cash - ai_player.bonds in
+    let ai_share_adv_value = M.(ai_share_price * ai_share_advantage * (B_options.difficulty_enum params.options)) in
+    let ai_value = M.(ai_share_adv_value / divide + ai_player.cash - ai_player.bonds) in
     (* TODO: is this a bug? What is this amount? Should it be ai_in_player_shares? *)
-    let player_value = (player_total_shares / 2 - ai_treasury_shares + 10) * player_share_price in
-    ai_value > player_value
+    let player_value = M.mult player_share_price (player_total_shares / 2 - ai_treasury_shares + 10) in
+    M.(ai_value > player_value)
   in
   let buy_player_shares =
-    let ai_can_afford_player_share = player_share_price * 10 <= ai_player.cash in
+    let ai_can_afford_player_share = M.(player_share_price * 10 <= ai_player.cash) in
     let player_controls_self = Stock_market.controls_own_company player_idx stocks in
     let ai_controls_player = Stock_market.controls_company ai_idx ~target:player_idx stocks in
     let first_year = params.year = params.year_start in
@@ -780,12 +785,12 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
     && (not first_year) && other_ai_in_player_shares = 0 && ai_player.track_length > 32
   in
   if buy_player_shares then `BuyPlayerShares else
-  let decent_money_situtation = ai_player.cash + (Climate.to_enum params.climate) * 500 > 3000 in
-  if avoid_bonds || decent_money_situtation then `PayBackBond else
+  let decent_money_situation = M.(ai_player.cash + (of_int @@ Climate.to_enum params.climate) * 500 > of_int 3000) in
+  if avoid_bonds || decent_money_situation then `PayBackBond else
   let ai_sell_own_stock =
     let ai_more_self_shares = player_in_ai_shares + 20 < ai_treasury_shares in
-    let ai_has_bond = ai_player.bonds > 0 in
-    let worth_selling = earnings_per_share / 16 < ai_share_price in
+    let ai_has_bond = M.(ai_player.bonds > of_int 0) in
+    let worth_selling = M.(earnings_per_share / 16 < ai_share_price) in
     let odd_year = params.year land 1 <> 0 in
     if ai_more_self_shares && ai_has_bond && v.financial_ctr land 0x3C = 0 && odd_year && worth_selling then true else
     if company_is_last_active && ai_be_active && ai_treasury_shares > 0 then true
@@ -793,7 +798,7 @@ let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t
   in
   if ai_sell_own_stock then `SellOwnShares else
   if ai_in_player_shares ai_idx stocks > 0 && company_is_last_active
-    && (ai_player.bonds > 0 || Option.is_some last_ai_to_buy_player_stock || ai_player.cash < 100)
+    && M.(ai_player.bonds > zero || Option.is_some last_ai_to_buy_player_stock || ai_player.cash < of_int 100)
     then `SellPlayerShares
     else `Nothing
 
@@ -810,13 +815,13 @@ let financial_text ~cities ~region ui_msg v =
         (if buy then "adds" else "sells")
         C.num_buy_shares
         (if buy then "rises" else "falls")
-        (Utils.show_cash ~region ~ks:false price) 
+        (Money.print ~region ~ks:false price) 
   | AiTakesOutBond{ai_idx; _} ->
       Printf.sprintf
         "%s\n\
         takes out %s loan.\n" (* NOTE: always 500, even in west us *)
         (name ai_idx)
-        (Utils.show_cash ~region C.bond_value)
+        (Money.print ~region C.bond_value)
   | AiSellsPlayerStock {ai_idx; _} ->
       Printf.sprintf
         "%s\n\
@@ -843,7 +848,7 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
     let cost, stocks = Stock_market.ai_buy_own_stock ~ai_idx stocks in
     let price = Stock_market.share_price ai_idx stocks in
     let v = modify_ai ai_idx v (fun ai_player ->
-      let cash = ai_player.cash - cost in
+      let cash = M.(ai_player.cash - cost) in
       {ai_player with cash})
     in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
@@ -853,7 +858,7 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
     let profit, stocks = Stock_market.ai_sell_own_stock ~ai_idx stocks in
     let price = Stock_market.share_price ai_idx stocks in
     let v = modify_ai ai_idx v (fun ai_player ->
-      let cash = ai_player.cash + profit in
+      let cash = M.(ai_player.cash + profit) in
       {ai_player with cash})
     in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
@@ -864,19 +869,20 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
     let takeover = Stock_market.controls_company ai_idx ~target:C.player stocks in
     let stocks = if takeover then Stock_market.hostile_takeover ~ai_idx ~player_idx stocks else stocks in
     let v = modify_ai ai_idx v (fun ai_player ->
+      let open M in
       let cash = ai_player.cash - cost in
       let cash = if takeover then cash + player_cash else cash in
       {ai_player with cash})
     in
     let v = {v with last_ai_to_buy_player_stock=Some ai_idx} in
-    let player_cash = if takeover then 0 else player_cash in
+    let player_cash = if takeover then M.zero else player_cash in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
     v, stocks, player_cash, [Ui_msg.AiBuysPlayerStock{opponent; player_idx; ai_idx; takeover}]
 
   | `SellPlayerShares ->
     let profit, stocks = Stock_market.ai_sell_player_stock ~ai_idx ~player_idx stocks in
     let v = modify_ai ai_idx v (fun ai_player ->
-      let cash = ai_player.cash + profit in
+      let cash = M.(ai_player.cash + profit) in
       {ai_player with cash})
     in
     let opponent = (get_ai_exn ai_idx v).opponent.name in
@@ -884,12 +890,13 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
 
   | `PayBackBond ->
       let v = modify_ai ai_idx v (fun ai_player ->
+        let open M in
         let cash = ai_player.cash - C.bond_value in
-        let num_loans = ai_player.bonds / C.bond_value in
+        let num_loans = ai_player.bonds /~ C.bond_value in
         let interest_delta = ai_player.yearly_interest / num_loans in
         let yearly_interest = ai_player.yearly_interest - interest_delta in
         let bonds = ai_player.bonds - C.bond_value in
-        let cash = cash - 5 in (* Why? *)
+        let cash = cash - of_int 5 in (* Why? *)
         {ai_player with cash; bonds; yearly_interest}
       )
       in
@@ -897,7 +904,8 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
 
   | `TakeOutBond(bond_interest) ->
     let v = modify_ai ai_idx v (fun ai_player ->
-      let cash = ai_player.cash + C.bond_value - 5 in
+      let open M in
+      let cash = ai_player.cash + C.bond_value - of_int 5 in
       let yearly_interest = ai_player.yearly_interest + bond_interest * 5 in
       let bonds = ai_player.bonds + C.bond_value in
       {ai_player with cash; yearly_interest; bonds}

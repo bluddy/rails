@@ -1,3 +1,4 @@
+module M = Money
 
 type t =
   | Wood
@@ -6,6 +7,6 @@ type t =
   [@@deriving eq, hash, yojson, show]
 
 let price_of = function
-  | Wood -> 50
-  | Stone -> 400
-  | Iron -> 200
+  | Wood -> M.of_int 50
+  | Stone -> M.of_int 400
+  | Iron -> M.of_int 200

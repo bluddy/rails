@@ -2,6 +2,7 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module C = Constants
+module M = Money
 
 let src = Logs.Src.create "stock_market" ~doc:"Stock_market"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -14,7 +15,7 @@ type t = {
      First level: owner. Second level: owned
      *)
   ownership: (int Owner.Map.t) Owner.Map.t;
-  prices: Money.t Owner.Map.t; (* share prices *)
+  prices: M.t Owner.Map.t; (* share prices *)
   totals: int Owner.Map.t; (* total number of shares *)
   price_histories: price_history Owner.Map.t; (* prices over time in fiscal periods *)
 } [@@deriving yojson]
@@ -31,15 +32,18 @@ let player_starting_share_price difficulty =
 
 let add_human_player player_idx difficulty v =
   let totals = Owner.Map.add player_idx C.Stock.starting_num v.totals in
-  let prices = Owner.Map.add player_idx (Money.of_int @@ B_options.difficulty_to_enum difficulty + 7) v.prices in
+  let prices = Owner.Map.add player_idx (M.of_int @@ B_options.difficulty_to_enum difficulty + 7) v.prices in
   let price_histories = Owner.Map.add player_idx [] v.price_histories in
   {v with totals; prices; price_histories}
 
 let add_ai_player player_idx ~num_fin_periods v =
   (* AI players come in late, so we need to complete their history *)
   let prices = Owner.Map.add player_idx C.Stock.ai_share_price v.prices in
-  let totals = Owner.Map.add player_idx C.Stock.starting_num v.prices in
-  let history = if num_fin_periods > 0 then List.replicate 0 (num_fin_periods - 1) else [] in
+  let totals = Owner.Map.add player_idx C.Stock.starting_num v.totals in
+  let history = if num_fin_periods > 0 then
+    List.replicate (num_fin_periods - 1) M.zero 
+    else []
+  in
   let price_histories = Owner.Map.add player_idx history v.price_histories in
   {v with totals; prices; price_histories}
 
@@ -57,22 +61,22 @@ let total_shares player_idx v = Owner.Map.get_or ~default:0 player_idx v.totals
 
 let non_treasury_shares player_idx v = total_shares player_idx v - treasury_shares player_idx v
 
-let share_price player_idx v = Owner.Map.get_or ~default:0 player_idx v.prices
+let share_price player_idx v = Owner.Map.get_or ~default:M.zero player_idx v.prices
 
-let owned_share_value ~total_shares ~owned_shares ~share_price =
+let owned_share_value ~total_shares ~owned_shares ~(share_price:M.t) =
   (* We need to account for the cost of selling all our stock 10k shares at a time *)
   let non_treasury_shares = total_shares - owned_shares in
   let sale_rounds = owned_shares / 10 in
   let rec loop i ~total ~share_price =
     if i < sale_rounds then
-      let loss = (10 * share_price ) / (10 * i + non_treasury_shares + 10) in
-      let share_price = share_price - loss in
-      let total = total + share_price in
+      let loss = M.div M.(share_price * 10) (10 * i + non_treasury_shares + 10) in
+      let share_price = M.(share_price - loss) in
+      let total = M.(total + share_price) in
       loop (i + 1) ~total ~share_price
     else
       total
   in
-  loop 0 ~total:0 ~share_price
+  loop 0 ~total:M.zero ~share_price
 
 let treasury_share_value player_idx v =
   (* How much the player owns in himself value-wise *)
@@ -110,7 +114,7 @@ let set_total_shares player_idx total_shares v =
   {v with totals}
 
 let add_to_share_price player_idx change v =
-  let prices = Owner.Map.incr player_idx change v.prices in
+  let prices = Owner.Map.incr_cash player_idx change v.prices in
   {v with prices}
 
 let set_share_price player_idx ~price v =
@@ -167,27 +171,27 @@ let can_buy_stock player_idx ~target ~cash (params:Params.t) v =
   else if Owner.(player_idx <> target) && public_shares = 0 &&
        not (controls_own_company target v)
     then
-      let share_price = share_price target v * 2 in
+      let share_price = M.(share_price target v * 2) in
       let shares_to_buy = shares_owned_by_all_companies target ~exclude:player_idx v in
       `Offer_takeover(share_price, shares_to_buy)
   else (* buy public shares *)
     (* TODO: what about buying the rest of *your* own shares? *)
     let share_price = share_price target v in
-    let cost = share_price * C.num_buy_shares in
-    if cash >= cost && public_shares > 0 then `Ok
+    let cost = M.(share_price * C.num_buy_shares) in
+    if M.(cash >= cost) && public_shares > 0 then `Ok
     else `Error
 
     (* TODO: check the logic here for sell. It might be wrong *)
 let _sell_buy_stock player_idx ~target ~buy v =
   let share_price = share_price target v in
   let public_shares = public_shares target v in
-  let cost = share_price * C.num_buy_shares in
+  let cost = M.(share_price * C.num_buy_shares) in
   let price_change =
+    let open M in
     let delta = if buy then 1 else 0 in
-    (cost / public_shares) + delta
+    (cost / public_shares) +~ delta
   in
-  let price_change = if buy then price_change else -price_change in
-  Log.debug (fun f -> f "price change[%d] public_shares[%d] share_price=[%d]" price_change public_shares share_price);
+  let price_change = if buy then price_change else M.neg price_change in
   let v = add_to_share_price target price_change v in
   let num = if buy then C.num_buy_shares else -C.num_buy_shares in
   let v = add_shares player_idx ~owned:target ~num v in
@@ -199,15 +203,15 @@ let _sell_buy_stock player_idx ~target ~buy v =
      3: ai selling its own stock has a weird order of operations
    *)
 let ai_buy_stock ~ai_idx ~player_idx ~human v =
-  let modify = if human then (+) 1 else Fun.id in
-  let cost = C.num_buy_shares * (share_price player_idx v) in
+  let modify = if human then M.(fun x -> x + of_int 1) else Fun.id in
+  let cost = M.((share_price player_idx v) * C.num_buy_shares) in
   let player_treasury_shares = treasury_shares player_idx v in
   (* BUG: the original code add num_buy_shares here, probably copied from sell *)
   let non_treasury_shares = total_shares player_idx v - player_treasury_shares in
-  let price_change = modify @@ cost / non_treasury_shares in
+  let price_change = modify @@ M.(cost / non_treasury_shares) in
   let v = add_to_share_price player_idx price_change v in
   let v = add_shares ai_idx ~owned:player_idx ~num:C.num_buy_shares v in
-  let cost = modify @@ C.num_buy_shares * (share_price player_idx v) in
+  let cost = modify @@ M.((share_price player_idx v) * C.num_buy_shares) in
   cost, v
 
 let ai_buy_player_stock ~ai_idx ~player_idx v =
@@ -218,23 +222,24 @@ let ai_buy_own_stock ~ai_idx v =
 
   (* Weird inconsistency here. Should be fixed *)
 let ai_sell_player_stock ~ai_idx ~player_idx v =
-  let cost = share_price player_idx v * C.num_buy_shares in
+  let cost = M.(share_price player_idx v * C.num_buy_shares) in
   (* Doesn't account for public shares *)
   let player_treasury_shares = treasury_shares player_idx v in
   let non_treasury_shares = total_shares player_idx v - player_treasury_shares in
-  let price_change = cost / non_treasury_shares in
-  let v = add_to_share_price player_idx (-price_change) v in
+  let price_change = M.(cost / non_treasury_shares) in
+  let v = add_to_share_price player_idx (M.neg price_change) v in
   let v = remove_shares ai_idx ~owned:player_idx ~num:C.num_buy_shares v in
-  let profit = (share_price player_idx v) * C.num_buy_shares - 1 in
+  let profit = M.((share_price player_idx v) * C.num_buy_shares -~ 1) in
   profit, v
 
 let ai_sell_own_stock ~ai_idx v =
   let v = remove_shares ai_idx ~owned:ai_idx ~num:C.num_buy_shares v in
   let ai_treasury_shares = treasury_shares ai_idx v in
   let non_treasury_shares = total_shares ai_idx v - ai_treasury_shares + C.num_buy_shares in
-  let price_delta = C.num_buy_shares * (share_price ai_idx v) / non_treasury_shares in
-  let v = add_to_share_price ai_idx (-price_delta) v in
-  let profit = (share_price ai_idx v) * C.num_buy_shares - 1 in
+  let open M in
+  let price_delta = (share_price ai_idx v) * C.num_buy_shares / non_treasury_shares in
+  let v = add_to_share_price ai_idx (neg price_delta) v in
+  let profit = (share_price ai_idx v) * C.num_buy_shares -~ 1 in
   profit, v
 
 let buy_stock player_idx ~target params ~cash v =
@@ -244,16 +249,17 @@ let buy_stock player_idx ~target params ~cash v =
     let cost, v = _sell_buy_stock player_idx ~target ~buy:true v in
     `Bought cost, v
 
-  | `Offer_takeover(share_price, num_shares) when cash >= share_price * num_shares -> (* buy all *)
+  | `Offer_takeover(share_price, num_shares) when M.(cash >= share_price * num_shares) -> (* buy all *)
     (* Buy all stock for one player. Remove from all others *)
     let money =
+      let open M in
       Owner.Map.mapi (fun owner owned_map ->
         if Owner.(owner = player_idx) then
           (* Cost for buyer *)
-          -num_shares * share_price
+          share_price * -num_shares
         else
           let owned_shares = Owner.Map.get_or ~default:0 target owned_map in
-          owned_shares * share_price)
+          share_price * owned_shares)
         v.ownership
     in
     let ownership =
@@ -276,7 +282,7 @@ let sell_stock player_idx ~target v =
   if can_sell_stock player_idx ~target v then
     _sell_buy_stock player_idx ~target ~buy:false v
   else
-    0, v
+    M.zero, v
 
 let other_companies_controlled_by player_idx v =
   match Owner.Map.get player_idx v.ownership with
@@ -293,10 +299,10 @@ let controls_any_other_company player_idx v =
   (* TODO: double check we're accounting for deprecetiating stock prices *)
 let total_owned_stock_value player_idx ?(exclude_self=false) v =
   match Owner.Map.get player_idx v.ownership with
-  | None -> 0
+  | None -> M.zero
   | Some owned -> 
-    Owner.Map.sum (fun owned num ->
-      if exclude_self && Owner.(owned = player_idx) then 0 else
+    Owner.Map.sum_cash (fun owned num ->
+      if exclude_self && Owner.(owned = player_idx) then M.zero else
       let share_price = share_price owned v in
       let total_shares = total_shares owned v in
       owned_share_value ~total_shares ~owned_shares:num ~share_price)
@@ -322,12 +328,11 @@ let declare_bankruptcy player_idx players v =
       stocks, cash
     else
       (* Other players sell all stock in company and get partially compensated *)
-      let sold_stock = (share_price * owned_shares idx ~owned:player_idx stocks) / 2 in
+      let sold_stock = M.((share_price * owned_shares idx ~owned:player_idx stocks) / 2) in
       let cash = Owner.Map.add idx sold_stock cash in
       let stocks = set_owned_shares idx ~owned:player_idx 0 stocks in
       stocks, cash
   )
   (v, Owner.Map.empty)
   players
-
 

@@ -1,6 +1,7 @@
 
 (* Time *)
 (* Each time period is both 2 years and a 24 hour day *)
+let moi = Money.of_int
 
 let player = Owner.create_human ()
 let max_num_players = 4
@@ -21,20 +22,20 @@ let train_max_size = 8
 let min_dist_btw_stations = 5 (* gt *)
 
 let car_amount = 160
-let car_cost = Money.of_int 5 (* cost of a car *)
+let car_cost = moi 5 (* cost of a car *)
 let car_full_demand = 64 
 
 (* How much to divide by to get a human-readable amount of goods *)
 let goods_div = 4
 
 let speed_mult = 5 (* multiply speed by this *)
-let min_maintenance_cost = Money.of_int 2
+let min_maintenance_cost = moi 2
 
 let track_length = 2
 
 let tunnel_min_height = 80 (* height needed for tunnel *)
 let tunnel_max_length = 9
-let tunnel_cost = Money.of_int 20 (* per mile *)
+let tunnel_cost = moi 20 (* per mile *)
 
 let draw_margin = 4
 
@@ -46,9 +47,9 @@ let slow_message_time = 150
 let menu_h = 8
 
 (* In the west US it's 1000, but the AI doesn't always use it in the original game *)
-let bond_value = Money.of_int 500
-let max_cash_for_bankruptcy = Money.of_int 500
-let min_bonds_for_bankruptcy = Money.of_int 500
+let bond_value = moi 500
+let max_cash_for_bankruptcy = moi 500
+let min_bonds_for_bankruptcy = moi 500
 let max_interest_rate = 9 (* At 9%, we can no longer sell bonds *)
 
 let num_buy_shares = 10
@@ -72,7 +73,7 @@ end
 
 let priority_min_dist = 6
 let priority_max_dist = 64
-let priority_min_bonus = 20
+let priority_min_bonus = moi 20
 
 let reference_year = 1740
 
@@ -87,18 +88,18 @@ let young_station_age = 20
 (* This is the number we roll to see if we maintain *)
 let maintain_max_roll = 1250
 
-let track_maintenance_single = 1
-let track_maintenance_double = 2
+let track_maintenance_single = moi 1
+let track_maintenance_double = moi 2
 
 module Stock = struct
   let starting_num = 100
-  let ai_share_price = 10
+  let ai_share_price = moi 10
 end
 
 let ref_year_ai_route_value = 1710
 let ref_year_ai_build_value = 1770
 
-let ai_max_cash = Money.of_int 30000
+let ai_max_cash = moi 30000
 
 let map_width = 256
 let map_height = 192

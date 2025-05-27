@@ -35,10 +35,11 @@ let dist_mult = function
   | Europe -> 2
   | _ -> 1
 
+  (* Avoid Money for circularity *)
 let num_bonds region amount =
-  let div = match region with
+  let divide = match region with
     | WestUS -> 1000
     | _ -> 500
   in
-  amount / div
+  amount / divide
 

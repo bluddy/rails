@@ -10,6 +10,7 @@ module G = Track_graph
 module C = Constants
 module IS = Income_statement
 module UIM = Ui_msg
+module M = Money
 
 (* Low-level backend module. Deals with multiple modules at a time *)
 
@@ -89,7 +90,7 @@ module Train_update = struct
                 Train.car_delivery_money ~loc ~train ~car ~rates:station_info.rates ~params:v.params
               in
               let freight = Freight.of_good car.good in
-              IS.RevenueMap.incr freight money acc
+              IS.RevenueMap.incr_cash freight money acc
             else acc)
           IS.RevenueMap.empty
           cars_delivered
@@ -119,6 +120,7 @@ module Train_update = struct
             | _ -> acc)
           0
           cars_delivered
+          |> M.of_int
         in
         cars_delivered, money_from_goods, freight_ton_miles, other_income
       in
@@ -189,11 +191,12 @@ module Train_update = struct
       (* This function always naively switches to loading at station. Other conditions will be handled elsewhere *)
       let state = Train.LoadingAtStation {wait_time} in
 
-      let goods_revenue = IS.RevenueMap.total money_from_goods in
-      let revenue = goods_revenue + other_income - car_change_expense in
+      let goods_revenue = IS.RevenueMap.total_cash money_from_goods in
+      let revenue = M.(goods_revenue + other_income - car_change_expense) in
 
-      let periodic = Train.update_periodic v.params.fiscal_period train.periodic
-        (fun p -> {p with ton_miles=p.ton_miles + ton_miles; revenue=p.revenue + goods_revenue;})
+      let periodic =
+        Train.update_periodic v.params.fiscal_period train.periodic
+        (fun p -> {p with ton_miles=p.ton_miles + ton_miles; revenue=M.(p.revenue + goods_revenue);})
       in
 
       let income_stmt =

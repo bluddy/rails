@@ -4,6 +4,7 @@ module Hashtbl = Utils.Hashtbl
 module B = Backend
 module C = Constants
 module R = Renderer
+module M = Money
 open! Utils.Infix
 
 let src = Logs.Src.create "mapview" ~doc:"Mapview"
@@ -644,7 +645,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.draw_line win ~x1:(x+16) ~y1:(y+16) ~x2:station_x ~y2:station_y ~color:Ega.white;
       R.draw_rect win ~x ~y ~w:32 ~h:32 ~fill:true ~color:Ega.bblue;
       let revenue = Station.total_goods_revenue station in
-      let revenue = Utils.clip revenue ~min:0 ~max:(64 * 30) in
+      let revenue = M.clip revenue ~min:0 ~max:(64 * 30) |> M.to_int in
       let h = revenue / 64 in
       R.draw_rect win ~x ~y:(y+32-h) ~w:32 ~h ~fill:true ~color:Ega.bgreen; (* frame *)
       let y_line = y + 32 - h - 1 in

@@ -10,6 +10,7 @@ module C = Constants
 module UIM = Ui_msg
 module Bool = Utils.Bool
 module IntMap = Utils.IntMap
+module M = Money
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -523,7 +524,7 @@ let _buy_stock v player_idx ~stock =
   let cash = Player.get_cash player in
   match Stock_market.buy_stock player_idx ~target:stock ~cash v.params v.stocks with
   | `Bought cost, stocks ->
-      let v = update_player v player_idx (Player.add_cash @@ -cost) in
+      let v = update_player v player_idx (Player.add_cash @@ M.neg cost) in
       send_ui_msg v @@ StockBroker(StockBought {player_idx; stock; cost});
       {v with stocks}
   | `Takeover money_map, stocks ->
@@ -585,7 +586,7 @@ let companies_controlled_by player_idx v =
 let _operate_rr_take_money player_idx ~company ~amount v =
   let players = v.players in
   let players = Player.update players player_idx @@ Player.add_cash amount in
-  let players = Player.update players company @@ Player.add_cash @@ -amount in
+  let players = Player.update players company @@ Player.add_cash @@ M.neg amount in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player_idx; company; amount});
@@ -593,7 +594,7 @@ let _operate_rr_take_money player_idx ~company ~amount v =
   
 let _operate_rr_give_money player_idx ~company ~amount v =
   let players = v.players in
-  let players = Player.update players player_idx @@ Player.add_cash @@ -amount in
+  let players = Player.update players player_idx @@ Player.add_cash @@ M.neg amount in
   let players = Player.update players company @@ Player.add_cash amount in
   (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
@@ -623,7 +624,7 @@ let _start_broker_timer player_idx v =
 
 let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->
-    update_player v player_idx @@ Player.add_cash 500
+    update_player v player_idx @@ Player.add_cash @@ M.of_int 500
 
   | CreatePriorityShipment ->
     let player = Player.get player_idx v.players in
@@ -659,8 +660,8 @@ module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]
 
   type operate_rr =
-    | RRTakeMoney of int
-    | RRGiveMoney of int
+    | RRTakeMoney of Money.t
+    | RRGiveMoney of Money.t
     | RRBuildTrack of Utils.loc * Utils.loc
     | RRRepayBond
     [@@deriving show]

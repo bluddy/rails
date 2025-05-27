@@ -102,14 +102,13 @@ module Map = struct
     let yojson_of_t conv v =
       to_hashtbl v |> yojson_of_hashtbl O.yojson_of_t conv
 
-    let total v = fold (fun _ x acc -> acc + x) v 0
-
     let incr_f ~combine ~zero k x v =
       let x2 = get_or k v ~default:zero in
       add k (combine x x2) v
 
-    let incr k x v =
-      incr_f ~combine:(+) ~zero:0 k x v
+    let incr k x v = incr_f ~combine:(+) ~zero:0 k x v
+
+    let incr_cash k x v = incr_f ~combine:Money.add ~zero:Money.zero k x v
 
     let merge_f ~combine ~zero v1 v2 =
       let v3 = fold (fun key x1 acc ->
@@ -124,10 +123,19 @@ module Map = struct
         v2
         v3
 
-    let merge_add v1 v2 =
-      merge_f ~combine:(+) ~zero:0 v1 v2
+    let merge_add v1 v2 = merge_f ~combine:(+) ~zero:0 v1 v2
 
-      let sum f v = fold (fun k v acc -> f k v + acc) v 0
+    let merge_add_cash v1 v2 = merge_f ~combine:Money.add ~zero:Money.zero v1 v2
+
+    let sum_f ~combine ~zero f v = fold (fun k v acc -> combine (f k v) acc) v zero
+
+    let sum f v = sum_f ~combine:(+) ~zero:0 f v
+
+    let sum_cash f v = sum_f ~combine:Money.add ~zero:Money.zero f v
+
+    let total_cash v = sum_cash (fun _ x -> x) v
+
+    let total v = sum (fun _ x -> x) v
 
     let nth_key n v =
       let exception Found of key in
@@ -348,6 +356,8 @@ module List = struct
           loop (i-1) (y::acc) ys
     in
     loop i [] l0
+
+  let sum_cash f v = List.fold_left (fun acc x -> Money.(acc + f x)) Money.zero v
 
   let sum f v = List.fold_left (fun acc x -> acc + f x) 0 v
 

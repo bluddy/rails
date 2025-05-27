@@ -36,17 +36,36 @@ let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?region (cash:t) =
   );
   Buffer.contents b
 
-  let (+~) x y = to_int x + y |> of_int
-  let (+) x y = to_int x + to_int y |> of_int
-  let add = (+)
-  let (-~) x y = to_int x - y |> of_int
-  let (-) x y = to_int x - to_int y |> of_int
-  let sub = (-)
-  let (/) (x:t) (y:int) : t = (to_int x) / y |> of_int
-  let div = (/)
-  let ( * ) (x:t) (y:int) : t = (to_int x) * y |> of_int
-  let mult = ( * )
+let (+~) x y = to_int x + y |> of_int
+let (+) x y = to_int x + to_int y |> of_int
+let add = (+)
+let neg x = ~- (to_int x) |> of_int
+let (-~) x y = to_int x - y |> of_int
+let (-) x y = to_int x - to_int y |> of_int
+let sub = (-)
+let (/~) (x:t) (y:t) : int = (to_int x) / (to_int y)
+let (/) (x:t) (y:int) : t = (to_int x) / y |> of_int
+let div = (/)
+let ( *~ ) (x:t) (y:t) : t = (to_int x) * (to_int y) |> of_int
+let ( * ) (x:t) (y:int) : t = (to_int x) * y |> of_int
+let mult = ( * )
+let (>) x y = to_int x > to_int y
+let (<) x y = to_int x < to_int y
+let (<=) x y = to_int x <= to_int y
+let (>=) x y = to_int x >= to_int y
+let (=) x y = to_int x = to_int y
 
-  let zero = of_int 0
+let zero = of_int 0
+
+let clip v ~min ~max =
+  let min = of_int min in
+  let max = of_int max in
+  if v >= min then 
+    if v <= max then
+      v
+    else
+      max
+  else
+    min
 
 
