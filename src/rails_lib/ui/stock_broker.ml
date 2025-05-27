@@ -148,17 +148,17 @@ let render win (s:State.t) v =
     y + line + line
   in
   let y = Iter.fold (fun y player_idx -> render_player_info player_idx s.backend y) y @@ B.players_and_ai s.backend in
-  let y = y + line in
-  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%" (Climate.show @@ B.get_climate s.backend)
+  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%"
+    (Climate.show @@ B.get_climate s.backend)
     (Backend.get_interest_rate s.backend player_idx);
 
-  let x, y = 194, 50 in
+  let x, y = 275, 50 in
   let render_opponent player_idx textures (b:Backend.t) y =
     if Owner.is_human player_idx then y else
     let ai = Ai.get_ai_exn player_idx b.ai in
     let tex = Hashtbl.find textures ai.opponent.name in
     R.Texture.render win ~x ~y tex;
-    y + 10
+    y + 50
   in
   Iter.fold (fun y player_idx -> render_opponent player_idx s.textures.opponents s.backend y) y @@ B.players_and_ai s.backend |> ignore;
 
