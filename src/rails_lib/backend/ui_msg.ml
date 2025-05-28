@@ -42,5 +42,6 @@ type t =
   | AiTakesOutBond of {player_idx: Owner.t; ai_idx: Owner.t; opponent: Opponent.name}  (* msg to player only. payback is secret *)
   | AiSellsPlayerStock of {player_idx: Owner.t; ai_idx: Owner.t; opponent: Opponent.name}
   | AiBuysPlayerStock of {player_idx: Owner.t; ai_idx: Owner.t; takeover: bool; opponent: Opponent.name}
+  | BridgeWashout of {player_idx: Owner.t; loc: loc; fixed: bool}
   [@@deriving yojson]
 

@@ -105,5 +105,9 @@ let ai_max_cash = moi 30000
 let map_width = 256
 let map_height = 192
 
-let iron_bridge_fail_odds = 4
+let bridge_washout_grace_age = 5 (* How long before washouts can happen *)
+let bridge_extra_roll = 100     (* Doesn't matter so much so long as it works for both iron and stone *)
+let bridge_washout_tries = 16  (* How many times we try to hit a bridge *)
+let iron_bridge_fail_odds = 4  (* The extra odds of an iron bridge failing *)
+let stone_bridge_fail_odds = 8  (* The extra odds of a stone bridge failing *)
 

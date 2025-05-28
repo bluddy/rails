@@ -46,6 +46,8 @@ type t = {
   difficulty: difficulty;
 } [@@deriving yojson]
 
+let investor v = match v.difficulty with | `Investor -> true | _ -> false
+
 let default =
   {
     speed=`Moderate;

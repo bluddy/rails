@@ -41,6 +41,10 @@ let default_monetary = {
     num_bankruptcies = 0;
 }
 
+type event =
+  BridgeWashout of U.loc
+  [@@deriving yojson]
+
 type t = {
   idx: Owner.t;
   name: string option; (* custom name for railroad *)
@@ -57,7 +61,7 @@ type t = {
   priority: Priority_shipment.t option;
    (* A current active station, which causes high development *)
   mutable active_station: Utils.loc option;
-  event : U.loc option;
+  event : event option;
 } [@@deriving yojson]
 
 let default idx =
@@ -328,32 +332,35 @@ let pay_train_maintenance v =
   let expense = Trainmap.total_maintenance v.trains in
   pay `TrainMaintenance expense v
 
-let wash_out_track random tracks params v =
-  let loc =
+let handle_bridge_washout tracks params random v =
+  let age = params.Params.year - params.year_start in
+  match v.event with
+  | Some(BridgeWashout loc) ->
+      {v with event=None}, [Ui_msg.BridgeWashout{player_idx=v.idx; loc; fixed=true}]
+  | None when age < 5 || B_options.investor params.options -> v, []
+  | _ ->
     let rec loop i =
-      if i >= 16 then None else
+      if i <= 0 then None else
       let roll = Random.int C.washout_max_roll random in
       let len = Vector.length v.track in
       if roll < len then
         (* TODO: multiple rolls if more track than max *)
-        let roll = Random.int len random in
-        let loc = Vector.get v.track roll in
+        let loc = Vector.random random v.track in
+        let roll = Random.int C.bridge_extra_roll random in
         let track = Trackmap.get_exn loc tracks in
         match Track.get_kind track with
         | Bridge(Wood) -> Some loc
-        | Bridge(Iron) when roll mod C.iron_bridge_fail_odds -> Some loc
+        (* Note: in the original code, some iron bridges were just cursed because they used the same roll *)
+        | Bridge(Iron) when roll mod C.iron_bridge_fail_odds = 0 -> Some loc
+        (* TODO: according to the manual, strone bridges should very rarely wash out *)
+        | Bridge(Stone) when roll mod C.stone_bridge_fail_odds = 0 -> Some loc
         | _ -> None
-      else None
+      else loop (i - 1)
     in
-    loop 0
-  in
-  let age = params.Params.year - params.year_start in
-  if age < 5 || then v else
-
-
-
-
-
+    match loop C.bridge_washout_tries with
+    | None -> v, []
+    | Some loc ->
+      {v with event=Some(BridgeWashout loc)}, [Ui_msg.BridgeWashout{player_idx=v.idx; loc; fixed=false}]
 
 let update v idx f =
   let p = Owner.Map.find idx v in
