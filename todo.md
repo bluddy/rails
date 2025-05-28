@@ -1,10 +1,8 @@
 # Tasks
+- Handle trains running into washed out bridges
+- Draw washed out bridges
+- Handle train accidents
 - Stock broker: print ownership of AI stock
-- Deal with number idx for ais and players, specifically where they interact:
-  - player id
-  - stocks
-- Switch city idxs in AI for locs. Don't rely on int idxs.
-- Money -> use money type
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game
 - Deal with region-based, duplicate tile to pixel mapping
@@ -20,19 +18,14 @@
   - Also the model_menu handler
 - Refactor msgbox: shouldn't need so many args?
 - Check /2 for different things with money (e.g. pay)
-- Figure out ton-miles for freight/per period
-  - Seems to involve per-car computation
 - Check if we need to loop in _update_train (print out if we ever do multiple updates)
-- Wire up player updates
+- Update_train: handle freight class priority movement
 - Could division by 2 for money be to get a little more space in the bits?
 - Bug:
-  - No space between entries on stock broker
   - Delivery + priority pickup: no delivery message
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu
-  - Train revenue doesn't add to money
   - Create a train with no station: msgbox to build a station first
-  - Selling stock doesn't lower stock price
   - New train doesn't pick up stuff from starting station
   - Clicking on map during train creation crashes
   - First engines use one-chimney img. Check in code.
