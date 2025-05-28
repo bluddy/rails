@@ -21,15 +21,15 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Train arrival message (top-right UI)
 - [ ] Messages to the player (record etc)
 - [x] Priority deliveries
-- [ ] Opponents and AI
-- [ ] Stock Market
+- [x] Opponents and AI
+- [x] Stock Market
 - [ ] Stock market chart
 - [x] Balance Sheet, Income Statement
 - [ ] History and accomplishments
 - [ ] Train efficiency report
 - [x] Flesh out train info screen (currently dummy)
 - [x] Station lights and train stopping mechanism
-- [ ] Map changes over time
+- [x] Map changes over time
 - [ ] Train stop by right click
 - [ ] Accidents
 - [ ] Being driven out of town
