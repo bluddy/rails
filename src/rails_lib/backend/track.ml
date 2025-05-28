@@ -68,6 +68,8 @@ let equal_dirs v1 v2 =
 
 let change_kind v ~kind = {v with kind}
 
+let get_kind v = v.kind
+
   (* Make hashtabl that only uses track dirs and kind for quick texture lookup *)
 module Htbl = Hashtbl.Make(struct
   type nonrec t = t

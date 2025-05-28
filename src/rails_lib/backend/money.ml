@@ -61,10 +61,7 @@ let clip v ~min ~max =
   let min = of_int min in
   let max = of_int max in
   if v >= min then 
-    if v <= max then
-      v
-    else
-      max
+    if v <= max then v else max
   else
     min
 

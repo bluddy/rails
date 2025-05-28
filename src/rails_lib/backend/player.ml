@@ -11,6 +11,7 @@ let src = Logs.Src.create "player" ~doc:"Player"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 module Vector = Utils.Vector
+module U = Utils
 
 type monetary = {
   cash: Money.t; (* all x1000 *)
@@ -56,6 +57,7 @@ type t = {
   priority: Priority_shipment.t option;
    (* A current active station, which causes high development *)
   mutable active_station: Utils.loc option;
+  event : U.loc option;
 } [@@deriving yojson]
 
 let default idx =
@@ -74,6 +76,7 @@ let default idx =
     broker_timer=None;
     priority=None;
     active_station=None;
+    event=None;
   }
 
 let get_cash v = v.m.cash
@@ -324,6 +327,33 @@ let pay_station_maintenance station_map v =
 let pay_train_maintenance v =
   let expense = Trainmap.total_maintenance v.trains in
   pay `TrainMaintenance expense v
+
+let wash_out_track random tracks params v =
+  let loc =
+    let rec loop i =
+      if i >= 16 then None else
+      let roll = Random.int C.washout_max_roll random in
+      let len = Vector.length v.track in
+      if roll < len then
+        (* TODO: multiple rolls if more track than max *)
+        let roll = Random.int len random in
+        let loc = Vector.get v.track roll in
+        let track = Trackmap.get_exn loc tracks in
+        match Track.get_kind track with
+        | Bridge(Wood) -> Some loc
+        | Bridge(Iron) when roll mod C.iron_bridge_fail_odds -> Some loc
+        | _ -> None
+      else None
+    in
+    loop 0
+  in
+  let age = params.Params.year - params.year_start in
+  if age < 5 || then v else
+
+
+
+
+
 
 let update v idx f =
   let p = Owner.Map.find idx v in

@@ -87,6 +87,7 @@ let young_station_age = 20
 
 (* This is the number we roll to see if we maintain *)
 let maintain_max_roll = 1250
+let washout_max_roll = 1024
 
 let track_maintenance_single = moi 1
 let track_maintenance_double = moi 2
@@ -103,4 +104,6 @@ let ai_max_cash = moi 30000
 
 let map_width = 256
 let map_height = 192
+
+let iron_bridge_fail_odds = 4
 

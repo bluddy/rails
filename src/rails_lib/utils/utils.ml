@@ -274,6 +274,10 @@ module Vector = struct
       None
     with Found i -> Some i
 
+  let random random v =
+    let i = Random.int (length v) random in
+    get v i
+
   let rw_of_yojson _ = `RW
   let yojson_of_rw _ = `Null
   
