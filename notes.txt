@@ -1,0 +1,17 @@
+Notes:
+
+- Fixes/Alterations:
+  - The way the code is written, some metal bridges are just cursed. Changed it to be more fair.
+  - According to the manual, there should be a small chance of stone bridges washing out.
+
+- Enhancement Ideas:
+  - Currently all resources convert to others automatically. So a power plant converts coal to steel.
+  - Also they convert to one thing only!
+    Ideally:
+      - Power plants shouldn't create steel
+      - Each tile determines what it converts to.
+      - Power plants only exist after a certain date?
+      - Once they exist, they increase growth of cities/factories (large range)
+  - Add resource chains
+  - Tourism sites?
+  - Have tile development depend on climate
