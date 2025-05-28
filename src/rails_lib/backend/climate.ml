@@ -22,3 +22,9 @@ let strong = function
 
 let plus_4 climate = to_enum climate + 4
 
+let modify random v =
+  let roll_max = match v with Panic -> 2 | _ -> 3 in
+  let roll = Random.int roll_max random in
+  if roll = 0 then
+  else v
+
