@@ -349,11 +349,11 @@ let handle_bridge_washout tracks params random v =
         let roll = Random.int C.bridge_extra_roll random in
         let track = Trackmap.get_exn loc tracks in
         match Track.get_kind track with
-        | Bridge(Wood) -> Some loc
+        | Bridge Wood -> Some loc
         (* Note: in the original code, some iron bridges were just cursed because they used the same roll *)
-        | Bridge(Iron) when roll mod C.iron_bridge_fail_odds = 0 -> Some loc
-        (* TODO: according to the manual, strone bridges should very rarely wash out *)
-        | Bridge(Stone) when roll mod C.stone_bridge_fail_odds = 0 -> Some loc
+        | Bridge Iron when roll mod C.iron_bridge_fail_odds = 0 -> Some loc
+        (* Note: according to the manual, strone bridges should very rarely wash out, but it's not implemented *)
+        | Bridge Stone when roll mod C.stone_bridge_fail_odds = 0 -> Some loc
         | _ -> None
       else loop (i - 1)
     in
