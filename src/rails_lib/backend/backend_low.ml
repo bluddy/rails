@@ -642,6 +642,13 @@ let _update_station_supply_demand player_idx stations map params =
   in
   stations, ui_msgs
 
+let modify_climate params random =
+  let climate = Climate.modify random params.Params.climate in
+  if climate =!= params.climate then
+    {params with climate}, [Ui_msg.ClimateChange {climate}]
+  else
+    params, []
+
 (** Most time-based work happens here **)
 let handle_cycle v =
   let time_step () =
