@@ -6,8 +6,7 @@ module Vector = Utils.Vector
 module C = Constants
 open Utils.Infix
 
-
-module Id = Int_id.Make(struct end)
+module Id = Train.Id
 
 (* It's very important to keep the tile_idx updated all the time.
    We do this using r/w and r/o access functions

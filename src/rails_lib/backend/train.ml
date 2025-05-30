@@ -114,6 +114,7 @@ type state =
 
 type periodic = {
   mutable dist_traveled: int;
+  mutable time_running: int;  (* TODO: update this in train_update *)
   ton_miles: int;
   revenue: Money.t;
 } [@@deriving yojson, show]
@@ -125,6 +126,8 @@ type wait = [`Wait | `NoWait]
   [@@ deriving yojson, show]
 
 let is_wait = function `Wait -> true | `NoWait -> false
+
+module Id = Int_id.Make(struct end) [@@deriving yojson]
 
 (* 'mut is so we can't mutate a train from the wrong api *)
 type 'mut t = {
@@ -220,6 +223,7 @@ let make ((x,y) as station) engine cars other_station ~dir player =
   let cars = List.map Car.make cars in
   let make_periodic () = {
       dist_traveled=0;
+      time_running=0;
       ton_miles=0;
       revenue=M.zero;
     }
@@ -401,6 +405,10 @@ let add_dist_traveled add period (v: rw t) =
   let period = get_period period v in
   period.dist_traveled <- period.dist_traveled + add
 
+let add_time_running add period (v: rw t) =
+  let period = get_period period v in
+  period.dist_traveled <- period.time_running + add
+
 let is_full (v: 'a t) = List.for_all Car.is_full v.cars
 
 let advance (v:rw t) =
@@ -560,6 +568,8 @@ let calc_car_loc trackmap car_idx ~car_pixels (v:'a t) =
 let get_car_dir i (v:'a t) = (History.get (i+1) v.history).dir
 
 let get_engine_cost v = v.engine.price
+
+let get_engine v = v.engine
 
 let num_of_cars v = List.length v.cars
 
