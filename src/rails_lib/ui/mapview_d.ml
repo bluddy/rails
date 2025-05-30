@@ -59,7 +59,7 @@ type t =
     survey: bool;
     mutable smoke_plumes: smoke_plume list;
    (* Used to provide the train effect for zoom2/3 *)
-    draw_buffer: (int, train_history array) Utils.Hashtbl.t;
+    draw_buffer: (Train.Id.t, train_history array) Utils.Hashtbl.t;
     (* Used for zoom2/3 for stationboxes *)
     tile_buffer: Tilebuffer.t;
     options: Options.t;

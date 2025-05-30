@@ -578,8 +578,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         | _ -> false
       in
       let set_draw_buffer draw_buffer =
-        Hashtbl.update
-        v.draw_buffer
+        Hashtbl.update v.draw_buffer
         ~f:(fun _ arr -> match arr with
           | Some arr ->
               arr.(0) <- draw_buffer;
@@ -876,7 +875,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
         Trainmap.foldi (fun i acc train ->
           if Engine.has_steam train.engine &&
              Train.get_speed train > 0 &&
-             (i * 3 + s.backend.params.cycle) mod 16 = 0 &&
+             (Train.Id.to_int i * 3 + s.backend.params.cycle) mod 16 = 0 &&
              train.x >= start_x_map - C.draw_margin &&
              train.x <= end_x_map + C.draw_margin &&
              train.y >= start_y_map - C.draw_margin &&

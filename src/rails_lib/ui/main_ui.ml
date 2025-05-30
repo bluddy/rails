@@ -1013,7 +1013,7 @@ let render_main win (s:State.t) v =
       buf_add "\n";
       buf_add @@ Train.show_train_type msg._type;
       buf_add "  (";
-      buf_add @@ string_of_int (msg.train_num + 1);
+      buf_add @@ string_of_int (Train.Id.to_int msg.train_num + 1);
       buf_add ")\n";
       List.iter (fun (good, amount) ->
          buf_add @@ Goods.short_descr_of good amount)

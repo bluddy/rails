@@ -8,7 +8,7 @@ type train_arrival_msg = {
     train_name: string option;
     freight: Freight.complex;
     _type: Train.train_type;
-    train_num: int;
+    train_num: Train.Id.t;
     goods_amount: (Goods.t * int) list; (* goods delivered *)
     revenue: Money.t; (* x 1000 *)
 } [@@deriving yojson]
@@ -35,7 +35,7 @@ type year_end_msg =
   [@@deriving yojson]
 
 type t =
-  | TrainBuilt of Trainmap.Id.t
+  | TrainBuilt of TID.t
   | DemandChanged of {player_idx: Owner.t; x: int; y: int; good: Goods.t; add: bool}
   | TrainArrival of train_arrival_msg
   | StockBroker of stock_broker_ui_msg

@@ -103,7 +103,7 @@ let get_last v : ro Train.t =
 
 let iter (f:ro Train.t -> unit) (v:t) = Vector.iter f @@ _freeze_all v.trains
 
-let iteri (f: int -> ro Train.t -> unit) (v:t) = Vector.iteri f @@ _freeze_all v.trains
+let iteri (f: Id.t -> ro Train.t -> unit) (v:t) = Vector.iteri (fun i train -> f (Id.of_int i) train) @@ _freeze_all v.trains
 
 let fold (f: 'a -> ro Train.t -> 'a) (v:t) ~init = Vector.fold f init @@ _freeze_all v.trains
 
@@ -111,12 +111,14 @@ let sum f v = fold (fun acc train -> acc + f train) ~init:0 v
 
 let sum_money f v = fold (fun acc train -> Money.(acc + f train)) ~init:Money.zero v
 
-let foldi (f: int -> 'a -> ro Train.t -> 'a) (v:t) ~init = Vector.foldi f init @@ _freeze_all v.trains
+let foldi (f: Id.t -> 'a -> ro Train.t -> 'a) (v:t) ~init =
+  Vector.foldi (fun i acc train -> f (Id.of_int i) acc train) init @@ _freeze_all v.trains
 
 (* R/W *)
 let mapi_in_place f v = 
   Vector.mapi_in_place (fun i train ->
-    _with_update_loc v (Id.of_int i) train (f i)
+    let id = Id.of_int i in
+    _with_update_loc v id train (f id)
   )
   v.trains;
   v
@@ -124,17 +126,18 @@ let mapi_in_place f v =
 (* R/W *)
 let fold_mapi_in_place f v ~init =
   Vector.fold_mapi_in_place (fun i acc train ->
-    _with_update_loc_pair (Id.of_int i) train v (f i acc))
+    let id = Id.of_int i in
+    _with_update_loc_pair id train v (f id acc))
     ~init
     v.trains
 
   (* Return the index of a train that matches *)
 let find_ret_index (f:ro Train.t -> bool) (v:t) =
-  let exception Stop of int in
+  let exception Stop of Id.t in
   try
     iteri (fun i x -> if f x then raise (Stop i)) v;
     None
-  with Stop i -> Some (Id.of_int i)
+  with Stop i -> Some i
 
   (* Return indices of trains at a given location *)
 let get_at_loc loc (v:t) =

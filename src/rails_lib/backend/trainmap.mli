@@ -1,5 +1,5 @@
 
-module Id : sig include module type of Int_id.Make(struct end) end
+module Id = Train.Id
 
 type ro = Train.ro
 type rw = Train.rw
@@ -22,15 +22,15 @@ val get_last: t -> ro Train.t
 
 val iter: (ro Train.t -> unit) -> t -> unit
 
-val iteri: (int -> ro Train.t -> unit) -> t -> unit
+val iteri: (Id.t -> ro Train.t -> unit) -> t -> unit
 
 val fold: ('a -> ro Train.t -> 'a) -> t -> init:'a -> 'a
 
-val foldi: (int -> 'a -> ro Train.t -> 'a) -> t -> init:'a -> 'a
+val foldi: (Id.t -> 'a -> ro Train.t -> 'a) -> t -> init:'a -> 'a
 
-val mapi_in_place: (int -> rw Train.t -> rw Train.t) -> t -> t
+val mapi_in_place: (Id.t -> rw Train.t -> rw Train.t) -> t -> t
 
-val fold_mapi_in_place: (int -> 'a -> rw Train.t -> 'a * rw Train.t) -> t -> init:'a -> 'a
+val fold_mapi_in_place: (Id.t -> 'a -> rw Train.t -> 'a * rw Train.t) -> t -> init:'a -> 'a
 
 val find_ret_index: (ro Train.t -> bool) -> t -> Id.t option
 

@@ -16,7 +16,7 @@ module M = Money
 
 module Train_update = struct
 
-  let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~idx ~cycle loc ~dir =
+  let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~(idx:Train.Id.t) ~cycle loc ~dir =
     (* Speed factor computation from height delta and turn *)
     let height1 = Tilemap.get_tile_height loc v.map in
     let loc2 = Dir.adjust_loc dir loc in
@@ -286,7 +286,7 @@ module Train_update = struct
     let train = [%up {train with last_station; priority_stop; stop}] in
     train, stations, data, ui_msgs
 
-  let _exit_station ~idx ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) loc =
+  let _exit_station ~(idx:Train.Id.t) ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) loc =
     let compute_dir_to_dest graph =
       (* This is expensive *)
       let dest = Train.get_dest train in
@@ -456,7 +456,7 @@ let _update_player_with_data (player:Player.t) data active_stations fiscal_perio
       let active_station = Random.pick_list active_stations random in
       Player.set_active_station active_station player
 
-let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
+let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
   (* This is the regular update function for trains. Important stuff happens midtile
      The train can be looped over several times as it picks up speed.
    *)
