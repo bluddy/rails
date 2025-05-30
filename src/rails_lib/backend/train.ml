@@ -213,6 +213,13 @@ let get_car_goods_count cars =
   List.iter (fun car -> Hashtbl.incr ~by:1 h car.Car.good) cars;
   h
 
+let make_periodic () = {
+    dist_traveled=0;
+    time_running=0;
+    ton_miles=0;
+    revenue=M.zero;
+}
+
 let make ((x,y) as station) engine cars other_station ~dir player =
   let route = [`NoWait, make_stop x y None] in
   let route = match other_station with
@@ -221,13 +228,6 @@ let make ((x,y) as station) engine cars other_station ~dir player =
   in
   let route = Vector.of_list route in
   let cars = List.map Car.make cars in
-  let make_periodic () = {
-      dist_traveled=0;
-      time_running=0;
-      ton_miles=0;
-      revenue=M.zero;
-    }
-  in
   let v = {
     x=x * C.tile_w + C.tile_w / 2;
     y=y * C.tile_h + C.tile_h / 2;

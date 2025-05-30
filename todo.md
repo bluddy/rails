@@ -1,4 +1,5 @@
 # Tasks
+- Add special newspaper and events
 - Handle ui_msgs for washout, climate change
 - Handle trains running into washed out bridges
 - Draw washed out bridges
