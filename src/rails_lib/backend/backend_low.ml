@@ -52,7 +52,7 @@ module Train_update = struct
     end;
     (* Bookkeeping *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
-    Train.add_dist_traveled dist v.params.fiscal_period train;
+    Train.add_dist_traveled dist v.params.fiscal_period_year train;
     update_player_state v train.player (Player.incr_dist_traveled ~dist);
     Train.advance train
 
@@ -71,7 +71,7 @@ module Train_update = struct
         let dist = Utils.classic_dist loc train.last_station in
         let num_cars = List.length train.cars in
         dist * num_cars
-        (* Train.add_ton_miles train total_dist v.fiscal_period *)
+        (* Train.add_ton_miles train total_dist v.fiscal_period_year *)
       in
       let cars = train.cars in
 
@@ -195,7 +195,7 @@ module Train_update = struct
       let revenue = M.(goods_revenue + other_income - car_change_expense) in
 
       let periodic =
-        Train.update_periodic v.params.fiscal_period train.periodic
+        Train.update_periodic v.params.fiscal_period_year train.periodic
         (fun p -> {p with ton_miles=p.ton_miles + ton_miles; revenue=M.(p.revenue + goods_revenue);})
       in
 
@@ -502,7 +502,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
           end else
             train, stations, None, [], []
         in
-        let player = _update_player_with_data player data active_stations v.params.fiscal_period v.random in
+        let player = _update_player_with_data player data active_stations v.params.fiscal_period_year v.random in
         train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
     in
@@ -511,7 +511,7 @@ let _update_train v idx (train:rw Train.t) stations (player:Player.t) ~cycle ~cy
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
     let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle v train stations loc in
-    let player = _update_player_with_data player data active_stations v.params.fiscal_period v.random in
+    let player = _update_player_with_data player data active_stations v.params.fiscal_period_year v.random in
     train, stations, player, ui_msgs
   end
 

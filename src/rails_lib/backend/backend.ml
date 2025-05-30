@@ -99,7 +99,7 @@ let get_cycle v = v.params.cycle
 
 let get_climate v = v.params.climate
 
-let get_period v = v.params.fiscal_period
+let get_period v = v.params.fiscal_period_year
 
 let get_map v = v.map
 

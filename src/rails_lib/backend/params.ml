@@ -6,7 +6,7 @@ type t = {
   year: int;
   year_start: int;
   num_fiscal_periods: int; (* Counts, like year, number of fiscal periods *)
-  fiscal_period: [`First | `Second];
+  fiscal_period_year: [`First | `Second];
   climate: Climate.t;
   west_us_route_done: bool;
   region: Region.t;
@@ -19,7 +19,7 @@ let default = {
   year=1830;
   year_start=1830;
   num_fiscal_periods=0;
-  fiscal_period=`First;
+  fiscal_period_year=`First;
   climate=Normal;
   west_us_route_done=false;
   region=Region.WestUS;
