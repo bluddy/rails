@@ -19,7 +19,10 @@ type monetary = {
   stockholders_equity : Money.t; (* not sure how this changes *)
   owned_industry: Money.t;
   yearly_interest_payment: Money.t;
-  net_worth: Money.t;
+  earnings: Money.t;
+  earnings_last_year: Money.t;
+  earnings_record: Money.t;
+  earnings_change_history: Money.t list; (* reversed list *)
   in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
   total_income_statement: Income_statement_d.t;
@@ -33,7 +36,10 @@ let default_monetary = {
     stockholders_equity = Money.of_int @@ -500;
     owned_industry = Money.zero;
     yearly_interest_payment = Money.of_int 20;
-    net_worth = Money.of_int 500;
+    earnings = Money.of_int 500; 
+    earnings_last_year = Money.of_int 500; 
+    earnings_record = Money.of_int 500; 
+    earnings_change_history = [];
     in_receivership = false;
     income_statement = Income_statement_d.default;
     total_income_statement = Income_statement_d.default;
@@ -85,7 +91,7 @@ let default idx =
 
 let get_cash v = v.m.cash
 
-let net_worth v = v.m.net_worth
+let earnings v = v.m.earnings
 
 let bonds v = v.m.bonds
 
@@ -111,6 +117,30 @@ let add_income_stmt income_stmt (v:t) =
   let income_statement = Income_statement.merge v.m.income_statement income_stmt in
   let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
+
+let year_end year v =
+  let total_revenue = Income_statement.total_revenue v.m.income_statement in
+  let total_income_statement = Income_statement.merge v.m.total_income_statement v.m.income_statement in
+  let ui_msgs =
+    if total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > 2000 then [Ui_msg.ConsiderBankruptcy] else []
+  in
+  let earnings_change = Money.((v.m.earnings - v.m.earnings_last_year) * 10) in
+  let new_fin_period = year mod 2 = 1 in
+  let earnings_change_history = match v.m.earnings_change_history with
+    | x::xs when not new_fin_period -> Money.(x + earnings_change)::xs
+    | xs when new_fin_period -> earnings_change::xs
+  in
+  let earnings_fin_period = List.hd earnings_change_history in
+  let earnings_record, ui_msgs =
+    if Money.(earnings_fin_period > v.m.earnings_record) then
+      earnings_fin_period, Ui_msg.RecordEarnings(earnings_fin_period)::ui_msgs
+    else
+      v.m.earnings_record, ui_msgs
+  in
+  let income_statement = Income_statement.default in
+  v
+
+
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in

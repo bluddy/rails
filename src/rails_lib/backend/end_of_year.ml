@@ -1,6 +1,6 @@
 open Containers
 
-let run_checks player_idx trains stations params =
+let checks_and_clear player_idx trains stations params =
   let fiscal_next_year = match params.Params.fiscal_period_year with `First -> `Second | `Second -> `First in
   let ui_msgs =
     (* Trainmap is mutable *)

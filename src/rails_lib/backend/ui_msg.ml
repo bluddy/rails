@@ -33,6 +33,8 @@ type year_end_msg =
   | TrainNoSchedule of TID.t
   | TrainOldEngine of TID.t
   | StationHasHold of loc
+  | ConsiderBankruptcy
+  | RecordEarnings of Money.t
   [@@deriving yojson]
 
 type t =
