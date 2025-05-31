@@ -28,6 +28,9 @@ type monetary = {
   total_income_statement: Income_statement_d.t;
   last_balance_sheet: Balance_sheet_d.t;
   num_bankruptcies: int;
+  net_worth_history: Money.t list;
+  total_revenue_record: Money.t;
+  total_revenue_history: Money.t list;
 } [@@deriving yojson]
 
 let default_monetary = {
@@ -38,13 +41,16 @@ let default_monetary = {
     yearly_interest_payment = Money.of_int 20;
     net_worth = Money.of_int 500; 
     net_worth_last_year = Money.of_int 500; 
-    earnings_record = Money.of_int 0; 
+    earnings_record = Money.zero;
     earnings_history = [];
     in_receivership = false;
     income_statement = Income_statement_d.default;
     total_income_statement = Income_statement_d.default;
     last_balance_sheet = Balance_sheet_d.default;
     num_bankruptcies = 0;
+    net_worth_history=[];
+    total_revenue_record=Money.zero;
+    total_revenue_history=[];
 }
 
 type event =
@@ -65,15 +71,18 @@ type t = {
   m: monetary;
   track_length: int; (* track length according to the game (not per tile) *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
-  mutable dist_traveled: int;
   freight_ton_miles: int Freight.Map.t * int Freight.Map.t; (* per period *)
   goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
   broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
-  periodic: periodic * periodic;
    (* A current active station, which causes high development *)
   mutable active_station: Utils.loc option;
   event : event option;
+  periodic: periodic * periodic;
+  avg_speed_history: int list; (* reversed *)
+  avg_speed_record: int;
+  ton_mile_history: int list;
+  ton_mile_record: int;
 } [@@deriving yojson]
 
 let make_periodic () = {
@@ -91,7 +100,6 @@ let default idx =
     trains = Trainmap.empty ();
     track_length = 0;
     track = Vector.create ();
-    dist_traveled=0;
     freight_ton_miles=(Freight.Map.empty, Freight.Map.empty);
     goods_delivered=Goods.Set.empty;
     broker_timer=None;
@@ -99,6 +107,10 @@ let default idx =
     active_station=None;
     event=None;
     periodic=(make_periodic (), make_periodic ());
+    avg_speed_history=[];
+    avg_speed_record=0;
+    ton_mile_history=[];
+    ton_mile_record=0;
   }
 
 let get_cash v = v.m.cash
@@ -130,7 +142,7 @@ let add_income_stmt income_stmt (v:t) =
   let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
 
-let year_end year v =
+let year_end period v =
   let total_revenue = Income_statement.total_revenue v.m.income_statement in
   let total_income_statement = Income_statement.merge v.m.total_income_statement v.m.income_statement in
   let ui_msgs =
@@ -138,10 +150,11 @@ let year_end year v =
       [Ui_msg.ConsiderBankruptcy] else []
   in
   let earnings = Money.((v.m.net_worth - v.m.net_worth_last_year) * 10) in
-  let new_fin_period = year mod 2 = 1 in
+  let new_fin_period = match period with `First -> false | `Second -> true in
   let earnings_history = match v.m.earnings_history with
     | x::xs when not new_fin_period -> Money.(x + earnings)::xs
     | xs when new_fin_period -> earnings::xs
+    | _ -> assert false
   in
   let earnings_fin_period = List.hd earnings_history in
   let earnings_record, ui_msgs =
@@ -151,9 +164,53 @@ let year_end year v =
       v.m.earnings_record, ui_msgs
   in
   let income_statement = Income_statement.default in
-  v
-
-
+  let total_time = 10 + Pair.fold (fun p1 p2 -> p1.time_running + p2.time_running) v.periodic in
+  let total_time = total_time / 10 in
+  let total_dist = 6 * (Pair.fold (fun p1 p2 -> p1.dist_traveled + p2.dist_traveled) v.periodic) in
+  let avg_speed = total_dist / total_time in
+  let avg_speed_history = match v.avg_speed_history with
+    | _::xs when not new_fin_period -> avg_speed::xs
+    | xs when new_fin_period -> avg_speed::xs
+    | _ -> assert false
+  in
+  let avg_speed_record, ui_msgs =
+    if avg_speed > v.avg_speed_record then
+      avg_speed, Ui_msg.AvgSpeedRecord(avg_speed)::ui_msgs
+    else
+      v.avg_speed_record, ui_msgs
+  in
+  let ton_miles = (Utils.read_pair v.periodic period).ton_miles in
+  let ton_mile_record, ui_msgs =
+    if ton_miles > v.ton_mile_record then
+      ton_miles, Ui_msg.TonMileRecord(ton_miles)::ui_msgs
+    else
+      v.ton_mile_record, ui_msgs
+  in
+  (* Bug fix here I think, placing the right value in history *)
+  let ton_mile_history = match v.ton_mile_history with
+    | x::xs when not new_fin_period -> (x + ton_miles)::xs
+    | xs when new_fin_period -> ton_miles::xs
+    | _ -> assert false
+  in
+  let total_revenue_record, ui_msgs =
+    if Money.(total_revenue > v.m.total_revenue_record) then
+      total_revenue, Ui_msg.RevenueRecord(total_revenue)::ui_msgs
+    else
+      v.m.total_revenue_record, ui_msgs
+  in
+  let total_revenue_history = match v.m.total_revenue_history with
+    | x::xs when not new_fin_period -> Money.(x + total_revenue)::xs
+    | xs when new_fin_period -> total_revenue::xs
+    | _ -> assert false
+  in
+  let net_worth_last_year = v.m.net_worth in
+  let m = {
+    v.m with net_worth_last_year; earnings_record; earnings_history; income_statement;
+    total_income_statement; total_revenue_record; total_revenue_history } in
+  let v =
+    {v with m; avg_speed_record; avg_speed_history; ton_mile_record; ton_mile_history}
+  in
+  v, ui_msgs
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
@@ -185,8 +242,9 @@ let get_name station_map cities v = match v.name with
   (* "Game" reported track lenght, not track pieces *)
 let track_length v = v.track_length
 
-let incr_dist_traveled ~dist v =
-  v.dist_traveled <- v.dist_traveled + dist
+let incr_dist_traveled ~dist period_year v =
+  Utils.pair_iter v.periodic period_year (fun period ->
+    period.dist_traveled <- period.dist_traveled + dist)
 
 let add_station loc v =
   {v with stations=loc::v.stations}

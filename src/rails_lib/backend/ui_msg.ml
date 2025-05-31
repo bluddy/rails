@@ -35,6 +35,9 @@ type year_end_msg =
   | StationHasHold of loc
   | ConsiderBankruptcy
   | RecordEarnings of Money.t
+  | AvgSpeedRecord of int
+  | TonMileRecord of int
+  | RevenueRecord of Money.t
   [@@deriving yojson]
 
 type t =

@@ -523,3 +523,7 @@ let update_pair pair idx f = match idx with
   | `First -> (f @@ fst pair, snd pair)
   | `Second -> (fst pair, f @@ snd pair)
 
+let pair_iter pair idx f = match idx with
+  | `First -> f @@ fst pair
+  | `Second -> f @@ snd pair
+

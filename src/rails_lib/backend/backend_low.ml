@@ -52,8 +52,9 @@ module Train_update = struct
     end;
     (* Bookkeeping *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
-    Train.add_dist_traveled dist v.params.fiscal_period_year train;
-    update_player_state v train.player (Player.incr_dist_traveled ~dist);
+    let fiscal_period_year = v.params.fiscal_period_year in
+    Train.add_dist_traveled dist fiscal_period_year train;
+    update_player_state v train.player (Player.incr_dist_traveled ~dist fiscal_period_year);
     Train.advance train
 
 
