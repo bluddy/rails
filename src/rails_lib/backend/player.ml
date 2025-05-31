@@ -19,10 +19,10 @@ type monetary = {
   stockholders_equity : Money.t; (* not sure how this changes *)
   owned_industry: Money.t;
   yearly_interest_payment: Money.t;
-  earnings: Money.t;
-  earnings_last_year: Money.t;
-  earnings_record: Money.t;
-  earnings_change_history: Money.t list; (* reversed list *)
+  net_worth: Money.t;
+  net_worth_last_year: Money.t;
+  earnings_record: Money.t; (* Earnings is delta in net worth *)
+  earnings_history: Money.t list; (* reversed list *)
   in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
   total_income_statement: Income_statement_d.t;
@@ -36,10 +36,10 @@ let default_monetary = {
     stockholders_equity = Money.of_int @@ -500;
     owned_industry = Money.zero;
     yearly_interest_payment = Money.of_int 20;
-    earnings = Money.of_int 500; 
-    earnings_last_year = Money.of_int 500; 
-    earnings_record = Money.of_int 500; 
-    earnings_change_history = [];
+    net_worth = Money.of_int 500; 
+    net_worth_last_year = Money.of_int 500; 
+    earnings_record = Money.of_int 0; 
+    earnings_history = [];
     in_receivership = false;
     income_statement = Income_statement_d.default;
     total_income_statement = Income_statement_d.default;
@@ -51,6 +51,12 @@ type event =
   BridgeWashout of U.loc
   [@@deriving yojson]
 
+type periodic = {
+  mutable dist_traveled: int;
+  mutable time_running: int;  (* TODO: update this in train_update *)
+  ton_miles: int; (* goods delievered per mile per period *)
+} [@@deriving yojson, show]
+
 type t = {
   idx: Owner.t;
   name: string option; (* custom name for railroad *)
@@ -60,15 +66,21 @@ type t = {
   track_length: int; (* track length according to the game (not per tile) *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
   mutable dist_traveled: int;
-  ton_miles: int * int; (* goods delievered per mile per period *)
   freight_ton_miles: int Freight.Map.t * int Freight.Map.t; (* per period *)
   goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
   broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
+  periodic: periodic * periodic;
    (* A current active station, which causes high development *)
   mutable active_station: Utils.loc option;
   event : event option;
 } [@@deriving yojson]
+
+let make_periodic () = {
+    dist_traveled=0;
+    time_running=0;
+    ton_miles=0;
+}
 
 let default idx =
   {
@@ -80,18 +92,18 @@ let default idx =
     track_length = 0;
     track = Vector.create ();
     dist_traveled=0;
-    ton_miles=(0, 0);
     freight_ton_miles=(Freight.Map.empty, Freight.Map.empty);
     goods_delivered=Goods.Set.empty;
     broker_timer=None;
     priority=None;
     active_station=None;
     event=None;
+    periodic=(make_periodic (), make_periodic ());
   }
 
 let get_cash v = v.m.cash
 
-let earnings v = v.m.earnings
+let net_worth v = v.m.net_worth
 
 let bonds v = v.m.bonds
 
@@ -122,15 +134,16 @@ let year_end year v =
   let total_revenue = Income_statement.total_revenue v.m.income_statement in
   let total_income_statement = Income_statement.merge v.m.total_income_statement v.m.income_statement in
   let ui_msgs =
-    if total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > 2000 then [Ui_msg.ConsiderBankruptcy] else []
+    if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
+      [Ui_msg.ConsiderBankruptcy] else []
   in
-  let earnings_change = Money.((v.m.earnings - v.m.earnings_last_year) * 10) in
+  let earnings = Money.((v.m.net_worth - v.m.net_worth_last_year) * 10) in
   let new_fin_period = year mod 2 = 1 in
-  let earnings_change_history = match v.m.earnings_change_history with
-    | x::xs when not new_fin_period -> Money.(x + earnings_change)::xs
-    | xs when new_fin_period -> earnings_change::xs
+  let earnings_history = match v.m.earnings_history with
+    | x::xs when not new_fin_period -> Money.(x + earnings)::xs
+    | xs when new_fin_period -> earnings::xs
   in
-  let earnings_fin_period = List.hd earnings_change_history in
+  let earnings_fin_period = List.hd earnings_history in
   let earnings_record, ui_msgs =
     if Money.(earnings_fin_period > v.m.earnings_record) then
       earnings_fin_period, Ui_msg.RecordEarnings(earnings_fin_period)::ui_msgs
