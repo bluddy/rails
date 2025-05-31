@@ -118,14 +118,15 @@ let render win (s:State.t) (v:State.t t) : unit =
         (Train.show_train_type train.typ)
     in
     let train_loc = (train.x, train.y) in
+    let stations = s.backend.stations in
     let train_loc_s = match train.state with
       | Traveling _ ->
-          let station = Station_map.find_nearest s.backend.stations train_loc
+          let station = Station_map.find_nearest ~player_idx train_loc stations 
             |> Option.get_exn_or "must have station"
           in
           "near "^Station.get_name station
       | _ ->
-          let station = Station_map.get_exn (train.x / C.tile_w, train.y / C.tile_h) s.backend.stations in
+          let station = Station_map.get_exn (train.x / C.tile_w, train.y / C.tile_h) stations in
           sprintf ("at %s") (Station.get_name station)
     in
     let maintenance = Train.display_maintenance train
@@ -140,7 +141,7 @@ let render win (s:State.t) (v:State.t t) : unit =
           sprintf "Speed: %d mph, bound for %s"
           (Train.display_speed train)
           (let loc = Train.get_dest train in
-           Station_map.get_exn loc s.backend.stations 
+           Station_map.get_exn loc stations 
            |> Station.get_name)
     in
     let str = sprintf "%s\n%s  %s\n%s"
@@ -178,8 +179,7 @@ let render win (s:State.t) (v:State.t t) : unit =
         match Train.Car.get_load car with
         | Some (good, amount, loc) when amount >= 4 ->
             let s1 = Goods.descr_of good amount in
-            let s2 = Station_map.get_exn loc s.backend.stations 
-              |> Station.get_name 
+            let s2 = Station_map.get_exn loc stations |> Station.get_name 
             in
             Printf.sprintf "%s%s from %s\n" acc_s s1 s2
         | _ -> acc_s)
@@ -202,7 +202,7 @@ let render win (s:State.t) (v:State.t t) : unit =
 
     let write_station ?(wait=`NoWait) (stop:Train.stop) ~i ~y =
       let station =
-        Station_map.get_exn (stop.x, stop.y) s.backend.stations
+        Station_map.get_exn (stop.x, stop.y) stations
       in
       let color = match i with
         | Some i ->

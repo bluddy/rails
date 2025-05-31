@@ -32,6 +32,7 @@ type year_end_msg =
   | TrainNoMaintenance of TID.t
   | TrainNoSchedule of TID.t
   | TrainOldEngine of TID.t
+  | StationHasHold of loc
   [@@deriving yojson]
 
 type t =

@@ -242,6 +242,12 @@ let set_override dir override (v:t) =
 
 let cancel_override dir (v:t) = set_override dir NoOverride v 
 
+let has_override_hold v =
+  match snd v.signals.lower, snd v.signals.upper with
+  | OverrideHold, _
+  | _, OverrideHold -> true
+  | _ -> false
+
   (* When an owned company builds track into our >signaltower station,
      it becomes a union station: effectively a terminal *)
 let set_to_union_station v =

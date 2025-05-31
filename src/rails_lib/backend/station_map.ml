@@ -5,9 +5,11 @@ include Loc_map
 type t = Station.t Loc_map.t
   [@@deriving yojson]
 
-let find_nearest v loc =
+let find_nearest ~player_idx ?(only_proper=false) loc v =
   (* NOTE: could be made more efficient with quadmap or array *)
   fold (fun (station:Station.t) acc ->
+    if Owner.(Station.get_player_idx station <> player_idx) then acc else
+    if only_proper && not @@ Station.is_proper_station station then acc else
     let dist = Utils.classic_dist loc @@ Station.get_loc station in
     match acc with
     | Some (_, min_dist) when dist < min_dist -> Some(station, dist)

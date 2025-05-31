@@ -178,13 +178,14 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap v
 
 let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Params.t) ~city ~stocks random v =
   (* New company creation test at this city *)
+  let player_idx = C.player in
   let demand_supply = Tilemap.demand_supply_sum city tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
   if cycles_value >= value && not force then `Update v else
   let find_closest_player_station_check_distance () =
-    let closest_station = Station_map.find_nearest stations city in
+    let closest_station = Station_map.find_nearest ~player_idx city stations in
     let create = match closest_station with
       | Some _ -> true
       | None when first_ai-> true (* No player station but first opponent can still exist *)
@@ -514,6 +515,7 @@ let build_order_fail_text ai_name src_name tgt_name =
 let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_idx ~stocks ~player_net_worth random v =
   (* Use target city and company to expand *)
   let ai_player = get_ai_exn ai_idx v in
+  let player_idx = C.player in
   match ai_of_city city v with
   | Some company when Owner.(company <> ai_idx) -> `Update v
   | _ ->
@@ -574,7 +576,7 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_i
     let will_check = ai_player.expand_ctr >= dist in
     if not (cash_check && will_check) then `Update v else
     let station_check =
-      let closest_station = Station_map.find_nearest stations city in
+      let closest_station = Station_map.find_nearest ~player_idx city stations in
       match closest_station with
       | Some station when Station.is_proper_station station ->
          (* Make sure we're not too close *)
