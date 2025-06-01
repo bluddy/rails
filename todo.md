@@ -1,14 +1,13 @@
 # Tasks
+- Train records, first deliveries
 - Hook up fiscal_period_end stuff
-- year_end_interest_engine_and_score
-- Handle train blizzard event
-- Train: fill in time_running
+- Handle train blizzard event (what generates it?)
 - Handle year end messages
 - Add special newspaper and events
 - Handle ui_msgs for washout, climate change
 - Handle trains running into washed out bridges
-- Draw washed out bridges
 - Handle train accidents
+- Draw washed out bridges
 - Stock broker: print ownership of AI stock
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game

@@ -291,7 +291,7 @@ module Train_update = struct
       let dest = Train.get_dest train in
       let dir, ui_msgs = match Track_graph.shortest_path graph ~src:loc ~dest with
         | Some dir -> dir, []
-        | None -> (* TODO: Impossible route message *)
+        | None ->
           Dir.Set.find_nearest train.dir track.dirs
           |> Option.get_exn_or "Cannot find track for train",
           [Ui_msg.ImpossibleRoute{player_idx=train.player; train_idx=idx; src=Train.get_last_station train; dst=dest}]
@@ -681,7 +681,6 @@ let handle_cycle v =
 
     let trains, stations, player, tr_msgs = Train_update._update_all_trains v player in
 
-    (* TODO: events, climate update *)
     let player =
       if cycle mod C.Cycles.periodic_maintenance = 0 then
         if ((cycle / C.Cycles.periodic_maintenance) mod 2) = 0 then

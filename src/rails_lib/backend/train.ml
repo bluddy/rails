@@ -114,7 +114,7 @@ type state =
 
 type periodic = {
   mutable dist_traveled: int;
-  mutable time_running: int;  (* TODO: update this in train_update *)
+  mutable time_running: int;
   ton_miles: int;
   revenue: Money.t;
 } [@@deriving yojson, show]

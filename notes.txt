@@ -15,3 +15,107 @@ Notes:
   - Add resource chains
   - Tourism sites?
   - Have tile development depend on climate
+
+- Event handler sender:
+  gets event_idx and station_idx(?)
+  saves event_idx, station_idx, event_year
+  ((timer * 3) / 17) % 360 -> day_of_year
+
+- white, (304, 20, 8, 3): draw_something ?
+- newspaper
+  - newspaper_name:
+    - black
+    - day_of_year mod 4
+      - 0 ->
+        - (4,6) black draw something
+        - (4,264) black draw something
+        - (4, 64) RailNews Weekly
+      - 1 -> 
+        - (4,6) black draw something
+        - (4,264) black draw something
+        - (4,88) Daily Tattler
+      - 2 -> (4, 56) The New York Times/ (4, 64) The London Times (US/Europe)
+      - 3 -> (6, 32) Wall Street Journal / (6, 56) The Herald Tribune
+  - newspaper tear:
+    - roll 0 or 1, choose texture
+    - idx = 0-15
+    - x: 20 * idx
+    - y: 100 - (roll 0 or 1)
+  - newspaper content:
+    - event_idx == 0:
+      - (40, 16): New Railroad Formed:
+      - (57, 16): extra_info,000 shares of stock
+      - (74, 16): sold to local investors.
+    - event_idx == 6:
+      - Track laid from
+      - city.name (extra_event_info) to
+      - city.name (extra_event_info+1)!
+    - event_idx in [1, 13]: (13 is bridge accident)
+      - " TRAIN WRECK on R&R!" (company name, not sure what it doesn't appear)
+      - day_of_year mod 16 + 2
+      - " persons injured."
+      - " Customers Panic!"
+    - event_idx == 2: (climate change)
+      - Custom writing, placed in arrays
+      - extra_info & F: 1st data
+      - extra_info >> 4: 2nd data
+      - Climate array1: (40,16) (1st data)
+        - Western Gold Strike!
+        - New Territory Settled
+        - Invention Patented!
+        - Foreign Trade Up
+        - Bank Failure!!
+        - Labor Violence!
+      - Climate array2: (57, 16) (1st data)
+        - New Lode Uncovered!
+        - Land Rush expected.
+        - Perpetual Motion!
+        - New Markets Opened
+        - Wall Street Worried
+        - Militia Called Out!
+      - Climate array2 (74, 16) (2nd data = climate)
+        - PANIC Strikes!!
+        - Recession Feared.
+        - Moderation Expected.
+        - Prosperity in Sight.
+        - BOOM Times Ahead!
+    - event_idx == 3: (record profits fin period)
+      - Record Profits on (company name)
+      - "(money) earnings" (from event_extra_info)
+      - "in last two years."
+    - event_idx == 4:
+      - First Train Arrives
+      - in (city_of_station_name extra_info).
+      - Citizens Celebrate!
+    - event_idx == 5:
+      - (extra info engine name)
+      - Locomotive Introduced.
+      - Bigger, Better, Faster.
+    - event_idx == 8:
+      - Flood Waters Rise!
+      - (current_event_loc_x,y, station_find_closest, city_of_station_name)
+      - Trestle Washed Away!
+    - event_idx == 9:
+      - Blizzard Strikes!
+      - Trains Slowed
+      - Cows Freeze!
+    - event_idx == 7:
+      - Rate War Declared in
+      - (event_extra_info & F | city_of_station_name)!
+      - (company_name) vs. (event_extra_info>>8 | ai_company_name_str).
+    - event_idx == 16:
+      - (company_name) takes control
+      - of (extra_info | company_name_str) Railroad!
+      - Wall Street amazed.
+    - event_idx == 14:
+      - (company_name) president leaves
+      - town after meeting
+      - with stockholders.
+    - event_idx == 15:
+      - (company_name) president leaves
+      - town after meeting
+      - with new management.
+  - newspaper details:
+    - (24,272) (((event_year - 1775) / 40) * 5) cents
+    - (24, 8) (day_of_year/30 mod 12 | month_str) (day_of_year mod 30 + 1), (day_of_year / 360 + event_year)
+    - (128,80) Press any key to continue.
