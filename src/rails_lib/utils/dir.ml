@@ -110,7 +110,7 @@ module Set = struct
   (* Convert bool mask to dir set *)
   let of_mask mask =
     Iter.foldi (fun acc i v ->
-      if v then add acc (of_enum i |> Option.get_exn_or "dir")
+      if v then add (of_enum i |> Option.get_exn_or "dir") acc
       else acc)
     empty
     mask
@@ -138,6 +138,8 @@ module Set = struct
     let ccwd = ccw ccwd in
     if check ccwd then Some ccwd else
     None
+
+  let x_shape = empty |> add UpLeft |> add UpRight |> add DownLeft |> add DownRight
 end
 
 

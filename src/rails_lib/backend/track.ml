@@ -51,12 +51,12 @@ let make dirs kind player =
   {dirs; kind; ixn; player}
 
 let add_dir v ~dir =
-  let dirs = Dir.Set.add v.dirs dir in
+  let dirs = Dir.Set.add dir v.dirs in
   let ixn = _is_ixn dirs in
   {v with dirs; ixn}
 
 let remove_dir v ~dir =
-  let dirs = Dir.Set.remove v.dirs dir in
+  let dirs = Dir.Set.remove dir v.dirs in
   let ixn = _is_ixn dirs in
   {v with dirs; ixn}
 
@@ -128,7 +128,7 @@ let straighten v =
   if Dir.Set.cardinal v.dirs = 1 then
     let dir = Dir.Set.find v.dirs (fun _ -> true) in
     let opposite = Dir.opposite dir in
-    let dirs = Dir.Set.add v.dirs opposite in
+    let dirs = Dir.Set.add opposite v.dirs in
     {v with dirs}
   else
     if TrackSet.mem straight_dirs v.dirs then v

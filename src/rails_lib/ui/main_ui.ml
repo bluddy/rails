@@ -524,22 +524,22 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with options}, nobaction
         | On (`News newstype), _ ->
             let options = v.options in
-            let news = NewsTypes.add options.news newstype in
+            let news = NewsTypes.add newstype options.news in
             let options = {options with news} in
             {v with options}, nobaction
         | Off (`News newstype), _ ->
             let options = v.options in
-            let news = NewsTypes.remove options.news newstype in
+            let news = NewsTypes.remove newstype options.news in
             let options = {options with news} in
             {v with options}, nobaction
         | On (`Features feature), _ ->
             let options = v.options in
-            let features = Features.add options.features feature in
+            let features = Features.add feature options.features in
             let options = {options with features} in
             {v with options}, nobaction
         | Off (`Features feature), _ ->
             let options = v.options in
-            let features = Features.remove options.features feature in
+            let features = Features.remove feature options.features in
             let options = {options with features} in
             {v with options}, nobaction
         | On (`Options option), _ ->

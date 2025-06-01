@@ -124,7 +124,7 @@ let complex_of_set set =
   if Set.mem set `Mail && Set.cardinal set = 1 then MailFreight
   else
     (* Mail won't matter from now on *)
-    let set = Set.remove set `Mail in
+    let set = Set.remove `Mail set in
     if Set.cardinal set = 1 then
       if Set.mem set `Passenger then PassengerFreight
       else if Set.mem set `Fast then FastFreight

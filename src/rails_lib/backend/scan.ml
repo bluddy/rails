@@ -70,7 +70,7 @@ let _scan_for_ixn tracks loc ~dir ~double player_idx =
     | Some track when Owner.(track.player = player2_idx) ->
         (* Find other dir and follow it *)
         let (let*) = Option.bind in
-        let* other_dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in
+        let* other_dir, _ = Dir.Set.remove oppo_dir track.dirs |> Dir.Set.pop_opt in
         let* loc2 = Trackmap.move_dir_bounds loc tracks ~dir:other_dir in
         let double = double_acc && Track.acts_like_double track in
         loop_to_node loc2 other_dir double ~dist:(dist + 1)
@@ -135,7 +135,7 @@ let scan_station_block tracks trains loc dir player_idx =
         Hashtbl.replace seen_ixns loc ();
         let double = Track.acts_like_double track in
         let count = List.length train_idxs in
-        let other_dirs = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.to_list in
+        let other_dirs = Dir.Set.remove oppo_dir track.dirs |> Dir.Set.to_list in
         List.fold_left (fun ((count, double) as acc) dir ->
           match Trackmap.move_dir_bounds loc ~dir tracks with
           | Some loc2 ->
@@ -150,7 +150,7 @@ let scan_station_block tracks trains loc dir player_idx =
         let double = Track.acts_like_double track in
         let count = List.length train_idxs in
         let res =
-          let* dir, _ = Dir.Set.remove track.dirs oppo_dir |> Dir.Set.pop_opt in
+          let* dir, _ = Dir.Set.remove oppo_dir track.dirs |> Dir.Set.pop_opt in
           let* loc2 = Trackmap.move_dir_bounds loc ~dir tracks in
           Option.return (loop loc2 dir)
         in

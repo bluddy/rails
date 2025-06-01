@@ -27,7 +27,7 @@ module Make(E: Elem) = struct
     let i = E.to_enum elem in
     v land (1 lsl i) <> 0
 
-  let remove v elem =
+  let remove elem v =
     let i = E.to_enum elem in
     v land (lnot (1 lsl i))
 
@@ -49,12 +49,12 @@ module Make(E: Elem) = struct
     with
     Not_found -> None
 
-  let add v elem =
+  let add elem v =
     let i = E.to_enum elem in
     v lor (1 lsl i)
 
   let singleton elem =
-    add empty elem
+    add elem empty
 
   let equal v1 v2 =
     v1 = v2
@@ -83,7 +83,7 @@ module Make(E: Elem) = struct
   let of_list l =
     let v = ref empty in
     List.iter (fun elem ->
-      v := add !v elem
+      v := add elem !v
     )
     l;
     !v
@@ -94,7 +94,7 @@ module Make(E: Elem) = struct
     (* raises exception on empty *)
   let pop v =
     let elem = find v (fun _ -> true) in
-    let v = remove v elem in
+    let v = remove elem v in
     elem, v
 
   let pop_opt v =

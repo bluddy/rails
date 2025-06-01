@@ -307,7 +307,7 @@ let add_upgrade upgrade player v =
   let info =
     match v.info with
     | Some ({upgrades;_} as info) ->
-        let upgrades = Upgrades.add upgrades upgrade in
+        let upgrades = Upgrades.add upgrade upgrades in
         {info with upgrades} |> Option.some
     | None -> None
   in

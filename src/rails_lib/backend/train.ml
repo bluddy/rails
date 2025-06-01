@@ -205,7 +205,7 @@ let freight_set_of_cars cars =
   (* Create a complex freight set *)
   List.fold_left (fun set car ->
     let freight = Car.get_freight car in
-    Freight.Set.add set freight)
+    Freight.Set.add freight set)
   Freight.Set.empty
   cars
 

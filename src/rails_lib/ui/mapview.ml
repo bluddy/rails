@@ -174,9 +174,9 @@ let set_survey b v = {v with survey=b}
 let update_option option value v =
   let options = 
     if value then
-      Options.add v.options option
+      Options.add option v.options 
     else
-      Options.remove v.options option
+      Options.remove option v.options
   in
   {v with options}
 
@@ -528,36 +528,43 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
               R.draw_rect win ~x:(x-9) ~y:(y-9) ~w:18 ~h:18 ~fill:false ~color:Ega.white
           | _ -> ()
         in
-        begin match track.kind with
-        | Station (`Depot | `Station | `Terminal) ->
+        let draw_normal_track ~color ~is_double dirs =
+          let draw_segment x y dir =
+            let dx, dy = Dir.to_offsets dir in
+            R.draw_line win ~color ~x1:x ~y1:y
+              ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2);
+          in
+          Dir.Set.iter (fun dir ->
+            draw_segment x y dir;
+            if is_double then (
+              let dir_adjust = match dir with
+              | Dir.Up | Down -> Dir.Left
+              | _ -> Down
+              in
+              let x, y = Dir.adjust dir_adjust x y in
+              draw_segment x y dir
+            )
+          )
+          dirs
+        in
+        begin match track.kind, bridge_washout with
+        | Station (`Depot | `Station | `Terminal), _ ->
             (* Draw station outline *)
             R.draw_rect win ~color:Ega.white ~x:(x-3) ~y:(y-3) ~w:6 ~h:6 ~fill:true;
             draw_signals ();
             draw_zoom4_station ()
 
-        | Station `SignalTower ->
+        | Station `SignalTower, _ ->
             draw_signals ();
             draw_zoom4_station ()
 
-        | _normal_track ->
-            let draw_segment x y dir =
-              let dx, dy = Dir.to_offsets dir in
-              R.draw_line win ~color:Ega.white ~x1:x ~y1:y
-                ~x2:(x+dx*tile_w2) ~y2:(y+dy*tile_h2);
-            in
+        | Bridge _, Some (bridge_x,bridge_y) when bridge_x = tile_x && bridge_y = tile_y ->
+            (* Draw an X on the brige *)
+            draw_normal_track ~color:Ega.bred ~is_double:true Dir.Set.x_shape
+
+        | _normal_track, _ ->
             let is_double = Track.acts_like_double track in
-            Dir.Set.iter (fun dir ->
-              draw_segment x y dir;
-              if is_double then (
-                let dir_adjust = match dir with
-                | Dir.Up | Down -> Dir.Left
-                | _ -> Down
-                in
-                let x, y = Dir.adjust dir_adjust x y in
-                draw_segment x y dir
-              )
-            )
-            track.dirs
+            draw_normal_track ~color:Ega.white ~is_double track.dirs
         end
       | _ -> ()
   in

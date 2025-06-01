@@ -19,13 +19,13 @@ module type S = sig
 
   val mem: t -> elt -> bool
 
-  val remove: t -> elt -> t
+  val remove: elt -> t -> t
 
   val find: t -> (elt -> bool) -> elt
 
   val find_opt: t -> (elt -> bool) -> elt option
 
-  val add: t -> elt -> t
+  val add: elt -> t -> t
 
   val singleton: elt -> t
 
