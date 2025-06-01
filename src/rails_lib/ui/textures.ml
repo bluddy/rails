@@ -915,6 +915,7 @@ module Misc = struct
   | `Cursor
   | `PaperTear1
   | `PaperTear2
+  | `WaterOnBridge
   | `Escape1
   | `Escape2
   | `FrameBL
@@ -953,6 +954,7 @@ module Misc = struct
     tex `Cursor 300 100;
     tex `PaperTear1 40 100;
     tex `PaperTear2 60 100;
+    tex `WaterOnBridge 200 100;
     slice [220, 100; 240, 100; 260, 100; 280, 100] |> Hashtbl.replace smoke_hash `SmokeTop;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in

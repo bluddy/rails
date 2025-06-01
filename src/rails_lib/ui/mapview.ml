@@ -377,6 +377,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   v, actions
 
 let render win (s:State.t) (v:t) ~minimap ~build_station =
+  let player_idx = C.player in
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let tile_div = tile_div_of_zoom v.zoom in
   let tile_w2, tile_h2 = tile_w/2, tile_h/2 in
@@ -444,11 +445,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       [0, Ega.white; 16, Ega.black]
     ) trains
   in
+  let bridge_washout = B.get_player player_idx s.backend |> Player.get_bridge_washout in
   let draw_track_zoom4 ~tile_x ~tile_y ~screen_x ~screen_y =
     (* draw an individual piece of tile *)
     let track_h = s.State.textures.tracks in
-    match B.get_track tile_x tile_y s.backend with
-    | Some track when Track.is_visually_double track ->
+    let misc_h = s.textures.misc in
+    match B.get_track tile_x tile_y s.backend, bridge_washout with
+    | Some track, _ when Track.is_visually_double track ->
       let tex = Textures.Tracks.find track_h track in
       let (x1, y1), (x2, y2) = Track.double_track_offsets track in
       let xd, yd = screen_x + x1 - 2, screen_y + y1 - 2 in
@@ -456,7 +459,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       let xd, yd = screen_x + x2 - 2, screen_y + y2 - 2 in
       R.Texture.render win tex ~x:xd ~y:yd
 
-    | Some ({kind=Station station_kind; dirs;_} as track) ->
+    | Some ({kind=Station station_kind; dirs;_} as track), _ ->
       let tex = Textures.Tracks.find track_h track in
       R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2);
 
@@ -476,7 +479,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           R.Texture.render ~color win tex ~x:(screen_x-2) ~y:(screen_y-2))
       ) dirs
 
-    | Some track ->
+    | Some ({kind=Bridge _;_} as track), Some(x,y) when tile_x=x && tile_y=y ->
+      let tex = Textures.Tracks.find track_h track in
+      R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2);
+      let water_tex = Hashtbl.find misc_h `WaterOnBridge in
+      R.Texture.render win water_tex ~x:(screen_x-2) ~y:(screen_y-2)
+      
+    | Some track, _ ->
       let tex = Textures.Tracks.find track_h track in
       R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
 
@@ -569,7 +578,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     v.draw_buffer;
 
     (* draw current trains *)
-    let trains = B.get_trains C.player s.backend in
+    let trains = B.get_trains player_idx s.backend in
     Trainmap.iteri (fun train_num train ->
       let should_write_to_buffer =
         match Hashtbl.find_opt v.draw_buffer train_num with

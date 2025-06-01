@@ -538,4 +538,7 @@ let add_to_total_difficulty params v =
   let diff = if B_options.cutthroat options then increase diff else diff in 
   {v with total_difficulty=diff}
 
+let get_bridge_washout v = match v.event with
+  | Some(BridgeWashout loc) -> Some loc
+  | _ -> None
 
