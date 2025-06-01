@@ -181,6 +181,8 @@ let reset_pixels_from_midtile (train: rw t) =
 
 let get_route_dest v = Vector.get v.route v.stop
 
+let get_last_station v = v.last_station
+
 let get_next_stop v =
   match v.priority_stop with
   | Some stop -> (`NoWait, stop)

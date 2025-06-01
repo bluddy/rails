@@ -289,16 +289,16 @@ module Train_update = struct
     let compute_dir_to_dest graph =
       (* This is expensive *)
       let dest = Train.get_dest train in
-      let dir =
-        match Track_graph.shortest_path graph ~src:loc ~dest with
-        | Some dir -> dir
+      let dir, ui_msgs = match Track_graph.shortest_path graph ~src:loc ~dest with
+        | Some dir -> dir, []
         | None -> (* TODO: Impossible route message *)
           Dir.Set.find_nearest train.dir track.dirs
-          |> Option.get_exn_or "Cannot find track for train"
+          |> Option.get_exn_or "Cannot find track for train",
+          [Ui_msg.ImpossibleRoute{player_idx=train.player; train_idx=idx; src=Train.get_last_station train; dst=dest}]
       in
-      dir
+      dir, ui_msgs
     in
-    let dir = compute_dir_to_dest v.graph in
+    let dir, ui_msgs = compute_dir_to_dest v.graph in
     let station = Station_map.get_exn loc stations in
     (* Second check of this. No matter *)
     let can_go, cancel_override = Station.can_train_go dir station in
@@ -321,9 +321,10 @@ module Train_update = struct
           economic_activity=false; (* reset *)
         }
       in
-      _update_train_target_speed v train track ~idx ~cycle loc ~dir, stations, active_stations
+      let train = _update_train_target_speed v train track ~idx ~cycle loc ~dir in
+      train, stations, active_stations, ui_msgs
     ) else (
-      {train with state=Train.StoppedAtSignal dir}, stations, []
+      {train with state=Train.StoppedAtSignal dir}, stations, [], ui_msgs
     )
 
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
@@ -356,8 +357,8 @@ module Train_update = struct
               in
               if Train.is_traveling train then
                 (* No stopping at this station *)
-                let train, stations, active_stations = _exit_station ~idx ~cycle v train stations track loc in
-                train, stations, data, active_stations, ui_msgs
+                let train, stations, active_stations, new_msgs = _exit_station ~idx ~cycle v train stations track loc in
+                train, stations, data, active_stations, new_msgs @ ui_msgs
               else
                 (* Some kind of stop. Exit later *)
                 train, stations, data, [], ui_msgs
@@ -370,16 +371,16 @@ module Train_update = struct
           | LoadingAtStation _ ->
               (* Done loading/unloading. Check if we can exit the station *)
               let wait_at_stop, _ = Train.get_next_stop train in
-              let train, stations, active_stations = match wait_at_stop with
-                | `Wait -> {train with state=Train.WaitingForFullLoad}, stations, []
+              let train, stations, active_stations, ui_msgs = match wait_at_stop with
+                | `Wait -> {train with state=Train.WaitingForFullLoad}, stations, [], []
                 | _ -> _exit_station ~idx ~cycle v train stations track loc
               in
-              train, stations, None, active_stations, []
+              train, stations, None, active_stations, ui_msgs
 
           | WaitingForFullLoad when Train.is_full train ->
               (* Done waiting for full load *)
-              let train, stations, active_stations = _exit_station ~idx ~cycle v train stations track loc in
-              train, stations, None, active_stations, []
+              let train, stations, active_stations, ui_msgs = _exit_station ~idx ~cycle v train stations track loc in
+              train, stations, None, active_stations, ui_msgs
 
           | WaitingForFullLoad ->
               (* If we're not full, we need to see if we can offload more from the station *)
@@ -412,8 +413,8 @@ module Train_update = struct
               (* Check here as well to avoid expensive computation *)
               let can_go, _ = Station.can_train_go dir station in
               if can_go then
-                let train, stations, active_stations = _exit_station ~idx ~cycle v train stations track loc in
-                train, stations, None, active_stations, []
+                let train, stations, active_stations, ui_msgs = _exit_station ~idx ~cycle v train stations track loc in
+                train, stations, None, active_stations, ui_msgs
               else
                 default_ret
         in
