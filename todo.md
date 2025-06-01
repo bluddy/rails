@@ -7,7 +7,6 @@
 - Handle ui_msgs for washout, climate change
 - Handle trains running into washed out bridges
 - Handle train accidents
-- Draw washed out bridges
 - Stock broker: print ownership of AI stock
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game
