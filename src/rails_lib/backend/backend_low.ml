@@ -72,7 +72,6 @@ module Train_update = struct
         let dist = Utils.classic_dist loc train.last_station in
         let num_cars = List.length train.cars in
         dist * num_cars
-        (* Train.add_ton_miles train total_dist v.fiscal_period_year *)
       in
       let cars = train.cars in
 
@@ -257,7 +256,6 @@ module Train_update = struct
     | Some _ when not train.had_maintenance && Station.can_maintain station ->
          {train with had_maintenance=true}, station, None, []
     | _ -> train, station, None, []
-
 
       (* TODO: young_station_reached if age <= 20 *)
       (* add income/2 to other_income type *)
@@ -457,15 +455,18 @@ let _update_player_with_data (player:Player.t) data active_stations fiscal_perio
       let active_station = Random.pick_list active_stations random in
       Player.set_active_station active_station player
 
-let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.t) params ~cycle ~cycle_check ~cycle_bit ~region_div =
+let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.t) params =
   (* This is the regular update function for trains. Important stuff happens midtile
      The train can be looped over several times as it picks up speed.
    *)
 
+  let cycle_check, region_div = if Region.is_us params.Params.region then 16, 1 else 8, 2 in
+  let cycle_bit = 1 lsl (params.cycle mod 12) in
+
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   begin match train.state with
   | Traveling travel_state ->
-    let train = Train.update_speed train ~cycle ~cycle_check ~cycle_bit in
+    let train = Train.update_speed train ~cycle:params.cycle ~cycle_check ~cycle_bit in
 
     (* Take care of bookkeeping *)
     if Train.get_speed train > 0 then (
@@ -500,7 +501,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
             (* Make sure we don't double-process mid-tiles *)
             match is_mid_tile, travel_state.traveling_past_station with
             | true, false ->
-                _handle_train_mid_tile ~idx ~cycle v train stations loc
+                _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc
             | false, true ->
                 travel_state.traveling_past_station <- false;
                 Train.advance train, stations, None, [], []
@@ -517,24 +518,18 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
-    let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle v train stations loc in
+    let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc in
     let player = _update_player_with_data player data active_stations v.params.fiscal_period_year v.random in
     train, stations, player, ui_msgs
   end
 
     (* Run every cycle, updating every train's position and speed *)
   let _update_all_trains (v:t) (player:Player.t) =
-    (* Log.debug (fun f -> f "update_all_trains"); *)
-    let cycle_check, region_div = if Region.is_us v.params.region then 16, 1 else 8, 2 in
-    let cycle_bit = 1 lsl (v.params.cycle mod 12) in
-    let cycle = v.params.cycle in
     (* TODO: We update the high priority trains before the low priority *)
     (* Trains are in a vector, updated in-place *)
     let stations, player, ui_msgs =
       Trainmap.fold_mapi_in_place (fun idx (stations, player, ui_msg_acc) train ->
-        let train, stations, player, ui_msgs = 
-          _update_train v idx train stations player v.params ~cycle ~cycle_check ~cycle_bit ~region_div
-        in
+        let train, stations, player, ui_msgs = _update_train v idx train stations player v.params in
         (stations, player, ui_msgs @ ui_msg_acc), train)
         player.trains
         ~init:(v.stations, player, [])
