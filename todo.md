@@ -1,4 +1,9 @@
 # Tasks
+- Hook up fiscal_period_end stuff
+- year_end_interest_engine_and_score
+- Handle train blizzard event
+- Train: fill in time_running
+- Handle year end messages
 - Add special newspaper and events
 - Handle ui_msgs for washout, climate change
 - Handle trains running into washed out bridges

@@ -643,12 +643,24 @@ let _update_station_supply_demand player_idx stations map params =
   in
   stations, ui_msgs
 
-let modify_climate params random =
+let _modify_climate params random =
   let climate = Climate.modify random params.Params.climate in
   if climate =!= params.climate then
     {params with climate}, [Ui_msg.ClimateChange {climate}]
   else
     params, []
+
+let _year_end_checks player ai engines params =
+  let player = player
+    |> Player.pay_yearly_interest
+    |> Player.add_to_total_difficulty params
+  in
+  let ai = Ai.end_of_year_maintenance_interest ai in
+  let ui_msgs =
+    Engine.discovered_at_year engines ~year:params.Params.year
+    |> List.map (fun engine -> Ui_msg.EngineDiscovered engine)
+  in
+  player, ai, ui_msgs
 
 (** Most time-based work happens here **)
 let handle_cycle v =
@@ -679,7 +691,7 @@ let handle_cycle v =
     in
     let params, climate_msgs =
       if cycle mod C.Cycles.climate_change = 0 then
-        modify_climate params v.random
+        _modify_climate params v.random
       else params, []
     in
     let player, event_msgs =
@@ -735,12 +747,7 @@ let handle_cycle v =
       else player, []
     in
 
-    let m = [%up {player.m with cash}] in
-    let player = [%up {player with active_station; trains; m}] in
-
-    let players = if player =!= player_old then Player.set player_idx player players else players in
-
-    (* TODO: only this part deals with all players for now *)
+    (* NOTE: only this part deals with all players for now *)
 
     (* Cancel any expired priority shipments *)
     let players, stations, cp_msgs = _cancel_expired_priority_shipments players stations params in
@@ -748,20 +755,32 @@ let handle_cycle v =
     (* Check if we delivered priority deliveries *)
     let players, stations, del_msgs = _check_priority_delivery players stations params in
 
-    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params}] in
-
-    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @ fin_msgs @ climate_msgs @ event_msgs in
-
     (* adjust time *)
-    v.params.time <- v.params.time + 1;
-    let v = 
-      if v.params.time >= Constants.year_ticks then
-        (* TODO: time should reset on fin period, not year *)
-        {v with params={v.params with year=v.params.year + 1; time=0}}
-      else v
+    params.time <- params.time + 1;
+
+    let params, end_of_year = 
+      if params.time >= C.year_ticks then {params with year=params.year + 1}, true else params, false
     in
+
+    let player, ai, year_end_msgs =
+      if end_of_year then _year_end_checks player ai v.engines params
+      else player, ai, []
+    in
+
+    (* Combine all data *)
+    let m = [%up {player.m with cash}] in
+    let player = [%up {player with active_station; trains; m}] in
+    let players = if player =!= player_old then Player.set player_idx player players else players in
+
+    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params}] in
+    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @
+      fin_msgs @ climate_msgs @ event_msgs @ year_end_msgs
+    in
+
     v, ui_msgs
+
   in
+
   if not v.pause then
     time_step ()
   else v, []

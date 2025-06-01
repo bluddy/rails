@@ -27,7 +27,7 @@ type stock_broker_ui_msg =
 
 module TID = Trainmap.Id
 
-type year_end_msg =
+type fiscal_period_end_msg =
   | TrainNoRevenue of TID.t
   | TrainNoMaintenance of TID.t
   | TrainNoSchedule of TID.t
@@ -59,6 +59,7 @@ type t =
   | AiBuysPlayerStock of {player_idx: Owner.t; ai_idx: Owner.t; takeover: bool; opponent: Opponent.name}
   | BridgeWashout of {player_idx: Owner.t; loc: loc; fixed: bool}
   | ClimateChange of {climate: Climate.t}
-  | YearEndMsgs of Owner.t * year_end_msg list
+  | EngineDiscovered of Engine.t
+  | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   [@@deriving yojson]
 

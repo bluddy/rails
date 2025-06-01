@@ -64,6 +64,7 @@ let speed v = v.speed
 
 let cutthroat v = RealityLevels.mem v.reality_levels `CutthroatCompetition
 
+let dispatcher_ops v = RealityLevels.mem v.reality_levels `DispatcherOps
 let complex_economy v = RealityLevels.mem v.reality_levels `ComplexEconomy 
 let simple_economy v = not @@ complex_economy v
 

@@ -83,6 +83,7 @@ type t = {
   avg_speed_record: int;
   ton_mile_history: int list;
   ton_mile_record: int;
+  total_difficulty: int;  (* dynamic tracker of difficulty over time *)
 } [@@deriving yojson]
 
 let make_periodic () = {
@@ -111,6 +112,7 @@ let default idx =
     avg_speed_record=0;
     ton_mile_history=[];
     ton_mile_record=0;
+    total_difficulty=0;
   }
 
 let get_cash v = v.m.cash
@@ -142,7 +144,7 @@ let add_income_stmt income_stmt (v:t) =
   let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
 
-let year_end stations params v =
+let fiscal_period_end stations params v =
   (* Messages and housecleaning *)
   let fiscal_period_year = params.Params.fiscal_period_year in
   let fiscal_next_year = match fiscal_period_year with `First -> `Second | `Second -> `First in
@@ -248,7 +250,7 @@ let year_end stations params v =
   let v =
     {v with m; avg_speed_record; avg_speed_history; ton_mile_record; ton_mile_history}
   in
-  v, Ui_msg.YearEndMsgs(v.idx, ui_msgs)
+  v, Ui_msg.FiscalPeriodEndMsgs(v.idx, ui_msgs)
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
@@ -512,4 +514,24 @@ let get idx v = Owner.Map.find idx v
 
 let set idx player v =
   Owner.Map.add idx player v
+
+let pay_yearly_interest v =
+  let open Money in
+  let v = pay `InterestFees v.m.yearly_interest_payment v in
+  if v.m.cash < zero then
+    pay `InterestFees (neg v.m.cash / 8) v
+  else v
+
+let add_to_total_difficulty params v =
+  (* We dynamically keep track of difficulty *)
+  let options = params.Params.options in
+  let diff = v.total_difficulty in
+  let difficulty = B_options.difficulty_enum options in
+  let diff = difficulty * 4 + 2 + diff in
+  let increase diff = diff + difficulty / 2 + 1 in
+  let diff = if B_options.dispatcher_ops options then increase diff else diff in
+  let diff = if B_options.complex_economy options then increase diff else diff in
+  let diff = if B_options.cutthroat options then increase diff else diff in 
+  {v with total_difficulty=diff}
+
 

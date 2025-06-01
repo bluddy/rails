@@ -922,7 +922,6 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
 
   | `Nothing -> v, stocks, player_cash, []
 
-
 let ai_track_routines ?force_create ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
   match ai_track_routines ?force_create ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v with
   | `Build(tracks, tilemap, v, stations, ui_msg) ->
@@ -931,4 +930,16 @@ let ai_track_routines ?force_create ~stocks ~params ~player_net_worth ~tilemap ~
       tracks, tilemap, stations, stocks, v,  [ui_msg]
   | `Update v ->
       tracks, tilemap, stations, stocks, v, []
+
+let end_of_year_maintenance_interest v =
+  let ais =
+    Owner.Map.map (fun ai_player ->
+      let track_maintenance = ai_player.track_length / 8 |> Money.of_int in
+      let open Money in
+      let cash = ai_player.cash - track_maintenance - ai_player.yearly_interest in
+      let cash = if cash < zero then cash + cash / 8 else cash in
+      {ai_player with cash}
+    ) v.ais
+  in
+  {v with ais}
 
