@@ -67,7 +67,7 @@ type t = {
   idx: Owner.t;
   name: string option; (* custom name for railroad *)
   mutable trains: Trainmap.t;
-  stations: Utils.loc list; (* Stations ordered by creation order *)
+  station_locs: Utils.loc list; (* Stations ordered by creation order *)
   m: monetary;
   track_length: int; (* track length according to the game (not per tile) *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
@@ -95,7 +95,7 @@ let default idx =
   {
     idx;
     name=None;
-    stations = [];
+    station_locs = [];
     m = default_monetary;
     trains = Trainmap.empty ();
     track_length = 0;
@@ -142,15 +142,53 @@ let add_income_stmt income_stmt (v:t) =
   let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
 
-let year_end period v =
+let year_end stations params v =
+  (* Messages and housecleaning *)
+  let fiscal_period_year = params.Params.fiscal_period_year in
+  let fiscal_next_year = match fiscal_period_year with `First -> `Second | `Second -> `First in
+  let trains = v.trains in
+  let ui_msgs = [] in
+  let ui_msgs =
+    (* Trainmap is mutable *)
+    Trainmap.fold_mapi_in_place (fun idx acc train ->
+      let period = Train.get_period params.fiscal_period_year train in
+      let acc = if Money.(period.revenue = zero) then Ui_msg.TrainNoRevenue(idx)::acc else acc in
+      let acc = if not train.had_maintenance then Ui_msg.TrainNoMaintenance(idx)::acc else acc in
+      let acc = if Train.get_route_length train = 0 then Ui_msg.TrainNoSchedule(idx)::acc else acc in
+      let maintenance_cost =
+        let added_maint = if Train.get_engine train |> Engine.has_steam then 2 else 1 in
+        let no_maint_penalty = if train.had_maintenance then 0 else 2 in
+        Money.(train.maintenance_cost +~ added_maint +~ no_maint_penalty) in
+      let acc = if Money.(maintenance_cost >= Train.get_engine_cost train) then Ui_msg.TrainOldEngine(idx)::acc else acc in
+      let periodic = Train.update_periodic fiscal_next_year train.periodic (fun _ -> Train.make_periodic ()) in
+      acc, {train with had_maintenance=false; periodic})
+      trains
+      ~init:ui_msgs
+  in
+  let player_idx = v.idx in
+  let ui_msgs =
+    List.fold_left (fun acc loc ->
+      let station = Station_map.get_exn loc stations in
+      if Station.has_override_hold station then
+        let loc =
+          if Station.is_proper_station station then loc
+          else
+            Station_map.find_nearest ~player_idx ~only_proper:true loc stations 
+            |> Option.get_exn_or "couldn't find station" |> fun x -> x.loc
+        in
+        Ui_msg.StationHasHold(loc)::acc
+      else acc)
+      ui_msgs
+      v.station_locs
+  in
   let total_revenue = Income_statement.total_revenue v.m.income_statement in
   let total_income_statement = Income_statement.merge v.m.total_income_statement v.m.income_statement in
   let ui_msgs =
     if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
-      [Ui_msg.ConsiderBankruptcy] else []
+      (Ui_msg.ConsiderBankruptcy)::ui_msgs else ui_msgs
   in
   let earnings = Money.((v.m.net_worth - v.m.net_worth_last_year) * 10) in
-  let new_fin_period = match period with `First -> false | `Second -> true in
+  let new_fin_period = match fiscal_period_year with `First -> false | `Second -> true in
   let earnings_history = match v.m.earnings_history with
     | x::xs when not new_fin_period -> Money.(x + earnings)::xs
     | xs when new_fin_period -> earnings::xs
@@ -179,7 +217,7 @@ let year_end period v =
     else
       v.avg_speed_record, ui_msgs
   in
-  let ton_miles = (Utils.read_pair v.periodic period).ton_miles in
+  let ton_miles = (Utils.read_pair v.periodic fiscal_period_year).ton_miles in
   let ton_mile_record, ui_msgs =
     if ton_miles > v.ton_mile_record then
       ton_miles, Ui_msg.TonMileRecord(ton_miles)::ui_msgs
@@ -210,7 +248,7 @@ let year_end period v =
   let v =
     {v with m; avg_speed_record; avg_speed_history; ton_mile_record; ton_mile_history}
   in
-  v, ui_msgs
+  v, Ui_msg.YearEndMsgs(v.idx, ui_msgs)
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
@@ -232,7 +270,7 @@ let get_name station_map cities v = match v.name with
             let city, _ = Cities.find_exn x y cities in
             city::acc
           | _ -> acc)
-      v.stations
+      v.station_locs
       []
     in
     match first_two_proper_station_cities with
@@ -247,11 +285,11 @@ let incr_dist_traveled ~dist period_year v =
     period.dist_traveled <- period.dist_traveled + dist)
 
 let add_station loc v =
-  {v with stations=loc::v.stations}
+  {v with station_locs=loc::v.station_locs}
 
 let remove_station loc v =
-  let stations = List.filter (fun loc2 -> not @@ Utils.equal_loc loc loc2) v.stations in
-  [%up {v with stations}]
+  let station_locs = List.filter (fun loc2 -> not @@ Utils.equal_loc loc loc2) v.station_locs in
+  [%up {v with station_locs}]
 
 let has_bond (v:t) = Money.(v.m.bonds > Money.zero)
 
@@ -425,7 +463,7 @@ let pay_station_maintenance station_map v =
     List.sum_cash (fun loc ->
       let station = Station_map.get_exn loc station_map in
       Station.maintenance_of station
-    ) v.stations
+    ) v.station_locs
   in
   pay `StationMaintenance expense v
 

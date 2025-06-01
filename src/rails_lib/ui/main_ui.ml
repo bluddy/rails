@@ -830,7 +830,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           add_remove
           (Goods.show good)
       in
-      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews text None) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews text None) in
       {v with mode}
 
     | Normal, (TrainArrival t) ->
@@ -854,27 +854,27 @@ let handle_msgs (s:State.t) v ui_msgs =
       {v with mode=Stock_broker state}
 
     | Normal, PriorityShipmentCanceled{player_idx} when Owner.(player_idx = main_player_idx) ->
-      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews Priority_shipment.cancel_text None) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None) in
       {v with mode}
 
     | Normal, PriorityShipmentCreated{player_idx; shipment} when Owner.(player_idx = main_player_idx) ->
       let heading, text = Priority_shipment.create_text shipment (B.get_region s.backend) s.backend.stations in
-      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
       {v with mode}
 
     | Normal, PriorityShipmentDelivered{player_idx; shipment; bonus} when Owner.(player_idx = main_player_idx) ->
       let heading, text = Priority_shipment.delivery_text shipment (B.get_region s.backend) s.backend.stations bonus in
-      let mode = Newspaper(Newspaper.make s Newspaper.LocalNews ~heading text None) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
       {v with mode}
 
     | Normal, NewCompany{opponent; city} ->
       let text = Ai.new_ai_text opponent city s.backend.cities in
-      let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
       {v with mode}
 
     | Normal, AiConnected{opponent; ai_name; src_name; tgt_name} ->
       let text = Ai.new_route_text ai_name src_name tgt_name in
-      let mode = Newspaper(Newspaper.make s Newspaper.RailRoadNews text @@ Some opponent) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
       {v with mode}
 
     | Normal, AiBuildOrderFailed{player_idx; ai_name; src_name; tgt_name} when Owner.(player_idx = main_player_idx) ->
@@ -887,12 +887,12 @@ let handle_msgs (s:State.t) v ui_msgs =
 
     | Normal, (AiBuySellOwnStock {opponent;_} | AiBuysPlayerStock {opponent;_} | AiSellsPlayerStock {opponent;_}) ->
       let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
-      let mode = Newspaper(Newspaper.make s Newspaper.FinancialNews text @@ Some opponent) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
       {v with mode}
 
     | Normal, AiTakesOutBond {opponent; player_idx;_} when Owner.(player_idx=main_player_idx) ->
       let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
-      let mode = Newspaper(Newspaper.make s Newspaper.FinancialNews text @@ Some opponent) in
+      let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
       {v with mode}
 
     | _ -> v
@@ -925,8 +925,6 @@ let handle_tick s v time is_cycle = match v.mode with
       in
       decr_train_msgs ()
   | _ -> v
-
-let str_of_month = [|"Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun"; "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec"|]
 
 let draw_train_roster win (s:State.t) v =
   train_roster_iter s v
@@ -1046,7 +1044,7 @@ let render_main win (s:State.t) v =
   Fonts.Render.write win s.fonts ~color ~idx:4 ~x:264 ~y:66 cash_s;
 
   let month, year = B.get_date s.backend in
-  let date_s = Printf.sprintf "%s %d" (str_of_month.(month)) year in
+  let date_s = Printf.sprintf "%s %d" (Utils.str_of_month month) year in
   Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:74 date_s;
 
   (* Train area *)

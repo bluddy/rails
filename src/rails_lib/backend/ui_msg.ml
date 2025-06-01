@@ -59,6 +59,6 @@ type t =
   | AiBuysPlayerStock of {player_idx: Owner.t; ai_idx: Owner.t; takeover: bool; opponent: Opponent.name}
   | BridgeWashout of {player_idx: Owner.t; loc: loc; fixed: bool}
   | ClimateChange of {climate: Climate.t}
-  | YearEndMsgs of year_end_msg list
+  | YearEndMsgs of Owner.t * year_end_msg list
   [@@deriving yojson]
 

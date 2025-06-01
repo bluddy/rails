@@ -342,7 +342,7 @@ let handle_msg (s:State.t) v ui_msg =
       | BankruptcyDeclared {player_idx} when Owner.(player_idx = C.player) ->
           let company_name = Backend.get_name player_idx s.backend in
           let text = sp "%s\nBankruptcy declared!" company_name in
-          Some(Newspaper(Newspaper.make s Newspaper.FinancialNews text None))
+          Some(Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text None))
       | _ -> None
       end
     | _ -> None

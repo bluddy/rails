@@ -1,6 +1,10 @@
 
 (* Time *)
 (* Each time period is both 2 years and a 24 hour day *)
+
+let screen_width = 320
+let screen_height = 200
+
 let moi = Money.of_int
 
 let player = Owner.create_human ()
@@ -111,3 +115,4 @@ let bridge_washout_tries = 16  (* How many times we try to hit a bridge *)
 let iron_bridge_fail_odds = 4  (* The extra odds of an iron bridge failing *)
 let stone_bridge_fail_odds = 8  (* The extra odds of a stone bridge failing *)
 
+let newspaper_cost_ref_year = 1775

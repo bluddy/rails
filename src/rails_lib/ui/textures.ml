@@ -913,6 +913,8 @@ module Misc = struct
   | `Council
   | `Credits
   | `Cursor
+  | `PaperTear1
+  | `PaperTear2
   | `Escape1
   | `Escape2
   | `FrameBL
@@ -949,6 +951,8 @@ module Misc = struct
     in
 
     tex `Cursor 300 100;
+    tex `PaperTear1 40 100;
+    tex `PaperTear2 60 100;
     slice [220, 100; 240, 100; 260, 100; 280, 100] |> Hashtbl.replace smoke_hash `SmokeTop;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in

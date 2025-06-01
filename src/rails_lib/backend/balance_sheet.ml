@@ -27,7 +27,7 @@ let create (s:State.t) player_idx =
     List.sum_cash (fun loc ->
       let station = Station_map.get_exn loc s.backend.stations in
       M.(Station.value_of station + Station.total_upgrade_value station))
-    player.stations
+    player.station_locs
   in
   let industries = player.m.owned_industry in
   let real_estate = calc_real_estate (B.get_region s.backend) s.backend.track s.backend.map player_idx in
