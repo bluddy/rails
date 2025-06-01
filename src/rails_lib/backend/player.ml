@@ -483,7 +483,7 @@ let handle_bridge_washout tracks params random v =
       let roll = Random.int C.washout_max_roll random in
       let len = Vector.length v.track in
       if roll < len then
-        (* TODO: multiple rolls if more track than max *)
+        (* TODO: need multiple rolls if more track than max *)
         let loc = Vector.random random v.track in
         let roll = Random.int C.bridge_extra_roll random in
         let track = Trackmap.get_exn loc tracks in

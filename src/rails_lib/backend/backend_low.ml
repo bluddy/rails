@@ -682,7 +682,12 @@ let handle_cycle v =
         modify_climate params v.random
       else params, []
     in
-
+    let player, event_msgs =
+      if cycle mod C.Cycles.event_change = 0 then
+        Player.handle_bridge_washout track params v.random player
+      else
+        player, []
+    in
 
     let stations, player, dev_state, active_station, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
@@ -745,7 +750,7 @@ let handle_cycle v =
 
     let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params}] in
 
-    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @ fin_msgs @ climate_msgs in
+    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @ fin_msgs @ climate_msgs @ event_msgs in
 
     (* adjust time *)
     v.params.time <- v.params.time + 1;
