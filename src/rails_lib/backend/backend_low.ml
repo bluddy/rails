@@ -457,7 +457,7 @@ let _update_player_with_data (player:Player.t) data active_stations fiscal_perio
       let active_station = Random.pick_list active_stations random in
       Player.set_active_station active_station player
 
-let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.t) ~cycle ~cycle_check ~cycle_bit ~region_div =
+let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.t) params ~cycle ~cycle_check ~cycle_bit ~region_div =
   (* This is the regular update function for trains. Important stuff happens midtile
      The train can be looped over several times as it picks up speed.
    *)
@@ -466,7 +466,13 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
   begin match train.state with
   | Traveling travel_state ->
     let train = Train.update_speed train ~cycle ~cycle_check ~cycle_bit in
-    (* TODO: fiscal period update stuff *)
+
+    (* Take care of bookkeeping *)
+    if Train.get_speed train > 0 then (
+        Train.add_time_running 1 params.Params.fiscal_period_year train;
+        Player.incr_time_running params.fiscal_period_year player;
+    );
+
     let rec train_update_loop train speed_bound stations player ui_msg_acc =
       let speed = Train.get_speed train in
       if speed_bound >= speed then train, stations, player, ui_msg_acc
@@ -527,7 +533,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
     let stations, player, ui_msgs =
       Trainmap.fold_mapi_in_place (fun idx (stations, player, ui_msg_acc) train ->
         let train, stations, player, ui_msgs = 
-          _update_train v idx train stations player ~cycle ~cycle_check ~cycle_bit ~region_div
+          _update_train v idx train stations player v.params ~cycle ~cycle_check ~cycle_bit ~region_div
         in
         (stations, player, ui_msgs @ ui_msg_acc), train)
         player.trains

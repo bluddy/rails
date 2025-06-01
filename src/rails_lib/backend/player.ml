@@ -286,6 +286,10 @@ let incr_dist_traveled ~dist period_year v =
   Utils.pair_iter v.periodic period_year (fun period ->
     period.dist_traveled <- period.dist_traveled + dist)
 
+let incr_time_running cur_period v =
+  Utils.pair_iter v.periodic cur_period (fun period ->
+    period.time_running <- period.time_running + 1)
+
 let add_station loc v =
   {v with station_locs=loc::v.station_locs}
 
