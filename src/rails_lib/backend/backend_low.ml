@@ -661,8 +661,9 @@ let handle_cycle v =
 
     let player_idx = C.player in
 
-    let player = Player.get player_idx v.players in
-    let player1 = player in
+    let players, track, stocks, map, ai, params = v.players, v.track, v.stocks, v.map, v.ai, v.params in
+    let player = Player.get player_idx players in
+    let player_old = player in (* For later comparison *)
 
     let trains, stations, player, tr_msgs = Train_update._update_all_trains v player in
 
@@ -676,8 +677,12 @@ let handle_cycle v =
       else
         player
     in
+    let params, climate_msgs =
+      if cycle mod C.Cycles.climate_change = 0 then
+        modify_climate params v.random
+      else params, []
+    in
 
-    let players, track, stocks, map, ai, params = v.players, v.track, v.stocks, v.map, v.ai, v.params in
 
     let stations, player, dev_state, active_station, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
@@ -728,7 +733,7 @@ let handle_cycle v =
     let m = [%up {player.m with cash}] in
     let player = [%up {player with active_station; trains; m}] in
 
-    let players = if player =!= player1 then Player.set player_idx player players else players in
+    let players = if player =!= player_old then Player.set player_idx player players else players in
 
     (* TODO: only this part deals with all players for now *)
 
@@ -738,9 +743,9 @@ let handle_cycle v =
     (* Check if we delivered priority deliveries *)
     let players, stations, del_msgs = _check_priority_delivery players stations params in
 
-    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks}] in
+    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params}] in
 
-    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @ fin_msgs in
+    let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @ fin_msgs @ climate_msgs in
 
     (* adjust time *)
     v.params.time <- v.params.time + 1;

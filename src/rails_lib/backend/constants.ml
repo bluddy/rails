@@ -61,6 +61,7 @@ let num_buy_shares = 10
 module Cycles = struct
   (* Cycle counts to perform some tasks *)
   let periodic_maintenance = 1024
+  let climate_change = 1024
   let rare_bgnd_events = 8
   let background_update = 16
 
