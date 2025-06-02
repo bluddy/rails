@@ -372,7 +372,8 @@ let add_freight_ton_miles ftm cur_period v =
   let periodic =
     Utils.update_pair v.periodic cur_period (fun period ->
       let freight_ton_miles = Freight.Map.merge_add period.freight_ton_miles ftm in
-      {period with freight_ton_miles})
+      let ton_miles = period.ton_miles + Freight.Map.sum (fun _ x -> x) ftm in
+      {period with freight_ton_miles; ton_miles})
   in
   {v with periodic}
 

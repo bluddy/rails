@@ -68,11 +68,6 @@ module Train_update = struct
           Station.set_priority_shipment true station
         else station
       in
-      let ton_miles =
-        let dist = Utils.classic_dist loc train.last_station in
-        let num_cars = List.length train.cars in
-        dist * num_cars
-      in
       let cars = train.cars in
 
       let deliver_cargo () =
@@ -194,7 +189,9 @@ module Train_update = struct
       let goods_revenue = IS.RevenueMap.total_cash money_from_goods in
       let revenue = M.(goods_revenue + other_income - car_change_expense) in
 
+      (* Bugfix: more accurate computation via map *)
       let periodic =
+        let ton_miles = Freight.Map.sum (fun _ x -> x) freight_ton_miles in
         Train.update_periodic (Params.current_period v.params) train.periodic
         (fun p -> {p with ton_miles=p.ton_miles + ton_miles; revenue=M.(p.revenue + goods_revenue);})
       in
