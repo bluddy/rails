@@ -61,7 +61,8 @@ type periodic = {
   mutable dist_traveled: int;
   mutable time_running: int;  (* TODO: update this in train_update *)
   ton_miles: int; (* goods delievered per mile per period *)
-} [@@deriving yojson, show]
+  freight_ton_miles: int Freight.Map.t; (* per period *)
+} [@@deriving yojson]
 
 type t = {
   idx: Owner.t;
@@ -71,7 +72,6 @@ type t = {
   m: monetary;
   track_length: int; (* track length according to the game (not per tile) *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
-  freight_ton_miles: int Freight.Map.t * int Freight.Map.t; (* per period *)
   goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
   broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
@@ -87,9 +87,10 @@ type t = {
 } [@@deriving yojson]
 
 let make_periodic () = {
-    dist_traveled=0;
-    time_running=0;
-    ton_miles=0;
+  dist_traveled=0;
+  time_running=0;
+  ton_miles=0;
+  freight_ton_miles=Freight.Map.empty;
 }
 
 let default idx =
@@ -101,7 +102,6 @@ let default idx =
     trains = Trainmap.empty ();
     track_length = 0;
     track = Vector.create ();
-    freight_ton_miles=(Freight.Map.empty, Freight.Map.empty);
     goods_delivered=Goods.Set.empty;
     broker_timer=None;
     priority=None;
@@ -368,11 +368,13 @@ let check_priority_delivery stations v =
     (fun pr_data -> Priority_shipment.check_priority_delivery pr_data stations)
     v.priority
 
-let add_freight_ton_miles ftm fiscal_period v =
-  let freight_ton_miles = Utils.update_pair v.freight_ton_miles fiscal_period
-    (fun cur_ftm -> Freight.Map.merge_add cur_ftm ftm)
+let add_freight_ton_miles ftm cur_period v =
+  let periodic =
+    Utils.update_pair v.periodic cur_period (fun period ->
+      let freight_ton_miles = Freight.Map.merge_add period.freight_ton_miles ftm in
+      {period with freight_ton_miles})
   in
-  {v with freight_ton_miles}
+  {v with periodic}
 
 let set_active_station active_station v =
   Log.debug (fun f -> f "Active station set to %s" @@ Utils.show_loc active_station);
