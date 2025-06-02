@@ -21,16 +21,11 @@ type monetary = {
   yearly_interest_payment: Money.t;
   net_worth: Money.t;
   net_worth_last_period: Money.t;
-  earnings_record: Money.t; (* Earnings is delta in net worth *)
-  earnings_history: Money.t list; (* reversed list *)
   in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
   total_income_statement: Income_statement_d.t;
   last_balance_sheet: Balance_sheet_d.t;
   num_bankruptcies: int;
-  net_worth_history: Money.t list;
-  total_revenue_record: Money.t;
-  total_revenue_history: Money.t list;
 } [@@deriving yojson]
 
 let default_monetary = {
@@ -41,16 +36,11 @@ let default_monetary = {
     yearly_interest_payment = Money.of_int 20;
     net_worth = Money.of_int 500; 
     net_worth_last_period = Money.of_int 500; 
-    earnings_record = Money.zero;
-    earnings_history = [];
     in_receivership = false;
     income_statement = Income_statement_d.default;
     total_income_statement = Income_statement_d.default;
     last_balance_sheet = Balance_sheet_d.default;
     num_bankruptcies = 0;
-    net_worth_history=[];
-    total_revenue_record=Money.zero;
-    total_revenue_history=[];
 }
 
 type event =
@@ -63,6 +53,47 @@ type periodic = {
   ton_miles: int; (* goods delievered per mile per period *)
   freight_ton_miles: int Freight.Map.t; (* per period *)
 } [@@deriving yojson]
+
+let make_periodic () = {
+  dist_traveled=0;
+  time_running=0;
+  ton_miles=0;
+  freight_ton_miles=Freight.Map.empty;
+}
+
+module Record = struct
+  type t = {
+    earnings: Money.t; (* Earnings is delta in net worth *)
+    total_revenue: Money.t;
+    avg_speed: int;
+    ton_miles: int;
+  } [@@deriving yojson]
+
+  let default = {
+    earnings=Money.zero;
+    total_revenue=Money.zero;
+    avg_speed=0;
+    ton_miles=0;
+  }
+end
+
+module History = struct
+  type t = {
+    net_worth: Money.t list;
+    earnings: Money.t list; (* reversed list *)
+    total_revenue: Money.t list;
+    avg_speed: int list; (* reversed *)
+    ton_miles: int list;
+  } [@@deriving yojson]
+
+  let default = {
+    net_worth=[];
+    earnings=[];
+    total_revenue=[];
+    avg_speed=[];
+    ton_miles=[];
+  }
+end
 
 type t = {
   idx: Owner.t;
@@ -79,41 +110,30 @@ type t = {
   mutable active_station: Utils.loc option;
   event : event option;
   periodic: periodic * periodic;
-  avg_speed_history: int list; (* reversed *)
-  avg_speed_record: int;
-  ton_mile_history: int list;
-  ton_mile_record: int;
   total_difficulty: int;  (* dynamic tracker of difficulty over time *)
+  history: History.t;
+  record: Record.t;
 } [@@deriving yojson]
 
-let make_periodic () = {
-  dist_traveled=0;
-  time_running=0;
-  ton_miles=0;
-  freight_ton_miles=Freight.Map.empty;
-}
 
-let default idx =
-  {
-    idx;
-    name=None;
-    station_locs = [];
-    m = default_monetary;
-    trains = Trainmap.empty ();
-    track_length = 0;
-    track = Vector.create ();
-    goods_delivered=Goods.Set.empty;
-    broker_timer=None;
-    priority=None;
-    active_station=None;
-    event=None;
-    periodic=(make_periodic (), make_periodic ());
-    avg_speed_history=[];
-    avg_speed_record=0;
-    ton_mile_history=[];
-    ton_mile_record=0;
-    total_difficulty=0;
-  }
+let default idx = {
+  idx;
+  name=None;
+  station_locs = [];
+  m = default_monetary;
+  trains = Trainmap.empty ();
+  track_length = 0;
+  track = Vector.create ();
+  goods_delivered=Goods.Set.empty;
+  broker_timer=None;
+  priority=None;
+  active_station=None;
+  event=None;
+  periodic=(make_periodic (), make_periodic ());
+  total_difficulty=0;
+  history = History.default;
+  record = Record.default;
+}
 
 let get_cash v = v.m.cash
 
@@ -190,46 +210,55 @@ let fiscal_period_end stations params v =
       (Ui_msg.ConsiderBankruptcy)::ui_msgs else ui_msgs
   in
   let earnings = Money.((v.m.net_worth - v.m.net_worth_last_period) * 10) in
-  let earnings_history = earnings::v.m.earnings_history in
+  let earnings_history = earnings::v.history.earnings in
   let earnings_record, ui_msgs =
-    if Money.(earnings > v.m.earnings_record) then
+    if Money.(earnings > v.record.earnings) then
       earnings, Ui_msg.RecordEarnings(earnings)::ui_msgs
     else
-      v.m.earnings_record, ui_msgs
+      v.record.earnings, ui_msgs
   in
   let income_statement = Income_statement.default in
   let total_time = (10 + Pair.fold (fun p1 p2 -> p1.time_running + p2.time_running) v.periodic) / 10 in
   let total_dist = 6 * (Pair.fold (fun p1 p2 -> p1.dist_traveled + p2.dist_traveled) v.periodic) in
   let avg_speed = total_dist / total_time in
-  let avg_speed_history = (avg_speed / 2)::v.avg_speed_history in
+  let avg_speed_history = (avg_speed / 2)::v.history.avg_speed in
   let avg_speed_record, ui_msgs =
-    if avg_speed > v.avg_speed_record then
+    if avg_speed > v.record.avg_speed then
       avg_speed, Ui_msg.AvgSpeedRecord(avg_speed)::ui_msgs
     else
-      v.avg_speed_record, ui_msgs
+      v.record.avg_speed, ui_msgs
   in
   let ton_miles = (Utils.read_pair v.periodic current_period).ton_miles in
-  let ton_mile_history = ton_miles::v.ton_mile_history in
+  let ton_mile_history = ton_miles::v.history.ton_miles in
   let ton_mile_record, ui_msgs =
-    if ton_miles > v.ton_mile_record then
+    if ton_miles > v.record.ton_miles then
       ton_miles, Ui_msg.TonMileRecord(ton_miles)::ui_msgs
     else
-      v.ton_mile_record, ui_msgs
+      v.record.ton_miles, ui_msgs
   in
-  let total_revenue_history = total_revenue::v.m.total_revenue_history in
+  let total_revenue_history = total_revenue::v.history.total_revenue in
   let total_revenue_record, ui_msgs =
-    if Money.(total_revenue > v.m.total_revenue_record) then
+    if Money.(total_revenue > v.record.total_revenue) then
       total_revenue, Ui_msg.RevenueRecord(total_revenue)::ui_msgs
     else
-      v.m.total_revenue_record, ui_msgs
+      v.record.total_revenue, ui_msgs
   in
   let net_worth_last_period = v.m.net_worth in
-  let m = {
-    v.m with net_worth_last_period; earnings_record; earnings_history; income_statement;
-    total_income_statement; total_revenue_record; total_revenue_history } in
-  let v =
-    {v with m; avg_speed_record; avg_speed_history; ton_mile_record; ton_mile_history}
-  in
+  let m = { v.m with net_worth_last_period; income_statement; total_income_statement } in
+  let history = History.{v.history with
+    total_revenue=total_revenue_history;
+    earnings=earnings_history;
+    ton_miles=ton_mile_history;
+    avg_speed=avg_speed_history; 
+  } in
+  let record = Record.{
+    ton_miles=ton_mile_record;
+    avg_speed=avg_speed_record;
+    earnings=earnings_record;
+    total_revenue=total_revenue_record;
+  } in
+  let v = {v with m; history; record } in
+
   (* TODO: change current period in backend *)
   v, Ui_msg.FiscalPeriodEndMsgs(v.idx, ui_msgs)
 
