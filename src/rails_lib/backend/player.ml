@@ -20,7 +20,7 @@ type monetary = {
   owned_industry: Money.t;
   yearly_interest_payment: Money.t;
   net_worth: Money.t;
-  net_worth_last_year: Money.t;
+  net_worth_last_period: Money.t;
   earnings_record: Money.t; (* Earnings is delta in net worth *)
   earnings_history: Money.t list; (* reversed list *)
   in_receivership: bool; (* bankruptcy *)
@@ -40,7 +40,7 @@ let default_monetary = {
     owned_industry = Money.zero;
     yearly_interest_payment = Money.of_int 20;
     net_worth = Money.of_int 500; 
-    net_worth_last_year = Money.of_int 500; 
+    net_worth_last_period = Money.of_int 500; 
     earnings_record = Money.zero;
     earnings_history = [];
     in_receivership = false;
@@ -146,14 +146,14 @@ let add_income_stmt income_stmt (v:t) =
 
 let fiscal_period_end stations params v =
   (* Messages and housecleaning *)
-  let fiscal_period_year = params.Params.fiscal_period_year in
-  let fiscal_next_year = match fiscal_period_year with `First -> `Second | `Second -> `First in
+  let current_period = Params.current_period params in
+  let next_period = Params.last_period params in
   let trains = v.trains in
   let ui_msgs = [] in
   let ui_msgs =
     (* Trainmap is mutable *)
     Trainmap.fold_mapi_in_place (fun idx acc train ->
-      let period = Train.get_period params.fiscal_period_year train in
+      let period = Train.get_period current_period train in
       let acc = if Money.(period.revenue = zero) then Ui_msg.TrainNoRevenue(idx)::acc else acc in
       let acc = if not train.had_maintenance then Ui_msg.TrainNoMaintenance(idx)::acc else acc in
       let acc = if Train.get_route_length train = 0 then Ui_msg.TrainNoSchedule(idx)::acc else acc in
@@ -162,7 +162,7 @@ let fiscal_period_end stations params v =
         let no_maint_penalty = if train.had_maintenance then 0 else 2 in
         Money.(train.maintenance_cost +~ added_maint +~ no_maint_penalty) in
       let acc = if Money.(maintenance_cost >= Train.get_engine_cost train) then Ui_msg.TrainOldEngine(idx)::acc else acc in
-      let periodic = Train.update_periodic fiscal_next_year train.periodic (fun _ -> Train.make_periodic ()) in
+      let periodic = Train.update_periodic next_period train.periodic (fun _ -> Train.make_periodic ()) in
       acc, {train with had_maintenance=false; periodic})
       trains
       ~init:ui_msgs
@@ -189,67 +189,48 @@ let fiscal_period_end stations params v =
     if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
       (Ui_msg.ConsiderBankruptcy)::ui_msgs else ui_msgs
   in
-  let earnings = Money.((v.m.net_worth - v.m.net_worth_last_year) * 10) in
-  let new_fin_period = match fiscal_period_year with `First -> false | `Second -> true in
-  let earnings_history = match v.m.earnings_history with
-    | x::xs when not new_fin_period -> Money.(x + earnings)::xs
-    | xs when new_fin_period -> earnings::xs
-    | _ -> assert false
-  in
-  let earnings_fin_period = List.hd earnings_history in
+  let earnings = Money.((v.m.net_worth - v.m.net_worth_last_period) * 10) in
+  let earnings_history = earnings::v.m.earnings_history in
   let earnings_record, ui_msgs =
-    if Money.(earnings_fin_period > v.m.earnings_record) then
-      earnings_fin_period, Ui_msg.RecordEarnings(earnings_fin_period)::ui_msgs
+    if Money.(earnings > v.m.earnings_record) then
+      earnings, Ui_msg.RecordEarnings(earnings)::ui_msgs
     else
       v.m.earnings_record, ui_msgs
   in
   let income_statement = Income_statement.default in
-  let total_time = 10 + Pair.fold (fun p1 p2 -> p1.time_running + p2.time_running) v.periodic in
-  let total_time = total_time / 10 in
+  let total_time = (10 + Pair.fold (fun p1 p2 -> p1.time_running + p2.time_running) v.periodic) / 10 in
   let total_dist = 6 * (Pair.fold (fun p1 p2 -> p1.dist_traveled + p2.dist_traveled) v.periodic) in
   let avg_speed = total_dist / total_time in
-  let avg_speed_history = match v.avg_speed_history with
-    | _::xs when not new_fin_period -> avg_speed::xs
-    | xs when new_fin_period -> avg_speed::xs
-    | _ -> assert false
-  in
+  let avg_speed_history = (avg_speed / 2)::v.avg_speed_history in
   let avg_speed_record, ui_msgs =
     if avg_speed > v.avg_speed_record then
       avg_speed, Ui_msg.AvgSpeedRecord(avg_speed)::ui_msgs
     else
       v.avg_speed_record, ui_msgs
   in
-  let ton_miles = (Utils.read_pair v.periodic fiscal_period_year).ton_miles in
+  let ton_miles = (Utils.read_pair v.periodic current_period).ton_miles in
+  let ton_mile_history = ton_miles::v.ton_mile_history in
   let ton_mile_record, ui_msgs =
     if ton_miles > v.ton_mile_record then
       ton_miles, Ui_msg.TonMileRecord(ton_miles)::ui_msgs
     else
       v.ton_mile_record, ui_msgs
   in
-  (* Bug fix here I think, placing the right value in history *)
-  let ton_mile_history = match v.ton_mile_history with
-    | x::xs when not new_fin_period -> (x + ton_miles)::xs
-    | xs when new_fin_period -> ton_miles::xs
-    | _ -> assert false
-  in
+  let total_revenue_history = total_revenue::v.m.total_revenue_history in
   let total_revenue_record, ui_msgs =
     if Money.(total_revenue > v.m.total_revenue_record) then
       total_revenue, Ui_msg.RevenueRecord(total_revenue)::ui_msgs
     else
       v.m.total_revenue_record, ui_msgs
   in
-  let total_revenue_history = match v.m.total_revenue_history with
-    | x::xs when not new_fin_period -> Money.(x + total_revenue)::xs
-    | xs when new_fin_period -> total_revenue::xs
-    | _ -> assert false
-  in
-  let net_worth_last_year = v.m.net_worth in
+  let net_worth_last_period = v.m.net_worth in
   let m = {
-    v.m with net_worth_last_year; earnings_record; earnings_history; income_statement;
+    v.m with net_worth_last_period; earnings_record; earnings_history; income_statement;
     total_income_statement; total_revenue_record; total_revenue_history } in
   let v =
     {v with m; avg_speed_record; avg_speed_history; ton_mile_record; ton_mile_history}
   in
+  (* TODO: change current period in backend *)
   v, Ui_msg.FiscalPeriodEndMsgs(v.idx, ui_msgs)
 
 let build_industry cost (v:t) =

@@ -52,9 +52,9 @@ module Train_update = struct
     end;
     (* Bookkeeping *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
-    let fiscal_period_year = v.params.fiscal_period_year in
-    Train.add_dist_traveled dist fiscal_period_year train;
-    update_player_state v train.player (Player.incr_dist_traveled ~dist fiscal_period_year);
+    let current_period = Params.current_period v.params in
+    Train.add_dist_traveled dist current_period train;
+    update_player_state v train.player (Player.incr_dist_traveled ~dist current_period);
     Train.advance train
 
 
@@ -195,7 +195,7 @@ module Train_update = struct
       let revenue = M.(goods_revenue + other_income - car_change_expense) in
 
       let periodic =
-        Train.update_periodic v.params.fiscal_period_year train.periodic
+        Train.update_periodic (Params.current_period v.params) train.periodic
         (fun p -> {p with ton_miles=p.ton_miles + ton_miles; revenue=M.(p.revenue + goods_revenue);})
       in
 
@@ -463,6 +463,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
   let cycle_check, region_div = if Region.is_us params.Params.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl (params.cycle mod 12) in
+  let current_period = Params.current_period v.params in
 
   (* let priority = (Goods.freight_to_enum train.freight) * 3 - (Train.train_type_to_enum train.typ) + 2 in *)
   begin match train.state with
@@ -471,8 +472,8 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
     (* Take care of bookkeeping *)
     if Train.get_speed train > 0 then (
-        Train.incr_time_running params.Params.fiscal_period_year train;
-        Player.incr_time_running params.fiscal_period_year player;
+        Train.incr_time_running current_period train;
+        Player.incr_time_running current_period player;
     );
 
     let rec train_update_loop train speed_bound stations player ui_msg_acc =
@@ -511,7 +512,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
           end else
             train, stations, None, [], []
         in
-        let player = _update_player_with_data player data active_stations v.params.fiscal_period_year v.random in
+        let player = _update_player_with_data player data active_stations current_period v.random in
         train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
     in
@@ -520,7 +521,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
     let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc in
-    let player = _update_player_with_data player data active_stations v.params.fiscal_period_year v.random in
+    let player = _update_player_with_data player data active_stations current_period v.random in
     train, stations, player, ui_msgs
   end
 
