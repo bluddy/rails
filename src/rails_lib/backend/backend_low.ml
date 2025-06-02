@@ -324,6 +324,12 @@ module Train_update = struct
       {train with state=Train.StoppedAtSignal dir}, stations, [], ui_msgs
     )
 
+  let _check_train_collocation_problem loc tracks trainmap =
+    let trains = Trainmap.get_at_loc loc trainmap in
+    let double_track = Trackmap.get_exn loc tracks |> Track.acts_like_double in
+    let max_num = if double_track then 2 else 1 in
+    List.length trains > max_num, trains
+
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
     (* All major computation happens mid-tile *)
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)

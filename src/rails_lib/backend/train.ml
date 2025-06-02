@@ -131,8 +131,8 @@ module Id = Int_id.Make(struct end) [@@deriving yojson]
 
 (* 'mut is so we can't mutate a train from the wrong api *)
 type 'mut t = {
-  mutable x: int; (* in map pixels *)
-  mutable y: int; (* in map pixels *)
+  mutable x: int; (* in zoom4 pixels *)
+  mutable y: int; (* in zoom4 pixels *)
   player: Owner.t;
   state: state;
   (* Used for train/car drawing algorithm *)
@@ -582,4 +582,23 @@ let set_priority_shipment x v = {v with holds_priority_shipment=x}
 let can_hold_priority_shipment cars priority_freight =
   let freight_set = freight_set_of_cars cars in
   Freight.Set.mem freight_set priority_freight 
+
+let find_train_to_stop_no_dispatcher train1 train2 = 
+  let compute_priority train =
+    (* CHANGE: remove 32x factor in orig game. That was to deal with 32 max trains *)
+    (Freight.to_enum train.freight * 3 - (train_type_to_enum train.typ))
+  in
+  let overtake_time train =
+    let num_cars = num_of_cars train in
+    let speed = get_speed train in
+    (num_cars * 384 + 1152) / (speed + 2)
+  in
+  (* CHANGE: in orig game, we also add the number of the train as a tie breaker.
+     We don't do that here. Also, note that there's no check of priority shipment *)
+  let priority1, priority2 = compute_priority train1, compute_priority train2 in
+  (* Lower priority is better *)
+  if priority1 <= priority2 then
+    `First, overtake_time train1
+  else
+    `Second, overtake_time train2
 
