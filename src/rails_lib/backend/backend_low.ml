@@ -471,7 +471,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
     (* Take care of bookkeeping *)
     if Train.get_speed train > 0 then (
-        Train.add_time_running 1 params.Params.fiscal_period_year train;
+        Train.incr_time_running params.Params.fiscal_period_year train;
         Player.incr_time_running params.fiscal_period_year player;
     );
 
