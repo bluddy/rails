@@ -324,11 +324,24 @@ module Train_update = struct
       {train with state=Train.StoppedAtSignal dir}, stations, [], ui_msgs
     )
 
-  let _check_train_collocation_problem loc tracks trainmap =
+  let _check_train_crash loc tracks trainmap =
     let collocated_trains = Trainmap.get_at_loc loc trainmap in
     let double_track = Trackmap.get_exn loc tracks |> Track.acts_like_double in
     let max_num = if double_track then 2 else 1 in
-    List.length collocated_trains > max_num, collocated_trains
+    if List.length collocated_trains > max_num then
+      match collocated_trains with
+      | x::y::_ -> Some (x,y)
+      | _ -> assert false
+    else None
+
+  (* let _handle_train_crash loc tracks trainmap params = *)
+  (*   match _check_train_crash loc tracks trainmap with *)
+  (*   | Some crash when B_options.dispatcher_ops params.Params.options -> () *)
+  (*   | Some ((train1, train2) as trains) -> *)
+  (*     let choice, waiting_time = Train.find_train_to_stop_no_dispatcher train1 train2 in *)
+  (*     let train_id = Utils.read_pair trains choice in *)
+  (*     Trainmap.update train_id trainmap (fun train -> train with state=WaitingToBePassed{waiting_time}) *)
+  (*   | None -> () *)
 
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
     (* All major computation happens mid-tile *)
@@ -481,7 +494,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
     let rec train_update_loop train speed_bound stations player ui_msg_acc =
       let speed = Train.get_speed train in
-      if speed_bound >= speed then train, stations, player, ui_msg_acc
+        if speed_bound >= speed then train, stations, player, ui_msg_acc, []
       else (
         let speed =
           if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3 else speed
@@ -492,31 +505,38 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
           else speed
         in
         (* BUGFIX: original code allowed sampling from random memory *)
-        let update_val = update_val / region_div
-          |> min Train.update_array_length
-        in
-        let train, stations, data, active_stations, ui_msgs =
+        let update_val = update_val / region_div |> min Train.update_array_length in
+
+        let train, stations, data, active_stations, ui_msgs, crash_info =
           if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
             let is_mid_tile =
               (train.x mod C.tile_w) = C.tile_w / 2 &&
               (train.y mod C.tile_h) = C.tile_h / 2
             in
-            let loc = train.x / C.tile_w, train.y / C.tile_h in
-
             (* Make sure we don't double-process mid-tiles *)
             match is_mid_tile, travel_state.traveling_past_station with
             | true, false ->
-                _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc
+                let loc = train.x / C.tile_w, train.y / C.tile_h in
+                let crash_info = _check_train_crash loc v.track (Player.get_trains player) in
+                if Option.is_some crash_info then
+                    train, stations, None, [], [], crash_info
+                else
+                    let a, b, c, d, e =
+                      _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc in
+                    a, b, c, d, e, None
             | false, true ->
                 travel_state.traveling_past_station <- false;
-                Train.advance train, stations, None, [], []
+                Train.advance train, stations, None, [], [], None
             | _ ->
-                Train.advance train, stations, None, [], []
+                Train.advance train, stations, None, [], [], None
           end else
-            train, stations, None, [], []
+            train, stations, None, [], [], None
         in
         let player = _update_player_with_data player data active_stations current_period v.random in
-        train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
+        if Option.is_some crash_info then
+          train, stations, player, (ui_msgs @ ui_msg_acc), Option.to_list crash_info
+        else
+          train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
     in
     train_update_loop train 0 stations player []
@@ -524,22 +544,23 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
     let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc in
-    let player = _update_player_with_data player data active_stations current_period v.random in
-    train, stations, player, ui_msgs
+    let player = _update_player_with_data player data active_stations current_period v.random
+    in
+    train, stations, player, ui_msgs, []
   end
 
     (* Run every cycle, updating every train's position and speed *)
   let _update_all_trains (v:t) (player:Player.t) =
     (* TODO: We update the high priority trains before the low priority *)
     (* Trains are in a vector, updated in-place *)
-    let stations, player, ui_msgs =
-      Trainmap.fold_mapi_in_place (fun idx (stations, player, ui_msg_acc) train ->
-        let train, stations, player, ui_msgs = _update_train v idx train stations player v.params in
-        (stations, player, ui_msgs @ ui_msg_acc), train)
+    let stations, player, ui_msgs, crash_info =
+      Trainmap.fold_mapi_in_place (fun idx (stations, player, ui_msg_acc, crash_info_acc) train ->
+        let train, stations, player, ui_msgs, crash_info = _update_train v idx train stations player v.params in
+        (stations, player, ui_msgs @ ui_msg_acc, crash_info @ crash_info_acc), train)
         player.trains
-        ~init:(v.stations, player, [])
+        ~init:(v.stations, player, [], [])
     in
-    player.trains, stations, player, ui_msgs
+    player.trains, stations, player, ui_msgs, crash_info
 end
 
 let _try_to_create_priority_shipment ?(force=false) (player:Player.t) stations params random =
@@ -683,7 +704,7 @@ let handle_cycle v =
     let player = Player.get player_idx players in
     let player_old = player in (* For later comparison *)
 
-    let trains, stations, player, tr_msgs = Train_update._update_all_trains v player in
+    let trains, stations, player, tr_msgs, crash_info = Train_update._update_all_trains v player in
 
     let player =
       if cycle mod C.Cycles.periodic_maintenance = 0 then

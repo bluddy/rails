@@ -114,6 +114,7 @@ type state =
                    block: Block_map_d.Id.t; 
                 }
   | LoadingAtStation of {mutable wait_time: int} (* We always go through this state *)
+  | WaitingToBePassed of {mutable wait_time: int} (* When a train passes us in no-dispatcher-ops *)
   | WaitingForFullLoad (* In a station with Wait *)
   | HoldingAtStation (* Held and waiting for unhold by player. Before entering station *)
   | StoppedAtSignal of Dir.t (* Waiting at a hold signal. After exiting station *)
@@ -605,9 +606,9 @@ let find_train_to_stop_no_dispatcher train1 train2 =
   let priority1, priority2 = compute_priority train1, compute_priority train2 in
   (* Lower priority is better *)
   if priority1 <= priority2 then
-    `First, overtake_time train1
+    `Second, overtake_time train1
   else
-    `Second, overtake_time train2
+    `First, overtake_time train2
 
 let remove_goods goods v =
   let cars = List.map (fun car ->
