@@ -6,6 +6,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl
+module Map = Utils.Map
 module C = Constants
 module M = Money
 
@@ -136,6 +137,7 @@ type wait = [`Wait | `NoWait]
 let is_wait = function `Wait -> true | `NoWait -> false
 
 module Id = Int_id.Make(struct end) [@@deriving yojson]
+module IdSet = Set.Make(Id)
 
 (* 'mut is so we can't mutate a train from the wrong api *)
 type 'mut t = {
@@ -618,4 +620,10 @@ let remove_goods goods v =
     v.cars
   in
   {v with cars}
+
+let get_goods v =
+  List.fold_left (fun acc car ->
+    Goods.Set.add (Car.get_good car) acc)
+    Goods.Set.empty
+    v.cars
 

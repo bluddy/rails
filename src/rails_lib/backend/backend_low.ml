@@ -334,14 +334,42 @@ module Train_update = struct
       | _ -> assert false
     else None
 
-  (* let _handle_train_crash loc tracks trainmap params = *)
-  (*   match _check_train_crash loc tracks trainmap with *)
-  (*   | Some crash when B_options.dispatcher_ops params.Params.options -> () *)
-  (*   | Some ((train1, train2) as trains) -> *)
-  (*     let choice, waiting_time = Train.find_train_to_stop_no_dispatcher train1 train2 in *)
-  (*     let train_id = Utils.read_pair trains choice in *)
-  (*     Trainmap.update train_id trainmap (fun train -> train with state=WaitingToBePassed{waiting_time}) *)
-  (*   | None -> () *)
+  let _handle_train_crash crash_info loc tracks trainmap stations params remove_train_f =
+    let crash_info, train_id_set =
+      List.fold_left (fun ((acc, id_set) as a) ((train1, train2)as trains) ->
+        if Train.IdSet.mem train1 id_set || Train.IdSet.mem train2 id_set then a
+        else
+          let id_set = id_set |> Train.IdSet.add train1 |> Train.IdSet.add train2 in
+          (trains::acc, id_set))
+      ([], Train.IdSet.empty)
+      crash_info
+    in
+    let goods = Train.IdSet.fold (fun acc idx ->
+      let train = Trainmap.get idx trainmap in
+      Goods.Set.merge acc (Train.get_goods train))
+      train_id_set
+    in
+    if B_options.dispatcher_ops params.Params.options then
+      (* Remove all goods that were on the dead trains *)
+      let trainmap = Trainmap.remove_goods_in_all_trains goods trainmap in
+      let stations = Station_map.remove_goods goods stations in
+      let train_ids = Train.IdSet.to_list train_id_set |> List.rev in
+      let trainmap = List.fold_left (fun acc train_id ->
+        remove_train_f train_id player_idx acc
+      ) trainmap train_ids
+      in
+      stations, trainmap
+    else
+      List.fold_left (fun trainmap ((train1, train2) as train_ids) ->
+        (* Use a set for handling doubles *)
+        let choice, waiting_time = Train.find_train_to_stop_no_dispatcher train1 train2 in
+        let trainmap =
+          let train_id = Utils.read_pair train_ids choice in
+          Trainmap.update train_id trainmap (fun train -> {train with state=WaitingToBePassed{waiting_time}})
+        in
+        trainmap)
+        trainmap
+        crash_info
 
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
     (* All major computation happens mid-tile *)
@@ -521,9 +549,10 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
                 if Option.is_some crash_info then
                     train, stations, None, [], [], crash_info
                 else
-                    let a, b, c, d, e =
-                      _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc in
-                    a, b, c, d, e, None
+                  let a, b, c, d, e =
+                    _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc
+                  in
+                  a, b, c, d, e, None
             | false, true ->
                 travel_state.traveling_past_station <- false;
                 Train.advance train, stations, None, [], [], None
