@@ -51,3 +51,7 @@ let have_engine_shop v =
   find (fun v -> Station.has_upgrade v Station.EngineShop) v
   |> Option.is_some
 
+let remove_goods goods v =
+  iter (Station.remove_goods goods) v;
+  v
+

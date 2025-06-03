@@ -505,3 +505,8 @@ let total_lost_supply v = match v.info with
     let supply = info.lost_supply in
     Hashtbl.sum (fun _ num -> num) supply
 
+let remove_goods goods v =
+  Goods.Set.iter (fun good ->
+    Hashtbl.update v.supply ~k:good ~f:(fun _ -> function _ -> None)
+  ) goods
+
