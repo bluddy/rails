@@ -97,6 +97,13 @@ module Car = struct
     | Some load ->
       Some (v.good, load.amount, load.source)
 
+  let remove_good v = 
+    let load = match v.load with
+      | Some load -> Some {load with amount=0}
+      | None -> None
+    in
+    {v with load}
+
 end
 
 type state =
@@ -601,4 +608,13 @@ let find_train_to_stop_no_dispatcher train1 train2 =
     `First, overtake_time train1
   else
     `Second, overtake_time train2
+
+let remove_goods goods v =
+  let cars = List.map (fun car ->
+    if Goods.Set.mem (Car.get_good car) goods then
+      Car.remove_good car
+    else car)
+    v.cars
+  in
+  {v with cars}
 

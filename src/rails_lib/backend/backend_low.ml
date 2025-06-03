@@ -325,10 +325,10 @@ module Train_update = struct
     )
 
   let _check_train_collocation_problem loc tracks trainmap =
-    let trains = Trainmap.get_at_loc loc trainmap in
+    let collocated_trains = Trainmap.get_at_loc loc trainmap in
     let double_track = Trackmap.get_exn loc tracks |> Track.acts_like_double in
     let max_num = if double_track then 2 else 1 in
-    List.length trains > max_num, trains
+    List.length collocated_trains > max_num, collocated_trains
 
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
     (* All major computation happens mid-tile *)

@@ -44,3 +44,5 @@ val total_maintenance: t -> Money.t
 
 val clear_priority_shipment: t -> t
 
+val remove_goods_in_all_trains: Goods.Set.t -> t -> t
+

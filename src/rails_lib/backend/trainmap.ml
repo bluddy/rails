@@ -163,3 +163,11 @@ let clear_priority_shipment v =
     v.trains;
   v
 
+let remove_goods_in_all_trains remove_goods v =
+  Vector.map_in_place (fun train ->
+    Train.remove_goods remove_goods train)
+  v.trains;
+  v
+  
+
+
