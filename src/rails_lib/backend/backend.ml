@@ -456,8 +456,9 @@ let _build_industry ((x, y) as loc) tile player_idx v =
   
 let _remove_train train_idx player_idx v =
   (* Same function called by Backend *)
-  let players = Player.update v.players player_idx @@
-    Player.remove_train train_idx v.blocks v
+  let players = Player.update v.players player_idx @@ fun player ->
+    let trains = Train_station.remove_train train_idx v.blocks player.trains in
+    [%up {player with trains}]
   in
   [%up {v with players}]
 

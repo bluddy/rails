@@ -314,7 +314,7 @@ module Train_update = struct
       let block = Block_map.block_incr_train locu v.blocks in
       let train = 
         {train with
-          state=Train.start_traveling block;
+          state=Train.start_traveling ~past_station:true block;
           economic_activity=false; (* reset *)
         }
       in
@@ -372,7 +372,10 @@ module Train_update = struct
             Train.find_train_to_stop_no_dispatcher train1 train2 in
           let train_id = Utils.read_pair train_ids choice in
           Trainmap.update train_id trainmap (fun train ->
-            {train with state=WaitingToBePassed{wait_time}}))
+            match train.state with
+            | Traveling {block; _} -> {train with state=WaitingToBePassed{wait_time; block}}
+            (* If we caught the train in a different state, do nothing *)
+            | _ -> train))
           trainmap
           crash_info
       in
@@ -474,9 +477,9 @@ module Train_update = struct
               s.wait_time <- s.wait_time - 1;
               default_ret
 
-          | WaitingToBePassed _ ->
-              s.wait_time <- s.wait_time - 1;
-              default_ret
+          | WaitingToBePassed s ->
+              let train = {train with state = Train.start_traveling ~past_station:false s.block} in
+              train, stations, None, [], []
         in
         Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state));
         train, stations, data, active_stations, ui_msgs

@@ -124,8 +124,8 @@ type state =
   | StoppedAtSignal of Dir.t (* Waiting at a hold signal. After exiting station *)
   [@@deriving yojson, show]
 
-let start_traveling block = 
-    Traveling {speed=0; target_speed=4; traveling_past_station=true; block}
+let start_traveling ~past_station block = 
+    Traveling {speed=0; target_speed=4; traveling_past_station=past_station; block}
 
 type periodic = {
   mutable dist_traveled: int;
