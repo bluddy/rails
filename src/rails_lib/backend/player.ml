@@ -555,14 +555,3 @@ let get_bridge_washout v = match v.event with
   | Some(BridgeWashout loc) -> Some loc
   | _ -> None
 
-let remove_train train_idx blocks v =
-  (* Same function called by Backend *)
-  let () =
-    let train = Trainmap.get train_idx v.trains in
-    match train.state with
-    | Traveling {block; _} -> Block_map.block_decr_train block blocks
-    | _ -> ()
-  in
-  let trains = Trainmap.delete train_idx v.trains in
-  [%up {v with trains}]
-

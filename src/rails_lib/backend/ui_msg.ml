@@ -62,5 +62,6 @@ type t =
   | EngineDiscovered of Engine.t
   | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   | ImpossibleRoute of {player_idx: Owner.t; train_idx: Train.Id.t; src: loc; dst: loc}
+  | TrainAccident of {player_idx: Owner.t}
   [@@deriving yojson]
 

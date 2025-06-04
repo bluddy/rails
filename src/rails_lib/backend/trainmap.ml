@@ -169,5 +169,3 @@ let remove_goods_in_all_trains remove_goods v =
   v.trains;
   v
   
-
-

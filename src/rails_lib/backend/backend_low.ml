@@ -334,7 +334,8 @@ module Train_update = struct
       | _ -> assert false
     else None
 
-  let _handle_train_crash crash_info player_idx trainmap stations params =
+  let _handle_train_crash crash_info player_idx blocks trainmap stations params =
+    (* Get train set and remove doubles *)
     let crash_info, train_id_set =
       List.fold_left (fun ((acc, id_set) as a) ((train1, train2) as trains) ->
         if Train.IdSet.mem train1 id_set || Train.IdSet.mem train2 id_set then a
@@ -344,35 +345,39 @@ module Train_update = struct
       ([], Train.IdSet.empty)
       crash_info
     in
-    let goods = Train.IdSet.fold (fun idx acc ->
-      let train = Trainmap.get idx trainmap in
-      Goods.Set.union acc (Train.get_goods train))
-      train_id_set Goods.Set.empty
-    in
     let dispatcher_ops = B_options.dispatcher_ops params.Params.options in
 
     if dispatcher_ops then
       (* Remove all goods that were on the dead trains *)
-      let trainmap = Trainmap.remove_goods_in_all_trains goods trainmap in
-      let stations = Station_map.remove_goods goods stations in
+      let destroyed_goods = Train.IdSet.fold (fun idx acc ->
+        let train = Trainmap.get idx trainmap in
+        Goods.Set.union acc (Train.get_goods train))
+        train_id_set Goods.Set.empty
+      in
+      let trainmap = Trainmap.remove_goods_in_all_trains destroyed_goods trainmap in
+      let stations = Station_map.remove_goods destroyed_goods stations in
       (* Have to sort train ids to make sure indices are valid *)
       let train_ids = Train.IdSet.to_list train_id_set |> List.rev in
       let trainmap = List.fold_left (fun acc train_id ->
-        remove_train train_id player_idx acc
-      ) trainmap train_ids
-      in
-      stations, trainmap
-    else
-      List.fold_left (fun trainmap ((train1, train2) as train_ids) ->
-        (* Use a set for handling doubles *)
-        let choice, waiting_time = Train.find_train_to_stop_no_dispatcher train1 train2 in
-        let trainmap =
-          let train_id = Utils.read_pair train_ids choice in
-          Trainmap.update train_id trainmap (fun train -> {train with state=WaitingToBePassed{waiting_time}})
-        in
-        trainmap)
+        Train_station.remove_train train_id blocks acc)
         trainmap
-        crash_info
+        train_ids
+      in
+      stations, trainmap, [UIM.TrainAccident{player_idx}]
+    else
+      let stop_one_train_on_side () =
+        List.fold_left (fun trainmap ((train1, train2) as train_ids) ->
+          let choice, wait_time =
+            let train1, train2 = Trainmap.get train1 trainmap, Trainmap.get train2 trainmap in
+            Train.find_train_to_stop_no_dispatcher train1 train2 in
+          let train_id = Utils.read_pair train_ids choice in
+          Trainmap.update train_id trainmap (fun train ->
+            {train with state=WaitingToBePassed{wait_time}}))
+          trainmap
+          crash_info
+      in
+      let trainmap = stop_one_train_on_side () in
+      stations, trainmap, []
 
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
     (* All major computation happens mid-tile *)
@@ -412,6 +417,10 @@ module Train_update = struct
 
             (* Loading/unloading goods at the station *)
           | LoadingAtStation s when s.wait_time > 0 ->
+              s.wait_time <- s.wait_time - 1;
+              default_ret
+
+          | WaitingToBePassed s when s.wait_time > 0 ->
               s.wait_time <- s.wait_time - 1;
               default_ret
 
