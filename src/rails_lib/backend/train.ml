@@ -115,11 +115,17 @@ type state =
                    block: Block_map_d.Id.t; 
                 }
   | LoadingAtStation of {mutable wait_time: int} (* We always go through this state *)
-  | WaitingToBePassed of {mutable wait_time: int} (* When a train passes us in no-dispatcher-ops *)
+  | WaitingToBePassed of {  (* When a train passes us in no-dispatcher-ops *)
+      mutable wait_time: int;
+      block: Block_map_d.Id.t;
+  } 
   | WaitingForFullLoad (* In a station with Wait *)
   | HoldingAtStation (* Held and waiting for unhold by player. Before entering station *)
   | StoppedAtSignal of Dir.t (* Waiting at a hold signal. After exiting station *)
   [@@deriving yojson, show]
+
+let start_traveling block = 
+    Traveling {speed=0; target_speed=4; traveling_past_station=true; block}
 
 type periodic = {
   mutable dist_traveled: int;

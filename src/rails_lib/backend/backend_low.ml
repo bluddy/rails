@@ -314,7 +314,7 @@ module Train_update = struct
       let block = Block_map.block_incr_train locu v.blocks in
       let train = 
         {train with
-          state=Train.Traveling {speed=0; target_speed=4; traveling_past_station=true; block};
+          state=Train.start_traveling block;
           economic_activity=false; (* reset *)
         }
       in
@@ -420,10 +420,6 @@ module Train_update = struct
               s.wait_time <- s.wait_time - 1;
               default_ret
 
-          | WaitingToBePassed s when s.wait_time > 0 ->
-              s.wait_time <- s.wait_time - 1;
-              default_ret
-
           | LoadingAtStation _ ->
               (* Done loading/unloading. Check if we can exit the station *)
               let wait_at_stop, _ = Train.get_next_stop train in
@@ -473,6 +469,14 @@ module Train_update = struct
                 train, stations, None, active_stations, ui_msgs
               else
                 default_ret
+
+          | WaitingToBePassed s when s.wait_time > 0 ->
+              s.wait_time <- s.wait_time - 1;
+              default_ret
+
+          | WaitingToBePassed _ ->
+              s.wait_time <- s.wait_time - 1;
+              default_ret
         in
         Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state));
         train, stations, data, active_stations, ui_msgs
