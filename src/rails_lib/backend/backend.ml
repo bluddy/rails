@@ -454,17 +454,10 @@ let _build_industry ((x, y) as loc) tile player_idx v =
     v
   ) else v
   
-let _remove_train idx player_idx v =
-  let players =
-    Player.update v.players player_idx (fun player ->
-      let () =
-        let train = Trainmap.get idx player.trains in
-        match train.state with
-        | Traveling {block; _} -> Block_map.block_decr_train block v.blocks
-        | _ -> ()
-      in
-      let trains = Trainmap.delete idx player.trains in
-      [%up {player with trains}])
+let _remove_train train_idx player_idx v =
+  (* Same function called by Backend *)
+  let players = Player.update v.players player_idx @@
+    Player.remove_train train_idx v.blocks v
   in
   [%up {v with players}]
 

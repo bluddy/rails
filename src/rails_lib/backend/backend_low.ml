@@ -334,9 +334,9 @@ module Train_update = struct
       | _ -> assert false
     else None
 
-  let _handle_train_crash crash_info loc tracks trainmap stations params remove_train_f =
+  let _handle_train_crash crash_info player_idx trainmap stations params =
     let crash_info, train_id_set =
-      List.fold_left (fun ((acc, id_set) as a) ((train1, train2)as trains) ->
+      List.fold_left (fun ((acc, id_set) as a) ((train1, train2) as trains) ->
         if Train.IdSet.mem train1 id_set || Train.IdSet.mem train2 id_set then a
         else
           let id_set = id_set |> Train.IdSet.add train1 |> Train.IdSet.add train2 in
@@ -344,18 +344,21 @@ module Train_update = struct
       ([], Train.IdSet.empty)
       crash_info
     in
-    let goods = Train.IdSet.fold (fun acc idx ->
+    let goods = Train.IdSet.fold (fun idx acc ->
       let train = Trainmap.get idx trainmap in
-      Goods.Set.merge acc (Train.get_goods train))
-      train_id_set
+      Goods.Set.union acc (Train.get_goods train))
+      train_id_set Goods.Set.empty
     in
-    if B_options.dispatcher_ops params.Params.options then
+    let dispatcher_ops = B_options.dispatcher_ops params.Params.options in
+
+    if dispatcher_ops then
       (* Remove all goods that were on the dead trains *)
       let trainmap = Trainmap.remove_goods_in_all_trains goods trainmap in
       let stations = Station_map.remove_goods goods stations in
+      (* Have to sort train ids to make sure indices are valid *)
       let train_ids = Train.IdSet.to_list train_id_set |> List.rev in
       let trainmap = List.fold_left (fun acc train_id ->
-        remove_train_f train_id player_idx acc
+        remove_train train_id player_idx acc
       ) trainmap train_ids
       in
       stations, trainmap
