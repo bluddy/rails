@@ -753,6 +753,8 @@ let handle_cycle v =
     let player_old = player in (* For later comparison *)
 
     let trains, stations, player, tr_msgs, crash_info = Train_update._update_all_trains v player in
+    let stations, trains, crash_msgs =
+      Train_update._handle_train_crash crash_info player_idx v.blocks trains stations params in
 
     let player =
       if cycle mod C.Cycles.periodic_maintenance = 0 then
@@ -848,7 +850,7 @@ let handle_cycle v =
 
     let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params}] in
     let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @
-      fin_msgs @ climate_msgs @ event_msgs @ year_end_msgs
+      fin_msgs @ climate_msgs @ event_msgs @ year_end_msgs @ crash_msgs
     in
 
     v, ui_msgs
