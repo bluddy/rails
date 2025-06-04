@@ -11,6 +11,7 @@ module C = Constants
 module IS = Income_statement
 module UIM = Ui_msg
 module M = Money
+module U = Utils
 
 (* Low-level backend module. Deals with multiple modules at a time *)
 
@@ -324,63 +325,89 @@ module Train_update = struct
       {train with state=Train.StoppedAtSignal dir}, stations, [], ui_msgs
     )
 
-  let _check_train_crash loc tracks trainmap =
+  let _check_train_crash loc train_idx tracks player =
+    let trainmap = Player.get_trains player in
     let collocated_trains = Trainmap.get_at_loc loc trainmap in
     let double_track = Trackmap.get_exn loc tracks |> Track.acts_like_double in
     let max_num = if double_track then 2 else 1 in
-    if List.length collocated_trains > max_num then
-      match collocated_trains with
-      | x::y::_ -> Some (x,y)
-      | _ -> assert false
-    else None
+    let crashes =
+      if List.length collocated_trains > max_num then
+        match collocated_trains with
+        | t1::t2::_ -> [`TrainCrash (t1,t2)]
+        | _ -> assert false
+      else []
+    in
+    let bridge_crashes = match player.Player.event with
+      | Some(BridgeWashout(wash_loc)) when U.equal_loc wash_loc loc -> [`BridgeCrash(train_idx)]
+      | _ -> []
+    in
+    bridge_crashes @ crashes
 
   let _handle_train_crash crash_info player_idx blocks trainmap stations params =
     (* Get train set and remove doubles *)
-    let crash_info, train_id_set =
-      List.fold_left (fun ((acc, id_set) as a) ((train1, train2) as trains) ->
-        if Train.IdSet.mem train1 id_set || Train.IdSet.mem train2 id_set then a
-        else
-          let id_set = id_set |> Train.IdSet.add train1 |> Train.IdSet.add train2 in
-          (trains::acc, id_set))
-      ([], Train.IdSet.empty)
-      crash_info
+    let crash_info, bridge_crash_info, train_id_set =
+      List.fold_left (fun ((acc_crash, acc_bridge, id_set) as a) -> function
+          | `BridgeCrash train -> (acc_crash, Train.IdSet.add train acc_bridge, id_set)
+          | `TrainCrash ((train1, train2) as trains) ->
+          if Train.IdSet.mem train1 id_set || Train.IdSet.mem train2 id_set then a
+          else
+            let id_set = id_set |> Train.IdSet.add train1 |> Train.IdSet.add train2 in
+            (trains::acc_crash, acc_bridge, id_set))
+        ([], Train.IdSet.empty, Train.IdSet.empty)
+        crash_info
     in
     let dispatcher_ops = B_options.dispatcher_ops params.Params.options in
-
-    if dispatcher_ops then
+    let trains_to_remove = if dispatcher_ops
+      then Train.IdSet.union bridge_crash_info train_id_set
+      else bridge_crash_info
+    in
+    let remove_trains_and_goods trains_to_remove =
       (* Remove all goods that were on the dead trains *)
       let destroyed_goods = Train.IdSet.fold (fun idx acc ->
         let train = Trainmap.get idx trainmap in
         Goods.Set.union acc (Train.get_goods train))
-        train_id_set Goods.Set.empty
+          trains_to_remove
+          Goods.Set.empty
       in
       let trainmap = Trainmap.remove_goods_in_all_trains destroyed_goods trainmap in
       let stations = Station_map.remove_goods destroyed_goods stations in
       (* Have to sort train ids to make sure indices are valid *)
-      let train_ids = Train.IdSet.to_list train_id_set |> List.rev in
-      let trainmap = List.fold_left (fun acc train_id ->
-        Train_station.remove_train train_id blocks acc)
-        trainmap
-        train_ids
-      in
-      stations, trainmap, [UIM.TrainAccident{player_idx}]
-    else
-      let stop_one_train_on_side () =
-        List.fold_left (fun trainmap ((train1, train2) as train_ids) ->
-          let choice, wait_time =
-            let train1, train2 = Trainmap.get train1 trainmap, Trainmap.get train2 trainmap in
-            Train.find_train_to_stop_no_dispatcher train1 train2 in
-          let train_id = Utils.read_pair train_ids choice in
-          Trainmap.update train_id trainmap (fun train ->
-            match train.state with
-            | Traveling {block; _} -> {train with state=WaitingToBePassed{wait_time; block}}
-            (* If we caught the train in a different state, do nothing *)
-            | _ -> train))
+      let train_ids = Train.IdSet.to_list trains_to_remove |> List.rev in
+      let trainmap =
+        List.fold_left (fun acc train_id -> Train_station.remove_train train_id blocks acc)
           trainmap
-          crash_info
+          train_ids
       in
-      let trainmap = stop_one_train_on_side () in
-      stations, trainmap, []
+      stations, trainmap
+    in
+    let stations, trainmap = remove_trains_and_goods trains_to_remove in
+    let ui_msgs =
+      if not @@ Train.IdSet.is_empty bridge_crash_info
+      then [UIM.TrainBridgeAccident {player_idx}] else []
+    in
+    let ui_msgs =
+      if dispatcher_ops && not @@ Train.IdSet.is_empty train_id_set 
+      then (UIM.TrainAccident {player_idx}::ui_msgs) else ui_msgs
+    in
+    let trainmap =
+      if dispatcher_ops then trainmap else
+        let stop_one_train_on_side () =
+          List.fold_left (fun trainmap ((train1, train2) as train_ids) ->
+            let choice, wait_time =
+              let train1, train2 = Trainmap.get train1 trainmap, Trainmap.get train2 trainmap in
+              Train.find_train_to_stop_no_dispatcher train1 train2 in
+            let train_id = Utils.read_pair train_ids choice in
+            Trainmap.update train_id trainmap (fun train ->
+              match train.state with
+              | Traveling {block; _} -> {train with state=WaitingToBePassed{wait_time; block}}
+              (* If we caught the train in a different state, do nothing *)
+              | _ -> train))
+            trainmap
+            crash_info
+        in
+        stop_one_train_on_side ()
+    in
+    stations, trainmap, ui_msgs
 
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
     (* All major computation happens mid-tile *)
@@ -564,25 +591,25 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
             match is_mid_tile, travel_state.traveling_past_station with
             | true, false ->
                 let loc = train.x / C.tile_w, train.y / C.tile_h in
-                let crash_info = _check_train_crash loc v.track (Player.get_trains player) in
-                if Option.is_some crash_info then
+                let crash_info = _check_train_crash loc idx v.track player in
+                if not @@ List.is_empty crash_info then
                     train, stations, None, [], [], crash_info
                 else
                   let a, b, c, d, e =
                     _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc
                   in
-                  a, b, c, d, e, None
+                    a, b, c, d, e, []
             | false, true ->
                 travel_state.traveling_past_station <- false;
-                Train.advance train, stations, None, [], [], None
+                Train.advance train, stations, None, [], [], []
             | _ ->
-                Train.advance train, stations, None, [], [], None
+                Train.advance train, stations, None, [], [], []
           end else
-            train, stations, None, [], [], None
+              train, stations, None, [], [], []
         in
         let player = _update_player_with_data player data active_stations current_period v.random in
-        if Option.is_some crash_info then
-          train, stations, player, (ui_msgs @ ui_msg_acc), Option.to_list crash_info
+        if not @@ List.is_empty crash_info then
+          train, stations, player, (ui_msgs @ ui_msg_acc), crash_info
         else
           train_update_loop train (speed_bound + 12) stations player (ui_msgs @ ui_msg_acc)
       )
