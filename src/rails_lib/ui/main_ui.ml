@@ -804,12 +804,13 @@ let handle_event (s:State.t) v (event:Event.t) =
 (* Handle incoming messages from backend *)
 let handle_msgs (s:State.t) v ui_msgs =
   let old_mode, old_menu = v.mode, v.menu in
+  let b = s.backend in
   let main_player_idx = C.player in
   let train_arrival_msg_speed v : [`Fast | `Slow] option =
     match v.options.message_speed with
     | `Off -> None
     (* Turbo mode cancels train messges *)
-    | (`Fast | `Slow) as x when not (B_options.equal_speed (B.get_speed s.backend) `Turbo) -> Some x
+    | (`Fast | `Slow) as x when not (B_options.equal_speed (B.get_speed b) `Turbo) -> Some x
     | _ -> None
   in
   let handle_msg v ui_msg =
@@ -831,7 +832,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       | DemandChanged{x; y; good; add; player_idx} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let add_remove = if add then "now\naccepts" else "no longer\naccepts" in
-        let station = B.get_station (x, y) s.backend |> Option.get_exn_or "missing station" in
+        let station = B.get_station (x, y) b |> Option.get_exn_or "missing station" in
         let text =
           Printf.sprintf "%s\n... %s %s.\n"
             (Station.get_name station)
@@ -869,18 +870,18 @@ let handle_msgs (s:State.t) v ui_msgs =
 
       | PriorityShipmentCreated{player_idx; shipment} ->
         if Owner.(player_idx <> main_player_idx) then v else
-        let heading, text = Priority_shipment.create_text shipment (B.get_region s.backend) s.backend.stations in
+        let heading, text = Priority_shipment.create_text shipment (B.get_region b) b.stations in
         let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
         {v with mode}
 
       | PriorityShipmentDelivered{player_idx; shipment; bonus} ->
         if Owner.(player_idx <> main_player_idx) then v else
-        let heading, text = Priority_shipment.delivery_text shipment (B.get_region s.backend) s.backend.stations bonus in
+        let heading, text = Priority_shipment.delivery_text shipment (B.get_region b) b.stations bonus in
         let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
         {v with mode}
 
       | NewCompany{opponent; city} ->
-        let text = Ai.new_ai_text opponent city s.backend.cities in
+        let text = Ai.new_ai_text opponent city b.cities in
         let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
         {v with mode}
 
@@ -902,14 +903,30 @@ let handle_msgs (s:State.t) v ui_msgs =
       | (AiBuySellOwnStock {opponent;_}
       | AiBuysPlayerStock {opponent;_}
       | AiSellsPlayerStock {opponent;_}) ->
-        let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
+        let text = Ai.financial_text ~cities:b.cities ~region:b.params.region ui_msg b.ai in
         let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
         {v with mode}
 
       | AiTakesOutBond {opponent; player_idx;_} ->
         if Owner.(player_idx <> main_player_idx) then v else
-        let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
+        let text = Ai.financial_text ~cities:b.cities ~region:b.params.region ui_msg b.ai in
         let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
+        {v with mode}
+
+      | BridgeWashout {player_idx; loc; fixed} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let mode =
+          if fixed then
+            let text = "Bridge Repaired.\n" in
+            Newspaper(Newspaper.make_simple s Newspaper.LocalNews text None)
+          else
+            let station = Station_map.find_nearest ~player_idx ~only_proper:true loc b.stations
+                |> Option.get_exn_or "no station found"
+            in
+            let name = Station.get_name station in
+            let text = "Flood Waters Rise!", name, "Trestle Washed Away!" in
+            Newspaper(Newspaper.make_fancy s text b.params)
+        in
         {v with mode}
       end
     | _ -> v
