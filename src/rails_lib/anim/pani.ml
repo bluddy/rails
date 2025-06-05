@@ -185,12 +185,14 @@ let stream_of_file filename =
   let stream = My_gen.of_stringi str in
   stream
 
-let main filename =
-  Printf.printf "--- PANI dump: %s\n" filename;
-
-  let filepath = Filename.remove_extension filename in
-
+let play ?(debug=false) filename =
   let stream = stream_of_file filename in
-  let pani_v = of_stream stream ~dump_files:(Some filepath) in
+  let dump_files =
+    if debug then
+      let filepath = Filename.remove_extension filename in
+      Some filepath
+    else None
+  in
+  let pani_v = of_stream stream ~dump_files in
   Pani_interp.run_to_end pani_v
 

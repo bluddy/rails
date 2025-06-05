@@ -913,6 +913,8 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
         {v with mode}
 
+        (* TODO: bridge animation *)
+        (* TODO: center on event *)
       | BridgeWashout {player_idx; loc; fixed} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let mode =

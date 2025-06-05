@@ -90,7 +90,7 @@ let main () =
   match !mode with
   | `Font -> Fonts.main !file
   | `Pic  -> Pic.png_of_file !file
-  | `Pani when !dump -> Pani.main !file
+  | `Pani when !dump -> Pani.play !file
   | `Pani -> Mainloop.main @@ init_pani ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Modules.run ()
