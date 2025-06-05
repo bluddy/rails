@@ -10,6 +10,7 @@ module B = Backend
 module C = Constants
 module M = Money
 
+
 let save_game (state:State.t) =
   let s1 = Backend.yojson_of_t state.backend |> Yojson.Safe.to_string in
   let s2 = Main_ui_d.yojson_of_options state.ui.options |> Yojson.Safe.to_string in
@@ -812,90 +813,105 @@ let handle_msgs (s:State.t) v ui_msgs =
     | _ -> None
   in
   let handle_msg v ui_msg =
-    match v.mode, ui_msg with
-    | BuildTrain(`AddCars _), Ui_msg.TrainBuilt idx ->
-        let state = Train_report.make s idx in
-        {v with mode=TrainReport state}
+    match v.mode with 
+    | BuildTrain(`AddCars _) ->
+      begin match ui_msg with
+        | Ui_msg.TrainBuilt idx ->
+          let state = Train_report.make s idx in
+          {v with mode=TrainReport state}
+        | _ -> v
+      end
 
-    | Stock_broker state, _ ->
+    | Stock_broker state ->
         let state2 = Stock_broker.handle_msg s state ui_msg in
         if state2 === state then v else {v with mode=Stock_broker state2}
 
-    | Normal, DemandChanged{x; y; good; add; player_idx} when Owner.(player_idx = main_player_idx)->
-      let add_remove = if add then "now\naccepts" else "no longer\naccepts" in
-      let station = B.get_station (x, y) s.backend |> Option.get_exn_or "missing station" in
-      let text =
-        Printf.sprintf "%s\n... %s %s.\n"
-          (Station.get_name station)
-          add_remove
-          (Goods.show good)
-      in
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews text None) in
-      {v with mode}
-
-    | Normal, (TrainArrival t) ->
-        let msg_speed = train_arrival_msg_speed v in
-        let v' =
-          Option.map_or ~default:v
-            (fun msg_speed ->
-               let time = match msg_speed with
-               | `Fast -> C.fast_message_time
-               | `Slow -> C.slow_message_time
-               in
-               Log.debug (fun f -> f "Setting train arrival message with %d time" time);
-               {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
-            )
-            msg_speed
+    | Normal ->
+      begin match ui_msg with 
+      | DemandChanged{x; y; good; add; player_idx} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let add_remove = if add then "now\naccepts" else "no longer\naccepts" in
+        let station = B.get_station (x, y) s.backend |> Option.get_exn_or "missing station" in
+        let text =
+          Printf.sprintf "%s\n... %s %s.\n"
+            (Station.get_name station)
+            add_remove
+            (Goods.show good)
         in
-        if v === v' then v else v'
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews text None) in
+        {v with mode}
 
-    | Normal, OpenStockBroker{player_idx} when Owner.(player_idx = main_player_idx) ->
-      let state = Stock_broker.make s in
-      {v with mode=Stock_broker state}
+      | (TrainArrival t) ->
+          let msg_speed = train_arrival_msg_speed v in
+          let v' =
+            Option.map_or ~default:v
+              (fun msg_speed ->
+                 let time = match msg_speed with
+                 | `Fast -> C.fast_message_time
+                 | `Slow -> C.slow_message_time
+                 in
+                 Log.debug (fun f -> f "Setting train arrival message with %d time" time);
+                 {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
+              )
+              msg_speed
+          in
+          if v === v' then v else v'
 
-    | Normal, PriorityShipmentCanceled{player_idx} when Owner.(player_idx = main_player_idx) ->
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None) in
-      {v with mode}
+      | OpenStockBroker{player_idx} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let state = Stock_broker.make s in
+        {v with mode=Stock_broker state}
 
-    | Normal, PriorityShipmentCreated{player_idx; shipment} when Owner.(player_idx = main_player_idx) ->
-      let heading, text = Priority_shipment.create_text shipment (B.get_region s.backend) s.backend.stations in
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
-      {v with mode}
+      | PriorityShipmentCanceled{player_idx} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None) in
+        {v with mode}
 
-    | Normal, PriorityShipmentDelivered{player_idx; shipment; bonus} when Owner.(player_idx = main_player_idx) ->
-      let heading, text = Priority_shipment.delivery_text shipment (B.get_region s.backend) s.backend.stations bonus in
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
-      {v with mode}
+      | PriorityShipmentCreated{player_idx; shipment} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let heading, text = Priority_shipment.create_text shipment (B.get_region s.backend) s.backend.stations in
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
+        {v with mode}
 
-    | Normal, NewCompany{opponent; city} ->
-      let text = Ai.new_ai_text opponent city s.backend.cities in
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
-      {v with mode}
+      | PriorityShipmentDelivered{player_idx; shipment; bonus} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let heading, text = Priority_shipment.delivery_text shipment (B.get_region s.backend) s.backend.stations bonus in
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
+        {v with mode}
 
-    | Normal, AiConnected{opponent; ai_name; src_name; tgt_name} ->
-      let text = Ai.new_route_text ai_name src_name tgt_name in
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
-      {v with mode}
+      | NewCompany{opponent; city} ->
+        let text = Ai.new_ai_text opponent city s.backend.cities in
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
+        {v with mode}
 
-    | Normal, AiBuildOrderFailed{player_idx; ai_name; src_name; tgt_name} when Owner.(player_idx = main_player_idx) ->
-      let text = Ai.build_order_fail_text ai_name src_name tgt_name in
-      fst @@ make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text
+      | AiConnected{opponent; ai_name; src_name; tgt_name} ->
+        let text = Ai.new_route_text ai_name src_name tgt_name in
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
+        {v with mode}
 
-    | Normal, IndustryBuilt{player_idx; tile} when Owner.(player_idx = main_player_idx) ->
-      let tile_s = Tile.show tile in
-      fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s
+      | AiBuildOrderFailed{player_idx; ai_name; src_name; tgt_name} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let text = Ai.build_order_fail_text ai_name src_name tgt_name in
+        fst @@ make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text
 
-    | Normal, (AiBuySellOwnStock {opponent;_} | AiBuysPlayerStock {opponent;_} | AiSellsPlayerStock {opponent;_}) ->
-      let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
-      {v with mode}
+      | IndustryBuilt{player_idx; tile} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let tile_s = Tile.show tile in
+        fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s
 
-    | Normal, AiTakesOutBond {opponent; player_idx;_} when Owner.(player_idx=main_player_idx) ->
-      let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
-      let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
-      {v with mode}
+      | (AiBuySellOwnStock {opponent;_} | AiBuysPlayerStock {opponent;_} | AiSellsPlayerStock {opponent;_}) ->
+        let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
+        {v with mode}
 
+      | AiTakesOutBond {opponent; player_idx;_} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let text = Ai.financial_text ~cities:s.backend.cities ~region:s.backend.params.region ui_msg s.backend.ai in
+        let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
+        {v with mode}
+      end
     | _ -> v
+
   in
   let v = List.fold_left handle_msg v ui_msgs in
   (* Handle pausing/unpausing *)

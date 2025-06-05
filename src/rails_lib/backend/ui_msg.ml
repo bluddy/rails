@@ -25,7 +25,7 @@ type stock_broker_ui_msg =
   | AiBondRepaid of {player_idx: Owner.t; company: Owner.t}
   [@@deriving yojson]
 
-module TID = Trainmap.Id
+module TID = Train.Id
 
 type fiscal_period_end_msg =
   | TrainNoRevenue of TID.t
