@@ -114,7 +114,8 @@ let get_str_w_h ?(skip_amp=false) font str =
       (x + w + font.space_x, y)
     with
     | Not_found ->
-        failwith @@ Printf.sprintf "char[%c] not found." c
+        Log.err (fun f -> f "char '%c' not found in font." c); 
+        x, y
 
     (* Write a string.
        active_color: color for automatically highlighting chars with &

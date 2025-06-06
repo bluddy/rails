@@ -69,5 +69,6 @@ type t =
   | RateWarDeclared of {player_idx: Owner.t; other_player_idx: Owner.t; station: loc}
   | PlayerTakesControlOfOther of {player_idx: Owner.t; other: Owner.t}
   | OwnerFired of {player_idx: Owner.t; by:[`Stockholders | `Management]}
+  | BridgeCreated of {player_idx: Owner.t; kind: Bridge.t}
   [@@deriving yojson]
 

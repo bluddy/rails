@@ -15,7 +15,7 @@ type t = {
 }
 
 let create ?input filename =
-  let stream = Pani.stream_of_file filename in
+  let stream = Pani.stream_of_file @@ "data/" ^ filename in
   let interp = Pani.of_stream ?input stream in
   let textures = [||] in
   let state = `Timeout in

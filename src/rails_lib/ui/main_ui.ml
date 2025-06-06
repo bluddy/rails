@@ -965,7 +965,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let state = 
             let value = if Region.is_us b.params.region then 0 else 1 in
             let input = [0, value; 1, value] in
-            Pani_render.create ~input "wreckm.pan"
+            Pani_render.create ~input C.Pani.wreck
           in
           let next_mode = accident player_idx in
           let mode = Animation{state; next_mode} in
@@ -973,7 +973,7 @@ let handle_msgs (s:State.t) v ui_msgs =
 
         | TrainBridgeAccident {player_idx; engine} ->
           let state = 
-            let filename = if Region.is_us b.params.region then "floodm.pan" else "engfldm.pan" in
+            let filename = if Region.is_us b.params.region then C.Pani.flood_us else C.Pani.flood_eu in
             let input = [10, 1; 0, engine.bridge_val] in
             Pani_render.create ~input filename
           in
@@ -1035,6 +1035,21 @@ let handle_msgs (s:State.t) v ui_msgs =
                      match by with | `Stockholders -> "with stockholders." | `Management -> "with new Management" in
           Newspaper(Newspaper.make_fancy s text b.params) in
         {v with mode}
+
+      | BridgeCreated {player_idx; kind} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let file = match kind with
+          | Wood -> Some C.Pani.wood_bridge
+          | Iron -> Some C.Pani.iron_bridge
+          | _ -> None in
+        begin match file with
+        | Some file ->
+          let next_mode = Normal in
+          let state = Pani_render.create file in
+          let mode = Animation{state; next_mode} in
+          {v with mode}
+        | None -> v
+        end
 
       (* 
          TODO: Record Profits on 

@@ -27,6 +27,9 @@
 - Update_train: handle freight class priority movement
 - Could division by 2 for money be to get a little more space in the bits?
 - Bug:
+  - * , () doesn't exist in font. (Daily Tattler, RailRoad news)
+  - Fancy paper: random paper animates!
+  - Animation: old timing issues
   - Delivery + priority pickup: no delivery message
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu

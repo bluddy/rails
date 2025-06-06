@@ -236,6 +236,7 @@ let _build_bridge ((x, y) as loc) ~dir player_idx ~kind v =
     |> Player.update_and_pay_for_track x y ~dir ~len:2 ~climate:v.params.climate v.map
     |> Player.pay `BridgeTunnel (Bridge.price_of kind))
   in
+  send_ui_msg v @@ BridgeCreated{player_idx; kind};
   [%up {v with graph; track; blocks; players}]
 
 let check_build_track loc ~dir player_idx v =
