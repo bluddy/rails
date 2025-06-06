@@ -746,11 +746,10 @@ let _update_station_supply_demand player_idx stations map params =
   stations, ui_msgs
 
 let _modify_climate params random =
-  let climate = Climate.modify random params.Params.climate in
-  if climate =!= params.climate then
-    {params with climate}, [Ui_msg.ClimateChange {climate}]
-  else
-    params, []
+  match Climate.modify random params.Params.climate with
+  | `Same -> params, []
+  | `Change (climate, reason) ->
+      {params with climate}, [Ui_msg.ClimateChange {climate; reason}]
 
 let _year_end_checks player ai engines params =
   let player = player

@@ -41,6 +41,7 @@ type fiscal_period_end_msg =
   [@@deriving yojson]
 
 type t =
+  | NewPlayerCompany of {num_shares: int}
   | TrainBuilt of TID.t
   | DemandChanged of {player_idx: Owner.t; x: int; y: int; good: Goods.t; add: bool}
   | TrainArrival of train_arrival_msg
@@ -58,11 +59,15 @@ type t =
   | AiSellsPlayerStock of {player_idx: Owner.t; ai_idx: Owner.t; opponent: Opponent.name}
   | AiBuysPlayerStock of {player_idx: Owner.t; ai_idx: Owner.t; takeover: bool; opponent: Opponent.name}
   | BridgeWashout of {player_idx: Owner.t; loc: loc; fixed: bool}
-  | ClimateChange of {climate: Climate.t}
+  | ClimateChange of {climate: Climate.t; reason: Climate.reason}
   | EngineDiscovered of Engine.t
   | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   | ImpossibleRoute of {player_idx: Owner.t; train_idx: Train.Id.t; src: loc; dst: loc}
   | TrainAccident of {player_idx: Owner.t}
   | TrainBridgeAccident of {player_idx: Owner.t}
+  | FirstTrainArrives of {player_idx: Owner.t; station: loc}
+  | RateWarDeclared of {player_idx: Owner.t; other_player_idx: Owner.t; station: loc}
+  | PlayerTakesControlOfOther of {player_idx: Owner.t; other: Owner.t}
+  | OwnerFired of {player_idx: Owner.t; by:[`Stockholders | `Management]}
   [@@deriving yojson]
 

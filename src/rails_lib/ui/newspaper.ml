@@ -13,11 +13,13 @@ let make_simple (s:State.t) kind ?heading text opponent = Simple {
     msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ?heading ~fonts:s.fonts s text;
 }
 
+let day_of_year time = ((time * 3) / 17) mod 360
+
 let make_fancy (s:State.t) text params =
   let year, time = params.Params.year, params.time in
   let cost = ((year - C.newspaper_cost_ref_year) / 40) * 5 in
   (* Note: for some reason, the day computation here isn't the same as it is in the rest of the game. Why? *)
-  let day_of_year = ((time * 3) / 17) mod 360 in
+  let day_of_year = day_of_year time in
   let source = match day_of_year mod 4 with
     | 0 -> Fancy.RailNewsWeekly
     | 1 -> DailyTattler

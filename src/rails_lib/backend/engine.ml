@@ -113,7 +113,6 @@ let of_region = function
   | Britain -> en_engines
   | Europe -> eu_engines
 
-
 let randomize_year rand engines =
   List.mapi (fun i engine ->
     match i with
@@ -131,4 +130,8 @@ let available_at_year engines ~year =
 
 let discovered_at_year engines ~year =
   List.filter (fun engine -> engine.year = year) engines
+
+let get_name region engine = 
+  let engines = of_region region in
+  (t_of_make engines engine).name
 
