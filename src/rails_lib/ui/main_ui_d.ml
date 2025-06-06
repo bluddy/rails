@@ -114,6 +114,7 @@ and 'state mode =
   | Accomplishments
   | Income_statement of Balance_sheet_d.t (* we use the stock part *)
   | Efficiency_report
+  | Animation of {state: Pani_render.t; next_mode: 'state mode}
 
 let is_normal_mode = function
   | Normal -> true

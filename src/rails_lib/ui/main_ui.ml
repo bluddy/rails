@@ -463,9 +463,9 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
   in
   let player_idx = C.player in
-  let modal_screen_no_input v event =
+  let modal_screen_no_input v ~next_mode event =
     if Event.is_left_click event || Event.key_modal_dismiss event then
-      {v with mode=Normal}, nobaction
+      {v with mode=next_mode}, nobaction
     else
       v, nobaction
   in
@@ -794,7 +794,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Balance_sheet _
     | Income_statement _
     | Efficiency_report
-    | Accomplishments -> modal_screen_no_input v event
+    | Accomplishments -> modal_screen_no_input ~next_mode:Normal v event
         
   in
   (* See if we need to pause or unpause *)
