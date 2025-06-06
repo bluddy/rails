@@ -64,7 +64,7 @@ type t =
   | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   | ImpossibleRoute of {player_idx: Owner.t; train_idx: Train.Id.t; src: loc; dst: loc}
   | TrainAccident of {player_idx: Owner.t}
-  | TrainBridgeAccident of {player_idx: Owner.t}
+  | TrainBridgeAccident of {player_idx: Owner.t; engine: Engine.t}
   | FirstTrainArrives of {player_idx: Owner.t; station: loc}
   | RateWarDeclared of {player_idx: Owner.t; other_player_idx: Owner.t; station: loc}
   | PlayerTakesControlOfOther of {player_idx: Owner.t; other: Owner.t}

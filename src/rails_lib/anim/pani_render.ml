@@ -14,9 +14,9 @@ type t = {
   mutable textures: R.Texture.t option array;
 }
 
-let create filename =
+let create ?input filename =
   let stream = Pani.stream_of_file filename in
-  let interp = Pani.of_stream stream in
+  let interp = Pani.of_stream ?input stream in
   let textures = [||] in
   let state = `Timeout in
   let last_time = 0 in

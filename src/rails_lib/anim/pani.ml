@@ -56,7 +56,7 @@ WOOD2: 18sec
 *)
 
 
-let of_stream ?(dump_files=None) s =
+let of_stream ?input ?(dump_files=None) s =
   let pani = Gen.take 4 s |> My_gen.to_stringi in
   if String.(pani = "PANI")
   then ()
@@ -174,7 +174,7 @@ let of_stream ?(dump_files=None) s =
   | None -> ()
   end;
 
-  let pani_v = Pani_interp.make pani_code_s pic_bgnd pani_pics in
+  let pani_v = Pani_interp.make ?input pani_code_s pic_bgnd pani_pics in
   pani_v
 
 let stream_of_file filename =

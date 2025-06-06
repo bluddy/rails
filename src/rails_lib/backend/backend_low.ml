@@ -383,7 +383,10 @@ module Train_update = struct
     let stations, trainmap = remove_trains_and_goods trains_to_remove in
     let ui_msgs =
       if not @@ Train.IdSet.is_empty bridge_crash_info
-      then [UIM.TrainBridgeAccident {player_idx}] else []
+      then
+        let train_id = Train.IdSet.choose bridge_crash_info in
+        let engine = Trainmap.get train_id trainmap |> Train.get_engine in
+        [UIM.TrainBridgeAccident {player_idx; engine}] else []
     in
     let ui_msgs =
       if dispatcher_ops && not @@ Train.IdSet.is_empty train_id_set 

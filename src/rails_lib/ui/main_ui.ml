@@ -830,15 +830,12 @@ let handle_msgs (s:State.t) v ui_msgs =
     | Normal ->
 
       let accident player_idx =
-        let mode =
-          let name = B.get_player player_idx b |> Player.get_name b.stations b.cities in
-          let text = Printf.sprintf "TRAIN WRECK on %s!" name in
-          let num_people = (Newspaper.day_of_year b.params.time) mod 16 + 2 in
-          let text2 = Printf.sprintf "%d persons injured." num_people in
-          let text3 = "Customers Panic!" in
-          Newspaper(Newspaper.make_fancy s (text, text2, text3) b.params)
-        in
-        {v with mode}
+        let name = B.get_player player_idx b |> Player.get_name b.stations b.cities in
+        let text = Printf.sprintf "TRAIN WRECK on %s!" name in
+        let num_people = (Newspaper.day_of_year b.params.time) mod 16 + 2 in
+        let text2 = Printf.sprintf "%d persons injured." num_people in
+        let text3 = "Customers Panic!" in
+        Newspaper(Newspaper.make_fancy s (text, text2, text3) b.params)
       in
       begin match ui_msg with 
       | DemandChanged{x; y; good; add; player_idx} ->
@@ -949,9 +946,25 @@ let handle_msgs (s:State.t) v ui_msgs =
           Newspaper(Newspaper.make_fancy s text b.params) in
         {v with mode}
 
-      | TrainAccident {player_idx} -> accident player_idx
+      | TrainAccident {player_idx} ->
+          let state = 
+            let value = if Region.is_us b.params.region then 0 else 1 in
+            let input = [0, value; 1, value] in
+            Pani_render.create ~input "wreckm.pan"
+          in
+          let next_mode = accident player_idx in
+          let mode = Animation{state; next_mode} in
+          {v with mode}
 
-      | TrainBridgeAccident {player_idx} -> accident player_idx
+        | TrainBridgeAccident {player_idx; engine} ->
+          let state = 
+            let filename = if Region.is_us b.params.region then "floodm.pan" else "engfldm.pan" in
+            let input = [10, 1; 0, engine.bridge_val] in
+            Pani_render.create ~input filename
+          in
+          let next_mode = accident player_idx in
+          let mode = Animation{state; next_mode} in
+          {v with mode}
 
       | ClimateChange {climate; reason} ->
           let mode =
@@ -978,41 +991,41 @@ let handle_msgs (s:State.t) v ui_msgs =
           Newspaper(Newspaper.make_fancy s text b.params) in
         {v with mode}
 
-        | RateWarDeclared{player_idx; other_player_idx; station} ->
-          let mode =
-            let station_name = Station_map.get_exn station b.stations |> Station.get_name in
-            let player_name = B.get_name player_idx b in
-            let other_name = B.get_name other_player_idx b in
-            let text = "Rate War Declared in",
-                       (Printf.sprintf "%s!" station_name),
-                       (Printf.sprintf "%s vs. %s." player_name other_name) in
-            Newspaper(Newspaper.make_fancy s text b.params) in
-          {v with mode}
+      | RateWarDeclared{player_idx; other_player_idx; station} ->
+        let mode =
+          let station_name = Station_map.get_exn station b.stations |> Station.get_name in
+          let player_name = B.get_name player_idx b in
+          let other_name = B.get_name other_player_idx b in
+          let text = "Rate War Declared in",
+                     (Printf.sprintf "%s!" station_name),
+                     (Printf.sprintf "%s vs. %s." player_name other_name) in
+          Newspaper(Newspaper.make_fancy s text b.params) in
+        {v with mode}
 
-        | PlayerTakesControlOfOther{player_idx; other} ->
-          let mode =
-            let player_name = B.get_name player_idx b in
-            let other_name = B.get_name other b in
-            let text = (Printf.sprintf "%s take control" player_name),
-                       (Printf.sprintf "of %s Railroad!" other_name),
-                       "Wall Street amazed." in
-            Newspaper(Newspaper.make_fancy s text b.params) in
-          {v with mode}
+      | PlayerTakesControlOfOther{player_idx; other} ->
+        let mode =
+          let player_name = B.get_name player_idx b in
+          let other_name = B.get_name other b in
+          let text = (Printf.sprintf "%s take control" player_name),
+                     (Printf.sprintf "of %s Railroad!" other_name),
+                     "Wall Street amazed." in
+          Newspaper(Newspaper.make_fancy s text b.params) in
+        {v with mode}
 
-        | OwnerFired {player_idx; by} ->
-          let mode =
-            let player_name = B.get_name player_idx b in
-            let text = (Printf.sprintf "%s president leaves" player_name),
-                       "town after meeting",
-                       match by with | `Stockholders -> "with stockholders." | `Management -> "with new Management" in
-            Newspaper(Newspaper.make_fancy s text b.params) in
-          {v with mode}
+      | OwnerFired {player_idx; by} ->
+        let mode =
+          let player_name = B.get_name player_idx b in
+          let text = (Printf.sprintf "%s president leaves" player_name),
+                     "town after meeting",
+                     match by with | `Stockholders -> "with stockholders." | `Management -> "with new Management" in
+          Newspaper(Newspaper.make_fancy s text b.params) in
+        {v with mode}
 
-        (* 
-           TODO: Record Profits on 
-           name earnings
-           in last two years.
-           *)
+      (* 
+         TODO: Record Profits on 
+         name earnings
+         in last two years.
+         *)
 
       | StockBroker _ -> v
 

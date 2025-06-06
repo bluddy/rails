@@ -23,27 +23,29 @@ type t = {
   buffer: bytes;
   mutable read_ptr: int;
   mutable stack: int list;
-  animation_registers: int Array.t;
+  memory: int Array.t;
   animations: Pani_anim.t Array.t;
   pics: ndarray option Array.t;
   mutable backgrounds: bg list; (* reversed *)
 }
 
-let make buf_str (background: ndarray option) pics =
+let make ?(input=[]) buf_str (background: ndarray option) pics =
   assert (Array.length pics = 251);
   pics.(250) <- background;
-{
-  is_done=false;
-  timeout=false;
-  register=0;
-  read_ptr=0;
-  buffer=buf_str;
-  stack=[];
-  animation_registers=Array.make 52 0;
-  animations=Array.init 51 (fun _ -> Pani_anim.empty ());
-  pics; (* size 251 *)
-  backgrounds = (match background with None -> [] | Some _ -> [{x=0; y=0; pic_idx=250}]);
-}
+  let memory = Array.make 52 0 in
+  List.iter (fun (loc, v) -> memory.(loc) <- v) input;
+  {
+    is_done=false;
+    timeout=false;
+    register=0;
+    read_ptr=0;
+    buffer=buf_str;
+    stack=[];
+    memory=Array.make 52 0;
+    animations=Array.init 51 (fun _ -> Pani_anim.empty ());
+    pics; (* size 251 *)
+    backgrounds = (match background with None -> [] | Some _ -> [{x=0; y=0; pic_idx=250}]);
+  }
 
 type op =
   | CreateAnimation
@@ -246,8 +248,8 @@ let interpret v =
         let value = read_word v in
         if is_true test then begin
           if debug then
-            Printf.printf "%d from animation_register [%d] " v.animation_registers.(value) value;
-          v.register <- v.animation_registers.(value)
+            Printf.printf "%d from memory [%d] " v.memory.(value) value;
+          v.register <- v.memory.(value)
         end else begin
           if debug then
             Printf.printf "%d " value;
@@ -265,7 +267,7 @@ let interpret v =
           if value >= 0 && value <= 50 then begin
             if debug then
               Printf.printf ", %d in animation_reg[%d] " newval value;
-            v.animation_registers.(value) <- newval
+            v.memory.(value) <- newval
           end;
           v.stack <- rest
         | _ -> failwith "SetTimeoutWriteAnimArray: missing argument"
