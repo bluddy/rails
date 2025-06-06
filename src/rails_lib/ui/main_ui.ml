@@ -795,6 +795,8 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Income_statement _
     | Efficiency_report
     | Accomplishments -> modal_screen_no_input ~next_mode:Normal v event
+
+    | Animation {next_mode; _} -> modal_screen_no_input ~next_mode v event
         
   in
   (* See if we need to pause or unpause *)
@@ -888,6 +890,19 @@ let handle_msgs (s:State.t) v ui_msgs =
         let heading, text = Priority_shipment.delivery_text shipment (B.get_region b) b.stations bonus in
         let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
         {v with mode}
+
+      | ImpossibleRoute a ->
+          let text = Printf.sprintf
+            "Impossible Route:\n\
+             Train #%d\n\
+             from %s\n\
+             to %s\n\
+            "
+            (Train.Id.to_int a.train_idx)
+            (Station_map.get_exn a.src b.stations |> Station.get_name)
+            (Station_map.get_exn a.dst b.stations |> Station.get_name)
+          in
+          fst @@ make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text
 
       | NewCompany{opponent; city} ->
         let text = Ai.new_ai_text opponent city b.cities in
@@ -1027,7 +1042,7 @@ let handle_msgs (s:State.t) v ui_msgs =
          in last two years.
          *)
 
-      | StockBroker _ -> v
+      | StockBroker _ | TrainBuilt _ -> v
 
       end
     | _ -> v
@@ -1060,6 +1075,10 @@ let handle_tick s v time is_cycle = match v.mode with
         [%up {v with view; train_arrival_msgs}]
       in
       decr_train_msgs ()
+  | Animation a ->
+      let state2 = Pani_render.handle_tick time a.state in
+      if state2 === a.state then v else {v with mode=Animation{a with state=state2}}
+    
   | _ -> v
 
 let draw_train_roster win (s:State.t) v =
@@ -1258,6 +1277,8 @@ let render (win:R.window) (s:State.t) v =
         Accomplishments.render win s
     | Efficiency_report ->
         Efficiency_report.render win s
+    | Animation {state; _} ->
+        Pani_render.render win state
   in
   render_mode v.mode;
   if should_render_mouse v.mode then

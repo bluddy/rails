@@ -112,9 +112,9 @@ and 'state mode =
   | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of Balance_sheet_d.t
   | Accomplishments
-  | Income_statement of Balance_sheet_d.t (* we use the stock part *)
+  | Income_statement of Balance_sheet_d.t  (* we use the stock part *)
   | Efficiency_report
-  | Animation of {state: Pani_render.t; next_mode: 'state mode}
+  | Animation of {state: Pani_render.t; next_mode: 'state mode}  (* Animation stores its next mode for ease of use *)
 
 let is_normal_mode = function
   | Normal -> true
