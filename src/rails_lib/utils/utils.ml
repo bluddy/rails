@@ -376,6 +376,15 @@ module List = struct
 
   let min_f f l = comp_f (<) f l
   let max_f f l = comp_f (>) f l
+
+  let rev_iter f l =
+    let rec loop f l = match l with
+      | x::xs ->
+        loop f xs;
+        f x
+      | [] -> ()
+    in
+    loop f l
     
 end
 

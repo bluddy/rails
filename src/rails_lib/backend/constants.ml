@@ -118,3 +118,9 @@ let iron_bridge_fail_odds = 4  (* The extra odds of an iron bridge failing *)
 let stone_bridge_fail_odds = 8  (* The extra odds of a stone bridge failing *)
 
 let newspaper_cost_ref_year = 1775
+
+module Pani = struct
+  let update_delta = 10
+  let max_num_animations = 50
+end
+
