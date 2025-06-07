@@ -1,4 +1,6 @@
 # Tasks
+- Straddle station updates so they're smaller and they don't seem as coordinated, like in game.
+- Allow upgrading station while keeping station data
 - Train records, first deliveries
 - Hook up fiscal_period_end stuff
 - Handle train blizzard event (what generates it?)

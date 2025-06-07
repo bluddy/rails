@@ -146,6 +146,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
           begin match lst with
           | [backend;options;view] ->
               let backend = Yojson.Safe.from_string backend |> Backend.t_of_yojson in
+              let backend = {backend with pause = false} in
               Backend.reset_tick backend;
               let ui_options = Yojson.Safe.from_string options |> Main_ui_d.options_of_yojson in
               let ui_view = Yojson.Safe.from_string view |> Mapview_d.t_of_yojson in
