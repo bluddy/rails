@@ -64,11 +64,6 @@ let render_fancy win (s:State.t) v =
   R.draw_line win ~x1:1 ~y1:1 ~x2:318 ~y2:1 ~color:black;
   let name, (x, y) = Fancy.show_source v.Fancy.source, Fancy.source_pos v.source in
   Fonts.Render.write win s.fonts ~color:black ~x ~y ~idx:0 name;
-  if Fancy.has_doodles v.source then (
-    let text = "()*+" in
-    Fonts.Render.write win s.fonts ~color:black ~x:6 ~y:4 ~idx:0 text;
-    Fonts.Render.write win s.fonts ~color:black ~x:264 ~y:4 ~idx:0 text;
-  );
   R.draw_line win ~x1:0 ~y1:32 ~x2:319 ~y2:32 ~color:black;
   R.draw_line win ~x1:1 ~y1:1 ~x2:1 ~y2:32 ~color:black;
   R.draw_line win ~x1:1 ~y1:1 ~x2:1 ~y2:32 ~color:black;

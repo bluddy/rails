@@ -44,10 +44,6 @@ module Fancy = struct
     | WallStreetJournal -> (32, 6)
     | HeraldTribune -> (56, 6)
 
-  let has_doodles = function
-    | RailNewsWeekly | DailyTattler -> true
-    | _ -> false
-
   (* A large newspaper for events *)
   type 'state t = {
     source: source;
