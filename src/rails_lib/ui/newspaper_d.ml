@@ -51,6 +51,7 @@ module Fancy = struct
     msgbox: (unit, 'state) Menu.MsgBox.t;
     cost_s: string;
     date_s: string;
+    tear_vals: (int * int) list; (* values for random tear *)
   }
 end
 

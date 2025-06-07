@@ -15,7 +15,7 @@ let make_simple (s:State.t) kind ?heading text opponent = Simple {
 
 let day_of_year time = ((time * 3) / 17) mod 360
 
-let make_fancy (s:State.t) text params =
+let make_fancy (s:State.t) text params random =
   let year, time = params.Params.year, params.time in
   let cost = ((year - C.newspaper_cost_ref_year) / 40) * 5 in
   (* Note: for some reason, the day computation here isn't the same as it is in the rest of the game. Why? *)
@@ -35,12 +35,20 @@ let make_fancy (s:State.t) text params =
     let year = day_of_year / 360 + year in
     Printf.sprintf "%s %d, %d" month_s day_of_month year
   in
+  let tear_vals =
+    let rec loop x acc =
+      if x >= C.screen_width then acc else
+      let vals = (Random.int 2 random, Random.int 2 random) in
+      loop (x + 20) @@ vals::acc
+    in loop 0 []
+  in
   Fancy {
     source;
     text;
     msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ~fonts:s.fonts s "Press any key to continue";
     cost_s=Printf.sprintf "%d cents" cost;
     date_s=date_s;
+    tear_vals;
   }
 
 let render_simple win (s:State.t) v =
@@ -70,15 +78,15 @@ let render_fancy win (s:State.t) v =
   R.draw_line win ~x1:318 ~y1:1 ~x2:318 ~y2:32 ~color:black;
   R.draw_line win ~x1:0 ~y1:97 ~x2:319 ~y2:97 ~color:black;
   let paper_tear_tex = List.map (fun name -> Hashtbl.find s.textures.misc name) [`PaperTear1; `PaperTear2] in
-  let random = s.backend.random in
   let _draw_tear =
-    let rec loop x =
-      if x >= C.screen_width then () else
-      let tex = Random.int 2 random |> List.nth paper_tear_tex in
-      let y = 100 - Random.int 2 random in
+    ignore @@
+    List.fold_left (fun x (i, j) ->
+      let tex = List.nth paper_tear_tex i in
+      let y = 100 - j in
       R.Texture.render win ~x ~y tex;
-      loop (x + 20)
-    in loop 0
+      (x + 20))
+    0
+    v.tear_vals
   in
   let txt1, txt2, txt3 = v.text in
   Fonts.Render.write win s.fonts ~color:black ~x:16 ~y:40 ~idx:2 txt1;
