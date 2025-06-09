@@ -1,4 +1,11 @@
 # Tasks
+- Can't rebuild bridge under repair
+- Use value manipulation to get to unseen overlays
+- Announcement of new engine is followed by engine detail display
+- Missing:
+  - Rate war info
+  - driven out of town animation
+  - Small things here and there (look through code)
 - Straddle station updates so they're smaller and they don't seem as coordinated, like in game.
 - Allow upgrading station while keeping station data
 - Train records, first deliveries

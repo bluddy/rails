@@ -59,8 +59,7 @@ module Train_update = struct
     Train.advance train
 
 
-  let _train_station_handle_consist_and_maintenance (v:t) idx loc
-      (station:Station.t) (train:rw Train.t) =
+  let _train_station_handle_consist_and_maintenance (v:t) idx loc (station:Station.t) (train:rw Train.t) =
     let handle_stop station_info =
       let had_maintenance = Station.can_maintain station || train.had_maintenance in
       (* Priority shipment arriving to station *)
@@ -229,7 +228,7 @@ module Train_update = struct
               goods_amount=goods_delivered_amt;
             }
           in
-          let data = (income_stmt, freight_ton_miles) in
+          let data = (income_stmt, freight_ton_miles, goods_delivered) in
           [msg], Some data
         else
           [], None
@@ -538,7 +537,7 @@ module Train_update = struct
 
 let _update_player_with_data (player:Player.t) data active_stations fiscal_period random =
     let player = match data with
-      | Some (income_stmt, freight_ton_miles) ->
+      | Some (income_stmt, freight_ton_miles, _) ->
           Player.add_income_stmt income_stmt player
           |> Player.add_freight_ton_miles freight_ton_miles fiscal_period
       | _ -> player

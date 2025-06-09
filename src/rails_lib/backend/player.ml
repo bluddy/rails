@@ -104,6 +104,7 @@ type t = {
   track_length: int; (* track length according to the game (not per tile) *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
   goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
+  goods_picked_up: Goods.Set.t;  (* goods picked up *)
   broker_timer: int option;  (* Time left to see broker, if any *)
   priority: Priority_shipment.t option;
    (* A current active station, which causes high development *)
@@ -125,6 +126,7 @@ let default idx = {
   track_length = 0;
   track = Vector.create ();
   goods_delivered=Goods.Set.empty;
+  goods_picked_up=Goods.Set.empty;
   broker_timer=None;
   priority=None;
   active_station=None;

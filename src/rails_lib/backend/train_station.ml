@@ -68,9 +68,10 @@ let train_pickup_and_empty_station cars loc cycle station =
   match total_pickup with
   | 0 -> 0, cars, station
   | _ ->
+    let cars_pickup_amounts = List.combine cars pickup_amounts in
     let cars =
-      List.map2 (fun (car:T.Car.t) add_amount ->
-        match car.load with
+      List.map (fun (car, add_amount) ->
+        match car.T.Car.load with
         | Some load ->
           let amount = load.amount + add_amount in
           if load.amount < add_amount then
@@ -79,27 +80,25 @@ let train_pickup_and_empty_station cars loc cycle station =
           else
             {car with load=Some {load with amount}}
         | None ->
-            {car with load=Some {amount=add_amount; source=loc; cycle}})
-      cars
-      pickup_amounts
+            {car with load=Some {amount=add_amount; source=loc; cycle}}
+      )
+      cars_pickup_amounts
     in
     let time_pickup =
-      List.fold_left2 (fun time amt car ->
+      List.fold_left (fun time (car, amt) ->
         let freight = T.Car.get_freight car |> Freight.to_enum in
         time + (amt * freight / 32))
         0
-        pickup_amounts
-        cars
+        cars_pickup_amounts
     in
-    let picked_up_goods = Station.get_picked_up_goods_exn station in
+    let station_picked_up_goods = Station.get_picked_up_goods_exn station in
     let () =
-      List.iter2 (fun car amount ->
+      List.iter (fun (car, amount) ->
         let good = T.Car.get_good car in
         Hashtbl.decr station_supply good ~by:amount;
-        Hashtbl.incr picked_up_goods good ~by:amount;
+        Hashtbl.incr station_picked_up_goods good ~by:amount;
       )
-      cars
-      pickup_amounts
+      cars_pickup_amounts
     in
     time_pickup, cars, station
 
