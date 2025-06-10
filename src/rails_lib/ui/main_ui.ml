@@ -963,31 +963,31 @@ let handle_msgs (s:State.t) v ui_msgs =
         {v with mode}
 
       | TrainAccident {player_idx} ->
-          let state = 
-            let value = if Region.is_us b.params.region then 0 else 1 in
-            let input = [0, value; 1, value] in
-            Pani_render.create ~input C.Pani.wreck
-          in
-          let next_mode = accident player_idx in
-          let mode = Animation{state; next_mode} in
-          {v with mode}
+        let state = 
+          let value = if Region.is_us b.params.region then 0 else 1 in
+          let input = [0, value; 1, value] in
+          Pani_render.create ~input C.Pani.wreck
+        in
+        let next_mode = accident player_idx in
+        let mode = Animation{state; next_mode} in
+        {v with mode}
 
-        | TrainBridgeAccident {player_idx; engine} ->
-          let state = 
-            let filename = if Region.is_us b.params.region then C.Pani.flood_us else C.Pani.flood_eu in
-            let input = [10, 1; 0, engine.bridge_val] in
-            Pani_render.create ~input filename
-          in
-          let next_mode = accident player_idx in
-          let mode = Animation{state; next_mode} in
-          {v with mode}
+      | TrainBridgeAccident {player_idx; engine} ->
+        let state = 
+          let filename = if Region.is_us b.params.region then C.Pani.flood_us else C.Pani.flood_eu in
+          let input = [10, 1; 0, engine.bridge_val] in
+          Pani_render.create ~input filename
+        in
+        let next_mode = accident player_idx in
+        let mode = Animation{state; next_mode} in
+        {v with mode}
 
       | ClimateChange {climate; reason} ->
-          let mode =
-            let text1, text2 = Climate.text1 reason in
-            let text3 = Climate.text2 climate in
-            make_news @@ Newspaper.make_fancy s (text1, text2, text3) b.params b.random in
-          {v with mode}
+        let mode =
+          let text1, text2 = Climate.text1 reason in
+          let text3 = Climate.text2 climate in
+          make_news @@ Newspaper.make_fancy s (text1, text2, text3) b.params b.random in
+        {v with mode}
 
       | FirstTrainArrives{player_idx; station} ->
         if Owner.(player_idx <> main_player_idx) then v else
@@ -1000,8 +1000,8 @@ let handle_msgs (s:State.t) v ui_msgs =
         {v with mode}
 
       | EngineDiscovered(engine) ->
-        let next_mode=EngineInfo(Engine_info.make engine) in
         let mode =
+          let next_mode=EngineInfo(Engine_info.make engine) in
           let text = engine.name,
                      "Locmotive Introduced.",
                      "Bigger, Better, Faster." in
