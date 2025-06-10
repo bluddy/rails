@@ -16,6 +16,20 @@ module U = Utils
 (* Low-level backend module. Deals with multiple modules at a time *)
 
 module Train_update = struct
+  (* type to return *)
+  type train_data = {
+    income_stmt: Income_statement_d.t;
+    freight_ton_miles: int Freight.Map.t;
+    new_goods_delivered: Goods.Set.t;
+    new_goods_picked_up: Goods.Set.t;
+  }
+
+  let default_train_data = {
+    income_stmt=Income_statement_d.default;
+    freight_ton_miles=Freight.Map.empty;
+    new_goods_delivered=Goods.Set.empty;
+    new_goods_picked_up=Goods.Set.empty;
+  }
 
   let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~(idx:Train.Id.t) ~cycle loc ~dir =
     (* Speed factor computation from height delta and turn *)
@@ -58,8 +72,32 @@ module Train_update = struct
     update_player_state v train.player (Player.incr_dist_traveled ~dist current_period);
     Train.advance train
 
+  let _ui_msgs_of_new_goods_picked_up goods_picked_up player =
+    let new_goods = Goods.Set.diff goods_picked_up player.Player.goods_picked_up in
+    let ui_msgs = new_goods
+      |> Goods.Set.to_list
+      |> List.map (fun good ->
+        UIM.NewGoodPickedUp{player_idx=player.Player.idx; good})
+    in
+    ui_msgs, new_goods
 
-  let _train_station_handle_consist_and_maintenance (v:t) idx loc (station:Station.t) (train:rw Train.t) =
+  let _ui_msgs_of_new_goods_delivered goods_delivered goods_delivered_map player money_from_goods train station =
+    let new_goods = Goods.Set.diff goods_delivered player.Player.goods_delivered in
+    let ui_msgs = new_goods
+      |> Goods.Set.to_list
+      |> List.map (fun good ->
+        UIM.NewGoodDelivery {
+          player_idx=player.idx;
+          good;
+          src=Train.get_last_station train;
+          dst=station;
+          amount=Goods.Map.find good goods_delivered_map;
+          revenue=Goods.Map.find good money_from_goods;
+        })
+    in
+    ui_msgs, new_goods
+
+  let _train_station_handle_consist_and_maintenance (v:t) player idx loc (station:Station.t) (train:rw Train.t) =
     let handle_stop station_info =
       let had_maintenance = Station.can_maintain station || train.had_maintenance in
       (* Priority shipment arriving to station *)
@@ -84,10 +122,9 @@ module Train_update = struct
               let money =
                 Train.car_delivery_money ~loc ~train ~car ~rates:station_info.rates ~params:v.params
               in
-              let freight = Freight.of_good car.good in
-              IS.RevenueMap.incr_cash freight money acc
+              Goods.Map.incr_cash (Train.Car.get_good car) money acc
             else acc)
-          IS.RevenueMap.empty
+          Goods.Map.empty
           cars_delivered
         in
         let freight_ton_miles =
@@ -166,9 +203,10 @@ module Train_update = struct
         car_change_work * multiplier
       in
       let freight = Train.freight_of_cars cars in
-      let time_for_pickup, cars, station =
+      let time_for_pickup, cars, station, goods_picked_up =
         Train_station.train_pickup_and_empty_station cars loc v.params.cycle station
       in
+      let pickup_msgs, new_goods_picked_up = _ui_msgs_of_new_goods_picked_up goods_picked_up player in
       (* Update whether we leave with priority shipment on train *)
       let holds_priority_shipment =
         let player = Player.get train.player v.players in
@@ -186,7 +224,7 @@ module Train_update = struct
       (* This function always naively switches to loading at station. Other conditions will be handled elsewhere *)
       let state = Train.LoadingAtStation {wait_time} in
 
-      let goods_revenue = IS.RevenueMap.total_cash money_from_goods in
+      let goods_revenue = Goods.Map.total_cash money_from_goods in
       let revenue = M.(goods_revenue + other_income - car_change_expense) in
 
       (* Bugfix: more accurate computation via map *)
@@ -198,11 +236,10 @@ module Train_update = struct
 
       let income_stmt =
         IS.default
-        |> IS.add_revenues money_from_goods 
+        |> IS.add_revenues (Income_statement.RevenueMap.of_goods money_from_goods)
         |> IS.add_revenue `Other other_income
         |> IS.deduct `Train car_change_expense
       in
-
       let goods_delivered = List.fold_left (fun acc (car, delivered) ->
         if delivered then
           let good, amount = Train.Car.get_good car, Train.Car.get_amount car in
@@ -211,11 +248,13 @@ module Train_update = struct
         Goods.Map.empty
         cars_delivered
       in
-      let goods_delivered_amt = Goods.Map.to_list goods_delivered in
       let total_goods = Goods.Map.total goods_delivered in
       let ui_msgs, data =
         if total_goods > 0 then
           let complex_freight = Train.freight_set_of_cars train.cars |> Freight.complex_of_set in
+          let goods_delivered_amt = Goods.Map.to_list goods_delivered in
+          let goods_delivered_set = Goods.Map.keys goods_delivered |> Goods.Set.of_iter in
+          let deliv_msgs, new_goods_delivered = _ui_msgs_of_new_goods_delivered goods_delivered_set goods_delivered player money_from_goods train loc in
           let msg =
             UIM.TrainArrival {
               player=train.player;
@@ -228,10 +267,10 @@ module Train_update = struct
               goods_amount=goods_delivered_amt;
             }
           in
-          let data = (income_stmt, freight_ton_miles, goods_delivered) in
-          [msg], Some data
+          let data = {income_stmt; freight_ton_miles; new_goods_delivered; new_goods_picked_up} in
+          msg::deliv_msgs @ pickup_msgs, Some data
         else
-          [], None
+          pickup_msgs, None
       in
       Log.debug (fun f -> f "Wait_time(%d)" wait_time);
 
@@ -264,12 +303,12 @@ module Train_update = struct
          record reward for delivery
        *)
 
-  let _enter_station (v:t) idx (train: rw Train.t) stations loc  =
+  let _enter_station (v:t) idx (train: rw Train.t) stations player loc  =
     let station' = Station_map.get_exn loc stations in
     let last_station, priority_stop, stop, train, station, data, ui_msgs =
       if Station.is_proper_station station' then (
         let train, station, data, ui_msgs =
-          _train_station_handle_consist_and_maintenance v idx loc station' train in
+          _train_station_handle_consist_and_maintenance v player idx loc station' train in
         let priority_stop, stop = Train.check_increment_stop loc train in
         loc, priority_stop, stop, train, station, data, ui_msgs
       ) else (
@@ -411,7 +450,7 @@ module Train_update = struct
     in
     stations, trainmap, ui_msgs
 
-  let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations loc =
+  let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations player loc =
     (* All major computation happens mid-tile *)
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
     (* TODO: check for colocated trains (accidents/stop a train) *)
@@ -437,7 +476,7 @@ module Train_update = struct
                 if train.hold_at_next_station then
                   {train with state = HoldingAtStation}, stations, None, []
                 else
-                  _enter_station v idx train stations loc
+                  _enter_station v idx train stations player loc
               in
               if Train.is_traveling train then
                 (* No stopping at this station *)
@@ -468,19 +507,21 @@ module Train_update = struct
 
           | WaitingForFullLoad ->
               (* If we're not full, we need to see if we can offload more from the station *)
-              let wait_time, cars, stations =
-                let station' = Station_map.get_exn loc stations in
-                let wait_time, cars, station = Train_station.train_pickup_and_empty_station train.cars loc v.params.cycle station' in
-                let stations = if station =!= station' then Station_map.add loc station stations else stations in
-                wait_time, cars, stations
-              in
+              let station' = Station_map.get_exn loc stations in
+              let wait_time, cars, station, goods_picked_up =
+                Train_station.train_pickup_and_empty_station train.cars loc v.params.cycle station' in
+              let stations = if station =!= station' then Station_map.add loc station stations else stations in
+              let ui_msgs, new_goods_picked_up = _ui_msgs_of_new_goods_picked_up goods_picked_up player in
+              let data =
+                if Goods.Set.is_empty new_goods_picked_up then None
+                else Some {default_train_data with new_goods_picked_up} in
               if wait_time > 0 then
                 (* We found stuff to load *)
                 let train = {train with state = LoadingAtStation {wait_time}; cars; economic_activity=true} in
-                train, stations, None, [], []
+                train, stations, data, [], ui_msgs
               else
                 (* Keep waiting for more goods to show up *)
-                [%up {train with cars}], stations, None, [], []
+                [%up {train with cars}], stations, data, [], ui_msgs
 
           | HoldingAtStation when train.hold_at_next_station ->
               (* Don't enter station yet *)
@@ -488,7 +529,7 @@ module Train_update = struct
 
           | HoldingAtStation ->
               (* Hold happens before we enter the station *)
-              let train, stations, data, ui_msgs = _enter_station v idx train stations loc in
+              let train, stations, data, ui_msgs = _enter_station v idx train stations player loc in
               train, stations, data, [], ui_msgs
 
           | StoppedAtSignal dir ->
@@ -537,9 +578,11 @@ module Train_update = struct
 
 let _update_player_with_data (player:Player.t) data active_stations fiscal_period random =
     let player = match data with
-      | Some (income_stmt, freight_ton_miles, _) ->
-          Player.add_income_stmt income_stmt player
-          |> Player.add_freight_ton_miles freight_ton_miles fiscal_period
+      | Some data ->
+          Player.add_income_stmt data.income_stmt player
+          |> Player.add_freight_ton_miles data.freight_ton_miles fiscal_period
+          |> Player.add_goods_delivered data.new_goods_delivered
+          |> Player.add_goods_picked_up data.new_goods_picked_up
       | _ -> player
     in
     if List.is_empty active_stations then player
@@ -598,7 +641,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
                     train, stations, None, [], [], crash_info
                 else
                   let a, b, c, d, e =
-                    _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc
+                    _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations player loc
                   in
                     a, b, c, d, e, []
             | false, true ->
@@ -620,7 +663,8 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
   | _ ->  (* Other train states or time is up *)
     let loc = train.x / C.tile_w, train.y / C.tile_h in
-    let train, stations, data, active_stations, ui_msgs = _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations loc in
+    let train, stations, data, active_stations, ui_msgs =
+          _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations player loc in
     let player = _update_player_with_data player data active_stations current_period v.random
     in
     train, stations, player, ui_msgs, []

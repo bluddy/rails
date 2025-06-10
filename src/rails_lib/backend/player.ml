@@ -408,6 +408,14 @@ let add_freight_ton_miles ftm cur_period v =
   in
   {v with periodic}
 
+let add_goods_delivered gd v =
+  let goods_delivered = Goods.Set.union gd v.goods_delivered in
+  [%up {v with goods_delivered}]
+
+let add_goods_picked_up gd v =
+  let goods_picked_up = Goods.Set.union gd v.goods_picked_up in
+  [%up {v with goods_picked_up}]
+
 let set_active_station active_station v =
   Log.debug (fun f -> f "Active station set to %s" @@ Utils.show_loc active_station);
   {v with active_station=Some active_station}

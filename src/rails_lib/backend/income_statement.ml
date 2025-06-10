@@ -15,11 +15,11 @@ let add_revenue revenue money v =
   {v with revenues}
 
 let add_revenues revenues v =
-  let revenues = RevenueMap.merge_add_cash v.revenues revenues in
+  let revenues = RevenueMap.merge_add_cash revenues revenues in
   {v with revenues}
 
 let add_expenses expenses v =
-  let expenses = ExpenseMap.merge_add_cash v.expenses expenses in
+  let expenses = ExpenseMap.merge_add_cash expenses expenses in
   {v with expenses}
 
 let merge v1 v2 =

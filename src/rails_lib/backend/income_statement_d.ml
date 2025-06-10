@@ -47,10 +47,17 @@ let show_revenue = function
   | `Bulk -> "Bulk Freight"
   | `Other -> "Other Income"
 
-module RevenueMap = Utils.Map.Make(struct
+module RevenueMap = struct
+  include Utils.Map.Make(struct
     type t = revenue [@@deriving yojson]
     let compare = compare_revenue
   end)
+  let of_goods goods =
+    Goods.Map.to_iter goods
+    |> Iter.map (fun (good, x) -> Freight.of_good good, x)
+    |> of_iter
+end
+
 
 type t = {
   expenses: Money.t ExpenseMap.t;

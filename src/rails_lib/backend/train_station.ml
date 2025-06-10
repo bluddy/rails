@@ -66,7 +66,7 @@ let train_pickup_and_empty_station cars loc cycle station =
   in
   (* Shortcut if we can pick up nothing *)
   match total_pickup with
-  | 0 -> 0, cars, station
+  | 0 -> 0, cars, station, Goods.Set.empty
   | _ ->
     let cars_pickup_amounts = List.combine cars pickup_amounts in
     let cars =
@@ -92,15 +92,17 @@ let train_pickup_and_empty_station cars loc cycle station =
         cars_pickup_amounts
     in
     let station_picked_up_goods = Station.get_picked_up_goods_exn station in
-    let () =
-      List.iter (fun (car, amount) ->
+    let goods_picked_up =
+      List.fold_left (fun acc (car, amount) ->
         let good = T.Car.get_good car in
         Hashtbl.decr station_supply good ~by:amount;
         Hashtbl.incr station_picked_up_goods good ~by:amount;
+        Goods.Set.add good acc
       )
+      Goods.Set.empty
       cars_pickup_amounts
     in
-    time_pickup, cars, station
+    time_pickup, cars, station, goods_picked_up
 
   (* Check whether a train stops at a particular size station *)
 let train_class_stops_at station_info train = 

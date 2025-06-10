@@ -91,12 +91,19 @@ module Set = Bitset.Make(struct
   let last = `Bulk
 end)
 
-module Map = Utils.Map.Make(struct
-  type nonrec t = t
-  let t_of_yojson = t_of_yojson
-  let yojson_of_t = yojson_of_t
-  let compare = compare
-end)
+module Map = struct 
+  include Utils.Map.Make(struct
+    type nonrec t = t
+    let t_of_yojson = t_of_yojson
+    let yojson_of_t = yojson_of_t
+    let compare = compare
+  end)
+
+  let of_goods goods =
+    Goods.Map.to_iter goods
+    |> Iter.map (fun (good, x) -> of_good good, x)
+    |> of_iter
+end
 
 type complex =
   | MailFreight
