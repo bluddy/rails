@@ -790,6 +790,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         in
         v, action
 
+    | EngineInfo _
     | StationReport _
     | Balance_sheet _
     | Income_statement _
@@ -999,11 +1000,12 @@ let handle_msgs (s:State.t) v ui_msgs =
         {v with mode}
 
       | EngineDiscovered(engine) ->
+        let next_mode=EngineInfo(Engine_info.make engine) in
         let mode =
           let text = engine.name,
                      "Locmotive Introduced.",
                      "Bigger, Better, Faster." in
-          make_news @@ Newspaper.make_fancy s text b.params b.random in
+          make_news ~next_mode @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | RateWarDeclared{player_idx; other_player_idx; station} ->
@@ -1278,6 +1280,8 @@ let render (win:R.window) (s:State.t) v =
         Menu.MsgBox.render win s modal.menu
     | StationReport(x, y) ->
         Station_report.render win s (x,y) ~show_demand:true
+    | EngineInfo state ->
+        Engine_info.render win state ~fonts:s.fonts ~textures:s.textures ~region:(B.get_region s.backend)
     | BuildTrain(state) ->
         Build_train.render win s state
     | TrainReport state ->

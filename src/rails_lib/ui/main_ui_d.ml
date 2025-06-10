@@ -113,6 +113,7 @@ and 'state mode =
   | Balance_sheet of Balance_sheet_d.t
   | Accomplishments
   | Income_statement of Balance_sheet_d.t  (* we use the stock part *)
+  | EngineInfo of Engine_info.t
   | Efficiency_report
   | Animation of {state: Pani_render.t; next_mode: 'state mode}  (* Animation stores its next mode for ease of use *)
 
