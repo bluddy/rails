@@ -1,7 +1,15 @@
 # Tasks
+- Move block_map and track_graph to player
+- First delivery: animation
+- Train service inaugurated: no animation
+  - Coal
+  - service
+  - inaugurated!
+  - Coal picked up from Grafton Junction
+  - Coal may be delivered to
+  -          Grafton Woods
 - Can't rebuild bridge under repair
 - Use value manipulation to get to unseen overlays
-- Announcement of new engine is followed by engine detail display
 - Missing:
   - Rate war info
   - driven out of town animation
@@ -10,44 +18,32 @@
 - Allow upgrading station while keeping station data
 - Train records, first deliveries
 - Hook up fiscal_period_end stuff
-- Handle train blizzard event (what generates it?)
 - Handle year end messages
-- Add special newspaper and events
-- Handle ui_msgs for washout, climate change
-- Handle trains running into washed out bridges
-- Handle train accidents
 - Stock broker: print ownership of AI stock
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game
-- Deal with region-based, duplicate tile to pixel mapping
 - Check default state of development_map and block_map
-- Make sure money gets deducted for new engine
-  - Also for new train
-  - Also for station, upgrade etc
 - What happens when we delete a station and a train is heading there?
 - Check computation of wait time
 - F10 for survey
 - cursor
 - Refactor modal_menu: give it a 4th last type, move to its own module
   - Also the model_menu handler
-- Refactor msgbox: shouldn't need so many args?
 - Check /2 for different things with money (e.g. pay)
 - Check if we need to loop in _update_train (print out if we ever do multiple updates)
 - Update_train: handle freight class priority movement
-- Could division by 2 for money be to get a little more space in the bits?
+  - Data structure sorted by priority?
 - Bug:
-  - * , () doesn't exist in font. (Daily Tattler, RailRoad news)
-  - Fancy paper: random paper animates!
   - Animation: old timing issues
   - Delivery + priority pickup: no delivery message
   - Can't change light from f2/f3
   - Need better feedback for clicking on menu
   - Create a train with no station: msgbox to build a station first
   - New train doesn't pick up stuff from starting station
+    - this may be normal
   - Clicking on map during train creation crashes
   - First engines use one-chimney img. Check in code.
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game
-  - After load, trains are stuck
   - joining a track from another track either refuses or crashes
   - Going into negative should be red money
