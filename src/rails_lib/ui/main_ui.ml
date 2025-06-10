@@ -664,9 +664,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun x -> ModalMsgbox x)
         (fun _ () -> v, nobaction)
 
-    | Newspaper news_state ->
-        let v = match Newspaper.handle_event s news_state event with
-          | `Exit -> {v with mode=Normal}
+    | Newspaper news ->
+        let v = match Newspaper.handle_event s news.state event with
+          | `Exit -> {v with mode=news.next_mode}
           | _ -> v
         in
         v, nobaction
@@ -815,6 +815,7 @@ let handle_msgs (s:State.t) v ui_msgs =
     | (`Fast | `Slow) as x when not (B_options.equal_speed (B.get_speed b) `Turbo) -> Some x
     | _ -> None
   in
+  let make_news ?(next_mode=Normal) state = Newspaper {state; next_mode} in
   let handle_msg v ui_msg =
     match v.mode with 
     | BuildTrain(`AddCars _) ->
@@ -830,14 +831,13 @@ let handle_msgs (s:State.t) v ui_msgs =
         if state2 === state then v else {v with mode=Stock_broker state2}
 
     | Normal ->
-
       let accident player_idx =
         let name = B.get_player player_idx b |> Player.get_name b.stations b.cities in
         let text = Printf.sprintf "TRAIN WRECK on %s!" name in
         let num_people = (Newspaper.day_of_year b.params.time) mod 16 + 2 in
         let text2 = Printf.sprintf "%d persons injured." num_people in
         let text3 = "Customers Panic!" in
-        Newspaper(Newspaper.make_fancy s (text, text2, text3) b.params b.random)
+        make_news @@ Newspaper.make_fancy s (text, text2, text3) b.params b.random
       in
       begin match ui_msg with 
       | DemandChanged{x; y; good; add; player_idx} ->
@@ -850,7 +850,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             add_remove
             (Goods.show good)
         in
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews text None) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews text None in
         {v with mode}
 
       | (TrainArrival t) ->
@@ -876,19 +876,19 @@ let handle_msgs (s:State.t) v ui_msgs =
 
       | PriorityShipmentCanceled{player_idx} ->
         if Owner.(player_idx <> main_player_idx) then v else
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None in
         {v with mode}
 
       | PriorityShipmentCreated{player_idx; shipment} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let heading, text = Priority_shipment.create_text shipment (B.get_region b) b.stations in
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews ~heading text None in
         {v with mode}
 
       | PriorityShipmentDelivered{player_idx; shipment; bonus} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let heading, text = Priority_shipment.delivery_text shipment (B.get_region b) b.stations bonus in
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.LocalNews ~heading text None) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews ~heading text None in
         {v with mode}
 
       | ImpossibleRoute a ->
@@ -906,12 +906,12 @@ let handle_msgs (s:State.t) v ui_msgs =
 
       | NewCompany{opponent; city} ->
         let text = Ai.new_ai_text opponent city b.cities in
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent in
         {v with mode}
 
       | AiConnected{opponent; ai_name; src_name; tgt_name} ->
         let text = Ai.new_route_text ai_name src_name tgt_name in
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.RailRoadNews text @@ Some opponent in
         {v with mode}
 
       | AiBuildOrderFailed{player_idx; ai_name; src_name; tgt_name} ->
@@ -928,13 +928,13 @@ let handle_msgs (s:State.t) v ui_msgs =
       | AiBuysPlayerStock {opponent;_}
       | AiSellsPlayerStock {opponent;_}) ->
         let text = Ai.financial_text ~cities:b.cities ~region:b.params.region ui_msg b.ai in
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent in
         {v with mode}
 
       | AiTakesOutBond {opponent; player_idx;_} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let text = Ai.financial_text ~cities:b.cities ~region:b.params.region ui_msg b.ai in
-        let mode = Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent) in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent in
         {v with mode}
 
         (* TODO: center on event *)
@@ -943,14 +943,14 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode =
           if fixed then
             let text = "Bridge Repaired.\n" in
-            Newspaper(Newspaper.make_simple s Newspaper.LocalNews text None)
+            make_news @@ Newspaper.make_simple s Newspaper.LocalNews text None
           else
             let station = Station_map.find_nearest ~player_idx ~only_proper:true loc b.stations
                 |> Option.get_exn_or "no station found"
             in
             let name = Station.get_name station in
             let text = "Flood Waters Rise!", name, "Trestle Washed Away!" in
-            Newspaper(Newspaper.make_fancy s text b.params b.random) in
+            make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | NewPlayerCompany {num_shares} ->
@@ -958,7 +958,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text  = "New Railroad formed:",
                       (Printf.sprintf "%d,000 shares of stock" num_shares),
                       "sold to local Investors." in
-          Newspaper(Newspaper.make_fancy s text b.params b.random) in
+          make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | TrainAccident {player_idx} ->
@@ -985,7 +985,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let mode =
             let text1, text2 = Climate.text1 reason in
             let text3 = Climate.text2 climate in
-            Newspaper(Newspaper.make_fancy s (text1, text2, text3) b.params b.random) in
+            make_news @@ Newspaper.make_fancy s (text1, text2, text3) b.params b.random in
           {v with mode}
 
       | FirstTrainArrives{player_idx; station} ->
@@ -995,7 +995,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text  = "First Train Arrives",
                       (Printf.sprintf "in %s." name),
                       "Citizens Celebrate!" in
-          Newspaper(Newspaper.make_fancy s text b.params b.random) in
+          make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | EngineDiscovered(engine) ->
@@ -1003,7 +1003,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text = engine.name,
                      "Locmotive Introduced.",
                      "Bigger, Better, Faster." in
-          Newspaper(Newspaper.make_fancy s text b.params b.random) in
+          make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | RateWarDeclared{player_idx; other_player_idx; station} ->
@@ -1014,7 +1014,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text = "Rate War Declared in",
                      (Printf.sprintf "%s!" station_name),
                      (Printf.sprintf "%s vs. %s." player_name other_name) in
-          Newspaper(Newspaper.make_fancy s text b.params b.random) in
+          make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | PlayerTakesControlOfOther{player_idx; other} ->
@@ -1024,7 +1024,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text = (Printf.sprintf "%s take control" player_name),
                      (Printf.sprintf "of %s Railroad!" other_name),
                      "Wall Street amazed." in
-          Newspaper(Newspaper.make_fancy s text b.params b.random) in
+          make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | OwnerFired {player_idx; by} ->
@@ -1033,7 +1033,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text = (Printf.sprintf "%s president leaves" player_name),
                      "town after meeting",
                      match by with | `Stockholders -> "with stockholders." | `Management -> "with new Management" in
-          Newspaper(Newspaper.make_fancy s text b.params b.random) in
+          make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | BridgeCreated {player_idx; kind} ->
@@ -1252,9 +1252,9 @@ let render (win:R.window) (s:State.t) v =
     | ModalMsgbox modal ->
         render_mode modal.last;
         Menu.MsgBox.render win s modal.menu
-    | Newspaper news_state ->
+    | Newspaper news ->
         render_main win s v;
-        Newspaper.render win s news_state
+        Newspaper.render win s news.state
     | BuildStation modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu

@@ -93,7 +93,7 @@ type ('state, 'menu_options, 'payload) modalmenu =
 and 'state mode =
   | Normal
   | ModalMsgbox of ('state, unit, unit) modalmenu
-  | Newspaper of 'state Newspaper_d.t
+  | Newspaper of {state: 'state Newspaper_d.t; next_mode: 'state mode}
   | BuildStation of ('state, Station.kind, unit) modalmenu
   | BuildBridge of ('state, Bridge.t, Backend.Action.msg) modalmenu
   | BuildHighGrade of ('state, [`BuildTunnel | `BuildTrack], Backend.Action.msg) modalmenu
