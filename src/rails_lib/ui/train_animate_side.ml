@@ -30,6 +30,8 @@ let init (s:State.t) ~engine ~cars ~station ~rail ~paused =
 let pause v = {v with paused=true}
 let unpause v = {v with paused=false}
 
+let get_x v = v.x
+
 let train_end_at_screen_edge (s:State.t) v =
   match v.rail with
   | `Front ->
