@@ -1053,6 +1053,20 @@ let handle_msgs (s:State.t) v ui_msgs =
         | None -> v
         end
 
+        | NewGoodPickedUp d ->
+          if Owner.(d.player_idx <> main_player_idx) then v
+          else
+            let state = New_delivery_pickup.init s d.good d.station d.engine d.cars in
+            {v with mode=NewGoodDeliveryPickup state}
+
+        | NewGoodDelivery d ->
+          if Owner.(d.player_idx <> main_player_idx) then v
+          else
+            let state = New_delivery_pickup.init s d.good d.dst d.engine d.cars
+              ~delivery:(d.src, d.revenue, d.amount)
+            in
+            {v with mode=NewGoodDeliveryPickup state}
+
       (* 
          TODO: Record Profits on 
          name earnings

@@ -8,15 +8,16 @@ let wait_time = 1000/fps
 
 let smoke_x_off = 76 (* depends on smoke image *)
 
-let init (s:State.t) ~engine ~cars ~station ~rail ~paused =
-  let x = match rail with
-    | `Back -> 62
-    | `Front ->
-        let engine_tex = Hashtbl.find s.textures.engine_anim engine in
-        0 - engine_tex.w
+let init ?x (s:State.t) ~engine ~cars ~station ~rail ~paused =
+  let engine_tex = Hashtbl.find s.textures.engine_anim engine in
+  let x = match x, rail with
+    | Some x, `Back -> x
+    | _, `Back -> 62
+    | Some x, `Front -> x - engine_tex.w
+    | _, `Front -> 0 - engine_tex.w
   in
   {
-    x;
+    x;  (* left index of train engine *)
     anim_idx=0;
     smoke_idx=0;
     last_time=0;

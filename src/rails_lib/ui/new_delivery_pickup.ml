@@ -9,7 +9,6 @@ module C = Constants
 
 type delivery = {
   src: Utils.loc;
-  loc: Utils.loc;
   amount: int;
   revenue: Money.t;
 }
@@ -18,20 +17,27 @@ type t = {
   anim: Train_animate_side_d.t;
   finished: bool;
   good: Goods.t;
+  loc: Utils.loc;
   delivery: delivery option;
 }
 
 let is_delivery v = Option.is_some v.delivery
 
 (* Create the animation that will be used when we add cars *)
-let init (s:State.t) ui_msg = 
+let init ?delivery (s:State.t) good loc engine cars =
+  let delivery = delivery |> Option.map (fun (src, revenue, amount) -> {src; revenue; amount}) in
+  let is_delivery = Option.is_some delivery in
+  let x = if is_delivery then 150 else 208 in
   let anim =
     let engine = engine.Engine.make in
-    Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:station.loc ~rail:`Back
+    Train_animate_side.init s ~x ~engine ~cars ~paused:false ~station:loc ~rail:`Front
   in
   {
     anim;
-    finished=false;
+    finished=not is_delivery;
+    good;
+    loc;
+    delivery;
   }
 
 let nobaction = Backend.Action.NoAction
