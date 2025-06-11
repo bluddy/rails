@@ -1,4 +1,5 @@
 # Tasks
+- Check that active_station only works for 20 years per station
 - Move block_map and track_graph to player
 - First delivery: animation
 - Train service inaugurated: no animation
