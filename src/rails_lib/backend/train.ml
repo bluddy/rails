@@ -463,7 +463,7 @@ let car_delivery_ton_miles ~loc ~car ~region =
   let dist_amount = dist * (Car.get_amount car) in
   dist_amount / C.car_amount
 
-let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
+let car_delivery_money_speed ~loc ~train ~car ~rates ~(params:Params.t) =
   let mult = if Region.is_us params.region then 1 else 2 in
   let calc_dist = Utils.classic_dist loc (Car.get_source car) * mult in
   let car_age = Car.get_age car params.cycle in
@@ -493,7 +493,7 @@ let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
     | Passengers when Option.is_some train.name -> money * 3 / 2 (* Passengers pay more for exclusive trains *)
     | _ -> money
   in 
-  money |> M.of_int
+  money |> M.of_int, speed
 
 let update_speed ~cycle ~cycle_check ~cycle_bit (v:rw t) =
   (* Update current train speed based on target speed and cycle *)

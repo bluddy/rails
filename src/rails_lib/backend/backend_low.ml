@@ -93,7 +93,7 @@ module Train_update = struct
     in
     ui_msgs, new_goods
 
-  let _ui_msgs_of_new_goods_delivered goods_delivered goods_delivered_map player money_from_goods train station =
+  let _ui_msgs_of_new_goods_delivered goods_delivered goods_delivered_map goods_speed player cars_delivered money_from_goods train station =
     let new_goods = Goods.Set.diff goods_delivered player.Player.goods_delivered in
     let ui_msgs = new_goods
       |> Goods.Set.to_list
@@ -130,15 +130,22 @@ module Train_update = struct
             Station.has_demand_for station car.good)
           cars
         in
-        let money_from_goods =
-          List.fold_left (fun acc (car, delivered) ->
+        let money_from_goods, goods_speed =
+          List.fold_left (fun ((money_acc, speed_acc) as acc) (car, delivered) ->
             if delivered then
-              let money =
-                Train.car_delivery_money ~loc ~train ~car ~rates:station_info.Station.rates ~params:v.params
+              let money, speed =
+                Train.car_delivery_money_speed ~loc ~train ~car ~rates:station_info.Station.rates ~params:v.params
               in
-              Goods.Map.incr_cash (Train.Car.get_good car) money acc
+              let good = Train.Car.get_good car in
+              let money_acc = Goods.Map.incr_cash good money money_acc in
+              let speed_acc = Goods.Map.update good (function
+                  | None -> Some speed
+                  | Some best_speed -> if speed < best_speed then Some speed else Some best_speed)
+                speed_acc
+              in
+              money_acc, speed_acc
             else acc)
-          Goods.Map.empty
+          (Goods.Map.empty, Goods.Map.empty)
           cars_delivered
         in
         let freight_ton_miles =
@@ -168,9 +175,9 @@ module Train_update = struct
           cars_delivered
           |> M.of_int
         in
-        cars_delivered, money_from_goods, freight_ton_miles, other_income
+        cars_delivered, money_from_goods, goods_speed, freight_ton_miles, other_income
       in
-      let cars_delivered, money_from_goods, freight_ton_miles, other_income = deliver_cargo () in
+      let cars_delivered, money_from_goods, goods_speed, freight_ton_miles, other_income = deliver_cargo () in
 
       let station_supply = station_info.supply in
       let add_converted_goods_to_station cars_delivered =
@@ -269,7 +276,7 @@ module Train_update = struct
           let goods_delivered_amt = Goods.Map.to_list goods_delivered in
           let goods_delivered_set = Goods.Map.keys goods_delivered |> Goods.Set.of_iter in
           let deliv_msgs, new_goods_delivered =
-            _ui_msgs_of_new_goods_delivered goods_delivered_set goods_delivered player money_from_goods train loc in
+            _ui_msgs_of_new_goods_delivered goods_delivered_set goods_delivered goods_speed player cars_delivered money_from_goods train loc in
           let msg =
             UIM.TrainArrival {
               player=train.player;
