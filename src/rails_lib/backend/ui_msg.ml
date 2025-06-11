@@ -70,7 +70,7 @@ type t =
   | PlayerTakesControlOfOther of {player_idx: Owner.t; other: Owner.t}
   | OwnerFired of {player_idx: Owner.t; by:[`Stockholders | `Management]}
   | BridgeCreated of {player_idx: Owner.t; kind: Bridge.t}
-  | NewGoodPickedUp of {player_idx: Owner.t; good: Goods.t; station: loc; engine: Engine.make; cars: Goods.t list}
+  | NewGoodPickedUp of {player_idx: Owner.t; good: Goods.t; station: loc; engine: Engine.make; cars: Goods.t list; buying: loc list}
   | NewGoodDelivery of {player_idx: Owner.t; good: Goods.t; src: loc; dst: loc; amount: int; revenue: Money.t; engine: Engine.make; cars: Goods.t list}
   [@@deriving yojson]
 

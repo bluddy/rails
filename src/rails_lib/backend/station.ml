@@ -126,7 +126,6 @@ type info = {
   holds_priority_shipment: bool;
 } [@@deriving yojson]
 
-let has_demand_for v good = Goods.Set.mem good v.demand
 let convert v good region =
   if Goods.Set.mem good v.convert_demand then
     Goods.convert region good
@@ -511,4 +510,9 @@ let remove_goods goods v = match v.info with
     Goods.Set.iter (fun good ->
       Hashtbl.update info.supply ~k:good ~f:(fun _ -> function _ -> None)
     ) goods
+
+let has_demand_for v good =
+  match v.info with
+  | None -> false
+  | Some info -> Goods.Set.mem good info.demand
 

@@ -467,7 +467,7 @@ let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
   let mult = if Region.is_us params.region then 1 else 2 in
   let calc_dist = Utils.classic_dist loc (Car.get_source car) * mult in
   let car_age = Car.get_age car params.cycle in
-  let reward = calc_dist * 16 / (car_age / 24) in
+  let speed = calc_dist * 16 / (car_age / 24) in
   let calc_dist =
     (* For west US, we override the car distance here for bonus purposes. *)
     if Region.is_west_us params.region && not params.west_us_route_done then
@@ -479,7 +479,7 @@ let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
   let v1 = (calc_dist * (5 - freight) + 40 * freight + 40) / 8 in
   let fp2 = freight * freight * 2 in
   let v3 = (params.year - 1790) / 10 + fp2 in
-  let v6 = (Car.get_amount car)/2 * (reward + fp2) * v1 / v3 in
+  let v6 = (Car.get_amount car)/2 * (speed + fp2) * v1 / v3 in
   let v12 = v6 / (params.year - params.year_start/3 - 1170) in
   let money = (7 - B_options.difficulty_to_enum params.options.difficulty) * v12 / 3 in
   let money = match rates with
@@ -489,11 +489,11 @@ let car_delivery_money ~loc ~train ~car ~rates ~(params:Params.t) =
   in
   let money = Utils.clip money ~min:2 ~max:9999 in 
   let money = match car.good with
-    | Goods.Mail -> money * 5 / 4
-    | Passengers -> money * 3 / 2
+    | Goods.Mail -> money * 5 / 4  (* Mail always has a boost? *)
+    | Passengers when Option.is_some train.name -> money * 3 / 2 (* Passengers pay more for exclusive trains *)
     | _ -> money
   in 
-  money / 2 |> M.of_int (* Seems like it's divided in the end *)
+  money |> M.of_int
 
 let update_speed ~cycle ~cycle_check ~cycle_bit (v:rw t) =
   (* Update current train speed based on target speed and cycle *)
