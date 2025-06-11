@@ -1,6 +1,8 @@
 open Containers
 open Utils.Infix
 
+(* UI for 1st delivery/pickup of a good notice *)
+
 module R = Renderer
 module B = Backend
 module C = Constants
@@ -22,16 +24,7 @@ type t = {
 let is_delivery v = Option.is_some v.delivery
 
 (* Create the animation that will be used when we add cars *)
-let init (s:State.t) ~engine =
-  (* Find station with engine shop *)
-  let station =
-    try
-      Station_map.filter 
-      (fun station -> Station.can_build_train station)
-      s.backend.stations
-      |> Iter.head_exn
-    with Invalid_argument _ -> invalid_arg "No station with engine found"
-  in
+let init (s:State.t) ui_msg = 
   let anim =
     let engine = engine.Engine.make in
     Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:station.loc ~rail:`Back
