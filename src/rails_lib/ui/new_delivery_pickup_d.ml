@@ -1,8 +1,14 @@
+type loc = Utils.loc
 
 type delivery = {
   src: Utils.loc;
   amount: int;
   revenue: Money.t;
+  speed: int;
+}
+
+type pickup = {
+  buying: loc list; (* places that can buy the good *)
 }
 
 type t = {
@@ -10,5 +16,5 @@ type t = {
   finished: bool;
   good: Goods.t;
   loc: Utils.loc;
-  delivery: delivery option;
+  kind: [`Delivery of delivery | `Pickup of pickup]
 }

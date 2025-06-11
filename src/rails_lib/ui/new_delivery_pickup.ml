@@ -8,22 +8,24 @@ module C = Constants
 
 include New_delivery_pickup_d
 
-let is_delivery v = Option.is_some v.delivery
+let is_delivery v = match v.kind with `Delivery _ -> true | _ -> false
 
 (* Create the animation that will be used when we add cars *)
-let init ?delivery (s:State.t) good loc engine cars =
-  let delivery = delivery |> Option.map (fun (src, revenue, amount) -> {src; revenue; amount}) in
-  let is_delivery = Option.is_some delivery in
-  let x = if is_delivery then 150 else 208 in
+let init ?pickup ?delivery (s:State.t) good loc engine cars =
+  let kind, x, finished = match pickup, delivery with
+    | Some buying, _ -> `Pickup {buying}, 208, true
+    | _, Some (src, revenue, amount, speed) ->  `Delivery {src; revenue; amount; speed}, 150, false
+    | _ -> assert false
+  in
   let anim =
     Train_animate_side.init s ~x ~engine ~cars ~paused:false ~station:loc ~rail:`Front
   in
   {
     anim;
-    finished=not is_delivery;
+    finished;
     good;
     loc;
-    delivery;
+    kind;
   }
 
 let nobaction = Backend.Action.NoAction
@@ -48,6 +50,9 @@ let handle_tick s time v =
   in
   [%up {v with anim; finished}]
 
+
+let station_name loc s = (B.get_station loc s.State.backend |> Option.get_exn_or "oops "|> Station.get_name)
+
 let render win (s:State.t) v =
   Train_animate_side.render win s v.anim;
   let fonts = s.fonts in
@@ -57,8 +62,8 @@ let render win (s:State.t) v =
   let station_s = B.get_station v.loc s.backend |> Option.get_exn_or "oops "|> Station.get_name in
   if v.finished then (
     let good_s = Goods.show v.good in
-    match v.delivery with
-    | Some d ->
+    match v.kind with
+    | `Delivery d ->
       let text = Printf.sprintf "First\n%s\ndelivery!" good_s in
       write_lg text ~x:80 ~y:8;
       let text = Printf.sprintf
@@ -73,19 +78,20 @@ let render win (s:State.t) v =
         (B.get_station d.src s.backend |> Option.get_exn_or "oops "|> Station.get_name)
         station_s
         (Utils.classic_dist v.loc d.src)
-        12 (* TODO: how do we get speed? *)
+        d.speed
       in
       write_sm text ~x:80 ~y:63;
       let text = Money.print d.revenue in
       write_lg text ~x:127 ~y:107
 
-    | None ->
+    | `Pickup p ->
       let text = Printf.sprintf "%s\nservice\ninaugurated!" good_s in
       write_lg  text ~x:80 ~y:8;
       let text = Printf.sprintf "%s picked up from %s" good_s station_s in
       write_sm text ~x:40 ~y:65;
       let text = Printf.sprintf "%s may be delivered to" good_s in
       write_sm text ~x:40 ~y:82;
-      (* TODO: write cities to deliver to at (80, 90) *)
+      let text = List.map (fun loc -> station_name loc s) p.buying |> String.concat "\n" in
+      write_sm text ~x:80 ~y:90;
   )
 

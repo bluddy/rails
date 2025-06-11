@@ -1063,14 +1063,14 @@ let handle_msgs (s:State.t) v ui_msgs =
         | NewGoodPickedUp d ->
           if Owner.(d.player_idx <> main_player_idx) then v
           else
-            let state = New_delivery_pickup.init s d.good d.station d.engine d.cars in
+            let state = New_delivery_pickup.init s d.good d.station d.engine d.cars ~pickup:d.buying in
             {v with mode=NewGoodDeliveryPickup state}
 
         | NewGoodDelivery d ->
           if Owner.(d.player_idx <> main_player_idx) then v
           else
             let state = New_delivery_pickup.init s d.good d.dst d.engine d.cars
-              ~delivery:(d.src, d.revenue, d.amount)
+              ~delivery:(d.src, d.revenue, d.amount, d.speed)
             in
             {v with mode=NewGoodDeliveryPickup state}
 
