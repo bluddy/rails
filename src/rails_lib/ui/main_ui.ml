@@ -790,6 +790,13 @@ let handle_event (s:State.t) v (event:Event.t) =
         in
         v, action
 
+    | NewGoodDeliveryPickup state ->
+      begin match New_delivery_pickup.handle_event state event with
+      | _, `Exit -> {v with mode=Normal}, nobaction
+      | state2, `Stay when state2 === state -> v, nobaction
+      | state2, `Stay -> {v with mode=NewGoodDeliveryPickup(state2)}, nobaction
+      end
+
     | EngineInfo _
     | StationReport _
     | Balance_sheet _
@@ -1109,6 +1116,10 @@ let handle_tick s v time is_cycle = match v.mode with
   | Animation a ->
       let state2 = Pani_render.handle_tick time a.state in
       if state2 === a.state then v else {v with mode=Animation{a with state=state2}}
+
+  | NewGoodDeliveryPickup d ->
+      let d2 = New_delivery_pickup.handle_tick s time d in
+      if d2 === d then v else {v with mode=NewGoodDeliveryPickup d}
     
   | _ -> v
 
@@ -1312,6 +1323,8 @@ let render (win:R.window) (s:State.t) v =
         Efficiency_report.render win s
     | Animation {state; _} ->
         Pani_render.render win state
+    | NewGoodDeliveryPickup d ->
+        New_delivery_pickup.render win s d
   in
   render_mode v.mode;
   if should_render_mouse v.mode then

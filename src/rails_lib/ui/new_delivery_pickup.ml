@@ -7,19 +7,7 @@ module R = Renderer
 module B = Backend
 module C = Constants
 
-type delivery = {
-  src: Utils.loc;
-  amount: int;
-  revenue: Money.t;
-}
-
-type t = {
-  anim: Train_animate_side_d.t;
-  finished: bool;
-  good: Goods.t;
-  loc: Utils.loc;
-  delivery: delivery option;
-}
+include New_delivery_pickup_d
 
 let is_delivery v = Option.is_some v.delivery
 
@@ -29,7 +17,6 @@ let init ?delivery (s:State.t) good loc engine cars =
   let is_delivery = Option.is_some delivery in
   let x = if is_delivery then 150 else 208 in
   let anim =
-    let engine = engine.Engine.make in
     Train_animate_side.init s ~x ~engine ~cars ~paused:false ~station:loc ~rail:`Front
   in
   {
@@ -42,22 +29,15 @@ let init ?delivery (s:State.t) good loc engine cars =
 
 let nobaction = Backend.Action.NoAction
 
-let handle_event (s:State.t) v event =
-  if v.train_done && (Event.pressed_esc event || Event.is_left_click event) then
-    let station = v.anim.station in
-    let other_station =
-      Track_graph.connected_stations_dirs s.backend.graph s.backend.track [station]
-      |> Utils.LocuHSet.to_iter |> Iter.head |> Option.map fst
-    in
-    v, Backend.Action.BuildTrain{engine=v.anim.engine;
-                                 cars=v.anim.cars;
-                                 station;
-                                 other_station;
-                                 player_idx=C.player}
+let handle_event v event =
+  if (Event.pressed_esc event || Event.is_left_click event) then
+    if v.finished then v, `Exit
+    else
+      {v with finished=true}, `Stay
   else
-    v, nobaction
+    v, `Stay
 
-let handle_tick s v time =
+let handle_tick s time v =
   let anim = 
     if v.finished then v.anim
     else
@@ -71,34 +51,6 @@ let handle_tick s v time =
 
 let render win (s:State.t) v =
   Train_animate_side.render win s v.anim;
-  ()
-
-let is_done v = v.finished
-
-let nobaction = Backend.Action.NoAction
-
-let handle_event (s:State.t) v (event:Event.t) = match v with
-  | `ChooseEngine ->
-      let engine_opt =
-        Choose_engine.handle_event event s.backend.engines ~year:(B.get_year s.backend)
-      in
-      begin match engine_opt with
-      | Some engine ->
-          let state = AddCars.init s ~engine in
-          `AddCars state, nobaction
-      | None ->
-          `ChooseEngine, nobaction
-      end
-  | `AddCars state ->
-      let state2, action = AddCars.handle_event s state event in
-      if state =!= state2 then
-        `AddCars state2, action
-      else
-        v, action
-
-let render win (s:State.t) v = match v with
-  | `ChooseEngine ->
-        Choose_engine.render win s ~engines:s.backend.engines ~year:(B.get_year s.backend)
-  | `AddCars state ->
-        AddCars.render win s state 
+  if v.finished then (
+  )
 
