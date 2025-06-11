@@ -24,7 +24,7 @@ type t =
   | Wool (* EU *)
   | Grapes (* EU *)
   | Wine (* EU *)
-  [@@deriving yojson, ord, enum, show]
+  [@@deriving yojson, ord, enum, show, eq]
 
 let order = List.((to_enum Mail) -- (to_enum Wine))
   |> List.map of_enum |> List.map (Option.get_exn_or "error")

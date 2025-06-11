@@ -98,15 +98,18 @@ module Train_update = struct
     let ui_msgs = new_goods
       |> Goods.Set.to_list
       |> List.map (fun good ->
+        let car, _ = List.find (fun (car, delivered) -> delivered && Goods.equal (Train.Car.get_good car) good) cars_delivered in
+        let src=Train.Car.get_source car in
         UIM.NewGoodDelivery {
           player_idx=player.idx;
           good;
-          src=Train.get_last_station train;
+          src;
           dst=station;
           amount=Goods.Map.find good goods_delivered_map;
           revenue=Goods.Map.find good money_from_goods;
           engine=(Train.get_engine train).make;
           cars=List.map Train.Car.get_good train.cars;
+          speed=Goods.Map.find good goods_speed;
         })
     in
     ui_msgs, new_goods

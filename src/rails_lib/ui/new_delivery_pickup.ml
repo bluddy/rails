@@ -1,5 +1,4 @@
 open Containers
-open Utils.Infix
 
 (* UI for 1st delivery/pickup of a good notice *)
 
