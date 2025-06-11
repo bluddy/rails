@@ -51,6 +51,19 @@ let handle_tick s time v =
 
 let render win (s:State.t) v =
   Train_animate_side.render win s v.anim;
+  let fonts = s.fonts in
+  let color = Ega.white in
+  let write_lg = Fonts.Render.write_shadow win fonts ~color ~idx:2 in
+  let write_sm = Fonts.Render.write_shadow win fonts ~color ~idx:4 in
+  let station_s = B.get_station v.loc s.backend |> Option.get_exn_or "oops "|> Station.get_name in
   if v.finished then (
+    let good_s = Goods.show v.good in
+    let text = Printf.sprintf "%s\nservice\ninaugurated!" good_s in
+    write_lg  text ~x:81 ~y:9;
+    let text = Printf.sprintf "%s picked up from %s" good_s station_s in
+    write_sm text ~x:40 ~y:65;
+    let text = Printf.sprintf "%s may be delivered to" good_s in
+    write_sm text ~x:40 ~y:82;
+    (* TODO: write cities to deliver to at (80, 90) *)
   )
 
