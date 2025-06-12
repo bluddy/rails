@@ -60,39 +60,49 @@ let render win (s:State.t) v =
 
   | `Front ->
       let y = 193 in
-      let engine = Hashtbl.find s.textures.engine_anim v.engine in
-      let engine_h = R.Texture.get_h engine.tex in
-      R.Texture.render win ~x:v.x ~y:(y-engine_h) engine.tex;
-      let len = Array.length engine.anim in
+
+      let draw_engine x y engine =
+        let engine = Hashtbl.find s.textures.engine_anim engine in
+        let engine_h = R.Texture.get_h engine.tex in
+        R.Texture.render win ~x ~y:(y-engine_h) engine.tex
+      in
+      draw_engine v.x y v.engine;
 
       if not v.paused then begin
-        (* Draw animating wheels *)
-        if len > 0 then
-          R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(y-engine_h+engine.anim_y) engine.anim.(v.anim_idx);
+        let engine = Hashtbl.find s.textures.engine_anim v.engine in
+        let engine_h = R.Texture.get_h engine.tex in
+        let draw_wheel_anim () =
+          let len = Array.length engine.anim in
+          if len > 0 then
+            R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(y-engine_h+engine.anim_y) engine.anim.(v.anim_idx);
+        in
+        draw_wheel_anim ();
 
-        (* Draw smoke *)
-        begin match engine.smoke_x with
-        | None -> ()
-        | Some smoke_x ->
-            let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
-            let smoke_tex = smoke_arr.(v.smoke_idx) in
-            let smoke_h = R.Texture.get_h smoke_tex in
-            R.Texture.render win ~x:(v.x + smoke_x - smoke_x_off) ~y:(y - engine_h - smoke_h) smoke_tex
-        end;
+        let draw_smoke () =
+          begin match engine.smoke_x with
+          | None -> ()
+          | Some smoke_x ->
+              let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
+              let smoke_tex = smoke_arr.(v.smoke_idx) in
+              let smoke_h = R.Texture.get_h smoke_tex in
+              R.Texture.render win ~x:(v.x + smoke_x - smoke_x_off) ~y:(y - engine_h - smoke_h) smoke_tex
+          end;
+        in
+        draw_smoke ();
       end;
 
-      (* Draw cars *)
-      let _ =
+      let draw_cars x y cars =
+        ignore @@
         List.fold_left (fun x car ->
           let car_tex_old, _ = Hashtbl.find s.textures.car_anim car in
           let car_w, car_h = R.Texture.get_w car_tex_old, R.Texture.get_h car_tex_old in
           let x = x - car_w in
           R.Texture.render win ~x ~y:(y - car_h) car_tex_old;
           x)
-        v.x
-        v.cars
+        x
+        cars
       in
-      ()
+      draw_cars v.x y v.cars
 
 let handle_tick (s:State.t) v time =
   if time - v.last_time < wait_time then v
