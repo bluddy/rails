@@ -88,8 +88,7 @@ let render win (s:State.t) v =
           let car_w, car_h = R.Texture.get_w car_tex_old, R.Texture.get_h car_tex_old in
           let x = x - car_w in
           R.Texture.render win ~x ~y:(y - car_h) car_tex_old;
-          x
-        )
+          x)
         v.x
         v.cars
       in

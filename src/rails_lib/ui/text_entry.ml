@@ -13,7 +13,7 @@ type t = {
 let char_width = 8
 let char_height = 8
 
-let make text x y ~chars =
+let make text ~x ~y ~chars =
   {
     cursor=0; text; x; y; num_chars=chars;
   }

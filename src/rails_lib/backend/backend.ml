@@ -701,6 +701,7 @@ module Action = struct
     | BuyStock of {player_idx: Owner.t; stock: Owner.t}
     | SellStock of {player_idx: Owner.t; stock: Owner.t}
     | OperateRR of {player_idx: Owner.t; company: Owner.t; action: operate_rr}
+    | NameTrain of {player_idx: Owner.t; train: Train.Id.t; name: string}
     | Cheat of Owner.t * Cheat_d.t (* player *)
     | Quit_game
     [@@deriving show]
