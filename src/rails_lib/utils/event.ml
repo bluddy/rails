@@ -15,8 +15,8 @@ end)
 type key =
   | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P
   | Q | R | S | T | U | V | W | X | Y | Z
-  | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 | K9
-  | F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | F10 | F11 | F12 | Enter | Space
+  | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 | K9 | K0
+  | F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | F10 | F11 | F12 | Enter | Space | Backspace
   | Left | Right | Up | Down | Escape
   [@@deriving show, eq]
 
@@ -56,12 +56,18 @@ let char_of_key = function
   | K7 -> '7'
   | K8 -> '8'
   | K9 -> '9'
+  | K0 -> '0'
   | _ -> failwith "Not a letter"
 
 let is_letter = function
   | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P
   | Q | R | S | T | U | V | W | X | Y | Z -> true
   | _ -> false
+
+let is_number = function
+  | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 | K9 | K0 -> true | _ -> false
+
+let is_alphanumeric k = is_letter k || is_number k
 
 type modifier =
   [`Shift | `Ctrl | `Alt | `Lshift | `Rshift | `Lctrl | `Rctrl | `Lalt | `Ralt | `Caps]
@@ -154,6 +160,7 @@ let handle_key event (event_typ:Sdl.Event.enum) =
       | `K7 -> K7
       | `K8 -> K8
       | `K9 -> K9
+      | `K0 -> K0
       | `F1 -> F1
       | `F2 -> F2
       | `F3 -> F3
@@ -168,6 +175,7 @@ let handle_key event (event_typ:Sdl.Event.enum) =
       | `F12 -> F12
       | `Return -> Enter
       | `Space -> Space
+      | `Backspace -> Backspace
       | `Left -> Left
       | `Right -> Right
       | `Up -> Up
