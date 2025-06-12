@@ -82,13 +82,13 @@ let render win (s:State.t) v =
       in
       write_sm text ~x:80 ~y:63;
       let text = Money.print d.revenue in
-      write_lg text ~x:127 ~y:107
+      write_lg text ~x:128 ~y:108
 
     | `Pickup p ->
       let text = Printf.sprintf "%s\nservice\ninaugurated!" good_s in
       write_lg  text ~x:80 ~y:8;
       let text = Printf.sprintf "%s picked up from %s" good_s station_s in
-      write_sm text ~x:40 ~y:65;
+      write_sm text ~x:40 ~y:64;
       let text = Printf.sprintf "%s may be delivered to" good_s in
       write_sm text ~x:40 ~y:82;
       let text = List.map (fun loc -> station_name loc s) p.buying |> String.concat "\n" in
