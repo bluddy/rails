@@ -601,6 +601,10 @@ let _name_train player_idx train_idx name v =
     @@ Player.update_trains @@ fun trains ->
         Trainmap.update train_idx trains @@ Train.set_name name
 
+let _name_rr player_idx name handle v =
+  update_player v player_idx
+    @@ fun player -> {player with name=Some(name, handle)}
+
 let _operate_rr_repay_bond player_idx ~company_idx v =
   let v = update_player v company_idx Player.repay_bond in
   (* TODO: fix this *)
@@ -707,6 +711,7 @@ module Action = struct
     | SellStock of {player_idx: Owner.t; stock: Owner.t}
     | OperateRR of {player_idx: Owner.t; company: Owner.t; action: operate_rr}
     | NameTrain of {player_idx: Owner.t; train: Train.Id.t; name: string}
+    | NameRR of {player_idx: Owner.t; name: string; handle: string}
     | Cheat of Owner.t * Cheat_d.t (* player *)
     | Quit_game
     [@@deriving show]
@@ -781,6 +786,8 @@ module Action = struct
           _operate_rr_repay_bond player_idx ~company_idx:company backend
       | NameTrain {player_idx; train; name} ->
           _name_train player_idx train name backend
+      | NameRR {player_idx; name; handle} ->
+          _name_rr player_idx name handle backend
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

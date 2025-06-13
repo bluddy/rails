@@ -99,9 +99,9 @@ end
 
 type t = {
   idx: Owner.t;
-  name: string option; (* custom name for railroad *)
+  name: (string * string) option; (* custom name, handle for railroad *)
   mutable trains: Trainmap.t;
-  station_locs: Utils.loc list; (* Stations ordered by creation order *)
+  station_locs: Utils.loc list; (* Stations ordered by reverse creation order *)
   m: monetary;
   track_length: int; (* track length according to the game (not per tile) *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
@@ -276,27 +276,34 @@ let build_industry cost (v:t) =
   let owned_industry = Money.(v.m.owned_industry + cost) in
   {v with m={v.m with owned_industry}}
 
-let get_name station_map cities v = match v.name with
-  | Some name -> name
+let _get_first_2_cities station_map cities v =
+  (* Getting the name if it's not custom is... complicated *)
+  List.fold_right (fun loc acc ->
+    if List.length acc >= 2 then acc
+    else
+      let station = Station_map.get_exn loc station_map in
+      match station.Station.info with 
+      | Some info ->
+        let x, y = info.city in
+        let city, _ = Cities.find_exn x y cities in
+        city::acc
+      | _ -> acc)
+  v.station_locs
+  []
+
+let get_name_and_handle station_map cities v = match v.name with
+  | Some (name, handle) -> name, handle
   | _ -> 
-    (* Getting the name if it's not custom is... complicated *)
-    let first_two_proper_station_cities =
-      List.fold_right (fun loc acc ->
-        if List.length acc >= 2 then acc
-        else
-          let station = Station_map.get_exn loc station_map in
-          match station.Station.info with 
-          | Some info ->
-            let x, y = info.city in
-            let city, _ = Cities.find_exn x y cities in
-            city::acc
-          | _ -> acc)
-      v.station_locs
-      []
-    in
-    match first_two_proper_station_cities with
-    | x::y::_ -> Printf.sprintf "%s & %s RR" y x
-    | _ -> "RR"
+    match _get_first_2_cities station_map cities v with
+    | x::y::_ -> Printf.sprintf "%s & %s RR" y x, Printf.sprintf "%c&%c" x.[0] y.[0]
+    | x::_ -> Printf.sprintf "%s RR" x, Printf.sprintf "%c" x.[0]
+    | _ -> "RR", "RR"
+
+let get_name station_map cities v = 
+  get_name_and_handle station_map cities v |> fst
+
+let get_handle station_map cities v =
+  get_name_and_handle station_map cities v |> snd
 
   (* "Game" reported track lenght, not track pieces *)
 let track_length v = v.track_length

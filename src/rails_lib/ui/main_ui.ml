@@ -470,6 +470,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       v, nobaction
   in
   let old_mode, old_menu = v.mode, v.menu in
+  let b = s.backend in
   let v, backend_msg =
     match v.mode with
     | Normal ->
@@ -557,6 +558,9 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with mode=Efficiency_report}, nobaction
         | On (`Call_broker), _ ->
             v, B.Action.CallBroker{player_idx}
+        | On (`Name_rr), _ ->
+            let state = Name_rr.init b.stations b.cities player_idx b in
+            {v with mode=Name_rr state}, nobaction
         | On (`Cheat x), _ ->
             v, B.Action.Cheat(C.player, x)
         | Off (`Options option), _ ->
@@ -800,6 +804,14 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Speed_record state ->
       let state2, retval, b_action = Speed_record.handle_event state event in
       let v = if state2 === state then v else {v with mode = Speed_record state2} in
+      begin match retval with
+      | `Exit -> {v with mode=Normal}, b_action
+      | `Stay -> v, b_action
+      end
+
+    | Name_rr state ->
+      let state2, retval, b_action = Name_rr.handle_event state event in
+      let v = if state2 === state then v else {v with mode = Name_rr state2} in
       begin match retval with
       | `Exit -> {v with mode=Normal}, b_action
       | `Stay -> v, b_action
@@ -1342,6 +1354,8 @@ let render (win:R.window) (s:State.t) v =
         New_delivery_pickup.render win s d
     | Speed_record d ->
         Speed_record.render win s d
+    | Name_rr state ->
+        Name_rr.render win s state
   in
   render_mode v.mode;
   if should_render_mouse v.mode then
