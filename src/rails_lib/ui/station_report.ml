@@ -5,7 +5,7 @@ module B = Backend
 
 (* Station view screen *)
 
-let render win (s:State.t) loc ~show_demand =
+let render ?(show_name=true) win (s:State.t) loc ~show_demand =
   let ground_y = 186 in
   let switchingyard_x = 0 in
   let engineshop_x = 64 in
@@ -200,15 +200,9 @@ let render win (s:State.t) loc ~show_demand =
         let str = "PRIORITY\nDELIVERY:\n" ^ goods in
         Fonts.Render.write_shadow win s.fonts ~color:Ega.white ~idx:4 ~x:210 ~y:104 str)
       goods_s;
-
-    (* name with shadow *)
-    write_name ~shadow:true ~x:8 ~y:104 ~color:Ega.white;
-    ()
-
-  ) else (
-    (* normal view *)
-    write_name ~shadow:false ~x:96 ~y:16 ~color:Ega.white;
-    ()
   );
-  ()
 
+  if show_name then (
+    (* name with shadow *)
+    write_name ~shadow:true ~x:8 ~y:104 ~color:Ega.white
+  )

@@ -54,7 +54,7 @@ let handle_tick s time v =
 let station_name loc s = (B.get_station loc s.State.backend |> Option.get_exn_or "oops "|> Station.get_name)
 
 let render win (s:State.t) v =
-  Train_animate_side.render win s v.anim;
+  Train_animate_side.render ~show_name:false win s v.anim;
   let fonts = s.fonts in
   let color = Ega.white in
   let write_lg = Fonts.Render.write_shadow win fonts ~color ~idx:2 in

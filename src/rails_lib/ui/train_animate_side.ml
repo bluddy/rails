@@ -66,8 +66,8 @@ let train_end_at_screen_edge (s:State.t) v =
     train_end = 0
   | `Back -> false
 
-let render win (s:State.t) v =
-  Station_report.render win s v.station ~show_demand:false;
+let render ?(show_name=true) win (s:State.t) v =
+  Station_report.render win s v.station ~show_demand:false ~show_name;
   match v.rail with
   | `Back ->
       let y = 186 in
