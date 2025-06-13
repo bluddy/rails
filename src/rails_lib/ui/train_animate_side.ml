@@ -33,6 +33,23 @@ let unpause v = {v with paused=false}
 
 let get_x v = v.x
 
+let draw_engine win (s:State.t) x y engine =
+  (* x: left of engine. y: bottom of engine *)
+  let engine = Hashtbl.find s.textures.engine_anim engine in
+  let engine_h = R.Texture.get_h engine.tex in
+  R.Texture.render win ~x ~y:(y-engine_h) engine.tex
+
+let draw_cars win (s:State.t) x y cars =
+  (* x: right of cars. y: bottom of cars *)
+  List.fold_left (fun x car ->
+    let car_tex_old, _ = Hashtbl.find s.textures.car_anim car in
+    let car_w, car_h = R.Texture.get_w car_tex_old, R.Texture.get_h car_tex_old in
+    let x = x - car_w in
+    R.Texture.render win ~x ~y:(y - car_h) car_tex_old;
+    x)
+  x
+  cars
+
 let train_end_at_screen_edge (s:State.t) v =
   match v.rail with
   | `Front ->
@@ -61,12 +78,7 @@ let render win (s:State.t) v =
   | `Front ->
       let y = 193 in
 
-      let draw_engine x y engine =
-        let engine = Hashtbl.find s.textures.engine_anim engine in
-        let engine_h = R.Texture.get_h engine.tex in
-        R.Texture.render win ~x ~y:(y-engine_h) engine.tex
-      in
-      draw_engine v.x y v.engine;
+      draw_engine win s v.x y v.engine;
 
       if not v.paused then begin
         let engine = Hashtbl.find s.textures.engine_anim v.engine in
@@ -91,18 +103,7 @@ let render win (s:State.t) v =
         draw_smoke ();
       end;
 
-      let draw_cars x y cars =
-        ignore @@
-        List.fold_left (fun x car ->
-          let car_tex_old, _ = Hashtbl.find s.textures.car_anim car in
-          let car_w, car_h = R.Texture.get_w car_tex_old, R.Texture.get_h car_tex_old in
-          let x = x - car_w in
-          R.Texture.render win ~x ~y:(y - car_h) car_tex_old;
-          x)
-        x
-        cars
-      in
-      draw_cars v.x y v.cars
+      draw_cars win s v.x y v.cars |> ignore
 
 let handle_tick (s:State.t) v time =
   if time - v.last_time < wait_time then v
