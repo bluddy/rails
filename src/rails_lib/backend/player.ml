@@ -67,6 +67,7 @@ module Record = struct
     total_revenue: Money.t;
     avg_speed: int;
     ton_miles: int;
+    train_speed: int;
   } [@@deriving yojson]
 
   let default = {
@@ -74,6 +75,7 @@ module Record = struct
     total_revenue=Money.zero;
     avg_speed=0;
     ton_miles=0;
+    train_speed=0;
   }
 end
 
@@ -254,6 +256,7 @@ let fiscal_period_end stations params v =
     avg_speed=avg_speed_history; 
   } in
   let record = Record.{
+    v.record with
     ton_miles=ton_mile_record;
     avg_speed=avg_speed_record;
     earnings=earnings_record;
@@ -564,4 +567,11 @@ let add_to_total_difficulty params v =
 let get_bridge_washout v = match v.event with
   | Some(BridgeWashout loc) -> Some loc
   | _ -> None
+
+let get_speed_record v = v.record.train_speed
+
+let update_speed_record speed v =
+  if speed > v.record.train_speed then
+    {v with record={v.record with train_speed=speed}}
+  else v
 

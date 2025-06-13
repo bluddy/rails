@@ -72,5 +72,6 @@ type t =
   | BridgeCreated of {player_idx: Owner.t; kind: Bridge.t}
   | NewGoodPickedUp of {player_idx: Owner.t; good: Goods.t; station: loc; engine: Engine.make; cars: Goods.t list; buying: loc list}
   | NewGoodDelivery of {player_idx: Owner.t; good: Goods.t; src: loc; dst: loc; amount: int; revenue: Money.t; engine: Engine.make; cars: Goods.t list; speed: int}
+  | SpeedRecord of {player_idx: Owner.t; speed: int; src: loc; dst: loc; train_idx: Train.Id.t }
   [@@deriving yojson]
 

@@ -22,6 +22,7 @@ module Train_update = struct
     freight_ton_miles: int Freight.Map.t;
     new_goods_delivered: Goods.Set.t;
     new_goods_picked_up: Goods.Set.t;
+    max_speed: int;
   }
 
   let default_train_data = {
@@ -29,6 +30,7 @@ module Train_update = struct
     freight_ton_miles=Freight.Map.empty;
     new_goods_delivered=Goods.Set.empty;
     new_goods_picked_up=Goods.Set.empty;
+    max_speed=0;
   }
 
   let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~(idx:Train.Id.t) ~cycle loc ~dir =
@@ -93,12 +95,36 @@ module Train_update = struct
     in
     ui_msgs, new_goods
 
-  let _ui_msgs_of_new_goods_delivered goods_delivered goods_delivered_map goods_speed player cars_delivered money_from_goods train station =
+  let _ui_msgs_of_speed_record cars_delivered_speed loc train_idx player =
+    match cars_delivered_speed with
+    | [] -> [], 0
+    | x::xs ->
+      let (car, _), max_speed =
+        List.fold_left (fun ((_, max_speed) as acc) ((_, speed) as curr) -> 
+          if speed > max_speed then curr else acc)
+        x xs
+      in
+      if Player.get_speed_record player < max_speed then
+        [
+          UIM.SpeedRecord {
+            player_idx=player.idx;
+            speed=max_speed;
+            src=Train.Car.get_source car;
+            dst=loc;
+            train_idx=train_idx;
+          }
+        ], max_speed
+      else [], 0
+          
+
+  let _ui_msgs_of_new_goods_delivered goods_delivered goods_delivered_map player cars_delivered_speed money_from_goods train station =
     let new_goods = Goods.Set.diff goods_delivered player.Player.goods_delivered in
     let ui_msgs = new_goods
       |> Goods.Set.to_list
       |> List.map (fun good ->
-        let car, _ = List.find (fun (car, delivered) -> delivered && Goods.equal (Train.Car.get_good car) good) cars_delivered in
+        let (car, _), speed =
+          List.find (fun ((car, delivered), _) -> delivered && Goods.equal (Train.Car.get_good car) good) cars_delivered_speed
+        in
         let src=Train.Car.get_source car in
         UIM.NewGoodDelivery {
           player_idx=player.idx;
@@ -109,7 +135,7 @@ module Train_update = struct
           revenue=Goods.Map.find good money_from_goods;
           engine=(Train.get_engine train).make;
           cars=List.map Train.Car.get_good train.cars;
-          speed=Goods.Map.find good goods_speed;
+          speed;
         })
     in
     ui_msgs, new_goods
@@ -133,24 +159,23 @@ module Train_update = struct
             Station.has_demand_for station car.good)
           cars
         in
-        let money_from_goods, goods_speed =
-          List.fold_left (fun ((money_acc, speed_acc) as acc) (car, delivered) ->
+        let money_from_goods, car_speed =
+          List.fold_left (fun (money_acc, speed_acc) (car, delivered) ->
             if delivered then
               let money, speed =
                 Train.car_delivery_money_speed ~loc ~train ~car ~rates:station_info.Station.rates ~params:v.params
               in
-              let good = Train.Car.get_good car in
-              let money_acc = Goods.Map.incr_cash good money money_acc in
-              let speed_acc = Goods.Map.update good (function
-                  | None -> Some speed
-                  | Some best_speed -> if speed < best_speed then Some speed else Some best_speed)
-                speed_acc
-              in
+              let money_acc =
+                let good = Train.Car.get_good car in
+                Goods.Map.incr_cash good money money_acc in
+              let speed_acc = speed::speed_acc in
               money_acc, speed_acc
-            else acc)
-          (Goods.Map.empty, Goods.Map.empty)
+            else
+              (money_acc, 0::speed_acc))
+          (Goods.Map.empty, [])
           cars_delivered
         in
+        let car_speed = List.rev car_speed in
         let freight_ton_miles =
           List.fold_left (fun acc (car, delivered) ->
             if delivered then
@@ -178,9 +203,9 @@ module Train_update = struct
           cars_delivered
           |> M.of_int
         in
-        cars_delivered, money_from_goods, goods_speed, freight_ton_miles, other_income
+        cars_delivered, money_from_goods, car_speed, freight_ton_miles, other_income
       in
-      let cars_delivered, money_from_goods, goods_speed, freight_ton_miles, other_income = deliver_cargo () in
+      let cars_delivered, money_from_goods, car_speed, freight_ton_miles, other_income = deliver_cargo () in
 
       let station_supply = station_info.supply in
       let add_converted_goods_to_station cars_delivered =
@@ -278,8 +303,10 @@ module Train_update = struct
           let complex_freight = Train.freight_set_of_cars train.cars |> Freight.complex_of_set in
           let goods_delivered_amt = Goods.Map.to_list goods_delivered in
           let goods_delivered_set = Goods.Map.keys goods_delivered |> Goods.Set.of_iter in
+          let cars_delivered_speed = List.combine cars_delivered car_speed in
           let deliv_msgs, new_goods_delivered =
-            _ui_msgs_of_new_goods_delivered goods_delivered_set goods_delivered goods_speed player cars_delivered money_from_goods train loc in
+            _ui_msgs_of_new_goods_delivered goods_delivered_set goods_delivered player cars_delivered_speed money_from_goods train loc in
+          let speed_msgs, max_speed = _ui_msgs_of_speed_record cars_delivered_speed loc idx player in
           let msg =
             UIM.TrainArrival {
               player=train.player;
@@ -292,8 +319,8 @@ module Train_update = struct
               goods_amount=goods_delivered_amt;
             }
           in
-          let data = {income_stmt; freight_ton_miles; new_goods_delivered; new_goods_picked_up} in
-          msg::deliv_msgs @ pickup_msgs, Some data
+          let data = {income_stmt; freight_ton_miles; new_goods_delivered; new_goods_picked_up; max_speed} in
+          msg::speed_msgs @ deliv_msgs @ pickup_msgs, Some data
         else
           pickup_msgs, None
       in
@@ -608,6 +635,7 @@ let _update_player_with_data (player:Player.t) data active_stations fiscal_perio
           |> Player.add_freight_ton_miles data.freight_ton_miles fiscal_period
           |> Player.add_goods_delivered data.new_goods_delivered
           |> Player.add_goods_picked_up data.new_goods_picked_up
+          |> Player.update_speed_record data.max_speed
       | _ -> player
     in
     if List.is_empty active_stations then player
