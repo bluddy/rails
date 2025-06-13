@@ -15,7 +15,7 @@ let char_height = 8
 
 let make text ~x ~y ~chars =
   {
-    cursor=0; text; x; y; num_chars=chars;
+    cursor=0; text=text^" "; x; y; num_chars=chars;
   }
 
 let render win fonts v =
@@ -51,13 +51,13 @@ let handle_event v = function
       {v with text; cursor=v.cursor + 1}, `Stay
     | Left when v.cursor > 0 ->
       {v with cursor=v.cursor - 1}, `Stay
-    | Right when v.cursor < String.length v.text ->
+    | Right when v.cursor < String.length v.text - 1 ->
       {v with cursor=v.cursor + 1}, `Stay
     | Backspace when v.cursor > 0 ->
-      let text1, text2 = String.take v.cursor v.text, String.drop (v.cursor + 1) v.text in
+      let text1, text2 = String.take (v.cursor-1) v.text, String.drop v.cursor v.text in
       let text = text1 ^ text2 in
       {v with cursor=v.cursor-1; text}, `Stay
-    | Enter -> v, `Return v.text
+    | Enter -> v, `Return(String.take (String.length v.text - 1) v.text)
     | _ -> v, `Stay
     end
   | _ -> v, `Stay
