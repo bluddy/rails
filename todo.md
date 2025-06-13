@@ -35,6 +35,7 @@
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - Bug:
+  - Can't upgrade station
   - Animation: old timing issues
   - Delivery + priority pickup: no delivery message
   - Can't change light from f2/f3

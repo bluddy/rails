@@ -313,7 +313,7 @@ module MsgBox = struct
         | NoAction -> (* nothing from deep *)
             let menu_choice =
               if Event.is_letter key then
-                CharMap.find_opt (Event.char_of_key key) v.index
+                CharMap.find_opt (Event.char_of_key ~shift:true key) v.index
               else
                 None
             in
@@ -596,7 +596,7 @@ module Global = struct
   let handle_key s v ~key =
       let get_char () =
         if Event.is_letter key then
-          Hashtbl.find_opt v.index (Event.char_of_key key)
+          Hashtbl.find_opt v.index (Event.char_of_key ~shift:true key)
         else None
       in
       match v.open_menu with

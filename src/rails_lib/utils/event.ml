@@ -20,7 +20,8 @@ type key =
   | Left | Right | Up | Down | Escape
   [@@deriving show, eq]
 
-let char_of_key = function
+let char_of_key ?(shift=false) key =
+  let c = match key with
   | A -> 'A'
   | B -> 'B'
   | C -> 'C'
@@ -53,11 +54,14 @@ let char_of_key = function
   | K4 -> '4'
   | K5 -> '5'
   | K6 -> '6'
+  | K7 when shift -> '&'
   | K7 -> '7'
   | K8 -> '8'
   | K9 -> '9'
   | K0 -> '0'
   | _ -> failwith "Not a letter"
+  in
+  if not shift then Char.lowercase_ascii c else c
 
 let is_letter = function
   | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P

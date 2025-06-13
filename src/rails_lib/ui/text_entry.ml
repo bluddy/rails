@@ -15,8 +15,11 @@ let char_height = 8
 
 let make ?(editable=true) text ~x ~y ~chars =
   let cursor = if editable then Some 0 else None in
+  let len = String.length text in
+  let num_spaces = max 0 (chars - len) in
+  let text = text ^ String.make num_spaces ' ' in
   {
-    cursor; text=text^" "; x; y; num_chars=chars;
+    cursor; text; x; y; num_chars=chars;
   }
 
 let get_text v = v.text
@@ -47,17 +50,12 @@ let handle_event v event =
         Printf.sprintf "%s%c%s" text1 c text2
       in
       begin match key with
-      | _ when Event.is_alphanumeric key ->
-        let c = Event.char_of_key key in
-        let c =
-          if Event.Modifiers.shift keyinfo.modifiers then
-            Char.uppercase_ascii c
-          else
-            Char.lowercase_ascii c
-        in
+      | _ when Event.is_alphanumeric key && cursor < v.num_chars ->
+        let shift = Event.Modifiers.shift keyinfo.modifiers in
+        let c = Event.char_of_key ~shift key in
         let text = insert_char c v in
         {v with text; cursor=Some(cursor + 1)}, `Stay
-      | Space ->
+      | Space when cursor < v.num_chars ->
         let text = insert_char ' ' v in
         {v with text; cursor=Some(cursor + 1)}, `Stay
       | Left when cursor > 0 ->
@@ -66,9 +64,9 @@ let handle_event v event =
         {v with cursor=Some(cursor + 1)}, `Stay
       | Backspace when cursor > 0 ->
         let text1, text2 = String.take (cursor-1) v.text, String.drop cursor v.text in
-        let text = text1 ^ text2 in
+        let text = text1 ^ text2 ^ " " in
         {v with cursor=Some(cursor-1); text}, `Stay
-      | Enter -> v, `Return(String.take (String.length v.text - 1) v.text)
+      | Enter -> v, `Return(v.text)
       | _ -> v, `Stay
       end
     | _ -> v, `Stay
