@@ -24,16 +24,10 @@ let render win fonts v =
   let h = 8 + 2 + 3 in
   R.draw_rect win ~x:v.x ~y:v.y ~w ~h ~color:Ega.black ~fill:false;
 
-  (* draw cursor *)
-  let y = v.y + 1 in
-  let x = v.x + 2 + char_width * v.cursor in
-  let w, h = char_width, char_height in
-  R.draw_rect win ~x ~y ~w ~h ~color:Ega.bcyan ~fill:true;
-
   (* draw text *)
-  let y = v.y + 1 in
+  let y = v.y + 2 in
   let x = v.x + 2 in
-  Fonts.Render.write win fonts v.text ~color:Ega.black ~idx:4 ~x ~y
+  Fonts.Render.write win fonts v.text ~cursor:(v.cursor, Ega.bcyan) ~color:Ega.black ~idx:4 ~x ~y
 
 let handle_event v = function
   | Event.Key ({down=true; key; _} as keyinfo) ->

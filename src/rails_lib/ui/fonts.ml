@@ -106,11 +106,19 @@ let get_str_w_h ?(skip_amp=false) font str =
       )
     )
 
-  let write_char win font ?(color=Ega.white) c ~x ~y =
+  let write_char ?cursor_color win font ?(color=Ega.white) c ~x ~y =
     try
       let char_tex = Hashtbl.find font.textures c in
-      R.Texture.render ~x ~y ~color win char_tex;
       let w = get_letter_width font c in
+      begin match cursor_color with
+      | Some color ->
+          let y = y - 1 in
+          let h = font.height + font.space_y + 2 in
+          let w = w + font.space_x in
+          R.draw_rect win ~x ~y ~w ~h ~color ~fill:true;
+      | None -> ()
+      end;
+      R.Texture.render ~x ~y ~color win char_tex;
       (x + w + font.space_x, y)
     with
     | Not_found ->
@@ -120,18 +128,21 @@ let get_str_w_h ?(skip_amp=false) font str =
     (* Write a string.
        active_color: color for automatically highlighting chars with &
     *)
-  let write ?active_color win font ~color str ~x ~y =
+  let write ?active_color ?cursor win font ~color str ~x ~y =
     let x_first = x in (* keep starting column *)
-    String.fold (fun (active, x, y) c ->
-      match c, active_color with
-      | '&', Some _ ->
+    String.foldi (fun (active, x, y) i c ->
+      match c, active_color, cursor with
+      | '&', Some _, _ ->
           (true, x, y)
-      | '\n', _ ->
+      | '\n', _, _ ->
           (false, x_first, y + font.height + font.space_y)
-      | _, Some active_color when active ->
+      | _, Some active_color, _ when active ->
           let x, y = write_char win font ~color:active_color c ~x ~y in
           false, x, y
-      | _ ->
+      | _, _, Some (j, cursor_color) when j = i ->
+          let x, y = write_char ~cursor_color win font ~color c ~x ~y in
+          false, x, y
+      | _, _, _ ->
           let x, y = write_char win font ~color c ~x ~y in
           false, x, y
     )
@@ -280,8 +291,8 @@ module Render = struct
 let write_char win fonts ~color ~idx c ~x ~y =
   Font.write_char win ~color fonts.(idx) c ~x ~y
 
-let write win fonts ?active_color ~color ~idx str ~x ~y =
-  Font.write ?active_color win fonts.(idx) ~color str ~x ~y
+let write win fonts ?active_color ?cursor ~color ~idx str ~x ~y =
+  Font.write ?active_color ?cursor win fonts.(idx) ~color str ~x ~y
 
 let write_shadow win fonts ~color ~idx str ~x ~y =
   write win fonts ~color:Ega.black ~idx str ~x:(x+1) ~y:(y+1);

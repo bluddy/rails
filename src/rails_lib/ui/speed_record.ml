@@ -35,13 +35,14 @@ let handle_event v event =
 let station_name loc s = (B.get_station loc s.State.backend |> Option.get_exn_or "oops "|> Station.get_name)
 
 let render win (s:State.t) v =
+  let y = 77 in
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
   Fonts.Render.write_shadow win s.fonts ~idx:2 ~color:Ega.bred ~x:24 ~y:8 "New Speed Record!";
   let train = B.get_train v.train_idx C.player s.backend in
-  Train_animate_side.draw_engine win s 118 76 (Train.get_engine train).make;
+  Train_animate_side.draw_engine win s 118 y (Train.get_engine train).make;
   let cars = List.map Train.Car.get_good train.cars in
-  Train_animate_side.draw_cars win s 117 76 cars |> ignore;
-  R.draw_line win ~x1:2 ~y1:77 ~x2:316 ~y2:77 ~color:Ega.black;
+  Train_animate_side.draw_cars win s 118 y cars |> ignore;
+  R.draw_line win ~x1:2 ~y1:y ~x2:316 ~y2:y ~color:Ega.black;
 
   let text =
     Printf.sprintf
