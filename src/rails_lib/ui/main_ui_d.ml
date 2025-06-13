@@ -117,6 +117,7 @@ and 'state mode =
   | Efficiency_report
   | Animation of {state: Pani_render.t; next_mode: 'state mode}  (* Animation stores its next mode for ease of use *)
   | NewGoodDeliveryPickup of New_delivery_pickup_d.t
+  | Speed_record of Speed_record_d.t
 
 let is_normal_mode = function
   | Normal -> true

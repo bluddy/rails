@@ -797,6 +797,14 @@ let handle_event (s:State.t) v (event:Event.t) =
       | state2, `Stay -> {v with mode=NewGoodDeliveryPickup(state2)}, nobaction
       end
 
+    | Speed_record state ->
+      let state2, retval, b_action = Speed_record.handle_event state event in
+      let v = if state2 === state then v else {v with mode = Speed_record state2} in
+      begin match retval with
+      | `Exit -> {v with mode=Normal}, b_action
+      | `Stay -> v, b_action
+      end
+
     | EngineInfo _
     | StationReport _
     | Balance_sheet _
@@ -1060,19 +1068,26 @@ let handle_msgs (s:State.t) v ui_msgs =
         | None -> v
         end
 
-        | NewGoodPickedUp d ->
-          if Owner.(d.player_idx <> main_player_idx) then v
-          else
-            let state = New_delivery_pickup.init s d.good d.station d.engine d.cars ~pickup:d.buying in
-            {v with mode=NewGoodDeliveryPickup state}
+      | NewGoodPickedUp d ->
+        if Owner.(d.player_idx <> main_player_idx) then v
+        else
+          let state = New_delivery_pickup.init s d.good d.station d.engine d.cars ~pickup:d.buying in
+          {v with mode=NewGoodDeliveryPickup state}
 
-        | NewGoodDelivery d ->
-          if Owner.(d.player_idx <> main_player_idx) then v
-          else
-            let state = New_delivery_pickup.init s d.good d.dst d.engine d.cars
-              ~delivery:(d.src, d.revenue, d.amount, d.speed)
-            in
-            {v with mode=NewGoodDeliveryPickup state}
+      | NewGoodDelivery d ->
+        if Owner.(d.player_idx <> main_player_idx) then v
+        else
+          let state = New_delivery_pickup.init s d.good d.dst d.engine d.cars
+            ~delivery:(d.src, d.revenue, d.amount, d.speed)
+          in
+          {v with mode=NewGoodDeliveryPickup state}
+
+      | SpeedRecord d ->
+        if Owner.(d.player_idx <> main_player_idx) then v
+        else
+          let trains = B.get_trains main_player_idx b in
+          let state = Speed_record.make d.speed ~src:d.src ~dst:d.dst d.train_idx trains b.stations b.cities in
+          {v with mode=Speed_record state}
 
       (* 
          TODO: Record Profits on 
@@ -1325,6 +1340,8 @@ let render (win:R.window) (s:State.t) v =
         Pani_render.render win state
     | NewGoodDeliveryPickup d ->
         New_delivery_pickup.render win s d
+    | Speed_record d ->
+        Speed_record.render win s d
   in
   render_mode v.mode;
   if should_render_mouse v.mode then

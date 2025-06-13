@@ -153,6 +153,10 @@ let in_receivership v = v.m.in_receivership
 
 let get_trains v = v.trains
 
+let update_trains f v =
+  let trains2 = f v.trains in
+  [%up {v with trains=trains2}]
+
 let pay expense money (v:t) =
   let income_statement = Income_statement.deduct expense money v.m.income_statement in
   let cash = Money.(v.m.cash - money) in

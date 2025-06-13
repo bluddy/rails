@@ -633,3 +633,5 @@ let get_goods v =
     Goods.Set.empty
     v.cars
 
+let set_name name v = {v with name=Some name}
+

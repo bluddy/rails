@@ -3,15 +3,7 @@ module C = Constants
 module R = Renderer
 module B = Backend
 
-type loc = Utils.loc
-
-type t = {
-  speed: int;
-  src: loc;
-  dst: loc;
-  train_idx: Train.Id.t;
-  entry: Text_entry.t;
-}
+include Speed_record_d
 
 let make speed ~src ~dst train_idx trains stations cities = 
   let names = ["Zephyr"; "Cannonball"; "Rocket"; "Special"] in

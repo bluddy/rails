@@ -596,6 +596,11 @@ let _operate_rr_give_money player_idx ~company ~amount v =
   send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player_idx; amount});
   [%up {v with players}]
 
+let _name_train player_idx train_idx name v =
+  update_player v player_idx 
+    @@ Player.update_trains @@ fun trains ->
+        Trainmap.update train_idx trains @@ Train.set_name name
+
 let _operate_rr_repay_bond player_idx ~company_idx v =
   let v = update_player v company_idx Player.repay_bond in
   (* TODO: fix this *)
@@ -774,6 +779,8 @@ module Action = struct
           _operate_rr_build_track player_idx ~company src dst backend
       | OperateRR{player_idx; company; action=RRRepayBond} ->
           _operate_rr_repay_bond player_idx ~company_idx:company backend
+      | NameTrain {player_idx; train; name} ->
+          _name_train player_idx train name backend
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend
