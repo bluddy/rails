@@ -22,7 +22,7 @@ let make ?(editable=true) text ~x ~y ~chars =
     cursor; text; x; y; num_chars=chars;
   }
 
-let get_text v = v.text
+let get_text v = String.rdrop_while (function ' ' -> true | _ -> false) v.text
 
 let render win fonts v =
   (* draw frame *)
@@ -66,7 +66,7 @@ let handle_event v event =
         let text1, text2 = String.take (cursor-1) v.text, String.drop cursor v.text in
         let text = text1 ^ text2 ^ " " in
         {v with cursor=Some(cursor-1); text}, `Stay
-      | Enter -> v, `Return(v.text)
+      | Enter -> v, `Return(get_text v)
       | _ -> v, `Stay
       end
     | _ -> v, `Stay
