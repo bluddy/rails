@@ -518,6 +518,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On `Save_game, _ ->
             save_game s;
             v, nobaction
+        | On `Find_city, _ ->
+            let state = Find_city.init () in
+            {v with mode=FindCity state}, nobaction
         | On `Quit_game, _ ->
             v, B.Action.Quit_game
         | On (`Speed speed), _ -> v, B.Action.SetSpeed speed
@@ -816,6 +819,20 @@ let handle_event (s:State.t) v (event:Event.t) =
       | `Exit -> {v with mode=Normal}, b_action
       | `Stay -> v, b_action
       end
+
+    | FindCity state ->
+      let state2, status = Find_city.handle_event event s.backend.cities state in
+      let v = begin match status with
+        | `Fail -> make_msgbox ~x:92 ~y:50 s v ~fonts:s.fonts "No such city." |> fst
+        | `Stay -> if state2 === state then v else {v with mode=FindCity state2}
+        | `Return (x,y) ->
+            let view = v.view
+              |> Mapview.set_zoom Mapview_d.Zoom4
+              |> Mapview.set_const_box_to_loc ~x ~y
+            in
+            {v with view; mode=Normal}
+        end
+      in v, nobaction
 
     | EngineInfo _
     | StationReport _
@@ -1356,6 +1373,9 @@ let render (win:R.window) (s:State.t) v =
         Speed_record.render win s d
     | Name_rr state ->
         Name_rr.render win s state
+    | FindCity state ->
+       render_main win s v;
+       Find_city.render win s.fonts state
   in
   render_mode v.mode;
   if should_render_mouse v.mode then

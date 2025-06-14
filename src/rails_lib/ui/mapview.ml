@@ -185,6 +185,9 @@ let flush_draw_buffer v =
   Hashtbl.clear v.draw_buffer;
   ()
 
+let set_zoom zoom v =
+  {v with zoom; survey=false}
+
 let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   let handle_mapview_button v x y button =
     let offset_x, offset_y = v.dims.x - 1, v.dims.y - 1 in
@@ -358,15 +361,15 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   let v, actions =
     match event with
     | Key {down=true; key=F1; _} ->
-        {v with zoom = Zoom1; survey=false}, `NoAction
+        set_zoom Zoom1 v, `NoAction
     | Key {down=true; key=F2; _} ->
         flush_draw_buffer v;
-        {v with zoom = def_zoom2; survey=false}, `NoAction
+        set_zoom def_zoom2 v, `NoAction
     | Key {down=true; key=F3; _} ->
         flush_draw_buffer v;
-        {v with zoom = def_zoom3; survey=false}, `NoAction
+        set_zoom def_zoom3 v, `NoAction
     | Key {down=true; key=F4; _} ->
-        {v with zoom = Zoom4}, `NoAction
+        set_zoom Zoom4 v, `NoAction
     | MouseButton {down=true; x; y; button; _} ->
         handle_mouse_button v x y button
     | Key {down=true; key; modifiers; _} when is_zoom4 v ->
