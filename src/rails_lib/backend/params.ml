@@ -30,3 +30,4 @@ let default = {
 
 let current_period v = v.current_period
 let last_period v = match v.current_period with `First -> `Second | `Second -> `First
+let next_period = last_period
