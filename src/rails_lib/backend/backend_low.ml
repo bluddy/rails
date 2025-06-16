@@ -906,7 +906,7 @@ let handle_cycle v =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, pr_msgs = _try_to_create_priority_shipment player stations params v.random in
         let dev_state, active_station = _develop_tiles v player in
-        Player.fiscal_period_end stations params player
+        (* Player.fiscal_period_end stations params player in *)
         let player = Player.track_maintenance_random_spot track v.random player in
         stations, player, dev_state, active_station, pr_msgs
       else

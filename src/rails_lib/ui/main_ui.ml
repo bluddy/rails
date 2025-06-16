@@ -841,6 +841,8 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Efficiency_report
     | Accomplishments -> modal_screen_no_input ~next_mode:Normal v event
 
+    | GenericScreen {next_mode;_} -> modal_screen_no_input ~next_mode v event
+
     | Animation {next_mode; _} -> modal_screen_no_input ~next_mode v event
         
   in
@@ -1376,6 +1378,8 @@ let render (win:R.window) (s:State.t) v =
     | FindCity state ->
        render_main win s v;
        Find_city.render win s.fonts state
+    | GenericScreen {render_fn; _} ->
+       render_fn win s
   in
   render_mode v.mode;
   if should_render_mouse v.mode then

@@ -120,6 +120,7 @@ and 'state mode =
   | Speed_record of Speed_record_d.t
   | Name_rr of Name_rr_d.t
   | FindCity of Find_city.t
+  | GenericScreen of { render_fn: Renderer.window -> 'state -> unit; next_mode: 'state mode }
 
 let is_normal_mode = function
   | Normal -> true
