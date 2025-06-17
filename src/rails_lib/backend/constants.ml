@@ -15,6 +15,7 @@ let max_num_cities = 100
 let tick_ms = 15 (* ms *)
 
 let year_ticks = 2032 (* really 170*12 = 2040 is new year, but any time we go over 2032 we stop the year *)
+let fin_period_ticks = 4080
 let month_ticks = 170
 
 let tile_dim = 16

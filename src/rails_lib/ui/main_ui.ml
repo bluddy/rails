@@ -1120,6 +1120,14 @@ let handle_msgs (s:State.t) v ui_msgs =
           let state = Speed_record.make d.speed ~src:d.src ~dst:d.dst d.train_idx trains b.stations b.cities in
           {v with mode=Speed_record state}
 
+      | FiscalPeriodEnd player_idx ->
+          if Owner.(player_idx <> main_player_idx) then v
+          else
+            let bal = Balance_sheet.create s player_idx in
+            let next_mode = Income_statement bal in
+            let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode} in
+            {v with mode}
+
       (* 
          TODO: Record Profits on 
          name earnings

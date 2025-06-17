@@ -61,6 +61,7 @@ type t =
   | BridgeWashout of {player_idx: Owner.t; loc: loc; fixed: bool}
   | ClimateChange of {climate: Climate.t; reason: Climate.reason}
   | EngineDiscovered of Engine.t
+  | FiscalPeriodEnd of Owner.t
   | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   | ImpossibleRoute of {player_idx: Owner.t; train_idx: Train.Id.t; src: loc; dst: loc}
   | TrainAccident of {player_idx: Owner.t}
