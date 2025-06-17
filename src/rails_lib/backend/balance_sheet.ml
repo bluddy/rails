@@ -18,7 +18,7 @@ let calc_real_estate region track_map tile_map player_idx =
   track_map
   ~init:M.zero
 
-let create (s:State.t) player_idx =
+let create ?(end_of_year=false) (s:State.t) player_idx =
   let player = B.get_player player_idx s.backend in
   let operating_funds = Player.get_cash player in
   let treasury_stock = Stock_market.treasury_share_value player_idx s.backend.stocks in
@@ -51,6 +51,7 @@ let create (s:State.t) player_idx =
     rolling_stock;
     outstanding_loans;
     stockholders_equity;
+    end_of_year;
   }
 
     

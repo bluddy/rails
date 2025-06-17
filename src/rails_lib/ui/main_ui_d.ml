@@ -112,7 +112,7 @@ and 'state mode =
   | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of Balance_sheet_d.t
   | Accomplishments
-  | Income_statement of Balance_sheet_d.t  (* we use the stock part *)
+  | Income_statement of { state: Balance_sheet_d.t; next_mode: 'state mode}  (* we use the stock part *)
   | EngineInfo of Engine_info.t
   | Efficiency_report
   | Animation of {state: Pani_render.t; next_mode: 'state mode}  (* Animation stores its next mode for ease of use *)
@@ -120,6 +120,7 @@ and 'state mode =
   | Speed_record of Speed_record_d.t
   | Name_rr of Name_rr_d.t
   | FindCity of Find_city.t
+  (* A screen with only rendering and no interaction *)
   | GenericScreen of { render_fn: Renderer.window -> 'state -> unit; next_mode: 'state mode }
 
 let is_normal_mode = function

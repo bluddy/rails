@@ -553,8 +553,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             let b = Balance_sheet.create s player_idx in
             {v with mode=Balance_sheet b}, nobaction
         | On (`Income_statement), _ ->
-            let b = Balance_sheet.create s player_idx in
-            {v with mode=Income_statement b}, nobaction
+            let state = Balance_sheet.create s player_idx in
+            {v with mode=Income_statement {state; next_mode=Normal}}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
@@ -1123,8 +1123,10 @@ let handle_msgs (s:State.t) v ui_msgs =
       | FiscalPeriodEnd player_idx ->
           if Owner.(player_idx <> main_player_idx) then v
           else
-            let bal = Balance_sheet.create s player_idx in
-            let next_mode = Income_statement bal in
+            (* Create a chain of modes *)
+            let bal = Balance_sheet.create ~end_of_year:true s player_idx in
+            let next_mode = Balance_sheet bal in
+            let next_mode = Income_statement {state=bal; next_mode} in
             let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode} in
             {v with mode}
 
@@ -1369,7 +1371,7 @@ let render (win:R.window) (s:State.t) v =
         Stock_broker.render win s state
     | Balance_sheet state ->
         Balance_sheet_view.render win s state
-    | Income_statement state ->
+    | Income_statement {state;_} ->
         Income_statement_view.render win s state
     | Accomplishments ->
         Accomplishments.render win s

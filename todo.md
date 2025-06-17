@@ -1,4 +1,5 @@
 # Tasks
+- Check when we beat train speed record for first time. Shouldn't be for any speed.
 - Check that active_station only works for 20 years per station
 - Move block_map and track_graph to player
 - First delivery: animation
@@ -35,6 +36,7 @@
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - Bug:
+  - 2 stations: 1 station not being delivered to.
   - Can't upgrade station
   - Animation: old timing issues
   - Delivery + priority pickup: no delivery message
