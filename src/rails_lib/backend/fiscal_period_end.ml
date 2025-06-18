@@ -1,3 +1,4 @@
+module List = Utils.List
 
 module R = Renderer
 module C = Constants
@@ -74,12 +75,27 @@ let get_records backend msgs =
   |> List.filter (fun s -> String.length s > 0)
   |> String.concat "\n"
 
-let get_record_earnings msgs =
+let get_record_earnings backend msgs =
+  let player = B.get_player C.player backend in
   let process = function
-    | Ui_msg.RecordEarnings money -> Some money
+    | Ui_msg.RecordEarnings money ->
+       (Printf.sprintf "Record Profits on %s" @@
+          Player.get_handle backend.stations backend.cities player,
+        Printf.sprintf "%s earnings" @@
+          Money.print ~region:backend.params.region money,
+        "in last two years.")
+        |> Option.some
     | _ -> None
   in
   msgs
   |> List.map process
   |> List.filter (fun s -> Option.is_some s)
+  |> List.head_opt
+  |> (function | Some x -> x | _ -> None)
+
+let handle_msgs backend msgs =
+  let record_earnings = get_record_earnings backend msgs in
+  let warnings = get_warnings backend msgs in
+  let records = get_records backend msgs  in
+  record_earnings, warnings, records
 

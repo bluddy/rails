@@ -1141,6 +1141,11 @@ let handle_msgs (s:State.t) v ui_msgs =
       | FiscalPeriodEndMsgs(player_idx, msgs) ->
           if Owner.(player_idx <> main_player_idx) then v
           else
+            let records_earnings, warnings, records = Fiscal_period_end.handle_msgs b msgs in
+            let next_mode = match records_earnings with
+             | Some texts -> make_news @@ Newspaper.make_fancy s texts b.params b.random
+             | None -> Normal
+            in
             let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
             {v with mode}
 
