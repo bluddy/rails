@@ -626,6 +626,20 @@ let _start_broker_timer player_idx v =
     update_player v player_idx (fun player -> fst @@ Player.incr_broker_timer player)
   ) else v
 
+  (* Find end 1st stage: cyan screen, income statement, balance sheet
+     then we get this message to continue to the next stage *)
+let _fin_end_proceed player_idx v =
+  let player = get_player player_idx v in
+  let player, ui_msgs = Player.fiscal_period_end v.stations v.params player in
+  let v = update_player v player_idx (fun _ -> player) in
+  send_ui_msg v ui_msgs;
+  let params = {v.params with
+    current_period=Params.next_period v.params;
+    time=0;
+  }
+  in
+  {v with params}
+
 let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->
     update_player v player_idx @@ Player.add_cash @@ M.of_int 500
@@ -714,6 +728,7 @@ module Action = struct
     | NameRR of {player_idx: Owner.t; name: string; handle: string}
     | Cheat of Owner.t * Cheat_d.t (* player *)
     | Quit_game
+    | FinEndProceed of Owner.t (* Move past first stage of fin_end *)
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -788,6 +803,7 @@ module Action = struct
           _name_train player_idx train name backend
       | NameRR {player_idx; name; handle} ->
           _name_rr player_idx name handle backend
+      | FinEndProceed player_idx -> _fin_end_proceed player_idx backend
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

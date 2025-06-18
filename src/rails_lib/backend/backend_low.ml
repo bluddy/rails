@@ -902,18 +902,20 @@ let handle_cycle v =
         player, []
     in
 
-    let stations, player, dev_state, active_station, pr_msgs =
+    let stations, player, dev_state, active_station, pause, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, msgs = _try_to_create_priority_shipment player stations params v.random in
         let dev_state, active_station = _develop_tiles v player in
 
-        let msgs = if params.time > C.fin_period_ticks then (UIM.FiscalPeriodEnd player_idx)::msgs else msgs in
+        let msgs, pause = if params.time > C.fin_period_ticks then
+          (UIM.FiscalPeriodEnd player_idx)::msgs, true
+          else msgs, v.pause in
 
         (* Player.fiscal_period_end stations params player in *)
         let player = Player.track_maintenance_random_spot track v.random player in
-        stations, player, dev_state, active_station, msgs
+        stations, player, dev_state, active_station, pause, msgs
       else
-        stations, player, v.dev_state, player.active_station, []
+        stations, player, v.dev_state, player.active_station, v.pause, []
     in
 
     let track, map, stations, stocks, ai, ai_msgs =
@@ -979,7 +981,7 @@ let handle_cycle v =
     let player = [%up {player with active_station; trains; m}] in
     let players = if player =!= player_old then Player.set player_idx player players else players in
 
-    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params}] in
+    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params; pause}] in
     let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @
       fin_msgs @ climate_msgs @ event_msgs @ year_end_msgs @ crash_msgs
     in

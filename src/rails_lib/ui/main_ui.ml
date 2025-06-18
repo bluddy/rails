@@ -836,10 +836,18 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | EngineInfo _
     | StationReport _
-    | Balance_sheet _
     | Income_statement _
     | Efficiency_report
     | Accomplishments -> modal_screen_no_input ~next_mode:Normal v event
+
+    | Balance_sheet state ->
+      (* Balance sheet at the fin period end is the last before we do housecleaning *)
+      if Event.is_left_click event || Event.key_modal_dismiss event then
+        let action = if state.end_of_year then B.Action.FinEndProceed C.player else nobaction in
+        let v = if state.end_of_year then v else {v with mode=Normal} in
+        v, action
+      else
+        v, nobaction
 
     | GenericScreen {next_mode;_} -> modal_screen_no_input ~next_mode v event
 
