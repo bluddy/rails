@@ -1138,6 +1138,12 @@ let handle_msgs (s:State.t) v ui_msgs =
             let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode} in
             {v with mode}
 
+      | FiscalPeriodEndMsgs(player_idx, msgs) ->
+          if Owner.(player_idx <> main_player_idx) then v
+          else
+            let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
+            {v with mode}
+
       (* 
          TODO: Record Profits on 
          name earnings

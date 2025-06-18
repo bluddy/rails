@@ -61,8 +61,6 @@ type t =
   | BridgeWashout of {player_idx: Owner.t; loc: loc; fixed: bool}
   | ClimateChange of {climate: Climate.t; reason: Climate.reason}
   | EngineDiscovered of Engine.t
-  | FiscalPeriodEnd of Owner.t
-  | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   | ImpossibleRoute of {player_idx: Owner.t; train_idx: Train.Id.t; src: loc; dst: loc}
   | TrainAccident of {player_idx: Owner.t}
   | TrainBridgeAccident of {player_idx: Owner.t; engine: Engine.t}
@@ -74,5 +72,7 @@ type t =
   | NewGoodPickedUp of {player_idx: Owner.t; good: Goods.t; station: loc; engine: Engine.make; cars: Goods.t list; buying: loc list}
   | NewGoodDelivery of {player_idx: Owner.t; good: Goods.t; src: loc; dst: loc; amount: int; revenue: Money.t; engine: Engine.make; cars: Goods.t list; speed: int}
   | SpeedRecord of {player_idx: Owner.t; speed: int; src: loc; dst: loc; train_idx: Train.Id.t }
+  | FiscalPeriodEnd of Owner.t
+  | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   [@@deriving yojson]
 
