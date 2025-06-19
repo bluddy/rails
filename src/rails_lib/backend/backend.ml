@@ -139,6 +139,9 @@ let get_net_worth player_idx v = get_player_ai Player.net_worth Ai.get_net_worth
 let get_name player_idx v =
   get_player_ai (Player.get_name v.stations v.cities) (Ai.get_name ~cities:v.cities) player_idx v
 
+let get_handle player_idx v =
+  get_player_ai (Player.get_handle v.stations v.cities) (Ai.get_name ~cities:v.cities) player_idx v
+
 let get_track_length player_idx v =
   get_player_ai Player.track_length Ai.get_track_length player_idx v
 

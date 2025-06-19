@@ -713,7 +713,6 @@ let handle_event (s:State.t) v (event:Event.t) =
             )
 
     | BuildHighGrade build_menu ->
-        let fonts = s.fonts in
         handle_modal_menu_events build_menu
         (fun x -> BuildHighGrade x)
         (fun ({data={x;y;dir;player_idx} as msg;_} as modal) -> function
@@ -875,8 +874,8 @@ let handle_msgs (s:State.t) v ui_msgs =
     | (`Fast | `Slow) as x when not (B_options.equal_speed (B.get_speed b) `Turbo) -> Some x
     | _ -> None
   in
-  let make_news ?(next_mode=Normal) ?(background=Normal) state =
-    Newspaper {state; next_mode; background} in
+  let make_news ?(next=Normal) ?(background=Normal) state =
+    Newspaper {state; next_mode=next; background} in
   let handle_msg v ui_msg =
     match v.mode with 
     | BuildTrain(`AddCars _) ->
@@ -893,7 +892,7 @@ let handle_msgs (s:State.t) v ui_msgs =
 
     | Normal ->
       let accident player_idx =
-        let name = B.get_player player_idx b |> Player.get_name b.stations b.cities in
+        let name = B.get_handle player_idx b in
         let text = Printf.sprintf "TRAIN WRECK on %s!" name in
         let num_people = (Newspaper.day_of_year b.params.time) mod 16 + 2 in
         let text2 = Printf.sprintf "%d persons injured." num_people in
@@ -1061,18 +1060,18 @@ let handle_msgs (s:State.t) v ui_msgs =
 
       | EngineDiscovered(engine) ->
         let mode =
-          let next_mode=EngineInfo(Engine_info.make engine) in
+          let next=EngineInfo(Engine_info.make engine) in
           let text = engine.name,
                      "Locmotive Introduced.",
                      "Bigger, Better, Faster." in
-          make_news ~next_mode @@ Newspaper.make_fancy s text b.params b.random in
+          make_news ~next @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
       | RateWarDeclared{player_idx; other_player_idx; station} ->
         let mode =
           let station_name = Station_map.get_exn station b.stations |> Station.get_name in
-          let player_name = B.get_name player_idx b in
-          let other_name = B.get_name other_player_idx b in
+          let player_name = B.get_handle player_idx b in
+          let other_name = B.get_handle other_player_idx b in
           let text = "Rate War Declared in",
                      (Printf.sprintf "%s!" station_name),
                      (Printf.sprintf "%s vs. %s." player_name other_name) in
@@ -1081,8 +1080,8 @@ let handle_msgs (s:State.t) v ui_msgs =
 
       | PlayerTakesControlOfOther{player_idx; other} ->
         let mode =
-          let player_name = B.get_name player_idx b in
-          let other_name = B.get_name other b in
+          let player_name = B.get_handle player_idx b in
+          let other_name = B.get_handle other b in
           let text = (Printf.sprintf "%s take control" player_name),
                      (Printf.sprintf "of %s Railroad!" other_name),
                      "Wall Street amazed." in
@@ -1091,7 +1090,7 @@ let handle_msgs (s:State.t) v ui_msgs =
 
       | OwnerFired {player_idx; by} ->
         let mode =
-          let player_name = B.get_name player_idx b in
+          let player_name = B.get_handle player_idx b in
           let text = (Printf.sprintf "%s president leaves" player_name),
                      "town after meeting",
                      match by with | `Stockholders -> "with stockholders." | `Management -> "with new Management" in
@@ -1149,26 +1148,21 @@ let handle_msgs (s:State.t) v ui_msgs =
           else
             let records_earnings, warnings, records = Fiscal_period_end.handle_msgs b msgs in
             let background = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
+            (* Build the modes backwards *)
+            let mode = Normal in
+            let mode = if String.length records > 0 then
+              make_msgbox_mode s ~x:80 ~y:60 warnings ~background ~next:mode
+              else mode
+            in
+            let mode = if String.length warnings > 0 then
+              make_msgbox_mode s ~x:64 ~y:40 warnings ~background ~next:mode
+              else mode
+            in
             let mode = match records_earnings with
-             | Some texts -> make_news ~background @@ Newspaper.make_fancy s texts b.params b.random
+             | Some texts -> make_news ~background ~next:mode @@ Newspaper.make_fancy s texts b.params b.random
              | None -> Normal
             in
-            let first_mode = mode in
-            let mode = if String.length warnings > 0 then
-              make_msgbox_mode s ~x:64 ~y:40 warnings |> Option.some
-              else None
-            in
-            let records_msgbox = if String.length records > 0 then
-              make_msgbox_mode s ~x:80 ~y:60 warnings |> Option.some
-              else None
-            in
             {v with mode}
-
-      (* 
-         TODO: Record Profits on 
-         name earnings
-         in last two years.
-         *)
 
       | StockBroker _ | TrainBuilt _ -> v
 
