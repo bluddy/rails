@@ -82,7 +82,8 @@ type ('state, 'menu_options, 'payload) modalmenu =
   {
     menu: ('menu_options option, 'state) Menu.MsgBox.t;
     data: 'payload;
-    last: 'state mode;
+    background: 'state mode;
+    next: 'state mode;
   }
     (* Main modes of operation of the mapview.
        Any special menu needs a mode.
@@ -93,7 +94,7 @@ type ('state, 'menu_options, 'payload) modalmenu =
 and 'state mode =
   | Normal
   | ModalMsgbox of ('state, unit, unit) modalmenu
-  | Newspaper of {state: 'state Newspaper_d.t; next_mode: 'state mode}
+  | Newspaper of {state: 'state Newspaper_d.t; next_mode: 'state mode; background: 'state mode}
   | BuildStation of ('state, Station.kind, unit) modalmenu
   | BuildBridge of ('state, Bridge.t, Backend.Action.msg) modalmenu
   | BuildHighGrade of ('state, [`BuildTunnel | `BuildTrack], Backend.Action.msg) modalmenu
@@ -126,6 +127,9 @@ and 'state mode =
 let is_normal_mode = function
   | Normal -> true
   | _ -> false
+
+let make_modal ?(background=Normal) ?(next=Normal) menu data = 
+  {menu; data; background; next}
 
 type 'state t = {
   dims: dims;

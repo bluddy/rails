@@ -421,9 +421,13 @@ let handle_train_roster_event (s:State.t) v event =
 
 let nobaction = B.Action.NoAction
 
-let make_msgbox ?x ?y s v ~fonts text =
-  let menu = Menu.MsgBox.make_basic ?x ?y s ~fonts text in
-  let mode = ModalMsgbox {menu; data=(); last=Normal} in
+let make_msgbox_mode ?x ?y ?background ?next s text =
+  let menu = Menu.MsgBox.make_basic ?x ?y s ~fonts:s.State.fonts text in
+  let modal = make_modal ?background ?next menu () in
+  ModalMsgbox modal
+
+let make_msgbox ?x ?y s v text =
+  let mode = make_msgbox_mode ?x ?y s text in
   {v with mode}, nobaction
 
 let check_add_pause_msg old_mode old_menu v =
@@ -451,7 +455,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           (build_fn:(State.t, b, c) modalmenu -> State.t mode)
           (process_fn:(State.t, b, c) modalmenu -> b -> State.t t * B.Action.t) ->
       let menu, action = Menu.MsgBox.update s modal.menu event in
-      let exit_mode () = {v with mode=modal.last}, B.Action.NoAction in
+      let exit_mode () = {v with mode=modal.next}, B.Action.NoAction in
       begin match action with
       | Menu.On(None) -> exit_mode ()
       | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
@@ -500,13 +504,13 @@ let handle_event (s:State.t) v (event:Event.t) =
             let menu =
               build_station_menu s.fonts (B.get_region s.backend)
               |> Menu.MsgBox.do_open_menu s in
-            let modal = {menu; data=(); last=Normal} in
+            let modal = make_modal menu () in
             {v with mode=BuildStation modal}, nobaction
         | On `Build_industry, _ ->
             let menu =
               build_industry_menu s.fonts (B.get_region s.backend)
               |> Menu.MsgBox.do_open_menu s in
-            let modal = {menu; data=(); last=Normal} in
+            let modal = make_modal menu () in
             {v with mode=BuildIndustry(`ChooseIndustry modal)}, nobaction
         | On `BuildTrack, _ ->
             {v with view=Mapview.set_build_mode v.view true}, nobaction 
@@ -574,13 +578,13 @@ let handle_event (s:State.t) v (event:Event.t) =
         | _, `BuildBridge msg ->
             let menu = build_bridge_menu s.fonts (B.get_region s.backend)
               |> Menu.MsgBox.do_open_menu s in
-            let modal = {menu; data=msg; last=Normal} in
+            let modal = make_modal menu msg in
             {v with mode=BuildBridge modal}, nobaction
         | _, `HighGradeTrack(msg, grade, tunnel) ->
             let menu = build_high_grade_menu ~grade ~tunnel s.fonts
               |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
             in
-            let modal = {menu; data=msg; last=Normal} in
+            let modal = make_modal menu msg in
             {v with mode=BuildHighGrade modal}, nobaction
         | _, `ShowTileInfo (x, y, tile) ->
             let info = Tile.Info.get (B.get_region s.backend) tile in
@@ -643,7 +647,8 @@ let handle_event (s:State.t) v (event:Event.t) =
               Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:4
               |> Menu.MsgBox.do_open_menu s
             in
-            let mode = ModalMsgbox {menu; data=(); last=Normal} in
+            let modal = make_modal menu () in
+            let mode = ModalMsgbox modal in
             {v with mode}, nobaction
 
         | _, `SignalMenu(x, y, dir, screen_x, screen_y) ->
@@ -652,7 +657,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               (* build_signal_menu s.fonts 10 10 (*((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y) *) *)
               |> Menu.MsgBox.do_open_menu s
             in
-            let modal = {menu; data=(x, y, dir); last=Normal} in
+            let modal = make_modal menu (x, y, dir) in
             {v with mode=SignalMenu modal}, nobaction
 
         | _, `StationView(x, y) ->
@@ -682,12 +687,12 @@ let handle_event (s:State.t) v (event:Event.t) =
         handle_modal_menu_events build_menu
         (fun x -> BuildStation x)
         (fun modal station_kind ->
-            let exit_mode () = {v with mode=modal.last}, nobaction in
+            let exit_mode () = {v with mode=modal.next}, nobaction in
             let x, y = Mapview.get_cursor_pos v.view in
             match Backend.check_build_station x y player_idx station_kind s.backend with
             | `Ok ->
                 let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
-                {v with mode=modal.last}, backend_action
+                {v with mode=modal.next}, backend_action
                 (* TODO: handle other cases *)
             | _ -> exit_mode ()
             )
@@ -702,9 +707,9 @@ let handle_event (s:State.t) v (event:Event.t) =
             | `Ok -> 
                 let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
                 let view = Mapview.move_const_box v.view dir 2 in
-                {v with mode=modal.last; view}, backend_action
+                {v with mode=modal.next; view}, backend_action
             | _ ->
-                {v with mode=modal.last}, nobaction
+                {v with mode=modal.next}, nobaction
             )
 
     | BuildHighGrade build_menu ->
@@ -714,7 +719,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun ({data={x;y;dir;player_idx} as msg;_} as modal) -> function
           | `BuildTrack ->
               let view = Mapview.move_const_box v.view dir 1 in
-              {v with mode=modal.last; view}, B.Action.BuildTrack msg
+              {v with mode=modal.next; view}, B.Action.BuildTrack msg
           | `BuildTunnel ->
               match B.check_build_tunnel (x, y) player_idx ~dir s.backend with
               | `Tunnel(length, disp_length, cost) ->
@@ -723,16 +728,16 @@ let handle_event (s:State.t) v (event:Event.t) =
                       ~region:(B.get_region s.backend) s.fonts
                     |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
                   in
-                  let modal = {menu; data=(msg, length); last=Normal} in
+                  let modal = make_modal menu (msg, length) in
                   {v with mode=BuildTunnel modal}, nobaction
               | `HitWater ->
-                  make_msgbox s v ~fonts "Can't tunnel under water!"
+                  make_msgbox s v "Can't tunnel under water!"
               | `HitsTrack ->
-                  make_msgbox s v ~fonts "Tunnel can't cross\nexisting track!"
+                  make_msgbox s v "Tunnel can't cross\nexisting track!"
               | `OutOfBounds ->
-                  make_msgbox s v ~fonts "Can't tunnel off map."
+                  make_msgbox s v "Can't tunnel off map."
               | `TooLong ->
-                  make_msgbox s v ~fonts "Tunnel too long."
+                  make_msgbox s v "Tunnel too long."
         )
 
     | BuildTunnel build_menu ->
@@ -765,11 +770,11 @@ let handle_event (s:State.t) v (event:Event.t) =
           let (x, y) = Mapview.get_cursor_pos v.view in
           let site = Tilemap.search_for_industry_site x y wanted_tile ~region:(B.get_region s.backend) s.backend.map in
           match site with
-          | None -> make_msgbox ~x:144 ~y:24 s v ~fonts:s.fonts "No suitable site found.\nTry another location."
+          | None -> make_msgbox ~x:144 ~y:24 s v "No suitable site found.\nTry another location."
           | Some (x, y) ->
             let view = Mapview.set_const_box_to_loc v.view ~x ~y in
             let menu = confirm_build_site_menu s.fonts |> Menu.MsgBox.do_open_menu s in
-            let modal = {menu; data=(wanted_tile, x, y); last=Normal} in
+            let modal = make_modal menu (wanted_tile, x, y) in
             {v with view; mode=BuildIndustry(`ConfirmBuild modal)}, nobaction)
 
     | BuildIndustry(`ConfirmBuild(confirm_menu)) ->
@@ -823,7 +828,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | FindCity state ->
       let state2, status = Find_city.handle_event event s.backend.cities state in
       let v = begin match status with
-        | `Fail -> make_msgbox ~x:92 ~y:50 s v ~fonts:s.fonts "No such city." |> fst
+        | `Fail -> make_msgbox ~x:92 ~y:50 s v "No such city." |> fst
         | `Stay -> if state2 === state then v else {v with mode=FindCity state2}
         | `Return (x,y) ->
             let view = v.view
@@ -870,7 +875,8 @@ let handle_msgs (s:State.t) v ui_msgs =
     | (`Fast | `Slow) as x when not (B_options.equal_speed (B.get_speed b) `Turbo) -> Some x
     | _ -> None
   in
-  let make_news ?(next_mode=Normal) state = Newspaper {state; next_mode} in
+  let make_news ?(next_mode=Normal) ?(background=Normal) state =
+    Newspaper {state; next_mode; background} in
   let handle_msg v ui_msg =
     match v.mode with 
     | BuildTrain(`AddCars _) ->
@@ -957,7 +963,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             (Station_map.get_exn a.src b.stations |> Station.get_name)
             (Station_map.get_exn a.dst b.stations |> Station.get_name)
           in
-          fst @@ make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text
+          fst @@ make_msgbox ~x:100 ~y:8 s v text
 
       | NewCompany{opponent; city} ->
         let text = Ai.new_ai_text opponent city b.cities in
@@ -972,12 +978,12 @@ let handle_msgs (s:State.t) v ui_msgs =
       | AiBuildOrderFailed{player_idx; ai_name; src_name; tgt_name} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let text = Ai.build_order_fail_text ai_name src_name tgt_name in
-        fst @@ make_msgbox ~x:100 ~y:8 s v ~fonts:s.fonts text
+        fst @@ make_msgbox ~x:100 ~y:8 s v text
 
       | IndustryBuilt{player_idx; tile} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let tile_s = Tile.show tile in
-        fst @@ make_msgbox ~x:24 ~y:144 s v ~fonts:s.fonts @@ Printf.sprintf "%s built." tile_s
+        fst @@ make_msgbox ~x:24 ~y:144 s v @@ Printf.sprintf "%s built." tile_s
 
       | (AiBuySellOwnStock {opponent;_}
       | AiBuysPlayerStock {opponent;_}
@@ -1142,11 +1148,20 @@ let handle_msgs (s:State.t) v ui_msgs =
           if Owner.(player_idx <> main_player_idx) then v
           else
             let records_earnings, warnings, records = Fiscal_period_end.handle_msgs b msgs in
-            let next_mode = match records_earnings with
-             | Some texts -> make_news @@ Newspaper.make_fancy s texts b.params b.random
+            let background = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
+            let mode = match records_earnings with
+             | Some texts -> make_news ~background @@ Newspaper.make_fancy s texts b.params b.random
              | None -> Normal
             in
-            let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
+            let first_mode = mode in
+            let mode = if String.length warnings > 0 then
+              make_msgbox_mode s ~x:64 ~y:40 warnings |> Option.some
+              else None
+            in
+            let records_msgbox = if String.length records > 0 then
+              make_msgbox_mode s ~x:80 ~y:60 warnings |> Option.some
+              else None
+            in
             {v with mode}
 
       (* 
@@ -1352,10 +1367,10 @@ let render (win:R.window) (s:State.t) v =
     | Normal ->
         render_main win s v
     | ModalMsgbox modal ->
-        render_mode modal.last;
+        render_mode modal.background;
         Menu.MsgBox.render win s modal.menu
     | Newspaper news ->
-        render_main win s v;
+        render_mode news.background;
         Newspaper.render win s news.state
     | BuildStation modal ->
         render_main win s v;
