@@ -422,6 +422,7 @@ let handle_train_roster_event (s:State.t) v event =
 let nobaction = B.Action.NoAction
 
 let make_msgbox_mode ?x ?y ?background ?next s text =
+  if String.length text = 0 then Normal else
   let menu = Menu.MsgBox.make_basic ?x ?y s ~fonts:s.State.fonts text in
   let modal = make_modal ?background ?next menu () in
   ModalMsgbox modal
@@ -840,7 +841,6 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | EngineInfo _
     | StationReport _
-    | Income_statement _
     | Efficiency_report
     | Accomplishments -> modal_screen_no_input ~next_mode:Normal v event
 
@@ -853,8 +853,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       else
         v, nobaction
 
-    | GenericScreen {next_mode;_} -> modal_screen_no_input ~next_mode v event
-
+    | Income_statement {next_mode; _}
+    | GenericScreen {next_mode;_}
     | Animation {next_mode; _} -> modal_screen_no_input ~next_mode v event
         
   in
@@ -889,6 +889,31 @@ let handle_msgs (s:State.t) v ui_msgs =
     | Stock_broker state ->
         let state2 = Stock_broker.handle_msg s state ui_msg in
         if state2 === state then v else {v with mode=Stock_broker state2}
+
+    | Balance_sheet {end_of_year=true; _} ->
+      begin match ui_msg with
+      | FiscalPeriodEndMsgs(player_idx, msgs) ->
+          if Owner.(player_idx <> main_player_idx) then v
+          else
+            let records_earnings, warnings, records = Fiscal_period_end.handle_msgs b msgs in
+            let background = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
+            (* Build the modes backwards *)
+            let mode = Normal in
+            let mode = if String.length records > 0 then
+              make_msgbox_mode s ~x:80 ~y:60 records ~background ~next:mode
+              else mode
+            in
+            let mode = if String.length warnings > 0 then
+              make_msgbox_mode s ~x:64 ~y:40 warnings ~background ~next:mode
+              else mode
+            in
+            let mode = match records_earnings with
+             | Some texts -> make_news ~background ~next:mode @@ Newspaper.make_fancy s texts b.params b.random
+             | None -> mode
+            in
+            {v with mode}
+      | _ -> v
+      end
 
     | Normal ->
       let accident player_idx =
@@ -1143,28 +1168,9 @@ let handle_msgs (s:State.t) v ui_msgs =
             let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode} in
             {v with mode}
 
-      | FiscalPeriodEndMsgs(player_idx, msgs) ->
-          if Owner.(player_idx <> main_player_idx) then v
-          else
-            let records_earnings, warnings, records = Fiscal_period_end.handle_msgs b msgs in
-            let background = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
-            (* Build the modes backwards *)
-            let mode = Normal in
-            let mode = if String.length records > 0 then
-              make_msgbox_mode s ~x:80 ~y:60 warnings ~background ~next:mode
-              else mode
-            in
-            let mode = if String.length warnings > 0 then
-              make_msgbox_mode s ~x:64 ~y:40 warnings ~background ~next:mode
-              else mode
-            in
-            let mode = match records_earnings with
-             | Some texts -> make_news ~background ~next:mode @@ Newspaper.make_fancy s texts b.params b.random
-             | None -> mode
-            in
-            {v with mode}
-
-      | StockBroker _ | TrainBuilt _ -> v
+      | FiscalPeriodEndMsgs _
+      | StockBroker _
+      | TrainBuilt _ -> v
 
       end
     | _ -> v

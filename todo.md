@@ -36,7 +36,11 @@
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - Bug:
+  - AIs don't seem to get created.
   - 2 stations: 1 station not being delivered to.
+  - B and P in priority shipment are off left by one
+  - Fancy paper: press any key is too high
+  - Station screen has name in wrong place
   - Can't upgrade station
   - Animation: old timing issues
   - Delivery + priority pickup: no delivery message
