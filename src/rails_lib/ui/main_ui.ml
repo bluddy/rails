@@ -1160,7 +1160,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             in
             let mode = match records_earnings with
              | Some texts -> make_news ~background ~next:mode @@ Newspaper.make_fancy s texts b.params b.random
-             | None -> Normal
+             | None -> mode
             in
             {v with mode}
 
