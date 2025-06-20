@@ -12,6 +12,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module Vector = Utils.Vector
 module U = Utils
+module M = Money
 
 type monetary = {
   cash: Money.t; (* all x1000 *)
@@ -265,6 +266,25 @@ let fiscal_period_end net_worth stations params v =
   let v = {v with m; history; record } in
   (* TODO: change current period in backend *)
   v, total_revenue, Ui_msg.FiscalPeriodEndMsgs(v.idx, ui_msgs)
+
+let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
+  let player_idx = v.idx in
+  let old_share_price = Stock_market.share_price v.idx stocks in
+  let total_shares = Stock_market.total_shares v.idx stocks in
+  let share_price = M.div M.((total_revenue / 4 + net_worth + of_int 5)) (total_shares / 10) in
+  let share_price = M.(max (of_int 1) share_price) in
+  let avg_share_price = Stock_market.avg_share_price player_idx stocks in
+  let avg_share_price = M.((avg_share_price * 7) / 8 + share_price) in
+  let fiscal_period_div = Utils.clip params.Params.num_fiscal_periods ~min:1 ~max:4 in
+  let z = (((share_price * 8) - avg_share_price) * 12) + (avg_share_price / 16) in
+  let avg_share_price_growth = (z / ((avg_share_price / 8) + 1)) / fiscal_period_div in
+  let stocks = stocks
+    |> Stock_market.set_share_price share_price v.idx
+    |> Stock_market.set_avg_share_price avg_share_price v.idx
+  in
+  stocks
+  
+
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in

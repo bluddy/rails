@@ -18,6 +18,7 @@ type t = {
   prices: M.t Owner.Map.t; (* share prices *)
   totals: int Owner.Map.t; (* total number of shares *)
   price_histories: price_history Owner.Map.t; (* prices over time in fiscal periods *)
+  avg_prices: M.t Owner.Map.t;
 } [@@deriving yojson]
 
 let default = {
@@ -25,6 +26,7 @@ let default = {
   prices=Owner.Map.empty;
   totals=Owner.Map.empty;
   price_histories=Owner.Map.empty;
+  avg_prices=Owner.Map.empty;
 }
 
 let player_starting_share_price difficulty = 
@@ -62,6 +64,12 @@ let total_shares player_idx v = Owner.Map.get_or ~default:0 player_idx v.totals
 let non_treasury_shares player_idx v = total_shares player_idx v - treasury_shares player_idx v
 
 let share_price player_idx v = Owner.Map.get_or ~default:M.zero player_idx v.prices
+
+let set_share_price price player_idx v = Owner.Map.add player_idx price v.prices
+
+let avg_share_price player_idx v = Owner.Map.get_or ~default:M.zero player_idx v.avg_prices
+
+let set_avg_share_price price player_idx v = Owner.Map.add player_idx price v.avg_prices
 
 let owned_share_value ~total_shares ~owned_shares ~(share_price:M.t) =
   (* We need to account for the cost of selling all our stock 10k shares at a time *)
@@ -335,4 +343,11 @@ let declare_bankruptcy player_idx players v =
   )
   (v, Owner.Map.empty)
   players
+
+let split_stock player_idx v =
+  let prices = Owner.Map.update player_idx (Option.map @@ fun price -> M.(price / 2)) v.prices in
+  let avg_prices = Owner.Map.update player_idx (Option.map @@ fun price -> M.(price / 2)) v.avg_prices in
+  let totals = Owner.Map.update player_idx (Option.map @@ ( * ) 2) v.totals in
+  let ownership = Owner.Map.map (Owner.Map.update player_idx (Option.map @@ ( * ) 2)) v.ownership in
+  {v with prices; avg_prices; totals; ownership}
 

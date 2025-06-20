@@ -65,4 +65,6 @@ let clip v ~min ~max =
   else
     min
 
+let max v1 v2 = if v1 > v2 then v1 else v2
+
 
