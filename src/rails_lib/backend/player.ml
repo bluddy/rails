@@ -20,7 +20,6 @@ type monetary = {
   owned_industry: Money.t;
   yearly_interest_payment: Money.t;
   net_worth: Money.t;
-  net_worth_last_period: Money.t;
   in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
   total_income_statement: Income_statement_d.t;
@@ -35,7 +34,6 @@ let default_monetary = {
     owned_industry = Money.zero;
     yearly_interest_payment = Money.of_int 20;
     net_worth = Money.of_int 500; 
-    net_worth_last_period = Money.of_int 500; 
     in_receivership = false;
     income_statement = Income_statement_d.default;
     total_income_statement = Income_statement_d.default;
@@ -172,7 +170,7 @@ let add_income_stmt income_stmt (v:t) =
   let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
 
-let fiscal_period_end player_net_worth stations params v =
+let fiscal_period_end net_worth stations params v =
   (* Messages and housecleaning *)
   let current_period = Params.current_period params in
   let next_period = Params.last_period params in
@@ -217,8 +215,7 @@ let fiscal_period_end player_net_worth stations params v =
     if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
       (Ui_msg.ConsiderBankruptcy)::ui_msgs else ui_msgs
   in
-  let earnings = Money.((v.m.net_worth - v.m.net_worth_last_period) * 10) in
-  let earnings_history = earnings::v.history.earnings in
+  let earnings = Money.((net_worth - v.m.net_worth) * 10) in
   let earnings_record, ui_msgs =
     if Money.(earnings > v.record.earnings) then
       earnings, Ui_msg.RecordEarnings(earnings)::ui_msgs
@@ -229,7 +226,6 @@ let fiscal_period_end player_net_worth stations params v =
   let total_time = (10 + Pair.fold (fun p1 p2 -> p1.time_running + p2.time_running) v.periodic) / 10 in
   let total_dist = 6 * (Pair.fold (fun p1 p2 -> p1.dist_traveled + p2.dist_traveled) v.periodic) in
   let avg_speed = total_dist / total_time in
-  let avg_speed_history = (avg_speed / 2)::v.history.avg_speed in
   let avg_speed_record, ui_msgs =
     if avg_speed > v.record.avg_speed then
       avg_speed, Ui_msg.AvgSpeedRecord(avg_speed)::ui_msgs
@@ -237,27 +233,25 @@ let fiscal_period_end player_net_worth stations params v =
       v.record.avg_speed, ui_msgs
   in
   let ton_miles = (Utils.read_pair v.periodic current_period).ton_miles in
-  let ton_mile_history = ton_miles::v.history.ton_miles in
   let ton_mile_record, ui_msgs =
     if ton_miles > v.record.ton_miles then
       ton_miles, Ui_msg.TonMileRecord(ton_miles)::ui_msgs
     else
       v.record.ton_miles, ui_msgs
   in
-  let total_revenue_history = total_revenue::v.history.total_revenue in
   let total_revenue_record, ui_msgs =
     if Money.(total_revenue > v.record.total_revenue) then
       total_revenue, Ui_msg.RevenueRecord(total_revenue)::ui_msgs
     else
       v.record.total_revenue, ui_msgs
   in
-  let net_worth_last_period = v.m.net_worth in
-  let m = { v.m with net_worth_last_period; income_statement; total_income_statement } in
-  let history = History.{v.history with
-    total_revenue=total_revenue_history;
-    earnings=earnings_history;
-    ton_miles=ton_mile_history;
-    avg_speed=avg_speed_history; 
+  let m = { v.m with net_worth; income_statement; total_income_statement } in
+  let history = History.{
+    total_revenue=total_revenue::v.history.total_revenue;
+    earnings=earnings::v.history.earnings;
+    ton_miles=ton_miles::v.history.ton_miles;
+    avg_speed=(avg_speed / 2)::v.history.avg_speed;
+    net_worth=net_worth::v.history.net_worth;
   } in
   let record = Record.{
     v.record with

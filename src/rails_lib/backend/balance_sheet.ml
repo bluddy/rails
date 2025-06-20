@@ -55,9 +55,6 @@ let create player_idx players stocks stations params tracks map =
     stockholders_equity;
   }
 
-(* let create_b ?end_of_year (b:Backend_d.t) player_idx = *)
-(*   create ?end_of_year player_idx b.players b.stocks b.stations b.params b.tracks b.map b.trains *)
-
 let compute_assets b =
   (* TODO: for some reason, we have different ways of rounding different assets of the balance sheet *)
   M.(b.operating_funds + b.treasury_stock + b.other_rr_stock + b.facilities + b.industries + b.real_estate + b.track + b.rolling_stock)
