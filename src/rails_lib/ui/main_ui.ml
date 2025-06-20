@@ -555,10 +555,10 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Options option), _ ->
             {v with view=Mapview.update_option option true v.view }, nobaction
         | On (`Balance_sheet), _ ->
-            let b = Balance_sheet.create s player_idx in
-            {v with mode=Balance_sheet b}, nobaction
+            let state = B.create_balance_sheet player_idx s.backend in
+            {v with mode=Balance_sheet {state; end_of_year=false}}, nobaction
         | On (`Income_statement), _ ->
-            let state = Balance_sheet.create s player_idx in
+            let state = B.create_balance_sheet player_idx s.backend in
             {v with mode=Income_statement {state; next_mode=Normal}}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
@@ -1162,9 +1162,9 @@ let handle_msgs (s:State.t) v ui_msgs =
           if Owner.(player_idx <> main_player_idx) then v
           else
             (* Create a chain of modes *)
-            let bal = Balance_sheet.create ~end_of_year:true s player_idx in
-            let next_mode = Balance_sheet bal in
-            let next_mode = Income_statement {state=bal; next_mode} in
+            let state = B.create_balance_sheet player_idx s.backend in
+            let next_mode = Balance_sheet {state; end_of_year=true} in
+            let next_mode = Income_statement {state; next_mode} in
             let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode} in
             {v with mode}
 
@@ -1403,7 +1403,7 @@ let render (win:R.window) (s:State.t) v =
         Train_report.render win s state
     | Stock_broker state ->
         Stock_broker.render win s state
-    | Balance_sheet state ->
+    | Balance_sheet {state;_} ->
         Balance_sheet_view.render win s state
     | Income_statement {state;_} ->
         Income_statement_view.render win s state

@@ -908,6 +908,7 @@ let handle_cycle v =
         let dev_state, active_station = _develop_tiles v player in
 
         let msgs, pause = if params.time > C.fin_period_ticks then
+          (* We announce here and wait for the response from the UI *)
           (UIM.FiscalPeriodEnd player_idx)::msgs, true
           else msgs, v.pause in
 

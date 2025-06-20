@@ -4,12 +4,7 @@ module R = Renderer
 module B = Backend
 module M = Money
 
-let compute_assets (b:Balance_sheet.t) =
-  (* TODO: for some reason, we have different ways of rounding different assets of the balance sheet *)
-  M.(b.operating_funds + b.treasury_stock + b.other_rr_stock + b.facilities + b.industries + b.real_estate + b.track + b.rolling_stock)
-
-let compute_liabilities (b:Balance_sheet.t) =
-  M.(b.outstanding_loans + b.stockholders_equity)
+module Bal = Balance_sheet
 
 let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   let player_idx = C.player in
@@ -58,7 +53,7 @@ let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   write_total_and_ytd ~y "Rolling Stock:" b.rolling_stock pb.rolling_stock;
   R.draw_line win ~x1:128 ~y1:120 ~x2:180 ~y2:120 ~color:Ega.black;
   let y = y + line + 2 in
-  let assets = compute_assets b in
+  let assets = Bal.compute_assets b in
   write_money ~x:x_total ~y assets;
 
   let y = y + line in
@@ -68,8 +63,8 @@ let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   let y = y + line in
   write_total_and_ytd ~y "Stockholders Equity:" b.stockholders_equity pb.stockholders_equity;
   let y = y + line + line in
-  let profit = M.(assets + compute_liabilities b) in
-  let old_profit = M.(compute_assets pb + compute_liabilities pb) in
+  let profit = Bal.compute_profit b in
+  let old_profit = Bal.compute_profit pb in
   write_total_and_ytd ~y "PROFIT:" profit old_profit;
   ()
 

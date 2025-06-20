@@ -111,7 +111,7 @@ and 'state mode =
   ]
   | TrainReport of 'state Train_report_d.t
   | Stock_broker of 'state Stock_broker_d.t
-  | Balance_sheet of Balance_sheet_d.t
+  | Balance_sheet of {state: Balance_sheet_d.t; end_of_year: bool}
   | Accomplishments
   | Income_statement of { state: Balance_sheet_d.t; next_mode: 'state mode}  (* we use the stock part *)
   | EngineInfo of Engine_info.t

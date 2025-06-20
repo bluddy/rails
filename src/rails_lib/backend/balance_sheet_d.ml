@@ -13,7 +13,6 @@ type t = {
   rolling_stock: Money.t;
   outstanding_loans: Money.t;
   stockholders_equity: Money.t;
-  end_of_year: bool;
 } [@@deriving yojson]
 
 let default = {
@@ -28,6 +27,5 @@ let default = {
   rolling_stock=M.zero;
   outstanding_loans = Money.of_int @@ -500;
   stockholders_equity = Money.of_int @@ -500;
-  end_of_year=false;
 }
 

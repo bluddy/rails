@@ -629,11 +629,17 @@ let _start_broker_timer player_idx v =
     update_player v player_idx (fun player -> fst @@ Player.incr_broker_timer player)
   ) else v
 
-  (* Find end 1st stage: cyan screen, income statement, balance sheet
-     then we get this message to continue to the next stage *)
+let create_balance_sheet player_idx v =
+  Balance_sheet.create player_idx v.players v.stocks v.stations v.params v.track v.map
+
+  (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
+     then we get this message from the UI to continue to the next stage *)
 let _fin_end_proceed player_idx v =
+  let net_worth =
+    let balance_sheet = create_balance_sheet player_idx v in
+    Balance_sheet.compute_profit balance_sheet in
   let player = get_player player_idx v in
-  let player, ui_msgs = Player.fiscal_period_end v.stations v.params player in
+  let player, ui_msgs = Player.fiscal_period_end net_worth v.stations v.params player in
   let v = update_player v player_idx (fun _ -> player) in
   send_ui_msg v ui_msgs;
   let params = {v.params with

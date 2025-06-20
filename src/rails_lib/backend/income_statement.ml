@@ -3,6 +3,8 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 include Income_statement_d
 
+(* Income statement is maintained over time inside the player data *)
+
 let combine = Money.add
 let zero = Money.zero
 

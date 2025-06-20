@@ -172,7 +172,7 @@ let add_income_stmt income_stmt (v:t) =
   let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
 
-let fiscal_period_end stations params v =
+let fiscal_period_end player_net_worth stations params v =
   (* Messages and housecleaning *)
   let current_period = Params.current_period params in
   let next_period = Params.last_period params in
