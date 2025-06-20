@@ -639,7 +639,7 @@ let _fin_end_proceed player_idx v =
     let balance_sheet = create_balance_sheet player_idx v in
     Balance_sheet.compute_profit balance_sheet in
   let player = get_player player_idx v in
-  let player, ui_msgs = Player.fiscal_period_end net_worth v.stations v.params player in
+  let player, total_revenue, ui_msgs = Player.fiscal_period_end net_worth v.stations v.params player in
   let v = update_player v player_idx (fun _ -> player) in
   send_ui_msg v ui_msgs;
   let params = {v.params with

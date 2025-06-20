@@ -20,6 +20,7 @@ type monetary = {
   owned_industry: Money.t;
   yearly_interest_payment: Money.t;
   net_worth: Money.t;
+  profit: Money.t;
   in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
   total_income_statement: Income_statement_d.t;
@@ -32,6 +33,7 @@ let default_monetary = {
     bonds = Money.of_int 500;
     stockholders_equity = Money.of_int @@ -500;
     owned_industry = Money.zero;
+    profit = Money.zero;
     yearly_interest_payment = Money.of_int 20;
     net_worth = Money.of_int 500; 
     in_receivership = false;
@@ -171,7 +173,7 @@ let add_income_stmt income_stmt (v:t) =
   {v with m={v.m with income_statement; cash}}
 
 let fiscal_period_end net_worth stations params v =
-  (* Messages and housecleaning *)
+  (* Messages, computation, housecleaning *)
   let current_period = Params.current_period params in
   let next_period = Params.last_period params in
   let trains = v.trains in
@@ -215,7 +217,7 @@ let fiscal_period_end net_worth stations params v =
     if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
       (Ui_msg.ConsiderBankruptcy)::ui_msgs else ui_msgs
   in
-  let earnings = Money.((net_worth - v.m.net_worth) * 10) in
+  let earnings = Money.((net_worth - v.m.net_worth) * 10) in (* aka profit *)
   let earnings_record, ui_msgs =
     if Money.(earnings > v.record.earnings) then
       earnings, Ui_msg.RecordEarnings(earnings)::ui_msgs
@@ -245,7 +247,7 @@ let fiscal_period_end net_worth stations params v =
     else
       v.record.total_revenue, ui_msgs
   in
-  let m = { v.m with net_worth; income_statement; total_income_statement } in
+  let m = { v.m with net_worth; income_statement; total_income_statement; profit=earnings } in
   let history = History.{
     total_revenue=total_revenue::v.history.total_revenue;
     earnings=earnings::v.history.earnings;
@@ -261,9 +263,8 @@ let fiscal_period_end net_worth stations params v =
     total_revenue=total_revenue_record;
   } in
   let v = {v with m; history; record } in
-
   (* TODO: change current period in backend *)
-  v, Ui_msg.FiscalPeriodEndMsgs(v.idx, ui_msgs)
+  v, total_revenue, Ui_msg.FiscalPeriodEndMsgs(v.idx, ui_msgs)
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
