@@ -17,7 +17,7 @@ type t = {
   ownership: (int Owner.Map.t) Owner.Map.t;
   prices: M.t Owner.Map.t; (* share prices *)
   totals: int Owner.Map.t; (* total number of shares *)
-  price_histories: price_history Owner.Map.t; (* prices over time in fiscal periods *)
+  value_histories: price_history Owner.Map.t; (* prices over time in fiscal periods *)
   avg_prices: M.t Owner.Map.t;
 } [@@deriving yojson]
 
@@ -25,7 +25,7 @@ let default = {
   ownership=Owner.Map.empty;
   prices=Owner.Map.empty;
   totals=Owner.Map.empty;
-  price_histories=Owner.Map.empty;
+  value_histories=Owner.Map.empty;
   avg_prices=Owner.Map.empty;
 }
 
@@ -35,8 +35,8 @@ let player_starting_share_price difficulty =
 let add_human_player player_idx difficulty v =
   let totals = Owner.Map.add player_idx C.Stock.starting_num v.totals in
   let prices = Owner.Map.add player_idx (M.of_int @@ B_options.difficulty_to_enum difficulty + 7) v.prices in
-  let price_histories = Owner.Map.add player_idx [] v.price_histories in
-  {v with totals; prices; price_histories}
+  let value_histories = Owner.Map.add player_idx [] v.value_histories in
+  {v with totals; prices; value_histories}
 
 let add_ai_player player_idx ~num_fin_periods v =
   (* AI players come in late, so we need to complete their history *)
@@ -46,8 +46,8 @@ let add_ai_player player_idx ~num_fin_periods v =
     List.replicate (num_fin_periods - 1) M.zero 
     else []
   in
-  let price_histories = Owner.Map.add player_idx history v.price_histories in
-  {v with totals; prices; price_histories}
+  let value_histories = Owner.Map.add player_idx history v.value_histories in
+  {v with totals; prices; value_histories}
 
 let owned_shares owner ~owned v =
   match Owner.Map.get owner v.ownership with
@@ -355,3 +355,22 @@ let split_stock player_idx v =
   let ownership = Owner.Map.map (Owner.Map.update player_idx (Option.map @@ ( * ) 2)) v.ownership in
   {v with prices; avg_prices; totals; ownership}
 
+(* Value of all player stock *)
+let stock_value player_idx v =
+  let total_shares = total_shares player_idx v in
+  let share_price = share_price player_idx v in
+  M.(share_price * Int.(total_shares / 100))
+
+let update_history player_idx value v =
+  let value_histories =
+    Owner.Map.update player_idx (function
+      | None -> Some [value]
+      | Some xs -> Some(value::xs))
+      v.value_histories
+  in
+  {v with value_histories}
+
+let update_history_with_stock_value player_idx v =
+  let value = stock_value player_idx v in
+  update_history player_idx value v
+  

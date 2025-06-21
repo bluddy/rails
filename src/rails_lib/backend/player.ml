@@ -282,7 +282,9 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
     |> Stock_market.set_share_price player_idx share_price
     |> Stock_market.set_avg_share_price player_idx avg_share_price
     |> Stock_market.split_stock player_idx
+    |> Stock_market.update_history_with_stock_value player_idx
   in
+
   stocks
   
 
