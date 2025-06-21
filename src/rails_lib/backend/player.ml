@@ -276,11 +276,12 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
   let avg_share_price = Stock_market.avg_share_price player_idx stocks in
   let avg_share_price = M.((avg_share_price * 7) / 8 + share_price) in
   let fiscal_period_div = Utils.clip params.Params.num_fiscal_periods ~min:1 ~max:4 in
-  let z = (((share_price * 8) - avg_share_price) * 12) + (avg_share_price / 16) in
-  let avg_share_price_growth = (z / ((avg_share_price / 8) + 1)) / fiscal_period_div in
+  let z = M.((((share_price * 8) - avg_share_price) * 12) + (avg_share_price / 16)) in
+  let avg_share_price_growth = M.((z /~ ((avg_share_price / 8) +~ 1))) / fiscal_period_div |> M.of_int in
   let stocks = stocks
-    |> Stock_market.set_share_price share_price v.idx
-    |> Stock_market.set_avg_share_price avg_share_price v.idx
+    |> Stock_market.set_share_price player_idx share_price
+    |> Stock_market.set_avg_share_price player_idx avg_share_price
+    |> Stock_market.split_stock player_idx
   in
   stocks
   
