@@ -27,6 +27,14 @@ type stock_broker_ui_msg =
 
 module TID = Train.Id
 
+type investor_reaction =
+  | Investors_ecstatic
+  | Investors_pleased
+  | Investors_concerned
+  | Investors_very_concerned
+  | Investors_outraged
+  [@@deriving yojson]
+
 type fiscal_period_end_msg =
   | TrainNoRevenue of TID.t
   | TrainNoMaintenance of TID.t
@@ -38,6 +46,7 @@ type fiscal_period_end_msg =
   | AvgSpeedRecord of int
   | TonMileRecord of int
   | RevenueRecord of Money.t
+  | SharePriceChange of {from_: Money.t; to_: Money.t; avg_share_price_growth_pct: int}
   [@@deriving yojson]
 
 type t =
