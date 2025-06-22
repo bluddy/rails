@@ -285,21 +285,18 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
     |> Stock_market.set_share_price player_idx share_price
     |> Stock_market.set_avg_share_price player_idx avg_share_price
   in
-  let stocks, ui_msgs =
-    if M.(share_price > of_int 100) then
-      Stock_market.split_stock player_idx stocks, [Ui_msg.StockSplit]
-    else stocks, []
-  in
+  let split = M.(share_price > of_int 100) in
+  let stocks = if split then Stock_market.split_stock player_idx stocks else stocks in
   let stocks = Stock_market.update_history_with_stock_value player_idx stocks in
   let investor_opinion = Stock_market.investor_opinion avg_share_price_growth_pct in
   let investor_anger = v.m.investor_anger + Stock_market.investor_anger_mod investor_opinion in
-  let msg = Ui_msg.SharePriceChange{from_=old_share_price; to_=share_price; avg_share_price_growth_pct} in
-  (* TODO: fired logic, check ownership *)
+  let msg = Ui_msg.SharePriceChange{
+    player_idx; from_=old_share_price; to_=share_price; avg_share_price_growth_pct; split} in
   let fired =
     if investor_anger >= 5 && not @@ Stock_market.controls_company player_idx ~target:player_idx stocks then
       `Fired else `NotFired
   in
-  {v with m={v.m with investor_anger}}, stocks, fired, msg::ui_msgs
+  {v with m={v.m with investor_anger}}, stocks, fired, msg
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in

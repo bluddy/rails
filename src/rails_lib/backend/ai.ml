@@ -76,14 +76,20 @@ let owned_by_player stocks company =
 
 let new_ai_idx () = Owner.create_ai ()
 
-    (* Update valuation only for AI players *)
-let update_valuation player stocks v =
+(* Update valuation for AI players *)
+let _update_net_worth stocks ai_player =
   let open M in
-  let loans = v.bonds / 10 in
-  let cash = v.cash / 10 in
-  let stock_value = Stock_market.total_owned_stock_value player stocks in
-  let net_worth = cash - loans +~ (Int.mul v.track_length 2) + stock_value in
-  {v with net_worth}
+  let loans = ai_player.bonds / 10 in
+  let cash = ai_player.cash / 10 in
+  let stock_value = Stock_market.total_owned_stock_value ai_player.idx stocks in
+  let net_worth = cash - loans +~ Int.(ai_player.track_length * 2) + stock_value in
+  {ai_player with net_worth}
+
+let compute_share_price player stocks v =
+  let total_shares = Stock_market.total_shares player stocks in
+  let open M in
+  ((v.revenue_ytd / 3) + v.net_worth) / total_shares
+  |> M.to_int |> Utils.clip ~min:1 ~max:999 |> M.of_int
 
 let ai_of_city city v = LocMap.get city v.ai_of_city
 
@@ -943,6 +949,19 @@ let end_of_year_maintenance_interest v =
   in
   {v with ais}
 
-let fiscal_period_end_stock_eval stocks params v =
-  ()
+let fiscal_period_end_stock_eval stocks v =
+  let ais = Owner.Map.map (_update_net_worth stocks) v.ais in
+  let stocks, ui_msgs = Owner.Map.fold (fun player_idx ai_player (stocks, ui_msgs) ->
+    let share_price = Stock_market.share_price player_idx stocks in
+    let new_share_price = compute_share_price player_idx stocks ai_player in
+    let split = M.(new_share_price >= of_int 100) in
+    let stocks = Stock_market.set_share_price player_idx new_share_price stocks in
+    let stocks = if split then Stock_market.split_stock player_idx stocks else stocks in
+    let stocks = Stock_market.update_history_with_stock_value player_idx stocks in
+    let msg = Ui_msg.SharePriceChange{player_idx; from_=share_price; to_=new_share_price; avg_share_price_growth_pct=0; split} in
+    (stocks, msg::ui_msgs))
+    v.ais
+    (stocks, [])
+  in
+  {v with ais}, stocks, ui_msgs
 
