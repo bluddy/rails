@@ -294,7 +294,12 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
   let investor_opinion = Stock_market.investor_opinion avg_share_price_growth_pct in
   let investor_anger = v.m.investor_anger + Stock_market.investor_anger_mod investor_opinion in
   let msg = Ui_msg.SharePriceChange{from_=old_share_price; to_=share_price; avg_share_price_growth_pct} in
-  {v with m={v.m with investor_anger}}, stocks, msg::ui_msgs
+  (* TODO: fired logic, check ownership *)
+  let fired =
+    if investor_anger >= 5 && not @@ Stock_market.controls_company player_idx ~target:player_idx stocks then
+      `Fired else `NotFired
+  in
+  {v with m={v.m with investor_anger}}, stocks, fired, msg::ui_msgs
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
