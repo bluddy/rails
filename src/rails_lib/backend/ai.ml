@@ -943,3 +943,6 @@ let end_of_year_maintenance_interest v =
   in
   {v with ais}
 
+let fiscal_period_end_stock_eval stocks params v =
+  ()
+

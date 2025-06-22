@@ -374,3 +374,17 @@ let update_history_with_stock_value player_idx v =
   let value = stock_value player_idx v in
   update_history player_idx value v
   
+let investor_opinion growth_pct =
+  if growth_pct >= 25 then Ui_msg.Investors_ecstatic else
+  if growth_pct >= 10 then Investors_pleased else
+  if growth_pct > 5 then Investors_concerned else
+  if growth_pct > 2 then Investors_very_concerned else
+  Investors_outraged
+
+let investor_anger_mod = function
+  | Ui_msg.Investors_ecstatic -> -1
+  | Investors_pleased -> -1
+  | Investors_concerned -> 0
+  | Investors_very_concerned -> 0
+  | Investors_outraged -> 1
+  

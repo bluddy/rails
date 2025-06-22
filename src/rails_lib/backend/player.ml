@@ -14,13 +14,6 @@ module Vector = Utils.Vector
 module U = Utils
 module M = Money
 
-let investor_anger_mod = function
-  | Ui_msg.Investors_ecstatic -> -1
-  | Investors_pleased -> -1
-  | Investors_concerned -> 0
-  | Investors_very_concerned -> 0
-  | Investors_outraged -> 1
-  
 type monetary = {
   cash: Money.t; (* all x1000 *)
   bonds: Money.t;
@@ -291,19 +284,17 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
   let stocks = stocks
     |> Stock_market.set_share_price player_idx share_price
     |> Stock_market.set_avg_share_price player_idx avg_share_price
-    |> Stock_market.split_stock player_idx
-    |> Stock_market.update_history_with_stock_value player_idx
   in
-  let investor_opinion = 
-    if avg_share_price_growth_pct >= 25 then Ui_msg.Investors_ecstatic else
-    if avg_share_price_growth_pct >= 10 then Investors_pleased else
-    if avg_share_price_growth_pct > 5 then Investors_concerned else
-    if avg_share_price_growth_pct > 2 then Investors_very_concerned else
-    Investors_outraged
+  let stocks, ui_msgs =
+    if M.(share_price > of_int 100) then
+      Stock_market.split_stock player_idx stocks, [Ui_msg.StockSplit]
+    else stocks, []
   in
-  let investor_anger = v.m.investor_anger + investor_anger_mod investor_opinion in
+  let stocks = Stock_market.update_history_with_stock_value player_idx stocks in
+  let investor_opinion = Stock_market.investor_opinion avg_share_price_growth_pct in
+  let investor_anger = v.m.investor_anger + Stock_market.investor_anger_mod investor_opinion in
   let msg = Ui_msg.SharePriceChange{from_=old_share_price; to_=share_price; avg_share_price_growth_pct} in
-  {v with m={v.m with investor_anger}}, stocks, msg
+  {v with m={v.m with investor_anger}}, stocks, msg::ui_msgs
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in

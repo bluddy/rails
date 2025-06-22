@@ -46,6 +46,7 @@ type fiscal_period_end_msg =
   | AvgSpeedRecord of int
   | TonMileRecord of int
   | RevenueRecord of Money.t
+  | StockSplit
   | SharePriceChange of {from_: Money.t; to_: Money.t; avg_share_price_growth_pct: int}
   [@@deriving yojson]
 
