@@ -47,6 +47,7 @@ type fiscal_period_end_msg =
   | TonMileRecord of int
   | RevenueRecord of Money.t
   | SharePriceChange of {player_idx: Owner.t; from_: Money.t; to_: Money.t; avg_share_price_growth_pct: int; split: bool}
+  | DissolveCompany of Owner.t
   [@@deriving yojson]
 
 type t =

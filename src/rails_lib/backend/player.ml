@@ -267,7 +267,7 @@ let fiscal_period_end net_worth stations params v =
   } in
   let v = {v with m; history; record } in
   (* TODO: change current period in backend *)
-  v, total_revenue, Ui_msg.FiscalPeriodEndMsgs(v.idx, ui_msgs)
+  v, total_revenue, ui_msgs
 
 let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
   let player_idx = v.idx in
@@ -296,7 +296,7 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
     if investor_anger >= 5 && not @@ Stock_market.controls_company player_idx ~target:player_idx stocks then
       `Fired else `NotFired
   in
-  {v with m={v.m with investor_anger}}, stocks, fired, msg
+  {v with m={v.m with investor_anger}}, stocks, fired, [msg]
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in

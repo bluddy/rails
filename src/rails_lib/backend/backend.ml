@@ -639,15 +639,16 @@ let _fin_end_proceed player_idx v =
     let balance_sheet = create_balance_sheet player_idx v in
     Balance_sheet.compute_profit balance_sheet in
   let player = get_player player_idx v in
-  let player, total_revenue, ui_msgs = Player.fiscal_period_end net_worth v.stations v.params player in
+  let player, total_revenue, ui_msgs1 = Player.fiscal_period_end net_worth v.stations v.params player in
+  (* TODO handle fired *)
+  let player, stocks, _fired, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
+  (* TODO: handle dissolved company *)
+  let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let v = update_player v player_idx (fun _ -> player) in
-  send_ui_msg v ui_msgs;
-  let params = {v.params with
-    current_period=Params.next_period v.params;
-    time=0;
-  }
-  in
-  {v with params}
+  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, ui_msgs1 @ ui_msgs2 @ ui_msgs3) in
+  send_ui_msg v ui_msg;
+  let params = {v.params with current_period=Params.next_period v.params; time=0} in
+  {v with params; ai; stocks}
 
 let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->
