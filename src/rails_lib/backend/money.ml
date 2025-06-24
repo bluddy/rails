@@ -16,7 +16,7 @@ end
 
 include M
 
-let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?region (cash:t) =
+let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?(decimal=false) ?region (cash:t) =
   (* show_neg: have a negative symbol
      spaces: spaces to use for the upper thousands
      region: determines money symbol to use
@@ -33,6 +33,9 @@ let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?region (cash:t) =
   Buffer.add_string b money_s;
   if ks then (
     Buffer.add_string b ",000"
+  );
+  if decimal then (
+    Buffer.add_string b ".00"
   );
   Buffer.contents b
 

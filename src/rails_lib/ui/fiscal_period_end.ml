@@ -3,6 +3,7 @@ module List = Utils.List
 module R = Renderer
 module C = Constants
 module B = Backend
+module M = Money
 
 let render_bg win (s:State.t) =
   R.paint_screen win ~color:Ega.white;
@@ -17,6 +18,14 @@ let render_bg win (s:State.t) =
   in
   Fonts.Render.write_shadow win s.fonts ~color:Ega.bcyan ~idx:2 text ~x:80 ~y:72;
   ()
+
+let stock_price_diff_s ~ai ~region x y =
+  let print_money x = Money.print ~region ~ks:false ~decimal:true x in
+  let per_share = if ai then "/" else " per " in
+  let s = Printf.sprintf in
+  if M.(x > y) then s "Stock drops from %s to %s%sshare" (print_money x) (print_money y) per_share
+  else if M.(x < y) then s "Stock rises from %s to %s%sshare" (print_money x) (print_money y) per_share
+  else s "Stock stays at %s%sshare" (print_money x) per_share
 
 let render_stock_eval win stock_data (s:State.t) =
   let b = s.backend in
