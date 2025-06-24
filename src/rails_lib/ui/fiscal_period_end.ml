@@ -36,7 +36,6 @@ let render_stock_eval win stock_data (s:State.t) =
   Menu.MsgBox.render_box win 2 2 236 184;
   let player_data = fst stock_data in
   let avg_growth = player_data.Ui_msg.share_price_growth in
-  let anger = (B.get_player player_idx).Player.m.investor_anger in
   let text = Printf.sprintf
     "%s\n\
     %d,000 shares outstanding.\n\
@@ -47,9 +46,12 @@ let render_stock_eval win stock_data (s:State.t) =
     (Stock_market.total_shares player_idx b.stocks)
     avg_growth
     (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
-
+    (match player_data.fired with
+      | `Fired -> "You are replaced by NEW MANAGEMENT!"
+      | `Warning -> "They may replace you as president!"
+      | `Normal -> "")
   in
-  ()
+  Fonts.Render.write win s.fonts ~color:Ega.white ~idx:4 ~x:7 ~y:7 text
 
 let get_warnings backend msgs =
   let process = function
