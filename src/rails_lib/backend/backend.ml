@@ -641,7 +641,7 @@ let _fin_end_proceed player_idx v =
   let player = get_player player_idx v in
   let player, total_revenue, ui_msgs1 = Player.fiscal_period_end net_worth v.stations v.params player in
   (* TODO handle fired *)
-  let player, stocks, _fired, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
+  let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   (* TODO: handle dissolved company *)
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let v = update_player v player_idx (fun _ -> player) in

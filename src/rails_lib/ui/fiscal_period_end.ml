@@ -28,11 +28,27 @@ let stock_price_diff_s ~ai ~region x y =
   else s "Stock stays at %s%sshare" (print_money x) per_share
 
 let render_stock_eval win stock_data (s:State.t) =
+  let player_idx = C.player in
   let b = s.backend in
   R.paint_screen win ~color:Ega.green;
   R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
   R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
   Menu.MsgBox.render_box win 2 2 236 184;
+  let player_data = fst stock_data in
+  let avg_growth = player_data.Ui_msg.share_price_growth in
+  let anger = (B.get_player player_idx).Player.m.investor_anger in
+  let text = Printf.sprintf
+    "%s\n\
+    %d,000 shares outstanding.\n\
+    %d%% Average Share Price Growth.\n\
+    Investors are %s.\n\
+    %s"
+    (stock_price_diff_s ~ai:false ~region:b.params.region player_data.Ui_msg.from_ player_data.to_)
+    (Stock_market.total_shares player_idx b.stocks)
+    avg_growth
+    (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
+
+  in
   ()
 
 let get_warnings backend msgs =
@@ -112,20 +128,16 @@ let get_record_earnings backend msgs =
 
 let get_stock_msgs msgs =
   let all_players =
-    List.filter (function
-      | Ui_msg.SharePriceChange _ -> true
-      | _ -> false)
-      msgs
-    |> List.sort (fun x y -> match x, y with
-       | Ui_msg.SharePriceChange x, SharePriceChange y -> x.avg_share_price_growth_pct - y.avg_share_price_growth_pct
-       | _ -> assert false
-    ) |> List.rev
+    msgs
+    |> List.filter (function | Ui_msg.SharePriceChange _ -> true | _ -> false)
+    |> List.map (function | Ui_msg.SharePriceChange x -> x | _ -> assert false)
+    |> List.sort (fun x y -> x.Ui_msg.share_price_growth - y.share_price_growth)
+    |> List.rev
   in
   let human =
-    List.filter (function
-      | Ui_msg.SharePriceChange s when Owner.is_human s.player_idx -> true
-      | _ -> false)
-      msgs
+    msgs
+    |> List.filter (function | Ui_msg.SharePriceChange s when Owner.is_human s.player_idx -> true | _ -> false)
+    |> List.map (function | Ui_msg.SharePriceChange x -> x | _ -> assert false)
     |> List.hd
   in
   human, all_players

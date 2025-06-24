@@ -387,4 +387,11 @@ let investor_anger_mod = function
   | Investors_concerned -> 0
   | Investors_very_concerned -> 0
   | Investors_outraged -> 1
+
+let show_investor = function
+  | Ui_msg.Investors_ecstatic -> "ecstatic"
+  | Investors_pleased -> "pleased"
+  | Investors_concerned -> "concerned"
+  | Investors_very_concerned -> "very concerned"
+  | Investors_outraged -> "outraged"
   

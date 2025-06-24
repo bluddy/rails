@@ -35,6 +35,16 @@ type investor_reaction =
   | Investors_outraged
   [@@deriving yojson]
 
+type share_price_change = {
+    player_idx: Owner.t;
+    from_: Money.t;
+    to_: Money.t;
+    share_price_growth: int;
+    split: bool;
+    fired: [`Fired | `Warning | `Normal]
+  }
+  [@@deriving yojson]
+
 type fiscal_period_end_msg =
   | TrainNoRevenue of TID.t
   | TrainNoMaintenance of TID.t
@@ -46,7 +56,7 @@ type fiscal_period_end_msg =
   | AvgSpeedRecord of int
   | TonMileRecord of int
   | RevenueRecord of Money.t
-  | SharePriceChange of {player_idx: Owner.t; from_: Money.t; to_: Money.t; avg_share_price_growth_pct: int; split: bool}
+  | SharePriceChange of share_price_change
   | DissolveCompany of Owner.t
   [@@deriving yojson]
 
