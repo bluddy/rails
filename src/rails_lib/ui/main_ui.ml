@@ -895,8 +895,8 @@ let handle_msgs (s:State.t) v ui_msgs =
       | FiscalPeriodEndMsgs(player_idx, msgs) ->
           if Owner.(player_idx <> main_player_idx) then v
           else
-            let records_earnings, warnings, records = Fiscal_period_end.handle_msgs b msgs in
-            let background = GenericScreen{render_fn=Fiscal_period_end.render; next_mode=Normal} in
+            let records_earnings, warnings, records, stock_msgs = Fiscal_period_end.handle_msgs b msgs in
+            let background = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode=Normal} in
             (* Build the modes backwards *)
             let mode = Normal in
             let mode = if String.length records > 0 then
@@ -1165,7 +1165,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             let state = B.create_balance_sheet player_idx s.backend in
             let next_mode = Balance_sheet {state; end_of_year=true} in
             let next_mode = Income_statement {state; next_mode} in
-            let mode = GenericScreen{render_fn=Fiscal_period_end.render; next_mode} in
+            let mode = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode} in
             {v with mode}
 
       | FiscalPeriodEndMsgs _

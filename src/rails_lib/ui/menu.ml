@@ -393,12 +393,14 @@ module MsgBox = struct
       in
       Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y) ~active_color
 
+    let render_box win x y w h =
+      Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.gray ~fill:true;
+      Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
+      Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
+
     let rec render win s v =
       (* draw background *)
-      let x = v.x in
-      Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.gray ~fill:true;
-      Renderer.draw_rect win ~x:(x+1) ~y:(v.y+1) ~w:v.w ~h:v.h ~color:Ega.white ~fill:false;
-      Renderer.draw_rect win ~x:x ~y:v.y ~w:(v.w+2) ~h:(v.h+2) ~color:Ega.black ~fill:false;
+      render_box win v.x v.y v.w v.h;
 
       (* draw heading *)
       begin match v.heading with
