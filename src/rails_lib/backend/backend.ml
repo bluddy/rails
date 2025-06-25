@@ -143,7 +143,9 @@ let get_handle player_idx v =
   get_player_ai (Player.get_handle v.stations v.cities) (Ai.get_name ~cities:v.cities) player_idx v
 
 let get_track_length player_idx v =
-  get_player_ai Player.track_length Ai.get_track_length player_idx v
+  (* Track length for ui and such *)
+  (get_player_ai Player.track_length Ai.get_track_length player_idx v)
+  * Region.dist_mult v.params.region
 
 let players_and_ai v =
   Iter.append (Owner.Map.keys v.players) (Ai.ai_iter v.ai)

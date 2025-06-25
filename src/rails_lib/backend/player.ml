@@ -146,6 +146,8 @@ let get_cash v = v.m.cash
 
 let net_worth v = v.m.net_worth
 
+let get_profit v = v.m.profit
+
 let bonds v = v.m.bonds
 
 let modify_cash f v = {v with m={v.m with cash = f v.m.cash}}
@@ -337,7 +339,7 @@ let get_name station_map cities v =
 let get_handle station_map cities v =
   get_name_and_handle station_map cities v |> snd
 
-  (* "Game" reported track lenght, not track pieces *)
+(* "Game" reported track length, not track pieces *)
 let track_length v = v.track_length
 
 let incr_dist_traveled ~dist period_year v =
@@ -617,4 +619,5 @@ let update_speed_record speed v =
   if speed > v.record.train_speed then
     {v with record={v.record with train_speed=speed}}
   else v
+
 

@@ -35,6 +35,8 @@ let render_stock_eval win stock_data (s:State.t) =
   let b = s.backend in
   let write text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black text in
   let write_wh text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.white text in
+  let price_s money = Money.print ~ks:false ~decimal:true ~region:b.params.region money in
+  let money_s money = Money.print ~region:b.params.region money in
   let _draw_background =
     R.paint_screen win ~color:Ega.green;
     R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
@@ -65,17 +67,28 @@ let render_stock_eval win stock_data (s:State.t) =
     match msg.fired with | `Normal -> 40 | _ -> 50
   in
   let msgs = snd stock_data in
+  let player = B.get_player player_idx b in
+  let _player_stock_data = sp
+    "%s %s per share\n\
+    Profit:%s\n\
+    Net Worth:%s Track: %d miles\n\
+    "
+    (B.get_name player_idx b) (price_s share_price)
+    (Player.get_profit player |> money_s)
+    (Player.net_worth player |> money_s) (Player.track_length player)
+  in
   (* Write ordered company data *)
   (* TODO: fix this up *)
   (* TODO: take cae of newline if fired/warned *)
   let _write_stock_data =
     List.fold_left (fun y Ui_msg.{from_; to_; player_idx; _} ->
-      let name = B.get_name player_idx b in
+      let share_price = Stock_market.share_price player_idx stocks in
       let text = sp
-        "%s\n\
-        %s\n\
+        "%s %s per share\n\
+        Profit:%s\n\
         "
-        name
+        (B.get_name player_idx b)
+        (Money.print ~ks:false ~decimal:true ~region:b.params.region share_price)
         (_stock_price_diff_s ~region:b.params.region from_ to_ player_idx)
       in
       write ~x:7 ~y:7 text;
