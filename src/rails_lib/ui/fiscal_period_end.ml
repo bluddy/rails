@@ -41,29 +41,32 @@ let render_stock_eval win stock_data (s:State.t) =
     R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
     Menu.MsgBox.render_box win 2 2 236 184;
   in
-  let _write_player_data =
-    let player_data = fst stock_data in
-    let avg_growth = player_data.Ui_msg.share_price_growth in
+  let y =
+    (* Write player msg *)
+    let msg = fst stock_data in
+    let avg_growth = msg.Ui_msg.share_price_growth in
     let text = Printf.sprintf
       "%s\n\
       %d,000 shares outstanding.\n\
       %s\n\
       Investors are %s.\n\
       %s"
-      (_stock_price_diff_s ~region:b.params.region player_data.Ui_msg.from_ player_data.to_ msg.player_idx)
+      (_stock_price_diff_s ~region:b.params.region msg.from_ msg.to_ msg.player_idx)
       (Stock_market.total_shares player_idx b.stocks)
       (_share_price_growth_s avg_growth)
       (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
-      (match player_data.fired with
+      (match msg.fired with
         | `Fired -> "You are replaced by NEW MANAGEMENT!"
         | `Warning -> "They may replace you as president!"
         | `Normal -> "")
     in
     write_wh ~x:7 ~y:7 text;
+    match msg.fired with | `Normal -> 40 | _ -> 50
   in
   let msgs = snd stock_data in
   (* Write ordered company data *)
   (* TODO: fix this up *)
+  (* TODO: take cae of newline if fired/warned *)
   let _write_stock_data =
     List.fold_left (fun y Ui_msg.{from_; to_; player_idx; _} ->
       let name = B.get_name player_idx b in
@@ -76,21 +79,24 @@ let render_stock_eval win stock_data (s:State.t) =
       in
       write ~x:7 ~y:7 text;
       y + 40 (* TODO *)
-    ) 7 msgs |> ignore
+    )
+    y
+    msgs |> ignore
   in
   let _draw_portraits =
     let x = 200 in (* TODO *)
-    List.fold_left (fun y {player_idx; _} ->
+    List.fold_left (fun y Ui_msg.{player_idx; _} ->
       if Owner.is_human player_idx then
         () (* TODO: player frame *)
       else
         let ai = Ai.get_ai player_idx |> Option.get in
-        let oppo = Ai.get_opponent player_idx b.ais |> Option.map Opponent.get_name in
+        let oppo = Ai.get_opponent player_idx b.ai |> Option.map Opponent.get_name in
         let tex = Hashtbl.find s.textures.opponents oppo in
-        R.Texture.render win ~x ~y tex;
+        R.Texture.render win ~x ~y tex
     )
     8
     msgs
+    |> ignore
   in
   let _write_rankings =
     let x = 220 in (* TODO *)
@@ -104,7 +110,7 @@ let render_stock_eval win stock_data (s:State.t) =
        | 0 -> "1st"
        | 1 -> "2nd"
        | 2 -> "3rd"
-       | _ -> sp "%dth" i
+       | _ -> sp "%dth" (i+1)
       in
       write text ~x:(x + 2) ~y; (* TODO *)
       (y + 80, i+1) (* TODO *)

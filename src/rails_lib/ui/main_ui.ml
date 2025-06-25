@@ -897,8 +897,13 @@ let handle_msgs (s:State.t) v ui_msgs =
           else
             let records_earnings, warnings, records, stock_msgs = Fiscal_period_end.handle_msgs b msgs in
             let background = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode=Normal} in
-            (* Build the modes backwards *)
+            (* Build the modes list backwards *)
             let mode = Normal in
+            (* Stock screen *)
+            let mode = GenericScreen{
+                render_fn=Fiscal_period_end.render_stock_eval; next_mode=mode;
+              }
+            in
             let mode = if String.length records > 0 then
               make_msgbox_mode s ~x:80 ~y:60 records ~background ~next:mode
               else mode
