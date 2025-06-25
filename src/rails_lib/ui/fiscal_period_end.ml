@@ -46,18 +46,19 @@ let render_stock_eval win stock_data (s:State.t) =
     let msg = fst stock_data in
     let avg_growth = msg.Ui_msg.share_price_growth in
     let text = Printf.sprintf
-      "%s\n\
+      "%s%s\n\
       %d,000 shares outstanding.\n\
       %s\n\
-      Investors are %s.\n\
-      %s"
+      Investors are %s.%s"
+      (if msg.split then "Your stock splits\ntwo for one!\n" else "")
       (_stock_price_diff_s ~region:b.params.region msg.from_ msg.to_ msg.player_idx)
       (Stock_market.total_shares player_idx b.stocks)
       (_share_price_growth_s avg_growth)
       (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
       (match msg.fired with
-        | `Fired -> "You are replaced by NEW MANAGEMENT!"
-        | `Warning -> "They may replace you as president!"
+        | `Fired -> "\nYou are replaced by NEW MANAGEMENT!"
+        | `Warning -> "\nThey are looking for a new president!"
+        | `MinorWarning -> "\nThey may replace you as president!"
         | `Normal -> "")
     in
     write_wh ~x:7 ~y:7 text;

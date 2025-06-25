@@ -41,7 +41,7 @@ type share_price_change = {
     to_: Money.t;
     share_price_growth: int;
     split: bool;
-    fired: [`Fired | `Warning | `Normal]
+    fired: [`Fired | `Warning | `MinorWarning | `Normal]
   }
   [@@deriving yojson]
 

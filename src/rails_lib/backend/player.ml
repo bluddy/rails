@@ -294,6 +294,7 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
   let fired = if not controls_company then
       if investor_anger >= 5 then `Fired
       else if investor_anger >= 3 then `Warning
+      else if investor_anger >= 1 then `MinorWarning
       else `Normal
     else `Normal
   in
