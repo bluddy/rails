@@ -106,7 +106,7 @@ let get_str_w_h ?(skip_amp=false) font str =
       )
     )
 
-  let write_char ?cursor_color win font ?(color=Ega.white) c ~x ~y =
+  let write_char win font ?cursor_color ?(color=Ega.white) c ~x ~y =
     try
       let char_tex = Hashtbl.find font.textures c in
       let w = get_letter_width font c in
@@ -127,26 +127,35 @@ let get_str_w_h ?(skip_amp=false) font str =
 
     (* Write a string.
        active_color: color for automatically highlighting chars with &
+                     or turned on and off with \\
     *)
   let write ?active_color ?cursor win font ~color str ~x ~y =
     let x_first = x in (* keep starting column *)
     String.foldi (fun (active, x, y) i c ->
-      match c, active_color, cursor with
-      | '&', Some _, _ ->
-          (true, x, y)
-      | '\n', _, _ ->
-          (false, x_first, y + font.height + font.space_y)
-      | _, Some active_color, _ when active ->
-          let x, y = write_char win font ~color:active_color c ~x ~y in
-          false, x, y
-      | _, _, Some (j, cursor_color) when j = i ->
-          let x, y = write_char ~cursor_color win font ~color c ~x ~y in
-          false, x, y
-      | _, _, _ ->
-          let x, y = write_char win font ~color c ~x ~y in
-          false, x, y
+      let write_c = write_char win font ~x ~y in
+      match c, active_color, cursor, active with
+      | '&', Some _, _, _ ->
+          `OneChar, x, y
+      | '\\', Some _, _, `Off ->
+          `On, x, y
+      | '\\', Some _, _, `On ->
+          `Off, x, y
+      | '\n', _, _, _ ->
+          active, x_first, y + font.height + font.space_y
+      | _, Some active_color, _, `On ->
+          let x, y = write_c ~color:active_color c in
+          `On, x, y
+      | _, Some active_color, _, `OneChar ->
+          let x, y = write_c ~color:active_color c in
+          `Off, x, y
+      | _, _, Some (j, cursor_color), _ when j = i ->
+          let x, y = write_c ~cursor_color ~color c in
+          `Off, x, y
+      | _, _, _, _ ->
+          let x, y = write_c ~color c in
+          `Off, x, y
     )
-    (false, x, y)
+    (`Off, x, y)
     str
     |> ignore
 
