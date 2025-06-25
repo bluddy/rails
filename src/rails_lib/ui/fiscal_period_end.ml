@@ -39,7 +39,7 @@ let create_stock_eval stock_data (s:State.t) =
   let player_idx = C.player in
   let b = s.backend in
   let price_s money = Money.print ~ks:false ~decimal:true ~region:b.params.region money in
-  let money_s money = Money.print ~show_neg:false ~region:b.params.region money in
+  let money_s money = Money.print ~spaces:6 ~show_neg:false ~region:b.params.region money in
   let heading =
     (* Write player msg *)
     let msg = fst stock_data in
@@ -96,6 +96,7 @@ let create_stock_eval stock_data (s:State.t) =
   Menu.MsgBox.make_basic ~x:2 ~y:2 ~heading ~fonts:s.fonts text 
   
 let render_stock_eval win state stock_data (s:State.t) =
+  let player_idx = C.player in
   let b = s.backend in
   let write text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black text in
   let _draw_background =
@@ -106,13 +107,30 @@ let render_stock_eval win state stock_data (s:State.t) =
   in
   Menu.MsgBox.render win s state.stock_msgbox;
 
+  let draw_player_frame x y =
+    let tex = Hashtbl.find s.textures.opponents CorneliusVanderbilt in
+    R.Texture.render win ~x ~y tex;
+    R.draw_rect win ~x:(x+2) ~y:(y+2) ~w:36 ~h:41 ~color:Ega.bcyan ~fill:true;
+    let handle = Backend.get_handle player_idx b in
+    write ~x:(x+8) ~y:(y+16) handle;
+    let x1, x2 = x + 7, x + 33 in
+    let y = y + 12 in
+    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.black;
+    let y = y + 2 in
+    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.black;
+    let y = y + 11 in
+    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.black;
+    let y = y + 2 in
+    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.black;
+  in
+
   let msgs = snd stock_data in
   let _draw_portraits =
     let x = 276 in
     List.fold_left (fun y Ui_msg.{player_idx; _} ->
       let () =
         if Owner.is_human player_idx then
-          () (* TODO: player frame *)
+          draw_player_frame x y
         else
           let oppo = Ai.get_opponent player_idx b.ai
             |> Option.map Opponent.get_name |> Option.get
@@ -126,23 +144,23 @@ let render_stock_eval win state stock_data (s:State.t) =
     |> ignore
   in
   let _write_rankings =
-    let x = 286 in (* TODO *)
-    let w, h = 9, 21 in (* TODO *)
+    let x = 286 in
+    let w, h = 9, 21 in
     List.fold_left (fun (y, i) _ ->
-      R.draw_rect win ~color:Ega.green ~x ~y ~h:10 ~w:10 ~fill:true;
-      (* draw glint *)
-      R.draw_line win ~color:Ega.bgreen ~x1:x ~y1:y ~x2:x ~y2:(y+h);
-      R.draw_line win ~color:Ega.bgreen ~x1:x ~y1:(y+h) ~x2:(x+w) ~y2:(y+h);
+      R.draw_rect win ~color:Ega.bgreen ~x ~y ~h:10 ~w:10 ~fill:true;
+      (* draw shadow *)
+      R.draw_line win ~color:Ega.green ~x1:x ~y1:y ~x2:x ~y2:(y+h);
+      R.draw_line win ~color:Ega.green ~x1:x ~y1:(y+h) ~x2:(x+w) ~y2:(y+h);
       let text = match i with
        | 0 -> "1st"
        | 1 -> "2nd"
        | 2 -> "3rd"
        | _ -> sp "%dth" (i+1)
       in
-      write text ~x:(x + 2) ~y; (* TODO *)
-      (y + 49, i+1) (* TODO *)
+      write text ~x:(x + 2) ~y;
+      (y + 49, i+1)
     )
-    (40, 0) (* TODO *)
+    (40, 0)
     msgs
   in
   ()
