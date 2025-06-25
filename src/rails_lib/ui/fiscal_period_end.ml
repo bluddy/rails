@@ -5,12 +5,13 @@ module C = Constants
 module B = Backend
 module M = Money
 
+let sp = Printf.sprintf
+
 let render_bg win (s:State.t) =
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~color:Ega.black ~x:2 ~y:2 ~w:316 ~h:196 ~fill:false;
   R.draw_rect win ~color:Ega.cyan ~x:8 ~y:8 ~w:303 ~h:183 ~fill:true;
-  let text =
-    Printf.sprintf
+  let text = sp
     "End of\n\
     Fiscal Period\n\
     %d-%d"
@@ -19,13 +20,15 @@ let render_bg win (s:State.t) =
   Fonts.Render.write_shadow win s.fonts ~color:Ega.bcyan ~idx:2 text ~x:80 ~y:72;
   ()
 
-let stock_price_diff_s ~ai ~region x y =
-  let print_money x = Money.print ~region ~ks:false ~decimal:true x in
-  let per_share = if ai then "/" else " per " in
-  let s = Printf.sprintf in
-  if M.(x > y) then s "Stock drops from %s to %s%sshare" (print_money x) (print_money y) per_share
-  else if M.(x < y) then s "Stock rises from %s to %s%sshare" (print_money x) (print_money y) per_share
-  else s "Stock stays at %s%sshare" (print_money x) per_share
+let _stock_price_diff_s ~region from_ to_ player_idx =
+  let print_money from_ = Money.print ~region ~ks:false ~decimal:true from_ in
+  let is_human = Owner.is_human player_idx in
+  let per_share = if not is_human then "/" else " per " in
+  if M.(from_ > to_) then sp "Stock drops from %s to %s%sshare" (print_money from_) (print_money to_) per_share
+  else if M.(from_ < to_) then sp "Stock rises from %s to %s%sshare" (print_money from_) (print_money to_) per_share
+  else sp "Stock stays at %s%sshare" (print_money from_) per_share
+
+let _share_price_growth_s growth = sp "%d%% Average Share Price Growth." growth
 
 let render_stock_eval win stock_data (s:State.t) =
   let player_idx = C.player in
@@ -39,19 +42,36 @@ let render_stock_eval win stock_data (s:State.t) =
   let text = Printf.sprintf
     "%s\n\
     %d,000 shares outstanding.\n\
-    %d%% Average Share Price Growth.\n\
+    %s\n\
     Investors are %s.\n\
     %s"
-    (stock_price_diff_s ~ai:false ~region:b.params.region player_data.Ui_msg.from_ player_data.to_)
+    (_stock_price_diff_s ~region:b.params.region player_data.Ui_msg.from_ player_data.to_ msg.player_idx)
     (Stock_market.total_shares player_idx b.stocks)
-    avg_growth
+    (_share_price_growth_s avg_growth)
     (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
     (match player_data.fired with
       | `Fired -> "You are replaced by NEW MANAGEMENT!"
       | `Warning -> "They may replace you as president!"
       | `Normal -> "")
   in
-  Fonts.Render.write win s.fonts ~color:Ega.white ~idx:4 ~x:7 ~y:7 text
+  Fonts.Render.write win s.fonts ~color:Ega.white ~idx:4 ~x:7 ~y:7 text;
+  (* Write ordered company data *)
+  List.fold_left (fun y Ui_msg.{from_; to_; player_idx; _} ->
+    let name = B.get_name player_idx b in
+    let text = sp
+      "%s\n\
+      %s\n\
+      "
+      name
+      (_stock_price_diff_s ~region:b.params.region from_ to_ player_idx)
+    in
+    Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:7 ~y:7 text;
+    y + 40 (* TODO *)
+  )
+  7
+  (snd stock_data)
+  |> ignore;
+
 
 let get_warnings backend msgs =
   let process = function
