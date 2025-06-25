@@ -20,11 +20,12 @@ let render_bg win (s:State.t) =
   Fonts.Render.write_shadow win s.fonts ~color:Ega.bcyan ~idx:2 text ~x:80 ~y:72;
   ()
 
-let _stock_price_diff_s ~region from_ to_ player_idx =
-  let print_money from_ = Money.print ~region ~ks:false ~decimal:true from_ in
+let _stock_price_diff_s ~split ~region from_ to_ player_idx =
+  let print_money x = Money.print ~region ~ks:false ~decimal:true x in
   let is_human = Owner.is_human player_idx in
   let per_share = if not is_human then "/" else " per " in
-  if M.(from_ > to_) then sp "Stock drops from %s to %s%sshare" (print_money from_) (print_money to_) per_share
+  if not is_human && split then sp "Stock splits 2 for 1 to %s/share" (print_money to_)
+  else if M.(from_ > to_) then sp "Stock drops from %s to %s%sshare" (print_money from_) (print_money to_) per_share
   else if M.(from_ < to_) then sp "Stock rises from %s to %s%sshare" (print_money from_) (print_money to_) per_share
   else sp "Stock stays at %s%sshare" (print_money from_) per_share
 
@@ -53,7 +54,7 @@ let render_stock_eval win stock_data (s:State.t) =
       %s\n\
       Investors are %s.%s"
       (if msg.split then "Your stock splits\ntwo for one!\n" else "")
-      (_stock_price_diff_s ~region:b.params.region msg.from_ msg.to_ msg.player_idx)
+      (_stock_price_diff_s ~split:msg.split ~region:b.params.region msg.from_ msg.to_ msg.player_idx)
       (Stock_market.total_shares player_idx b.stocks)
       (_share_price_growth_s avg_growth)
       (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
@@ -71,9 +72,8 @@ let render_stock_eval win stock_data (s:State.t) =
   let _player_stock_data = sp
     "%s %s per share\n\
     Profit:%s\n\
-    Net Worth:%s Track: %d miles\n\
-    "
-    (B.get_name player_idx b) (price_s share_price)
+    Net Worth:%s Track: %d miles\n"
+    (B.get_name player_idx b) (Stock_market.share_price player_idx b.stocks |> price_s)
     (Player.get_profit player |> money_s)
     (Player.net_worth player |> money_s) (Player.track_length player)
   in
@@ -81,15 +81,18 @@ let render_stock_eval win stock_data (s:State.t) =
   (* TODO: fix this up *)
   (* TODO: take cae of newline if fired/warned *)
   let _write_stock_data =
-    List.fold_left (fun y Ui_msg.{from_; to_; player_idx; _} ->
+    List.fold_left (fun y Ui_msg.{from_; to_; player_idx; split; _} ->
       let share_price = Stock_market.share_price player_idx stocks in
       let text = sp
-        "%s %s per share\n\
+        "%s\n\
+        %s\n\
         Profit:%s\n\
-        "
+        Net worth:%s Track: %d miles\n"
         (B.get_name player_idx b)
-        (Money.print ~ks:false ~decimal:true ~region:b.params.region share_price)
-        (_stock_price_diff_s ~region:b.params.region from_ to_ player_idx)
+        (_stock_price_diff_s ~split ~region:b.params.region from_ to_ player_idx)
+        (Stock_market.share_price player_idx b.stocks |> price_s)
+        (Ai.get_net_worth player_idx b.ai |> money_s)
+        (B.get_track_length player_idx b)
       in
       write ~x:7 ~y:7 text;
       y + 40 (* TODO *)
