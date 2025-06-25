@@ -37,7 +37,8 @@ let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?(decimal=false) ?region (cash
   if decimal then (
     Buffer.add_string b ".00"
   );
-  Buffer.contents b
+  let s = Buffer.contents b in
+  if show_neg then s else "|"^s^"|"
 
 let (+~) x y = to_int x + y |> of_int
 let (+) x y = to_int x + to_int y |> of_int
