@@ -77,7 +77,7 @@ let create_stock_eval stock_data (s:State.t) =
   let text =
     List.fold_left (fun acc Ui_msg.{from_; to_; player_idx; split; _} ->
       let text = sp
-        "%s\n\
+        "\n%s\n\
         %s\n\
         Profit:%s Cash:%s\n\
         Net worth:%s Track: %d miles\n"
@@ -88,8 +88,7 @@ let create_stock_eval stock_data (s:State.t) =
         (Ai.get_net_worth player_idx b.ai |> money_s)
         (B.get_track_length player_idx b)
       in
-      acc ^ text
-    )
+      acc ^ text)
     text 
     msgs
   in
