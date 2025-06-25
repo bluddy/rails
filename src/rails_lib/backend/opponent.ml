@@ -110,5 +110,7 @@ let random_of_region region random =
 
 let t_of_leader leader = Map.find leader leader_map
 
+let get_name v = v.name
+
 let show v = show_name v.name
 

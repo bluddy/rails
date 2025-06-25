@@ -99,6 +99,8 @@ let get_ai idx v = Owner.Map.get idx v.ais
 
 let get_ai_exn idx v = Owner.Map.find idx v.ais
 
+let get_opponent idx v = get_ai idx v |> Option.map (fun player -> player.opponent)
+
 let ai_iter v = Owner.Map.keys v.ais
 
 let modify_ai idx v f =

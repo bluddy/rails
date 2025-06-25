@@ -33,44 +33,86 @@ let _share_price_growth_s growth = sp "%d%% Average Share Price Growth." growth
 let render_stock_eval win stock_data (s:State.t) =
   let player_idx = C.player in
   let b = s.backend in
-  R.paint_screen win ~color:Ega.green;
-  R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
-  R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
-  Menu.MsgBox.render_box win 2 2 236 184;
-  let player_data = fst stock_data in
-  let avg_growth = player_data.Ui_msg.share_price_growth in
-  let text = Printf.sprintf
-    "%s\n\
-    %d,000 shares outstanding.\n\
-    %s\n\
-    Investors are %s.\n\
-    %s"
-    (_stock_price_diff_s ~region:b.params.region player_data.Ui_msg.from_ player_data.to_ msg.player_idx)
-    (Stock_market.total_shares player_idx b.stocks)
-    (_share_price_growth_s avg_growth)
-    (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
-    (match player_data.fired with
-      | `Fired -> "You are replaced by NEW MANAGEMENT!"
-      | `Warning -> "They may replace you as president!"
-      | `Normal -> "")
+  let write text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black text in
+  let write_wh text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.white text in
+  let _draw_background =
+    R.paint_screen win ~color:Ega.green;
+    R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
+    R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
+    Menu.MsgBox.render_box win 2 2 236 184;
   in
-  Fonts.Render.write win s.fonts ~color:Ega.white ~idx:4 ~x:7 ~y:7 text;
-  (* Write ordered company data *)
-  List.fold_left (fun y Ui_msg.{from_; to_; player_idx; _} ->
-    let name = B.get_name player_idx b in
-    let text = sp
+  let _write_player_data =
+    let player_data = fst stock_data in
+    let avg_growth = player_data.Ui_msg.share_price_growth in
+    let text = Printf.sprintf
       "%s\n\
+      %d,000 shares outstanding.\n\
       %s\n\
-      "
-      name
-      (_stock_price_diff_s ~region:b.params.region from_ to_ player_idx)
+      Investors are %s.\n\
+      %s"
+      (_stock_price_diff_s ~region:b.params.region player_data.Ui_msg.from_ player_data.to_ msg.player_idx)
+      (Stock_market.total_shares player_idx b.stocks)
+      (_share_price_growth_s avg_growth)
+      (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
+      (match player_data.fired with
+        | `Fired -> "You are replaced by NEW MANAGEMENT!"
+        | `Warning -> "They may replace you as president!"
+        | `Normal -> "")
     in
-    Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:7 ~y:7 text;
-    y + 40 (* TODO *)
-  )
-  7
-  (snd stock_data)
-  |> ignore;
+    write_wh ~x:7 ~y:7 text;
+  in
+  let msgs = snd stock_data in
+  (* Write ordered company data *)
+  (* TODO: fix this up *)
+  let _write_stock_data =
+    List.fold_left (fun y Ui_msg.{from_; to_; player_idx; _} ->
+      let name = B.get_name player_idx b in
+      let text = sp
+        "%s\n\
+        %s\n\
+        "
+        name
+        (_stock_price_diff_s ~region:b.params.region from_ to_ player_idx)
+      in
+      write ~x:7 ~y:7 text;
+      y + 40 (* TODO *)
+    ) 7 msgs |> ignore
+  in
+  let _draw_portraits =
+    let x = 200 in (* TODO *)
+    List.fold_left (fun y {player_idx; _} ->
+      if Owner.is_human player_idx then
+        () (* TODO: player frame *)
+      else
+        let ai = Ai.get_ai player_idx |> Option.get in
+        let oppo = Ai.get_opponent player_idx b.ais |> Option.map Opponent.get_name in
+        let tex = Hashtbl.find s.textures.opponents oppo in
+        R.Texture.render win ~x ~y tex;
+    )
+    8
+    msgs
+  in
+  let _write_rankings =
+    let x = 220 in (* TODO *)
+    let w, h = 10, 10 in (* TODO *)
+    List.fold_left (fun (y, i) _ ->
+      R.draw_rect win ~color:Ega.green ~x ~y ~h:10 ~w:10 ~fill:true;
+      (* draw glint *)
+      R.draw_line win ~color:Ega.bgreen ~x1:x ~y1:y ~x2:x ~y2:(y+h);
+      R.draw_line win ~color:Ega.bgreen ~x1:x ~y1:(y+h) ~x2:(x+w) ~y2:(y+h);
+      let text = match i with
+       | 0 -> "1st"
+       | 1 -> "2nd"
+       | 2 -> "3rd"
+       | _ -> sp "%dth" i
+      in
+      write text ~x:(x + 2) ~y; (* TODO *)
+      (y + 80, i+1) (* TODO *)
+    )
+    (8 + 30, 0) (* TODO *)
+    msgs
+  in
+  ()
 
 
 let get_warnings backend msgs =
