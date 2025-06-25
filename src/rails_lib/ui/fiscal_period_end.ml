@@ -7,6 +7,9 @@ module M = Money
 
 include Fiscal_period_end_d
 
+let src = Logs.Src.create "Fiscal_period_end" ~doc:"Fiscal_period_end"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 let sp = Printf.sprintf
 
 let render_bg win (s:State.t) =
@@ -74,6 +77,7 @@ let create_stock_eval stock_data (s:State.t) =
   let msgs = snd stock_data in
   let text =
     List.fold_left (fun acc Ui_msg.{from_; to_; player_idx; split; _} ->
+      if Owner.is_human player_idx then acc else
       let text = sp
         "\n%s\n\
         %s\n\
@@ -144,19 +148,19 @@ let render_stock_eval win state (s:State.t) =
   in
   let _write_rankings =
     let x = 286 in
-    let w, h = 9, 21 in
+    let w, h = 21, 9 in
     List.fold_left (fun (y, i) _ ->
-      R.draw_rect win ~color:Ega.bgreen ~x ~y ~h:10 ~w:10 ~fill:true;
+      R.draw_rect win ~color:Ega.bgreen ~x ~y ~h ~w ~fill:true;
       (* draw shadow *)
       R.draw_line win ~color:Ega.green ~x1:x ~y1:y ~x2:x ~y2:(y+h);
-      R.draw_line win ~color:Ega.green ~x1:x ~y1:(y+h) ~x2:(x+w) ~y2:(y+h);
+      R.draw_line win ~color:Ega.green ~x1:x ~y1:(y+h) ~x2:(x+w-1) ~y2:(y+h);
       let text = match i with
        | 0 -> "1st"
        | 1 -> "2nd"
        | 2 -> "3rd"
        | _ -> sp "%dth" (i+1)
       in
-      write text ~x:(x + 2) ~y;
+      write text ~x:(x + 2) ~y:(y+1);
       (y + 49, i+1)
     )
     (40, 0)

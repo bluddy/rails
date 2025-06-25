@@ -391,7 +391,7 @@ module MsgBox = struct
         | Interactive _ -> Ega.dgray, Ega.dgray
         | Static {color;_} -> color, color
       in
-      Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y) ~active_color
+      Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
 
     let render_box win x y w h =
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.gray ~fill:true;

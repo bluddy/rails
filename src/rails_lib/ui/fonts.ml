@@ -129,31 +129,31 @@ let get_str_w_h ?(skip_amp=false) font str =
        active_color: color for automatically highlighting chars with &
                      or turned on and off with \\
     *)
-  let write ?active_color ?cursor win font ~color str ~x ~y =
+  let write ?tag_color ?active_color ?cursor win font ~color str ~x ~y =
     let x_first = x in (* keep starting column *)
     String.foldi (fun (active, x, y) i c ->
       let write_c = write_char win font ~x ~y in
-      match c, active_color, cursor, active with
-      | '&', Some _, _, _ ->
+      match c, active_color, tag_color, cursor, active with
+      | '&', Some _, _, _, _ ->
           `OneChar, x, y
-      | '|', Some _, _, `Off ->
+      | '|', _, Some _, _, `Off ->
           `On, x, y
-      | '|', Some _, _, `On ->
+      | '|', _, Some _, _, `On ->
           `Off, x, y
-      | '|', None, _, _ -> (* ignore if no active color *)
+      | '|', _, None, _, _ -> (* ignore if no active color *)
           active, x, y
-      | '\n', _, _, _ ->
+      | '\n', _, _, _, _ ->
           active, x_first, y + font.height + font.space_y
-      | _, Some active_color, _, `On ->
-          let x, y = write_c ~color:active_color c in
+      | _, _, Some tag_color, _, `On ->
+          let x, y = write_c ~color:tag_color c in
           `On, x, y
-      | _, Some active_color, _, `OneChar ->
+      | _, Some active_color, _, _, `OneChar ->
           let x, y = write_c ~color:active_color c in
           `Off, x, y
-      | _, _, Some (j, cursor_color), _ when j = i ->
+      | _, _, _, Some (j, cursor_color), _ when j = i ->
           let x, y = write_c ~cursor_color ~color c in
           `Off, x, y
-      | _, _, _, _ ->
+      | _, _, _, _, _ ->
           let x, y = write_c ~color c in
           `Off, x, y
     )

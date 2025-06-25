@@ -24,6 +24,7 @@ let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?(decimal=false) ?region (cash
   let b = Buffer.create 20 in
   Option.iter (fun region -> Buffer.add_char b @@ Region.money_symbol region) region;
   let cash = to_int cash in
+  let is_neg = cash < 0 in
   let cash = if not show_neg then abs cash else cash in
   let money_s = Printf.sprintf "%#d" cash |> String.map (function '_' -> ',' | x -> x) in
   let len = String.length money_s in
@@ -38,7 +39,7 @@ let print ?(ks=true) ?(show_neg=true) ?(spaces=0) ?(decimal=false) ?region (cash
     Buffer.add_string b ".00"
   );
   let s = Buffer.contents b in
-  if show_neg then s else "|"^s^"|"
+  if show_neg || not is_neg then s else "|"^s^"|"
 
 let (+~) x y = to_int x + y |> of_int
 let (+) x y = to_int x + to_int y |> of_int
