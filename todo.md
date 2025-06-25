@@ -24,6 +24,8 @@
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - Bug:
+  - Fiscal end stock eval: msgbox weird size thing
+  - AI companies msgbox is off
   - Check when we beat train speed record for first time. Shouldn't be for any speed.
   - AIs don't seem to get created.
   - 2 stations: 1 station not being delivered to.
