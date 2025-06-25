@@ -123,6 +123,7 @@ and 'state mode =
   | FindCity of Find_city.t
   (* A screen with only rendering and no interaction *)
   | GenericScreen of { render_fn: Renderer.window -> 'state -> unit; next_mode: 'state mode }
+  | FiscalPeriodEndStocks of {state: 'state Fiscal_period_end_d.t; next_mode: 'state mode}
 
 let is_normal_mode = function
   | Normal -> true

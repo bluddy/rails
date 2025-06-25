@@ -855,6 +855,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | Income_statement {next_mode; _}
     | GenericScreen {next_mode;_}
+    | FiscalPeriodEndStocks {next_mode; _}
     | Animation {next_mode; _} -> modal_screen_no_input ~next_mode v event
         
   in
@@ -896,14 +897,15 @@ let handle_msgs (s:State.t) v ui_msgs =
           if Owner.(player_idx <> main_player_idx) then v
           else
             let records_earnings, warnings, records, stock_msgs = Fiscal_period_end.handle_msgs b msgs in
-            let background = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode=Normal} in
             (* Build the modes list backwards *)
             let mode = Normal in
             (* Stock screen *)
-            let mode = GenericScreen{
-                render_fn=Fiscal_period_end.render_stock_eval; next_mode=mode;
-              }
+            let mode = FiscalPeriodEndStocks{
+              state=Fiscal_period_end.create_stock_eval stock_msgs s;
+              next_mode=mode
+            }
             in
+            let background = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode=Normal} in
             let mode = if String.length records > 0 then
               make_msgbox_mode s ~x:80 ~y:60 records ~background ~next:mode
               else mode
@@ -1427,6 +1429,8 @@ let render (win:R.window) (s:State.t) v =
     | FindCity state ->
        render_main win s v;
        Find_city.render win s.fonts state
+    | FiscalPeriodEndStocks {state; _} ->
+       Fiscal_period_end.render_stock_eval win state  s
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in

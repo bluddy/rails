@@ -5,11 +5,9 @@ module C = Constants
 module B = Backend
 module M = Money
 
-let sp = Printf.sprintf
+include Fiscal_period_end_d
 
-type ('a, 'state) t = {
-    stock_msgbox: ('a, 'state) Menu.MsgBox.t;
-  }
+let sp = Printf.sprintf
 
 let render_bg win (s:State.t) =
   R.paint_screen win ~color:Ega.white;
@@ -92,9 +90,11 @@ let create_stock_eval stock_data (s:State.t) =
     text 
     msgs
   in
-  Menu.MsgBox.make_basic ~x:2 ~y:2 ~heading ~fonts:s.fonts text 
+  let stock_msgbox = Menu.MsgBox.make_basic ~x:2 ~y:2 ~heading ~fonts:s.fonts s text in
+  { stock_msgbox; msgs }
+
   
-let render_stock_eval win state stock_data (s:State.t) =
+let render_stock_eval win state (s:State.t) =
   let player_idx = C.player in
   let b = s.backend in
   let write text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black text in
@@ -123,7 +123,7 @@ let render_stock_eval win state stock_data (s:State.t) =
     R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.black;
   in
 
-  let msgs = snd stock_data in
+  let msgs = state.msgs in
   let _draw_portraits =
     let x = 276 in
     List.fold_left (fun y Ui_msg.{player_idx; _} ->
