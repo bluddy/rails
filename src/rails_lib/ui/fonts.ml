@@ -136,10 +136,12 @@ let get_str_w_h ?(skip_amp=false) font str =
       match c, active_color, cursor, active with
       | '&', Some _, _, _ ->
           `OneChar, x, y
-      | '\\', Some _, _, `Off ->
+      | '|', Some _, _, `Off ->
           `On, x, y
-      | '\\', Some _, _, `On ->
+      | '|', Some _, _, `On ->
           `Off, x, y
+      | '|', None, _, _ -> (* ignore if no active color *)
+          active, x, y
       | '\n', _, _, _ ->
           active, x_first, y + font.height + font.space_y
       | _, Some active_color, _, `On ->
