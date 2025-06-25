@@ -7,6 +7,10 @@ module M = Money
 
 let sp = Printf.sprintf
 
+type ('a, 'state) t = {
+    stock_msgbox: ('a, 'state) Menu.MsgBox.t;
+  }
+
 let render_bg win (s:State.t) =
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~color:Ega.black ~x:2 ~y:2 ~w:316 ~h:196 ~fill:false;
@@ -31,24 +35,16 @@ let _stock_price_diff_s ~split ~region from_ to_ player_idx =
 
 let _share_price_growth_s growth = sp "%d%% Average Share Price Growth." growth
 
-let render_stock_eval win stock_data (s:State.t) =
+let create_stock_eval stock_data (s:State.t) =
   let player_idx = C.player in
   let b = s.backend in
-  let write text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black text in
-  let write_wh text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.white text in
   let price_s money = Money.print ~ks:false ~decimal:true ~region:b.params.region money in
-  let money_s money = Money.print ~region:b.params.region money in
-  let _draw_background =
-    R.paint_screen win ~color:Ega.green;
-    R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
-    R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
-    Menu.MsgBox.render_box win 2 2 236 184;
-  in
-  let y =
+  let money_s money = Money.print ~show_neg:false ~region:b.params.region money in
+  let heading =
     (* Write player msg *)
     let msg = fst stock_data in
     let avg_growth = msg.Ui_msg.share_price_growth in
-    let text = Printf.sprintf
+    Printf.sprintf
       "%s%s\n\
       %d,000 shares outstanding.\n\
       %s\n\
@@ -63,61 +59,75 @@ let render_stock_eval win stock_data (s:State.t) =
         | `Warning -> "\nThey are looking for a new president!"
         | `MinorWarning -> "\nThey may replace you as president!"
         | `Normal -> "")
-    in
-    write_wh ~x:7 ~y:7 text;
-    match msg.fired with | `Normal -> 40 | _ -> 50
+  in
+  let text =
+    let player = B.get_player player_idx b in
+    sp
+    "%s %s per share\n\
+    Profit:%s Cash:%s\n\
+    Net Worth:%s Track: %d miles\n"
+    (B.get_name player_idx b)
+    (Stock_market.share_price player_idx b.stocks |> price_s)
+    (Player.get_profit player |> money_s)
+    (Player.get_cash player |> money_s)
+    (Player.net_worth player |> money_s)
+    (Player.track_length player)
   in
   let msgs = snd stock_data in
-  let player = B.get_player player_idx b in
-  let _player_stock_data = sp
-    "%s %s per share\n\
-    Profit:%s\n\
-    Net Worth:%s Track: %d miles\n"
-    (B.get_name player_idx b) (Stock_market.share_price player_idx b.stocks |> price_s)
-    (Player.get_profit player |> money_s)
-    (Player.net_worth player |> money_s) (Player.track_length player)
-  in
-  (* Write ordered company data *)
-  (* TODO: fix this up *)
-  (* TODO: take cae of newline if fired/warned *)
-  let _write_stock_data =
-    List.fold_left (fun y Ui_msg.{from_; to_; player_idx; split; _} ->
-      let share_price = Stock_market.share_price player_idx stocks in
+  let text =
+    List.fold_left (fun acc Ui_msg.{from_; to_; player_idx; split; _} ->
       let text = sp
         "%s\n\
         %s\n\
-        Profit:%s\n\
+        Profit:%s Cash:%s\n\
         Net worth:%s Track: %d miles\n"
         (B.get_name player_idx b)
         (_stock_price_diff_s ~split ~region:b.params.region from_ to_ player_idx)
-        (Stock_market.share_price player_idx b.stocks |> price_s)
+        (Ai.calc_profit player_idx b.ai |> money_s)
+        (Ai.get_cash player_idx b.ai |> money_s)
         (Ai.get_net_worth player_idx b.ai |> money_s)
         (B.get_track_length player_idx b)
       in
-      write ~x:7 ~y:7 text;
-      y + 40 (* TODO *)
+      acc ^ text
     )
-    y
-    msgs |> ignore
+    text 
+    msgs
   in
+  Menu.MsgBox.make_basic ~x:2 ~y:2 ~heading ~fonts:s.fonts text 
+  
+let render_stock_eval win state stock_data (s:State.t) =
+  let b = s.backend in
+  let write text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black text in
+  let _draw_background =
+    R.paint_screen win ~color:Ega.green;
+    R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
+    R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
+    Menu.MsgBox.render_box win 2 2 236 184;
+  in
+  Menu.MsgBox.render win s state.stock_msgbox;
+
+  let msgs = snd stock_data in
   let _draw_portraits =
-    let x = 200 in (* TODO *)
+    let x = 276 in
     List.fold_left (fun y Ui_msg.{player_idx; _} ->
-      if Owner.is_human player_idx then
-        () (* TODO: player frame *)
-      else
-        let ai = Ai.get_ai player_idx |> Option.get in
-        let oppo = Ai.get_opponent player_idx b.ai |> Option.map Opponent.get_name in
-        let tex = Hashtbl.find s.textures.opponents oppo in
-        R.Texture.render win ~x ~y tex
-    )
-    8
+      let () =
+        if Owner.is_human player_idx then
+          () (* TODO: player frame *)
+        else
+          let oppo = Ai.get_opponent player_idx b.ai
+            |> Option.map Opponent.get_name |> Option.get
+          in
+          let tex = Hashtbl.find s.textures.opponents oppo in
+          R.Texture.render win ~x ~y tex;
+      in
+      y + 49)
+    2
     msgs
     |> ignore
   in
   let _write_rankings =
-    let x = 220 in (* TODO *)
-    let w, h = 10, 10 in (* TODO *)
+    let x = 286 in (* TODO *)
+    let w, h = 9, 21 in (* TODO *)
     List.fold_left (fun (y, i) _ ->
       R.draw_rect win ~color:Ega.green ~x ~y ~h:10 ~w:10 ~fill:true;
       (* draw glint *)
@@ -130,9 +140,9 @@ let render_stock_eval win stock_data (s:State.t) =
        | _ -> sp "%dth" (i+1)
       in
       write text ~x:(x + 2) ~y; (* TODO *)
-      (y + 80, i+1) (* TODO *)
+      (y + 49, i+1) (* TODO *)
     )
-    (8 + 30, 0) (* TODO *)
+    (40, 0) (* TODO *)
     msgs
   in
   ()

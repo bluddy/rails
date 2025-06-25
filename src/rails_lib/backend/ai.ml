@@ -976,4 +976,5 @@ let fiscal_period_end_stock_eval stocks v =
 let calc_profit player_idx v =
   let ai_player = get_ai_exn player_idx v in
   let maintenance = get_track_length player_idx v / 4 in
-  ai_player.revenue_ytd - maintenance - ai_player.yearly_interest/2
+  M.(ai_player.revenue_ytd - of_int maintenance - ai_player.yearly_interest/2)
+
