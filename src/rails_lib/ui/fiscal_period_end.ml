@@ -76,21 +76,25 @@ let create_stock_eval stock_data (s:State.t) =
   in
   let msgs = snd stock_data in
   let text =
-    List.fold_left (fun acc Ui_msg.{from_; to_; player_idx; split; _} ->
+    List.fold_left (fun acc Ui_msg.{from_; to_; player_idx; split; fired; _} ->
       if Owner.is_human player_idx then acc else
-      let text = sp
+      let text1 = sp
         "\n%s\n\
-        %s\n\
-        Profit:%s Cash:%s\n\
-        Net worth:%s Track: %d miles\n"
+        %s\n"
         (B.get_name player_idx b)
         (_stock_price_diff_s ~split ~region:b.params.region from_ to_ player_idx)
-        (Ai.calc_profit player_idx b.ai |> money_s)
-        (Ai.get_cash player_idx b.ai |> money_s)
-        (Ai.get_net_worth player_idx b.ai |> money_s)
-        (B.get_track_length player_idx b)
       in
-      acc ^ text)
+      let text2 = match fired with
+        | `Fired -> " --------- DISSOLVED ---------\n"
+        | _ -> sp
+          "Profit:%s Cash:%s\n\
+          Net worth:%s Track: %d miles\n"
+          (Ai.calc_profit player_idx b.ai |> money_s)
+          (Ai.get_cash player_idx b.ai |> money_s)
+          (Ai.get_net_worth player_idx b.ai |> money_s)
+          (B.get_track_length player_idx b)
+      in
+      acc ^ text1 ^ text2)
     text 
     msgs
   in
