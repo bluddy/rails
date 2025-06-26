@@ -24,6 +24,7 @@
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - Bug:
+  - Year doesn't switch at end of December.
   - Fiscal end stock eval: msgbox weird size thing
   - AI companies msgbox is off
   - Check when we beat train speed record for first time. Shouldn't be for any speed.

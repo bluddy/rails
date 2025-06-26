@@ -461,7 +461,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
           | false, Some _ ->
               (* Rate war *)
               let rate_war_at_city = LocSet.add tgt_city v.rate_war_at_city in
-              let stations = update_station (Station.set_rate_war true `Half) in
+              let stations = update_station Station.set_rate_war in
               rate_war_at_city, stations
           | _ ->
             v.rate_war_at_city, stations

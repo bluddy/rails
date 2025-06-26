@@ -120,7 +120,6 @@ type info = {
   picked_up_goods: (Goods.t, int) Hashtbl.t;
   kind: [`Depot | `Station | `Terminal];
   upgrades: Upgrades.t;
-  rate_war: bool;
   rates: [`Normal | `Double | `Half];
   cargo_revenue: Money.t Goods.Map.t; (* revenue for each cargo type at this station *)
   holds_priority_shipment: bool;
@@ -292,7 +291,6 @@ let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
         city=city_xy;
         suffix;
         upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
-        rate_war=false;
         rates=`Normal;
         cargo_revenue=Goods.Map.empty;
         holds_priority_shipment=false;
@@ -341,7 +339,7 @@ let get_demand_exn v = match v.info with
    (* some supplies are lost every tick in a rate war. *)
 let check_rate_war_lose_supplies ~difficulty v =
   match v.info with
-  | Some info when info.rate_war ->
+  | Some ({rates=`Half; _} as info) ->
       let div = match difficulty with
         | `Investor -> 1
         | `Financier -> 2
@@ -488,9 +486,21 @@ let set_priority_shipment x v =
 
 let get_player_idx v = v.player
 
-let set_rate_war x rates v =
-  update_with_info v
-    (fun info -> Some {info with rate_war=x; rates})
+let has_rate_war v = match v.info with
+  | Some {rates=`Half; _} -> true
+  | _ -> false
+
+let has_double_rates v = match v.info with
+  | Some {rates=`Double; _} -> true
+  | _ -> false
+
+let _set_rate_war x v = update_with_info v (fun info -> Some {info with rates=x})
+
+let set_rate_war v = _set_rate_war `Half v
+
+let win_rate_war v = _set_rate_war `Double v
+
+let set_normal_rates v = _set_rate_war `Normal v
 
 let total_picked_up_goods v = match v.info with
   | None -> 0

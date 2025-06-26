@@ -634,6 +634,16 @@ let _start_broker_timer player_idx v =
 let create_balance_sheet player_idx v =
   Balance_sheet.create player_idx v.players v.stocks v.stations v.params v.track v.map
 
+let _rate_war_info player_idx v =
+  let rate_wars =
+    Station_map.fold (fun station acc ->
+      if Station.has_rate_war station then station::acc else acc)
+      v.stations
+      ~init:[]
+  in
+  List.map (fun station ->
+  )
+
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
 let _fin_end_proceed player_idx v =
