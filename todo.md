@@ -1,4 +1,5 @@
 # Tasks
+- Building into an ai station
 - Player loss (fired)
 - AI company dissolved
 - Check that active_station only works for 20 years per station
