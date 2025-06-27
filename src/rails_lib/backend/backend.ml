@@ -727,27 +727,27 @@ let _retirement_calc ~fired player_idx stocks params v =
     let mult_val = Int.shift_left 1 (owned_ais - 1) in
     M.(value + (value / C.max_num_players) * mult_val)
   in
-  if M.(net_worth < of_int 100) then
-    let value = M.(net_worth / 20) |> Utils.clip_cash ~min:0 ~max:4 in
-    let retirement_bonus = modify_by_owned_ais net_worth in
-    ()
-  else
-    let retirement_bonus = (net_worth / (age + 20)) * difficulty_factor in
-    let retirement_bonus = modify_by_owned_ais retirement_bonus in
-    (* fired penalty *)
-    let retirement_bonus = if fired then retirement_bonus - retirement_bonus / 4 else retirement_bonus in
-    let rec loop value i =
-      let value = (value / 4) * 3 in
-      if value > 200 && i < Job.max then
-        loop value (i + 1)
-      else i
-    in 
-    let value =
-      if retirement_bonus >= 1000 then
-        19
-      else loop retirement_bonus (4 + 1)
-    in
-    ()
+  let job_idx, retirement_bonus =
+    if M.(net_worth < of_int 100) then
+      let job_idx = M.(net_worth / 20) |> Utils.clip_cash ~min:0 ~max:4 in
+      let retirement_bonus = modify_by_owned_ais net_worth in
+      job_idx, retirement_bonus
+    else
+      let retirement_bonus = (M.to_int net_worth / (age + 20)) * difficulty_factor in
+      let retirement_bonus = modify_by_owned_ais retirement_bonus in
+      (* fired penalty *)
+      let retirement_bonus = if fired then retirement_bonus - retirement_bonus / 4 else retirement_bonus in
+      let rec loop value i =
+        let value = (value / 4) * 3 in
+        if value > 200 && i < Jobs.max then
+          loop value (i + 1)
+        else i
+      in 
+      let job_idx =
+        if retirement_bonus >= 10000 then Jobs.max
+        else loop retirement_bonus (4 + 1)
+      in
+      job_idx, retirement_bonus
   
 let _rate_war_handle_result loc result v =
   (* TODO: handle rate war loss/win fully *)
