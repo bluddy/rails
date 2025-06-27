@@ -7,7 +7,9 @@ module C = Constants
 
 let sp = Printf.sprintf
 
-let render msg win fonts (b:Backend.t) =
+let render msg win (s:State.t) =
+  let b = s.backend in
+  let fonts = s.fonts in
   let player_idx = C.player in
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~x:2 ~y:2 ~w:(320-4) ~h:(200-4) ~color:Ega.black ~fill:false;
