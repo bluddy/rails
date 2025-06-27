@@ -155,6 +155,15 @@ module Map = struct
         acc := acc2;
         value2
       ) v
+
+    let of_iter_merge ~merge iter =
+      Iter.fold (fun acc (k, x) ->
+        update k (function
+          | None -> Some x
+          | Some y -> Some (merge x y))
+          acc)
+      empty
+      iter
   end
 end
 

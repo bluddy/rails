@@ -99,10 +99,14 @@ module Map = struct
     let compare = compare
   end)
 
-  let of_goods goods =
-    Goods.Map.to_iter goods
+  let of_goods_iter ~merge iter =
+    iter
     |> Iter.map (fun (good, x) -> of_good good, x)
-    |> of_iter
+    |> of_iter_merge ~merge
+
+  let of_goods ~merge goods =
+    Goods.Map.to_iter goods
+    |> of_goods_iter ~merge
 end
 
 type complex =

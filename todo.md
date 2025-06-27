@@ -1,7 +1,7 @@
 # Tasks
+- End of year data is fishy
 - Building into an ai station
-- Player loss (fired)
-- AI company dissolved
+- Player loss (fired), AI company dissolved
 - Check that active_station only works for 20 years per station
 - Move block_map and track_graph to player
 - Can't rebuild bridge under repair

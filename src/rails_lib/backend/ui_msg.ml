@@ -57,7 +57,13 @@ type fiscal_period_end_msg =
   | TonMileRecord of int
   | RevenueRecord of Money.t
   | SharePriceChange of share_price_change
-  | DissolveCompany of Owner.t
+  | RateWar of {
+      ai: Owner.t;
+      player_picked_up: int Freight.Map.t;
+      ai_picked_up: int Freight.Map.t;
+      player_delivered: Goods.Set.t;
+      ai_delivered: Goods.Set.t;
+  }
   [@@deriving yojson]
 
 type t =

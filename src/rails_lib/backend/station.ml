@@ -332,6 +332,10 @@ let get_picked_up_goods_exn v = match v.info with
   | Some info -> info.picked_up_goods
   | None -> failwith "not a proper station"
 
+let get_lost_supply_exn v = match v.info with
+  | Some info -> info.lost_supply
+  | None -> failwith "not a proper station"
+
 let get_demand_exn v = match v.info with
   | Some info -> info.demand
   | None -> failwith "not a proper station"

@@ -52,10 +52,11 @@ module RevenueMap = struct
     type t = revenue [@@deriving yojson]
     let compare = compare_revenue
   end)
-  let of_goods goods =
+
+  let of_goods ~merge goods =
     Goods.Map.to_iter goods
     |> Iter.map (fun (good, x) -> Freight.of_good good, x)
-    |> of_iter
+    |> of_iter_merge ~merge
 end
 
 

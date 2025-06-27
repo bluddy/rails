@@ -285,7 +285,7 @@ module Train_update = struct
 
       let income_stmt =
         IS.default
-        |> IS.add_revenues (Income_statement.RevenueMap.of_goods money_from_goods)
+        |> IS.add_revenues (Income_statement.RevenueMap.of_goods ~merge:(M.add) money_from_goods)
         |> IS.add_revenue `Other other_income
         |> IS.deduct `Train car_change_expense
       in

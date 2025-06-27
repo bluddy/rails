@@ -634,6 +634,35 @@ let _start_broker_timer player_idx v =
 let create_balance_sheet player_idx v =
   Balance_sheet.create player_idx v.players v.stocks v.stations v.params v.track v.map
 
+let _rate_war_info_one_station player_idx ai_player station v =
+  let picked_up = Station.get_picked_up_goods_exn station
+    |> Hashtbl.to_iter |> Freight.Map.of_goods_iter ~merge:(+) in
+  let ai_picked_up = Station.get_lost_supply_exn station
+    |> Hashtbl.to_iter |> Freight.Map.of_goods_iter ~merge:(+) in
+  let pickup_scores = Array.fold (fun acc freight ->
+    let amt = Freight.Map.get_or ~default:0 freight picked_up in
+    let ai_amt = Freight.Map.get_or ~default:0 freight ai_picked_up in
+    let sum = amt + ai_amt in
+    let category = if sum >= 320 then `Huge else if sum >= 160 then `Mid else `Little in
+    let score, ai_score = match category with
+    | `Little when amt >= ai_amt -> 1, 0
+    | `Little -> 0, 1
+    | `Mid when amt > ai_amt * 2 -> 2, 0
+    | `Mid when amt * 2 < ai_amt -> 0, 2
+    | `Mid -> 1, 1
+    | `Huge when amt > ai_amt * 2 -> 3, 0
+    | `Huge when amt * 2 < ai_amt -> 0, 3
+    | `Huge when amt > ai_amt -> 2, 1
+    | `Huge -> 1, 2
+    in
+    let ai_score = if Ai.get_track_length ai_player v.ai < 8 then 0 else ai_score in
+    Freight.Map.add freight (score, ai_score) acc)
+    Freight.Map.empty
+    Freight.all_freight
+  in
+
+
+
 let _rate_war_info player_idx v =
   let rate_wars =
     Station_map.fold (fun station acc ->
@@ -642,7 +671,9 @@ let _rate_war_info player_idx v =
       ~init:[]
   in
   List.map (fun station ->
+    ()
   )
+    
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
