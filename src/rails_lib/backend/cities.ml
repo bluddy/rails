@@ -36,9 +36,11 @@ open Containers
       let x, y = Utils.x_y_of_offset v.width i in
       x, y, city)
 
-  let find_close x y ~range v =
+  let find_close_xy x y ~range v =
     Utils.scan x y ~range ~width:v.width ~height:v.height
       ~f:(fun x y -> match find x y v with Some _ -> true | None -> false)
+
+  let find_close (x,y) ~range v = find_close_xy x y ~range v
 
   let random random v = Random.pick_array v.arr random
 

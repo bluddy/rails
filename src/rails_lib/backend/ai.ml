@@ -603,7 +603,7 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_i
           `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities
             ~stations ~tracks ~tilemap ~company:ai_idx ~stocks ~params random v)
 
-      | `TooClose ((x, y) as station_loc) when B_options.cutthroat params.options -> 
+      | `TooClose station_loc when B_options.cutthroat params.options -> 
         (* Rate war can only happen with cutthroat *)
         let track_check = ai_player.track_length >= 75 in
         (* Not sure why this is done *)
@@ -620,7 +620,7 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_i
           value < demand_supply / age
         in
         (* Find new target city (closest to station ) *)
-        let tgt_city = Cities.find_close x y cities ~range:999 |> Option.get_exn_or "can't find any city" in
+        let tgt_city = Cities.find_close station_loc cities ~range:999 |> Option.get_exn_or "can't find any city" in
         let tgt_city_check = ai_of_city tgt_city v |> Option.is_some in
         if track_check && player_share_check && value_check && tgt_city_check then
           `Build (_build_station tgt_city src_city ~tgt_station:(Some station_loc) ~cities

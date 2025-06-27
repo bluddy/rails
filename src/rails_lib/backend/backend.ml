@@ -115,7 +115,7 @@ let get_train idx player_idx v =
 
 let iter_cities f v = Cities.iter f v.cities
 
-let find_close_city x y ~range v = Cities.find_close x y v.cities ~range
+let find_close_city x y ~range v = Cities.find_close_xy x y v.cities ~range
 
 let send_ui_msg v msg =
   (* Mutation. Line up ui msg for when we can send it *)
@@ -634,7 +634,11 @@ let _start_broker_timer player_idx v =
 let create_balance_sheet player_idx v =
   Balance_sheet.create player_idx v.players v.stocks v.stations v.params v.track v.map
 
-let _rate_war_info_one_station player_idx ai_idx station v =
+let _rate_war_info_one_station station v =
+  let city =
+    let loc = Station.get_loc station in
+    Cities.find_close loc ~range:10 v.cities |> Option.get_exn_or "Nearby city not found" in
+  let ai_idx = Ai.ai_of_city city v.ai |> Option.get_exn_or "AI missing for city" in
   let picked_up = Station.get_picked_up_goods_exn station
     |> Hashtbl.to_iter |> Freight.Map.of_goods_iter ~merge:(+) in
   let ai_picked_up = Station.get_lost_supply_exn station
@@ -661,12 +665,11 @@ let _rate_war_info_one_station player_idx ai_idx station v =
     Freight.all_freight
   in
   let delivered = Station.get_goods_revenue station |> Goods.Map.to_iter |> Goods.Set.of_iter_with_test ~test:(fun x -> M.(x > zero)) in
-  let city = Station.get_city station |> Option.get_exn_or "Missing station city" in
   let ai_delivered =
     (* For ai, collect supply from all their cities *)
     let ai_supply = Loc_map.fold_loc (fun loc owner acc ->
        if Owner.(owner = ai_idx) then
-         let supply = Tilemap.collect_demand_supply city ~range:3 v.map
+         let supply = Tilemap.collect_demand_supply loc ~range:3 v.map
           |> snd |> Hashtbl.to_iter |> Goods.Set.of_iter_with_mult in
          Goods.Set.union acc supply
        else acc)
@@ -699,13 +702,12 @@ let _rate_war_info_one_station player_idx ai_idx station v =
 let _rate_war_info player_idx v =
   let rate_wars =
     Station_map.fold (fun station acc ->
-      if Station.has_rate_war station then station::acc else acc)
+      if Owner.(Station.get_player_idx station = player_idx) && Station.has_rate_war station then station::acc
+      else acc)
       v.stations
       ~init:[]
   in
-  List.map (fun station ->
-    ()
-  )
+  List.map (fun station -> _rate_war_info_one_station station v) rate_wars
     
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
@@ -717,11 +719,13 @@ let _fin_end_proceed player_idx v =
   let player = get_player player_idx v in
   let player, total_revenue, ui_msgs1 = Player.fiscal_period_end net_worth v.stations v.params player in
   (* TODO handle fired *)
-  let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   (* TODO: handle dissolved company *)
+  let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
+  (* TODO: handle rate war victory/loss *)
+  let rw_msgs = _rate_war_info player_idx v in
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let v = update_player v player_idx (fun _ -> player) in
-  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, ui_msgs1 @ ui_msgs2 @ ui_msgs3) in
+  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
   send_ui_msg v ui_msg;
   let params = {v.params with current_period=Params.next_period v.params; time=0} in
   {v with params; ai; stocks}
