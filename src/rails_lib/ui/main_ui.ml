@@ -908,8 +908,14 @@ let handle_msgs (s:State.t) v ui_msgs =
             let background = GenericScreen{render_fn=Fiscal_period_end.render_bg} in
             let modes = [] in
             let modes = List.fold_left (fun acc rate_war_msg ->
-              (GenericScreen{render_fn=Fiscal_end_rate_war.render rate_war_msg})::acc
-            ) modes rate_wars
+              let mode = GenericScreen{render_fn=Fiscal_end_rate_war.render rate_war_msg} in
+              let acc = mode::acc in
+              match rate_war_msg.winner with
+              | `Player | `Ai ->
+                   let mode = GenericScreen{render_fn=Fiscal_end_rate_war.render_council rate_war_msg} in
+                   mode::acc
+              | `None -> acc)
+              modes rate_wars
             in
             let modes = match records_earnings with
              | Some texts -> (make_news ~background @@ Newspaper.make_fancy s texts b.params b.random)::modes
