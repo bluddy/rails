@@ -58,11 +58,15 @@ type fiscal_period_end_msg =
   | RevenueRecord of Money.t
   | SharePriceChange of share_price_change
   | RateWar of {
-      ai: Owner.t;
-      player_picked_up: int Freight.Map.t;
+      ai_idx: Owner.t;
+      city: loc;
+      picked_up: int Freight.Map.t;
       ai_picked_up: int Freight.Map.t;
-      player_delivered: Goods.Set.t;
+      pickup_scores: (int * int) Freight.Map.t; (* player, ai *)
+      delivered: Goods.Set.t;
       ai_delivered: Goods.Set.t;
+      delivery_scores: (int * int) Goods.Map.t; (* player, ai *)
+      final_scores: int * int; (* player, ai *)
   }
   [@@deriving yojson]
 

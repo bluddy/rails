@@ -634,7 +634,7 @@ let _start_broker_timer player_idx v =
 let create_balance_sheet player_idx v =
   Balance_sheet.create player_idx v.players v.stocks v.stations v.params v.track v.map
 
-let _rate_war_info_one_station player_idx ai_player station v =
+let _rate_war_info_one_station player_idx ai_idx station v =
   let picked_up = Station.get_picked_up_goods_exn station
     |> Hashtbl.to_iter |> Freight.Map.of_goods_iter ~merge:(+) in
   let ai_picked_up = Station.get_lost_supply_exn station
@@ -655,13 +655,46 @@ let _rate_war_info_one_station player_idx ai_player station v =
     | `Huge when amt > ai_amt -> 2, 1
     | `Huge -> 1, 2
     in
-    let ai_score = if Ai.get_track_length ai_player v.ai < 8 then 0 else ai_score in
+    let ai_score = if Ai.get_track_length ai_idx v.ai < 8 then 0 else ai_score in
     Freight.Map.add freight (score, ai_score) acc)
     Freight.Map.empty
     Freight.all_freight
   in
-
-
+  let delivered = Station.get_goods_revenue station |> Goods.Map.to_iter |> Goods.Set.of_iter_with_test ~test:(fun x -> M.(x > zero)) in
+  let city = Station.get_city station |> Option.get_exn_or "Missing station city" in
+  let ai_delivered =
+    (* For ai, collect supply from all their cities *)
+    let ai_supply = Loc_map.fold_loc (fun loc owner acc ->
+       if Owner.(owner = ai_idx) then
+         let supply = Tilemap.collect_demand_supply city ~range:3 v.map
+          |> snd |> Hashtbl.to_iter |> Goods.Set.of_iter_with_mult in
+         Goods.Set.union acc supply
+       else acc)
+      ~init:Goods.Set.empty
+      (Ai.ai_of_city_map v.ai)
+    in
+    let station_demand = Station.get_demand_exn station in
+    Goods.Set.inter station_demand ai_supply
+  in
+  let delivery_scores = List.fold_left (fun acc good ->
+    let have = Goods.Set.mem good delivered in
+    let ai_have = Goods.Set.mem good ai_delivered in
+    match have, ai_have with
+    | true, true -> Goods.Map.add good (1, 1) acc
+    | true, false -> Goods.Map.add good (2, 0) acc
+    | false, true -> Goods.Map.add good (0, 2) acc
+    | _ -> acc)
+    Goods.Map.empty
+    Goods.order
+  in
+  let delivery_scores = if B_options.complex_economy v.params.options then delivery_scores else Goods.Map.empty in
+  let final_score fn =
+    Freight.Map.sum (fun _ pair -> fn pair) pickup_scores + Goods.Map.sum (fun _ pair -> fn pair) delivery_scores
+  in
+  let final_scores = final_score fst, final_score snd in
+  Ui_msg.RateWar {
+    ai_idx; city; picked_up; ai_picked_up; pickup_scores; delivered; ai_delivered; delivery_scores; final_scores;
+  }
 
 let _rate_war_info player_idx v =
   let rate_wars =

@@ -65,6 +65,14 @@ module Set = struct
 
     let yojson_of_t (t:t) =
       to_list t |> yojson_of_list O.yojson_of_t
+
+    (* of_iter with multiplicity *)
+    let of_iter_with_test ~test iter =
+      Iter.fold (fun acc (key, x) ->
+        if test x then add key acc else acc) empty iter
+
+    let of_iter_with_mult iter =
+      of_iter_with_test ~test:(fun x -> x > 0) iter
   end
 end
 

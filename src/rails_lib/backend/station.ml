@@ -472,6 +472,10 @@ let add_to_goods_revenue goods_rev info =
 let add_to_goods_revenue goods_rev v =
   update_with_info v (fun info -> add_to_goods_revenue goods_rev info |> Option.some)
 
+let get_goods_revenue v = match v.info with
+  | Some info -> info.cargo_revenue
+  | None -> Goods.Map.empty
+
 let color_of_rates v = match v.info with
   | Some info -> begin match info.rates with
     | `Normal -> Ega.white

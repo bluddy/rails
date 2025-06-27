@@ -337,8 +337,7 @@ module Train_update = struct
       train, station, data, ui_msgs
     in
     match station.info with
-    | Some station_info when Train_station.train_stops_at station train ->
-          handle_stop ()
+    | Some _ when Train_station.train_stops_at station train -> handle_stop ()
     | Some _ when not train.had_maintenance && Station.can_maintain station ->
          {train with had_maintenance=true}, station, None, []
     | _ -> train, station, None, []

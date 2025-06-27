@@ -93,6 +93,8 @@ let compute_share_price player stocks v =
 
 let ai_of_city city v = LocMap.get city v.ai_of_city
 
+let ai_of_city_map v = v.ai_of_city
+
 let city_rate_war city v = LocSet.mem city v.rate_war_at_city
 
 let get_ai idx v = Owner.Map.get idx v.ais
