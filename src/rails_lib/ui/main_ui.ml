@@ -896,15 +896,14 @@ let handle_msgs (s:State.t) v ui_msgs =
       | FiscalPeriodEndMsgs(player_idx, msgs) ->
           if Owner.(player_idx <> main_player_idx) then v
           else
-            let records_earnings, warnings, records, stock_msgs = Fiscal_period_end.handle_msgs b msgs in
+            let rate_wars, records_earnings, warnings, records, stock_msgs = Fiscal_period_end.handle_msgs b msgs in
             (* Build the modes list backwards *)
             let mode = Normal in
             (* Stock screen *)
             let mode = FiscalPeriodEndStocks{
               state=Fiscal_period_end.create_stock_eval stock_msgs s;
               next_mode=mode
-            }
-            in
+            } in
             let background = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode=Normal} in
             let mode = if String.length records > 0 then
               make_msgbox_mode s ~x:80 ~y:60 records ~background ~next:mode

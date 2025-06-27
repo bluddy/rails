@@ -356,7 +356,7 @@ let _remove_track ((x,y) as loc) ~dir player_idx v =
 
 let _improve_station loc player_idx ~upgrade v =
   let stations = 
-    Station_map.update loc (Option.map @@ Station.add_upgrade upgrade player_idx) v.stations
+    Station_map.update loc (Station.add_upgrade upgrade player_idx) v.stations
   in
   let players = Player.update v.players player_idx @@
     Player.(pay `StructuresEquipment @@ Station.price_of_upgrade upgrade)
@@ -445,10 +445,7 @@ let _station_set_signal loc dir cmd v =
   | `Hold -> OverrideHold
   | `Proceed -> OverrideProceed
   in
-  let stations = Station_map.update loc 
-    (Option.map (fun station -> Station.set_override dir signal station ))
-    v.stations
-  in
+  let stations = Station_map.update loc (Station.set_override dir signal) v.stations in
   [%up {v with stations}]
 
 let _build_industry ((x, y) as loc) tile player_idx v =

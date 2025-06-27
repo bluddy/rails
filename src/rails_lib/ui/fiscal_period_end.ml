@@ -264,10 +264,16 @@ let get_stock_msgs msgs =
   in
   human, all_players
 
+let get_rate_war_msgs msgs =
+  msgs
+  |> List.filter (function | Ui_msg.RateWar _ -> true | _ -> false)
+  |> List.map (function | Ui_msg.RateWar info -> info | _ -> assert false)
+
 let handle_msgs backend msgs =
+  let rate_war_msgs = get_rate_war_msgs msgs in
   let record_earnings = get_record_earnings backend msgs in
   let warnings = get_warnings backend msgs in
   let records = get_records backend msgs  in
   let stock_msgs = get_stock_msgs msgs in
-  record_earnings, warnings, records, stock_msgs
+  rate_war_msgs, record_earnings, warnings, records, stock_msgs
 
