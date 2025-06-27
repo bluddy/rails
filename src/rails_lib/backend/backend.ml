@@ -697,9 +697,17 @@ let _rate_war_info_one_station station v =
     in
     final_score fst, final_score snd
   in
-  Ui_msg.RateWar {
-    ai_idx; city; picked_up; ai_picked_up; pickup_scores; delivered; ai_delivered; delivery_scores; final_scores;
-  }
+  let winner =
+    let score, ai_score = final_scores in
+    if score >= ai_score * 2 then `Player
+    else if ai_score >= score * 2 then `Ai
+    else `None
+  in
+  let msg = Ui_msg.RateWar {
+      ai_idx; city; picked_up; ai_picked_up; pickup_scores; delivered; ai_delivered; delivery_scores; final_scores; winner;
+    }
+  in
+  (station.loc, winner), msg
 
 let _rate_war_info player_idx v =
   let rate_wars =
@@ -710,7 +718,18 @@ let _rate_war_info player_idx v =
       ~init:[]
   in
   List.map (fun station -> _rate_war_info_one_station station v) rate_wars
-    
+
+let _rate_war_handle_result loc result v =
+  (* TODO: handle rate war loss/win fully *)
+  let stations = v.stations in
+  let stations =  match result with
+    | `Player -> Station_map.update loc Station.set_double_rates stations
+    | `Ai -> Station_map.delete loc stations
+    | `None -> stations
+  in
+  (* Remove AI station, route. If stranded, remove more *)
+  (* Remove player stuff within radius of 3 *)
+  [%up {v with stations}]
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
@@ -723,8 +742,8 @@ let _fin_end_proceed player_idx v =
   (* TODO handle fired *)
   (* TODO: handle dissolved company *)
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
-  (* TODO: handle rate war victory/loss *)
-  let rw_msgs = _rate_war_info player_idx v in
+  let rate_war_results, rw_msgs = _rate_war_info player_idx v |> List.split in
+  let v = List.fold_left (fun acc (loc, result) -> _rate_war_handle_result loc result acc) v rate_war_results in
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let v = update_player v player_idx (fun _ -> player) in
   let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in

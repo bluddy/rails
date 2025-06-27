@@ -456,7 +456,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
           let opponent = (get_ai_exn company v).opponent.name in
           Ui_msg.AiConnected {opponent; ai_name; src_name; tgt_name}
         in
-        let update_station f = Station_map.update tgt_loc (Option.map f) stations in
+        let update_station f = Station_map.update tgt_loc f stations in
         let rate_war_at_city, stations = match ai_controlled_by_player, tgt_station with
           | true, Some _ ->
               v.rate_war_at_city, update_station Station.set_to_union_station

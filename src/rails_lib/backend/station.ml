@@ -516,7 +516,7 @@ let _set_rate_war x v = update_with_info v (fun info -> Some {info with rates=x}
 
 let set_rate_war v = _set_rate_war `Half v
 
-let win_rate_war v = _set_rate_war `Double v
+let set_double_rates v = _set_rate_war `Double v
 
 let set_normal_rates v = _set_rate_war `Normal v
 

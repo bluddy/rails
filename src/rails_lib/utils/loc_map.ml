@@ -35,7 +35,9 @@ let find_exn f v =
 
 let get loc v = LocMap.find_opt loc v
 
-let update loc f v = LocMap.update loc (fun v -> f v) v
+let update loc f v = LocMap.update loc (fun v ->
+  let v = Option.get_exn_or "Couldn't find station at loc" v in
+  Some(f v)) v
 
 let mem loc v = LocMap.mem loc v
 

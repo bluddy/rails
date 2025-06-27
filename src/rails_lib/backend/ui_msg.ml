@@ -3,14 +3,14 @@ open! Containers
 open! Utils
 
 type train_arrival_msg = {
-    player: Owner.t;
-    time: int;
-    train_name: string option;
-    freight: Freight.complex;
-    _type: Train.train_type;
-    train_num: Train.Id.t;
-    goods_amount: (Goods.t * int) list; (* goods delivered *)
-    revenue: Money.t; (* x 1000 *)
+  player: Owner.t;
+  time: int;
+  train_name: string option;
+  freight: Freight.complex;
+  _type: Train.train_type;
+  train_num: Train.Id.t;
+  goods_amount: (Goods.t * int) list; (* goods delivered *)
+  revenue: Money.t; (* x 1000 *)
 } [@@deriving yojson]
 
 type stock_broker_ui_msg = 
@@ -36,27 +36,28 @@ type investor_reaction =
   [@@deriving yojson]
 
 type share_price_change = {
-    player_idx: Owner.t;
-    from_: Money.t;
-    to_: Money.t;
-    share_price_growth: int;
-    split: bool;
-    fired: [`Fired | `Warning | `MinorWarning | `Normal]
-  }
-  [@@deriving yojson]
+  player_idx: Owner.t;
+  from_: Money.t;
+  to_: Money.t;
+  share_price_growth: int;
+  split: bool;
+  fired: [`Fired | `Warning | `MinorWarning | `Normal]
+}
+[@@deriving yojson]
 
 type rate_war_info = {
-    ai_idx: Owner.t;
-    city: loc;
-    picked_up: int Freight.Map.t;
-    ai_picked_up: int Freight.Map.t;
-    pickup_scores: (int * int) Freight.Map.t; (* player, ai *)
-    delivered: Goods.Set.t;
-    ai_delivered: Goods.Set.t;
-    delivery_scores: (int * int) Goods.Map.t; (* player, ai *)
-    final_scores: int * int; (* player, ai *)
-  }
-  [@@deriving yojson]
+  ai_idx: Owner.t;
+  city: loc;
+  picked_up: int Freight.Map.t;
+  ai_picked_up: int Freight.Map.t;
+  pickup_scores: (int * int) Freight.Map.t; (* player, ai *)
+  delivered: Goods.Set.t;
+  ai_delivered: Goods.Set.t;
+  delivery_scores: (int * int) Goods.Map.t; (* player, ai *)
+  final_scores: int * int; (* player, ai *)
+  winner: [`Player | `Ai | `None];
+}
+[@@deriving yojson]
 
 type fiscal_period_end_msg =
   | TrainNoRevenue of TID.t
