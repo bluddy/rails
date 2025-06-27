@@ -83,7 +83,6 @@ type ('state, 'menu_options, 'payload) modalmenu =
     menu: ('menu_options option, 'state) Menu.MsgBox.t;
     data: 'payload;
     background: 'state mode;
-    next: 'state mode;
   }
     (* Main modes of operation of the mapview.
        Any special menu needs a mode.
@@ -94,7 +93,7 @@ type ('state, 'menu_options, 'payload) modalmenu =
 and 'state mode =
   | Normal
   | ModalMsgbox of ('state, unit, unit) modalmenu
-  | Newspaper of {state: 'state Newspaper_d.t; next_mode: 'state mode; background: 'state mode}
+  | Newspaper of {state: 'state Newspaper_d.t; background: 'state mode}
   | BuildStation of ('state, Station.kind, unit) modalmenu
   | BuildBridge of ('state, Bridge.t, Backend.Action.msg) modalmenu
   | BuildHighGrade of ('state, [`BuildTunnel | `BuildTrack], Backend.Action.msg) modalmenu
@@ -113,30 +112,30 @@ and 'state mode =
   | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of {state: Balance_sheet_d.t; end_of_year: bool}
   | Accomplishments
-  | Income_statement of { state: Balance_sheet_d.t; next_mode: 'state mode}  (* we use the stock part *)
+  | Income_statement of Balance_sheet_d.t  (* we use the stock part *)
   | EngineInfo of Engine_info.t
   | Efficiency_report
-  | Animation of {state: Pani_render.t; next_mode: 'state mode}  (* Animation stores its next mode for ease of use *)
+  | Animation of Pani_render.t 
   | NewGoodDeliveryPickup of New_delivery_pickup_d.t
   | Speed_record of Speed_record_d.t
   | Name_rr of Name_rr_d.t
   | FindCity of Find_city.t
   (* A screen with only rendering and no interaction *)
-  | GenericScreen of { render_fn: Renderer.window -> 'state -> unit; next_mode: 'state mode }
-  | FiscalPeriodEndStocks of {state: 'state Fiscal_period_end_d.t; next_mode: 'state mode}
+  | GenericScreen of { render_fn: Renderer.window -> 'state -> unit}
+  | FiscalPeriodEndStocks of 'state Fiscal_period_end_d.t
 
 let is_normal_mode = function
   | Normal -> true
   | _ -> false
 
-let make_modal ?(background=Normal) ?(next=Normal) menu data = 
-  {menu; data; background; next}
+let make_modal ?(background=Normal) menu data = {menu; data; background}
 
 type 'state t = {
   dims: dims;
   options: options;
   menu: (menu_action, 'state) Menu.Global.t;
   mode: 'state mode; (* determines mode of operation *)
+  next_modes: 'state mode list;
   train_ui_start: int; (* which train we start showing in the UI *)
   (* Top-right UI arrival message, time to display *)
   train_arrival_msgs: (Ui_msg.train_arrival_msg * int ref) list;

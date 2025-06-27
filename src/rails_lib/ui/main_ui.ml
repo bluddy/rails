@@ -287,8 +287,17 @@ let default ?options ?view win fonts region =
     options;
     train_ui_start=0;
     mode=Normal;
+    next_modes = [];
     train_arrival_msgs = [];
   }
+
+let set_modes l v = match l with
+  | x::xs -> {v with mode=x; next_modes=xs}
+  | [] -> v
+
+let next_mode v = match v.next_modes with
+  | x::xs -> {v with mode=x; next_modes=xs}
+  | [] -> [%up {v with mode=Normal}]
 
 let build_station_menu fonts region =
   let open Menu in
@@ -421,10 +430,10 @@ let handle_train_roster_event (s:State.t) v event =
 
 let nobaction = B.Action.NoAction
 
-let make_msgbox_mode ?x ?y ?background ?next s text =
+let make_msgbox_mode ?x ?y ?background s text =
   if String.length text = 0 then Normal else
   let menu = Menu.MsgBox.make_basic ?x ?y s ~fonts:s.State.fonts text in
-  let modal = make_modal ?background ?next menu () in
+  let modal = make_modal ?background menu () in
   ModalMsgbox modal
 
 let make_msgbox ?x ?y s v text =
@@ -456,7 +465,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           (build_fn:(State.t, b, c) modalmenu -> State.t mode)
           (process_fn:(State.t, b, c) modalmenu -> b -> State.t t * B.Action.t) ->
       let menu, action = Menu.MsgBox.update s modal.menu event in
-      let exit_mode () = {v with mode=modal.next}, B.Action.NoAction in
+      let exit_mode () = next_mode v, B.Action.NoAction in
       begin match action with
       | Menu.On(None) -> exit_mode ()
       | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
@@ -468,9 +477,9 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
   in
   let player_idx = C.player in
-  let modal_screen_no_input v ~next_mode event =
+  let modal_screen_no_input v event =
     if Event.is_left_click event || Event.key_modal_dismiss event then
-      {v with mode=next_mode}, nobaction
+      next_mode v, nobaction
     else
       v, nobaction
   in
@@ -559,7 +568,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with mode=Balance_sheet {state; end_of_year=false}}, nobaction
         | On (`Income_statement), _ ->
             let state = B.create_balance_sheet player_idx s.backend in
-            {v with mode=Income_statement {state; next_mode=Normal}}, nobaction
+            {v with mode=Income_statement state}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
@@ -679,7 +688,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | Newspaper news ->
         let v = match Newspaper.handle_event s news.state event with
-          | `Exit -> {v with mode=news.next_mode}
+          | `Exit -> next_mode v
           | _ -> v
         in
         v, nobaction
@@ -687,13 +696,13 @@ let handle_event (s:State.t) v (event:Event.t) =
     | BuildStation build_menu ->
         handle_modal_menu_events build_menu
         (fun x -> BuildStation x)
-        (fun modal station_kind ->
-            let exit_mode () = {v with mode=modal.next}, nobaction in
+        (fun _ station_kind ->
+            let exit_mode () = next_mode v, nobaction in
             let x, y = Mapview.get_cursor_pos v.view in
             match Backend.check_build_station x y player_idx station_kind s.backend with
             | `Ok ->
                 let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
-                {v with mode=modal.next}, backend_action
+                next_mode v, backend_action
                 (* TODO: handle other cases *)
             | _ -> exit_mode ()
             )
@@ -708,18 +717,18 @@ let handle_event (s:State.t) v (event:Event.t) =
             | `Ok -> 
                 let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
                 let view = Mapview.move_const_box v.view dir 2 in
-                {v with mode=modal.next; view}, backend_action
+                {(next_mode v) with view}, backend_action
             | _ ->
-                {v with mode=modal.next}, nobaction
+                next_mode v, nobaction
             )
 
     | BuildHighGrade build_menu ->
         handle_modal_menu_events build_menu
         (fun x -> BuildHighGrade x)
-        (fun ({data={x;y;dir;player_idx} as msg;_} as modal) -> function
+        (fun {data={x;y;dir;player_idx} as msg;_} -> function
           | `BuildTrack ->
               let view = Mapview.move_const_box v.view dir 1 in
-              {v with mode=modal.next; view}, B.Action.BuildTrack msg
+              {(next_mode v) with view}, B.Action.BuildTrack msg
           | `BuildTunnel ->
               match B.check_build_tunnel (x, y) player_idx ~dir s.backend with
               | `Tunnel(length, disp_length, cost) ->
@@ -842,7 +851,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | EngineInfo _
     | StationReport _
     | Efficiency_report
-    | Accomplishments -> modal_screen_no_input ~next_mode:Normal v event
+    | Accomplishments -> modal_screen_no_input v event
 
     | Balance_sheet state ->
       (* Balance sheet at the fin period end is the last before we do housecleaning *)
@@ -853,10 +862,10 @@ let handle_event (s:State.t) v (event:Event.t) =
       else
         v, nobaction
 
-    | Income_statement {next_mode; _}
-    | GenericScreen {next_mode;_}
-    | FiscalPeriodEndStocks {next_mode; _}
-    | Animation {next_mode; _} -> modal_screen_no_input ~next_mode v event
+    | Income_statement _
+    | GenericScreen _
+    | FiscalPeriodEndStocks _
+    | Animation _ -> modal_screen_no_input v event
         
   in
   (* See if we need to pause or unpause *)
@@ -875,8 +884,7 @@ let handle_msgs (s:State.t) v ui_msgs =
     | (`Fast | `Slow) as x when not (B_options.equal_speed (B.get_speed b) `Turbo) -> Some x
     | _ -> None
   in
-  let make_news ?(next=Normal) ?(background=Normal) state =
-    Newspaper {state; next_mode=next; background} in
+  let make_news ?(background=Normal) state = Newspaper {state; background} in
   let handle_msg v ui_msg =
     match v.mode with 
     | BuildTrain(`AddCars _) ->
@@ -897,27 +905,20 @@ let handle_msgs (s:State.t) v ui_msgs =
           if Owner.(player_idx <> main_player_idx) then v
           else
             let rate_wars, records_earnings, warnings, records, stock_msgs = Fiscal_period_end.handle_msgs b msgs in
-            (* Build the modes list backwards *)
-            let mode = Normal in
-            (* Stock screen *)
-            let mode = FiscalPeriodEndStocks{
-              state=Fiscal_period_end.create_stock_eval stock_msgs s;
-              next_mode=mode
-            } in
-            let background = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode=Normal} in
-            let mode = if String.length records > 0 then
-              make_msgbox_mode s ~x:80 ~y:60 records ~background ~next:mode
-              else mode
+            let background = GenericScreen{render_fn=Fiscal_period_end.render_bg} in
+            let modes = [] in
+            let modes = match records_earnings with
+             | Some texts -> (make_news ~background @@ Newspaper.make_fancy s texts b.params b.random)::modes
+             | None -> modes
             in
-            let mode = if String.length warnings > 0 then
-              make_msgbox_mode s ~x:64 ~y:40 warnings ~background ~next:mode
-              else mode
+            let modes = if String.length warnings > 0 then
+              (make_msgbox_mode s ~x:64 ~y:40 warnings ~background)::modes else modes
             in
-            let mode = match records_earnings with
-             | Some texts -> make_news ~background ~next:mode @@ Newspaper.make_fancy s texts b.params b.random
-             | None -> mode
+            let modes = if String.length records > 0 then
+              (make_msgbox_mode s ~x:80 ~y:60 records ~background)::modes else modes
             in
-            {v with mode}
+            let modes = (FiscalPeriodEndStocks (Fiscal_period_end.create_stock_eval stock_msgs s))::modes in
+            set_modes (List.rev modes) v
       | _ -> v
       end
 
@@ -1058,19 +1059,16 @@ let handle_msgs (s:State.t) v ui_msgs =
           let input = [0, value; 1, value] in
           Pani_render.create ~input C.Pani.wreck
         in
-        let next_mode = accident player_idx in
-        let mode = Animation{state; next_mode} in
-        {v with mode}
+        let next_modes = [accident player_idx] in
+        {v with mode=Animation state; next_modes}
 
       | TrainBridgeAccident {player_idx; engine} ->
         let state = 
           let filename = if Region.is_us b.params.region then C.Pani.flood_us else C.Pani.flood_eu in
           let input = [10, 1; 0, engine.bridge_val] in
-          Pani_render.create ~input filename
-        in
-        let next_mode = accident player_idx in
-        let mode = Animation{state; next_mode} in
-        {v with mode}
+          Pani_render.create ~input filename in
+        let next_modes = [accident player_idx] in
+        {v with mode=Animation state; next_modes}
 
       | ClimateChange {climate; reason} ->
         let mode =
@@ -1091,12 +1089,12 @@ let handle_msgs (s:State.t) v ui_msgs =
 
       | EngineDiscovered(engine) ->
         let mode =
-          let next=EngineInfo(Engine_info.make engine) in
           let text = engine.name,
                      "Locmotive Introduced.",
                      "Bigger, Better, Faster." in
-          make_news ~next @@ Newspaper.make_fancy s text b.params b.random in
-        {v with mode}
+          make_news @@ Newspaper.make_fancy s text b.params b.random in
+        let next_modes=[EngineInfo(Engine_info.make engine)] in
+        {v with mode; next_modes}
 
       | RateWarDeclared{player_idx; other_player_idx; station} ->
         let mode =
@@ -1124,7 +1122,9 @@ let handle_msgs (s:State.t) v ui_msgs =
           let player_name = B.get_handle player_idx b in
           let text = (Printf.sprintf "%s president leaves" player_name),
                      "town after meeting",
-                     match by with | `Stockholders -> "with stockholders." | `Management -> "with new Management" in
+                     match by with
+                     | `Stockholders -> "with stockholders."
+                     | `Management -> "with new Management" in
           make_news @@ Newspaper.make_fancy s text b.params b.random in
         {v with mode}
 
@@ -1135,11 +1135,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           | Iron -> Some C.Pani.iron_bridge
           | _ -> None in
         begin match file with
-        | Some file ->
-          let next_mode = Normal in
-          let state = Pani_render.create file in
-          let mode = Animation{state; next_mode} in
-          {v with mode}
+        | Some file -> {v with mode= Animation(Pani_render.create file)}
         | None -> v
         end
 
@@ -1169,10 +1165,10 @@ let handle_msgs (s:State.t) v ui_msgs =
           else
             (* Create a chain of modes *)
             let state = B.create_balance_sheet player_idx s.backend in
-            let next_mode = Balance_sheet {state; end_of_year=true} in
-            let next_mode = Income_statement {state; next_mode} in
-            let mode = GenericScreen{render_fn=Fiscal_period_end.render_bg; next_mode} in
-            {v with mode}
+            let income_stmt = Income_statement state in
+            let bal_sheet = Balance_sheet {state; end_of_year=true} in
+            let mode = GenericScreen{render_fn=Fiscal_period_end.render_bg} in
+            {v with mode; next_modes=[income_stmt; bal_sheet]}
 
       | FiscalPeriodEndMsgs _
       | StockBroker _
@@ -1209,9 +1205,9 @@ let handle_tick s v time is_cycle = match v.mode with
         [%up {v with view; train_arrival_msgs}]
       in
       decr_train_msgs ()
-  | Animation a ->
-      let state2 = Pani_render.handle_tick time a.state in
-      if state2 === a.state then v else {v with mode=Animation{a with state=state2}}
+  | Animation state ->
+      let state2 = Pani_render.handle_tick time state in
+      if state2 === state then v else {v with mode=Animation state2}
 
   | NewGoodDeliveryPickup d ->
       let d2 = New_delivery_pickup.handle_tick s time d in
@@ -1411,13 +1407,13 @@ let render (win:R.window) (s:State.t) v =
         Stock_broker.render win s state
     | Balance_sheet {state;_} ->
         Balance_sheet_view.render win s state
-    | Income_statement {state;_} ->
+    | Income_statement state ->
         Income_statement_view.render win s state
     | Accomplishments ->
         Accomplishments.render win s
     | Efficiency_report ->
         Efficiency_report.render win s
-    | Animation {state; _} ->
+    | Animation state ->
         Pani_render.render win state
     | NewGoodDeliveryPickup d ->
         New_delivery_pickup.render win s d
@@ -1428,7 +1424,7 @@ let render (win:R.window) (s:State.t) v =
     | FindCity state ->
        render_main win s v;
        Find_city.render win s.fonts state
-    | FiscalPeriodEndStocks {state; _} ->
+    | FiscalPeriodEndStocks state ->
        Fiscal_period_end.render_stock_eval win state  s
     | GenericScreen {render_fn; _} ->
        render_fn win s
