@@ -148,6 +148,8 @@ let net_worth v = v.m.net_worth
 
 let get_profit v = v.m.profit
 
+let get_net_worth v = v.m.net_worth
+
 let bonds v = v.m.bonds
 
 let modify_cash f v = {v with m={v.m with cash = f v.m.cash}}
@@ -608,6 +610,8 @@ let add_to_total_difficulty params v =
   let diff = if B_options.complex_economy options then increase diff else diff in
   let diff = if B_options.cutthroat options then increase diff else diff in 
   {v with total_difficulty=diff}
+
+let get_total_difficulty v = v.total_difficulty
 
 let get_bridge_washout v = match v.event with
   | Some(BridgeWashout loc) -> Some loc

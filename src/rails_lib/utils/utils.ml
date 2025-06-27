@@ -332,6 +332,8 @@ let clip v ~min ~max =
   else
     min
 
+let clip_cash v ~min ~max = clip (Money.to_int v) ~min ~max |> Money.of_int
+
 let random_int maxval r =
   if maxval = 0 then 0 else Random.int maxval r
   

@@ -1,6 +1,6 @@
 open! Containers
 
-type t =
+type eu =
   (* Europe *)
   | ChimneySweep
   | GardenClubChairman
@@ -22,7 +22,9 @@ type t =
   | MinisterOfFinance
   | RoyalAdvisor
   | PrimeMinister
+  [@@deriving enum]
 
+type us =
   (* US *)
   | Hobo
   | SnakeOilPeddler
@@ -44,4 +46,7 @@ type t =
   | SecretaryOfTreasury
   | GeneralOfArmies
   | PresidentOfUnitedStates
+  [@@deriving enum]
+
+let max = eu_to_enum PrimeMinister
 

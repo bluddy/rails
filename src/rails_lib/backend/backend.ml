@@ -716,6 +716,39 @@ let _rate_war_info player_idx v =
   in
   List.map (fun station -> _rate_war_info_one_station station v) rate_wars
 
+let _retirement_calc ~fired player_idx stocks params v =
+  let ret_val = if Region.is_us params.Params.region then 20 else 0 in
+  let owned_ais = Stock_market.other_companies_controlled_by player_idx stocks |> List.length in
+  let age = Params.age params |> Utils.clip ~min:1 ~max:999 in
+  let player = get_player player_idx v in
+  let net_worth = Player.get_net_worth player in
+  let difficulty_factor = (Player.get_total_difficulty player * 10 / age) / 2 in
+  let modify_by_owned_ais value =
+    let mult_val = Int.shift_left 1 (owned_ais - 1) in
+    M.(value + (value / C.max_num_players) * mult_val)
+  in
+  if M.(net_worth < of_int 100) then
+    let value = M.(net_worth / 20) |> Utils.clip_cash ~min:0 ~max:4 in
+    let retirement_bonus = modify_by_owned_ais net_worth in
+    ()
+  else
+    let retirement_bonus = (net_worth / (age + 20)) * difficulty_factor in
+    let retirement_bonus = modify_by_owned_ais retirement_bonus in
+    (* fired penalty *)
+    let retirement_bonus = if fired then retirement_bonus - retirement_bonus / 4 else retirement_bonus in
+    let rec loop value i =
+      let value = (value / 4) * 3 in
+      if value > 200 && i < Job.max then
+        loop value (i + 1)
+      else i
+    in 
+    let value =
+      if retirement_bonus >= 1000 then
+        19
+      else loop retirement_bonus (4 + 1)
+    in
+    ()
+  
 let _rate_war_handle_result loc result v =
   (* TODO: handle rate war loss/win fully *)
   let stations = v.stations in
