@@ -85,3 +85,43 @@ let render msg win (s:State.t) =
     write ~x:8 ~y:168 text;
   in
   ()
+
+  (* This should only be called once one side has won *)
+let render_council msg win (s:State.t) =
+  let b = s.backend in
+  let fonts = s.fonts in
+  let player_idx = C.player in
+  let write = Fonts.Render.write win ~idx:4 fonts in
+  let write_g = write ~color:Ega.gray ~tag_color:Ega.black in
+  let write = write ~color:Ega.black in
+
+  let bg_tex = Hashtbl.find s.textures.misc `Council in
+  R.Texture.render win ~x:0 ~y:0 bg_tex;
+
+  let city_s = Cities.name_of_loc msg.Ui_msg.city b.cities in
+  write ~x:95 ~y:8 "Annual Meeting of the";
+  write ~x:95 ~y:20 @@ city_s ^ " Town Council.";
+
+  let score, ai_score = msg.final_scores in
+  let max_score, min_score = if score > ai_score then score, ai_score else ai_score, score in
+  let name =
+    let winner_idx = match msg.winner with
+      | `Player -> player_idx
+      | `Ai -> msg.ai_idx
+      | `None -> assert false
+    in
+    B.get_handle winner_idx b in
+  let text = sp
+    "The council vote\n\
+    is |%d to %d|\n\
+    in favor of the\n\
+    |%s RailRoad.|\n\
+     All other RRs\n\
+    must leave town\n\
+    |IMMEDIATELY!!!!|"
+    max_score
+    min_score
+    name
+  in
+  write_g ~x:57 ~y:74 text
+

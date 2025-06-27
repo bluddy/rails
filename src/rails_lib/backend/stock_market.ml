@@ -65,11 +65,7 @@ let non_treasury_shares player_idx v = total_shares player_idx v - treasury_shar
 
 let share_price player_idx v = Owner.Map.get_or ~default:M.zero player_idx v.prices
 
-let set_share_price player_idx price v = Owner.Map.add player_idx price v.prices
-
 let avg_share_price player_idx v = Owner.Map.get_or ~default:M.zero player_idx v.avg_prices
-
-let set_avg_share_price player_idx price v = Owner.Map.add player_idx price v.avg_prices
 
 let owned_share_value ~total_shares ~owned_shares ~(share_price:M.t) =
   (* We need to account for the cost of selling all our stock 10k shares at a time *)
