@@ -1,6 +1,6 @@
 # Tasks
-- End of year data is fishy
 - Building into an ai station
+- Rate war loss
 - Player loss (fired), AI company dissolved
 - Check that active_station only works for 20 years per station
 - Move block_map and track_graph to player
@@ -25,6 +25,7 @@
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - Bug:
+  - Stock view fin end is quite broken.
   - Year doesn't switch at end of December.
   - Fiscal end stock eval: msgbox weird size thing
   - AI companies msgbox is off
