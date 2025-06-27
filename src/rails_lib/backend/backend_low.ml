@@ -141,7 +141,7 @@ module Train_update = struct
     ui_msgs, new_goods
 
   let _train_station_handle_consist_and_maintenance (v:t) player idx loc (station:Station.t) (train:rw Train.t) =
-    let handle_stop station_info =
+    let handle_stop () =
       let had_maintenance = Station.can_maintain station || train.had_maintenance in
       (* Priority shipment arriving to station *)
       let station =
@@ -154,16 +154,15 @@ module Train_update = struct
       let deliver_cargo () =
         let cars_delivered =
           List.map (fun car -> 
-            car,
-            Train.Car.get_amount car > 0 && 
-            Station.has_demand_for station car.good)
+            let delivered = Train.Car.get_amount car > 0 && Station.has_demand_for station car.good in
+            car, delivered)
           cars
         in
         let money_from_goods, car_speed =
           List.fold_left (fun (money_acc, speed_acc) (car, delivered) ->
             if delivered then
               let money, speed =
-                Train.car_delivery_money_speed ~loc ~train ~car ~rates:station_info.Station.rates ~params:v.params
+                Train.car_delivery_money_speed ~loc ~train ~car ~rates:(Station.get_rates station) ~params:v.params
               in
               let money_acc =
                 let good = Train.Car.get_good car in
@@ -173,8 +172,7 @@ module Train_update = struct
             else
               (money_acc, 0::speed_acc))
           (Goods.Map.empty, [])
-          cars_delivered
-        in
+          cars_delivered in
         let car_speed = List.rev car_speed in
         let freight_ton_miles =
           List.fold_left (fun acc (car, delivered) ->
@@ -207,14 +205,14 @@ module Train_update = struct
       in
       let cars_delivered, money_from_goods, car_speed, freight_ton_miles, other_income = deliver_cargo () in
 
-      let station_supply = station_info.supply in
+      let station = Station.add_to_goods_revenue money_from_goods station in
+
+      let station_supply = Station.get_supply_exn station in
       let add_converted_goods_to_station cars_delivered =
         let conversion_goods =
           List.map (fun (car, delivered) -> 
             if delivered then 
-              let conv_good =
-                Station.convert station_info (Train.Car.get_good car) v.params.region
-              in
+              let conv_good = Station.convert (Train.Car.get_good car) v.params.region station in
               match conv_good with
               | Some good -> Some (good, Train.Car.get_amount car)
               | _ -> None
@@ -340,7 +338,7 @@ module Train_update = struct
     in
     match station.info with
     | Some station_info when Train_station.train_stops_at station train ->
-          handle_stop station_info
+          handle_stop ()
     | Some _ when not train.had_maintenance && Station.can_maintain station ->
          {train with had_maintenance=true}, station, None, []
     | _ -> train, station, None, []

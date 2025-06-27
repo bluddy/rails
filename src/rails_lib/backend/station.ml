@@ -125,8 +125,8 @@ type info = {
   holds_priority_shipment: bool;
 } [@@deriving yojson]
 
-let convert v good region =
-  if Goods.Set.mem good v.convert_demand then
+let convert good region info =
+  if Goods.Set.mem good info.convert_demand then
     Goods.convert region good
   else
     None
@@ -462,9 +462,15 @@ let lose_supplies v =
 
 let total_goods_revenue v =
   match v.info with
-  | Some info ->
-    Goods.Map.fold (fun _ i sum -> Money.(sum + i)) info.cargo_revenue Money.zero
+  | Some info -> Goods.Map.sum_cash (fun _ cash -> cash) info.cargo_revenue 
   | _ -> Money.zero
+
+let add_to_goods_revenue goods_rev info =
+  let cargo_revenue = Goods.Map.merge_add_cash info.cargo_revenue goods_rev in
+  {info with cargo_revenue}
+
+let add_to_goods_revenue goods_rev v =
+  update_with_info v (fun info -> add_to_goods_revenue goods_rev info |> Option.some)
 
 let color_of_rates v = match v.info with
   | Some info -> begin match info.rates with
@@ -498,6 +504,10 @@ let has_double_rates v = match v.info with
   | Some {rates=`Double; _} -> true
   | _ -> false
 
+let get_rates v = match v.info with
+  | Some {rates;_} -> rates
+  | _ -> `Normal
+
 let _set_rate_war x v = update_with_info v (fun info -> Some {info with rates=x})
 
 let set_rate_war v = _set_rate_war `Half v
@@ -529,4 +539,8 @@ let has_demand_for v good =
   match v.info with
   | None -> false
   | Some info -> Goods.Set.mem good info.demand
+
+let convert good region v = match v.info with
+  | Some info -> convert good region info
+  | None -> None
 
