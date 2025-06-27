@@ -691,10 +691,12 @@ let _rate_war_info_one_station station v =
     Goods.order
   in
   let delivery_scores = if B_options.complex_economy v.params.options then delivery_scores else Goods.Map.empty in
-  let final_score fn =
-    Freight.Map.sum (fun _ pair -> fn pair) pickup_scores + Goods.Map.sum (fun _ pair -> fn pair) delivery_scores
+  let final_scores =
+    let final_score fn =
+      Freight.Map.sum (fun _ pair -> fn pair) pickup_scores + Goods.Map.sum (fun _ pair -> fn pair) delivery_scores
+    in
+    final_score fst, final_score snd
   in
-  let final_scores = final_score fst, final_score snd in
   Ui_msg.RateWar {
     ai_idx; city; picked_up; ai_picked_up; pickup_scores; delivered; ai_delivered; delivery_scores; final_scores;
   }
