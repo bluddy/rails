@@ -22,7 +22,7 @@ type eu =
   | `MinisterOfFinance
   | `RoyalAdvisor
   | `PrimeMinister]
-  [@@deriving enum, yojson, ord]
+  [@@deriving enum, yojson, ord, eq]
 
 type us =
   (* US *)
@@ -46,10 +46,10 @@ type us =
   | `SecretaryOfTreasury
   | `GeneralOfArmies
   | `PresidentOfUnitedStates]
-  [@@deriving enum, yojson, ord]
+  [@@deriving enum, yojson, ord, eq]
 
 type t = [ eu | us ]
-  [@@deriving yojson]
+  [@@deriving yojson, eq]
 
 let max = eu_to_enum `PrimeMinister
 
@@ -148,8 +148,7 @@ let show = function
 
 let fold region f acc =
   let max_val = max in
-  Iter.fold (fun acc i ->
-    f acc (of_enum region i))
-  acc
-  Iter.(0 -- max_val)
+  Iter.fold (fun acc i -> f acc (of_enum region i))
+    acc
+    Iter.(0 -- max_val)
 
