@@ -104,3 +104,52 @@ let to_enum = function
   | `GeneralOfArmies -> 18
   | `PresidentOfUnitedStates -> 19
 
+let show = function
+  | `ChimneySweep -> "Chimney Sweep"
+  | `GardenClubChairman -> "Garden-Club Chairman"
+  | `DancingInstructor -> "Dancing Instructor"
+  | `Butler -> "Butler"
+  | `Surveyor -> "Surveyor"
+  | `GameWarden -> "Game Warden"
+  | `StableMaster -> "Stable Master"
+  | `SafariLeader -> "Safari Leader"
+  | `Harbormaster -> "Harbormaster"
+  | `PolarExplorer -> "Polar Explorer"
+  | `ConsultingDetective -> "Consulting Detective"
+  | `InvestmentBanker -> "Invesment Banker"
+  | `ArmamentsMerchant -> "Armaments Merchant"
+  | `Magistrate -> "Magistrate"
+  | `NavyCommodore -> "Navy Commodore"
+  | `ChiefOfSecretService -> "Chief Of Secret Service"
+  | `ArmyInspectorGeneral -> "Army Inspector General"
+  | `MinisterOfFinance -> "Minister Of Finance"
+  | `RoyalAdvisor -> "Royal Advisor"
+  | `PrimeMinister -> "Prime Minister"
+  | `Hobo -> "Hobo"
+  | `SnakeOilPeddler -> "Snake Oil Peddler"
+  | `IndianAgent -> "Indian Agent"
+  | `RiverboatGambler -> "Riverboat Gambler"
+  | `Conductor -> "Conductor"
+  | `ArmyCaptain -> "Army Captain"
+  | `NewspaperEditor -> "Newspaper Editor"
+  | `Inventor -> "Inventor"
+  | `SteamboatCaptain -> "Steamboat Captain"
+  | `Mayor -> "Mayor"
+  | `CircusImpresario -> "Circus Impresario"
+  | `SteamshipOwner -> "Steamship Owner"
+  | `BankPresident -> "Bank President"
+  | `Congressman -> "Congressman"
+  | `PresidentOfTheRRTrust -> "President Of The RR Trust"
+  | `StateGovernor -> "State Governor"
+  | `PresidentOfStockExchange -> "President Of The Stock Exchange"
+  | `SecretaryOfTreasury -> "Secretary Of The Treasury"
+  | `GeneralOfArmies -> "General Of The Armies"
+  | `PresidentOfUnitedStates -> "President Of The United States"
+
+let fold region f acc =
+  let max_val = max in
+  Iter.fold (fun acc i ->
+    f acc (of_enum region i))
+  acc
+  Iter.(0 -- max_val)
+
