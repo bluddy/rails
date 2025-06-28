@@ -863,7 +863,6 @@ module Job = struct
       let tex = Ndarray.get_slice [[y; y2 - 1]; [x; x2 - 1]] ndarray |> R.Texture.make win in
       Hashtbl.replace hash key tex
     in
-    let open Jobs in
     tex `Surveyor 214 0 320 140 "0";
     tex `SafariLeader 92 0 214 123 "0";
     tex `ChiefOfSecretService 0 0 94 123 "0";
