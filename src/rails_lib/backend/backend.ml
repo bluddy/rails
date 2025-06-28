@@ -716,42 +716,6 @@ let _rate_war_info player_idx v =
   in
   List.map (fun station -> _rate_war_info_one_station station v) rate_wars
 
-let _retirement_calc ~fired player_idx stocks params v =
-  let ret_val = if Region.is_us params.Params.region then 20 else 0 in
-  let owned_ais = Stock_market.other_companies_controlled_by player_idx stocks |> List.length in
-  let age = Params.age params |> Utils.clip ~min:1 ~max:999 in
-  let player = get_player player_idx v in
-  let net_worth = Player.get_net_worth player in
-  let difficulty_factor = (Player.get_total_difficulty player * 10 / age) / 2 in
-  let modify_by_owned_ais value =
-    let mult_val = Int.shift_left 1 (owned_ais - 1) in
-    M.(value + (value / C.max_num_players) * mult_val)
-  in
-  let job_idx, retirement_bonus =
-    if M.(net_worth < of_int 100) then
-      let job_idx = M.(net_worth / 20) |> Utils.clip_cash ~min:0 ~max:4 |> M.to_int in
-      let retirement_bonus = modify_by_owned_ais net_worth in
-      job_idx, retirement_bonus
-    else
-      let retirement_bonus = M.((net_worth / Int.(age + 20)) * difficulty_factor) in
-      let retirement_bonus = modify_by_owned_ais retirement_bonus in
-      (* fired penalty *)
-      let retirement_bonus = if fired then M.(retirement_bonus * 3 / 4) else retirement_bonus in
-      let rec loop value i =
-        let value = (value / 4) * 3 in
-        if value > 200 && i < Jobs.max then
-          loop value (i + 1)
-        else i
-      in 
-      let job_idx =
-        if M.to_int retirement_bonus >= 10000 then Jobs.max
-        else loop (M.to_int retirement_bonus) (4 + 1)
-      in
-      job_idx, retirement_bonus
-  in
-  let job = Jobs.of_enum params.region job_idx in
-  job, retirement_bonus
-  
 let _rate_war_handle_result loc result v =
   (* TODO: handle rate war loss/win fully *)
   let stations = v.stations in
@@ -760,8 +724,8 @@ let _rate_war_handle_result loc result v =
     | `Ai -> Station_map.delete loc stations
     | `None -> stations
   in
-  (* Remove AI station, route. If stranded, remove more *)
-  (* Remove player stuff within radius of 3 *)
+  (* TODO:Remove AI station, route. If stranded, remove more *)
+  (* TODO:Remove player stuff within radius of 3 *)
   [%up {v with stations}]
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
@@ -778,6 +742,7 @@ let _fin_end_proceed player_idx v =
   let rate_war_results, rw_msgs = _rate_war_info player_idx v |> List.split in
   let v = List.fold_left (fun acc (loc, result) -> _rate_war_handle_result loc result acc) v rate_war_results in
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
+  let job, _ = Player.retirement_bonus_and_job ~fired:false player stocks v.params in
   let v = update_player v player_idx (fun _ -> player) in
   let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
   send_ui_msg v ui_msg;

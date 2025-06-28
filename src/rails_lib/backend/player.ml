@@ -624,4 +624,39 @@ let update_speed_record speed v =
     {v with record={v.record with train_speed=speed}}
   else v
 
+let retirement_bonus_and_job ~fired player stocks params =
+  let player_idx = player.idx in
+  let owned_ais = Stock_market.other_companies_controlled_by player_idx stocks |> List.length in
+  let age = Params.age params |> Utils.clip ~min:1 ~max:999 in
+  let net_worth = get_net_worth player in
+  let difficulty_factor = (get_total_difficulty player * 10 / age) / 2 in
+  let modify_by_owned_ais value =
+    let mult_val = Int.shift_left 1 (owned_ais - 1) in
+    M.(value + (value / C.max_num_players) * mult_val)
+  in
+  let job_idx, retirement_bonus =
+    if M.(net_worth < of_int 100) then
+      let job_idx = M.(net_worth / 20) |> Utils.clip_cash ~min:0 ~max:4 |> M.to_int in
+      let retirement_bonus = modify_by_owned_ais net_worth in
+      job_idx, retirement_bonus
+    else
+      let retirement_bonus = M.((net_worth / Int.(age + 20)) * difficulty_factor) in
+      let retirement_bonus = modify_by_owned_ais retirement_bonus in
+      (* fired penalty *)
+      let retirement_bonus = if fired then M.(retirement_bonus * 3 / 4) else retirement_bonus in
+      let rec loop value i =
+        let value = (value / 4) * 3 in
+        if value > 200 && i < Jobs.max then
+          loop value (i + 1)
+        else i
+      in 
+      let job_idx =
+        if M.to_int retirement_bonus >= 10000 then Jobs.max
+        else loop (M.to_int retirement_bonus) (4 + 1)
+      in
+      job_idx, retirement_bonus
+  in
+  let job = Jobs.of_enum params.region job_idx in
+  job, retirement_bonus
+
 
