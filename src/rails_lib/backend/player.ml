@@ -71,14 +71,16 @@ module Record = struct
     avg_speed: int;
     ton_miles: int;
     train_speed: int;
+    job: Jobs.t;
   } [@@deriving yojson]
 
-  let default = {
+  let default region = {
     earnings=Money.zero;
     total_revenue=Money.zero;
     avg_speed=0;
     ton_miles=0;
     train_speed=0;
+    job=Jobs.min region;
   }
 end
 
@@ -122,7 +124,7 @@ type t = {
 } [@@deriving yojson]
 
 
-let default idx = {
+let default idx region = {
   idx;
   name=None;
   station_locs = [];
@@ -139,7 +141,7 @@ let default idx = {
   periodic=(make_periodic (), make_periodic ());
   total_difficulty=0;
   history = History.default;
-  record = Record.default;
+  record = Record.default region;
 }
 
 let get_cash v = v.m.cash
@@ -624,12 +626,12 @@ let update_speed_record speed v =
     {v with record={v.record with train_speed=speed}}
   else v
 
-let retirement_bonus_and_job ~fired player stocks params =
-  let player_idx = player.idx in
+let _retirement_bonus_and_job ~fired stocks params v =
+  let player_idx = v.idx in
   let owned_ais = Stock_market.other_companies_controlled_by player_idx stocks |> List.length in
   let age = Params.age params |> Utils.clip ~min:1 ~max:999 in
-  let net_worth = get_net_worth player in
-  let difficulty_factor = (get_total_difficulty player * 10 / age) / 2 in
+  let net_worth = get_net_worth v in
+  let difficulty_factor = (get_total_difficulty v * 10 / age) / 2 in
   let modify_by_owned_ais value =
     let mult_val = Int.shift_left 1 (owned_ais - 1) in
     M.(value + (value / C.max_num_players) * mult_val)
@@ -659,4 +661,10 @@ let retirement_bonus_and_job ~fired player stocks params =
   let job = Jobs.of_enum params.region job_idx in
   job, retirement_bonus
 
+let update_retirement_bonus_and_job ~fired stocks params v =
+  let job, _retirement_bonus = _retirement_bonus_and_job ~fired stocks params v in
+  if Jobs.to_enum v.record.job > Jobs.to_enum job then
+    Some job, {v with record={v.record with job}}
+  else
+    None, v
 

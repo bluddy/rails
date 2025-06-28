@@ -72,6 +72,7 @@ type fiscal_period_end_msg =
   | RevenueRecord of Money.t
   | SharePriceChange of share_price_change
   | RateWar of rate_war_info
+  | JobOffer of Jobs.t
   [@@deriving yojson]
 
 type t =

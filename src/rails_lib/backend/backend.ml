@@ -36,7 +36,7 @@ let default region resources ~random ~seed =
   let track = Trackmap.empty width height in
   let options = B_options.default in
   let stations = Station_map.empty in
-  let players = Owner.Map.singleton C.player @@ Player.default C.player in
+  let players = Owner.Map.singleton C.player @@ Player.default C.player region in
   let year = match region with
     | EastUS -> 1830
     | WestUS -> 1866
@@ -742,9 +742,10 @@ let _fin_end_proceed player_idx v =
   let rate_war_results, rw_msgs = _rate_war_info player_idx v |> List.split in
   let v = List.fold_left (fun acc (loc, result) -> _rate_war_handle_result loc result acc) v rate_war_results in
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
-  let job, _ = Player.retirement_bonus_and_job ~fired:false player stocks v.params in
+  let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
+  let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
   let v = update_player v player_idx (fun _ -> player) in
-  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
+  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
   send_ui_msg v ui_msg;
   let params = {v.params with current_period=Params.next_period v.params; time=0} in
   {v with params; ai; stocks}
