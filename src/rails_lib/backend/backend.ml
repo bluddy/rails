@@ -744,11 +744,15 @@ let _fin_end_proceed player_idx v =
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
-  let v = update_player v player_idx (fun _ -> player) in
   let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
   send_ui_msg v ui_msg;
   let stations = Station_map.map Station.end_of_period_reset v.stations in
-  let params = {v.params with current_period=Params.next_period v.params; time=0} in
+  let cycle = if v.params.cycle > 20000 then 0 else v.params.cycle in
+  (* TODO: check 100 years, "After 20*difficulty+40 years of faithful\nservcice you must retire\n
+     from the presidency of the name\n" *)
+  let params = {v.params with current_period=Params.next_period v.params; time=0; cycle} in
+  let player = Player.clear_periodic params player in
+  let v = update_player v player_idx (fun _ -> player) in
   {v with params; ai; stocks; stations}
 
 let _handle_cheat player_idx cheat v = match cheat with
