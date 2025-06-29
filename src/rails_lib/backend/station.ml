@@ -548,3 +548,13 @@ let convert good region v = match v.info with
   | Some info -> convert good region info
   | None -> None
 
+let end_of_period_reset v = match v.info with
+  | None -> v
+  | Some info ->
+    let info = {info with
+      picked_up_goods=Hashtbl.create 10;
+      lost_supply=Hashtbl.create 10;
+      cargo_revenue=Goods.Map.empty;
+    }
+    in {v with info=Some info}
+

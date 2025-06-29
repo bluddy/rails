@@ -747,8 +747,9 @@ let _fin_end_proceed player_idx v =
   let v = update_player v player_idx (fun _ -> player) in
   let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
   send_ui_msg v ui_msg;
+  let stations = Station_map.map Station.end_of_period_reset v.stations in
   let params = {v.params with current_period=Params.next_period v.params; time=0} in
-  {v with params; ai; stocks}
+  {v with params; ai; stocks; stations}
 
 let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->
