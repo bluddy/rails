@@ -22,7 +22,7 @@ let render_bg win (s:State.t) =
     %d-%d"
     (s.backend.params.Params.year - 2) (s.backend.params.year - 1)
   in
-  Fonts.Render.write_shadow win s.fonts ~color:Ega.bcyan ~idx:2 text ~x:80 ~y:72;
+  Fonts.Render.write_shadow win s.fonts ~color:Ega.bcyan ~idx:`Large text ~x:80 ~y:72;
   ()
 
 let _stock_price_diff_s ~split ~region from_ to_ player_idx =
@@ -105,7 +105,7 @@ let create_stock_eval stock_data (s:State.t) =
 let render_stock_eval win state (s:State.t) =
   let player_idx = C.player in
   let b = s.backend in
-  let write text = Fonts.Render.write win s.fonts ~idx:4 ~color:Ega.black text in
+  let write text = Fonts.Render.write win s.fonts ~idx:`Standard ~color:Ega.black text in
   let _draw_background =
     R.paint_screen win ~color:Ega.green;
     R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
@@ -269,11 +269,18 @@ let get_rate_war_msgs msgs =
   |> List.filter (function | Ui_msg.RateWar _ -> true | _ -> false)
   |> List.map (function | Ui_msg.RateWar info -> info | _ -> assert false)
 
+let get_job_msg msgs =
+  msgs
+  |> List.filter (function | Ui_msg.JobOffer _ -> true | _ -> false)
+  |> List.map (function Ui_msg.JobOffer job -> job | _ -> assert false)
+  |> List.head_opt
+
 let handle_msgs backend msgs =
   let rate_war_msgs = get_rate_war_msgs msgs in
   let record_earnings = get_record_earnings backend msgs in
   let warnings = get_warnings backend msgs in
   let records = get_records backend msgs  in
   let stock_msgs = get_stock_msgs msgs in
-  rate_war_msgs, record_earnings, warnings, records, stock_msgs
+  let job_msg = get_job_msg msgs in
+  rate_war_msgs, record_earnings, warnings, records, stock_msgs, job_msg
 

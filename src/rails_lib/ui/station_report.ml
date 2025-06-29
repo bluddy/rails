@@ -135,12 +135,12 @@ let render ?(show_name=true) win (s:State.t) loc ~show_demand =
   let tex, _, h = get_tex station_kind in
   R.Texture.render ~x:station_x ~y:(ground_y-h) win tex;
 
-  let font = Fonts.get_font s.fonts 4 in
+  let font = Fonts.get_font `Standard s.fonts in
 
   let write_name ~shadow ~x ~y ~color =
     let str = Printf.sprintf "%s (%s)\nBuilt in %d" (Station.get_name station) (Station.kind_str station) station.year in
     if shadow then
-      Fonts.Render.write_shadow win s.fonts ~color ~x ~y ~idx:4 str
+      Fonts.Render.write_shadow win s.fonts ~color ~x ~y ~idx:`Standard str
     else
       Fonts.Font.write win font ~x ~y ~color str
   in
@@ -198,7 +198,7 @@ let render ?(show_name=true) win (s:State.t) loc ~show_demand =
     Option.iter
       (fun goods ->
         let str = "PRIORITY\nDELIVERY:\n" ^ goods in
-        Fonts.Render.write_shadow win s.fonts ~color:Ega.white ~idx:4 ~x:210 ~y:104 str)
+        Fonts.Render.write_shadow win s.fonts ~color:Ega.white ~idx:`Standard ~x:210 ~y:104 str)
       goods_s;
   );
 

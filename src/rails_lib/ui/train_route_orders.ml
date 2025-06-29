@@ -49,7 +49,7 @@ let scale_loc (x,y) v = scale_xy x y v
 
 let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   let player_idx = C.player in
-  let write ?(color=Ega.black) ?(active_color=Ega.white) ?(idx=1) =
+  let write ?(color=Ega.black) ?(active_color=Ega.white) ?(idx=`Caps) =
     Fonts.Render.write win s.fonts ~idx ~color ~active_color
   in
 
@@ -113,7 +113,7 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   (* Info bar *)
   begin match v.selected_station with
   | Some loc ->
-      let write = write ~idx:4 in
+      let write = write ~idx:`Standard in
       let station = Station_map.get_exn loc s.backend.stations in
       let demand = Station.get_demand_exn station in
       write ~x:258 ~y:1 @@ Station.get_name station;

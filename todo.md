@@ -1,4 +1,6 @@
 # Tasks
+- Fonts: change to variants
+- Menu/msgbox: use Make() to get rid of 'state
 - Building into an ai station
 - Rate war loss
 - Player loss (fired), AI company dissolved

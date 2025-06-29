@@ -54,7 +54,7 @@ let make_fancy (s:State.t) text params random =
 let render_simple win (s:State.t) v =
   R.draw_rect win ~x:56 ~y:46 ~w:183 ~h:107 ~color:Ega.white ~fill:true;
   R.draw_rect win ~x:56 ~y:46 ~w:183 ~h:107 ~color:Ega.black ~fill:false;
-  Fonts.Render.write_shadow win s.fonts ~color:Ega.gray ~x:62 ~y:54 ~idx:2 @@
+  Fonts.Render.write_shadow win s.fonts ~color:Ega.gray ~x:62 ~y:54 ~idx:`Large @@
     Simple.show_kind v.Simple.kind;
   let tex = match v.opponent with
     | Some opponent ->
@@ -71,7 +71,7 @@ let render_fancy win (s:State.t) v =
   R.draw_rect win ~x:0 ~y:0 ~w:320 ~h:100 ~color:white ~fill:true;
   R.draw_line win ~x1:1 ~y1:1 ~x2:318 ~y2:1 ~color:black;
   let name, (x, y) = Fancy.show_source v.Fancy.source, Fancy.source_pos v.source in
-  Fonts.Render.write win s.fonts ~color:black ~x ~y ~idx:0 name;
+  Fonts.Render.write win s.fonts ~color:black ~x ~y ~idx:`Old name;
   R.draw_line win ~x1:0 ~y1:32 ~x2:319 ~y2:32 ~color:black;
   R.draw_line win ~x1:1 ~y1:1 ~x2:1 ~y2:32 ~color:black;
   R.draw_line win ~x1:1 ~y1:1 ~x2:1 ~y2:32 ~color:black;
@@ -89,11 +89,11 @@ let render_fancy win (s:State.t) v =
     v.tear_vals
   in
   let txt1, txt2, txt3 = v.text in
-  Fonts.Render.write win s.fonts ~color:black ~x:16 ~y:40 ~idx:2 txt1;
-  Fonts.Render.write win s.fonts ~color:black ~x:16 ~y:57 ~idx:2 txt2;
-  Fonts.Render.write win s.fonts ~color:black ~x:16 ~y:74 ~idx:2 txt3;
-  Fonts.Render.write win s.fonts ~color:black ~x:8 ~y:24 ~idx:4 v.date_s;
-  Fonts.Render.write win s.fonts ~color:black ~x:272 ~y:24 ~idx:4 v.cost_s;
+  Fonts.Render.write win s.fonts ~color:black ~x:16 ~y:40 ~idx:`Large txt1;
+  Fonts.Render.write win s.fonts ~color:black ~x:16 ~y:57 ~idx:`Large txt2;
+  Fonts.Render.write win s.fonts ~color:black ~x:16 ~y:74 ~idx:`Large txt3;
+  Fonts.Render.write win s.fonts ~color:black ~x:8 ~y:24 ~idx:`Standard v.date_s;
+  Fonts.Render.write win s.fonts ~color:black ~x:272 ~y:24 ~idx:`Standard v.cost_s;
   Menu.MsgBox.render win s v.msgbox;
   ()
 

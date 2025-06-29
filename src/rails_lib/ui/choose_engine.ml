@@ -36,7 +36,7 @@ let render win (s:State.t) ~engines ~year =
   R.draw_rect win ~x:160 ~y:2 ~w:158 ~h:196 ~color:Ega.black ~fill:false;
 
   (* Write details *)
-  let font = Fonts.get_font s.fonts 4 in
+  let font = Fonts.get_font `Standard s.fonts in
   let _ =
     let region = B.get_region s.backend in
     List.fold_left (fun y engine ->

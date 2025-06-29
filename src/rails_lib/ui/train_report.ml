@@ -100,7 +100,7 @@ let render win (s:State.t) (v:State.t t) : unit =
   | Normal ->
     let player_idx = C.player in
     let train = Backend.get_train v.train player_idx s.backend in
-    let write color = Fonts.Render.write win s.fonts ~color ~idx:4 in
+    let write color = Fonts.Render.write win s.fonts ~color ~idx:`Standard in
 
     (* Draw screen background *)
     R.paint_screen win ~color:Ega.white;

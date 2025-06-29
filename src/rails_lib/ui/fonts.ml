@@ -6,15 +6,15 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let debug = false
 
-module Font = struct
+type face = [
+  | `Old
+  | `Caps
+  | `Large
+  | `Tiny
+  | `Standard
+] [@@deriving enum]
 
-(* fonts:
-  0: fancy olde style
-  1: all-caps
-  2: large
-  3: tiny
-  4: standard
-*)
+module Font = struct
 
 type t =
   {
@@ -165,7 +165,7 @@ end
 
 type t = Font.t array
 
-let get_font v idx = v.(idx)
+let get_font idx v = v.(face_to_enum idx)
 
 let of_file filename : t =
   let bytes =
@@ -273,7 +273,7 @@ module Render = struct
 
   type t = 
     {
-      font_idx: int;
+      font_idx: face;
       chars: render_char list;
     }
 
@@ -283,7 +283,7 @@ module Render = struct
   let render ?(x=0) ?(y=0) ?color fonts ~to_render ~win =
     let x_off, y_off = x, y in
     List.fold_left (fun acc {font_idx; chars} ->
-      let font = fonts.(font_idx) in
+      let font = get_font font_idx fonts in
       List.fold_left (fun _acc {c; x; y; ega_color} ->
         let char_tex = Hashtbl.find font.Font.textures c in
         let x, y = x + x_off, y + y_off in
@@ -300,10 +300,10 @@ module Render = struct
     to_render 
 
 let write_char win fonts ~color ~idx c ~x ~y =
-  Font.write_char win ~color fonts.(idx) c ~x ~y
+  Font.write_char win ~color (get_font idx fonts) c ~x ~y
 
 let write win fonts ?active_color ?tag_color ?cursor ~color ~idx str ~x ~y =
-  Font.write ?active_color ?tag_color ?cursor win fonts.(idx) ~color str ~x ~y
+  Font.write ?active_color ?tag_color ?cursor win (get_font idx fonts) ~color str ~x ~y
 
 let write_shadow win fonts ~color ~idx str ~x ~y =
   write win fonts ~color:Ega.black ~idx str ~x:(x+1) ~y:(y+1);
@@ -313,7 +313,7 @@ end
 
   (* Create a list of locations of chars to render *)
 let write_str ?(color=15) idx str ~fonts ~x ~y : Render.t =
-  let font = fonts.(idx) in
+  let font = get_font idx fonts in
   let _, _, acc =
     let x_first = x in
     String.fold (fun (x, y, acc) c ->
@@ -330,5 +330,5 @@ let write_str ?(color=15) idx str ~fonts ~x ~y : Render.t =
   {font_idx=idx; chars=acc}
 
 let get_str_w_h ?skip_amp ~fonts ~idx str =
-  Font.get_str_w_h ?skip_amp fonts.(idx) str
+  Font.get_str_w_h ?skip_amp (get_font idx fonts) str
 
