@@ -313,7 +313,8 @@ let clear_periodic params v =
   let periodic =
     Utils.update_pair v.periodic params.Params.current_period (fun _ -> make_periodic ())
   in
-  {v with periodic}
+  let trains = Trainmap.mapi_in_place (fun _ train -> Train.clear_periodic params train) v.trains in
+  {v with periodic; trains}
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
