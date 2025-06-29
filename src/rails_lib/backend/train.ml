@@ -171,6 +171,7 @@ type 'mut t = {
   maintenance_cost: Money.t; (* per fin period *)
   economic_activity: bool; (* Whether we picked up or dropped off goods *)
   periodic: periodic * periodic; (* data saved for periodic tracking *)
+  total_revenue: Money.t;
 } [@@deriving yojson, show]
 
 let get_route_length v = Vector.length v.route
@@ -269,6 +270,7 @@ let make ((x,y) as station) engine cars other_station ~dir player =
     economic_activity=false;
     periodic=(make_periodic (), make_periodic ());
     player;
+    total_revenue=M.zero;
   }
   in
   Log.debug (fun f -> f "Train: new train at (%d,%d)" v.x v.y);

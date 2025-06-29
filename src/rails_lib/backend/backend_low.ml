@@ -332,6 +332,7 @@ module Train_update = struct
         holds_priority_shipment;
         economic_activity;
         periodic;
+        total_revenue=M.(train.total_revenue + goods_revenue);
       }
       in
       train, station, data, ui_msgs
