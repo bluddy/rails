@@ -71,16 +71,16 @@ module Record = struct
     avg_speed: int;
     ton_miles: int;
     train_speed: int;
-    job: Jobs.t;
+    job: Jobs.t option;
   } [@@deriving yojson]
 
-  let default region = {
+  let default = {
     earnings=Money.zero;
     total_revenue=Money.zero;
     avg_speed=0;
     ton_miles=0;
     train_speed=0;
-    job=Jobs.min region;
+    job=None;
   }
 end
 
@@ -124,7 +124,7 @@ type t = {
 } [@@deriving yojson]
 
 
-let default idx region = {
+let default idx = {
   idx;
   name=None;
   station_locs = [];
@@ -141,7 +141,7 @@ let default idx region = {
   periodic=(make_periodic (), make_periodic ());
   total_difficulty=0;
   history = History.default;
-  record = Record.default region;
+  record = Record.default;
 }
 
 let get_cash v = v.m.cash
@@ -663,8 +663,11 @@ let _retirement_bonus_and_job ~fired stocks params v =
 
 let update_retirement_bonus_and_job ~fired stocks params v =
   let job, _retirement_bonus = _retirement_bonus_and_job ~fired stocks params v in
-  if Jobs.to_enum v.record.job > Jobs.to_enum job then
-    Some job, {v with record={v.record with job}}
-  else
+  match v.record.job with
+  | Some cur_job when Jobs.to_enum job > Jobs.to_enum cur_job ->
+      Some job, {v with record={v.record with job=Some job}}
+  | None -> 
+      Some job, {v with record={v.record with job=Some job}}
+  | _ ->
     None, v
 
