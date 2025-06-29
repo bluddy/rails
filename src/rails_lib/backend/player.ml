@@ -272,7 +272,6 @@ let fiscal_period_end net_worth stations params v =
     total_revenue=total_revenue_record;
   } in
   let v = {v with m; history; record } in
-  (* TODO: change current period in backend *)
   v, total_revenue, ui_msgs
 
 let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
@@ -308,6 +307,13 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
     player_idx; from_=old_share_price; to_=share_price; share_price_growth; split; fired}
   in
   {v with m={v.m with investor_anger}}, stocks, [msg]
+
+let clear_periodic params v =
+  (* Should be called on a new period *)
+  let periodic =
+    Utils.update_pair v.periodic params.Params.current_period (fun _ -> make_periodic ())
+  in
+  {v with periodic}
 
 let build_industry cost (v:t) =
   let v = pay `StructuresEquipment cost v in
