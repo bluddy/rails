@@ -551,10 +551,12 @@ let convert good region v = match v.info with
 let end_of_period_reset v = match v.info with
   | None -> v
   | Some info ->
+    let rates = if has_double_rates v then `Normal else info.rates in
     let info = {info with
       picked_up_goods=Hashtbl.create 10;
       lost_supply=Hashtbl.create 10;
       cargo_revenue=Goods.Map.empty;
+      rates;
     }
     in {v with info=Some info}
 
