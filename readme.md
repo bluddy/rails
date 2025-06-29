@@ -44,7 +44,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Build industry
 - [ ] Give command to RR
 - [x] Economic Climate
-- [ ] Periodic reports
+- [x] Periodic reports
 - [x] Events (e.g. bridge washing out)
 - [ ] Music and Sound
 
