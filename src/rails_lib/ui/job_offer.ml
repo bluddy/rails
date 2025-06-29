@@ -38,7 +38,7 @@ let render state win (s:State.t) =
   Jobs.fold region (fun (y:int) job ->
     let job_s = Jobs.show job in
     let color = if Jobs.equal job state.job then Ega.black else Ega.gray in
-    Fonts.Render.write win fonts ~idx:4 ~x ~y ~color job_s;
+    Fonts.Render.write win fonts ~idx:`Standard ~x ~y ~color job_s;
     y + 8)
   8
   |> ignore;

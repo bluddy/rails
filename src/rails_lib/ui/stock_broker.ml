@@ -110,7 +110,7 @@ let render win (s:State.t) v =
   let player_idx = C.player in
   R.paint_screen win ~color:Ega.white;
   let dims = s.ui.dims in
-  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
+  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:`Standard ~color in
   R.draw_rect win ~x:2 ~y:(2 + C.menu_h) ~w:(dims.screen.w - 4) ~h:(dims.screen.h - 4 - C.menu_h) ~color:Ega.black ~fill:false;
   write ~x:100 ~y:12 "Financial Summaries";
 

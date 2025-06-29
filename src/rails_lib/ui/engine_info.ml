@@ -14,8 +14,8 @@ let render win v ~fonts ~textures ~region =
   R.draw_rect win ~x:2 ~y:2 ~w:315 ~h:195 ~color:Ega.dgray ~fill:false;
   (* center name *)
   let x = 160 - 7 * String.length v.engine.name in
-  Fonts.Render.write win fonts ~color:Ega.black ~idx:2 v.engine.name ~x ~y:4;
-  let write = Fonts.Render.write win fonts ~idx:4 ~color:Ega.black in
+  Fonts.Render.write win fonts ~color:Ega.black ~idx:`Large v.engine.name ~x ~y:4;
+  let write = Fonts.Render.write win fonts ~idx:`Standard ~color:Ega.black in
   let tex = Hashtbl.find textures.Textures.engine_detail v.engine.make in
   R.Texture.render win tex ~x:0 ~y:21;
 

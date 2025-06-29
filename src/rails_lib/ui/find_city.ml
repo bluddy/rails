@@ -11,7 +11,7 @@ let render win fonts v =
   (* Draw mainui first *)
   R.draw_rect win ~x:64 ~y:78 ~w:224 ~h:26 ~color:Ega.white ~fill:true;
   R.draw_rect win ~x:64 ~y:78 ~w:224 ~h:26 ~color:Ega.black ~fill:false;
-  Fonts.Render.write win fonts ~x:66 ~y:80 ~idx:4 ~color:Ega.black "Where in the heck is ... (city name)";
+  Fonts.Render.write win fonts ~x:66 ~y:80 ~idx:`Standard ~color:Ega.black "Where in the heck is ... (city name)";
   Text_entry.render win fonts v
 
 let _find_city text cities =

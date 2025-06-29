@@ -12,12 +12,12 @@ let render win (s:State.t) (balance_sheet:Balance_sheet.t) =
   let b, pb = balance_sheet, player.m.last_balance_sheet in
   let x_left, x_text, x_total, x_ytd = 8, 16, 128, 224 in
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
-  Fonts.Render.write_shadow win s.fonts ~idx:2 ~color:Ega.gray ~x:32 ~y:8 @@
+  Fonts.Render.write_shadow win s.fonts ~idx:`Large ~color:Ega.gray ~x:32 ~y:8 @@
     Printf.sprintf "Balance Sheet: %d" (B.get_year s.backend);
   let rr_name = Player.get_name s.backend.stations s.backend.cities player in
   let y = 24 in
   let line = 8 in
-  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:4 ~color in
+  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:`Standard ~color in
   let write_money ~x ~y money =
     let money_s = M.print ~show_neg:false ~spaces:6 ~region:(B.get_region s.backend) money in
     let color = if M.(money < zero) then Ega.bred else Ega.black in

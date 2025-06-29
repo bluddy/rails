@@ -35,9 +35,9 @@ let render win fonts v =
   let x = v.x + 2 in
   match v.cursor with
   | None ->
-    Fonts.Render.write win fonts v.text ~color:Ega.black ~idx:4 ~x ~y
+    Fonts.Render.write win fonts v.text ~color:Ega.black ~idx:`Standard ~x ~y
   | Some cursor ->
-    Fonts.Render.write win fonts v.text ~cursor:(cursor, Ega.bcyan) ~color:Ega.black ~idx:4 ~x ~y
+    Fonts.Render.write win fonts v.text ~cursor:(cursor, Ega.bcyan) ~color:Ega.black ~idx:`Standard ~x ~y
 
 let handle_event v event =
   match v.cursor with

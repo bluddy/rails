@@ -57,8 +57,8 @@ let render win (s:State.t) v =
   Train_animate_side.render ~show_name:false win s v.anim;
   let fonts = s.fonts in
   let color = Ega.white in
-  let write_lg = Fonts.Render.write_shadow win fonts ~color ~idx:2 in
-  let write_sm = Fonts.Render.write_shadow win fonts ~color ~idx:4 in
+  let write_lg = Fonts.Render.write_shadow win fonts ~color ~idx:`Large in
+  let write_sm = Fonts.Render.write_shadow win fonts ~color ~idx:`Standard in
   let station_s = B.get_station v.loc s.backend |> Option.get_exn_or "oops "|> Station.get_name in
   if v.finished then (
     let good_s = Goods.show v.good in

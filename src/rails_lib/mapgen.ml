@@ -319,7 +319,7 @@ let init r region cities =
   (* Perform a step of updating the map *)
 let update_map_step r v ~map ~fonts ~done_fn =
   let write ~y ~str ~text =
-    let newtext = Fonts.write_str ~x:258 ~y ~fonts 4 str in
+    let newtext = Fonts.write_str ~x:258 ~y ~fonts `Standard str in
     newtext::text
   in
   match v.state with

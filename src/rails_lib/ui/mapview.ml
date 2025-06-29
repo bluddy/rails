@@ -419,9 +419,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
         let x = (tile_x - start_x) * tile_w in
         let y = (tile_y - start_y) * tile_h + v.dims.y in
         let x, y = x + 11, y - 15 in
-        Fonts.Render.write win s.fonts name ~idx:4 ~x ~y ~color:Ega.black;
+        Fonts.Render.write win s.fonts name ~idx:`Standard ~x ~y ~color:Ega.black;
         let x, y = x + 1, y - 1 in
-        Fonts.Render.write win s.fonts name ~idx:4 ~x ~y ~color:Ega.bcyan;
+        Fonts.Render.write win s.fonts name ~idx:`Standard ~x ~y ~color:Ega.bcyan;
       )
     )
     s.backend
@@ -707,7 +707,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       Option.iter (fun priority ->
         let draw_letter letter =
           let color = Freight.to_color ~full:true priority.Priority_shipment.freight in
-          Fonts.Render.write win s.fonts ~color letter ~x ~y:(y+2) ~idx:4
+          Fonts.Render.write win s.fonts ~color letter ~x ~y:(y+2) ~idx:`Standard
         in
         if Utils.equal_loc priority.src_loc loc then draw_letter "P"
         else if Utils.equal_loc priority.dst_loc loc then draw_letter "D"
@@ -716,7 +716,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
 
       (* station name *)
       let name = Station.get_short_name station in
-      Fonts.Render.write win s.fonts ~color name ~x:(x+7) ~y:(y+2) ~idx:4;
+      Fonts.Render.write win s.fonts ~color name ~x:(x+7) ~y:(y+2) ~idx:`Standard;
     in
     iter_screen @@ fun x y ->
       let (tile_x, tile_y) as loc = start_x + x, start_y + y in
@@ -803,13 +803,13 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       | _ ->
         let height = (B.get_tile_height map_x map_y s.backend ) / 2 |> string_of_int in
         let x, y = x * tile_w + 4 + v.dims.x, y * tile_h + 4 + v.dims.y in
-        Fonts.Render.write win s.fonts height ~idx:3 ~x ~y ~color:Ega.white
+        Fonts.Render.write win s.fonts height ~idx:`Tiny ~x ~y ~color:Ega.white
     )
   in
   let draw_buildstation_mode () =
     let color = Ega.gray in
     let fill = false in
-    let font = Fonts.get_font s.fonts 4 in
+    let font = Fonts.get_font `Standard s.fonts in
     let x = (v.const_box_x - start_x - 1) * tile_w in
     let font_x = x in
     let y = (v.const_box_y - start_y - 1) * tile_h + v.dims.y in

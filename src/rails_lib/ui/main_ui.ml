@@ -654,7 +654,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               entries @ demand @ supply @ convert
             in
             let menu =
-              Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:4
+              Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:`Standard
               |> Menu.MsgBox.do_open_menu s
             in
             let modal = make_modal menu () in
@@ -1266,7 +1266,7 @@ let draw_train_roster win (s:State.t) v =
     let loc = Train.get_dest train in
     let station = Station_map.get_exn loc s.backend.stations in
     let short_name = Station.get_short_name station in
-    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3
+    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny
       short_name ~x:(x2-11) ~y:(y-4);
   )
 
@@ -1329,7 +1329,7 @@ let render_main win (s:State.t) v =
     let x, y = (dims.minimap.x+1), (dims.minimap.y+1) in
     let h, w = dims.minimap.h - 1, dims.minimap.w - 1 in
     R.draw_rect win ~x ~y ~h ~w ~color:Ega.bblue ~fill:true;
-    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3 ~x:258 ~y:12 msg_s
+    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny ~x:258 ~y:12 msg_s
   in
   begin match v.train_arrival_msgs with
   | (msg, _)::_ -> draw_train_arrival_msg msg
@@ -1341,17 +1341,17 @@ let render_main win (s:State.t) v =
   R.draw_rect win ~x ~y ~h:dims.infobar.h ~w:dims.ui.w ~color:Ega.white ~fill:true;
 
   if Backend.broker_timer_active player_idx s.backend then
-    Fonts.Render.write win s.fonts ~color:Ega.bgreen ~idx:4 ~x:256 ~y:66 "B";
+    Fonts.Render.write win s.fonts ~color:Ega.bgreen ~idx:`Standard ~x:256 ~y:66 "B";
 
   let region = B.get_region s.backend in
   let cash = B.get_cash player_idx s.backend in
   let cash_s = M.print ~show_neg:false ~spaces:6 ~region cash in
   let color = if M.(cash < zero) then Ega.bred else Ega.black in
-  Fonts.Render.write win s.fonts ~color ~idx:4 ~x:264 ~y:66 cash_s;
+  Fonts.Render.write win s.fonts ~color ~idx:`Standard ~x:264 ~y:66 cash_s;
 
   let month, year = B.get_date s.backend in
   let date_s = Printf.sprintf "%s %d" (Utils.str_of_month month) year in
-  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:4 ~x:264 ~y:74 date_s;
+  Fonts.Render.write win s.fonts ~color:Ega.black ~idx:`Standard ~x:264 ~y:74 date_s;
 
   (* Train area *)
   let y = y + dims.infobar.h in
@@ -1364,7 +1364,7 @@ let render_main win (s:State.t) v =
     | Some priority ->
       let bonus = Priority_shipment.compute_bonus priority @@ B.get_params s.backend in
       let bonus_s = Printf.sprintf "bonus: %d,000" @@ M.to_int bonus in
-      Fonts.Render.write win s.fonts ~color:Ega.white ~idx:3 ~x:258 ~y:194 bonus_s;
+      Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny ~x:258 ~y:194 bonus_s;
     | _ -> ()
   in
   draw_priority ();

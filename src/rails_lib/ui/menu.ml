@@ -8,7 +8,7 @@ open Containers
 module L = Utils.List
 module CharMap = Utils.CharMap
 
-let menu_font = 1
+let menu_font = `Caps
 let num_menus = 5
 let max_width = 320
 
@@ -159,7 +159,7 @@ module MsgBox = struct
     {v with entries; w; h; x; y; selected}
 
   let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ~fonts entries =
-    let font=fonts.(font_idx) in
+    let font=Fonts.get_font font_idx fonts in
     let index =
       List.foldi (fun acc i entry ->
         match get_active_char entry.name with
@@ -440,7 +440,7 @@ module MsgBox = struct
       let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
       let entry = static_entry ~color:entry_color text in
       let menu =
-        make ~x ~y ?heading ~fonts [entry] ~font_idx:4 |> do_open_menu s
+        make ~x ~y ?heading ~fonts [entry] ~font_idx:`Standard |> do_open_menu s
       in
       menu
 end
@@ -459,7 +459,7 @@ module Title = struct
   }
 
   let make ?test_enabled ~fonts ~x ~y name msgbox =
-    let w, h = Fonts.get_str_w_h ~skip_amp:true ~fonts ~idx:1 name in
+    let w, h = Fonts.get_str_w_h ~skip_amp:true ~fonts ~idx:menu_font name in
     {
       x; y;
       w; h;
