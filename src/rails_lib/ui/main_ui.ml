@@ -904,7 +904,8 @@ let handle_msgs (s:State.t) v ui_msgs =
       | FiscalPeriodEndMsgs(player_idx, msgs) ->
           if Owner.(player_idx <> main_player_idx) then v
           else
-            let rate_wars, records_earnings, warnings, records, stock_msgs = Fiscal_period_end.handle_msgs b msgs in
+            let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg =
+              Fiscal_period_end.handle_msgs b msgs in
             let background = GenericScreen{render_fn=Fiscal_period_end.render_bg} in
             let modes = [] in
             let modes = List.fold_left (fun acc rate_war_msg ->
@@ -928,6 +929,12 @@ let handle_msgs (s:State.t) v ui_msgs =
               (make_msgbox_mode s ~x:80 ~y:60 records ~background)::modes else modes
             in
             let modes = (FiscalPeriodEndStocks (Fiscal_period_end.create_stock_eval stock_msgs s))::modes in
+            let modes = match job_msg with
+            | Some job ->
+                let render_fn = Job_offer.create job s |> Job_offer.render in
+                GenericScreen{render_fn}::modes
+            | None -> modes
+            in
             set_modes (List.rev modes) v
       | _ -> v
       end
