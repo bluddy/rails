@@ -11,6 +11,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 let sp = Printf.sprintf
 
 let heading_h = 8 + 2 * 8
+let train_h = 19
 
 let render win (s:State.t) =
   let b = s.backend in
@@ -85,12 +86,13 @@ let handle_event (s:State.t) (event:Event.t) =
   match event with
   | MouseButton {y; button=`Left; down=true; _} ->
     if y <= heading_h then `Exit else
-    let choice, _ = Trainmap.foldi (fun i ((choice, y_end) as acc) _ ->
-      let is_none x = match x with `None -> true | _ -> false in
-      if is_none choice && y <= y_end then (`OpenTrain i, y_end + 19) else acc)
-      ~init:(`None, heading_h + 1) @@
+    let is_none x = match x with `None -> true | _ -> false in
+    let choice, y_end = Trainmap.foldi (fun i ((choice, y_end) as acc) _ ->
+      if is_none choice && y <= y_end then (`OpenTrain i, y_end + train_h) else acc)
+      ~init:(`None, heading_h + 1 + train_h) @@
       Player.get_trains player
     in
+    let choice = if is_none choice && y > y_end then `Exit else choice in
     choice
   | Key {down=true; key=_; _} -> `Exit
   | _ -> `None
