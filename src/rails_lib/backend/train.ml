@@ -186,6 +186,7 @@ let is_traveling v = match v.state with
   | _ -> false
 
 let set_type typ v = {v with typ}
+let get_type v = v.typ
 let replace_engine engine v = {v with engine; maintenance_cost=Money.zero}
 
 let display_speed v = C.speed_mult * get_speed v
@@ -199,6 +200,10 @@ let reset_pixels_from_midtile (train: rw t) =
 let get_route_dest v = Vector.get v.route v.stop
 
 let get_last_station v = v.last_station
+
+let get_next_station v =
+  let stop = get_route_dest v |> snd in
+  stop.x, stop.y
 
 let get_next_stop v =
   match v.priority_stop with
