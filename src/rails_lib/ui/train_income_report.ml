@@ -15,16 +15,16 @@ let render msg win (s:State.t) =
   let write_g = write ~color:Ega.gray in
   let write = write ~color:Ega.black in
 
-  let heading_h = 6 + 2 * 8 in
+  let heading_h = 7 + 2 * 8 in
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~color:Ega.bgreen ~x:0 ~y:0 ~w:320 ~h:heading_h ~fill:true;
 
   let _draw_headings =
     let name = B.get_name player_idx b in
     let heading = "Train Report:%s RR" b in
-    Fonts.Render.write ~x:80 ~y:2 heading;
+    Fonts.Render.write ~x:64 ~y:3 heading;
     let headings = "Train class/route  Revenue: YTD   Last Year  Lifetime" in
-    Fonts.Render.write ~x:2 ~y:12 headings;
+    Fonts.Render.write ~x:1 ~y:13 headings;
     let y = heading_h in
     R.draw_line win ~color:Ega.black ~x1:0 ~x2:319 ~y1:y ~y2:y
   in
@@ -44,5 +44,16 @@ let render msg win (s:State.t) =
       next_short_name
     in
     let num_type_dest = sp "%d)%s/%s" i typ_s desc_s in
+    write ~x:1 ~y num_type_dest;
+
+    let current_period = B.get_period v in
+    let last_period = Params.last_period params in
+    let money_s = Money.print ~region ~spaces:7 in
+    let last_revenue = Train.get_revenue last_period train |> money_s in
+    let cur_revenue = Train.get_revenuw current_period train |> money_s in
+    let total_revenue = Train.get_total_revenue train |> money_s in
+    let text = sp "%s  %s  %s" last_revenue cur_revenue total_revenue in
+    write ~x:128 ~y text;
+
     ()
 

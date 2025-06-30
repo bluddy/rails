@@ -647,3 +647,5 @@ let clear_periodic params v =
   let periodic = update_periodic params.Params.current_period v.periodic (fun _ -> make_periodic ()) in
   {v with periodic}
 
+let get_total_revenue v = v.total_revenue
+
