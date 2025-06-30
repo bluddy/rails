@@ -79,6 +79,7 @@ let render win (s:State.t) =
   let player = B.get_player player_idx b in
   Trainmap.foldi draw_train (Player.get_trains player) ~init:(heading_h + 2) |> ignore
 
+  (* TODO: show only some trains, next button, prev button *)
 let handle_event (s:State.t) (event:Event.t) =
   let b = s.backend in
   let player_idx = C.player in
