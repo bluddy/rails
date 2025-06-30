@@ -798,7 +798,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event in
         let v =
-          if exit_state then {v with mode=Normal}
+          if exit_state then next_mode v
           else if state =!= state2 then {v with mode=TrainReport state2}
           else v
         in
@@ -864,10 +864,19 @@ let handle_event (s:State.t) v (event:Event.t) =
       else
         v, nobaction
 
+    | TrainIncome ->
+        let v = begin match Train_income_report.handle_event s event with
+        | `None -> v
+        | `Exit -> next_mode v
+        | `OpenTrain idx ->
+            let state = Train_report.make s idx in
+            {v with mode=TrainReport state; next_modes=[TrainIncome]}
+        end
+        in v, nobaction
+
     | Income_statement _
     | GenericScreen _
     | FiscalPeriodEndStocks _
-    | TrainIncome
     | Animation _ -> modal_screen_no_input v event
         
   in

@@ -10,6 +10,8 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let sp = Printf.sprintf
 
+let heading_h = 8 + 2 * 8
+
 let render win (s:State.t) =
   let b = s.backend in
   let fonts = s.fonts in
@@ -18,7 +20,6 @@ let render win (s:State.t) =
   let write_g = write ~color:Ega.gray in
   let write = write ~color:Ega.black in
 
-  let heading_h = 8 + 2 * 8 in
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~color:Ega.bgreen ~x:0 ~y:0 ~w:320 ~h:heading_h ~fill:true;
 
@@ -77,4 +78,20 @@ let render win (s:State.t) =
   let player = B.get_player player_idx b in
   Trainmap.foldi draw_train (Player.get_trains player) ~init:(heading_h + 2) |> ignore
 
+let handle_event (s:State.t) (event:Event.t) =
+  let b = s.backend in
+  let player_idx = C.player in
+  let player = B.get_player player_idx b in
+  match event with
+  | MouseButton {y; button=`Left; down=true; _} ->
+    if y <= heading_h then `Exit else
+    let choice, _ = Trainmap.foldi (fun i ((choice, y_end) as acc) _ ->
+      let is_none x = match x with `None -> true | _ -> false in
+      if is_none choice && y <= y_end then (`OpenTrain i, y_end + 19) else acc)
+      ~init:(`None, heading_h + 1) @@
+      Player.get_trains player
+    in
+    choice
+  | Key {down=true; key=_; _} -> `Exit
+  | _ -> `None
 
