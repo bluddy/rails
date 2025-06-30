@@ -465,14 +465,12 @@ let check_increment_stop (x,y) v =
       v.priority_stop, v.stop
 
 let car_delivery_ton_miles ~loc ~car ~region =
-  let mult = if Region.is_us region then 1 else 2 in
-  let dist = Utils.classic_dist loc (Car.get_source car) * mult in
+  let dist = Utils.classic_dist loc (Car.get_source car) * Region.dist_mult region in
   let dist_amount = dist * (Car.get_amount car) in
   dist_amount / C.car_amount
 
 let car_delivery_money_speed ~loc ~train ~car ~rates ~(params:Params.t) =
-  let mult = if Region.is_us params.region then 1 else 2 in
-  let calc_dist = Utils.classic_dist loc (Car.get_source car) * mult in
+  let calc_dist = Utils.classic_dist loc (Car.get_source car) * Region.dist_mult params.region in
   let car_age = Car.get_age car params.cycle in
   let speed = calc_dist * 16 / (car_age / 24) in
   let calc_dist =
