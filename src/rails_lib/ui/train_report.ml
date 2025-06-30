@@ -103,9 +103,10 @@ let draw_cars win cars ~x ~y extract_fn (s:State.t) =
 let draw_train win train ~x ~y (s:State.t) =
   (* Draw current train engine *)
   let engine_tex = Hashtbl.find s.textures.route_engine @@ train.Train.engine.make in
-  R.Texture.render ~x ~y win engine_tex;
+  let w = engine_tex.w in
+  R.Texture.render ~x:(x - w) ~y win engine_tex;
 
-  draw_cars win train.cars ~x:(x+63) ~y:(y+1) Train.Car.get_good s
+  draw_cars win train.cars ~x ~y:(y+1) Train.Car.get_good s
 
 let render win (s:State.t) (v:State.t t) : unit =
   match v.screen with
@@ -173,7 +174,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     in
     write Ega.black ~x:8 ~y:12 str;
 
-    draw_train win train ~x:3 ~y:40 (s:State.t);
+    draw_train win train ~x:66 ~y:40 (s:State.t);
     
     write Ega.black ~x:292 ~y:40 "Exit";
 

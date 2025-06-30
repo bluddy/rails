@@ -5,6 +5,9 @@ module B = Backend
 module M = Money
 module C = Constants
 
+let src = Logs.Src.create "train_income_report" ~doc:"Train_income_report"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 let sp = Printf.sprintf
 
 let render win (s:State.t) =
@@ -15,16 +18,16 @@ let render win (s:State.t) =
   let write_g = write ~color:Ega.gray in
   let write = write ~color:Ega.black in
 
-  let heading_h = 7 + 2 * 8 in
+  let heading_h = 8 + 2 * 8 in
   R.paint_screen win ~color:Ega.white;
   R.draw_rect win ~color:Ega.bgreen ~x:0 ~y:0 ~w:320 ~h:heading_h ~fill:true;
 
   let _draw_headings =
     let name = B.get_name player_idx b in
-    let heading = sp "Train Report:%s RR" name in
-    write ~x:64 ~y:3 heading;
+    let heading = sp "Train Report:%s" name in
+    write ~x:64 ~y:4 heading;
     let headings = "Train class/route  Revenue: YTD   Last Year  Lifetime" in
-    write ~x:1 ~y:13 headings;
+    write ~x:1 ~y:14 headings;
     let y = heading_h in
     R.draw_line win ~color:Ega.black ~x1:0 ~x2:319 ~y1:y ~y2:y
   in
@@ -44,12 +47,12 @@ let render win (s:State.t) =
       next_short_name
     in
     let i = Train.Id.to_int i in
-    let num_type_dest = sp "%d)%s/%s" i typ_s desc_s in
+    let num_type_dest = sp "%d)%s/%s" (i+1) typ_s desc_s in
     write ~x:1 ~y num_type_dest;
 
     let current_period = B.get_period b in
     let last_period = Params.last_period b.params in
-    let money_s = Money.print ~region:b.params.region ~spaces:7 in
+    let money_s = Money.print ~region:b.params.region ~spaces:6 in
     let last_revenue = Train.get_revenue last_period train |> money_s in
     let cur_revenue = Train.get_revenue current_period train |> money_s in
     let total_revenue = Train.get_total_revenue train |> money_s in
@@ -57,17 +60,17 @@ let render win (s:State.t) =
     write ~x:128 ~y text;
 
     let y = y + 8 in
-    Train_report.draw_train win train ~x:17 ~y s;
+    Train_report.draw_train win train ~x:61 ~y s;
 
     let speed = Train.get_speed train in
     write_g ~x:185 ~y @@ sp "(%d mph)" speed;
 
-    let y = y + 8 in
+    let y = y + 9 in
     R.draw_line win ~color:Ega.black ~x1:0 ~x2:319 ~y1:y ~y2:y;
 
     y + 2
   in
   let player = B.get_player player_idx b in
-  Trainmap.foldi draw_train (Player.get_trains player) ~init:(heading_h + 1) |> ignore
+  Trainmap.foldi draw_train (Player.get_trains player) ~init:(heading_h + 2) |> ignore
 
 
