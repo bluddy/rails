@@ -53,17 +53,21 @@ let render win (s:State.t) =
     let current_period = B.get_period b in
     let last_period = Params.last_period b.params in
     let money_s = Money.print ~region:b.params.region ~spaces:6 in
-    let last_revenue = Train.get_revenue last_period train |> money_s in
-    let cur_revenue = Train.get_revenue current_period train |> money_s in
-    let total_revenue = Train.get_total_revenue train |> money_s in
+    (* TODO: why divide by 2 here? *)
+    let last_revenue = M.(Train.get_revenue last_period train / 2) |> money_s in
+    let cur_revenue = M.(Train.get_revenue current_period train / 2) |> money_s in
+    let total_revenue = M.(Train.get_total_revenue train / 2) |> money_s in
     let text = sp "%s  %s  %s" last_revenue cur_revenue total_revenue in
     write ~x:128 ~y text;
 
     let y = y + 8 in
     Train_report.draw_train win train ~x:61 ~y s;
 
-    let speed = Train.get_speed train in
-    write_g ~x:185 ~y @@ sp "(%d mph)" speed;
+    let avg_speed = Train.calc_avg_speed b.params.region train in
+    write_g ~x:185 ~y @@ sp "(%d mph)" avg_speed;
+
+    let maintenance = Train.displayed_maintenance_cost train in
+    write_g ~x:256 ~y @@ money_s maintenance;
 
     let y = y + 9 in
     R.draw_line win ~color:Ega.black ~x1:0 ~x2:319 ~y1:y ~y2:y;

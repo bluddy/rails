@@ -147,11 +147,7 @@ let total_engine_value (v:t) = sum_money Train.get_engine_cost v
 
 let total_car_value (v:t) = Money.(C.car_cost * (sum Train.num_of_cars v))
 
-let total_maintenance (v:t) =
-  sum_money (fun train ->
-    let num_cars = Train.num_of_cars train in
-    Money.(((train.maintenance_cost / 2 +~ num_cars) / 2) +~ 1))
-  v
+let total_maintenance (v:t) = sum_money Train.full_maintenance_cost v
 
 let clear_priority_shipment v =
   (* Clear priority shipment holding for the given players *)

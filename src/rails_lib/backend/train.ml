@@ -647,3 +647,19 @@ let clear_periodic params v =
 
 let get_total_revenue v = v.total_revenue
 
+let calc_avg_speed region v =
+  let p1, p2 = get_period `First v, get_period `Second v in
+  let dist = 6 * (p1.dist_traveled + p2.dist_traveled) in
+  let time = p1.time_running + p2.time_running + 1 in 
+  let time = time / ((Region.dist_mult region) * 10) in
+  dist / time
+
+let full_maintenance_cost train =
+  let num_cars = num_of_cars train in
+  M.(((train.maintenance_cost / 2 +~ num_cars) / 2) +~ 1)
+
+let displayed_maintenance_cost train =
+  (* Roughly twice full maintenance *)
+  let num_cars = num_of_cars train in
+  M.((train.maintenance_cost / 2 +~ num_cars) +~ 2)
+
