@@ -7,7 +7,7 @@ module C = Constants
 
 let sp = Printf.sprintf
 
-let render msg win (s:State.t) =
+let render win (s:State.t) =
   let b = s.backend in
   let fonts = s.fonts in
   let player_idx = C.player in
@@ -68,6 +68,6 @@ let render msg win (s:State.t) =
     y + 2
   in
   let player = B.get_player player_idx b in
-  Trainmap.foldi draw_train (Player.get_trains player) ~init:(heading_h + 1)
+  Trainmap.foldi draw_train (Player.get_trains player) ~init:(heading_h + 1) |> ignore
 
 

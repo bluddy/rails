@@ -569,6 +569,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Income_statement), _ ->
             let state = B.create_balance_sheet player_idx s.backend in
             {v with mode=Income_statement state}, nobaction
+        | On (`Train_income), _ ->
+            {v with mode=TrainIncome}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
@@ -865,6 +867,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Income_statement _
     | GenericScreen _
     | FiscalPeriodEndStocks _
+    | TrainIncome
     | Animation _ -> modal_screen_no_input v event
         
   in
@@ -1443,6 +1446,8 @@ let render (win:R.window) (s:State.t) v =
        Find_city.render win s.fonts state
     | FiscalPeriodEndStocks state ->
        Fiscal_period_end.render_stock_eval win state  s
+    | TrainIncome ->
+      Train_income_report.render win s
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in
