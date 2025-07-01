@@ -79,7 +79,7 @@ module Record = struct
     total_revenue=Money.zero;
     avg_speed=0;
     ton_miles=0;
-    train_speed=0;
+    train_speed=2; (* starting record to beat *)
     job=None;
   }
 end
@@ -670,11 +670,9 @@ let _retirement_bonus_and_job ~fired stocks params v =
 
 let update_retirement_bonus_and_job ~fired stocks params v =
   let job, _retirement_bonus = _retirement_bonus_and_job ~fired stocks params v in
+  let ret () = Some job, {v with record={v.record with job=Some job}} in
   match v.record.job with
-  | Some cur_job when Jobs.to_enum job > Jobs.to_enum cur_job ->
-      Some job, {v with record={v.record with job=Some job}}
-  | None -> 
-      Some job, {v with record={v.record with job=Some job}}
-  | _ ->
-    None, v
+  | Some cur_job when Jobs.to_enum job > Jobs.to_enum cur_job -> ret ()
+  | None -> ret ()
+  | _ -> None, v
 
