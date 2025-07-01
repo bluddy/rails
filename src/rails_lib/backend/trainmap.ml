@@ -165,3 +165,10 @@ let remove_goods_in_all_trains remove_goods v =
   v.trains;
   v
   
+let subrange start ~num v =
+  let start = Id.to_int start in
+  if start < size v - 1 || num <= 0 then Iter.empty, `End else
+  let end_ = min (start + num - 1) (size v - 1) in
+  let last = if end_ >= size v - 1 then `Last else `NotLast in
+  Iter.(start -- end_), last
+
