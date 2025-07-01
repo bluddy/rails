@@ -171,6 +171,7 @@ type 'mut t = {
   maintenance_cost: Money.t; (* per fin period *)
   economic_activity: bool; (* Whether we picked up or dropped off goods *)
   periodic: periodic * periodic; (* data saved for periodic tracking *)
+  total_revenue: Money.t;
 } [@@deriving yojson, show]
 
 let get_route_length v = Vector.length v.route
@@ -185,6 +186,7 @@ let is_traveling v = match v.state with
   | _ -> false
 
 let set_type typ v = {v with typ}
+let get_type v = v.typ
 let replace_engine engine v = {v with engine; maintenance_cost=Money.zero}
 
 let display_speed v = C.speed_mult * get_speed v
@@ -198,6 +200,10 @@ let reset_pixels_from_midtile (train: rw t) =
 let get_route_dest v = Vector.get v.route v.stop
 
 let get_last_station v = v.last_station
+
+let get_next_station v =
+  let stop = get_route_dest v |> snd in
+  stop.x, stop.y
 
 let get_next_stop v =
   match v.priority_stop with
@@ -269,6 +275,7 @@ let make ((x,y) as station) engine cars other_station ~dir player =
     economic_activity=false;
     periodic=(make_periodic (), make_periodic ());
     player;
+    total_revenue=M.zero;
   }
   in
   Log.debug (fun f -> f "Train: new train at (%d,%d)" v.x v.y);
@@ -458,14 +465,12 @@ let check_increment_stop (x,y) v =
       v.priority_stop, v.stop
 
 let car_delivery_ton_miles ~loc ~car ~region =
-  let mult = if Region.is_us region then 1 else 2 in
-  let dist = Utils.classic_dist loc (Car.get_source car) * mult in
+  let dist = Utils.classic_dist loc (Car.get_source car) * Region.dist_mult region in
   let dist_amount = dist * (Car.get_amount car) in
   dist_amount / C.car_amount
 
 let car_delivery_money_speed ~loc ~train ~car ~rates ~(params:Params.t) =
-  let mult = if Region.is_us params.region then 1 else 2 in
-  let calc_dist = Utils.classic_dist loc (Car.get_source car) * mult in
+  let calc_dist = Utils.classic_dist loc (Car.get_source car) * Region.dist_mult params.region in
   let car_age = Car.get_age car params.cycle in
   let speed = calc_dist * 16 / (car_age / 24) in
   let calc_dist =
@@ -639,4 +644,22 @@ let clear_periodic params v =
   (* Call after new perioid *)
   let periodic = update_periodic params.Params.current_period v.periodic (fun _ -> make_periodic ()) in
   {v with periodic}
+
+let get_total_revenue v = v.total_revenue
+
+let calc_avg_speed region v =
+  let p1, p2 = get_period `First v, get_period `Second v in
+  let dist = 6 * (p1.dist_traveled + p2.dist_traveled) in
+  let time = p1.time_running + p2.time_running + 1 in 
+  let time = time / ((Region.dist_mult region) * 10) in
+  if time > 0 then dist / time else 0
+
+let full_maintenance_cost train =
+  let num_cars = num_of_cars train in
+  M.(((train.maintenance_cost / 2 +~ num_cars) / 2) +~ 1)
+
+let displayed_maintenance_cost train =
+  (* Roughly twice full maintenance *)
+  let num_cars = num_of_cars train in
+  M.((train.maintenance_cost / 2 +~ num_cars) +~ 2)
 

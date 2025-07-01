@@ -569,6 +569,9 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Income_statement), _ ->
             let state = B.create_balance_sheet player_idx s.backend in
             {v with mode=Income_statement state}, nobaction
+        | On (`Train_income), _ ->
+            let state = Train_income_report.create s in
+            {v with mode=TrainIncome state}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
@@ -796,7 +799,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event in
         let v =
-          if exit_state then {v with mode=Normal}
+          if exit_state then next_mode v
           else if state =!= state2 then {v with mode=TrainReport state2}
           else v
         in
@@ -861,6 +864,17 @@ let handle_event (s:State.t) v (event:Event.t) =
         v, action
       else
         v, nobaction
+
+    | TrainIncome tstate ->
+        let v = begin match Train_income_report.handle_event tstate s event with
+        | _, `Exit -> next_mode v
+        | tstate, `OpenTrain idx ->
+            let state = Train_report.make s idx in
+            {v with mode=TrainReport state; next_modes=[TrainIncome tstate]}
+        | tstate2, _ when tstate2 === tstate -> v
+        | tstate2, _ -> {v with mode=TrainIncome tstate2}
+        end
+        in v, nobaction
 
     | Income_statement _
     | GenericScreen _
@@ -1443,6 +1457,8 @@ let render (win:R.window) (s:State.t) v =
        Find_city.render win s.fonts state
     | FiscalPeriodEndStocks state ->
        Fiscal_period_end.render_stock_eval win state  s
+    | TrainIncome state ->
+      Train_income_report.render win state s
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in

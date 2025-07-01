@@ -77,7 +77,7 @@ let render win (s:State.t) v =
         d.amount (Goods.group_of v.good) good_s
         (B.get_station d.src s.backend |> Option.get_exn_or "oops "|> Station.get_name)
         station_s
-        (Utils.classic_dist v.loc d.src)
+        (Utils.classic_dist v.loc d.src) (* TODO: check if modify dist by europe factor here *)
         d.speed
       in
       write_sm text ~x:80 ~y:63;

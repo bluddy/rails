@@ -21,7 +21,7 @@ let render win (s:State.t) balance_sheet =
     Printf.sprintf "Economic Climate: %s" climate;
 
   let x_left, x_text, x_ytd, x_total = 16, 20, 160, 240 in
-  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:`Large ~color in
+  let write ?(color=Ega.black) = Fonts.Render.write win s.fonts ~idx:`Standard ~color in
   let write_money ~x ~y money =
     let money_s = Money.print ~show_neg:false ~spaces:6 ~region:(B.get_region s.backend) money in
     let color = if M.(money < zero) then Ega.bred else Ega.black in

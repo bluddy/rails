@@ -1,4 +1,6 @@
 # Tasks
+- Train income: check multiple pages of trains work well
+- Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
 - Fonts: change to variants
 - Menu/msgbox: use Make() to get rid of 'state
 - Building into an ai station
@@ -26,6 +28,7 @@
 - Check if we need to loop in _update_train (print out if we ever do multiple updates)
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
+- New stations should have double rates for one fiscal period.
 - Bug:
   - Stock view fin end is quite broken.
   - Year doesn't switch at end of December.

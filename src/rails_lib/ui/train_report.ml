@@ -84,6 +84,30 @@ let make (s:State.t) train_idx =
     screen=Normal;
   }
 
+(* Draw current cars *)
+let draw_cars win cars ~x ~y extract_fn (s:State.t) =
+  match cars with
+  | [] ->
+      let caboose = Hashtbl.find s.textures.route_cars `Caboose in
+      R.Texture.render ~x ~y win caboose
+
+  | cars ->
+    ignore @@
+      List.fold_left (fun x car_data ->
+        let car = extract_fn car_data in
+        let car_tex = Hashtbl.find s.textures.route_cars (`CarOld car) in
+        R.Texture.render ~x ~y win car_tex;
+        x + car_tex.R.Texture.w
+      ) x cars
+
+let draw_train win train ~x ~y (s:State.t) =
+  (* Draw current train engine *)
+  let engine_tex = Hashtbl.find s.textures.route_engine @@ train.Train.engine.make in
+  let w = engine_tex.w in
+  R.Texture.render ~x:(x - w) ~y win engine_tex;
+
+  draw_cars win train.cars ~x ~y:(y+1) Train.Car.get_good s
+
 let render win (s:State.t) (v:State.t t) : unit =
   match v.screen with
   | TrainRouteOrders station_map ->
@@ -150,27 +174,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     in
     write Ega.black ~x:8 ~y:12 str;
 
-    (* Draw current train engine *)
-    let engine_tex = Hashtbl.find s.textures.route_engine @@ train.engine.make in
-    R.Texture.render ~x:3 ~y:40 win engine_tex;
-
-    (* Draw current cars *)
-    let draw_cars cars ~x ~y extract_fn =
-      match cars with
-      | [] ->
-          let caboose = Hashtbl.find s.textures.route_cars `Caboose in
-          R.Texture.render ~x ~y win caboose
-
-      | cars ->
-        ignore @@
-          List.fold_left (fun x car_data ->
-            let car = extract_fn car_data in
-            let car_tex = Hashtbl.find s.textures.route_cars (`CarOld car) in
-            R.Texture.render ~x ~y win car_tex;
-            x + car_tex.w
-          ) x cars
-    in
-    draw_cars train.cars ~x:66 ~y:41 Train.Car.get_good;
+    draw_train win train ~x:66 ~y:40 (s:State.t);
     
     write Ega.black ~x:292 ~y:40 "Exit";
 
@@ -222,7 +226,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     let draw_cars_option (stop:Train.stop) ~y =
       match stop.consist_change with
       | None -> write Ega.gray ~x:168 ~y "no changes"
-      | Some cars -> draw_cars cars ~x:160 ~y Utils.id
+      | Some cars -> draw_cars win cars ~x:160 ~y Utils.id s
     in
 
     (* Priority *)

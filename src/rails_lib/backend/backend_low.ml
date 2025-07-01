@@ -332,6 +332,7 @@ module Train_update = struct
         holds_priority_shipment;
         economic_activity;
         periodic;
+        total_revenue=M.(train.total_revenue + goods_revenue);
       }
       in
       train, station, data, ui_msgs
@@ -646,6 +647,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
      The train can be looped over several times as it picks up speed.
    *)
 
+  (* TODO: check if this should be specifically europe for scale *)
   let cycle_check, region_div = if Region.is_us params.Params.region then 16, 1 else 8, 2 in
   let cycle_bit = 1 lsl (params.cycle mod 12) in
   let current_period = Params.current_period v.params in
