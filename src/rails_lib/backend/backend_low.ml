@@ -347,13 +347,6 @@ module Train_update = struct
 
       (* TODO: young_station_reached if age <= 20 *)
       (* add income/2 to other_income type *)
-      (* check record delivery money-wise *)
-
-      (* ui msgs: 
-         first delivery of good (only >2 difficulty)
-         first pickup of goods (only >2 difficulty)
-         record reward for delivery
-       *)
 
   let _enter_station (v:t) idx (train: rw Train.t) stations player loc  =
     let station' = Station_map.get_exn loc stations in
