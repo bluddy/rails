@@ -123,7 +123,7 @@ and 'state mode =
   (* A screen with only rendering and no interaction *)
   | GenericScreen of { render_fn: Renderer.window -> 'state -> unit}
   | FiscalPeriodEndStocks of 'state Fiscal_period_end_d.t
-  | TrainIncome of Train_income_report.t
+  | TrainIncome of Train_income_report_d.t
 
 let is_normal_mode = function
   | Normal -> true

@@ -5,6 +5,8 @@ module B = Backend
 module M = Money
 module C = Constants
 
+include Train_income_report_d
+
 let src = Logs.Src.create "train_income_report" ~doc:"Train_income_report"
 module Log = (val Logs.src_log src: Logs.LOG)
 
@@ -14,12 +16,6 @@ let num_trains = 8
 let heading_h = 8 + 2 * 8
 let train_h = 19
 
-type t = {
-  start_id: Train.Id.t;
-  next_button: bool;
-  prev_button: bool;
-}
-
 let create ?start_id (s:State.t) =
   let player_idx = C.player in
   let trains = B.get_trains player_idx s.backend in
@@ -28,8 +24,8 @@ let create ?start_id (s:State.t) =
     | Some id -> id
   in
   let _, first, last = Trainmap.subrange start_id ~num:num_trains trains in
+  let prev_button = match first with `NotFirst -> true | _ -> false in
   let next_button = match last with `NotLast -> true | _ -> false in
-  let prev_button = match last with `NotFirst -> true | _ -> false in
   { start_id; next_button; prev_button; }
 
 let render win state (s:State.t) =
@@ -130,6 +126,10 @@ let handle_event v (s:State.t) (event:Event.t) =
   in
   match action with
   | `Next ->
-      let start_id = Train.Id.to_int v.start_id + 8 in
-      create ~start_id:v.(start_id + 8)
+      let start_id = Train.Id.to_int v.start_id + 8 |> Train.Id.of_int in
+      create ~start_id s, `None
+  | `Prev ->
+      let start_id = Train.Id.to_int v.start_id - 8 |> Train.Id.of_int in
+      create ~start_id s, `None
+  | _ -> v, action
 

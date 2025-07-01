@@ -865,13 +865,14 @@ let handle_event (s:State.t) v (event:Event.t) =
       else
         v, nobaction
 
-    | TrainIncome state ->
-        let v = begin match Train_income_report.handle_event state s event with
-        | `None -> v
-        | `Exit -> next_mode v
-        | `OpenTrain idx ->
+    | TrainIncome tstate ->
+        let v = begin match Train_income_report.handle_event tstate s event with
+        | _, `Exit -> next_mode v
+        | tstate, `OpenTrain idx ->
             let state = Train_report.make s idx in
-            {v with mode=TrainReport state; next_modes=[TrainIncome]}
+            {v with mode=TrainReport state; next_modes=[TrainIncome tstate]}
+        | tstate2, _ when tstate2 === tstate -> v
+        | tstate2, _ -> {v with mode=TrainIncome tstate2}
         end
         in v, nobaction
 
@@ -1456,8 +1457,8 @@ let render (win:R.window) (s:State.t) v =
        Find_city.render win s.fonts state
     | FiscalPeriodEndStocks state ->
        Fiscal_period_end.render_stock_eval win state  s
-    | TrainIncome ->
-      Train_income_report.render win s
+    | TrainIncome state ->
+      Train_income_report.render win state s
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in

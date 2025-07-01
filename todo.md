@@ -1,5 +1,5 @@
 # Tasks
-- Train income: show only some trains, next button, prev button
+- Train income: check multiple pages of trains work well
 - Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
 - Fonts: change to variants
 - Menu/msgbox: use Make() to get rid of 'state
