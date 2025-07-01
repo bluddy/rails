@@ -10,10 +10,29 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let sp = Printf.sprintf
 
+let num_trains = 8
 let heading_h = 8 + 2 * 8
 let train_h = 19
 
-let render win (s:State.t) =
+type t = {
+  start_id: Train.Id.t;
+  next_button: bool;
+  prev_button: bool;
+}
+
+let create ?start_id (s:State.t) =
+  let player_idx = C.player in
+  let trains = B.get_trains player_idx s.backend in
+  let start_id = match start_id with
+    | None -> Trainmap.first_train trains
+    | Some id -> id
+  in
+  let _, first, last = Trainmap.subrange start_id ~num:num_trains trains in
+  let next_button = match last with `NotLast -> true | _ -> false in
+  let prev_button = match last with `NotFirst -> true | _ -> false in
+  { start_id; next_button; prev_button; }
+
+let render win state (s:State.t) =
   let b = s.backend in
   let fonts = s.fonts in
   let player_idx = C.player in
@@ -34,7 +53,9 @@ let render win (s:State.t) =
     R.draw_line win ~color:Ega.black ~x1:0 ~x2:319 ~y1:y ~y2:y
   in
   
-  let draw_train i y train =
+  let player = B.get_player player_idx b in
+  let draw_train y i =
+    let train = Trainmap.get (Train.Id.of_int i) player.trains in
     let typ_s = Train.get_type train |> Train.show_train_type in
     let last_loc = Train.get_last_station train in
     let last_station = Station_map.get_exn last_loc b.stations in
@@ -48,7 +69,6 @@ let render win (s:State.t) =
       (if is_traveling then ">" else "")
       next_short_name
     in
-    let i = Train.Id.to_int i in
     let num_type_dest = sp "%d)%s/%s" (i+1) typ_s desc_s in
     write ~x:1 ~y num_type_dest;
 
@@ -77,16 +97,26 @@ let render win (s:State.t) =
     y + 2
   in
   let player = B.get_player player_idx b in
-  Trainmap.foldi draw_train (Player.get_trains player) ~init:(heading_h + 2) |> ignore
+  let range, first, last = Trainmap.subrange state.start_id ~num:8 @@ Player.get_trains player in
+  Iter.fold draw_train (heading_h + 2) range |> ignore;
 
-  (* TODO: show only some trains, next button, prev button *)
-let handle_event (s:State.t) (event:Event.t) =
+  let y = 190 in
+  (match first with
+  | `First -> ()
+  | `NotFirst -> write ~x:30 ~y "Prev");
+  (match last with
+  | `Last -> ()
+  | `NotLast -> write ~x:260 ~y "Next")
+
+let handle_event v (s:State.t) (event:Event.t) =
   let b = s.backend in
   let player_idx = C.player in
   let player = B.get_player player_idx b in
-  match event with
-  | MouseButton {y; button=`Left; down=true; _} ->
+  let action = match event with
+  | MouseButton {x; y; button=`Left; down=true; _} ->
     if y <= heading_h then `Exit else
+    if v.prev_button && x > 30 && x < 60 && y > 190 then `Prev else
+    if v.next_button && x > 260 && x < 290 && y > 190 then `Next else
     let is_none x = match x with `None -> true | _ -> false in
     let choice, y_end = Trainmap.foldi (fun i ((choice, y_end) as acc) _ ->
       if is_none choice && y <= y_end then (`OpenTrain i, y_end + train_h) else acc)
@@ -97,4 +127,9 @@ let handle_event (s:State.t) (event:Event.t) =
     choice
   | Key {down=true; key=_; _} -> `Exit
   | _ -> `None
+  in
+  match action with
+  | `Next ->
+      let start_id = Train.Id.to_int v.start_id + 8 in
+      create ~start_id:v.(start_id + 8)
 

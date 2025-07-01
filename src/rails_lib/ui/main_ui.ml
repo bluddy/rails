@@ -570,7 +570,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             let state = B.create_balance_sheet player_idx s.backend in
             {v with mode=Income_statement state}, nobaction
         | On (`Train_income), _ ->
-            {v with mode=TrainIncome}, nobaction
+            let state = Train_income_report.create s in
+            {v with mode=TrainIncome state}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
@@ -864,8 +865,8 @@ let handle_event (s:State.t) v (event:Event.t) =
       else
         v, nobaction
 
-    | TrainIncome ->
-        let v = begin match Train_income_report.handle_event s event with
+    | TrainIncome state ->
+        let v = begin match Train_income_report.handle_event state s event with
         | `None -> v
         | `Exit -> next_mode v
         | `OpenTrain idx ->

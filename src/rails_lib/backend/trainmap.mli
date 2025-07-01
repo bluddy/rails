@@ -46,3 +46,7 @@ val clear_priority_shipment: t -> t
 
 val remove_goods_in_all_trains: Goods.Set.t -> t -> t
 
+val subrange: Id.t -> num: int -> t -> int Iter.t * [`First | `NotFirst] * [`Last | `NotLast]
+
+val first_train: t -> Id.t
+
