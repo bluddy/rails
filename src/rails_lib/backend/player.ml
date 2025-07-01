@@ -626,10 +626,10 @@ let get_bridge_washout v = match v.event with
   | Some(BridgeWashout loc) -> Some loc
   | _ -> None
 
-let get_speed_record v = v.record.train_speed
+let check_new_speed_record speed v = speed > (v.record.train_speed + 1) * 2
 
-let update_speed_record speed v =
-  if speed > v.record.train_speed then
+let check_update_speed_record speed v =
+  if check_new_speed_record speed v then
     {v with record={v.record with train_speed=speed}}
   else v
 

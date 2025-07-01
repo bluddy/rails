@@ -97,15 +97,15 @@ module Train_update = struct
 
   let _ui_msgs_of_speed_record cars_delivered_speed loc train_idx player =
     match cars_delivered_speed with
-    | [] -> [], 0
+    | [] -> [], 0 
     | x::xs ->
       let (car, _), max_speed =
         List.fold_left (fun ((_, max_speed) as acc) ((_, speed) as curr) -> 
           if speed > max_speed then curr else acc)
         x xs
       in
-      if Player.get_speed_record player < max_speed then
-        [
+      if Player.check_new_speed_record max_speed player then
+        let msg = [
           UIM.SpeedRecord {
             player_idx=player.idx;
             speed=max_speed;
@@ -113,8 +113,10 @@ module Train_update = struct
             dst=loc;
             train_idx=train_idx;
           }
-        ], max_speed
-      else [], 0
+        ]
+        in
+        msg, max_speed
+      else [], 0 
           
 
   let _ui_msgs_of_new_goods_delivered goods_delivered goods_delivered_map player cars_delivered_speed money_from_goods train station =
@@ -633,7 +635,7 @@ let _update_player_with_data (player:Player.t) data active_stations fiscal_perio
           |> Player.add_freight_ton_miles data.freight_ton_miles fiscal_period
           |> Player.add_goods_delivered data.new_goods_delivered
           |> Player.add_goods_picked_up data.new_goods_picked_up
-          |> Player.update_speed_record data.max_speed
+          |> Player.check_update_speed_record data.max_speed
       | _ -> player
     in
     if List.is_empty active_stations then player
