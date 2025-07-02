@@ -7,9 +7,6 @@ module M = Money
 let src = Logs.Src.create "stock_market" ~doc:"Stock_market"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-type price_history = Money.t list (* reverse history of prices *)
-  [@@deriving yojson]
-
 type t = {
   (* Who owns how many shares in what company. By default, all shares are public
      First level: owner. Second level: owned
@@ -17,7 +14,7 @@ type t = {
   ownership: (int Owner.Map.t) Owner.Map.t;
   prices: M.t Owner.Map.t; (* share prices *)
   totals: int Owner.Map.t; (* total number of shares *)
-  value_histories: price_history Owner.Map.t; (* prices over time in fiscal periods *)
+  value_histories: (Money.t list) Owner.Map.t; (* prices over time in fiscal periods *)
   avg_prices: M.t Owner.Map.t;
 } [@@deriving yojson]
 
@@ -32,20 +29,19 @@ let default = {
 let player_starting_share_price difficulty = 
     B_options.difficulty_to_enum difficulty + 7
 
-let add_human_player player_idx difficulty v =
+let add_human_player player_idx params v =
+  let difficulty, num_fiscal_periods = params.Params.options.difficulty, params.num_fiscal_periods in
   let totals = Owner.Map.add player_idx C.Stock.starting_num v.totals in
   let prices = Owner.Map.add player_idx (M.of_int @@ B_options.difficulty_to_enum difficulty + 7) v.prices in
-  let value_histories = Owner.Map.add player_idx [] v.value_histories in
+  let history = List.replicate num_fiscal_periods M.zero in
+  let value_histories = Owner.Map.add player_idx history v.value_histories in
   {v with totals; prices; value_histories}
 
 let add_ai_player player_idx ~num_fin_periods v =
   (* AI players come in late, so we need to complete their history *)
   let prices = Owner.Map.add player_idx C.Stock.ai_share_price v.prices in
   let totals = Owner.Map.add player_idx C.Stock.starting_num v.totals in
-  let history = if num_fin_periods > 0 then
-    List.replicate (num_fin_periods - 1) M.zero 
-    else []
-  in
+  let history = List.replicate num_fin_periods M.zero in
   let value_histories = Owner.Map.add player_idx history v.value_histories in
   {v with totals; prices; value_histories}
 
@@ -366,6 +362,8 @@ let update_history player_idx value v =
   in
   {v with value_histories}
 
+let get_history owner v = Owner.Map.find owner v.value_histories
+
 let update_history_with_stock_value player_idx v =
   let value = stock_value player_idx v in
   update_history player_idx value v
@@ -391,3 +389,11 @@ let show_investor = function
   | Investors_very_concerned -> "very concerned"
   | Investors_outraged -> "outraged"
   
+let max_history_price v =
+  Owner.Map.fold (fun _ values max ->
+    let value = List.fold_left (fun max value ->
+      M.max max value) max values in
+    M.max value max)
+    v.value_histories
+    M.zero
+

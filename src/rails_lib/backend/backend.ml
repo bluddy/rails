@@ -34,7 +34,6 @@ let default region resources ~random ~seed =
     Cities.make h width height
   in
   let track = Trackmap.empty width height in
-  let options = B_options.default in
   let stations = Station_map.empty in
   let players = Owner.Map.singleton C.player @@ Player.default C.player in
   let year = match region with
@@ -45,10 +44,9 @@ let default region resources ~random ~seed =
   in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
+  let params = { Params.default with year; year_start=year; region } in
   let stocks = Stock_market.default
-    |> Stock_market.add_human_player C.player options.difficulty in
-  let params = { Params.default with year; year_start=year; region }
-  in
+    |> Stock_market.add_human_player C.player params in
   {
     params;
     last_tick=0;
