@@ -15,10 +15,9 @@ let render win (s:State.t) =
   let write = Fonts.Render.write win fonts ~idx:`Standard in
 
   R.paint_screen win ~color:Ega.white;
+  R.draw_rect win ~x:3 ~y:3 ~w:23 ~h:194 ~fill:true ~color:Ega.yellow;
   R.draw_rect win ~x:2 ~y:2 ~w:(320-4) ~h:(200-4) ~color:Ega.black ~fill:false;
-  let x = 26 in
-  R.draw_line win ~x1:x ~x2:x ~y1:2 ~y2:197 ~color:Ega.black;
-  R.draw_rect win ~x:3 ~y:3 ~w:22 ~h:193 ~fill:true ~color:Ega.yellow;
+  R.draw_line win ~x1:26 ~x2:26 ~y1:2 ~y2:197 ~color:Ega.black;
 
   let _horizontal_lines =
     let y_base = 40 in
@@ -57,8 +56,8 @@ let render win (s:State.t) =
       let y = y_base + i * 40 in
       let money_s = Money.print ~ks:false ~region:b.params.region money in
       write ~x ~y ~color:Ega.black money_s;
-      M.(price_delta + price_delta))
-    price_delta
+      M.(money - price_delta))
+    M.(price_delta * 4)
     Iter.(0 -- 3)
   in
 

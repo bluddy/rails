@@ -572,6 +572,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Train_income), _ ->
             let state = Train_income_report.create s in
             {v with mode=TrainIncome state}, nobaction
+        | On (`Stocks), _ ->
+          {v with mode=GenericScreen {render_fn=Stock_graph.render}}, nobaction
         | On (`Accomplishments), _ ->
             {v with mode=Accomplishments}, nobaction
         | On (`Efficiency_report), _ ->
