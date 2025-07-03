@@ -28,7 +28,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Train Income Report
 - [ ] History
 - [ ] Accomplishments
-- [ ] Train efficiency report
+- [x] Train efficiency report
 - [x] Flesh out train info screen (currently dummy)
 - [x] Station lights and train stopping mechanism
 - [x] Map changes over time
