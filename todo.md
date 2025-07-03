@@ -1,4 +1,5 @@
 # Tasks
+- Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
 - Train income: check multiple pages of trains work well
 - Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
 - Fonts: change to variants

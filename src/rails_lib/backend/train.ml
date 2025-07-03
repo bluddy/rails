@@ -645,6 +645,8 @@ let clear_periodic params v =
   let periodic = update_periodic params.Params.current_period v.periodic (fun _ -> make_periodic ()) in
   {v with periodic}
 
+let get_total_ton_miles v = (get_period `First v).ton_miles + (get_period `Second v).ton_miles
+
 let get_total_revenue v = v.total_revenue
 
 let calc_avg_speed region v =

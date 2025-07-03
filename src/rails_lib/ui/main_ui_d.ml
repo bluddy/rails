@@ -111,10 +111,8 @@ and 'state mode =
   | TrainReport of 'state Train_report_d.t
   | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of {state: Balance_sheet_d.t; end_of_year: bool}
-  | Accomplishments
   | Income_statement of Balance_sheet_d.t  (* we use the stock part *)
   | EngineInfo of Engine_info.t
-  | Efficiency_report
   | Animation of Pani_render.t 
   | NewGoodDeliveryPickup of New_delivery_pickup_d.t
   | Speed_record of Speed_record_d.t
@@ -124,6 +122,7 @@ and 'state mode =
   | GenericScreen of { render_fn: Renderer.window -> 'state -> unit}
   | FiscalPeriodEndStocks of 'state Fiscal_period_end_d.t
   | TrainIncome of Train_income_report_d.t
+  | History of History_d.t
 
 let is_normal_mode = function
   | Normal -> true

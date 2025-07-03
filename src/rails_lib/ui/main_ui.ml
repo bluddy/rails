@@ -575,9 +575,11 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Stocks), _ ->
           {v with mode=GenericScreen {render_fn=Stock_graph.render}}, nobaction
         | On (`Accomplishments), _ ->
-            {v with mode=Accomplishments}, nobaction
+          {v with mode=GenericScreen{render_fn=Accomplishments.render}}, nobaction
+        | On (`History), _ ->
+          {v with mode=History (History.default)}, nobaction
         | On (`Efficiency_report), _ ->
-            {v with mode=Efficiency_report}, nobaction
+            {v with mode=GenericScreen{render_fn=Efficiency_report.render}}, nobaction
         | On (`Call_broker), _ ->
             v, B.Action.CallBroker{player_idx}
         | On (`Name_rr), _ ->
@@ -854,9 +856,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       in v, nobaction
 
     | EngineInfo _
-    | StationReport _
-    | Efficiency_report
-    | Accomplishments -> modal_screen_no_input v event
+    | StationReport _ -> modal_screen_no_input v event
 
     | Balance_sheet state ->
       (* Balance sheet at the fin period end is the last before we do housecleaning *)
@@ -877,6 +877,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         | tstate2, _ -> {v with mode=TrainIncome tstate2}
         end
         in v, nobaction
+
+    | History _
 
     | Income_statement _
     | GenericScreen _
@@ -1442,10 +1444,6 @@ let render (win:R.window) (s:State.t) v =
         Balance_sheet_view.render win s state
     | Income_statement state ->
         Income_statement_view.render win s state
-    | Accomplishments ->
-        Accomplishments.render win s
-    | Efficiency_report ->
-        Efficiency_report.render win s
     | Animation state ->
         Pani_render.render win state
     | NewGoodDeliveryPickup d ->
@@ -1461,6 +1459,8 @@ let render (win:R.window) (s:State.t) v =
        Fiscal_period_end.render_stock_eval win state  s
     | TrainIncome state ->
       Train_income_report.render win state s
+    | History state ->
+       History.render win state s
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in

@@ -50,6 +50,8 @@ type event =
   BridgeWashout of U.loc
   [@@deriving yojson]
 
+ (* TODO: this is ton-miles traveled vs delivered (in trains). Check *)
+
 type periodic = {
   mutable dist_traveled: int;
   mutable time_running: int;  (* TODO: update this in train_update *)
@@ -181,6 +183,10 @@ let add_income_stmt income_stmt (v:t) =
   let cash = Money.(v.m.cash + Income_statement.total income_stmt) in
   {v with m={v.m with income_statement; cash}}
 
+let revenue_sum v = Income_statement.total_revenue v.m.income_statement
+
+let get_ton_miles period v = (Utils.read_pair v.periodic period).ton_miles
+
 let fiscal_period_end net_worth stations params v =
   (* Messages, computation, housecleaning *)
   let current_period = Params.current_period params in
@@ -220,7 +226,7 @@ let fiscal_period_end net_worth stations params v =
       ui_msgs
       v.station_locs
   in
-  let total_revenue = Income_statement.total_revenue v.m.income_statement in
+  let total_revenue = revenue_sum v in
   let total_income_statement = Income_statement.merge v.m.total_income_statement v.m.income_statement in
   let ui_msgs =
     if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
@@ -243,7 +249,7 @@ let fiscal_period_end net_worth stations params v =
     else
       v.record.avg_speed, ui_msgs
   in
-  let ton_miles = (Utils.read_pair v.periodic current_period).ton_miles in
+  let ton_miles = get_ton_miles current_period v in
   let ton_mile_record, ui_msgs =
     if ton_miles > v.record.ton_miles then
       ton_miles, Ui_msg.TonMileRecord(ton_miles)::ui_msgs
@@ -457,6 +463,9 @@ let check_priority_delivery stations v =
   Option.map_or ~default:false
     (fun pr_data -> Priority_shipment.check_priority_delivery pr_data stations)
     v.priority
+
+let get_total_ton_miles v =
+  (Utils.read_pair v.periodic `First).ton_miles + (Utils.read_pair v.periodic `Second).ton_miles
 
 let add_freight_ton_miles ftm cur_period v =
   let periodic =
