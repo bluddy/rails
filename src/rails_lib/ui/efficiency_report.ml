@@ -7,6 +7,8 @@ module C = Constants
 
 module Hashtbl = Utils.Hashtbl
 
+let sp = Printf.sprintf
+
 let render win (s:State.t) =
   let b = s.backend in
   let fonts = s.fonts in
