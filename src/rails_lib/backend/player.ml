@@ -10,6 +10,7 @@ open! Utils.Infix
 let src = Logs.Src.create "player" ~doc:"Player"
 module Log = (val Logs.src_log src: Logs.LOG)
 
+module IntMap = Utils.IntMap
 module Vector = Utils.Vector
 module U = Utils
 module M = Money
@@ -93,6 +94,7 @@ module History = struct
     total_revenue: Money.t list;
     avg_speed: int list; (* reversed *)
     ton_miles: int list;
+    track_length: int Vector.vector; (* track length per period *)
   } [@@deriving yojson]
 
   let default = {
@@ -101,6 +103,27 @@ module History = struct
     total_revenue=[];
     avg_speed=[];
     ton_miles=[];
+    track_length=Vector.create (); (* track length per period *)
+  }
+end
+
+module Achievement = struct
+  (* 8 achievements. We store the year of achievement *)
+
+  let track_length_of_idx idx = 100 * idx + 100
+  let revenue_of_idx idx = 250 * idx + 250
+  let net_worth_of_idx idx = (1 lsl idx) * 100
+
+  type t = {
+    track_length: int IntMap.t;
+    revenue: int IntMap.t;
+    net_worth: int IntMap.t;
+  }
+
+  let default = {
+    track_length=IntMap.empty;
+    revenue=IntMap.empty;
+    net_worth=IntMap.empty;
   }
 end
 
@@ -264,6 +287,7 @@ let fiscal_period_end net_worth stations params v =
   in
   let m = { v.m with net_worth; income_statement; total_income_statement; profit=earnings } in
   let history = History.{
+    v.history with
     total_revenue=total_revenue::v.history.total_revenue;
     earnings=earnings::v.history.earnings;
     ton_miles=ton_miles::v.history.ton_miles;

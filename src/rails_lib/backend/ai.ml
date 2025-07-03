@@ -39,6 +39,7 @@ type ai_player = {
   (* Global AI data *)
 type t = {
   routes: route Vector.vector;  (* Routes for all AIs *)
+  route_history: int Vector.vector; (* routes length at each period *)
   ai_of_city: Owner.t LocMap.t; (* Each city can only have one ai *)
   rate_war_at_city: LocSet.t;
   ais: ai_player Owner.Map.t; (* AI player info *)
@@ -54,6 +55,7 @@ type t = {
 
 let default () = {
   routes=Vector.create ();
+  route_history=Vector.create ();
   ai_of_city=LocMap.empty;
   rate_war_at_city=LocSet.empty;
   ais=Owner.Map.empty;
