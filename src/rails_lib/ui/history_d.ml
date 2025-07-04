@@ -1,4 +1,12 @@
+type loc = Utils.loc
 
-type t = unit
+type phase =
+  | Player of {track_idx: int}
+  | Ai of {route_idx: int; left: loc list}
 
-let default : t = ()
+type t = {
+  map_tex: Renderer.Texture.t;
+  year: int;
+  phase: phase;
+}
+

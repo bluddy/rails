@@ -577,7 +577,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Accomplishments), _ ->
           {v with mode=GenericScreen{render_fn=Accomplishments.render}}, nobaction
         | On (`History), _ ->
-          {v with mode=History (History.default)}, nobaction
+          {v with mode=History (History.create s)}, nobaction
         | On (`Efficiency_report), _ ->
             {v with mode=GenericScreen{render_fn=Efficiency_report.render}}, nobaction
         | On (`Call_broker), _ ->
