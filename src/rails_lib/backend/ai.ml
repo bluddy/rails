@@ -39,7 +39,7 @@ type ai_player = {
   (* Global AI data *)
 type t = {
   routes: route Vector.vector;  (* Routes for all AIs *)
-  route_history: int Vector.vector; (* routes length at each period *)
+  route_history: int list; (* routes length at each period *)
   ai_of_city: Owner.t LocMap.t; (* Each city can only have one ai *)
   rate_war_at_city: LocSet.t;
   ais: ai_player Owner.Map.t; (* AI player info *)
@@ -55,7 +55,7 @@ type t = {
 
 let default () = {
   routes=Vector.create ();
-  route_history=Vector.create ();
+  route_history=[];
   ai_of_city=LocMap.empty;
   rate_war_at_city=LocSet.empty;
   ais=Owner.Map.empty;
@@ -976,6 +976,10 @@ let fiscal_period_end_stock_eval stocks v =
     (stocks, [])
   in
   {v with ais}, stocks, ui_msgs
+
+let fiscal_period_end_history v =
+  let length = Vector.length v.routes in
+  {v with route_history=length::v.route_history}
 
 let calc_profit player_idx v =
   let ai_player = get_ai_exn player_idx v in

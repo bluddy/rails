@@ -32,19 +32,19 @@ type monetary = {
 } [@@deriving yojson]
 
 let default_monetary = {
-    cash = Money.of_int 1000;
-    bonds = Money.of_int 500;
-    stockholders_equity = Money.of_int @@ -500;
-    owned_industry = Money.zero;
-    profit = Money.zero;
-    yearly_interest_payment = Money.of_int 20;
-    net_worth = Money.of_int 500; 
-    in_receivership = false;
-    income_statement = Income_statement_d.default;
-    total_income_statement = Income_statement_d.default;
-    last_balance_sheet = Balance_sheet_d.default;
-    num_bankruptcies = 0;
-    investor_anger = 0;
+  cash = Money.of_int 1000;
+  bonds = Money.of_int 500;
+  stockholders_equity = Money.of_int @@ -500;
+  owned_industry = Money.zero;
+  profit = Money.zero;
+  yearly_interest_payment = Money.of_int 20;
+  net_worth = Money.of_int 500; 
+  in_receivership = false;
+  income_statement = Income_statement_d.default;
+  total_income_statement = Income_statement_d.default;
+  last_balance_sheet = Balance_sheet_d.default;
+  num_bankruptcies = 0;
+  investor_anger = 0;
 }
 
 type event =
@@ -88,13 +88,14 @@ module Record = struct
 end
 
 module History = struct
+  (* All reversed *)
   type t = {
     net_worth: Money.t list;
     earnings: Money.t list; (* reversed list *)
     total_revenue: Money.t list;
     avg_speed: int list; (* reversed *)
     ton_miles: int list;
-    track_length: int Vector.vector; (* track length per period *)
+    track_length: int list; (* track length per period *)
   } [@@deriving yojson]
 
   let default = {
@@ -103,28 +104,48 @@ module History = struct
     total_revenue=[];
     avg_speed=[];
     ton_miles=[];
-    track_length=Vector.create (); (* track length per period *)
+    track_length=[]; (* track length per period *)
   }
 end
 
 module Achievement = struct
   (* 8 achievements. We store the year of achievement *)
 
+  let num = 8 - 1
+
   let track_length_of_idx idx = 100 * idx + 100
-  let revenue_of_idx idx = 250 * idx + 250
-  let net_worth_of_idx idx = (1 lsl idx) * 100
+  let revenue_of_idx idx = 250 * idx + 250 |> M.of_int
+  let net_worth_of_idx idx = (1 lsl idx) * 100 |> M.of_int
+
+  type year = int
+    [@@deriving yojson]
 
   type t = {
-    track_length: int IntMap.t;
-    revenue: int IntMap.t;
-    net_worth: int IntMap.t;
-  }
+    track_length: year IntMap.t;
+    revenue: year IntMap.t;
+    net_worth: year IntMap.t;
+  } [@@deriving yojson]
 
   let default = {
     track_length=IntMap.empty;
     revenue=IntMap.empty;
     net_worth=IntMap.empty;
   }
+
+  let update x f gt ~year map =
+    Iter.fold (fun acc i ->
+      if gt x (f i) then
+        IntMap.update i (function None -> Some year | x -> x) acc
+      else
+        acc)
+    map
+    Iter.(0 -- num)
+
+  let update_all ~year ~track_length ~revenue ~net_worth v =
+    let track_length = update track_length track_length_of_idx (>) ~year v.track_length in
+    let revenue = update revenue revenue_of_idx M.(>) ~year v.revenue in
+    let net_worth = update net_worth net_worth_of_idx M.(>) ~year v.net_worth in
+    {track_length; revenue; net_worth}
 end
 
 type t = {
@@ -146,6 +167,7 @@ type t = {
   total_difficulty: int;  (* dynamic tracker of difficulty over time *)
   history: History.t;
   record: Record.t;
+  achievements: Achievement.t;
 } [@@deriving yojson]
 
 
@@ -167,6 +189,7 @@ let default idx = {
   total_difficulty=0;
   history = History.default;
   record = Record.default;
+  achievements = Achievement.default;
 }
 
 let get_cash v = v.m.cash
@@ -337,6 +360,18 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
     player_idx; from_=old_share_price; to_=share_price; share_price_growth; split; fired}
   in
   {v with m={v.m with investor_anger}}, stocks, [msg]
+
+let fiscal_period_end_history_achievements ~revenue ~net_worth params v =
+  (* Update track length *)
+  let track_length = v.track_length in
+  let history =
+    let track_length = track_length::v.history.track_length in
+    {v.history with track_length }
+  in
+  (* Handle achievements *)
+  let year = params.Params.year in
+  let achievements = Achievement.update_all ~year ~track_length ~revenue ~net_worth v.achievements in
+  {v with history; achievements}
 
 let clear_periodic params v =
   (* Should be called on a new period *)
