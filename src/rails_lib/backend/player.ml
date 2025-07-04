@@ -95,7 +95,7 @@ module History = struct
     total_revenue: Money.t list;
     avg_speed: int list; (* reversed *)
     ton_miles: int list;
-    track_length: int list; (* track length per period *)
+    track_pieces: int list; (* track length per period *)
   } [@@deriving yojson]
 
   let default = {
@@ -104,7 +104,7 @@ module History = struct
     total_revenue=[];
     avg_speed=[];
     ton_miles=[];
-    track_length=[]; (* track length per period *)
+    track_pieces=[]; (* track length per period *)
   }
 end
 
@@ -154,7 +154,7 @@ type t = {
   mutable trains: Trainmap.t;
   station_locs: Utils.loc list; (* Stations ordered by reverse creation order *)
   m: monetary;
-  track_length: int; (* track length according to the game (not per tile) *)
+  track_length: int; (* track length according to the game (not per track piece) *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
   goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
   goods_picked_up: Goods.Set.t;  (* goods picked up *)
@@ -232,6 +232,12 @@ let add_income_stmt income_stmt (v:t) =
 let revenue_sum v = Income_statement.total_revenue v.m.income_statement
 
 let get_ton_miles period v = (Utils.read_pair v.periodic period).ton_miles
+
+(* "Game" reported track length, not track pieces *)
+let track_length v = v.track_length
+
+(* Number of track pieces we've placed *)
+let get_num_track_pieces v = Vector.length v.track
 
 let fiscal_period_end net_worth stations params v =
   (* Messages, computation, housecleaning *)
@@ -363,13 +369,13 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
 
 let fiscal_period_end_history_achievements ~revenue ~net_worth params v =
   (* Update track length *)
-  let track_length = v.track_length in
+  let track_pieces = get_num_track_pieces v in
   let history =
-    let track_length = track_length::v.history.track_length in
-    {v.history with track_length }
+    let track_pieces = track_pieces::v.history.track_pieces in
+    {v.history with track_pieces }
   in
   (* Handle achievements *)
-  let year = params.Params.year in
+  let year, track_length = params.Params.year, v.track_length in
   let achievements = Achievement.update_all ~year ~track_length ~revenue ~net_worth v.achievements in
   {v with history; achievements}
 
@@ -414,9 +420,6 @@ let get_name station_map cities v =
 
 let get_handle station_map cities v =
   get_name_and_handle station_map cities v |> snd
-
-(* "Game" reported track length, not track pieces *)
-let track_length v = v.track_length
 
 let incr_dist_traveled ~dist period_year v =
   Utils.pair_iter v.periodic period_year (fun period ->
@@ -564,6 +567,7 @@ let _add_track x y ~len ~dir v =
 
 let update_and_pay_for_track x y ~len ~dir ~climate map v =
   let base_length, track_expense, land_expense = _calc_base_length_track_land_expense x y ~len ~dir ~climate map in
+  (* TODO: check Europe scale here *)
   let track_length = v.track_length + len * base_length in
   let () = _add_track x y ~len ~dir v in
   {v with track_length}
@@ -574,7 +578,7 @@ let _remove_track x y ~len ~dir v =
   (* Inefficient, but how often do we delete track? *)
   Iter.fold (fun ((x, y) as loc) _ ->
     begin match Vector.find_idx (fun loc2 -> Utils.equal_loc loc loc2) v.track with
-    | Some idx -> Vector.remove_unordered v.track idx
+    | Some idx -> Vector.remove_and_shift v.track idx
     | _ -> ()
     end;
     Dir.adjust dir x y)
@@ -586,6 +590,8 @@ let update_and_remove_track x y ~len ~dir ~climate map v =
   (* This is the proper way to remove track. Effectively sells land *)
   let base_length, _, land_revenue = _calc_base_length_track_land_expense x y ~len ~dir ~climate map in
   let track_length = v.track_length - len * base_length in
+  _remove_track x y ~len ~dir v;
+  (* TODO: deal with messing up history and achievements for track *)
   {v with track_length}
   |> earn `Other land_revenue
 
