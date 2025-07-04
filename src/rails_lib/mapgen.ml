@@ -388,3 +388,4 @@ let render_new_pixels win v pixel_tex =
   IntIntMap.fold render v.new_pixels ();
 
 end
+

@@ -1,4 +1,6 @@
 # Tasks
+- Tile dev: handle end of period stuff
+- Update map texture when updating map
 - Fancy paper announcement of new player.
 - Handle track removal: messes up history
 - Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
