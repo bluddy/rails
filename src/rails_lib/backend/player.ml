@@ -751,3 +751,5 @@ let update_retirement_bonus_and_job ~fired stocks params v =
   | None -> ret ()
   | _ -> None, v
 
+let get_achievements v = v.achievements
+
