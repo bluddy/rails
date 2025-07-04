@@ -9,6 +9,7 @@ type t = {
   (* non-saveable *)
   screen: Modules_d.t;
   mutable map_tex: Renderer.Texture.t;
+  map_silhouette_tex: Renderer.Texture.t;
   textures: Textures.t;
   resources: Resources.t;
   fonts: Fonts.t;

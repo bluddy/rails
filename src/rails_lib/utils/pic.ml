@@ -124,7 +124,6 @@ let white_pixel =
     img: ndarray converted to RGB uint8 values
     png: png file
  *)
-
 let img_of_ndarray ?transparent (arr:ndarray) =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in

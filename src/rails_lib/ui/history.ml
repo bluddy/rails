@@ -12,7 +12,7 @@ let sp = Printf.sprintf
 let create (s:State.t) = 
   let params = s.backend.params in
   {
-    map_tex=s.map_tex;
+    map_tex=s.map_silhouette_tex;
     year=params.year_start;
     phase=Player {track_idx=0}
   }

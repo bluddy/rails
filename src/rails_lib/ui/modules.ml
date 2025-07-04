@@ -41,7 +41,6 @@ let handle_tick win (s:State.t) time =
         (* A tick starts with the backend *)
         let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
         let ui = Main_ui.handle_tick s s.ui time is_cycle in
-        (* TODO: send msgs to backend. UI doesn't buffer backend_msgs *)
         let ui, backend_msgs = Main_ui.handle_msgs s ui ui_msgs in
         let backend = Backend.Action.handle_msgs backend backend_msgs in
         [%upf s.ui <- ui];
@@ -120,6 +119,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
         let textures = Textures.of_resources win resources in
 
         let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
+        let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
 
         let fonts = Fonts.load win in
 
@@ -127,6 +127,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
 
         {
           map_tex;
+          map_silhouette_tex;
           State.screen;
           backend;
           resources;

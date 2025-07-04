@@ -333,6 +333,12 @@ let to_ndarray mapdata =
   done;
   ndarray
 
+  (* Map an indexed ndarray to a silhouette image *)
+let to_silhouette (map:t) =
+  to_ndarray map.map
+  |> Ndarray.map (function 1 -> 1 | _ -> 3)
+  |> Pic.img_of_ndarray
+
   (* Make an image RGBA ndarray *)
 let to_img (map:t) =
   let ndarray = to_ndarray map.map in
