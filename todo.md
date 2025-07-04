@@ -1,4 +1,5 @@
 # Tasks
+- Fancy paper announcement of new player.
 - Handle track removal: messes up history
 - Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
 - Train income: check multiple pages of trains work well
@@ -32,7 +33,6 @@
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
 - Bug:
-  - Stock view fin end is quite broken.
   - Year doesn't switch at end of December.
   - Fiscal end stock eval: msgbox weird size thing
   - AI companies msgbox is off
@@ -56,3 +56,4 @@
   - Smoke seems to go in different direction from game
   - joining a track from another track either refuses or crashes
   - Going into negative should be red money
+ 
