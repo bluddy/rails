@@ -40,6 +40,8 @@ let handle_tick win (s:State.t) time =
 
         (* A tick starts with the backend *)
         let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
+        if List.find_opt (function Ui_msg.UpdateMap -> true | _ -> false) ui_msgs |> Option.is_some then
+          update_map win s s.backend.map;
         let ui = Main_ui.handle_tick s s.ui time is_cycle in
         let ui, backend_msgs = Main_ui.handle_msgs s ui ui_msgs in
         let backend = Backend.Action.handle_msgs backend backend_msgs in

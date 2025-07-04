@@ -76,6 +76,7 @@ type fiscal_period_end_msg =
   [@@deriving yojson]
 
 type t =
+  | UpdateMap (* map has been updated, refresh the texture *)
   | NewPlayerCompany of {num_shares: int}
   | TrainBuilt of TID.t
   | DemandChanged of {player_idx: Owner.t; x: int; y: int; good: Goods.t; add: bool}

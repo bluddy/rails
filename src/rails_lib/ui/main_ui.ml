@@ -1205,6 +1205,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             let mode = GenericScreen{render_fn=Fiscal_period_end.render_bg} in
             {v with mode; next_modes=[income_stmt; bal_sheet]}
 
+      | UpdateMap (* We don't handle it here *)
       | FiscalPeriodEndMsgs _
       | StockBroker _
       | TrainBuilt _ -> v

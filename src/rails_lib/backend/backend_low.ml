@@ -818,9 +818,9 @@ let _develop_tiles v (player:Player.t) =
         ~cities_to_ai:v.ai.ai_of_city v.dev_state
       in
       (* Clear active station *)
-      dev_state, None
+    dev_state, None, [UIM.UpdateMap]
   else
-    v.dev_state, player.active_station
+    v.dev_state, player.active_station, []
 
 let _update_station_supply_demand player_idx stations map params =
   let difficulty = params.Params.options.difficulty in
@@ -902,7 +902,8 @@ let handle_cycle v =
     let stations, player, dev_state, active_station, pause, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, msgs = _try_to_create_priority_shipment player stations params v.random in
-        let dev_state, active_station = _develop_tiles v player in
+        let dev_state, active_station, map_msgs = _develop_tiles v player in
+        let msgs = msgs @ map_msgs in
 
         let msgs, pause = if params.time > C.fin_period_ticks then
           (* We announce here and wait for the response from the UI *)
