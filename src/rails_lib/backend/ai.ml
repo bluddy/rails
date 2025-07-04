@@ -17,8 +17,11 @@ module LocSet = U.LocSet
 let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-type route = (U.loc * U.loc)
-             [@@deriving yojson]
+type route = {
+  src: U.loc;
+  dst: U.loc;
+  track: U.loc list; (* track for this route *)
+} [@@deriving yojson]
 
  (* An AI Player *)
 type ai_player = {
@@ -43,7 +46,6 @@ type t = {
   ai_of_city: Owner.t LocMap.t; (* Each city can only have one ai *)
   rate_war_at_city: LocSet.t;
   ais: ai_player Owner.Map.t; (* AI player info *)
-  ai_track: U.loc list;
   mutable financial_ctr: int; (* Affects ai financial actions *)
   last_ai_to_buy_player_stock: Owner.t option;
 } [@@deriving yojson]
@@ -59,7 +61,6 @@ let default () = {
   ai_of_city=LocMap.empty;
   rate_war_at_city=LocSet.empty;
   ais=Owner.Map.empty;
-  ai_track=[];
   financial_ctr=0;
   last_ai_to_buy_player_stock=None;
 }
@@ -165,7 +166,8 @@ let _route_value city1 city2 ~tilemap ~(params:Params.t) =
 
   (* Simulate earning money on a route *)
 let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap v =
-  let city1, city2 = Vector.get v.routes route_idx in
+  let {src; dst; _} = Vector.get v.routes route_idx in
+  let city1, city2 = src, dst in
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = Owner.Map.find player_idx v.ais in
   let value = _route_value city1 city2 ~tilemap ~params in
@@ -285,10 +287,11 @@ let _dir_from_dx_dy dx dy =
 type tgt_src = [`Tgt | `Src] [@@deriving eq]
 
 (* This function starts with the station locations for src and targets *)
-let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random ~ai_track =
+let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random =
   (* Get general dir from deltas *)
   let is_id = function `id -> true | _ -> false in
   let shift = function `ccw -> Dir.ccw | `id -> Fun.id | `cw -> Dir.cw in
+  let ai_track = [] in
 
   let rec connect_stations ~tracks ~ai_track tgt_loc src_loc tgt_at_station src_at_station =
     let dx, dy = Utils.s_dxdy src_loc tgt_loc in
@@ -449,7 +452,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
       loc, Station.get_name station
   in
   let ai_controlled_by_player = owned_by_player stocks company in
-  let ret = _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random ~ai_track:v.ai_track in
+  let ret = _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random in
   let ai_name = get_name company ~cities v in
   let ai_player = Owner.Map.find company v.ais in
   match ret with
@@ -486,10 +489,11 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
         let expand_ctr = 0 in
         let ai_of_city = LocMap.add tgt_city company v.ai_of_city in
         Tilemap.set_tile tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
-        Vector.push v.routes (src_city, tgt_city); (* Add AI route *)
+        let route = {src=src_city; dst=tgt_city; track=ai_track} in
+        Vector.push v.routes route; (* Add AI route *)
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
         let ais = Owner.Map.add company ai_player v.ais in
-        let v = {v with ais; ai_of_city; ai_track; routes=v.routes; rate_war_at_city} in
+        let v = {v with ais; ai_of_city; routes=v.routes; rate_war_at_city} in
         (* TODO: if not owned by player and connect to player, send rate war animation *)
         tracks, tilemap, v, stations, Some ui_msg
     | None ->
