@@ -176,6 +176,8 @@ let update_with_info v f = match v.info with
 
 let get_age v year = year - v.year
 
+let get_year_built v = v.year
+
 let young v year = get_age v year <= C.young_station_age
 
 let color_of_signal = function
@@ -298,6 +300,8 @@ let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
   in
   let signals = default_signals in
   { loc=(x, y); year; info; player=player_idx; signals}
+
+let has_suffix v = match v.info with Some {suffix=Some _; _} -> true | _ -> false
 
 let add_upgrade upgrade player v =
   if Owner.(v.player <> player) then v else
