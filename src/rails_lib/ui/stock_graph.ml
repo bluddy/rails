@@ -31,7 +31,7 @@ let render win (s:State.t) =
   let colors =
     Iter.foldi (fun acc i owner -> Owner.Map.add owner company_colors.(i) acc)
       Owner.Map.empty
-      (B.players_and_ai b)
+      owners
   in
 
   let _write_names =
