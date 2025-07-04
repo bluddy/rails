@@ -155,6 +155,7 @@ type t = {
   station_locs: Utils.loc list; (* Stations ordered by reverse creation order *)
   m: monetary;
   track_length: int; (* track length according to the game (not per track piece) *)
+  (* TODO: problem: this is used as history + owned track (for maintenance). But we can delete history this way! *)
   track: Utils.loc Vector.vector; (* vector of track owned by player *)
   goods_delivered: Goods.Set.t;  (* goods delivered so far (for newness) *)
   goods_picked_up: Goods.Set.t;  (* goods picked up *)
