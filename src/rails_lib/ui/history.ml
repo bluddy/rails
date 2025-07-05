@@ -131,15 +131,13 @@ let render win v (s:State.t) =
 
 let tick_delta = 200 (* ms *)
 
-let handle_tick s v cur_time =
+let handle_tick (s:State.t) v cur_time =
   let next_time = v.last_tick + tick_delta  in
   if cur_time < next_time then v else
   let last_tick = cur_time in
   let b = s.backend in
   let params = b.params in
-  let player_idx = C.player in
-  let player = B.get_player player_idx b in
-  let age = v.year - v.year_start in
+  let age = v.year - params.year_start in
   match v.phase with
   | Player {end_=false} ->
     let year_track_idx = v.player_track_history.(age) in
@@ -147,16 +145,16 @@ let handle_tick s v cur_time =
       {v with player_track_idx=v.player_track_idx + 1; last_tick}
     else
       {v with phase=Player {end_=true}; last_tick}
-  | Player _ -> Ai
+  | Player _ -> {v with phase=Ai; last_tick}
   | Ai ->
     let route = Ai.get_route v.ai_route_idx b.ai in
     let len = Array.length route.track in
     if v.ai_route_idx < len - 1 then
-      {v with ai_route_idx=ai_route_idx + 1; last_tick}
+      {v with ai_route_idx=v.ai_route_idx + 1; last_tick}
     else
       let year_route_idx = v.ai_route_history.(age) in
       if v.ai_route_idx < year_route_idx then
-        {v with ai_route_idx=ai_route_idx + 1; last_tick}
+        {v with ai_route_idx=v.ai_route_idx + 1; last_tick}
       else if v.year < params.year then
         {v with year=v.year + 1; phase=Player{end_=false}; last_tick}
       else
