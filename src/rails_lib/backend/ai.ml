@@ -20,7 +20,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 type route = {
   src: U.loc;
   dst: U.loc;
-  track: U.loc list; (* track for this route *)
+  track: U.loc array; (* track for this route *)
 } [@@deriving yojson]
 
  (* An AI Player *)
@@ -123,8 +123,6 @@ let get_bonds idx v = get_ai_exn idx v |> fun player -> player.bonds
 let get_net_worth idx v = get_ai_exn idx v |> fun player -> player.net_worth
 
 let get_track_length idx v = get_ai_exn idx v |> fun player -> player.track_length
-
-let get_route i v = Vector.get v.routes i
 
 let add_cash idx cash v =
   modify_ai idx v (fun ai_player -> {ai_player with cash=M.(ai_player.cash + cash)})
@@ -491,7 +489,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
         let expand_ctr = 0 in
         let ai_of_city = LocMap.add tgt_city company v.ai_of_city in
         Tilemap.set_tile tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
-        let route = {src=src_city; dst=tgt_city; track=ai_track} in
+        let route = {src=src_city; dst=tgt_city; track=List.rev ai_track |> Array.of_list} in
         Vector.push v.routes route; (* Add AI route *)
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
         let ais = Owner.Map.add company ai_player v.ais in
@@ -983,7 +981,8 @@ let fiscal_period_end_stock_eval stocks v =
   in
   {v with ais}, stocks, ui_msgs
 
-let fiscal_period_end_history v =
+let update_track_history v =
+  (* We do this every year rather than every fiscal period *)
   let length = Vector.length v.routes in
   {v with route_history=length::v.route_history}
 

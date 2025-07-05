@@ -368,17 +368,20 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
   in
   {v with m={v.m with investor_anger}}, stocks, [msg]
 
-let fiscal_period_end_history_achievements ~revenue ~net_worth params v =
-  (* Update track length *)
+let fiscal_period_end_achievements ~revenue ~net_worth params v =
+  (* Handle achievements *)
+  let year, track_length = params.Params.year, v.track_length in
+  let achievements = Achievement.update_all ~year ~track_length ~revenue ~net_worth v.achievements in
+  {v with achievements}
+
+let update_track_history v =
+  (* Update track length. Unlike OG, we do this every year *)
   let track_pieces = get_num_track_pieces v in
   let history =
     let track_pieces = track_pieces::v.history.track_pieces in
     {v.history with track_pieces }
   in
-  (* Handle achievements *)
-  let year, track_length = params.Params.year, v.track_length in
-  let achievements = Achievement.update_all ~year ~track_length ~revenue ~net_worth v.achievements in
-  {v with history; achievements}
+  {v with history}
 
 let clear_periodic params v =
   (* Should be called on a new period *)

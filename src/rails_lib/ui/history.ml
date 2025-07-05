@@ -52,22 +52,24 @@ let render win v (s:State.t) =
       owners
   in
   (* We need to draw everything from start_year to this year *)
-  (* Draw player stuff *)
 
   let period = (v.year - params.year_start) / 2 in
+  let period_idx = v.player_track_history.(period) in
+
   let _draw_player_track =
-    let period_idx = v.player_track_history.(period) in
     Iter.iter (fun idx ->
       let x, y = Player.get_track_loc idx player in
       let y = y + 8 in
       R.draw_point win ~color:Ega.white ~x ~y;
     )
-    Iter.(0 -- period_idx)
+    Iter.(0 -- v.player_track_idx)
   in
 
   let _draw_player_stations =
+    let is_end_player_or_ai = match v.phase with Player {end=true} | Ai -> true | _ -> false in
+    let comp = if is_end_player_or_ai then (<=) else (<) in
     Station_map.iter (fun station ->
-      if Station.get_year_built station <= v.year then (
+      if comp (Station.get_year_built station) v.year then (
         let x, y = Station.get_loc station in
         let y = y + 8 in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color:Ega.yellow ~fill:true
@@ -76,29 +78,46 @@ let render win v (s:State.t) =
     b.stations
   in
 
+  let period_idx = v.ai_route_history.(period) in
+
   let _draw_ai_track_and_stations =
-    let period_idx = v.ai_route_history.(period) in
-    Iter.iter (fun idx ->
-      let route = Ai.get_route idx b.ai in
-      List.iter (fun (x, y) ->
-        let y = y + 8 in
-        R.draw_point win ~color:Ega.black ~x ~y
-      ) route.track;
+    Array.iter (fun idx ->
       let src, dst = route.Ai.src, route.dst in
       let ai = Ai.ai_of_city src b.ai |> Option.get_exn_or "ai_of_city" in
       let color = Owner.Map.find ai colors in
-      let x, y = src in
-      let y = y + 8 in
-      R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
-      let x, y = dst in
-      let y = y + 8 in
-      R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
+      let route = Ai.get_route idx b.ai in
+      if idx = v.ai_route_idx then (
+        Iter.iter (fun idx ->
+          let x, y = route.track.(idx) in
+          let y = y + 8 in
+          R.draw_point win ~color:Ega.black ~x ~y
+        ) Iter.(0 -- (v.ai_track_idx - 1));
+        (* Draw current point *)
+        let x, y = route.track.(v.ai_track_idx) in
+        let y = y + 8 in
+        R.draw_point win ~color ~x ~y;
+        (* draw src only while drawing route *)
+        let x, y = src in
+        let y = y + 8 in
+        R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
+      ) else (
+        Array.iter (fun (x, y) ->
+          let y = y + 8 in
+          R.draw_point win ~color:Ega.black ~x ~y
+        ) route.track;
+        let x, y = src in
+        let y = y + 8 in
+        R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
+        let x, y = dst in
+        let y = y + 8 in
+        R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
+      );
     )
-    Iter.(0 -- period_idx)
+    Iter.(0 -- v.ai_route_idx)
   in
   let heading = match v.phase with
   | Player _ -> sp "a history of the %s." (B.get_name player_idx b)
-  | Ai {owner; route_idx; _} ->
+  | Ai {owner} ->
         let route = Ai.get_route idx b.ai in
         let src, dst = route.Ai.src, route.Ai.dst in
         let src_s = Cities.name_of_loc src b.cities in
@@ -107,4 +126,25 @@ let render win v (s:State.t) =
   in
   write_caps ~x:8 ~y:1 heading;
   ()
+
+let handle_tick s v time =
+  let b = s.backend in
+  let params = b.params in
+  let player_idx = C.player in
+  let player = B.get_player player_idx b in
+  match v.phase with
+  | Ai _ ->
+    let route = Ai.get_route v.ai_route_idx b.ai in
+    let len = Array.length route.track in
+    if v.ai_route_idx < len - 1 then
+      {v with ai_route_idx=ai_route_idx + 1}
+    else
+      let period = (v.year - v.year_start) / 2 in
+      let period_route_idx = v.ai_route_history.(period) in
+      if v.ai_route_idx < period_route_idx then
+        {v with ai_route_idx=ai_route_idx + 1}
+      else
+        {v with year=v.year + 1; phase=Player{end_=false}}
+
+
 

@@ -851,8 +851,12 @@ let _year_end_checks player ai engines params =
   let player = player
     |> Player.pay_yearly_interest
     |> Player.add_to_total_difficulty params
+    |> Player.update_track_history
   in
-  let ai = Ai.end_of_year_maintenance_interest ai in
+  let ai = ai
+    |> Ai.end_of_year_maintenance_interest
+    |> Ai.update_track_history
+  in
   let ui_msgs =
     Engine.discovered_at_year engines ~year:params.Params.year
     |> List.map (fun engine -> Ui_msg.EngineDiscovered engine)

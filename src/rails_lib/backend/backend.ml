@@ -737,11 +737,10 @@ let _fin_end_proceed player_idx v =
   (* TODO handle fired *)
   (* TODO: handle dissolved company *)
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
-  let player = Player.fiscal_period_end_history_achievements ~revenue:total_revenue ~net_worth v.params player in
+  let player = Player.fiscal_period_end_achievements ~revenue:total_revenue ~net_worth v.params player in
   let rate_war_results, rw_msgs = _rate_war_info player_idx v |> List.split in
   let v = List.fold_left (fun acc (loc, result) -> _rate_war_handle_result loc result acc) v rate_war_results in
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
-  let ai = Ai.fiscal_period_end_history ai in
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
   let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
