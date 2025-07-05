@@ -1,3 +1,4 @@
+open! Containers
 type loc = Utils.loc
 
 type phase =
@@ -8,5 +9,7 @@ type t = {
   map_tex: Renderer.Texture.t;
   year: int;
   phase: phase;
+  player_track_history: int array;
+  ai_track_history: int array;
 }
 

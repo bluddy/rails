@@ -753,3 +753,5 @@ let update_retirement_bonus_and_job ~fired stocks params v =
 
 let get_achievements v = v.achievements
 
+let get_track_pieces_history v = v.history.track_pieces
+

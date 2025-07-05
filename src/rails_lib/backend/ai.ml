@@ -990,3 +990,5 @@ let calc_profit player_idx v =
   let maintenance = get_track_length player_idx v / 4 in
   M.(ai_player.revenue_ytd - of_int maintenance - ai_player.yearly_interest/2)
 
+let get_route_history v = v.route_history
+
