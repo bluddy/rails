@@ -19,11 +19,15 @@ let create (s:State.t) =
   let player_track_history = Player.get_track_pieces_history player |> List.rev |> Array.of_list in
   let ai_route_history = Ai.get_route_history b.ai |> List.rev |> Array.of_list in
   {
+    last_tick=0;
     map_tex=s.map_silhouette_tex;
     year=params.year_start;
-    phase=Player {track_idx=0};
+    phase=Player {end_=false};
     player_track_history;
     ai_route_history;
+    player_track_idx=0;
+    ai_route_idx=0;
+    ai_track_idx=0;
   }
 
 let render win v (s:State.t) =
@@ -53,9 +57,6 @@ let render win v (s:State.t) =
   in
   (* We need to draw everything from start_year to this year *)
 
-  let period = (v.year - params.year_start) / 2 in
-  let period_idx = v.player_track_history.(period) in
-
   let _draw_player_track =
     Iter.iter (fun idx ->
       let x, y = Player.get_track_loc idx player in
@@ -66,7 +67,7 @@ let render win v (s:State.t) =
   in
 
   let _draw_player_stations =
-    let is_end_player_or_ai = match v.phase with Player {end=true} | Ai -> true | _ -> false in
+    let is_end_player_or_ai = match v.phase with Player {end_=true} | Ai -> true | _ -> false in
     let comp = if is_end_player_or_ai then (<=) else (<) in
     Station_map.iter (fun station ->
       if comp (Station.get_year_built station) v.year then (
@@ -78,11 +79,9 @@ let render win v (s:State.t) =
     b.stations
   in
 
-  let period_idx = v.ai_route_history.(period) in
-
   let _draw_ai_track_and_stations =
     Array.iter (fun idx ->
-      let src, dst = route.Ai.src, route.dst in
+      let src, dst = route.Ai.src, route.Ai.dst in
       let ai = Ai.ai_of_city src b.ai |> Option.get_exn_or "ai_of_city" in
       let color = Owner.Map.find ai colors in
       let route = Ai.get_route idx b.ai in
@@ -127,24 +126,39 @@ let render win v (s:State.t) =
   write_caps ~x:8 ~y:1 heading;
   ()
 
-let handle_tick s v time =
+let tick_delta = 200 (* ms *)
+
+let handle_tick s v cur_time =
+  let next_time = v.last_tick + tick_delta  in
+  if cur_time < next_time then v else
+  let last_tick = cur_time in
   let b = s.backend in
   let params = b.params in
   let player_idx = C.player in
   let player = B.get_player player_idx b in
+  let age = v.year - v.year_start in
   match v.phase with
-  | Ai _ ->
+  | Player {end_=false} ->
+    let year_track_idx = v.player_track_history.(age) in
+    if v.player_track_idx < year_track_idx then
+      {v with player_track_idx=v.player_track_idx + 1; last_tick}
+    else
+      {v with phase=Player {end_=true}; last_tick}
+  | Player _ -> Ai
+  | Ai ->
     let route = Ai.get_route v.ai_route_idx b.ai in
     let len = Array.length route.track in
     if v.ai_route_idx < len - 1 then
-      {v with ai_route_idx=ai_route_idx + 1}
+      {v with ai_route_idx=ai_route_idx + 1; last_tick}
     else
-      let period = (v.year - v.year_start) / 2 in
-      let period_route_idx = v.ai_route_history.(period) in
-      if v.ai_route_idx < period_route_idx then
-        {v with ai_route_idx=ai_route_idx + 1}
+      let year_route_idx = v.ai_route_history.(age) in
+      if v.ai_route_idx < year_route_idx then
+        {v with ai_route_idx=ai_route_idx + 1; last_tick}
+      else if v.year < params.year then
+        {v with year=v.year + 1; phase=Player{end_=false}; last_tick}
       else
-        {v with year=v.year + 1; phase=Player{end_=false}}
+        {v with phase=Done; last_tick}
+  | Done -> {v with last_tick}
 
 
 

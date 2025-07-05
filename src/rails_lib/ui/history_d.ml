@@ -3,9 +3,11 @@ type loc = Utils.loc
 
 type phase =
   | Player of {end_: bool}
-  | Ai of {owner: Owner.t}
+  | Ai
+  | Done
 
 type t = {
+  last_tick: int;
   map_tex: Renderer.Texture.t;
   year: int;
   phase: phase;
