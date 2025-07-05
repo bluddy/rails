@@ -18,6 +18,7 @@ let src = Logs.Src.create "backend_low" ~doc:"Backend_low"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 type route = {
+  owner: Owner.t;
   src: U.loc;
   dst: U.loc;
   track: U.loc array; (* track for this route *)
@@ -489,7 +490,7 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
         let expand_ctr = 0 in
         let ai_of_city = LocMap.add tgt_city company v.ai_of_city in
         Tilemap.set_tile tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
-        let route = {src=src_city; dst=tgt_city; track=List.rev ai_track |> Array.of_list} in
+        let route = {owner=company; src=src_city; dst=tgt_city; track=List.rev ai_track |> Array.of_list} in
         Vector.push v.routes route; (* Add AI route *)
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
         let ais = Owner.Map.add company ai_player v.ais in

@@ -80,7 +80,8 @@ let render win v (s:State.t) =
   in
 
   let _draw_ai_track_and_stations =
-    Array.iter (fun idx ->
+    Iter.iter (fun idx ->
+      let route = Ai.get_route idx b.ai in
       let src, dst = route.Ai.src, route.Ai.dst in
       let ai = Ai.ai_of_city src b.ai |> Option.get_exn_or "ai_of_city" in
       let color = Owner.Map.find ai colors in
@@ -115,13 +116,15 @@ let render win v (s:State.t) =
     Iter.(0 -- v.ai_route_idx)
   in
   let heading = match v.phase with
-  | Player _ -> sp "a history of the %s." (B.get_name player_idx b)
-  | Ai {owner} ->
-        let route = Ai.get_route idx b.ai in
-        let src, dst = route.Ai.src, route.Ai.dst in
-        let src_s = Cities.name_of_loc src b.cities in
-        let dst_s = Cities.name_of_loc dst b.cities in
-        sp "%s connects %s to %s" (B.get_name owner b) src_s dst_s
+  | Player _ ->
+      sp "a history of the %s." (B.get_name player_idx b)
+  | Ai ->
+      let route = Ai.get_route v.ai_route_idx b.ai in
+      let owner = route.owner in
+      let src, dst = route.Ai.src, route.dst in
+      let src_s = Cities.name_of_loc src b.cities in
+      let dst_s = Cities.name_of_loc dst b.cities in
+      sp "%s connects %s to %s" (B.get_name owner b) src_s dst_s
   in
   write_caps ~x:8 ~y:1 heading;
   ()

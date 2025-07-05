@@ -1,4 +1,6 @@
 # Tasks
+- History depends on a lot of present data being relevant for past. Check.
+  - e.g. company being dissolved.
 - Tile dev: handle end of period stuff
 - Update map texture when updating map
 - Fancy paper announcement of new player.
