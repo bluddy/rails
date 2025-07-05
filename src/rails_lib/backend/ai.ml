@@ -124,6 +124,8 @@ let get_net_worth idx v = get_ai_exn idx v |> fun player -> player.net_worth
 
 let get_track_length idx v = get_ai_exn idx v |> fun player -> player.track_length
 
+let get_route i v = Vector.get v.routes i
+
 let add_cash idx cash v =
   modify_ai idx v (fun ai_player -> {ai_player with cash=M.(ai_player.cash + cash)})
 
