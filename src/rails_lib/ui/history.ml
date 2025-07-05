@@ -161,5 +161,24 @@ let handle_tick (s:State.t) v cur_time =
         {v with phase=Done; last_tick}
   | Done -> {v with last_tick}
 
-
+let handle_event v (s:State.t) (event:Event.t) =
+  let player_idx = C.player in
+  let b = s.backend in
+  let params = b.params in
+  let player = B.get_player player_idx b in
+  let exit_event = match event with
+    | MouseButton {down=true; _}
+    | Key {down=true; _} -> true
+    | _ -> false
+  in
+  if not exit_event then `None, v else
+  match v.phase with
+    | Done -> `Exit, v
+    | _ ->
+    (* Jump to end *)
+    let ai_route_idx = Ai.num_routes b.ai - 1 in
+    let route = Ai.get_route ai_route_idx b.ai in
+    let ai_track_idx = Array.length route.track - 1 in
+    let player_track_idx = Player.get_num_track_pieces player - 1 in
+    `None, {v with phase=Done; year=params.year; ai_route_idx; player_track_idx; ai_track_idx}
 
