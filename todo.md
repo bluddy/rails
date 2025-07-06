@@ -1,4 +1,5 @@
 # Tasks
+- History: does it include anything from the current period?
 - History depends on a lot of present data being relevant for past. Check.
   - e.g. company being dissolved.
   - We can do a much cleaner job with dedicated history stuff.

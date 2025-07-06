@@ -18,6 +18,7 @@ let create (s:State.t) =
   let player = B.get_player player_idx s.backend in
   let player_track_history = Player.get_track_pieces_history player |> List.rev |> Array.of_list in
   let ai_route_history = Ai.get_route_history b.ai |> List.rev |> Array.of_list in
+  let ranked_owners = Stock_market.rank_owners_last_history b.stocks |> List.map snd in
   {
     last_tick=0;
     map_tex=s.map_silhouette_tex;
@@ -27,6 +28,7 @@ let create (s:State.t) =
     ai_route_history;
     player_track_idx=0;
     ai_route_idx=0;
+    ranked_owners;
   }
 
 let incr_y_8 (x ,y) = x, y + 8
@@ -124,7 +126,12 @@ let render win v (s:State.t) =
       "History Complete (Press key)"
   in
   write_caps ~x:8 ~y:1 heading;
-  ()
+
+  (* Draw ranked portraits *)
+  begin match v.phase with
+  | Done -> Fiscal_period_end.draw_owner_portraits win s (List.to_iter v.ranked_owners)
+  | _ -> ()
+  end
 
 let tick_delta = 200 (* ms *)
 

@@ -15,5 +15,6 @@ type t = {
   ai_route_history: int array;
   player_track_idx: int;
   ai_route_idx: int;
+  ranked_owners: Owner.t list; (* high to low *)
 }
 

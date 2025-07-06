@@ -101,19 +101,10 @@ let create_stock_eval stock_data (s:State.t) =
   let stock_msgbox = Menu.MsgBox.make_basic ~x:2 ~y:2 ~heading ~fonts:s.fonts s text in
   { stock_msgbox; msgs }
 
-  
-let render_stock_eval win state (s:State.t) =
+let draw_owner_portraits win (s:State.t) ranked_owners =
   let player_idx = C.player in
   let b = s.backend in
   let write text = Fonts.Render.write win s.fonts ~idx:`Standard ~color:Ega.black text in
-  let _draw_background =
-    R.paint_screen win ~color:Ega.green;
-    R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
-    R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
-    Menu.MsgBox.render_box win 2 2 236 184;
-  in
-  Menu.MsgBox.render win s state.stock_msgbox;
-
   let draw_player_frame x y =
     let tex = Hashtbl.find s.textures.opponents CorneliusVanderbilt in
     R.Texture.render win ~x ~y tex;
@@ -131,10 +122,9 @@ let render_stock_eval win state (s:State.t) =
     R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.black;
   in
 
-  let msgs = state.msgs in
   let _draw_portraits =
     let x = 276 in
-    List.fold_left (fun y Ui_msg.{player_idx; _} ->
+    Iter.fold (fun y player_idx ->
       let () =
         if Owner.is_human player_idx then
           draw_player_frame x y
@@ -147,13 +137,13 @@ let render_stock_eval win state (s:State.t) =
       in
       y + 49)
     2
-    msgs
+    ranked_owners
     |> ignore
   in
   let _write_rankings =
     let x = 286 in
     let w, h = 21, 9 in
-    List.fold_left (fun (y, i) _ ->
+    Iter.fold (fun (y, i) _ ->
       R.draw_rect win ~color:Ega.bgreen ~x ~y ~h ~w ~fill:true;
       (* draw shadow *)
       R.draw_line win ~color:Ega.green ~x1:x ~y1:y ~x2:x ~y2:(y+h);
@@ -168,10 +158,21 @@ let render_stock_eval win state (s:State.t) =
       (y + 49, i+1)
     )
     (40, 0)
-    msgs
+    ranked_owners
   in
   ()
 
+let render_stock_eval win state (s:State.t) =
+  let _draw_background =
+    R.paint_screen win ~color:Ega.green;
+    R.draw_rect win ~color:Ega.yellow ~x:270 ~y:0 ~w:50 ~h:200 ~fill:true;
+    R.draw_line win ~color:Ega.black ~x1:270 ~y1:0 ~x2:270 ~y2:200;
+    Menu.MsgBox.render_box win 2 2 236 184;
+  in
+  Menu.MsgBox.render win s state.stock_msgbox;
+
+  let ranked_owners = List.to_iter state.msgs |> Iter.map (fun x -> x.Ui_msg.player_idx) in
+  draw_owner_portraits win s ranked_owners
 
 let get_warnings backend msgs =
   let process = function

@@ -397,3 +397,15 @@ let max_history_price v =
     v.value_histories
     M.zero
 
+let rank_owners_last_history v =
+  let val_owners =
+    Owner.Map.fold (fun owner values acc -> match values with
+      | x::_ -> (x, owner)::acc
+      | _ -> acc
+    )
+    v.value_histories
+    []
+  in
+  List.sort (fun (v1, _) (v2, _) -> M.(v2 - v1 |> to_int)) (* reversed on purpose *)
+    val_owners
+
