@@ -68,7 +68,7 @@ let render win v (s:State.t) =
   in
 
   let _draw_player_stations =
-    let is_end_player_or_ai = match v.phase with Player {end_=true} | Ai _ -> true | _ -> false in
+    let is_end_player_or_ai = match v.phase with Done | Player {end_=true} | Ai _ -> true | _ -> false in
     let comp = if is_end_player_or_ai then (<=) else (<) in
     Station_map.iter (fun station ->
       if comp (Station.get_year_built station) v.year then (
