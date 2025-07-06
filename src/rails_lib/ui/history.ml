@@ -27,7 +27,6 @@ let create (s:State.t) =
     ai_route_history;
     player_track_idx=0;
     ai_route_idx=0;
-    ai_track_idx=0;
   }
 
 let render win v (s:State.t) =
@@ -125,6 +124,8 @@ let render win v (s:State.t) =
       let src_s = Cities.name_of_loc src b.cities in
       let dst_s = Cities.name_of_loc dst b.cities in
       sp "%s connects %s to %s" (B.get_name owner b) src_s dst_s
+  | Done ->
+      "Press any key to continue"
   in
   write_caps ~x:8 ~y:1 heading;
   ()
@@ -139,24 +140,37 @@ let handle_tick (s:State.t) v cur_time =
   let params = b.params in
   let age = v.year - params.year_start in
   match v.phase with
-  | Player {end_=false} ->
+  | Player {end_=false} when v.year < params.year ->
     let year_track_idx = v.player_track_history.(age) in
     if v.player_track_idx < year_track_idx then
       {v with player_track_idx=v.player_track_idx + 1; last_tick}
     else
       {v with phase=Player {end_=true}; last_tick}
+
+  | Player {end_=false} ->
+    (* last year *)
+    if v.player_track_idx < (Player.get_num_track_pieces player) - 1 then
+      {v with player_track_idx=v.player_track_idx + 1; last_tick}
+    else
+      {v with phase=Player {end_=true}; last_tick}
+
   | Player _ -> {v with phase=Ai; last_tick}
-  | Ai ->
+    (* Just to complete stations *)
+
+  | Ai ai_track_idx ->
     let route = Ai.get_route v.ai_route_idx b.ai in
     let len = Array.length route.track in
-    if v.ai_route_idx < len - 1 then
-      {v with ai_route_idx=v.ai_route_idx + 1; last_tick}
+    if ai_track_idx < len - 1 then
+      (* Same track *)
+      {v with phase=Ai {track_idx=ai_track_idx + 1}; last_tick}
     else
       let year_route_idx = v.ai_route_history.(age) in
       if v.ai_route_idx < year_route_idx then
-        {v with ai_route_idx=v.ai_route_idx + 1; last_tick}
+        (* Next route before year *)
+        {v with ai_route_idx=v.ai_route_idx + 1; phase=Ai{track_idx=0}; last_tick}
       else if v.year < params.year then
-        {v with year=v.year + 1; phase=Player{end_=false}; last_tick}
+        (* Advance year *)
+        {v with year=v.year + 1; phase=Player{end_=false}; phase=Ai{track_idx=0}; last_tick}
       else
         {v with phase=Done; last_tick}
   | Done -> {v with last_tick}

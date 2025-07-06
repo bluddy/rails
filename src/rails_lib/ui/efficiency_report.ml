@@ -62,6 +62,7 @@ let render win (s:State.t) =
   let div_v = (ton_miles + 2) / 2 in
   let efficiency = M.((revenue * 500) / div_v) |> M.to_int |> Int.to_float in
   let efficiency = Float.(efficiency / 100.) in
+  (* TODO: print money here *)
   write ~x ~y @@ sp "Revenue efficiency: %.2f per Ton-Mile" efficiency;
 
   let y = y + 8 in

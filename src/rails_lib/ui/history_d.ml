@@ -3,7 +3,7 @@ type loc = Utils.loc
 
 type phase =
   | Player of {end_: bool}
-  | Ai
+  | Ai of {track_idx: int}
   | Done
 
 type t = {
@@ -15,6 +15,5 @@ type t = {
   ai_route_history: int array;
   player_track_idx: int;
   ai_route_idx: int;
-  ai_track_idx: int;
 }
 
