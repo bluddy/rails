@@ -29,6 +29,8 @@ let create (s:State.t) =
     ai_route_idx=0;
   }
 
+let incr_y_8 (x ,y) = x, y + 8
+
 let render win v (s:State.t) =
   let b = s.backend in
   let fonts = s.fonts in
@@ -58,8 +60,7 @@ let render win v (s:State.t) =
   (* We need to draw everything from start_year to this year *)
   let _draw_player_track =
     Iter.iter (fun idx ->
-      let x, y = Player.get_track_loc idx player in
-      let y = y + 8 in
+      let x, y = Player.get_track_loc idx player |> incr_y_8 in
       let color = if idx = v.player_track_idx then Ega.yellow else Ega.white in
       R.draw_point win ~color ~x ~y;
     )
@@ -71,8 +72,7 @@ let render win v (s:State.t) =
     let comp = if is_end_player_or_ai then (<=) else (<) in
     Station_map.iter (fun station ->
       if comp (Station.get_year_built station) v.year then (
-        let x, y = Station.get_loc station in
-        let y = y + 8 in
+        let x, y = Station.get_loc station |> incr_y_8 in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color:Ega.yellow ~fill:true
       )
     )
@@ -89,26 +89,22 @@ let render win v (s:State.t) =
       match v.phase with
       | Ai {track_idx} when route_idx = v.ai_route_idx ->
         Iter.iter (fun track_idx2 ->
-          let x, y = route.track.(track_idx2) in
-          let y = y + 8 in
+          let x, y = route.track.(track_idx2) |> incr_y_8 in
           let color = if track_idx = track_idx2 then color else Ega.black in
           R.draw_point win ~color ~x ~y
         ) Iter.(0 -- track_idx);
 
         (* draw src only while drawing route *)
-        let x, y = src in
-        let y = y + 8 in
+        let x, y = src |> incr_y_8 in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true
       | _ ->
-        Array.iter (fun (x, y) ->
-          let y = y + 8 in
+        Array.iter (fun loc ->
+          let x, y = incr_y_8 loc in
           R.draw_point win ~color:Ega.black ~x ~y
         ) route.track;
-        let x, y = src in
-        let y = y + 8 in
+        let x, y = src |> incr_y_8 in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
-        let x, y = dst in
-        let y = y + 8 in
+        let x, y = dst |> incr_y_8 in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
     )
     Iter.(0 -- v.ai_route_idx)
