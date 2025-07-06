@@ -878,7 +878,13 @@ let handle_event (s:State.t) v (event:Event.t) =
         end
         in v, nobaction
 
-    | History _
+    | History state ->
+      begin match History.handle_event state s event with
+      | `Exit, _ -> {v with mode=Normal}, nobaction
+      | `None, state2 when state2 === state -> v, nobaction
+      | `None, state2 -> {v with mode=History state2}, nobaction
+      end
+  
 
     | Income_statement _
     | GenericScreen _
@@ -1248,6 +1254,10 @@ let handle_tick s v time is_cycle = match v.mode with
   | NewGoodDeliveryPickup d ->
       let d2 = New_delivery_pickup.handle_tick s time d in
       if d2 === d then v else {v with mode=NewGoodDeliveryPickup d}
+
+  | History state ->
+     let state2 = History.handle_tick s time state in
+     if state2 === state then v else {v with mode=History state2}
     
   | _ -> v
 

@@ -54,19 +54,20 @@ let render win v (s:State.t) =
       Owner.Map.empty
       owners
   in
-  (* We need to draw everything from start_year to this year *)
 
+  (* We need to draw everything from start_year to this year *)
   let _draw_player_track =
     Iter.iter (fun idx ->
       let x, y = Player.get_track_loc idx player in
       let y = y + 8 in
-      R.draw_point win ~color:Ega.white ~x ~y;
+      let color = if idx = v.player_track_idx then Ega.yellow else Ega.white in
+      R.draw_point win ~color ~x ~y;
     )
     Iter.(0 -- v.player_track_idx)
   in
 
   let _draw_player_stations =
-    let is_end_player_or_ai = match v.phase with Player {end_=true} | Ai -> true | _ -> false in
+    let is_end_player_or_ai = match v.phase with Player {end_=true} | Ai _ -> true | _ -> false in
     let comp = if is_end_player_or_ai then (<=) else (<) in
     Station_map.iter (fun station ->
       if comp (Station.get_year_built station) v.year then (
@@ -79,27 +80,26 @@ let render win v (s:State.t) =
   in
 
   let _draw_ai_track_and_stations =
-    Iter.iter (fun idx ->
-      let route = Ai.get_route idx b.ai in
+    if Ai.num_routes b.ai <= 0 then () else
+    Iter.iter (fun route_idx ->
+      let route = Ai.get_route route_idx b.ai in
       let src, dst = route.Ai.src, route.Ai.dst in
       let ai = Ai.ai_of_city src b.ai |> Option.get_exn_or "ai_of_city" in
       let color = Owner.Map.find ai colors in
-      let route = Ai.get_route idx b.ai in
-      if idx = v.ai_route_idx then (
-        Iter.iter (fun idx ->
-          let x, y = route.track.(idx) in
+      match v.phase with
+      | Ai {track_idx} when route_idx = v.ai_route_idx ->
+        Iter.iter (fun track_idx2 ->
+          let x, y = route.track.(track_idx2) in
           let y = y + 8 in
-          R.draw_point win ~color:Ega.black ~x ~y
-        ) Iter.(0 -- (v.ai_track_idx - 1));
-        (* Draw current point *)
-        let x, y = route.track.(v.ai_track_idx) in
-        let y = y + 8 in
-        R.draw_point win ~color ~x ~y;
+          let color = if track_idx = track_idx2 then color else Ega.black in
+          R.draw_point win ~color ~x ~y
+        ) Iter.(0 -- track_idx);
+
         (* draw src only while drawing route *)
         let x, y = src in
         let y = y + 8 in
-        R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
-      ) else (
+        R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true
+      | _ ->
         Array.iter (fun (x, y) ->
           let y = y + 8 in
           R.draw_point win ~color:Ega.black ~x ~y
@@ -110,14 +110,14 @@ let render win v (s:State.t) =
         let x, y = dst in
         let y = y + 8 in
         R.draw_rect win ~x ~y ~w:2 ~h:2 ~color ~fill:true;
-      );
     )
     Iter.(0 -- v.ai_route_idx)
   in
   let heading = match v.phase with
   | Player _ ->
       sp "a history of the %s." (B.get_name player_idx b)
-  | Ai ->
+  | Ai _ ->
+      if Ai.num_routes b.ai <= 0 then "" else
       let route = Ai.get_route v.ai_route_idx b.ai in
       let owner = route.owner in
       let src, dst = route.Ai.src, route.dst in
@@ -125,18 +125,20 @@ let render win v (s:State.t) =
       let dst_s = Cities.name_of_loc dst b.cities in
       sp "%s connects %s to %s" (B.get_name owner b) src_s dst_s
   | Done ->
-      "Press any key to continue"
+      "History Complete (Press key)"
   in
   write_caps ~x:8 ~y:1 heading;
   ()
 
 let tick_delta = 200 (* ms *)
 
-let handle_tick (s:State.t) v cur_time =
+let handle_tick (s:State.t) cur_time v =
   let next_time = v.last_tick + tick_delta  in
   if cur_time < next_time then v else
   let last_tick = cur_time in
   let b = s.backend in
+  let player_idx = C.player in
+  let player = B.get_player player_idx b in
   let params = b.params in
   let age = v.year - params.year_start in
   match v.phase with
@@ -154,15 +156,19 @@ let handle_tick (s:State.t) v cur_time =
     else
       {v with phase=Player {end_=true}; last_tick}
 
-  | Player _ -> {v with phase=Ai; last_tick}
+  | Player {end_=true} -> {v with phase=Ai {track_idx=0}; last_tick}
     (* Just to complete stations *)
 
-  | Ai ai_track_idx ->
+  | Ai {track_idx} ->
+    if Ai.num_routes b.ai <= 0 then
+        if v.year < params.year then {v with phase=Player {end_=false}; last_tick}
+        else {v with phase=Done; last_tick}
+    else
     let route = Ai.get_route v.ai_route_idx b.ai in
     let len = Array.length route.track in
-    if ai_track_idx < len - 1 then
+    if track_idx < len - 1 then
       (* Same track *)
-      {v with phase=Ai {track_idx=ai_track_idx + 1}; last_tick}
+      {v with phase=Ai {track_idx=track_idx + 1}; last_tick}
     else
       let year_route_idx = v.ai_route_history.(age) in
       if v.ai_route_idx < year_route_idx then
@@ -170,7 +176,7 @@ let handle_tick (s:State.t) v cur_time =
         {v with ai_route_idx=v.ai_route_idx + 1; phase=Ai{track_idx=0}; last_tick}
       else if v.year < params.year then
         (* Advance year *)
-        {v with year=v.year + 1; phase=Player{end_=false}; phase=Ai{track_idx=0}; last_tick}
+        {v with year=v.year + 1; phase=Player{end_=false}; last_tick}
       else
         {v with phase=Done; last_tick}
   | Done -> {v with last_tick}
@@ -178,7 +184,6 @@ let handle_tick (s:State.t) v cur_time =
 let handle_event v (s:State.t) (event:Event.t) =
   let player_idx = C.player in
   let b = s.backend in
-  let params = b.params in
   let player = B.get_player player_idx b in
   let exit_event = match event with
     | MouseButton {down=true; _}
@@ -186,13 +191,12 @@ let handle_event v (s:State.t) (event:Event.t) =
     | _ -> false
   in
   if not exit_event then `None, v else
+  let params = b.params in
   match v.phase with
     | Done -> `Exit, v
     | _ ->
     (* Jump to end *)
     let ai_route_idx = Ai.num_routes b.ai - 1 in
-    let route = Ai.get_route ai_route_idx b.ai in
-    let ai_track_idx = Array.length route.track - 1 in
     let player_track_idx = Player.get_num_track_pieces player - 1 in
-    `None, {v with phase=Done; year=params.year; ai_route_idx; player_track_idx; ai_track_idx}
+    `None, {v with phase=Done; year=params.year; ai_route_idx; player_track_idx}
 
