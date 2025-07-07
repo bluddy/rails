@@ -15,6 +15,7 @@ let max_width = 320
   type 'a action =
     | On of 'a
     | Off of 'a
+    | Selected of 'a
     | Handled
     | OpenMsgBox
     | CloseMsgBox
@@ -23,18 +24,7 @@ let max_width = 320
     | OpenMenu
     | CloseMenu
     | NoAction
-
-  let show_action = function
-    | On _ -> "On"
-    | Off _ -> "Off"
-    | Handled -> "Handled"
-    | OpenMsgBox -> "OpenMsgBox"
-    | CloseMsgBox -> "CloseMsgBox"
-    | ClickInMsgBox -> "ClickInMsgBox"
-    | KeyInMsgBox -> "KeyInMsgBox"
-    | OpenMenu -> "OpenMenu"
-    | CloseMenu -> "CloseMenu"
-    | NoAction -> "NoAction"
+    [@@deriving show]
 
   let is_action = function
     | NoAction -> false
@@ -57,7 +47,7 @@ module MsgBox = struct
   type ('msg, 'state) fire =
     | Action of 'msg
     | Checkbox of 'msg * ('state -> bool) (* function to check checkbox status *)
-    | MsgBox of bool * ('msg, 'state) t (* open *)
+    | MsgBox of bool * ('msg, 'state) t (* whether a further msgbox/menu is open open *)
 
   and ('msg, 'state) kind =
     | Static of {
@@ -66,6 +56,7 @@ module MsgBox = struct
     | Interactive of {
       fire: ('msg, 'state) fire;
       test_enabled: ('state -> bool) option;
+      select_action: 'msg option;
       enabled: bool;
     }
 
@@ -95,10 +86,9 @@ module MsgBox = struct
   let static_entry name ~color =
     { y=0; h=0; name; kind=Static {color} }
 
-  let make_entry ?test_enabled name fire =
+  let make_entry ?test_enabled ?select_action name fire =
     (* test_enabled: entry can be disabled under some circumstances *)
-    let fire =
-      match fire with
+    let fire = match fire with
       | `MsgBox m -> MsgBox(false, m)
       | `Action a -> Action a
       | `Checkbox (b, fn) -> Checkbox(b, fn)
@@ -108,10 +98,11 @@ module MsgBox = struct
         fire;
         enabled=true;
         test_enabled;
+        select_action;
       }
     }
 
-    (* Compute menu size dynamically *)
+    (* Compute menu size dynamically. Must be called. *)
   let do_open_menu ?(x=0) ?(y=0) ?(selected=None) s v =
     (* start calculating internal y *)
     let max_h = v.border_y in
@@ -180,6 +171,10 @@ module MsgBox = struct
       draw_bg;
     }
 
+  let get_entry_selection_action v = match v.kind with
+    | Interactive {select_action; _} -> select_action
+    | _ -> None
+
   let is_entry_clicked_shallow v ~y =
     match v.kind with
     | Static _ -> false
@@ -225,15 +220,13 @@ module MsgBox = struct
         {v with kind=e}, action
     | Static _ -> v, NoAction
 
-  let rec close_entry v =
-    match v.kind with
+  let rec close_entry v = match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         let box = close box in
         {v with kind=Interactive {e with fire=MsgBox(false, box)}}
     | _ -> v
 
-  and close v =
-    match v.selected with
+  and close v = match v.selected with
     | Some i ->
         let entries = L.modify_at_idx i close_entry v.entries in
         {v with entries; selected=None}
@@ -311,6 +304,18 @@ module MsgBox = struct
             v.entries, NoAction
       in
       let entries, action, selected =
+        let handle_selection_change old_idx new_idx =
+          let entries = match old_idx with
+            | Some old_idx -> L.modify_at_idx old_idx close_entry entries
+            | None -> entries
+          in
+          let select_action = List.nth entries new_idx |> get_entry_selection_action in
+          let action = match select_action with
+            | Some action -> Selected action
+            | None -> KeyInMsgBox
+          in
+          entries, action, Some new_idx
+        in
         match action with
         | NoAction -> (* nothing from deep *)
             let menu_choice =
@@ -320,14 +325,8 @@ module MsgBox = struct
                 None
             in
             begin match menu_choice, v.selected, key with
-            | Some _ as ch, Some entry_idx, _ ->
-                (* something matches *)
-                let entries =
-                  L.modify_at_idx entry_idx close_entry entries
-                in
-                entries, KeyInMsgBox, ch
-            | Some _ as ch, None, _ ->
-                entries, KeyInMsgBox, ch
+            | Some new_idx, entry_idx, _ ->
+                handle_selection_change entry_idx new_idx
             | None, (Some idx as sidx), Enter ->
                 let entries, action =
                   L.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
@@ -335,21 +334,15 @@ module MsgBox = struct
                 in
                 entries, action, sidx
             | None, None, Down ->
-                entries, KeyInMsgBox, Some 0
-            | None, Some idx, Down when idx < List.length entries - 1 ->
-                let entries =
-                  L.modify_at_idx idx close_entry entries
-                in
-                entries, KeyInMsgBox, Some (idx+1)
-            | None, Some idx, Up when idx > 0 ->
-                let entries =
-                  L.modify_at_idx idx close_entry entries
-                in
-                entries, KeyInMsgBox, Some (idx-1)
+                handle_selection_change None 0
+            | None, None, Up ->
+                handle_selection_change None (List.length entries - 1)
+            | None, (Some idx as sidx), Down when idx < List.length entries - 1 ->
+                handle_selection_change sidx (idx + 1)
+            | None, (Some idx as sidx), Up when idx > 0 ->
+                handle_selection_change sidx (idx - 1)
             | None, Some idx, Escape when is_entry_open (List.nth entries idx) ->
-                let entries =
-                  L.modify_at_idx idx close_entry entries
-                in
+                let entries = L.modify_at_idx idx close_entry entries in
                 entries, KeyInMsgBox, Some idx
             | None, _, _ when Event.is_letter key ->
                 (* nothing matches but still a letter: don't leak back to previous menu *)
