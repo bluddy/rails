@@ -12,6 +12,4 @@ type menu =
   | Difficulty
   | Options
 
-type t = {
-
-}
+type t =  unit

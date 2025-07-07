@@ -86,6 +86,7 @@ module MsgBox = struct
       selected: int option;
       font: Fonts.Font.t;
       index: int CharMap.t; (* for keyboard shortcuts *)
+      draw_bg: bool;
     }
 
   let get_entry_w_h font v =
@@ -158,7 +159,7 @@ module MsgBox = struct
     in
     {v with entries; w; h; x; y; selected}
 
-  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ~fonts entries =
+  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(draw_bg=true) ~fonts entries =
     let font=Fonts.get_font font_idx fonts in
     let index =
       List.foldi (fun acc i entry ->
@@ -176,6 +177,7 @@ module MsgBox = struct
       font;
       heading;
       index;
+      draw_bg;
     }
 
   let is_entry_clicked_shallow v ~y =
@@ -400,7 +402,9 @@ module MsgBox = struct
 
     let rec render win s v =
       (* draw background *)
-      render_box win v.x v.y v.w v.h;
+      if v.draw_bg then (
+        render_box win v.x v.y v.w v.h
+      );
 
       (* draw heading *)
       begin match v.heading with

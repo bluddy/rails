@@ -14,6 +14,7 @@ let set_modes l v = match l with
   | _ -> v
 
 let render_screen tex win _s =
+  R.clear_screen win;
   R.Texture.render win ~x:0 ~y:0 tex
 
 let next_mode v = match v.next_modes with
@@ -29,7 +30,7 @@ let create (s:State.t) =
   let mode = add_screen `LogoMPS mode in
   let mode = add_screen `Credits mode in
   let mode =
-    let file = "intro.pan" in
+    let file = "TITLEM.PAN" in
     Animation(Pani_render.create file)::mode in
   set_modes (List.rev mode) default
 

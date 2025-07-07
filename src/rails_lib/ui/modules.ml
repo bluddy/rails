@@ -3,6 +3,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Renderer
 module B = Backend
+open Utils.Infix
 
 open Modules_d
 
@@ -37,7 +38,6 @@ let handle_tick win (s:State.t) time =
 
     | MapView ->
         (* Main game *)
-
         (* A tick starts with the backend *)
         let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
         if List.find_opt (function Ui_msg.UpdateMap -> true | _ -> false) ui_msgs |> Option.is_some then
@@ -48,6 +48,12 @@ let handle_tick win (s:State.t) time =
         [%upf s.ui <- ui];
         [%upf s.backend <- backend];
         s
+
+    | MainMenu state ->
+        let state2 = Main_menu.handle_tick time state in
+        if state2 === state then s
+        else {s with screen=MainMenu state2}
+
   in
   state
 
@@ -55,11 +61,17 @@ let handle_event (s:State.t) (event:Event.t) =
   (* Handle an input event, starting with the UI *)
   let state, quit =
     match s.screen with
+    | MainMenu state ->
+        begin match Main_menu.handle_event event state with
+        | `None, state2 when state2 === state -> s, false
+        | `None, state2 -> {s with screen=MainMenu state2}, false
+        | `Exit, _ -> {s with screen=MapGen None}, false
+        end
+
     | MapGen Some {state=`Done; _} ->
         (* Only for map generation *)
         begin match event with
-        | Key {down=true; _} ->
-                {s with screen = MapView}, false
+        | Key {down=true; _} -> {s with screen = MapView}, false
         | _ -> s, false
         end
 
@@ -80,20 +92,20 @@ let handle_event (s:State.t) (event:Event.t) =
   in
   state, quit
 
-let render win (s:State.t) =
-  match s.screen with
+let render win (s:State.t) = match s.screen with
   | MapGen Some data ->
-      let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
-      R.clear_screen win;
-      R.Texture.render win ~x:0 ~y:0 bg_tex;
-      R.Texture.render win ~x:0 ~y:0 s.map_tex;
-      Fonts.Render.render s.fonts ~win ~to_render:data.text;
-      Mapgen.View.render_new_pixels win data s.textures.pixel;
-      ()
+    let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
+    R.clear_screen win;
+    R.Texture.render win ~x:0 ~y:0 bg_tex;
+    R.Texture.render win ~x:0 ~y:0 s.map_tex;
+    Fonts.Render.render s.fonts ~win ~to_render:data.text;
+    Mapgen.View.render_new_pixels win data s.textures.pixel;
+    ()
   | MapGen None -> ()
 
-  | MapView ->
-      Main_ui.render win s s.ui
+  | MapView -> Main_ui.render win s s.ui
+
+  | MainMenu state -> Main_menu.render win s state
 
 let run ?load ?(region=Region.WestUS) () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
@@ -105,28 +117,22 @@ let run ?load ?(region=Region.WestUS) () : unit =
   let init_fn win =
 
     let create_state ?backend ?ui_options ?ui_view screen =
-
         let resources = Resources.load_all () in
 
         let backend = match backend with
           | Some b -> b
           | None ->
-              (* Used by different elements *)
-              Random.self_init ();
-              let random = Random.get_state () in
-              let seed = Random.int 0x7FFF random in
-              B.default region resources ~random ~seed
+            (* Used by different elements *)
+            Random.self_init ();
+            let random = Random.get_state () in
+            let seed = Random.int 0x7FFF random in
+            B.default region resources ~random ~seed
         in
-
         let textures = Textures.of_resources win resources in
-
         let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
         let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
-
         let fonts = Fonts.load win in
-
         let ui = Main_ui.default ?options:ui_options ?view:ui_view win fonts region in
-
         {
           map_tex;
           map_silhouette_tex;
@@ -138,9 +144,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
           ui;
         }
     in
-
-    let state =
-      match load with
+    let state = match load with
       | Some savefile ->
           Printf.printf "Loading %s...\n" savefile;
           let s = IO.File.read_exn savefile in
@@ -154,14 +158,14 @@ let run ?load ?(region=Region.WestUS) () : unit =
               let ui_options = Yojson.Safe.from_string options |> Main_ui_d.options_of_yojson in
               let ui_view = Yojson.Safe.from_string view |> Mapview_d.t_of_yojson in
               create_state ~backend ~ui_options ~ui_view MapView
-
           | _ -> assert false
           end
-              
-      | None -> create_state (MapGen None)
 
+      | None ->
+        let s = create_state MapView in
+        let state = Main_menu.create s in
+        {s with screen=MainMenu state}
     in
-
     Printf.printf " done.\n";
 
     state, Mainloop.{
