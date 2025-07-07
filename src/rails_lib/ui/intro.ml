@@ -25,14 +25,16 @@ let create (s:State.t) =
   let add_screen tex mode =
     let tex = Hashtbl.find s.textures.misc tex in
     GenericScreen{render_fn=render_screen tex}::mode in
-  let mode = [] in
-  let mode = add_screen `LogoMicroprose mode in
-  let mode = add_screen `LogoMPS mode in
-  let mode = add_screen `Credits mode in
-  let mode =
+  let modes = [] in
+  let modes = add_screen `LogoMicroprose modes in
+  let modes = add_screen `LogoMPS modes in
+  let modes = add_screen `Credits modes in
+  let modes =
     let file = "TITLEM.PAN" in
-    Animation(Pani_render.create file)::mode in
-  set_modes (List.rev mode) default
+    Animation(Pani_render.create file)::modes in
+  match List.rev modes with
+  | x::xs -> {mode=x; next_modes=xs}
+  | _ -> assert false
 
 let render win (s:State.t) v = match v.mode with
   | GenericScreen {render_fn} -> render_fn win s
