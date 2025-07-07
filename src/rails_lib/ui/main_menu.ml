@@ -5,6 +5,8 @@ module B = Backend
 module C = Constants
 module M = Money
 
+open Utils.Infix
+
 include Main_menu_d
 
 let set_modes l v = match l with
@@ -25,19 +27,25 @@ let create (s:State.t) =
   let mode = [] in
   let mode = add_screen `LogoMicroprose mode in
   let mode = add_screen `LogoMPS mode in
-  let mode = add_screen `Council mode in
+  let mode = add_screen `Credits mode in
   let mode =
     let file = "intro.pan" in
     Animation(Pani_render.create file)::mode in
-  set_modes mode default
+  set_modes (List.rev mode) default
 
 let render win (s:State.t) v = match v.mode with
   | GenericScreen {render_fn} -> render_fn win s
+  | Animation state -> Pani_render.render win state
 
 let handle_event event v = match v.mode with
+  | Animation _
   | GenericScreen _ when Event.is_left_click event || Event.key_modal_dismiss event ->
       next_mode v
-  | GenericScreen _ -> `None, v
+  | _ -> `None, v
 
-let handle_tick win time v = match v.mode with
-  | GenericScreen _ -> v
+let handle_tick time v = match v.mode with
+  | Animation state ->
+      let state2 = Pani_render.handle_tick time state in
+      if state2 === state then v else {v with mode=Animation state2}
+  | _ -> v
+
