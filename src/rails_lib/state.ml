@@ -1,13 +1,19 @@
 open! Containers
 
+(* Main modules of game. They don't carry much state between them *)
+type module_t =
+  | Intro of t Intro_d.t
+  | MapGen of Mapgen.t option
+  | Game
+
 (* All state *)
-type t = {
+and t = {
   (* saveable *)
   mutable backend: Backend.t;
   mutable ui: t Main_ui_d.t; (* get around circular modules *)
 
   (* non-saveable *)
-  screen: t Modules_d.t;
+  screen: module_t;
   mutable map_tex: Renderer.Texture.t;
   map_silhouette_tex: Renderer.Texture.t;
   textures: Textures.t;

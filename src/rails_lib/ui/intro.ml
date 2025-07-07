@@ -7,7 +7,7 @@ module M = Money
 
 open Utils.Infix
 
-include Main_menu_d
+include Intro_d
 
 let set_modes l v = match l with
   | x::xs -> {mode=x; next_modes=xs}

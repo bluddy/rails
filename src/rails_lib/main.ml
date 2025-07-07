@@ -28,6 +28,6 @@ let main () =
   | `Pani when !dump -> Pani.play !file
   | `Pani -> Mainloop.main @@ Pani_render.standalone ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `Game -> Modules.run ()
-  | `LoadGame -> Modules.run ~load:!file ()
+  | `Game -> Game_modules.run ()
+  | `LoadGame -> Game_modules.run ~load:!file ()
 

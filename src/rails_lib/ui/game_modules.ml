@@ -5,8 +5,6 @@ module R = Renderer
 module B = Backend
 open Utils.Infix
 
-open Modules_d
-
 let update_map _win v map =
   R.Texture.update v.State.map_tex @@ Tilemap.to_img map
 
@@ -36,7 +34,7 @@ let handle_tick win (s:State.t) time =
         let backend = {s.backend with map} in
         {s with backend; screen=MapGen(Some data)}
 
-    | MapView ->
+    | Game ->
         (* Main game *)
         (* A tick starts with the backend *)
         let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
@@ -49,11 +47,10 @@ let handle_tick win (s:State.t) time =
         [%upf s.backend <- backend];
         s
 
-    | MainMenu state ->
-        let state2 = Main_menu.handle_tick time state in
+    | Intro state ->
+        let state2 = Intro.handle_tick time state in
         if state2 === state then s
-        else {s with screen=MainMenu state2}
-
+        else {s with screen=Intro state2}
   in
   state
 
@@ -61,23 +58,23 @@ let handle_event (s:State.t) (event:Event.t) =
   (* Handle an input event, starting with the UI *)
   let state, quit =
     match s.screen with
-    | MainMenu state ->
-        begin match Main_menu.handle_event event state with
+    | Intro state ->
+        begin match Intro.handle_event event state with
         | `None, state2 when state2 === state -> s, false
-        | `None, state2 -> {s with screen=MainMenu state2}, false
+        | `None, state2 -> {s with screen=Intro state2}, false
         | `Exit, _ -> {s with screen=MapGen None}, false
         end
 
     | MapGen Some {state=`Done; _} ->
         (* Only for map generation *)
         begin match event with
-        | Key {down=true; _} -> {s with screen = MapView}, false
+        | Key {down=true; _} -> {s with screen = Game}, false
         | _ -> s, false
         end
 
     | MapGen _ -> s, false
 
-    | MapView ->
+    | Game ->
         (* Main map view screen *)
         let ui, backend_msgs = Main_ui.handle_event s s.ui event in
         let backend = Backend.Action.handle_msgs s.backend backend_msgs in
@@ -103,9 +100,9 @@ let render win (s:State.t) = match s.screen with
     ()
   | MapGen None -> ()
 
-  | MapView -> Main_ui.render win s s.ui
+  | Game -> Main_ui.render win s s.ui
 
-  | MainMenu state -> Main_menu.render win s state
+  | Intro state -> Intro.render win s state
 
 let run ?load ?(region=Region.WestUS) () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
@@ -157,14 +154,15 @@ let run ?load ?(region=Region.WestUS) () : unit =
               Backend.reset_tick backend;
               let ui_options = Yojson.Safe.from_string options |> Main_ui_d.options_of_yojson in
               let ui_view = Yojson.Safe.from_string view |> Mapview_d.t_of_yojson in
-              create_state ~backend ~ui_options ~ui_view MapView
+              create_state ~backend ~ui_options ~ui_view Game
           | _ -> assert false
           end
 
       | None ->
-        let s = create_state MapView in
-        let state = Main_menu.create s in
-        {s with screen=MainMenu state}
+        (* New game. Just use a default *)
+        let s = create_state Game in
+        let state = Intro.create s in
+        {s with screen=Intro state}
     in
     Printf.printf " done.\n";
 
