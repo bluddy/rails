@@ -10,12 +10,12 @@ let update_map _win v map =
 
 let handle_tick win (s:State.t) time =
   let state =
-    match s.screen with
+    match s.mode with
     | MapGen None ->
         (* Prepare mapgen with init *)
         let cities = B.get_cities s.backend in
         let data = Mapgen.init s.backend.random (B.get_region s.backend) cities in
-        {s with screen=MapGen(Some data)}
+        {s with mode=MapGen(Some data)}
 
     | MapGen Some data ->
         let done_fn () =
@@ -32,7 +32,7 @@ let handle_tick win (s:State.t) time =
           (data, B.get_map s.backend)
         in
         let backend = {s.backend with map} in
-        {s with backend; screen=MapGen(Some data)}
+        {s with backend; mode=MapGen(Some data)}
 
     | Game ->
         (* Main game *)
@@ -50,32 +50,32 @@ let handle_tick win (s:State.t) time =
     | Intro state ->
         let state2 = Intro.handle_tick time state in
         if state2 === state then s
-        else {s with screen=Intro state2}
+        else {s with mode=Intro state2}
   in
   state
 
 let handle_event (s:State.t) (event:Event.t) =
   (* Handle an input event, starting with the UI *)
   let state, quit =
-    match s.screen with
+    match s.mode with
     | Intro state ->
         begin match Intro.handle_event event state with
         | `None, state2 when state2 === state -> s, false
-        | `None, state2 -> {s with screen=Intro state2}, false
-        | `Exit, _ -> {s with screen=MapGen None}, false
+        | `None, state2 -> {s with mode=Intro state2}, false
+        | `Exit, _ -> {s with mode=MapGen None}, false
         end
 
     | MapGen Some {state=`Done; _} ->
         (* Only for map generation *)
         begin match event with
-        | Key {down=true; _} -> {s with screen = Game}, false
+        | Key {down=true; _} -> {s with mode = Game}, false
         | _ -> s, false
         end
 
     | MapGen _ -> s, false
 
     | Game ->
-        (* Main map view screen *)
+        (* Main map view mode *)
         let ui, backend_msgs = Main_ui.handle_event s s.ui event in
         let backend = Backend.Action.handle_msgs s.backend backend_msgs in
         (* The backend buffers further msgs to ui and sends on next tick *)
@@ -89,7 +89,7 @@ let handle_event (s:State.t) (event:Event.t) =
   in
   state, quit
 
-let render win (s:State.t) = match s.screen with
+let render win (s:State.t) = match s.mode with
   | MapGen Some data ->
     let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
     R.clear_screen win;
@@ -113,7 +113,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
 
   let init_fn win =
 
-    let create_state ?backend ?ui_options ?ui_view screen =
+    let create_state ?backend ?ui_options ?ui_view mode =
         let resources = Resources.load_all () in
 
         let backend = match backend with
@@ -133,7 +133,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
         {
           map_tex;
           map_silhouette_tex;
-          State.screen;
+          State.mode;
           backend;
           resources;
           textures;
@@ -162,7 +162,7 @@ let run ?load ?(region=Region.WestUS) () : unit =
         (* New game. Just use a default *)
         let s = create_state Game in
         let state = Intro.create s in
-        {s with screen=Intro state}
+        {s with mode=Intro state}
     in
     Printf.printf " done.\n";
 

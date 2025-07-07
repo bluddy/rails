@@ -13,7 +13,7 @@ and t = {
   mutable ui: t Main_ui_d.t; (* get around circular modules *)
 
   (* non-saveable *)
-  screen: module_t;
+  mode: module_t;
   mutable map_tex: Renderer.Texture.t;
   map_silhouette_tex: Renderer.Texture.t;
   textures: Textures.t;
