@@ -8,6 +8,19 @@ type t =
 
 let regions = [EastUS; WestUS; Britain; Europe]
 
+let show = function
+  | EastUS -> "Eastern United States"
+  | WestUS -> "Western United States"
+  | Britain -> "England"
+  | Europe -> "Europe"
+
+  (* TODO: fix years *)
+let start_year = function
+  | EastUS -> 1880
+  | WestUS -> 1900
+  | Britain -> 1850
+  | Europe -> 1900
+
 let money_symbol = function
   | EastUS | WestUS -> '$'
   | Britain | Europe -> '#' 

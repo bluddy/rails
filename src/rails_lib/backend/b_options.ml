@@ -30,6 +30,8 @@ type difficulty =
   [ `Investor | `Financier | `Mogul | `Tycoon ]
   [@@deriving yojson, enum, ord]
 
+let difficulties = [`Investor; `Financier; `Mogul; `Tycoon]
+
 let show_difficulty = function
   | `Investor -> "Investor"
   | `Financier -> "Financier"
