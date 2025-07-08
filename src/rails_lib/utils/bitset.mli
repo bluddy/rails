@@ -42,6 +42,8 @@ module type S = sig
 
   val pop_opt: t -> (elt * t) option
 
+  val toggle: elt -> t -> t
+
   val of_list: elt list -> t
 
   val to_list: t -> elt list

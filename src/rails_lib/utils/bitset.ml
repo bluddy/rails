@@ -88,6 +88,9 @@ module Make(E: Elem) = struct
     l;
     !v
 
+  let toggle elem v =
+    if mem v elem then remove elem v else add elem v
+
   let to_list v =
     fold (fun acc x -> x::acc) [] v
 

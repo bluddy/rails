@@ -37,6 +37,9 @@ module RealityLevels = Bitset.Make(struct
   let last = `CutthroatCompetition
 end)
 
+let reality_levels_default = RealityLevels.empty
+  |> RealityLevels.add `DispatcherOps
+
 type difficulty =
   [ `Investor | `Financier | `Mogul | `Tycoon ]
   [@@deriving yojson, enum, ord]
