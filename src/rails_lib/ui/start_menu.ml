@@ -25,16 +25,13 @@ let action_menu fonts  =
 
 let region_menu fonts =
   let open Menu.MsgBox in
-  let regions = Region.regions
-    |> List.map (fun region ->
-        let s = Region.show region in
-        let year = Region.start_year region |> Int.to_string in
-        region, Printf.sprintf "%s (%s)" s year)
-  in
   let entries =
-    List.map (fun (region, str) -> 
+    List.map (fun region -> 
+      let region_s = Region.show region in
+      let year = Region.start_year region |> Int.to_string in
+      let str = Printf.sprintf "%s (%s)" region_s year in
       make_entry ~select_action:region str @@ `Action region)
-      regions
+      Region.regions
   in
   make ~draw_bg:false ~fonts entries |> do_open_menu
 
