@@ -5,25 +5,11 @@ module B = Backend
 module C = Constants
 module M = Money
 
+include Start_menu_d
+
 open Utils.Infix
 
 let sp = Printf.sprintf
-
-type 'state mode =
-  | Action of ([`NewGame | `LoadGame] option, 'state) Menu.MsgBox.t
-  | LoadGame
-  | Region of (Region.t, 'state) Menu.MsgBox.t
-  | Difficulty of (B_options.difficulty, 'state) Menu.MsgBox.t
-  | Reality of {
-      menu: ([B_options.reality_level | `Continue], 'state) Menu.MsgBox.t;
-      reality: B_options.RealityLevels.t
-    }
-
-type 'state t = {
-  mode: 'state mode;
-  region: Region.t option;
-  difficulty: B_options.difficulty option;
-}
 
 let x, y = 54, 42
 
@@ -73,9 +59,9 @@ let reality_menu fonts reality_set s =
     make_entry competition @@ `Action `CutthroatCompetition;
   ] |> do_open_menu s
 
-let default fonts =
-  let menu = action_menu fonts in
-  menu
+let default s =
+  let menu = action_menu s.State.fonts s in
+  { mode=Action menu; region=None; difficulty=None }
 
 let render win v (s:State.t) = 
   let fonts = s.fonts in
@@ -134,8 +120,8 @@ let handle_event (s:State.t) v (event:Event.t) =
   | Action menu ->
     let menu2, action = Menu.MsgBox.update s menu event in
     begin match action with
-    | Menu.On(Some `NewGame) -> `None, {v with mode=Region(region_menu fonts s)}
-    | Menu.On(Some `LoadGame) -> `None, {v with mode=LoadGame}
+    | Menu.On(`NewGame) -> `None, {v with mode=Region(region_menu fonts s)}
+    | Menu.On(`LoadGame) -> `None, {v with mode=LoadGame}
     | _ when menu2 === menu -> default
     | _ -> `None, {v with mode=Action menu2}
     end

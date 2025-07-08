@@ -51,6 +51,8 @@ let handle_tick win (s:State.t) time =
         let state2 = Intro.handle_tick time state in
         if state2 === state then s
         else {s with mode=Intro state2}
+
+    | Menu _ -> s
   in
   state
 
@@ -62,7 +64,15 @@ let handle_event (s:State.t) (event:Event.t) =
         begin match Intro.handle_event event state with
         | `None, state2 when state2 === state -> s, false
         | `None, state2 -> {s with mode=Intro state2}, false
-        | `Exit, _ -> {s with mode=MapGen None}, false
+        | `Exit, _ -> {s with mode=Menu(Start_menu.default s)}, false
+        end
+
+    | Menu state ->
+        begin match Start_menu.handle_event s state event with
+        | `None, state2 when state2 === state -> s, false
+        | `None, state2 -> {s with mode=Menu state2}, false
+        (* TODO *)
+        | `Choose _, _ -> {s with mode=MapGen None}, false
         end
 
     | MapGen Some {state=`Done; _} ->
@@ -86,10 +96,15 @@ let handle_event (s:State.t) (event:Event.t) =
           | _ -> false) backend_msgs
         in
         s, quit
+
   in
   state, quit
 
 let render win (s:State.t) = match s.mode with
+  | Intro state -> Intro.render win s state
+
+  | Menu state -> Start_menu.render win state s
+
   | MapGen Some data ->
     let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
     R.clear_screen win;
@@ -102,7 +117,6 @@ let render win (s:State.t) = match s.mode with
 
   | Game -> Main_ui.render win s s.ui
 
-  | Intro state -> Intro.render win s state
 
 let run ?load ?(region=Region.WestUS) () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
