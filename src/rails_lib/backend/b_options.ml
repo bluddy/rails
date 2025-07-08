@@ -17,16 +17,16 @@ let delay_mult_of_speed = function
 
 type reality_level =
   [`DispatcherOps | `ComplexEconomy | `CutthroatCompetition]
-  [@@deriving enum, eq, yojson]
+  [@@deriving enum, eq, yojson, show]
 
   (* TODO *)
 let show_reality_level ?(pos=true) v = match v, pos with
   | `DispatcherOps, true -> "Dispatcher Ops"
-  | `DispatcherOps, false -> "Simplified Ops"
+  | `DispatcherOps, false -> "'No-collision' Operation"
   | `ComplexEconomy, true -> "Complex Economy"
-  | `ComplexEconomy, false -> "Simple Economy"
+  | `ComplexEconomy, false -> "Basic Economy"
   | `CutthroatCompetition, true -> "Cut-throat Competition"
-  | `CutthroatCompetition, false -> "Easy Competition"
+  | `CutthroatCompetition, false -> "Friendly Competition"
 
 let reality_levels = [`DispatcherOps; `ComplexEconomy; `CutthroatCompetition]
 
@@ -81,3 +81,10 @@ let dispatcher_ops v = RealityLevels.mem v.reality_levels `DispatcherOps
 let complex_economy v = RealityLevels.mem v.reality_levels `ComplexEconomy 
 let simple_economy v = not @@ complex_economy v
 
+let compute_difficulty_pct difficulty reality_levels =
+  let x = difficulty_to_enum difficulty + 1 in
+  let x = if RealityLevels.mem reality_levels `DispatcherOps then x + 1 else x in
+  let x = if RealityLevels.mem reality_levels `ComplexEconomy then x + 1 else x in
+  let x = if RealityLevels.mem reality_levels `CutthroatCompetition then x + 1 else x in
+  x * 10
+  
