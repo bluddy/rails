@@ -17,7 +17,18 @@ let delay_mult_of_speed = function
 
 type reality_level =
   [`DispatcherOps | `ComplexEconomy | `CutthroatCompetition]
-  [@@deriving enum, eq, show, yojson]
+  [@@deriving enum, eq, yojson]
+
+  (* TODO *)
+let show_reality_level ?(pos=true) v = match v, pos with
+  | `DispatcherOps, true -> "Dispatcher Ops"
+  | `DispatcherOps, false -> "Simplified Ops"
+  | `ComplexEconomy, true -> "Complex Economy"
+  | `ComplexEconomy, false -> "Simple Economy"
+  | `CutthroatCompetition, true -> "Cut-throat Competition"
+  | `CutthroatCompetition, false -> "Easy Competition"
+
+let reality_levels = [`DispatcherOps; `ComplexEconomy; `CutthroatCompetition]
 
 module RealityLevels = Bitset.Make(struct
   type t = reality_level [@@deriving yojson]
