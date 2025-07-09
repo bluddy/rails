@@ -84,10 +84,10 @@ let render win v (s:State.t) =
   | None -> ()
   | Some active_man ->
     let idx, x, y = match active_man with
-    | `Investor -> 0, 40, 90
-    | `Financier -> 1, 104, 90
-    | `Mogul -> 2, 166, 80
-    | `Tycoon -> 3, 230, 84
+    | `Investor -> 1, 40, 91
+    | `Financier -> 2, 100, 88
+    | `Mogul -> 3, 169, 84
+    | `Tycoon -> 4, 252, 86
     in
     let tex = Hashtbl.find s.textures.misc @@ `MainMenuMan idx in
     R.Texture.render win ~x ~y tex
