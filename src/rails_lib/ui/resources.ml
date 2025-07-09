@@ -18,17 +18,17 @@ let load_pics () =
     "SPRITES.PIC"; "CSPRITES.PIC"; "ESPRITES.PIC"; "SPRITES_extra.png";
     "TRACKS.PIC"; "TRACKS_extra.png"; "STATION.PIC"; "ESTATION.PIC";
     "BRITAIN.PIC";
-    "TITLE.PIC";
-    "LOGO.PIC"; "LABS.PIC"; "CREDITS2.PIC"; "ADVERT.PIC";
-    "DIFFS.PIC"; "DIFFSP.PIC"; "COUNCIL.PIC";
-    "PAGE0.PIC"; "PAGE1.PIC"; "PAGE2.PIC"; "PAGE3.PIC"; "PAGE4.PIC";
-    "PAGE5.PIC"; "PAGE6.PIC"; "PAGE7.PIC"; "PAGE8.PIC"; "PAGE9.PIC";
     "LOCOS.PIC"; "CLOCOS.PIC"; "CLOCOSM.PIC"; "ELOCOS.PIC";
     "ELOCOSM.PIC"; "LOCOSM.PIC";
   ] in
   let nontransparent = [
     "ELOCOS0.PIC"; "ELOCOS1.PIC"; "ELOCOS2.PIC"; "ELOCOS3.PIC"; 
     "LOCOS0.PIC"; "LOCOS1.PIC"; "LOCOS2.PIC"; "FACES.PIC";
+    "LOGO.PIC"; "LABS.PIC"; "CREDITS2.PIC"; "ADVERT.PIC";
+    "PAGE0.PIC"; "PAGE1.PIC"; "PAGE2.PIC"; "PAGE3.PIC"; "PAGE4.PIC";
+    "PAGE5.PIC"; "PAGE6.PIC"; "PAGE7.PIC"; "PAGE8.PIC"; "PAGE9.PIC";
+    "TITLE.PIC";
+    "DIFFS.PIC"; "DIFFSP.PIC"; "COUNCIL.PIC";
   ] in
   let images = Hashtbl.create 20 in
   List.iter (fun s ->
