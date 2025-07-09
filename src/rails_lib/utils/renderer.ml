@@ -40,6 +40,7 @@ let create w h ~zoom =
   Sdl.render_set_scale renderer zoom zoom |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
+  Sdl.set_render_draw_blend_mode renderer Sdl.Blend.mode_blend |> get_exn;
   { inner_w=w; inner_h=h; renderer; window; zoom; rect; rect2; opt_rect=Some rect; }
 
 let zoom _win x = x

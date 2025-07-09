@@ -1,19 +1,5 @@
 # Tasks
-- Menu:
-  - black on white, cyan selection
-  - start new game,
-    - Select area...
-      - regions
-    - Are you an...
-      - difficulty (with animation)
-    - Difficulty\nfactor (allcaps)
-      - 40%
-      - (Financier) (allcaps)
-      - change reality levels ?
-      - continue
-      - dispatcher/ 'no collision' operation
-      - basic economy/ complex 
-      - friendly competition/cut-throat
+- Start menu: see if we can support the original menu colors
 - History: does it include anything from the current period?
 - History depends on a lot of present data being relevant for past. Check.
   - e.g. company being dissolved.

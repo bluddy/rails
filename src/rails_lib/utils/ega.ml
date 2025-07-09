@@ -61,6 +61,9 @@ let dgray = get_rgba 8
 let bblue = get_rgba 9
 let bgreen = get_rgba 10
 let bcyan = get_rgba 11
+let bcyan_transparent =
+  let r, g, b, _ = get_rgba 11 in
+  r, g, b, 0xA0 (* half transparent *)
 let bred = get_rgba 12
 let bmagenta = get_rgba 13
 let yellow = get_rgba 14

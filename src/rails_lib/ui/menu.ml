@@ -78,6 +78,7 @@ module MsgBox = struct
       font: Fonts.Font.t;
       index: int CharMap.t; (* for keyboard shortcuts *)
       draw_bg: bool;
+      select_color: Ega.color;
       use_prefix: bool; (* entry prefix for checked v space *)
     }
 
@@ -151,7 +152,7 @@ module MsgBox = struct
     in
     {v with entries; w; h; x; y; selected}
 
-  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(draw_bg=true) ?(use_prefix=true)
+  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(select_color=Ega.bcyan) ?(draw_bg=true) ?(use_prefix=true)
       ?(border_x=8) ?(border_y=6) ~fonts entries =
     let font=Fonts.get_font font_idx fonts in
     let index =
@@ -172,6 +173,7 @@ module MsgBox = struct
       index;
       draw_bg;
       use_prefix;
+      select_color;
     }
 
   let get_entry_selection_action v = match v.kind with
@@ -375,10 +377,10 @@ module MsgBox = struct
       in
       v, action
 
-    let render_entry win s font v ~use_prefix ~selected ~x ~border_x ~y ~w =
+    let render_entry win s font v ~bg_color ~use_prefix ~selected ~x ~border_x ~y ~w =
       if selected then (
         let x = if use_prefix then x + 3 else x in
-        Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:Ega.bcyan
+        Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:bg_color
       );
 
       let prefix = match v.kind with
@@ -415,7 +417,7 @@ module MsgBox = struct
       (* draw entries and selection *)
       let selected = Option.get_or v.selected ~default:(-1) in
       List.iteri (fun i entry ->
-        render_entry win s v.font ~use_prefix:v.use_prefix ~selected:(i=selected)
+        render_entry win s v.font ~bg_color:v.select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
           ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
         v.entries;
 
