@@ -1009,7 +1009,7 @@ module Misc = struct
     tex (`MainMenuMan 1) 3 129 55 199;
     tex (`MainMenuMan 2) 94 63 146 120;
     tex (`MainMenuMan 3) 57 129 114 189;
-    tex (`MainMenuMan 4) 115 121 176 199;
+    tex (`MainMenuMan 4) 115 121 176 200;
 
     let tex key filename =
       let ndarray = Hashtbl.find res.Resources.res_pics filename in
