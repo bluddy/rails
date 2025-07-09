@@ -12,7 +12,7 @@ open Utils.Infix
 let sp = Printf.sprintf
 
 let action_menu fonts s =
-  let x, y = 54, 42 in
+  let x, y = 54, 39 in
   let open Menu.MsgBox in
   make ~x ~y ~font_idx:`Standard ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts
   [
