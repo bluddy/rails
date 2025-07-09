@@ -16,8 +16,8 @@ let action_menu fonts s =
   let open Menu.MsgBox in
   make ~x ~y ~font_idx:`Standard ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts
   [
-    make_entry "Start new game" @@ `Action(`NewGame);
-    make_entry "Load a game" @@ `Action(`LoadGame);
+    make_entry "Start new RR" @@ `Action(`NewGame);
+    make_entry "Load Saved RR" @@ `Action(`LoadGame);
   ]
   |> do_open_menu s
 

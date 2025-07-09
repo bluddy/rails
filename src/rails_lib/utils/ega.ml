@@ -33,10 +33,10 @@ let get_color ?(transparent=true) ?(debug=false) i =
   if i >= Array.length palette then
     failwith @@ Printf.sprintf "Ega.get_color: Color %d is invalid" i
   else
-    match i with
-    | 0 when debug -> magenta, 0xFF
-    | 0 when transparent -> palette.(i), 0x0
-    | 5 when transparent -> palette.(0), 0xFF
+    match i, transparent, debug with
+    | 0, true, true -> palette.(5), 0xFF
+    | 0, true, false -> palette.(i), 0x0
+    | 5, true, _ -> palette.(0), 0xFF
     | _ -> palette.(i), 0xFF
 
 let get_rgba ?debug i =

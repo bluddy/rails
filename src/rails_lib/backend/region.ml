@@ -9,8 +9,8 @@ type t =
 let regions = [EastUS; WestUS; Britain; Europe]
 
 let show = function
-  | EastUS -> "Eastern US"
-  | WestUS -> "Western US"
+  | EastUS -> "Eastern USA"
+  | WestUS -> "Western USA"
   | Britain -> "England"
   | Europe -> "Europe"
 
