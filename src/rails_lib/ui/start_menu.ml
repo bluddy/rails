@@ -72,11 +72,12 @@ let render win v (s:State.t) =
   let bg_tex = Hashtbl.find s.textures.misc `MainMenuBackground in
   R.clear_screen win;
   R.Texture.render win ~x:0 ~y:0 bg_tex;
-  let tex = match v.region with
-  | None -> Hashtbl.find s.State.textures.misc `Logo
-  | Some region -> Hashtbl.find s.textures.misc @@ `MainMenu region
-  in
-  R.Texture.render win ~x:182 ~y:22 tex;
+  begin match v.region with
+  | None -> ()
+  | Some region ->
+      let tex = Hashtbl.find s.textures.misc @@ `MainMenu region in
+      R.Texture.render win ~x:182 ~y:22 tex;
+  end;
 
   (* draw man *)
   begin match v.difficulty with
@@ -146,7 +147,8 @@ let handle_event (s:State.t) v (event:Event.t) =
         let reality = B_options.reality_levels_default in
         let mode = Reality{menu=reality_menu fonts reality s; reality} in
         `None, {v with mode; difficulty=Some difficulty}
-    | Menu.Selected(difficulty) -> `None, {v with mode=Difficulty menu2; difficulty=Some difficulty}
+    | Menu.Selected(difficulty) ->
+        `None, {v with mode=Difficulty menu2; difficulty=Some difficulty}
     | _ when menu2 === menu -> default
     | _ -> `None, {v with mode=Difficulty menu2}
     end
