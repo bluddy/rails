@@ -21,7 +21,7 @@ module M = Money
 
 type t = Backend_d.t [@@deriving yojson]
 
-let default region resources ~random ~seed = 
+let default region resources ~reality_levels ~difficulty ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
   let map = Tilemap.of_ndarray ~region ~seed map in
   let width, height = Tilemap.get_width map, Tilemap.get_height map in
@@ -36,15 +36,10 @@ let default region resources ~random ~seed =
   let track = Trackmap.empty width height in
   let stations = Station_map.empty in
   let players = Owner.Map.singleton C.player @@ Player.default C.player in
-  let year = match region with
-    | EastUS -> 1830
-    | WestUS -> 1866
-    | Britain -> 1828
-    | Europe -> 1900
-  in
+  let year = Region.start_year region in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
-  let params = { Params.default with year; year_start=year; region } in
+  let params = Params.make ~year_start:year ~reality_levels ~difficulty ~region () in
   let stocks = Stock_market.default
     |> Stock_market.add_human_player C.player params in
   {

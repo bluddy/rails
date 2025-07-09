@@ -16,9 +16,9 @@ let show = function
 
   (* TODO: fix years *)
 let start_year = function
-  | EastUS -> 1880
-  | WestUS -> 1900
-  | Britain -> 1850
+  | EastUS -> 1830
+  | WestUS -> 1866
+  | Britain -> 1828
   | Europe -> 1900
 
 let money_symbol = function

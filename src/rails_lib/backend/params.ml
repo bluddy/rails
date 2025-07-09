@@ -15,15 +15,16 @@ type t = {
   mutable time: int;  (* In-game time, resets at end of fin period *)
 } [@@deriving yojson]
 
-let default = {
-  year=1830;
-  year_start=1830;
+let make ?(year_start=1830) ?reality_levels ?difficulty ?(region=Region.WestUS) () =
+{
+  year=year_start;
+  year_start;
   num_fiscal_periods=0;
   current_period=`First;
   climate=Normal;
   west_us_route_done=false;
-  region=Region.WestUS;
-  options=B_options.default;
+  region;
+  options=B_options.make ?reality_levels ?difficulty ();
   time=0;
   cycle=0;
 }

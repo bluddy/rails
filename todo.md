@@ -1,5 +1,7 @@
 # Tasks
-- Start menu: see if we can support the original menu colors
+- Start menu:
+  - See if we can support the original menu colors
+  - Make menu highlight go all the way
 - History: does it include anything from the current period?
 - History depends on a lot of present data being relevant for past. Check.
   - e.g. company being dissolved.

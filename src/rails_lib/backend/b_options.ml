@@ -64,12 +64,11 @@ type t = {
 
 let investor v = match v.difficulty with | `Investor -> true | _ -> false
 
-let default =
+let make ?(reality_levels=reality_levels_default) ?(difficulty=`Financier) () =
   {
     speed=`Moderate;
-    reality_levels=RealityLevels.of_list
-      [`DispatcherOps; `ComplexEconomy; `CutthroatCompetition];
-    difficulty=`Tycoon;
+    reality_levels;
+    difficulty;
   }
 
 let difficulty v = v.difficulty
