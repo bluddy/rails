@@ -3,3 +3,4 @@ _build/
 *.PAN
 *.DTA
 *.png
+data/
