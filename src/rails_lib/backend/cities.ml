@@ -17,6 +17,8 @@ open Containers
     let arr = Array.of_list l in
     {map; arr; width; height}
 
+  let default = make (Hashtbl.create 10) 0 0
+
   let iter f v =
     Hashtbl.iter (fun offset city_s ->
       let x, y = Utils.x_y_of_offset v.width offset in

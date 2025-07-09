@@ -21,6 +21,10 @@ type t = {
   region: Region.t;
 } [@@deriving yojson]
 
+let default = {
+  seed=0; map=[||]; heightmap=[||]; width=0; height=0; region=Region.WestUS
+}
+
 let get_height v = v.height
 let get_width v = v.width
 

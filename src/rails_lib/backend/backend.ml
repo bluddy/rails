@@ -21,7 +21,27 @@ module M = Money
 
 type t = Backend_d.t [@@deriving yojson]
 
-let default region resources ~reality_levels ~difficulty ~random ~seed = 
+let default = {
+  params = Params.make ();
+  last_tick=0;
+  pause=false;
+  players=Owner.Map.empty;
+  map=Tilemap.default;
+  track=Trackmap.empty 0 0;
+  graph=Track_graph.make ();
+  cities=Cities.default;
+  engines=[];
+  stations=Station_map.empty;
+  blocks=Block_map.make ();
+  dev_state=Tile_develop.default;
+  stocks=Stock_market.default;
+  ai=Ai.default ();
+  ui_msgs=[];
+  random=Random.get_state ();
+  seed=0;
+} 
+
+let make region resources ~reality_levels ~difficulty ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
   let map = Tilemap.of_ndarray ~region ~seed map in
   let width, height = Tilemap.get_width map, Tilemap.get_height map in
@@ -36,10 +56,10 @@ let default region resources ~reality_levels ~difficulty ~random ~seed =
   let track = Trackmap.empty width height in
   let stations = Station_map.empty in
   let players = Owner.Map.singleton C.player @@ Player.default C.player in
-  let year = Region.start_year region in
+  let year_start = Region.start_year region in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
-  let params = Params.make ~year_start:year ~reality_levels ~difficulty ~region () in
+  let params = Params.make ~year_start ~reality_levels ~difficulty ~region () in
   let stocks = Stock_market.default
     |> Stock_market.add_human_player C.player params in
   {

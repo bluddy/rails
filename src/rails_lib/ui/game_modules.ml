@@ -11,6 +11,13 @@ let update_map _win v map =
 let handle_tick win (s:State.t) time =
   let state =
     match s.mode with
+    | Intro state ->
+        let state2 = Intro.handle_tick time state in
+        if state2 === state then s
+        else {s with mode=Intro state2}
+
+    | Menu _ -> s
+
     | MapGen None ->
         (* Prepare mapgen with init *)
         let cities = B.get_cities s.backend in
@@ -47,12 +54,6 @@ let handle_tick win (s:State.t) time =
         [%upf s.backend <- backend];
         s
 
-    | Intro state ->
-        let state2 = Intro.handle_tick time state in
-        if state2 === state then s
-        else {s with mode=Intro state2}
-
-    | Menu _ -> s
   in
   state
 
@@ -70,9 +71,11 @@ let handle_event (s:State.t) (event:Event.t) =
     | Menu state ->
         begin match Start_menu.handle_event s state event with
         | `None, state2 when state2 === state -> s, false
-        | `None, state2 -> {s with mode=Menu state2}, false
-        (* TODO *)
-        | `Choose _, _ -> {s with mode=MapGen None}, false
+        | `None, state2 ->
+            {s with mode=Menu state2}, false
+        | `Choose (region, difficulty, reality_levels), _ ->
+
+            {s with mode=MapGen None}, false
         end
 
     | MapGen Some {state=`Done; _} ->
@@ -111,12 +114,76 @@ let render win (s:State.t) = match s.mode with
     R.Texture.render win ~x:0 ~y:0 bg_tex;
     R.Texture.render win ~x:0 ~y:0 s.map_tex;
     Fonts.Render.render s.fonts ~win ~to_render:data.text;
-    Mapgen.View.render_new_pixels win data s.textures.pixel;
-    ()
+    Mapgen.View.render_new_pixels win data s.textures.pixel
+
   | MapGen None -> ()
 
   | Game -> Main_ui.render win s s.ui
 
+let default_state win : State.t =
+  let resources = Resources.load_all () in
+  let textures = Textures.of_resources win resources in
+  let fonts = Fonts.load win in
+  let backend = Backend.default in
+  let map_tex = Hashtbl.find textures.misc `Advert in
+  let ui = Main_ui.default win fonts Region.WestUS in
+  {
+    map_tex;
+    map_silhouette_tex=map_tex;
+    resources;
+    textures;
+    fonts;
+    backend;
+    mode=State.Game;
+    ui;
+  }
+
+(* Createa a new default state. Have some dummy things *)
+let make_state win ~region ~reality_levels ~difficulty prev_state =
+  let s = prev_state in
+
+  let resources = s.State.resources in
+  let textures, fonts = s.State.textures, s.fonts in
+  let backend =
+    (* Used by different elements *)
+    Random.self_init ();
+    let random = Random.get_state () in
+    let seed = Random.int 0x7FFF random in
+    B.make region resources ~random ~seed ~reality_levels ~difficulty
+  in
+  let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
+  let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
+  let ui = Main_ui.default win fonts region in
+  {
+    State.map_tex;
+    map_silhouette_tex;
+    mode=State.Game;
+    backend;
+    resources;
+    textures;
+    fonts;
+    ui;
+  }
+
+(* Make state out of loaded game *)
+let load_state backend ui_options ui_view win =
+  let resources = Resources.load_all () in
+  let region =  backend.Backend_d.params.region in
+  let textures = Textures.of_resources win resources in
+  let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
+  let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
+  let fonts = Fonts.load win in
+  let ui = Main_ui.default ~options:ui_options ~view:ui_view win fonts region in
+  {
+    State.map_tex;
+    map_silhouette_tex;
+    mode=State.Game;
+    backend;
+    resources;
+    textures;
+    fonts;
+    ui;
+  }
 
 let run ?load ?(region=Region.WestUS) () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
@@ -127,54 +194,26 @@ let run ?load ?(region=Region.WestUS) () : unit =
 
   let init_fn win =
 
-    let create_state ?backend ?ui_options ?ui_view mode =
-        let resources = Resources.load_all () in
-
-        let backend = match backend with
-          | Some b -> b
-          | None ->
-            (* Used by different elements *)
-            Random.self_init ();
-            let random = Random.get_state () in
-            let seed = Random.int 0x7FFF random in
-            B.default region resources ~random ~seed
-        in
-        let textures = Textures.of_resources win resources in
-        let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
-        let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
-        let fonts = Fonts.load win in
-        let ui = Main_ui.default ?options:ui_options ?view:ui_view win fonts region in
-        {
-          map_tex;
-          map_silhouette_tex;
-          State.mode;
-          backend;
-          resources;
-          textures;
-          fonts;
-          ui;
-        }
-    in
     let state = match load with
       | Some savefile ->
           Printf.printf "Loading %s...\n" savefile;
           let s = IO.File.read_exn savefile in
           let lst = String.split s ~by:"====" in
-          Printf.printf "len[%d]\n%!" (List.length lst);
+          (* Printf.printf "len[%d]\n%!" (List.length lst); *)
           begin match lst with
-          | [backend;options;view] ->
+          | [backend; options; view] ->
               let backend = Yojson.Safe.from_string backend |> Backend.t_of_yojson in
               let backend = {backend with pause = false} in
               Backend.reset_tick backend;
               let ui_options = Yojson.Safe.from_string options |> Main_ui_d.options_of_yojson in
               let ui_view = Yojson.Safe.from_string view |> Mapview_d.t_of_yojson in
-              create_state ~backend ~ui_options ~ui_view Game
+              load_state backend ui_options ui_view win
           | _ -> assert false
           end
 
       | None ->
-        (* New game. Just use a default *)
-        let s = create_state Game in
+        (* New game. Use a default state *)
+        let s = create_initial_state win in
         let state = Intro.create s in
         {s with mode=Intro state}
     in
