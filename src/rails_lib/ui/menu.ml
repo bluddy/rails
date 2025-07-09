@@ -78,6 +78,7 @@ module MsgBox = struct
       font: Fonts.Font.t;
       index: int CharMap.t; (* for keyboard shortcuts *)
       draw_bg: bool;
+      use_prefix: bool; (* entry prefix for checked v space *)
     }
 
   let get_entry_w_h font v =
@@ -150,7 +151,8 @@ module MsgBox = struct
     in
     {v with entries; w; h; x; y; selected}
 
-  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(draw_bg=true) ~fonts entries =
+  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(draw_bg=true) ?(use_prefix=true)
+      ?(border_x=8) ?(border_y=6) ~fonts entries =
     let font=Fonts.get_font font_idx fonts in
     let index =
       List.foldi (fun acc i entry ->
@@ -161,7 +163,7 @@ module MsgBox = struct
       entries
     in
     {
-      border_x=8; border_y=6;
+      border_x; border_y;
       x; y; w=0; h=0;
       entries;
       selected=None;
@@ -169,6 +171,7 @@ module MsgBox = struct
       heading;
       index;
       draw_bg;
+      use_prefix;
     }
 
   let get_entry_selection_action v = match v.kind with
@@ -372,9 +375,11 @@ module MsgBox = struct
       in
       v, action
 
-    let render_entry win s font v ~selected ~x ~border_x ~y ~w =
-      if selected then
-        Renderer.draw_rect win ~x:(x+3) ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:Ega.bcyan;
+    let render_entry win s font v ~use_prefix ~selected ~x ~border_x ~y ~w =
+      if selected then (
+        let x = if use_prefix then x + 3 else x in
+        Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:Ega.bcyan
+      );
 
       let prefix = match v.kind with
         | Interactive {fire=Checkbox(_, fn);_} when fn s -> "^"
@@ -386,7 +391,8 @@ module MsgBox = struct
         | Interactive _ -> Ega.dgray, Ega.dgray
         | Static {color;_} -> color, color
       in
-      Fonts.Font.write win font ~color (prefix^v.name) ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
+      let name = if use_prefix then prefix^v.name else v.name in
+      Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
 
     let render_box win x y w h =
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.gray ~fill:true;
@@ -409,8 +415,8 @@ module MsgBox = struct
       (* draw entries and selection *)
       let selected = Option.get_or v.selected ~default:(-1) in
       List.iteri (fun i entry ->
-        render_entry win s v.font ~selected:(i=selected) ~x:v.x ~border_x:v.border_x
-          ~y:(v.y) ~w:v.w entry)
+        render_entry win s v.font ~use_prefix:v.use_prefix ~selected:(i=selected)
+          ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
         v.entries;
 
       (* recurse to sub-msgbox *)

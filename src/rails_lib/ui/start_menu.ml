@@ -11,11 +11,10 @@ open Utils.Infix
 
 let sp = Printf.sprintf
 
-let x, y = 54, 42
-
 let action_menu fonts s =
+  let x, y = 54, 42 in
   let open Menu.MsgBox in
-  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~fonts
+  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts
   [
     make_entry "Start new game" @@ `Action(`NewGame);
     make_entry "Load a game" @@ `Action(`LoadGame);
@@ -23,25 +22,26 @@ let action_menu fonts s =
   |> do_open_menu s
 
 let region_menu fonts s =
+  let x, y = 54, 39 in
   let open Menu.MsgBox in
   let entries =
     List.map (fun region -> 
       let region_s = Region.show region in
-      let year = Region.start_year region |> Int.to_string in
-      let str = Printf.sprintf "%s (%s)" region_s year in
-      make_entry ~select_action:region str @@ `Action region)
+      make_entry ~select_action:region region_s @@ `Action region)
       Region.regions
   in
-  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~fonts entries |> do_open_menu s
+  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts entries
+  |> do_open_menu s
 
 let difficulty_menu fonts s =
+  let x, y = 54, 39 in
   let open Menu.MsgBox in
   let entries = List.map (fun difficulty ->
       let str = B_options.show_difficulty difficulty in
       make_entry ~select_action:difficulty str @@ `Action difficulty)
     B_options.difficulties
   in
-  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~fonts entries |> do_open_menu s
+  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts entries |> do_open_menu s
 
 let reality_menu fonts reality_set s =
   let open Menu.MsgBox in
