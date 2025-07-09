@@ -15,7 +15,7 @@ let x, y = 54, 42
 
 let action_menu fonts s =
   let open Menu.MsgBox in
-  make ~x ~y ~draw_bg:false ~fonts
+  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~fonts
   [
     make_entry "Start new game" @@ `Action(`NewGame);
     make_entry "Load a game" @@ `Action(`LoadGame);
@@ -32,7 +32,7 @@ let region_menu fonts s =
       make_entry ~select_action:region str @@ `Action region)
       Region.regions
   in
-  make ~x ~y ~draw_bg:false ~fonts entries |> do_open_menu s
+  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~fonts entries |> do_open_menu s
 
 let difficulty_menu fonts s =
   let open Menu.MsgBox in
@@ -41,7 +41,7 @@ let difficulty_menu fonts s =
       make_entry ~select_action:difficulty str @@ `Action difficulty)
     B_options.difficulties
   in
-  make ~x ~y ~draw_bg:false ~fonts entries |> do_open_menu s
+  make ~x ~y ~font_idx:`Standard ~draw_bg:false ~fonts entries |> do_open_menu s
 
 let reality_menu fonts reality_set s =
   let open Menu.MsgBox in
