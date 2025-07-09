@@ -1,6 +1,10 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-let magenta = 0xAA00AA
+
+(* This is the standard EGA palette.
+   For transparent images, 0 is used as alpha=0, and 5 is used for black
+   i.e. alpha images can't have magenta
+ *)
 
 let palette =
   [|
@@ -9,7 +13,7 @@ let palette =
     0xAA00;   (* 2, green *)
     0xAAAA;   (* 3, cyan *)
     0xAA0000; (* 4, red *)
-    0x0;      (* 5, black *)
+    0xAA00AA; (* 5, black *)
     0xAA5500; (* 6, brown *)
     0xAAAAAA; (* 7, grey *)
     0x555555; (* 8, dgray *)
@@ -32,6 +36,7 @@ let get_color ?(transparent=true) ?(debug=false) i =
     match i with
     | 0 when debug -> magenta, 0xFF
     | 0 when transparent -> palette.(i), 0x0
+    | 5 when transparent -> palette.(0), 0xFF
     | _ -> palette.(i), 0xFF
 
 let get_rgba ?debug i =
@@ -44,12 +49,12 @@ let get_rgb ?debug i =
 
 type color = int * int * int * int [@@deriving eq, yojson]
 
-let magenta = get_rgba 0
+let black = get_rgba 0
 let blue = get_rgba 1
 let green = get_rgba 2
 let cyan = get_rgba 3
 let red = get_rgba 4
-let black = get_rgba 5
+let magenta = get_rgba 5
 let brown = get_rgba 6
 let gray = get_rgba 7
 let dgray = get_rgba 8
