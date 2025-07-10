@@ -1,7 +1,9 @@
 # Tasks
 - Start menu:
-  - See if we can support the original menu colors
-  - Make menu highlight go all the way
+  - Load game menu
+  - See if we can support the original menu colors (use menu images from original)
+  - Make menu highlight go all the way (solved by same solution)
+  - Select default value
 - History: does it include anything from the current period?
 - History depends on a lot of present data being relevant for past. Check.
   - e.g. company being dissolved.
@@ -42,6 +44,8 @@
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
 - Bug:
+  - Europe scrolling: tile chemical plant not found
+  - England: generation fails
   - Year doesn't switch at end of December.
   - Fiscal end stock eval: msgbox weird size thing
   - AI companies msgbox is off
@@ -66,3 +70,6 @@
   - joining a track from another track either refuses or crashes
   - Going into negative should be red money
  
+- Post 1.0
+  - Add maps from Deluxe
+  - 

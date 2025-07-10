@@ -40,6 +40,8 @@ end)
 let reality_levels_default = RealityLevels.empty
   |> RealityLevels.add `DispatcherOps
 
+let default_difficulty = `Financier
+
 type difficulty =
   [ `Investor | `Financier | `Mogul | `Tycoon ]
   [@@deriving yojson, enum, ord]
@@ -64,7 +66,7 @@ type t = {
 
 let investor v = match v.difficulty with | `Investor -> true | _ -> false
 
-let make ?(reality_levels=reality_levels_default) ?(difficulty=`Financier) () =
+let make ?(reality_levels=reality_levels_default) ?(difficulty=default_difficulty) () =
   {
     speed=`Moderate;
     reality_levels;

@@ -15,7 +15,8 @@ type t = {
   mutable time: int;  (* In-game time, resets at end of fin period *)
 } [@@deriving yojson]
 
-let make ?(year_start=1830) ?reality_levels ?difficulty ?(region=Region.WestUS) () =
+let make ?(year_start=1830) ?(reality_levels=B_options.reality_levels_default)
+  ?(difficulty=B_options.default_difficulty) ?(region=Region.WestUS) () =
 {
   year=year_start;
   year_start;
@@ -24,7 +25,7 @@ let make ?(year_start=1830) ?reality_levels ?difficulty ?(region=Region.WestUS) 
   climate=Normal;
   west_us_route_done=false;
   region;
-  options=B_options.make ?reality_levels ?difficulty ();
+  options=B_options.make ~reality_levels ~difficulty ();
   time=0;
   cycle=0;
 }

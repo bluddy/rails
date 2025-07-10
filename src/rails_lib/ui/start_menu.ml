@@ -158,7 +158,9 @@ let handle_event (s:State.t) v (event:Event.t) =
     let menu2, action = Menu.MsgBox.update s state.menu event in
     begin match action with
     | Menu.On `Continue ->
-        `Choose (v.region, v.difficulty, state.reality), v
+        let region = v.region |> Option.get_exn_or "missing region" in
+        let difficulty = v.difficulty |> Option.get_exn_or "missing difficulty" in
+        `Choose (region, difficulty, state.reality), v
         
     | Menu.On(#B_options.reality_level as reality_lvl) ->
         let reality = B_options.RealityLevels.toggle reality_lvl state.reality in

@@ -42,7 +42,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Resource map
 - [ ] Retirement
 - [x] Naming Train (speed record)
-- [ ] Starting menu
+- [x] Starting menu
 - [x] Build industry
 - [ ] Give command to RR
 - [x] Economic Climate

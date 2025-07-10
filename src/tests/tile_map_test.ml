@@ -34,7 +34,7 @@ let%expect_test "print river map" =
   print_map @@ river_map ();
   [%expect{| {"seed":0,"map":[["Clear"],["River",[["Down"],["Up"]]],["Clear"],["Clear"],["River",[["Down"],["Up"]]],["Clear"],["Clear"],["River",[["Down"],["Up"]]],["Clear"]],"heightmap":[43,49,43,49,57,51,43,51,47],"width":3,"height":3,"region":["EastUS"]} |}]
 
-let params = Params.default
+let params = Params.make ()
 
 let%test "check track across river" =
   let map = river_map () in
