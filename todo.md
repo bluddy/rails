@@ -8,15 +8,12 @@
 - History depends on a lot of present data being relevant for past. Check.
   - e.g. company being dissolved.
   - We can do a much cleaner job with dedicated history stuff.
-- Tile dev: handle end of period stuff
-- Update map texture when updating map
 - Fancy paper announcement of new player.
 - Handle track removal: messes up history
 - Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
 - Train income: check multiple pages of trains work well
 - Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
 - Fonts: change to variants
-- Menu/msgbox: use Make() to get rid of 'state
 - Building into an ai station
 - Rate war loss
 - Player loss (fired), AI company dissolved
@@ -44,6 +41,7 @@
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
 - Bug:
+  - Windows crash on start
   - Europe scrolling: tile chemical plant not found
   - England: generation fails
   - Year doesn't switch at end of December.

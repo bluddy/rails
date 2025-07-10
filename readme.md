@@ -35,12 +35,12 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Train stop by right click
 - [x] Accidents
 - [ ] Being driven out of town
-- [ ] Rate war
+- [-] Rate war
 - [x] Integrate animations
 - [x] Record train arrivals
 - [x] Newspapers
 - [ ] Resource map
-- [ ] Retirement
+- [-] Retirement
 - [x] Naming Train (speed record)
 - [x] Starting menu
 - [x] Build industry

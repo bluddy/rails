@@ -766,8 +766,9 @@ let _fin_end_proceed player_idx v =
      from the presidency of the name\n" *)
   let params = {v.params with current_period=Params.next_period v.params; time=0; cycle} in
   let player = Player.clear_periodic params player in
+  let dev_state = Tile_develop.end_of_period v.params v.dev_state in
   let v = update_player v player_idx (fun _ -> player) in
-  {v with params; ai; stocks; stations}
+  {v with params; ai; stocks; stations; dev_state}
 
 let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->

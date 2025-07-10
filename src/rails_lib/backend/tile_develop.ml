@@ -211,3 +211,21 @@ let develop_tiles ~two_devs (params:Params.t) ~random ~tilemap ~cities ~cities_t
   in
   loop 0 active_station v
 
+let end_of_period params v =
+  let slum_resist = 100 - (B_options.difficulty_to_enum params.Params.options.difficulty * 10) in
+  let coal_resist = if params.year = 1800 then 1 else PixelMap.find CoalMine_pixel v.resist in
+  let enemy_resist = if params.year = 1830 then 3 else PixelMap.find EnemyStation_pixel v.resist in
+  let oil_resist, enemy_val =
+    if params.year = 1865 then (5, 1)
+    else
+      (PixelMap.find OilWell_pixel v.resist, PixelMap.find EnemyStation_pixel v.develop)
+  in
+  let resist = v.resist
+    |> PixelMap.add Tilemap.Slum_pixel slum_resist
+    |> PixelMap.add CoalMine_pixel coal_resist
+    |> PixelMap.add EnemyStation_pixel enemy_resist
+    |> PixelMap.add OilWell_pixel oil_resist
+  in
+  let develop = PixelMap.add EnemyStation_pixel enemy_val v.develop in
+  {develop; resist; total_devs=0}
+
