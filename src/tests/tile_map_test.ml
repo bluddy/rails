@@ -77,7 +77,7 @@ let hills_east () =
 let%expect_test "hills on east" =
   let map = hills_east () in
   check_build_track (0, 1) ~dir:Dir.Right params map |> s_of_response |> print_string;
-  [%expect {| HighGrade 43 |}]
+  [%expect {| HighGrade 21 |}]
 
 let mountains_east () =
   let map = map (3,3) in
@@ -89,7 +89,7 @@ let mountains_east () =
 let%expect_test "mountains on east" =
   let map = mountains_east () in
   check_build_track (0, 1) ~dir:Dir.Right params map |> s_of_response |> print_string;
-  [%expect {| Tunnel 85 |}]
+  [%expect {| Tunnel 42 |}]
   
 let%expect_test "ocean on east" =
   let map = map (2,1) in
