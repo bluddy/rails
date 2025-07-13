@@ -141,6 +141,12 @@ let convert region goods =
   in
   Hashtbl.find_opt tbl goods
 
+let (>) x y = compare x y > 0
+let (>=) x y = compare x y >= 0
+let (<) x y = compare x y < 0
+let (<=) x y = compare x y <= 0
+let (=) x y = equal x y
+
 module Set = struct
   (* Use a regular set because we don't know how many goods we'll have *)
   include Utils.Set.Make(struct

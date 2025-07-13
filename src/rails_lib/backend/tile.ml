@@ -297,6 +297,26 @@ module Info = struct
     let data = get region tile in
     Money.(data.cost * C.build_industry_mult)
 
+  (* Get min supply/demand *)
+  let resource_map_supply_demand info =
+    let supply =
+      List.fold_left (fun min (good, x) ->
+        match min with
+        | Some min_good when Goods.(good >= Goods.Passengers && good < min_good) && Int.(x >= 16) -> Some good
+        | _ -> min)
+      None
+      info.supply
+    in
+    let demand =
+      List.fold_left (fun min (good, _) ->
+        match min with
+        | Some min_good when Goods.(good >= Goods.Passengers && good < min_good) -> Some good
+        | _ -> min)
+      None
+      info.demand
+    in
+    (supply, demand)
+
 end
 
 let (=) = equal

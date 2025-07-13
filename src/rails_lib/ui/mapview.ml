@@ -380,6 +380,8 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
   v, actions
 
 let render win (s:State.t) (v:t) ~minimap ~build_station =
+  let b = s.backend in
+  let region = b.params.region in
   let player_idx = C.player in
   let tile_w, tile_h = tile_size_of_zoom v.zoom in
   let tile_div = tile_div_of_zoom v.zoom in
@@ -402,15 +404,36 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let tiles = tile_textures_of_zoom s zoom in
     (* Check for alternate tile *)
     let alt = ((tile_x + tile_y) land 1) > 0 in
-    let tile = B.get_tile tile_x tile_y s.backend in
+    let tile = B.get_tile tile_x tile_y b in
     let tex = Textures.TileTex.find tiles ~region:(B.get_region s.backend) ~alt tile in
     R.Texture.render win tex ~x:screen_x ~y:screen_y
+  in
+  let draw_resource ~tile_x ~tile_y ~screen_x ~screen_y ~zoom =
+    let write = Fonts.Render.write win s.fonts ~idx:`Standard in
+    let tile = B.get_tile tile_x tile_y b in
+    let info = Tile.Info.get region tile in
+    match Tile.Info.resource_map_supply_demand info with
+    | Some good, _ ->
+        let letter = Goods.show good |> String.take 1 in
+        let color = Freight.of_good good |> Freight.to_color ~full:true in
+        write ~x:(screen_x + 2) ~y:(screen_y + 2) ~color letter
+    | _, Some good ->
+        let color = Freight.of_good good |> Freight.to_color ~full:true in
+        R.draw_rect win ~x:screen_x ~y:screen_y ~w:tile_w ~h:tile_h ~fill:true ~color
+    | _ -> ();
   in
   let draw_tiles () =
     iter_screen (fun x y ->
       let tile_x, tile_y = start_x + x, start_y + y in
       let screen_x, screen_y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
       draw_tile ~tile_x ~tile_y ~screen_x ~screen_y ~zoom:v.zoom
+    )
+  in
+  let draw_resource_map () =
+    iter_screen (fun x y ->
+      let tile_x, tile_y = start_x + x, start_y + y in
+      let screen_x, screen_y = v.dims.x + x * tile_w, v.dims.y + y * tile_h in
+      draw_resource ~tile_x ~tile_y ~screen_x ~screen_y ~zoom:v.zoom
     )
   in
   let draw_city_names () =
@@ -827,12 +850,18 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
 
   R.clear_screen win;
 
+  let draw_cyan_background () =
+    R.draw_rect win ~x:0 ~y:v.dims.y ~w:v.dims.w ~h:v.dims.h ~color:Ega.cyan ~fill:true;
+  in
+
   begin match v.zoom with
   | Zoom1 ->
       R.Texture.render win s.map_tex ~x:0 ~y:v.dims.y;
       draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
   | Zoom2 st ->
-      R.draw_rect win ~x:0 ~y:v.dims.y ~w:v.dims.w ~h:v.dims.h ~color:Ega.cyan ~fill:true;
+      draw_cyan_background ();
+      if Options.mem v.options `Resources then
+        draw_resource_map ();
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 6 8
       );
@@ -840,7 +869,12 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_trains_zoom2_3 ();
       draw_minimap ~minimap
   | Zoom3 st ->
-      draw_tiles ();
+      if Options.mem v.options `Resources then (
+        draw_cyan_background ();
+        draw_resource_map ()
+      ) else (
+        draw_tiles ()
+      );
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 3 4
       );
