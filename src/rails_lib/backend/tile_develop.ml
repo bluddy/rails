@@ -194,13 +194,13 @@ let develop_tiles ~two_devs (params:Params.t) ~random ~tilemap ~cities ~cities_t
               let res, v = _develop_tile x y tile params ~random ~tilemap v in
               match res with
               | Some (x, y, tile, `GoAgain, count) ->
-                  Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
+                  (* Log.debug (fun f -> f "Economic development at (%d, %d)" x y); *)
                   Tilemap.set_tile_xy x y tile tilemap ;
                   let x, y = Dir.random_adjust x y random in
                   let num_devs = if _should_count count then num_devs + 1 else num_devs in
                   wander_loop x y num_devs v
               | Some (x, y, tile, _, count) ->
-                  Log.debug (fun f -> f "Economic development at (%d, %d)" x y);
+                  (* Log.debug (fun f -> f "Economic development at (%d, %d)" x y); *)
                   Tilemap.set_tile_xy x y tile tilemap;
                   let num_devs = if _should_count count then num_devs + 1 else num_devs in
                   loop (num_devs + 1) None v

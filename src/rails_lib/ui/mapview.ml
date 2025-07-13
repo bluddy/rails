@@ -415,9 +415,11 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     match Tile.Info.resource_map_supply_demand info with
     | Some good, _ ->
         let letter = Goods.show good |> String.take 1 in
+        Log.info (fun f -> f "s good = %s\n" @@ Goods.show good);
         let color = Freight.of_good good |> Freight.to_color ~full:true in
         write ~x:(screen_x + 2) ~y:(screen_y + 2) ~color letter
     | _, Some good ->
+        Log.info (fun f -> f "d good = %s\n" @@ Goods.show good);
         let color = Freight.of_good good |> Freight.to_color ~full:true in
         R.draw_rect win ~x:screen_x ~y:screen_y ~w:tile_w ~h:tile_h ~fill:true ~color
     | _ -> ();
@@ -860,8 +862,9 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       draw_track_and_trains_zoom1 0 0 v.dims.w v.dims.h v.dims.x v.dims.y
   | Zoom2 st ->
       draw_cyan_background ();
-      if Options.mem v.options `Resources then
-        draw_resource_map ();
+      if Options.mem v.options `Resources then (
+        draw_resource_map ()
+      );
       if Options.mem v.options `StationBoxes then (
         draw_stationboxes 6 8
       );
