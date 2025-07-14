@@ -19,7 +19,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Double tracks
 - [x] Engine info display
 - [x] Train arrival message (top-right UI)
-- [/] Messages to the player (record etc)
+- [-] Messages to the player (record etc)
 - [x] Priority deliveries
 - [x] Opponents and AI
 - [x] Stock Market
@@ -49,6 +49,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Periodic reports
 - [x] Events (e.g. bridge washing out)
 - [ ] Music and Sound
+- [-] Testing and Fixes
 
 ## Feature List for 1.0+
 
