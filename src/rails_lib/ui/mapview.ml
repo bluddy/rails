@@ -413,21 +413,18 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     let write = Fonts.Render.write win s.fonts ~idx in
     let tile = B.get_tile tile_x tile_y b in
     let info = Tile.Info.get region tile in
+    let x, y = screen_x, screen_y in
     match Tile.Info.resource_map_supply_demand info with
     | `Supply good ->
         let letter = Goods.show good |> String.take 1 in
-        Log.info (fun f -> f "s good = %s\n" @@ Goods.show good);
         let color = Freight.of_good good |> Freight.to_color ~full:true in
-        write ~x:(screen_x + 2) ~y:(screen_y + 2) ~color letter
+        write ~x ~y ~color letter
     | `Demand good ->
-        Log.info (fun f -> f "d good = %s\n" @@ Goods.show good);
         let color = Freight.of_good good |> Freight.to_color ~full:true in
         R.draw_rect win ~x:screen_x ~y:screen_y ~w:tile_w ~h:tile_h ~fill:true ~color;
         let letter = Goods.show good |> String.take 1 in
-        write ~x:(screen_x + 2) ~y:(screen_y + 2) ~color:Ega.white letter
-    | `None ->
-        Log.info (fun f -> f "nothing to show");
-        ();
+        write ~x ~y ~color:Ega.white letter
+    | `None -> ();
   in
   let draw_tiles () =
     iter_screen (fun x y ->

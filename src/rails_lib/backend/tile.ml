@@ -149,6 +149,7 @@ let is_buildable = function
 
 module Info = struct
 
+
   module TileHash = Hashtbl.Make(struct
     (* Specialized hashtable that ignores the inner arguments of the tile *)
     type nonrec t = t
@@ -157,11 +158,11 @@ module Info = struct
     let hash = to_enum
   end)
 
-  type nonrec t = {
+  type t = {
     cost: Money.t;
     supply: (Goods.t * int) list;
     demand: (Goods.t * int) list;
-  }
+  } [@@deriving show]
 
   let make ?(supply=[]) ?(demand=[]) cost =
   let cost = Money.of_int cost in
@@ -297,19 +298,27 @@ module Info = struct
     let data = get region tile in
     Money.(data.cost * C.build_industry_mult)
 
-  (* Get min supply/demand *)
+  (* Choose the "best" supply/demand excluding mail *)
   let resource_map_supply_demand info =
     let supply =
-      List.fold_left (fun min (good, x) -> match min with
-        | Some min_good when Goods.(good >= Goods.Passengers && good < min_good) && Int.(x >= 16) -> Some good
-        | _ -> min)
+      List.fold_left (fun min (good, x) ->
+        if Goods.(good >= Goods.Passengers) && Int.(x >= 16) then
+          match min with
+          | Some min_good when good < min_good -> Some good
+          | Some _ -> min
+          | None -> Some good
+        else min)
       None
       info.supply
     in
     let demand =
-      List.fold_left (fun min (good, _) -> match min with
-        | Some min_good when Goods.(good >= Goods.Passengers && good < min_good) -> Some good
-        | _ -> min)
+      List.fold_left (fun min (good, _) ->
+        if Goods.(good >= Goods.Passengers) then
+          match min with
+          | Some min_good when good < min_good -> Some good
+          | Some _ -> min
+          | None -> Some good
+        else min)
       None
       info.demand
     in
