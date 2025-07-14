@@ -39,7 +39,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Integrate animations
 - [x] Record train arrivals
 - [x] Newspapers
-- [ ] Resource map
+- [x] Resource map
 - [-] Retirement
 - [x] Naming Train (speed record)
 - [x] Starting menu
