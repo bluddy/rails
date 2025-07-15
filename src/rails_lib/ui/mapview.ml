@@ -409,11 +409,14 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     R.Texture.render win tex ~x:screen_x ~y:screen_y
   in
   let draw_resource ~tile_x ~tile_y ~screen_x ~screen_y ~zoom =
-    let idx = match zoom with Zoom2 _ -> `Tiny | Zoom3 _ -> `Standard | _ -> assert false in
+    let idx, offset_x, offset_y = match zoom with
+      | Zoom2 _ -> `Tiny, 1, 0
+      | Zoom3 _ -> `Caps, 2, 1
+      | _ -> assert false in
     let write = Fonts.Render.write win s.fonts ~idx in
     let tile = B.get_tile tile_x tile_y b in
     let info = Tile.Info.get region tile in
-    let x, y = screen_x, screen_y in
+    let x, y = screen_x + offset_x, screen_y + offset_y in
     match Tile.Info.resource_map_supply_demand info with
     | `Supply good ->
         let letter = Goods.show good |> String.take 1 in
