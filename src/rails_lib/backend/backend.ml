@@ -628,9 +628,11 @@ let _operate_rr_repay_bond player_idx ~company_idx v =
   v
 
   (* TODO: RR build track *)
-let _operate_rr_build_track player_idx ~company _src _dst v =
-  let _player_idx, _company = player_idx, company in
-  v
+let _operate_rr_build_track player_idx ai_idx src dst v =
+  if Stock_market.controls_company player_idx ~target:ai_idx v.stocks then
+    let ai = Ai.set_build_order ai_idx src dst v.ai in
+    {v with ai}
+  else v
 
 let broker_timer_active player_idx v =
   Player.get player_idx v.players |> Player.has_broker_timer 
@@ -926,7 +928,7 @@ module Action = struct
       | OperateRR{player_idx; company; action=RRGiveMoney x} ->
           _operate_rr_give_money player_idx ~company ~amount:x backend
       | OperateRR{player_idx; company; action=RRBuildTrack(src,dst)} ->
-          _operate_rr_build_track player_idx ~company src dst backend
+          _operate_rr_build_track player_idx company src dst backend
       | OperateRR{player_idx; company; action=RRRepayBond} ->
           _operate_rr_repay_bond player_idx ~company_idx:company backend
       | NameTrain {player_idx; train; name} ->
