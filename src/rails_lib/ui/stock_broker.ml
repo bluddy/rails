@@ -103,7 +103,7 @@ let make (s:State.t) =
   let menu = make_menu b b.cities (B.get_region b) s.fonts in
   {
     menu;
-    modal = None;
+    modal = Normal;
   }
 
 let render win (s:State.t) v =
@@ -168,27 +168,27 @@ let render win (s:State.t) v =
 
   Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
 
-  Option.iter begin function 
-    | MsgBox msgbox -> Menu.MsgBox.render win s msgbox
-    | Confirm_menu msgbox -> Menu.MsgBox.render win s msgbox
-    | Newspaper newspaper -> Newspaper.render win s newspaper
-    end
-    v.modal;
-  ()
+  match v.modal with
+  | Normal -> ()
+  | MsgBox msgbox -> Menu.MsgBox.render win s msgbox
+  | Confirm_menu msgbox -> Menu.MsgBox.render win s msgbox
+  | Newspaper newspaper -> Newspaper.render win s newspaper
+  | RR_build state -> Rr_command.render win s.fonts state
 
 let handle_modal_event (s:State.t) modal (event:Event.t) =
   let player_idx = C.player in
   let nobaction = B.Action.NoAction in
   match modal with
+  | Normal -> true, Normal, nobaction
   | MsgBox msgbox -> 
      begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event with
      | `Stay _ -> false, Some modal, nobaction
-     | _ -> true, None, nobaction
+     | _ -> true, Normal, nobaction
      end
   | Newspaper newspaper ->
      begin match Newspaper.handle_event s newspaper event with
      | `Stay -> false, Some modal, nobaction
-     | `Exit -> true, None, nobaction
+     | `Exit -> true, Normal, nobaction
      end
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
@@ -196,8 +196,11 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
      | `Activate(`BuyStock stock) -> false, None, B.Action.BuyStock{player_idx; stock}
      | `Activate(`Declare_bankruptcy) -> false, None, B.Action.Declare_bankruptcy{player_idx}
      | `Activate `None -> false, Some modal, nobaction
-     | `Exit -> true, None, nobaction
+     | `Exit -> true, Normal, nobaction
      end
+  | RR_build state ->
+      begin match RR_command.handle_event event s.backend.cities state with
+      | `Route (ai, src, dst) -> ()
   
 let handle_event (s:State.t) v (event:Event.t) =
   let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
@@ -225,7 +228,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               (B_options.show_difficulty difficulty)
               max_num (if max_num > 1 then "s" else "")
           in
-          false, {v with modal=Some (MsgBox msgbox)}, nobaction
+          false, {v with modal=MsgBox msgbox}, nobaction
       | `Offer_takeover(share_price, shares_to_buy) ->
           let open Menu in
           let open MsgBox in
@@ -240,7 +243,7 @@ let handle_event (s:State.t) v (event:Event.t) =
               make_entry "Buy Stock" @@ `Action (`BuyStock stock);
             ]
           in
-          false, {v with modal=Some(Confirm_menu(menu))}, nobaction
+          false, {v with modal=Confirm_menu(menu)}, nobaction
       end
     | Menu.On(`SellStock stock) ->
         false, v, B.Action.SellStock {player_idx; stock}
@@ -254,7 +257,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             make_entry "YES" @@ `Action(`Declare_bankruptcy);
           ]
         in
-        false, {v with modal=Some(Confirm_menu(menu))}, nobaction
+        false, {v with modal=Confirm_menu(menu)}, nobaction
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
         let ai = Ai.get_ai_exn company_idx b.ai in
         (* TODO : AI *)
@@ -282,9 +285,10 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Menu.On(`OperateRR (company, `GiveMoney amount)) ->
         false, v, OperateRR{player_idx; company; action=RRGiveMoney(M.of_int amount)}
 
-      (* TODO: fill this in *)
     | Menu.On(`OperateRR (company, `BuildTrack)) ->
-        false, v, OperateRR{player_idx; company; action=RRBuildTrack((0,0),(0,0))}
+        false, {v with modal=RR_build(Rr_command.make company)}, nobaction
+        
+        (* false, v, OperateRR{player_idx; company; action=RRBuildTrack((0,0),(0,0))} *)
 
     | Menu.On(`OperateRR (company, `RepayBond)) ->
         false, v, OperateRR{player_idx; company; action=RRRepayBond}
@@ -301,7 +305,7 @@ let handle_msg (s:State.t) v ui_msg =
   (* Create a msgbox *)
   let show_cash = M.print ~show_neg:false ~region:(B.get_region s.backend) in
   let modal =
-    let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
+    let basic_msgbox text = MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text) in
     match ui_msg with
     | Ui_msg.StockBroker x -> begin match x with
       | BondSold {interest_rate; player_idx} when Owner.(player_idx = C.player) ->
@@ -341,10 +345,10 @@ let handle_msg (s:State.t) v ui_msg =
       | BankruptcyDeclared {player_idx} when Owner.(player_idx = C.player) ->
           let company_name = Backend.get_name player_idx s.backend in
           let text = sp "%s\nBankruptcy declared!" company_name in
-          Some(Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text None))
-      | _ -> None
+          Newspaper(Newspaper.make_simple s Newspaper.FinancialNews text None)
+      | _ -> Normal
       end
-    | _ -> None
+    | _ -> Normal
   in
   [%up {v with modal}]
 

@@ -23,11 +23,14 @@ type confirm_msg = [
 
   (* These things prevent any other interaction *)
 type 'state modal =
+  | Normal
   | MsgBox of (unit, 'state) Menu.MsgBox.t
   | Confirm_menu of (confirm_msg, 'state) Menu.MsgBox.t
   | Newspaper of 'state Newspaper_d.t
+  | RR_build of Rr_command.t
 
 type 'state t = {
   menu: (msg, 'state) Menu.Global.t;
-  modal: 'state modal option;
+  modal: 'state modal;
 }
+

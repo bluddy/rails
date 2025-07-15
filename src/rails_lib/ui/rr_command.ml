@@ -8,13 +8,14 @@ type t = {
   src: Text_entry.t;
   dst: Text_entry.t;
   focus: [`First | `Second of Utils.loc];
+  ai: Owner.t;
 }
 
-let default =
+let make ai =
   let x, chars = 66, 24 in
   let src = Text_entry.make "" ~x ~y:89 ~chars in
   let dst = Text_entry.make "" ~x ~y:107 ~chars ~editable:false in
-  {src; dst; focus=`First}
+  {src; dst; focus=`First; ai}
 
 let render win fonts v =
   (* Draw other ui first *)
@@ -49,7 +50,7 @@ let handle_event event cities v =
   let v, status = match v.focus, status with
     | `First, `Return loc -> {v with src=textbox; focus=`Second loc}, `Stay
     | `First, _ -> {v with src=textbox}, status
-    | `Second loc1, `Return loc2 -> {v with dst=textbox}, `Loc (loc1, loc2)
+    | `Second loc1, `Return loc2 -> {v with dst=textbox}, `Route (v.ai, loc1, loc2)
     | `Second _, _ -> {v with dst=textbox}, `Stay
   in
   v, status
