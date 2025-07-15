@@ -1,4 +1,5 @@
 # Tasks
+- Modify game to give RR orders, take screenshots
 - Start menu:
   - Load game menu
   - See if we can support the original menu colors (use menu images from original)

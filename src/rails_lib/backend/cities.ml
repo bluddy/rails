@@ -46,3 +46,13 @@ open Containers
 
   let random random v = Random.pick_array v.arr random
 
+  let find_by_substr text v =
+    let text = text
+      |> String.lowercase_ascii
+      |> String.rdrop_while (function ' ' -> true | _ -> false)
+    in
+    to_list v
+    |> List.map (fun (x, y, name) -> x, y, String.lowercase_ascii name)
+    |> List.sort (fun (_, _, name1) (_, _, name2) -> String.compare name1 name2)
+    |> List.find_opt (fun (_, _, name) -> String.prefix ~pre:text name)
+
