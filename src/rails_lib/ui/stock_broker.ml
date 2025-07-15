@@ -5,6 +5,8 @@ module R = Renderer
 module B = Backend
 module M = Money
 
+open Utils.Infix
+
 let src = Logs.Src.create "stock_broker" ~doc:"Stock_broker"
 module Log = (val Logs.src_log src: Logs.LOG)
 
@@ -182,37 +184,39 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   | Normal -> true, Normal, nobaction
   | MsgBox msgbox -> 
      begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event with
-     | `Stay _ -> false, Some modal, nobaction
+     | `Stay _ -> false, modal, nobaction
      | _ -> true, Normal, nobaction
      end
   | Newspaper newspaper ->
      begin match Newspaper.handle_event s newspaper event with
-     | `Stay -> false, Some modal, nobaction
+     | `Stay -> false, modal, nobaction
      | `Exit -> true, Normal, nobaction
      end
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
-     | `Stay modal -> false, Some (Confirm_menu modal), nobaction
-     | `Activate(`BuyStock stock) -> false, None, B.Action.BuyStock{player_idx; stock}
-     | `Activate(`Declare_bankruptcy) -> false, None, B.Action.Declare_bankruptcy{player_idx}
-     | `Activate `None -> false, Some modal, nobaction
+     | `Stay modal -> false, Confirm_menu modal, nobaction
+     | `Activate(`BuyStock stock) -> false, Normal, B.Action.BuyStock{player_idx; stock}
+     | `Activate(`Declare_bankruptcy) -> false, Normal, B.Action.Declare_bankruptcy{player_idx}
+     | `Activate `None -> false, modal, nobaction
      | `Exit -> true, Normal, nobaction
      end
   | RR_build state ->
-      begin match RR_command.handle_event event s.backend.cities state with
-      | `Route (ai, src, dst) -> ()
+      let cities = s.backend.cities in
+      begin match Rr_command.handle_event event cities state with
+      | _, `Route (ai, src, dst) ->
+         let action = B.Action.OperateRR {player_idx; company=ai; action=B.Action.RRBuildTrack(src, dst)} in
+         true, Normal, action
+      | state2, _ when state === state2 -> false, modal, nobaction
+      | state2, _ -> false, RR_build state2, nobaction
+      end
   
 let handle_event (s:State.t) v (event:Event.t) =
-  let basic_msgbox text = Some(MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text)) in
+  let basic_msgbox text = MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text) in
   let nobaction = B.Action.NoAction in
   let b = s.backend in
   let player_idx = C.player in
   match v.modal with
-  | Some modal ->
-    let exit, modal, bk_action = handle_modal_event s modal event in
-    let v = [%up {v with modal}] in
-    exit, v, bk_action
-  | None ->
+  | Normal ->
     let menu, menu_action, event = Menu.Global.update s v.menu event in
     let exit, v, bk_action = match menu_action with
     | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player_idx}
@@ -287,7 +291,6 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | Menu.On(`OperateRR (company, `BuildTrack)) ->
         false, {v with modal=RR_build(Rr_command.make company)}, nobaction
-        
         (* false, v, OperateRR{player_idx; company; action=RRBuildTrack((0,0),(0,0))} *)
 
     | Menu.On(`OperateRR (company, `RepayBond)) ->
@@ -299,6 +302,11 @@ let handle_event (s:State.t) v (event:Event.t) =
         false, v, nobaction
     in
     let v = [%up {v with menu}] in
+    exit, v, bk_action
+
+  | modal ->
+    let exit, modal, bk_action = handle_modal_event s modal event in
+    let v = [%up {v with modal}] in
     exit, v, bk_action
 
 let handle_msg (s:State.t) v ui_msg =

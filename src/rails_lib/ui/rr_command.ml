@@ -49,10 +49,10 @@ let handle_event event cities v =
   let textbox, status = process_box textbox in
   let v, status = match v.focus, status with
     | `First, `Return loc -> {v with src=textbox; focus=`Second loc}, `Stay
-    | `First, _ -> {v with src=textbox}, status
+    | `First, `Stay -> {v with src=textbox}, `Stay
+    | `First, `Fail -> {v with src=textbox}, `Fail
     | `Second loc1, `Return loc2 -> {v with dst=textbox}, `Route (v.ai, loc1, loc2)
     | `Second _, _ -> {v with dst=textbox}, `Stay
   in
   v, status
-
 
