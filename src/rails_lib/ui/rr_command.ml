@@ -7,34 +7,51 @@ module R = Renderer
 type t = {
   src: Text_entry.t;
   dst: Text_entry.t;
-  focus: [`First | `Second];
+  focus: [`First | `Second of Utils.loc];
 }
 
-let init () =
-  let src = Text_entry.make "" ~x:66 ~y:89 ~chars:24 in
-  let dst = Text_entry.make "" ~x:66 ~y:100 ~chars:24 ~editable:false in
+let default =
+  let x, chars = 66, 24 in
+  let src = Text_entry.make "" ~x ~y:89 ~chars in
+  let dst = Text_entry.make "" ~x ~y:107 ~chars ~editable:false in
   {src; dst; focus=`First}
 
 let render win fonts v =
-  (* Draw mainui first *)
-  R.draw_rect win ~x:64 ~y:78 ~w:224 ~h:26 ~color:Ega.white ~fill:true;
-  R.draw_rect win ~x:64 ~y:78 ~w:224 ~h:26 ~color:Ega.black ~fill:false;
-  Fonts.Render.write win fonts ~x:66 ~y:80 ~idx:`Standard ~color:Ega.black "From city";
+  (* Draw other ui first *)
+  let x, y, w, h = 64, 78, 224, 26 in
+  R.draw_rect win ~x ~y ~w ~h ~color:Ega.white ~fill:true;
+  R.draw_rect win ~x ~y ~w ~h ~color:Ega.black ~fill:false;
+  let x = 66 in
+  Fonts.Render.write win fonts ~x ~y:80 ~idx:`Standard ~color:Ega.black "From city";
   Text_entry.render win fonts v.src;
-  Fonts.Render.write win fonts ~x:66 ~y:80 ~idx:`Standard ~color:Ega.black "To city";
+  Fonts.Render.write win fonts ~x ~y:98 ~idx:`Standard ~color:Ega.black "To city";
   Text_entry.render win fonts v.dst
 
 let handle_event event cities v =
-  let state, status = Text_entry.handle_event v event in
-  let status = match status with
-    | `Return text ->
-        if String.is_empty text then `Fail else
-        begin match Cities.find_by_substr text cities with
-        | None -> `Fail
-        | Some (x, y, _) -> `Return (x, y)
-        end
-    | _ -> `Stay
+  let textbox = match v.focus with
+    | `First -> v.src
+    | `Second _ -> v.dst
   in
-  state, status
+  let process_box box =
+    let box, status = Text_entry.handle_event box event in
+    let status = match status with
+      | `Return text ->
+          if String.is_empty text then `Fail else
+          begin match Cities.find_by_substr text cities with
+          | None -> `Fail
+          | Some (x, y, _) -> `Return (x, y)
+          end
+      | _ -> `Stay
+    in
+    box, status
+  in
+  let textbox, status = process_box textbox in
+  let v, status = match v.focus, status with
+    | `First, `Return loc -> {v with src=textbox; focus=`Second loc}, `Stay
+    | `First, _ -> {v with src=textbox}, status
+    | `Second loc1, `Return loc2 -> {v with dst=textbox}, `Loc (loc1, loc2)
+    | `Second _, _ -> {v with dst=textbox}, `Stay
+  in
+  v, status
 
 
