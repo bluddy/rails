@@ -71,4 +71,8 @@
  
 - Post 1.0
   - Add maps from Deluxe
-  - 
+  - Supporting hi-res might involve making a proper UI system
+    - windows holding widgets with focus
+    - can be laid out properly
+    - can hold current menu/msgbox stuff
+
