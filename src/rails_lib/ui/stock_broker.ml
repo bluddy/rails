@@ -256,7 +256,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         in
         false, {v with modal=Some(Confirm_menu(menu))}, nobaction
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
-        let player = B.get_player company_idx b in
+        let ai = Ai.get_ai_exn company_idx b.ai in
         (* TODO : AI *)
         let build_order_s = ""
           (*
@@ -267,12 +267,11 @@ let handle_event (s:State.t) v (event:Event.t) =
           Player.build_order player
           *)
         in
+        let region = B.get_region b in
         let text = sp "%s\nRevenue YTD: %s\nYearly Interest: %s%s"
           (B.get_name company_idx b)
-          (Income_statement.total_revenue player.m.income_statement
-           |> M.print ~region:(B.get_region b))
-          (player.m.yearly_interest_payment
-           |> M.print ~region:(B.get_region b))
+          (Ai.get_revenue_ytd ai |> M.print ~region)
+          (Ai.get_yearly_interest ai |> M.print ~region)
           build_order_s
         in
         false, {v with modal=basic_msgbox text}, nobaction

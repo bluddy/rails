@@ -994,3 +994,7 @@ let calc_profit player_idx v =
 
 let get_route_history v = v.route_history
 
+let get_revenue_ytd v = v.revenue_ytd
+
+let get_yearly_interest v = v.yearly_interest
+
