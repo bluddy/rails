@@ -998,6 +998,9 @@ let get_revenue_ytd v = v.revenue_ytd
 
 let get_yearly_interest v = v.yearly_interest
 
+let get_build_order ai_idx v =
+  (get_ai_exn ai_idx v).build_order
+
 let set_build_order ai_idx src dst v =
   modify_ai ai_idx v (fun ai_player->
     {ai_player with build_order=Some(src, dst)})

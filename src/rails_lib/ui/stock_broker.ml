@@ -265,14 +265,12 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
         let ai = Ai.get_ai_exn company_idx b.ai in
         (* TODO : AI *)
-        let build_order_s = ""
-          (*
-          Option.map_or ~default:"" (fun ((x1, y1), (x2, y2)) ->
-          sp "\nSurveying route from\n%s to %s."
-            (Cities.find_exn b.cities x1 y1 |> fst)
-            (Cities.find_exn b.cities x2 y2 |> fst)) @@
-          Player.build_order player
-          *)
+        let build_order_s = match Ai.get_build_order company_idx b.ai with
+          | None -> ""
+          | Some(src, dst) ->
+            sp "\n\nSurveying route from\n%s to %s."
+            (Cities.name_of_loc src b.cities)
+            (Cities.name_of_loc dst b.cities)
         in
         let region = B.get_region b in
         let text = sp "%s\nRevenue YTD: %s\nYearly Interest: %s%s"
