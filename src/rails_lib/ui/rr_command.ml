@@ -5,24 +5,25 @@ module R = Renderer
 (* Called by Stock_broker *)
 
 type t = {
-  src: Text_entry.t;
-  dst: Text_entry.t;
-  focus: [`First | `Second of Utils.loc];
+  box: Text_entry.t;
+  stage: [`Src | `Dst of Utils.loc];
   ai: Owner.t;
 }
 
 let make ai =
-  let x, chars = 66, 24 in
-  let src = Text_entry.make "" ~x ~y:89 ~chars in
-  let dst = Text_entry.make "" ~x ~y:107 ~chars ~editable:false in
-  {src; dst; focus=`First; ai}
+  let box = Text_entry.make "" ~x:66 ~y:89 ~chars:24 in
+  {box; stage=`Src; ai}
 
 let render win fonts v =
   (* Draw other ui first *)
-  let x, y, w, h = 64, 78, 224, 26 in
+  let x, y, w, h = 64, 78, 224, 24 in
   R.draw_rect win ~x ~y ~w ~h ~color:Ega.white ~fill:true;
   R.draw_rect win ~x ~y ~w ~h ~color:Ega.black ~fill:false;
   let x = 66 in
+  let str = match v.stage with
+    | `Src -> "Survey route from  ... (city name)"
+    | `Dst _ -> "to connect to  ... (city name)"
+  in
   Fonts.Render.write win fonts ~x ~y:80 ~idx:`Standard ~color:Ega.black "From city";
   Text_entry.render win fonts v.src;
   Fonts.Render.write win fonts ~x ~y:98 ~idx:`Standard ~color:Ega.black "To city";
