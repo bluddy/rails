@@ -10,6 +10,7 @@ module IntSet = Utils.IntSet
 module List = Utils.List
 module U = Utils
 module M = Money
+module Random = Utils.Random
 
 module LocMap = U.LocMap
 module LocSet = U.LocSet

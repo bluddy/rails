@@ -48,6 +48,10 @@ module Random = struct
     let yojson_of_t v =
       `String (Marshal.to_string v [])
   end
+
+  let int maxval r =
+    if maxval = 0 then 0 else int maxval r
+  
 end
 
 (* Set with sexplib extension *)
@@ -334,9 +338,6 @@ let clip v ~min ~max =
 
 let clip_cash v ~min ~max = clip (Money.to_int v) ~min ~max |> Money.of_int
 
-let random_int maxval r =
-  if maxval = 0 then 0 else Random.int maxval r
-  
 let calc_offset width x y = y * width + x
 
 let x_y_of_offset width offset =

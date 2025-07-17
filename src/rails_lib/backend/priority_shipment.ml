@@ -2,6 +2,7 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 module C = Constants
 module M = Money
+module Random = Utils.Random
 
 type t = {
   freight: Freight.t;

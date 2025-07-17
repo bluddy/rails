@@ -1,4 +1,5 @@
 open Containers
+module Random = Utils.Random
 
 type t =
   | Panic

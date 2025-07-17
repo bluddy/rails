@@ -2,6 +2,7 @@ open Containers
 open Tilemap
 
 module C = Constants
+module Random = Utils.Random
 
 let debug = false
 
@@ -158,8 +159,8 @@ let add_resource region ~map ~land_pixel ~resource_pixel ~wanted_tile ~r =
     let y = Random.int 192 r in
     let x = match region with
       | Region.EastUS -> x + Random.int (319 - x) r 
-      | WestUS when x >= 120 -> x + Utils.random_int (255 - x) r
-      | WestUS -> if x > 0 then x - Random.int x r else 0
+      | WestUS when x >= 120 -> x + Random.int (255 - x) r
+      | WestUS -> x - Random.int x r
       | Britain -> x + Random.int (160 - x) r
       | Europe -> x
     in

@@ -9,6 +9,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 module C = Constants
 module Map = Utils.Map
 module IntMap = Utils.IntMap
+module Random = Utils.Random
 
 module PixelMap = Map.Make(struct
   type t = Tilemap.pixel [@@deriving yojson]

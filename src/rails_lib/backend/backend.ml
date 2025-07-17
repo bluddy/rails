@@ -11,6 +11,7 @@ module UIM = Ui_msg
 module Bool = Utils.Bool
 module IntMap = Utils.IntMap
 module M = Money
+module Random = Utils.Random
 
 (* This is the backend. All game-modifying functions go through here *)
 

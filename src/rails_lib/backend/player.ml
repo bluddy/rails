@@ -14,6 +14,7 @@ module IntMap = Utils.IntMap
 module Vector = Utils.Vector
 module U = Utils
 module M = Money
+module Random = U.Random
 
 type monetary = {
   cash: Money.t; (* all x1000 *)

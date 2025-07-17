@@ -3,6 +3,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Renderer
 module B = Backend
+module Random = Utils.Random
 open Utils.Infix
 
 let update_map _win v map =

@@ -1,6 +1,8 @@
 open Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
+module Random = Utils.Random
+
 type make =
   (* One to one mapping between Engine.make and Engine.t *)
   (* US engines *)

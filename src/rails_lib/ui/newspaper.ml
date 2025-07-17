@@ -3,6 +3,7 @@
 open! Containers
 module R = Renderer
 module C = Constants
+module Random = Utils.Random
 
 include Newspaper_d
 
