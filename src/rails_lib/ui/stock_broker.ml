@@ -181,35 +181,34 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
   let player_idx = C.player in
   let nobaction = B.Action.NoAction in
   match modal with
-  | Normal -> true, Normal, nobaction
+  | Normal -> `Exit, Normal, nobaction
   | MsgBox msgbox -> 
      begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event with
-     | `Stay _ -> false, modal, nobaction
-     | _ -> true, Normal, nobaction
+     | `Stay _ -> `Stay, modal, nobaction
+     | _ -> `Exit, Normal, nobaction
      end
   | Newspaper newspaper ->
      begin match Newspaper.handle_event s newspaper event with
-     | `Stay -> false, modal, nobaction
-     | `Exit -> true, Normal, nobaction
+     | `Stay -> `Stay, modal, nobaction
+     | `Exit -> `Exit, Normal, nobaction
      end
   | Confirm_menu menu ->
      begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
-     | `Stay modal -> false, Confirm_menu modal, nobaction
-     | `Activate(`BuyStock stock) -> false, Normal, B.Action.BuyStock{player_idx; stock}
-     | `Activate(`Declare_bankruptcy) -> false, Normal, B.Action.Declare_bankruptcy{player_idx}
-     | `Activate `None -> false, modal, nobaction
-     | `Exit -> true, Normal, nobaction
+     | `Stay modal -> `Stay, Confirm_menu modal, nobaction
+     | `Activate(`BuyStock stock) -> `Stay, Normal, B.Action.BuyStock{player_idx; stock}
+     | `Activate(`Declare_bankruptcy) -> `Stay, Normal, B.Action.Declare_bankruptcy{player_idx}
+     | `Activate `None -> `Stay, modal, nobaction
+     | `Exit -> `Exit, Normal, nobaction
      end
   | RR_build state ->
       let cities = s.backend.cities in
       begin match Rr_command.handle_event event cities state with
       | _, `Route (ai, src, dst) ->
          let action = B.Action.OperateRR {player_idx; company=ai; action=B.Action.RRBuildTrack(src, dst)} in
-         true, Normal, action
-      | _, `Exit ->
-          true, Normal, nobaction
-      | state2, _ when state === state2 -> false, modal, nobaction
-      | state2, _ -> false, RR_build state2, nobaction
+         `Exit, Normal, action
+      | _, `Exit -> `Exit, Normal, nobaction
+      | state2, _ when state === state2 -> `Stay, modal, nobaction
+      | state2, _ -> `Stay, RR_build state2, nobaction
       end
   
 let handle_event (s:State.t) v (event:Event.t) =
@@ -221,20 +220,20 @@ let handle_event (s:State.t) v (event:Event.t) =
   | Normal ->
     let menu, menu_action, event = Menu.Global.update s v.menu event in
     let exit, v, bk_action = match menu_action with
-    | Menu.On(`SellBond) -> false, v, B.Action.SellBond {player_idx}
-    | Menu.On(`RepayBond) -> false, v, B.Action.RepayBond {player_idx}
+    | Menu.On(`SellBond) -> `Stay, v, B.Action.SellBond {player_idx}
+    | Menu.On(`RepayBond) -> `Stay, v, B.Action.RepayBond {player_idx}
     | Menu.On(`BuyStock stock) ->
       let difficulty = B.get_difficulty b in
       begin match Stock_market.can_buy_stock player_idx ~target:stock ~cash:(B.get_cash player_idx b) b.params b.stocks with
-      | `Ok -> false, v, B.Action.BuyStock {player_idx; stock}
-      | `Error -> false, v, B.Action.NoAction
+      | `Ok -> `Stay, v, B.Action.BuyStock {player_idx; stock}
+      | `Error -> `Stay, v, B.Action.NoAction
       | `Anti_trust_violation max_num ->
           let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
             Printf.sprintf "Anti-Trust Violation\nAs a %s you are\nonly authorized to invest\nin %d other RailRoad%s."
               (B_options.show_difficulty difficulty)
               max_num (if max_num > 1 then "s" else "")
           in
-          false, {v with modal=MsgBox msgbox}, nobaction
+          `Stay, {v with modal=MsgBox msgbox}, nobaction
       | `Offer_takeover(share_price, shares_to_buy) ->
           let open Menu in
           let open MsgBox in
@@ -249,10 +248,10 @@ let handle_event (s:State.t) v (event:Event.t) =
               make_entry "Buy Stock" @@ `Action (`BuyStock stock);
             ]
           in
-          false, {v with modal=Confirm_menu(menu)}, nobaction
+          `Stay, {v with modal=Confirm_menu(menu)}, nobaction
       end
     | Menu.On(`SellStock stock) ->
-        false, v, B.Action.SellStock {player_idx; stock}
+        `Stay, v, B.Action.SellStock {player_idx; stock}
     | Menu.On(`Declare_bankruptcy) ->
         let menu =
           let text = "Are you sure you want\nto declare bankruptcy?" in
@@ -263,7 +262,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             make_entry "YES" @@ `Action(`Declare_bankruptcy);
           ]
         in
-        false, {v with modal=Confirm_menu(menu)}, nobaction
+        `Stay, {v with modal=Confirm_menu(menu)}, nobaction
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
         let ai = Ai.get_ai_exn company_idx b.ai in
         (* TODO : AI *)
@@ -281,25 +280,25 @@ let handle_event (s:State.t) v (event:Event.t) =
           (Ai.get_yearly_interest ai |> M.print ~region)
           build_order_s
         in
-        false, {v with modal=basic_msgbox text}, nobaction
+        `Stay, {v with modal=basic_msgbox text}, nobaction
 
     | Menu.On(`OperateRR (company, `TakeMoney amount)) ->
-        false, v, OperateRR{player_idx; company; action=RRTakeMoney(M.of_int amount)}
+        `Stay, v, OperateRR{player_idx; company; action=RRTakeMoney(M.of_int amount)}
 
     | Menu.On(`OperateRR (company, `GiveMoney amount)) ->
-        false, v, OperateRR{player_idx; company; action=RRGiveMoney(M.of_int amount)}
+        `Stay, v, OperateRR{player_idx; company; action=RRGiveMoney(M.of_int amount)}
 
     | Menu.On(`OperateRR (company, `BuildTrack)) ->
-        false, {v with modal=RR_build(Rr_command.make company)}, nobaction
+        `Stay, {v with modal=RR_build(Rr_command.make company)}, nobaction
         (* false, v, OperateRR{player_idx; company; action=RRBuildTrack((0,0),(0,0))} *)
 
     | Menu.On(`OperateRR (company, `RepayBond)) ->
-        false, v, OperateRR{player_idx; company; action=RRRepayBond}
+        `Stay, v, OperateRR{player_idx; company; action=RRRepayBond}
       
     | _ when Event.key_modal_dismiss event ->
-        true, v, nobaction
+        `Exit, v, nobaction
     | _ ->
-        false, v, nobaction
+        `Stay, v, nobaction
     in
     let v = [%up {v with menu}] in
     exit, v, bk_action

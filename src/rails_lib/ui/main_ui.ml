@@ -812,7 +812,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Stock_broker state ->
        let exit_state, state2, action = Stock_broker.handle_event s state event in
         let v =
-          if exit_state then {v with mode=Normal}
+          if Utils.is_exit exit_state then {v with mode=Normal}
           else if state =!= state2 then {v with mode=Stock_broker state2}
           else v
         in

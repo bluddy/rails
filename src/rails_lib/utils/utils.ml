@@ -577,3 +577,5 @@ let is_first = function `First -> true | _ -> false
 let is_second = function `Second -> true | _ -> false
 let is_third = function `Third -> true | _ -> false
 
+let is_exit = function `Exit -> true | _ -> false
+
