@@ -41,13 +41,81 @@ let create w h ~zoom =
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   Sdl.set_render_draw_blend_mode renderer Sdl.Blend.mode_blend |> get_exn;
-  { inner_w=w; inner_h=h; renderer; window; zoom; rect; rect2; opt_rect=Some rect; }
+  { inner_w=w; inner_h=h;
+    renderer; window;
+    zoom; rect; rect2;
+    opt_rect=Some rect;
+  }
 
 let zoom _win x = x
   (* win.zoom *. Float.of_int x |> Int.of_float *)
 
 let height window = window.inner_h
 let width window = window.inner_w
+
+module Transition = struct
+
+type t = {
+  w: int; h: int; 
+  offscreen_tex: Sdl.texture option;  (* Used for transition effects. option for efficiency *)
+  pixels: (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
+  tex: Sdl.texture; (* transition texture *)
+  mutable offsets: int list; (* offsets into screen *)
+}
+
+let make win random =
+  let w, h = win.inner_w, win.inner_w in
+  let r = win.renderer in
+  let offscreen_tex = Sdl.create_texture r Sdl.Pixel.format_rgba8888 Sdl.Texture.access_target ~w ~h |> get_exn |> Option.some in 
+  let pixels = Bigarray.Array1.(create Bigarray.float32 Bigarray.c_layout (h*w)) in
+  let tex = Sdl.create_texture r Sdl.Pixel.format_rgba8888 Sdl.Texture.access_streaming ~w ~h |> get_exn in 
+  let offsets = Iter.(0 -- (w*h)) |> Iter.to_array in
+  Array.shuffle_with random offsets;
+  let offsets = Array.to_list offsets in
+  {w; h; offscreen_tex; pixels; tex; offsets}
+
+let render_offscreen win render_fn v =
+  (* Do once with final transition image. Render offscreen the next image to our texture. *)
+  Sdl.set_render_target win.renderer v.offscreen_tex |> get_exn;
+  render_fn ();
+  (* Read from texture target to a buffer we can read from *)
+  Sdl.render_read_pixels win.renderer None None v.pixels (win.inner_w * 4) |> get_exn;
+  (* Restore render target to the main screen *)
+  Sdl.set_render_target win.renderer None |> get_exn
+
+let loc_write write_fn v  =
+  let open Result in
+  match Sdl.lock_texture v.tex None Bigarray.float32 with
+  | Error (`Msg str) -> failwith str
+  | Ok (dest_buf, pitch) ->
+    let x = write_fn dest_buf pitch in
+    Sdl.unlock_texture v.tex;
+    x
+
+let clear v =
+  loc_write (fun buf _pitch ->
+    for i = 0 to v.w * v.h - 1 do
+      Bigarray.Array1.set buf i 0.;
+    done) v
+
+let step num_pixels v =
+  loc_write (fun buf _pitch ->
+    let rec loop n =
+      if n = 0 then `NotDone else
+      match v.offsets with
+      | [] -> `Done
+      | x::xs ->
+        v.offsets <- xs;
+        let pixel = Bigarray.Array1.get v.pixels x in
+        Bigarray.Array1.set buf x pixel;
+        loop (n - 1)
+    in
+    loop num_pixels)
+  v
+
+let render win v = Sdl.render_copy win.renderer v.tex |> get_exn
+
+end
 
 module Texture = struct
   type t = {
