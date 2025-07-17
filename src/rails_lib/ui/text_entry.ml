@@ -67,6 +67,7 @@ let handle_event v event =
         let text = text1 ^ text2 ^ " " in
         {v with cursor=Some(cursor-1); text}, `Stay
       | Enter -> v, `Return(get_text v)
+      | Escape -> v, `Exit
       | _ -> v, `Stay
       end
     | _ -> v, `Stay
