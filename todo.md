@@ -1,5 +1,5 @@
 # Tasks
-- Modify game to give RR orders, take screenshots
+- RR build, find city: handle no such city
 - Start menu:
   - Load game menu
   - See if we can support the original menu colors (use menu images from original)

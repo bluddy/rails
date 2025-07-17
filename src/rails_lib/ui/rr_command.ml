@@ -24,18 +24,12 @@ let render win fonts v =
     | `Src -> "Survey route from  ... (city name)"
     | `Dst _ -> "to connect to  ... (city name)"
   in
-  Fonts.Render.write win fonts ~x ~y:80 ~idx:`Standard ~color:Ega.black "From city";
-  Text_entry.render win fonts v.src;
-  Fonts.Render.write win fonts ~x ~y:98 ~idx:`Standard ~color:Ega.black "To city";
-  Text_entry.render win fonts v.dst
+  Fonts.Render.write win fonts ~x ~y:98 ~idx:`Standard ~color:Ega.black str;
+  Text_entry.render win fonts v.box
 
 let handle_event event cities v =
-  let textbox = match v.focus with
-    | `First -> v.src
-    | `Second _ -> v.dst
-  in
-  let process_box box =
-    let box, status = Text_entry.handle_event box event in
+  let box, status = 
+    let box, status = Text_entry.handle_event v.box event in
     let status = match status with
       | `Return text ->
           if String.is_empty text then `Fail else
@@ -47,13 +41,14 @@ let handle_event event cities v =
     in
     box, status
   in
-  let textbox, status = process_box textbox in
-  let v, status = match v.focus, status with
-    | `First, `Return loc -> {v with src=textbox; focus=`Second loc}, `Stay
-    | `First, `Stay -> {v with src=textbox}, `Stay
-    | `First, `Fail -> {v with src=textbox}, `Fail
-    | `Second loc1, `Return loc2 -> {v with dst=textbox}, `Route (v.ai, loc1, loc2)
-    | `Second _, _ -> {v with dst=textbox}, `Stay
+  let v, status = match v.stage, status with
+    | `Src, `Return loc ->
+        let v = make v.ai in
+        {v with stage=`Dst loc}, `Stay
+    | `Src, `Stay -> [%up{v with box}], `Stay
+    | `Src, `Fail -> {v with box}, `Exit
+    | `Dst loc1, `Return loc2 -> {v with box}, `Route (v.ai, loc1, loc2)
+    | `Dst _, _ -> {v with box}, `Stay
   in
   v, status
 

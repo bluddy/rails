@@ -206,6 +206,8 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
       | _, `Route (ai, src, dst) ->
          let action = B.Action.OperateRR {player_idx; company=ai; action=B.Action.RRBuildTrack(src, dst)} in
          true, Normal, action
+      | _, `Exit ->
+          true, Normal, nobaction
       | state2, _ when state === state2 -> false, modal, nobaction
       | state2, _ -> false, RR_build state2, nobaction
       end
