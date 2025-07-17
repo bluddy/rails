@@ -341,12 +341,12 @@ let to_ndarray mapdata =
 let to_silhouette (map:t) =
   to_ndarray map.map
   |> Ndarray.map (function 1 -> 1 | _ -> 3)
-  |> Pic.img_of_ndarray
+  |> Pic.img_of_ndarray ~transparent:false
 
   (* Make an image RGBA ndarray *)
 let to_img (map:t) =
   let ndarray = to_ndarray map.map in
-  Pic.img_of_ndarray ndarray
+  Pic.img_of_ndarray ~transparent:false ndarray
 
 let get_pixel_xy x y v = get_tile_xy x y v |> pixel_of_tile
 let get_pixel (x,y) v = get_pixel_xy x y v

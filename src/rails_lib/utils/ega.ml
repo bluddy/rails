@@ -29,7 +29,7 @@ let palette =
   (* returns color and opacity
      debug: view transparency as magenta
    *)
-let get_color ?(transparent=true) ?(debug=false) i =
+let get_color ~transparent ?(debug=false) i =
   if i >= Array.length palette then
     failwith @@ Printf.sprintf "Ega.get_color: Color %d is invalid" i
   else
@@ -39,12 +39,14 @@ let get_color ?(transparent=true) ?(debug=false) i =
     | 5, true, _ -> palette.(0), 0xFF
     | _ -> palette.(i), 0xFF
 
+(* These colors are only for drawing, i.e. not transparent *)
+
 let get_rgba ?debug i =
-  let color, a = get_color ?debug i in
+  let color, a = get_color ~transparent:false ?debug i in
   (color lsr 16, (color lsr 8) land 0xFF, color land 0xFF, a)
 
 let get_rgb ?debug i =
-  let color, _ = get_color ?debug i in
+  let color, _ = get_color ~transparent:false ?debug i in
   (color lsr 16, (color lsr 8) land 0xFF, color land 0xFF)
 
 type color = int * int * int * int [@@deriving eq, yojson]

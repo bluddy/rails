@@ -88,12 +88,12 @@ let ndarray_of_file filename : ndarray =
   let stream = My_gen.of_stringi str in
   ndarray_of_stream stream
 
-let translate_ega ?transparent arr ~f ~w ~h =
+let translate_ega ~transparent arr ~f ~w ~h =
   for y=0 to h-1 do
     for x=0 to w-1 do
       let write_color x y index =
         let color, alpha =
-          Ega.get_color index ?transparent ~debug:!debug_images in
+          Ega.get_color index ~transparent ~debug:!debug_images in
         let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
         (* Printf.printf "x:%d y:%d\n" x y; *)
         f ~x ~y ~r ~g ~b ~alpha;
@@ -124,19 +124,19 @@ let white_pixel =
     img: ndarray converted to RGB uint8 values
     png: png file
  *)
-let img_of_ndarray ?transparent (arr:ndarray) =
+let img_of_ndarray ~transparent (arr:ndarray) =
   let dims = Ndarray.shape arr in
   let w, h = dims.(1), dims.(0) in
   let img = create_rgb_img (w, h) in
-  translate_ega arr ?transparent ~w ~h ~f:(img_write img);
+  translate_ega arr ~transparent ~w ~h ~f:(img_write img);
   img
 
   (* RGBA images *)
-let img_of_file ?transparent in_file =
+let img_of_file ~transparent in_file =
   let ext = Filename.extension in_file |> String.lowercase_ascii in
   match ext with
   | ".pic" -> let arr = ndarray_of_file in_file in
-              img_of_ndarray ?transparent arr
+              img_of_ndarray ~transparent arr
   | ".png" ->
       let img = ImageLib_unix.openfile in_file in
       let ndarray = create_rgb_img (img.width, img.height) in

@@ -96,7 +96,7 @@ let of_stream ?input ?(dump_files=None) s =
         Printf.printf "Loading background image\n";
 
         let ndarray = Pic.ndarray_of_stream s in
-        let pic_bgnd = Some(Pic.img_of_ndarray ndarray) in
+        let pic_bgnd = Some(Pic.img_of_ndarray ~transparent:false ndarray) in
 
         begin match dump_files with
         | Some filepath ->
@@ -141,7 +141,7 @@ let of_stream ?input ?(dump_files=None) s =
         align_pos ();
         Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
         let ndarray = Pic.ndarray_of_stream s in
-        pani_pics.(i) <- Some(Pic.img_of_ndarray ndarray);
+        pani_pics.(i) <- Some(Pic.img_of_ndarray ~transparent:true ndarray);
         
         match dump_files with
         | Some filepath ->

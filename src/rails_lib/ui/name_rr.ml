@@ -28,6 +28,7 @@ let handle_event v event =
         let name = Text_entry.set_writeable false name in
         [%up {v with name; active=`Second}], `Stay, nobaction
       | name, `Stay -> [%up {v with name}], `Stay, nobaction
+      | _ , `Exit -> v, `Exit, nobaction
       end
   | `Second ->
       begin match Text_entry.handle_event v.handle event with
@@ -37,6 +38,7 @@ let handle_event v event =
             name=Text_entry.get_text v.name;
             handle=Text_entry.get_text handle}
       | handle, `Stay -> [%up {v with handle}], `Stay, nobaction
+      | _ , `Exit -> v, `Exit, nobaction
       end
 
 let render win (s:State.t) v =

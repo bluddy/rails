@@ -29,7 +29,7 @@ let handle_event v event =
   match Text_entry.handle_event v.entry event with
   | entry, `Return name ->
     [%up {v with entry}], `Exit, B.Action.NameTrain{player_idx=C.player; train=v.train_idx; name}
-  | entry, `Stay ->
+  | entry, (`Stay | `Exit) ->
     [%up {v with entry}], `Stay, B.Action.NoAction
 
 let station_name loc s = (B.get_station loc s.State.backend |> Option.get_exn_or "oops "|> Station.get_name)

@@ -9,8 +9,8 @@ let init () =
 
 let render win fonts v =
   (* Draw mainui first *)
-  R.draw_rect win ~x:64 ~y:78 ~w:224 ~h:26 ~color:Ega.white ~fill:true;
   R.draw_rect win ~x:64 ~y:78 ~w:224 ~h:26 ~color:Ega.black ~fill:false;
+  R.draw_rect win ~x:65 ~y:79 ~w:222 ~h:24 ~color:Ega.white ~fill:true;
   Fonts.Render.write win fonts ~x:66 ~y:80 ~idx:`Standard ~color:Ega.black "Where in the heck is ... (city name)";
   Text_entry.render win fonts v
 
