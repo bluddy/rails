@@ -2,7 +2,7 @@ open! Containers
 
 (* Main modules of game. They don't carry much state between them *)
 type module_t =
-  | Intro of t Intro_d.t
+  | Intro of Intro_d.t
   | Menu of t Start_menu_d.t
   | MapGen of Mapgen.t option
   | Game

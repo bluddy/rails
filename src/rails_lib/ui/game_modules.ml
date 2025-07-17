@@ -173,7 +173,7 @@ let handle_event win (s:State.t) (event:Event.t) =
   state, quit
 
 let render win (s:State.t) = match s.mode with
-  | Intro state -> Intro.render win s state
+  | Intro state -> Intro.render win state 
 
   | Menu state -> Start_menu.render win state s
 

@@ -1,10 +1,10 @@
 
-type 'state mode =
+type mode =
   | Animation of Pani_render.t
-  | GenericScreen of {render_fn: Renderer.window -> 'state -> unit}
+  | GenericScreen of {render_fn: Renderer.window -> unit}
 
-type 'state t = {
-  mode: 'state mode;
-  next_modes: 'state mode list;
+type t = {
+  mode: mode;
+  next_modes: mode list;
 }
 

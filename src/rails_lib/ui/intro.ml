@@ -13,7 +13,7 @@ let set_modes l v = match l with
   | x::xs -> {mode=x; next_modes=xs}
   | _ -> v
 
-let render_screen tex win _s =
+let render_screen tex win =
   R.clear_screen win;
   R.Texture.render win ~x:0 ~y:0 tex
 
@@ -36,8 +36,8 @@ let create (s:State.t) =
   | x::xs -> {mode=x; next_modes=xs}
   | _ -> assert false
 
-let render win (s:State.t) v = match v.mode with
-  | GenericScreen {render_fn} -> render_fn win s
+let render win v = match v.mode with
+  | GenericScreen {render_fn} -> render_fn win
   | Animation state -> Pani_render.render win state
 
 let handle_event event v = match v.mode with
