@@ -44,7 +44,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Naming Train (speed record)
 - [x] Starting menu
 - [x] Build industry
-- [ ] Give command to RR
+- [x] Give command to RR
 - [x] Economic Climate
 - [x] Periodic reports
 - [x] Events (e.g. bridge washing out)

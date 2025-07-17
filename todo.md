@@ -1,7 +1,5 @@
 # Tasks
-- RR build, find city: handle no such city
 - Start menu:
-  - Load game menu
   - See if we can support the original menu colors (use menu images from original)
   - Make menu highlight go all the way (solved by same solution)
   - Select default value
@@ -14,20 +12,14 @@
 - Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
 - Train income: check multiple pages of trains work well
 - Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
-- Fonts: change to variants
 - Building into an ai station
 - Rate war loss
 - Player loss (fired), AI company dissolved
 - Check that active_station only works for 20 years per station
 - Move block_map and track_graph to player
 - Can't rebuild bridge under repair
-- Missing:
-  - Rate war info
-  - driven out of town animation
-  - Small things here and there (look through code)
 - Straddle station updates so they're smaller and they don't seem as coordinated, like in game.
 - Allow upgrading station while keeping station data
-- Handle year end messages
 - Stock broker: print ownership of AI stock
 - Way we changed random things (e.g. track maintenance) isn't right
   - Need to scale up to more track than 100% of original game
@@ -36,8 +28,7 @@
 - Check computation of wait time
 - F10 for survey
 - cursor
-- Check /2 for different things with money (e.g. pay)
-- Check if we need to loop in _update_train (print out if we ever do multiple updates)
+- Check if we actually need to loop in _update_train (print out if we ever do multiple updates)
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
@@ -48,7 +39,6 @@
   - Year doesn't switch at end of December.
   - Fiscal end stock eval: msgbox weird size thing
   - AI companies msgbox is off
-  - Check when we beat train speed record for first time. Shouldn't be for any speed.
   - AIs don't seem to get created.
   - 2 stations: 1 station not being delivered to.
   - B and P in priority shipment are off left by one
