@@ -83,7 +83,7 @@ let render_offscreen win render_fn v =
   (* Restore render target to the main screen *)
   Sdl.set_render_target win.renderer None |> get_exn
 
-let loc_write write_fn v  =
+let lock_write write_fn v  =
   let open Result in
   match Sdl.lock_texture v.tex None Bigarray.float32 with
   | Error (`Msg str) -> failwith str
@@ -93,13 +93,16 @@ let loc_write write_fn v  =
     x
 
 let clear v =
-  loc_write (fun buf _pitch ->
-    for i = 0 to v.w * v.h - 1 do
-      Bigarray.Array1.set buf i 0.;
-    done) v
+  lock_write (fun buf pitch ->
+    for i = 0 to v.h - 1 do
+      for j = 0 to v.w - 1 do
+        Bigarray.Array1.set buf (i * pitch + j) 0.;
+      done
+    done)
+    v
 
 let step num_pixels v =
-  loc_write (fun buf _pitch ->
+  lock_write (fun buf _pitch ->
     let rec loop n =
       if n = 0 then `NotDone else
       match v.offsets with

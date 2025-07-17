@@ -131,3 +131,8 @@ module Pani = struct
   let title = "TITLEM.PAN"
 end
 
+module Transition = struct
+  let tick_delta = 33
+  let step_pixels = 10
+end
+
