@@ -66,7 +66,7 @@ let render win v (s:State.t) =
       let color = if idx = v.player_track_idx then Ega.yellow else Ega.white in
       R.draw_point win ~color ~x ~y;
     )
-    Iter.(0 -- v.player_track_idx)
+    Iter.(0 -- (v.player_track_idx - 1))
   in
 
   let _draw_player_stations =

@@ -10,7 +10,7 @@ type window = {
   window: Sdl.window;
   rect: Sdl.rect; (* For drawing rectangles *)
   rect2: Sdl.rect;
-  opt_rect: Sdl.rect option; (* reduce allocation *)
+  opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
 }
 
 let do_hide_cursor = false  (* It's buggy on WSL *)
