@@ -656,12 +656,17 @@ let calc_avg_speed region v =
   let time = time / ((Region.dist_mult region) * 10) in
   if time > 0 then dist / time else 0
 
-let full_maintenance_cost train =
-  let num_cars = num_of_cars train in
-  M.(((train.maintenance_cost / 2 +~ num_cars) / 2) +~ 1)
+let full_maintenance_cost v =
+  let num_cars = num_of_cars v in
+  M.(((v.maintenance_cost / 2 +~ num_cars) / 2) +~ 1)
 
-let displayed_maintenance_cost train =
+let displayed_maintenance_cost v =
   (* Roughly twice full maintenance *)
-  let num_cars = num_of_cars train in
-  M.((train.maintenance_cost / 2 +~ num_cars) +~ 2)
+  let num_cars = num_of_cars v in
+  M.((v.maintenance_cost / 2 +~ num_cars) +~ 2)
+
+let toggle_hold_at_next_station v =
+  {v with hold_at_next_station=not v.hold_at_next_station}
+
+let get_train_hold v = v.hold_at_next_station
 

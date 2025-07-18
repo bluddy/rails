@@ -452,6 +452,9 @@ let _train_replace_engine ~train ~engine player_idx v =
 let _train_toggle_stop_wait ~train ~stop player_idx v =
   modify_train train player_idx v (Train.toggle_stop_wait stop)
 
+let _train_toggle_hold player_idx train_idx v =
+  modify_train train_idx player_idx v Train.toggle_hold_at_next_station
+
 let _station_set_signal loc dir cmd v =
   (* the user can only set the override *)
   let signal = match cmd with
@@ -848,6 +851,7 @@ module Action = struct
     | RemoveTrain of {idx: Trainmap.Id.t; player_idx: Owner.t}
     | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player_idx: Owner.t}
     | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player_idx: Owner.t}
+    | TrainToggleHold of {player_idx: Owner.t; train_idx: Trainmap.Id.t}
     | BuildIndustry of {player_idx: Owner.t; x: int; y: int; tile: Tile.t}
     | CallBroker of {player_idx: Owner.t}
     | StationSetSignal of {x: int; y: int; dir: Dir.t; cmd: [`Normal| `Hold| `Proceed]}
@@ -908,6 +912,8 @@ module Action = struct
           _train_replace_engine ~train ~engine player_idx backend
       | TrainToggleStopWait {train; stop; player_idx} ->
           _train_toggle_stop_wait ~train ~stop player_idx backend
+      | TrainToggleHold {player_idx; train_idx} ->
+          _train_toggle_hold player_idx train_idx backend
       | StationSetSignal {x; y; dir; cmd} ->
           _station_set_signal (x, y) dir cmd backend
       | BuildIndustry{player_idx; x; y; tile} ->

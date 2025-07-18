@@ -32,7 +32,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Flesh out train info screen (currently dummy)
 - [x] Station lights and train stopping mechanism
 - [x] Map changes over time
-- [ ] Train stop by right click
+- [x] Train stop by right click
 - [x] Accidents
 - [ ] Being driven out of town
 - [-] Rate war

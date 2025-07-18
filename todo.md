@@ -33,6 +33,8 @@
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
 - Bug:
+  - Trains init regardless of station/track orientation
+  - Tunnel always too long
   - Windows crash on start
   - Europe scrolling: tile chemical plant not found
   - England: generation fails

@@ -418,14 +418,20 @@ let handle_train_roster_event (s:State.t) v event =
     Iter.(0 -- (max_draw_trains - 1))
   in
   match event with
-  | Event.MouseButton {x; y; button=`Left; down=true; _} when
+  | Event.MouseButton {x; y; button; down=true; _} when
       x > v.dims.train_ui.x && y > v.dims.train_ui.y ->
-        let res =
+        let train_idx =
           ui_train_find (fun y_bot train_idx ->
-            if y < y_bot then Some (v, `EditTrain (Trainmap.Id.of_int train_idx))
+            if y < y_bot then Some (Trainmap.Id.of_int train_idx)
             else None)
         in
-        Option.get_or ~default:(v, `NoAction) res
+        let action = match train_idx, button with
+          | Some idx, `Left -> `EditTrain idx
+          | Some idx, `Right -> `HoldTrainToggle idx
+          | _ -> `NoAction
+        in
+        v, action
+        
   | _ -> v, `NoAction
 
 let nobaction = B.Action.NoAction
@@ -510,6 +516,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             {v with mode=BuildTrain(`ChooseEngine)}, nobaction
         | _, `EditTrain train_idx ->
             {v with mode=TrainReport(Train_report.make s train_idx)}, nobaction
+        | _, `HoldTrainToggle train_idx ->
+            v, B.Action.TrainToggleHold {player_idx; train_idx}
         | On `Build_station, _ ->
             let menu =
               build_station_menu s.fonts (B.get_region s.backend)
@@ -1287,24 +1295,22 @@ let draw_train_roster win (s:State.t) v =
   train_roster_iter s v
   (fun y_bot idx ->
     let train = B.get_train (Trainmap.Id.of_int idx) C.player s.backend in
-    (* Speed line *)
     let x = v.dims.train_ui.x + 1 in
-    let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
     let y = y_bot in
-    R.draw_line win ~x1:x ~y1:y ~x2 ~y2:y ~color:Ega.dgray;
-    let x1 = x2 - (Train.get_speed train) * 2 in
-    R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
-
-    (* Draw UI train *)
-    let draw_engine () =
+    let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
+    let _draw_speed_line =
+      let color = if Train.get_train_hold train then Ega.bred else Ega.dgray in
+      R.draw_line win ~x1:x ~y1:y ~x2 ~y2:y ~color;
+      let x1 = x2 - (Train.get_speed train) * 2 in
+      R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
+    in
+    let _draw_engine =
       let color = if Train.holds_priority_shipment train then Ega.bgreen else Ega.black in
       R.draw_line win ~x1:(x+3) ~y1:(y-3) ~x2:(x+3) ~y2:y ~color;
       R.draw_line win ~x1:(x+4) ~y1:(y-2) ~x2:(x+4) ~y2:(y-1) ~color;
       R.draw_rect win ~x:(x+5) ~y:(y-3) ~w:2 ~h:4 ~color ~fill:true;
     in
-    draw_engine ();
-    (* draw cars *)
-    let _ =
+    let _draw_cars =
       List.fold_left (fun x car ->
         let full = Train.Car.get_amount car > C.car_amount / 2 in
         let freight = Train.Car.get_good car in
@@ -1313,12 +1319,13 @@ let draw_train_roster win (s:State.t) v =
       (x + 8)
       train.cars
     in
-    (* Draw destination *)
-    let loc = Train.get_dest train in
-    let station = Station_map.get_exn loc s.backend.stations in
-    let short_name = Station.get_short_name station in
-    Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny
-      short_name ~x:(x2-11) ~y:(y-4);
+    let _write_destination =
+      let loc = Train.get_dest train in
+      let station = Station_map.get_exn loc s.backend.stations in
+      let short_name = Station.get_short_name station in
+      Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny short_name ~x:(x2-11) ~y:(y-4)
+    in
+    ()
   )
 
 let render_main win (s:State.t) v =
