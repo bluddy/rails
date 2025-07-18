@@ -33,7 +33,7 @@ let make (s:State.t) =
   let modes = (add_transition None `LogoMicroprose)::[] in
   let modes = (add_transition (Some `LogoMicroprose) `LogoMPS)::modes in
   let modes = (add_transition (Some `LogoMPS) `Credits)::modes in
-  let modes = (GenericScreen {render_fn=make_render_fn `Credits})::modes in
+  let modes = (GenericScreen {render_fn=make_render_fn `Credits; timeout=Some 0})::modes in
   let modes =
     let file = "TITLEM.PAN" in
     Animation(Pani_render.create file)::modes in
@@ -56,7 +56,7 @@ let set_next_mode v = match v.next_modes with
 let render win v = match v.mode with
   | TransitionScreen t -> Transition.render win t
   | Animation state -> Pani_render.render win state
-  | GenericScreen {render_fn} -> render_fn win
+  | GenericScreen {render_fn; _} -> render_fn win
 
 let handle_event event v = match v.mode with
   | (GenericScreen _ | Animation _) when Event.is_left_click event || Event.key_modal_dismiss event -> set_next_mode v
@@ -78,5 +78,8 @@ let handle_tick time v = match v.mode with
       | `Stay -> `Stay, {v with mode=TransitionScreen state2}
       | `Exit -> set_next_mode v
       end
+  | GenericScreen ({timeout=Some 0;_} as state) -> `Stay, {v with mode=GenericScreen{state with timeout=Some(time + C.wait_time * 1000)}}
+  | GenericScreen {timeout=Some end_time;_} when time >= end_time -> set_next_mode v
   | GenericScreen _ -> `Stay, v
+
 
