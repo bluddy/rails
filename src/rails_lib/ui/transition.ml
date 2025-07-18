@@ -21,15 +21,13 @@ type t = {
 let make win random ~wait_time ~old_render_fn ~render_fn =
   let transition = R.Transition.make win random in
   (* Set the final image *)
-  R.Transition.render_offscreen win render_fn transition;
-  R.Transition.clear transition;
+  R.Transition.render_offscreen win old_render_fn render_fn transition;
   let state = Static {until=None} in
   {old_render_fn; transition; state; wait_time}
 
 let render win v = match v.state with
   | Static _ -> v.old_render_fn win
   | Animating _ ->
-     v.old_render_fn win;
      R.Transition.render win v.transition
   | Done ->
      R.Transition.render win v.transition

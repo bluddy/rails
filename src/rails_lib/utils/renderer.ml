@@ -80,15 +80,6 @@ let make win random =
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
   {w; h; offscreen_tex; pixels; tex; offsets; rect}
 
-let render_offscreen win render_fn v =
-  (* Do once with final transition image. Render offscreen the next image to our texture. *)
-  Sdl.set_render_target win.renderer v.offscreen_tex |> get_exn;
-  render_fn win;
-  (* Read from texture target to a buffer we can read from *)
-  Sdl.render_read_pixels win.renderer None None v.pixels (win.inner_w * 4) |> get_exn;
-  (* Restore render target to the main screen *)
-  Sdl.set_render_target win.renderer None |> get_exn
-
 let lock_write write_fn v  =
   let open Result in
   match Sdl.lock_texture v.tex None Bigarray.float32 with
@@ -106,6 +97,34 @@ let clear v =
       done
     done)
     v
+
+let copy_pixels_to_tex v =
+  lock_write (fun buf pitch ->
+    for i = 0 to v.h - 1 do
+      for j = 0 to v.w - 1 do
+        let pixel = Bigarray.Array1.get v.pixels (i * v.w + j) in
+        Bigarray.Array1.set buf (i * pitch + j) pixel;
+      done
+    done)
+  v
+
+let render_offscreen win old_render_fn render_fn v =
+  (* Do once with final transition image. Render offscreen the next image to our texture. *)
+  Sdl.set_render_target win.renderer v.offscreen_tex |> get_exn;
+
+  (* Old image *)
+  old_render_fn win;
+  (* Read from texture target to a buffer we can read from *)
+  Sdl.render_read_pixels win.renderer None None v.pixels (win.inner_w * 4) |> get_exn;
+  (* Copy all pixels to our streaming texture *)
+  copy_pixels_to_tex v;
+
+  (* New image *)
+  render_fn win;
+  (* Read from texture target to a buffer we can read from *)
+  Sdl.render_read_pixels win.renderer None None v.pixels (win.inner_w * 4) |> get_exn;
+  (* Restore render target to the main screen *)
+  Sdl.set_render_target win.renderer None |> get_exn
 
 let step num_pixels v =
   lock_write (fun buf pitch ->
