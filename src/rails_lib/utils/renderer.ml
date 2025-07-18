@@ -60,6 +60,7 @@ type t = {
   offscreen_tex: Sdl.texture option;  (* Used for transition effects. option for efficiency *)
   pixels: (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
   tex: Sdl.texture; (* transition texture *)
+  rect: Sdl.rect;
   mutable offsets: int list; (* offsets into screen *)
 }
 
@@ -72,7 +73,11 @@ let make win random =
   let offsets = Iter.(0 -- (h * w - 1)) |> Iter.to_array in
   Array.shuffle_with random offsets;
   let offsets = Array.to_list offsets in
-  {w; h; offscreen_tex; pixels; tex; offsets}
+  (* Create rect for zooming to screen size *)
+  let w' = zoom win w in
+  let h' = zoom win h in
+  let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
+  {w; h; offscreen_tex; pixels; tex; offsets; rect}
 
 let render_offscreen win render_fn v =
   (* Do once with final transition image. Render offscreen the next image to our texture. *)
@@ -118,7 +123,7 @@ let step num_pixels v =
     loop num_pixels)
   v
 
-let render win v = Sdl.render_copy win.renderer v.tex |> get_exn
+let render win v = Sdl.render_copy win.renderer v.tex ~dst:v.rect |> get_exn
 
 end
 
