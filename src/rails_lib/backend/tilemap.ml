@@ -417,6 +417,7 @@ let check_build_track loc ~dir (params:Params.t) v =
           let tile3 = get_tile loc3 v in
           if Tile.is_ground tile3 then `Bridge
           else `Illegal
+    | t, EnemyStation when Tile.is_ground t -> `RateWar loc2
     | _, _ -> `Illegal
 
 let check_build_station loc v =

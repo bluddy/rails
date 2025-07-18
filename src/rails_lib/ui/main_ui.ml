@@ -730,12 +730,11 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun modal bridge_kind ->
             let msg = modal.data in
             let x, y, dir, player_idx = msg.x, msg.y, msg.dir, msg.player_idx in
-            match Backend.check_build_bridge (x, y) ~dir player_idx s.backend with
-            | `Ok -> 
+            if Backend.check_build_bridge (x, y) ~dir player_idx s.backend then
                 let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
                 let view = Mapview.move_const_box v.view dir 2 in
                 {(next_mode v) with view}, backend_action
-            | _ ->
+            else
                 next_mode v, nobaction
             )
 

@@ -55,6 +55,7 @@ let s_of_response = function
   | `HighGrade i -> Printf.sprintf "HighGrade %d" i
   | `Illegal -> "Illegal"
   | `Ok -> "Ok"
+  | `RateWar _ -> "Rate War"
   | `Tunnel i -> Printf.sprintf "Tunnel %d" i
 
 let%expect_test "river track diag bend" =

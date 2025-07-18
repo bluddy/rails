@@ -325,7 +325,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           if v.build_mode then
             (* Build track *)
             match B.check_build_track (v.const_box_x, v.const_box_y) ~dir player_idx s.backend with
-            | `Ok -> move 1, `BuildTrack(msg ())
+            | `Ok | `RateWar _ -> move 1, `BuildTrack(msg ())
             | `Ferry -> move 1, `BuildFerry(msg ())
             | `HighGrade g -> v, `HighGradeTrack(msg (), g, false)
             | `Bridge -> v, `BuildBridge(msg ()) 

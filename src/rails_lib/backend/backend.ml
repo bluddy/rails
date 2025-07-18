@@ -164,6 +164,8 @@ let get_track_length player_idx v =
 let players_and_ai v =
   Iter.append (Owner.Map.keys v.players) (Ai.ai_iter v.ai)
 
+let is_illegal = function `Illegal -> true | _ -> false
+
 let check_build_station x y player_idx station_type v =
   let loc = (x, y) in
   match Trackmap.check_build_station loc player_idx station_type v.track with
@@ -240,7 +242,20 @@ let _build_tunnel loc ~dir player_idx v =
     [%up {v with graph; track; blocks; players}]
   | _ -> v
 
+let check_build_track loc ~dir player_idx v =
+  (* First check the tilemap, then the trackmap *)
+  match Tilemap.check_build_track loc ~dir v.params v.map with
+  | `Bridge when Trackmap.check_build_stretch loc ~dir player_idx ~length:2 v.track -> `Bridge
+  | (`Ok | `RateWar _ | `Ferry | `Tunnel _ | `HighGrade _) as x when Trackmap.check_build_track loc ~dir player_idx v.track -> x
+  | `Ok | `RateWar _ | `Bridge | `Ferry | `Tunnel _ | `HighGrade _ | `Illegal -> `Illegal
+
+let check_build_bridge loc ~dir player_idx v =
+  match check_build_track loc ~dir player_idx v with
+  | `Bridge -> true
+  | _ -> false
+
 let _build_bridge ((x, y) as loc) ~dir player_idx ~kind v =
+  if not @@ check_build_bridge loc ~dir player_idx v then v else
   let before = Scan.scan v.track loc player_idx in
   let track = Trackmap.build_bridge loc ~dir player_idx ~kind v.track in
   let after = Scan.scan track loc player_idx in
@@ -257,18 +272,6 @@ let _build_bridge ((x, y) as loc) ~dir player_idx ~kind v =
   in
   send_ui_msg v @@ BridgeCreated{player_idx; kind};
   [%up {v with graph; track; blocks; players}]
-
-let check_build_track loc ~dir player_idx v =
-  (* First check the tilemap, then the trackmap *)
-  match Tilemap.check_build_track loc ~dir v.params v.map with
-  | `Bridge when Trackmap.check_build_stretch loc ~dir player_idx ~length:2 v.track -> `Bridge
-  | (`Ok | `Ferry | `Tunnel _ | `HighGrade _) as x when Trackmap.check_build_track loc ~dir player_idx v.track -> x
-  | _ -> `Illegal
-
-let check_build_bridge loc ~dir player_idx v =
-  match check_build_track loc ~dir player_idx v with
-  | `Bridge -> `Ok
-  | _ -> `Illegal
 
 let check_change_double_track loc player_idx ~double v =
   match Trackmap.get loc v.track with
@@ -289,9 +292,14 @@ let _change_double_track loc player_idx ~double v =
     in
     [%up {v with track; blocks}]
   ) else v
-    
+
+let _handle_rate_war_declaration loc v = v
+(* TODO *)
+
 let _build_track ((x, y) as loc) ~dir player_idx v =
   (* Can either create a new edge or a new node (ixn) *)
+  let ret = check_build_track loc ~dir player_idx v in
+  if is_illegal ret then v else
   let before = Scan.scan v.track loc player_idx in
   let track = Trackmap.build_track loc ~dir player_idx v.track in
   let after = Scan.scan track loc player_idx in
@@ -303,9 +311,14 @@ let _build_track ((x, y) as loc) ~dir player_idx v =
   let players = Player.update v.players player_idx @@
     Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map
   in
+  let v = match ret with `RateWar loc -> _handle_rate_war_declaration loc v | _ -> v in
   [%up {v with graph; track; blocks; players}]
 
+let is_ferry = function `Ferry -> true | _ -> false
+
 let _build_ferry ((x, y) as loc) ~dir player_idx v =
+  let ret = check_build_track loc ~dir player_idx v in
+  if not @@ is_ferry ret then v else
   let track, map = v.track, v.map in
   let before = Scan.scan track loc player_idx in
   let tile1 = Tilemap.get_tile loc map in
