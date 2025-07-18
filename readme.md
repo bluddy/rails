@@ -48,7 +48,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Economic Climate
 - [x] Periodic reports
 - [x] Events (e.g. bridge washing out)
-- [ ] Transition animation
+- [x] Transition animation
 - [ ] Music and Sound
 - [-] Testing and Fixes
 
