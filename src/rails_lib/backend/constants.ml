@@ -133,7 +133,7 @@ end
 
 module Transition = struct
   let tick_delta = 10
-  let step_pixels = 1200
+  let step_pixels = 2500
 end
 
 module Intro = struct

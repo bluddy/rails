@@ -67,9 +67,10 @@ type t = {
 let make win random =
   let w, h = win.inner_w, win.inner_w in
   let r = win.renderer in
-  let offscreen_tex = Sdl.create_texture r Sdl.Pixel.format_rgba8888 Sdl.Texture.access_target ~w ~h |> get_exn |> Option.some in 
+  let format = Sdl.Pixel.format_argb8888 in
+  let offscreen_tex = Sdl.create_texture r format Sdl.Texture.access_target ~w ~h |> get_exn |> Option.some in 
   let pixels = Bigarray.Array1.(create Bigarray.float32 Bigarray.c_layout (h*w)) in
-  let tex = Sdl.create_texture r Sdl.Pixel.format_rgba8888 Sdl.Texture.access_streaming ~w ~h |> get_exn in 
+  let tex = Sdl.create_texture r format Sdl.Texture.access_streaming ~w ~h |> get_exn in 
   let offsets = Iter.(0 -- (h * w - 1)) |> Iter.to_array in
   Array.shuffle_with random offsets;
   let offsets = Array.to_list offsets in
