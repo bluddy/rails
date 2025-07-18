@@ -132,7 +132,11 @@ module Pani = struct
 end
 
 module Transition = struct
-  let tick_delta = 33
-  let step_pixels = 10
+  let tick_delta = 10
+  let step_pixels = 1200
+end
+
+module Intro = struct
+  let wait_time = 2 (* secs *)
 end
 

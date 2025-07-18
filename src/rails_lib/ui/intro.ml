@@ -2,7 +2,7 @@ open! Containers
 
 module R = Renderer
 module B = Backend
-module C = Constants
+module C = Constants.Intro
 module M = Money
 
 open Utils.Infix
@@ -21,12 +21,12 @@ let make (s:State.t) =
       let tex = Hashtbl.find s.textures.misc tex_name in
       fun win -> render_screen tex win
   in
-  let wait_time = 2 in
   let add_transition tex1 tex2 =
     let old_render_fn = match tex1 with
     | Some tex1 -> make_render_fn tex1
     | None -> clear_screen
     in
+    let wait_time = if Option.is_some tex1 then C.wait_time else 0 in
     let render_fn = make_render_fn tex2 in
     let trans = Transition.make s.win s.random ~wait_time ~old_render_fn ~render_fn in
     TransitionScreen trans in
