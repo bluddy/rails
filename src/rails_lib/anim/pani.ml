@@ -96,7 +96,8 @@ let of_stream ?input ?(dump_files=None) s =
         Printf.printf "Loading background image\n";
 
         let ndarray = Pic.ndarray_of_stream s in
-        let pic_bgnd = Some(Pic.img_of_ndarray ~transparent:false ndarray) in
+        (* Doesn't needs to be transparent, but still stored that way *)
+        let pic_bgnd = Some(Pic.img_of_ndarray ~transparent:true ndarray) in
 
         begin match dump_files with
         | Some filepath ->
