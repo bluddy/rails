@@ -77,7 +77,7 @@ let make win random =
 let render_offscreen win render_fn v =
   (* Do once with final transition image. Render offscreen the next image to our texture. *)
   Sdl.set_render_target win.renderer v.offscreen_tex |> get_exn;
-  render_fn ();
+  render_fn win;
   (* Read from texture target to a buffer we can read from *)
   Sdl.render_read_pixels win.renderer None None v.pixels (win.inner_w * 4) |> get_exn;
   (* Restore render target to the main screen *)
@@ -102,15 +102,17 @@ let clear v =
     v
 
 let step num_pixels v =
-  lock_write (fun buf _pitch ->
+  lock_write (fun buf pitch ->
     let rec loop n =
       if n = 0 then `NotDone else
       match v.offsets with
       | [] -> `Done
-      | x::xs ->
-        v.offsets <- xs;
-        let pixel = Bigarray.Array1.get v.pixels x in
-        Bigarray.Array1.set buf x pixel;
+      | i::_is ->
+        v.offsets <- _is;
+        let pixel = Bigarray.Array1.get v.pixels i in
+        let row, col = i / v.w, i mod v.w in
+        let dest_i = row * pitch + col in
+        Bigarray.Array1.set buf dest_i pixel;
         loop (n - 1)
     in
     loop num_pixels)
