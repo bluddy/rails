@@ -16,7 +16,7 @@ let make_simple (s:State.t) kind ?heading text opponent = Simple {
 
 let day_of_year time = ((time * 3) / 17) mod 360
 
-let make_fancy (s:State.t) text params random =
+let make_fancy (s:State.t) text params =
   let year, time = params.Params.year, params.time in
   let cost = ((year - C.newspaper_cost_ref_year) / 40) * 5 in
   (* Note: for some reason, the day computation here isn't the same as it is in the rest of the game. Why? *)
@@ -39,7 +39,7 @@ let make_fancy (s:State.t) text params random =
   let tear_vals =
     let rec loop x acc =
       if x >= C.screen_width then acc else
-      let vals = (Random.int 2 random, Random.int 2 random) in
+      let vals = (Random.int 2 s.random, Random.int 2 s.random) in
       loop (x + 20) @@ vals::acc
     in loop 0 []
   in

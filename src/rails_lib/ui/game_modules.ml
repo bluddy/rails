@@ -25,6 +25,8 @@ let default_state win : State.t =
     backend;
     mode=State.Game;
     ui;
+    win;
+    random = Random.get_state ();
   }
 
 (* Createa a new state out of the default state for starting the program. *)
@@ -52,6 +54,8 @@ let make_state win ~region ~reality_levels ~difficulty prev_state =
     textures;
     fonts;
     ui;
+    win;
+    random = Random.get_state ();
   }
 
 (* Make state out of loaded game *)
@@ -72,6 +76,8 @@ let load_state backend ui_options ui_view win =
     textures;
     fonts;
     ui;
+    win;
+    random = Random.get_state ();
   }
 
 

@@ -943,7 +943,7 @@ let handle_msgs (s:State.t) v ui_msgs =
               modes rate_wars
             in
             let modes = match records_earnings with
-             | Some texts -> (make_news ~background @@ Newspaper.make_fancy s texts b.params b.random)::modes
+             | Some texts -> (make_news ~background @@ Newspaper.make_fancy s texts b.params)::modes
              | None -> modes
             in
             let modes = if String.length warnings > 0 then
@@ -970,7 +970,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let num_people = (Newspaper.day_of_year b.params.time) mod 16 + 2 in
         let text2 = Printf.sprintf "%d persons injured." num_people in
         let text3 = "Customers Panic!" in
-        make_news @@ Newspaper.make_fancy s (text, text2, text3) b.params b.random
+        make_news @@ Newspaper.make_fancy s (text, text2, text3) b.params
       in
       begin match ui_msg with 
       | DemandChanged{x; y; good; add; player_idx} ->
@@ -1083,7 +1083,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             in
             let name = Station.get_name station in
             let text = "Flood Waters Rise!", name, "Trestle Washed Away!" in
-            make_news @@ Newspaper.make_fancy s text b.params b.random in
+            make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
 
       | NewPlayerCompany {num_shares} ->
@@ -1091,7 +1091,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text  = "New Railroad formed:",
                       (Printf.sprintf "%d,000 shares of stock" num_shares),
                       "sold to local Investors." in
-          make_news @@ Newspaper.make_fancy s text b.params b.random in
+          make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
 
       | TrainAccident {player_idx} ->
@@ -1115,7 +1115,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode =
           let text1, text2 = Climate.text1 reason in
           let text3 = Climate.text2 climate in
-          make_news @@ Newspaper.make_fancy s (text1, text2, text3) b.params b.random in
+          make_news @@ Newspaper.make_fancy s (text1, text2, text3) b.params in
         {v with mode}
 
       | FirstTrainArrives{player_idx; station} ->
@@ -1125,7 +1125,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text  = "First Train Arrives",
                       (Printf.sprintf "in %s." name),
                       "Citizens Celebrate!" in
-          make_news @@ Newspaper.make_fancy s text b.params b.random in
+          make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
 
       | EngineDiscovered(engine) ->
@@ -1133,7 +1133,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text = engine.name,
                      "Locmotive Introduced.",
                      "Bigger, Better, Faster." in
-          make_news @@ Newspaper.make_fancy s text b.params b.random in
+          make_news @@ Newspaper.make_fancy s text b.params in
         let next_modes=[EngineInfo(Engine_info.make engine)] in
         {v with mode; next_modes}
 
@@ -1145,7 +1145,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text = "Rate War Declared in",
                      (Printf.sprintf "%s!" station_name),
                      (Printf.sprintf "%s vs. %s." player_name other_name) in
-          make_news @@ Newspaper.make_fancy s text b.params b.random in
+          make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
 
       | PlayerTakesControlOfOther{player_idx; other} ->
@@ -1155,7 +1155,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           let text = (Printf.sprintf "%s take control" player_name),
                      (Printf.sprintf "of %s Railroad!" other_name),
                      "Wall Street amazed." in
-          make_news @@ Newspaper.make_fancy s text b.params b.random in
+          make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
 
       | OwnerFired {player_idx; by} ->
@@ -1166,7 +1166,7 @@ let handle_msgs (s:State.t) v ui_msgs =
                      match by with
                      | `Stockholders -> "with stockholders."
                      | `Management -> "with new Management" in
-          make_news @@ Newspaper.make_fancy s text b.params b.random in
+          make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
 
       | BridgeCreated {player_idx; kind} ->
