@@ -19,6 +19,11 @@ let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
 
+let clear_screen win =
+  Sdl.render_clear win.renderer |> get_exn
+
+let format = Sdl.Pixel.format_argb8888
+
 let create w h ~zoom =
   let out_w = Int.of_float @@ zoom *. Float.of_int w in
   let out_h = Int.of_float @@ zoom *. Float.of_int h in
@@ -58,7 +63,7 @@ module Transition = struct
 type t = {
   w: int; h: int; 
   offscreen_tex: Sdl.texture option;  (* Used for transition effects. option for efficiency *)
-  pixels: (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
+  pixels: (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
   tex: Sdl.texture; (* transition texture *)
   rect: Sdl.rect;
   mutable offsets: int list; (* offsets into screen *)
@@ -69,7 +74,7 @@ let make win random =
   let r = win.renderer in
   let format = Sdl.Pixel.format_argb8888 in
   let offscreen_tex = Sdl.create_texture r format Sdl.Texture.access_target ~w ~h |> get_exn |> Option.some in 
-  let pixels = Bigarray.Array1.(create Bigarray.float32 Bigarray.c_layout (h*w)) in
+  let pixels = Bigarray.Array1.(create Bigarray.int32 Bigarray.c_layout (h*w)) in
   let tex = Sdl.create_texture r format Sdl.Texture.access_streaming ~w ~h |> get_exn in 
   let offsets = Iter.(0 -- (h * w - 1)) |> Iter.to_array in
   Array.shuffle_with random offsets;
@@ -82,21 +87,21 @@ let make win random =
 
 let lock_write write_fn v  =
   let open Result in
-  match Sdl.lock_texture v.tex None Bigarray.float32 with
+  match Sdl.lock_texture v.tex None Bigarray.int32 with
   | Error (`Msg str) -> failwith str
   | Ok (dest_buf, pitch) ->
     let x = write_fn dest_buf pitch in
     Sdl.unlock_texture v.tex;
     x
 
-let clear v =
-  lock_write (fun buf pitch ->
-    for i = 0 to v.h - 1 do
-      for j = 0 to v.w - 1 do
-        Bigarray.Array1.set buf (i * pitch + j) 0.;
-      done
-    done)
-    v
+(* let clear v = *)
+(*   lock_write (fun buf pitch -> *)
+(*     for i = 0 to v.h - 1 do *)
+(*       for j = 0 to v.w - 1 do *)
+(*         Bigarray.Array1.set buf (i * pitch + j) 0; *)
+(*       done *)
+(*     done) *)
+(*     v *)
 
 let copy_pixels_to_tex v =
   lock_write (fun buf pitch ->
@@ -143,7 +148,9 @@ let step num_pixels v =
     loop num_pixels)
   v
 
-let render win v = Sdl.render_copy win.renderer v.tex ~dst:v.rect |> get_exn
+let render win v =
+    clear_screen win;
+    Sdl.render_copy win.renderer v.tex ~dst:v.rect |> get_exn
 
 end
 
@@ -320,9 +327,6 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
   Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
   Sdl.render_draw_line win.renderer x1 y1 x2 y2 |> get_exn
   *)
-
-let clear_screen win =
-  Sdl.render_clear win.renderer |> get_exn
 
 let draw_cursor win texture =
   let _, (mouse_x, mouse_y) = Sdl.get_mouse_state () in
