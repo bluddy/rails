@@ -100,6 +100,7 @@ and 'state mode =
   | BuildTunnel of ('state, bool, Backend.Action.msg * int) modalmenu
   | SignalMenu of ('state, [`Normal|`Hold|`Proceed], int * int * Dir.t) modalmenu (* x,y,dir *)
   | StationReport of int * int (* x, y *)
+  | StationUpgrade of {transition: Transition.t option; old_station: Station.t; loc: Utils.loc}
   | BuildTrain of [
     | `ChooseEngine
     | `AddCars of 'state Build_train_d.addcars

@@ -527,8 +527,10 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On `RemoveTrack, _ ->
             {v with view=Mapview.set_build_mode v.view false}, nobaction 
         | On `ImproveStation upgrade, _ ->
-            let x, y = Mapview.get_cursor_pos v.view in
-            {v with mode=StationReport(x, y)}, ImproveStation{x; y; player_idx; upgrade}
+            let (x, y) as loc = Mapview.get_cursor_pos v.view in
+            let station = B.get_station loc b |> Option.get_exn_or "station not found" in
+            let mode = StationUpgrade{transition=None; loc; old_station=station} in
+            {v with mode}, ImproveStation{x; y; player_idx; upgrade}
         | On `Save_game, _ ->
             save_game s;
             v, nobaction
@@ -857,6 +859,9 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | EngineInfo _
     | StationReport _ -> modal_screen_no_input v event
+
+    | StationUpgrade {transition=Some t;_} when Transition.is_finished t -> modal_screen_no_input v event
+    | StationUpgrade _ -> v, nobaction
 
     | Balance_sheet state ->
       (* Balance sheet at the fin period end is the last before we do housecleaning *)
@@ -1258,6 +1263,23 @@ let handle_tick s v time is_cycle = match v.mode with
   | History state ->
      let state2 = History.handle_tick s time state in
      if state2 === state then v else {v with mode=History state2}
+
+  | StationUpgrade ({transition=None; old_station; loc} as state) ->
+    (* Iniitialize transition *)
+    let old_render_fn win = Station_report.render win s ~station:old_station loc ~show_demand:false in
+    (* Note: this must happen after backend has updated. Might need a message here *)
+    let render_fn win = Station_report.render win s loc ~show_demand:false in
+    let transition = Transition.make s.win s.random ~wait_time:0 ~old_render_fn ~render_fn |> Option.some in
+    let mode = StationUpgrade {state with transition} in
+    {v with mode}
+
+  | StationUpgrade ({transition=Some t; _} as state) ->
+    let status, t2 = Transition.handle_tick time t in
+    begin match status with
+    | `Stay when t2 === t -> v
+    | `Stay -> {v with mode=StationUpgrade {state with transition = Some t2}}
+    | `Exit -> v (* we don't allow exit by ticks here *)
+    end
     
   | _ -> v
 
@@ -1443,6 +1465,10 @@ let render (win:R.window) (s:State.t) v =
         Menu.MsgBox.render win s modal.menu
     | StationReport(x, y) ->
         Station_report.render win s (x,y) ~show_demand:true
+    | StationUpgrade{transition=Some t; _} ->
+        Transition.render win t
+    | StationUpgrade{transition=None; old_station; loc} ->
+        Station_report.render win s ~station:old_station loc ~show_demand:false
     | EngineInfo state ->
         Engine_info.render win state ~fonts:s.fonts ~textures:s.textures ~region:(B.get_region s.backend)
     | BuildTrain(state) ->

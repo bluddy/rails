@@ -5,7 +5,7 @@ module B = Backend
 
 (* Station view screen *)
 
-let render ?(show_name=true) win (s:State.t) loc ~show_demand =
+let render ?(show_name=true) win (s:State.t) ?station loc ~show_demand =
   let ground_y = 186 in
   let switchingyard_x = 0 in
   let engineshop_x = 64 in
@@ -50,8 +50,9 @@ let render ?(show_name=true) win (s:State.t) loc ~show_demand =
     R.Texture.render ~x:restaurant_x ~y:(y-h) win tex
   in
 
-  let station = Backend.get_station loc s.backend
-    |> Option.get_exn_or "station" in
+  let station = match station with
+  | Some station -> station
+  | _ -> Backend.get_station loc s.backend |> Option.get_exn_or "station" in
   let info = Option.get_exn_or "Not a real station" station.info in
 
   let goods_and_other () =
