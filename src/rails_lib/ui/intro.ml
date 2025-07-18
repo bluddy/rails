@@ -16,19 +16,24 @@ let render_screen tex win =
 let clear_screen win =
   R.clear_screen win
 
-let create (s:State.t) =
-  let empty_screen =
-    GenericScreen{render_fn=clear_screen; transition=None; end_transition=false}
+let make (s:State.t) =
+  let make_render_fn tex_name =
+      let tex = Hashtbl.find s.textures.misc tex_name in
+      fun win -> render_screen tex win
   in
-  let add_screen tex mode =
-    let tex = Hashtbl.find s.textures.misc tex in
-    let screen = GenericScreen{render_fn=render_screen tex; transition=None; end_transition=true}
+  let wait_time = 2 in
+  let add_transition tex1 tex2 =
+    let old_render_fn = match tex1 with
+    | Some tex1 -> make_render_fn tex1
+    | None -> clear_screen
     in
-    screen::mode in
-  let modes = [empty_screen] in
-  let modes = add_screen `LogoMicroprose modes in
-  let modes = add_screen `LogoMPS modes in
-  let modes = add_screen `Credits modes in
+    let render_fn = make_render_fn tex2 in
+    let trans = Transition.make s.win s.random ~wait_time ~old_render_fn ~render_fn in
+    TransitionScreen trans in
+  let modes = (add_transition None `LogoMicroprose)::[] in
+  let modes = (add_transition (Some `LogoMicroprose) `LogoMPS)::modes in
+  let modes = (add_transition (Some `LogoMPS) `Credits)::modes in
+  let modes = (GenericScreen {render_fn=make_render_fn `Credits})::modes in
   let modes =
     let file = "TITLEM.PAN" in
     Animation(Pani_render.create file)::modes in
@@ -45,36 +50,33 @@ let next_mode v = match v.next_modes with
   | _ -> None
 
 let set_next_mode v = match v.next_modes with
-  | _::_ -> `None, set_modes v.next_modes v
+  | _::_ -> `Stay, set_modes v.next_modes v
   | [] -> `Exit, v
 
-let rec render ?(freeze=false) win (s:State.t) v = match v.mode with
-  | GenericScreen {render_fn; transition=Some t; _} when not freeze ->
-      render_fn win;
-      Transition.render win t
-
-  | GenericScreen {render_fn; transition=None; end_transition=true} when not freeze && not @@ List.is_empty v.next_modes ->
-    (* Have to create it here because we have win *)
-    let render_fn =
-      let next_mode = List.hd v.next_modes in
-      let next_v = {v with mode=next_mode} in
-      fun win -> render win ~freeze:true s next_v in
-    let tr = Transition.make win s.random render_fn in
-    render_fn win
-
-  | GenericScreen {render_fn; transition=None;_} -> render_fn win
-
+let render win v = match v.mode with
+  | TransitionScreen t -> Transition.render win t
   | Animation state -> Pani_render.render win state
+  | GenericScreen {render_fn} -> render_fn win
 
 let handle_event event v = match v.mode with
-  | Animation _
-  | GenericScreen _ when Event.is_left_click event || Event.key_modal_dismiss event ->
-      next_mode v
-  | _ -> `None, v
+  | (GenericScreen _ | Animation _) when Event.is_left_click event || Event.key_modal_dismiss event -> set_next_mode v
+  | GenericScreen _ | Animation _ -> `Stay, v
+  | TransitionScreen state ->
+      begin match Transition.handle_event event state with
+      | `Stay -> `Stay, v
+      | `Exit -> set_next_mode v
+      end
 
 let handle_tick time v = match v.mode with
   | Animation state ->
       let state2 = Pani_render.handle_tick time state in
-      if state2 === state then v else {v with mode=Animation state2}
-  | _ -> v
+      if state2 === state then `Stay, v else `Stay, {v with mode=Animation state2}
+  | TransitionScreen state ->
+      let status, state2 = Transition.handle_tick time state in
+      begin match status with
+      | `Stay when state2 === state -> `Stay, v
+      | `Stay -> `Stay, {v with mode=TransitionScreen state2}
+      | `Exit -> set_next_mode v
+      end
+  | GenericScreen _ -> `Stay, v
 

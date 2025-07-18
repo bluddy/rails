@@ -85,9 +85,12 @@ let handle_tick win (s:State.t) time =
   let state =
     match s.mode with
     | Intro state ->
-        let state2 = Intro.handle_tick time state in
-        if state2 === state then s
-        else {s with mode=Intro state2}
+        let status, state2 = Intro.handle_tick time state in
+        begin match status with
+        | `Stay when state2 === state -> s
+        | `Stay -> {s with mode = Intro state2}
+        | `Exit -> {s with mode=Menu(Start_menu.default s)}
+        end
 
     | Menu _ -> s
 
@@ -138,8 +141,8 @@ let handle_event win (s:State.t) (event:Event.t) =
     match s.mode with
     | Intro state ->
         begin match Intro.handle_event event state with
-        | `None, state2 when state2 === state -> s, false
-        | `None, state2 -> {s with mode=Intro state2}, false
+        | `Stay, state2 when state2 === state -> s, false
+        | `Stay, state2 -> {s with mode=Intro state2}, false
         | `Exit, _ -> {s with mode=Menu(Start_menu.default s)}, false
         end
 
@@ -224,7 +227,7 @@ let run ?load () : unit =
       | None ->
         (* New game. Use a basic default state *)
         let s = default_state win in
-        let state = Intro.create s in
+        let state = Intro.make s in
         {s with mode=Intro state}
     in
     Printf.printf " done.\n";

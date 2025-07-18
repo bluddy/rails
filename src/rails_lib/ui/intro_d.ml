@@ -1,11 +1,8 @@
 
 type mode =
   | Animation of Pani_render.t
-  | GenericScreen of {
-    render_fn: Renderer.window -> unit;
-    end_transition: bool;
-    transition: Transition.t option;
-  }
+  | TransitionScreen of Transition.t
+  | GenericScreen of {render_fn: Renderer.window -> unit}
 
 type t = {
   mode: mode;

@@ -2,40 +2,55 @@ open Containers
 module R = Renderer
 module C = Constants.Transition
 
+type state =
+  | Static of {until: int option}
+  | Animating of {mutable last_tick: int}
+  | Done
+
 type t = {
-  old_render_fn: (R.window -> unit) option;
-  transition: R.Transition.t;
-  mutable last_tick: int;
-  finished: bool;
+  old_render_fn: (R.window -> unit);
+  transition: R.Transition.t;  (* also stores new render_fn *)
+  wait_time: int; (* in secs *)
+  state: state;
 }
 
-let make win random ?old_render_fn render_fn =
+let make win random ~wait_time ~old_render_fn ~render_fn =
   let transition = R.Transition.make win random in
   (* Set the final image *)
   R.Transition.render_offscreen win render_fn transition;
   R.Transition.clear transition;
-  {old_render_fn; transition; last_tick=0; finished=false}
+  let state = Static {until=None} in
+  {old_render_fn; transition; state; wait_time}
 
-let render win v =
-  match v.old_render_fn with
-  | Some render_fn when not v.finished -> render_fn win
-  | _ -> ();
-  R.Transition.render win v.transition
+let render win v = match v.state with
+  | Static _ -> v.old_render_fn win
+  | Animating _ ->
+     v.old_render_fn win;
+     R.Transition.render win v.transition
+  | Done ->
+     R.Transition.render win v.transition
 
-let handle_tick v time =
+let is_finished v = match v.state with Done -> true | _ -> false
+
+let handle_tick time v =
   (* Inner transition is entirely mutable *)
-  if v.finished then `Exit, v else
-  let new_time = v.last_tick + C.tick_delta in
-  if time >= new_time then (
-    v.last_tick <- time;
-    let status = R.Transition.step C.step_pixels v.transition in
-    match status with
-    | `Done -> `Stay, {v with finished=true}
-    | _ -> `Stay, v
-  ) else `Stay, v
+  match v.state with
+  | Done -> `Exit, v
+  | Static {until=None} -> `Stay, {v with state=Static{until=Some (time + v.wait_time * 1000)}}
+  | Static {until=Some start_time} when start_time >= time -> `Stay, {v with state=Animating{last_tick=0}}
+  | Static {until=Some _} -> `Stay, v
+  | Animating ({last_tick} as a) ->
+    let new_time = last_tick + C.tick_delta in
+    if time >= new_time then (
+      a.last_tick <- time;
+      let status = R.Transition.step C.step_pixels v.transition in
+      match status with
+      | `Done -> `Stay, {v with state=Done}
+      | _ -> `Stay, v
+    ) else `Stay, v
 
 let handle_event (event:Event.t) v =
-  if not v.finished then `Stay else
+  if not @@ is_finished v then `Stay else
   match event with
   | Key {down=true; _} -> `Exit
   | MouseButton {down=true; _} -> `Exit
