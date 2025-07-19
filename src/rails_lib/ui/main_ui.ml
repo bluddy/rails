@@ -10,6 +10,7 @@ module B = Backend
 module C = Constants
 module M = Money
 
+let sp = Printf.sprintf
 
 let save_game (state:State.t) =
   let s1 = Backend.yojson_of_t state.backend |> Yojson.Safe.to_string in
@@ -133,7 +134,7 @@ let main_menu fonts menu_h region =
     let entry str upgrade =
       let price_s =
         let cash = Station.price_of_upgrade upgrade in
-        Printf.sprintf " (%s)" (M.print ~region cash)
+        sp " (%s)" (M.print ~region cash)
       in
       make_entry (str^price_s) ~test_enabled:(check_upgrade ~flip:true upgrade)
         (`Checkbox(`ImproveStation upgrade, check_upgrade upgrade))
@@ -356,7 +357,7 @@ let build_high_grade_menu fonts ~grade ~tunnel =
   let open MsgBox in
   let pct1 = grade / 8 in
   let pct2 = ((grade / 2) mod 4) * 25 in
-  let heading = Printf.sprintf "WARNING: %d.%d%% grade" pct1 pct2 in
+  let heading = sp "WARNING: %d.%d%% grade" pct1 pct2 in
   let entries =
   [
     make_entry "&Build Track" @@ `Action(Some `BuildTrack);
@@ -373,7 +374,7 @@ let build_tunnel_menu fonts ~length ~cost ~region =
   let open Menu in
   let open MsgBox in
   let heading =
-    Printf.sprintf "%d mile tunnel required.\nCost: %s" length (M.print ~region cost)
+    sp "%d mile tunnel required.\nCost: %s" length (M.print ~region cost)
   in
   let entries =
   [
@@ -622,7 +623,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                   begin match B.find_close_city x y ~range:4 s.backend with
                   | Some (x,y) ->
                       let city, _ = Cities.find_exn x y s.backend.cities in
-                      Printf.sprintf "%s (%s)" (Tile.show tile) city
+                      sp "%s (%s)" (Tile.show tile) city
                   | None -> Tile.show tile
                   end
               | _ -> Tile.show tile
@@ -632,7 +633,7 @@ let handle_event (s:State.t) v (event:Event.t) =
                 static_entry ~color:Ega.white tilename;
                 static_entry ~color:Ega.white "Right-of-Way costs";
                 static_entry ~color:Ega.white @@
-                  Printf.sprintf "%s per mile" (M.print ~region:(B.get_region s.backend) info.cost);
+                  sp "%s per mile" (M.print ~region:(B.get_region s.backend) info.cost);
               ]
               in
               let demand = match info.demand with
@@ -978,9 +979,9 @@ let handle_msgs (s:State.t) v ui_msgs =
     | Normal ->
       let accident player_idx =
         let name = B.get_handle player_idx b in
-        let text = Printf.sprintf "TRAIN WRECK on %s!" name in
+        let text = sp "TRAIN WRECK on %s!" name in
         let num_people = (Newspaper.day_of_year b.params.time) mod 16 + 2 in
-        let text2 = Printf.sprintf "%d persons injured." num_people in
+        let text2 = sp "%d persons injured." num_people in
         let text3 = "Customers Panic!" in
         make_news @@ Newspaper.make_fancy s (text, text2, text3) b.params
       in
@@ -990,7 +991,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let add_remove = if add then "now\naccepts" else "no longer\naccepts" in
         let station = B.get_station (x, y) b |> Option.get_exn_or "missing station" in
         let text =
-          Printf.sprintf "%s\n... %s %s.\n"
+          sp "%s\n... %s %s.\n"
             (Station.get_name station)
             add_remove
             (Goods.show good)
@@ -1037,7 +1038,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         {v with mode}
 
       | ImpossibleRoute a ->
-          let text = Printf.sprintf
+          let text = sp
             "Impossible Route:\n\
              Train #%d\n\
              from %s\n\
@@ -1067,7 +1068,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       | IndustryBuilt{player_idx; tile} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let tile_s = Tile.show tile in
-        fst @@ make_msgbox ~x:24 ~y:144 s v @@ Printf.sprintf "%s built." tile_s
+        fst @@ make_msgbox ~x:24 ~y:144 s v @@ sp "%s built." tile_s
 
       | (AiBuySellOwnStock {opponent;_}
       | AiBuysPlayerStock {opponent;_}
@@ -1101,7 +1102,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       | NewPlayerCompany {num_shares} ->
         let mode =
           let text  = "New Railroad formed:",
-                      (Printf.sprintf "%d,000 shares of stock" num_shares),
+                      (sp "%d,000 shares of stock" num_shares),
                       "sold to local Investors." in
           make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
@@ -1135,7 +1136,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode =
           let name = Station_map.get_exn station b.stations |> Station.get_name in
           let text  = "First Train Arrives",
-                      (Printf.sprintf "in %s." name),
+                      (sp "in %s." name),
                       "Citizens Celebrate!" in
           make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
@@ -1155,17 +1156,25 @@ let handle_msgs (s:State.t) v ui_msgs =
           let player_name = B.get_handle player_idx b in
           let other_name = B.get_handle other_player_idx b in
           let text = "Rate War Declared in",
-                     (Printf.sprintf "%s!" station_name),
-                     (Printf.sprintf "%s vs. %s." player_name other_name) in
+                     (sp "%s!" station_name),
+                     (sp "%s vs. %s." player_name other_name) in
           make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
+
+      | UnionStation{player_idx; station} ->
+          if Owner.(player_idx <> main_player_idx) then v else
+          let station = B.get_station station b |> Option.get_exn_or "No station found" in
+          let city = Station.get_city station |> Option.get_exn_or "No city of station" in
+          let city_name = Cities.name_of_loc city b.cities in
+          let text = sp "Union Station in %s!\n" city_name in
+          make_msgbox ~x:100 ~y:80 s v text |> fst
 
       | PlayerTakesControlOfOther{player_idx; other} ->
         let mode =
           let player_name = B.get_handle player_idx b in
           let other_name = B.get_handle other b in
-          let text = (Printf.sprintf "%s take control" player_name),
-                     (Printf.sprintf "of %s Railroad!" other_name),
+          let text = (sp "%s take control" player_name),
+                     (sp "of %s Railroad!" other_name),
                      "Wall Street amazed." in
           make_news @@ Newspaper.make_fancy s text b.params in
         {v with mode}
@@ -1173,7 +1182,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       | OwnerFired {player_idx; by} ->
         let mode =
           let player_name = B.get_handle player_idx b in
-          let text = (Printf.sprintf "%s president leaves" player_name),
+          let text = (sp "%s president leaves" player_name),
                      "town after meeting",
                      match by with
                      | `Stockholders -> "with stockholders."
@@ -1229,6 +1238,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       | TrainBuilt _ -> v
 
       end
+
     | _ -> v
 
   in
@@ -1407,7 +1417,7 @@ let render_main win (s:State.t) v =
   Fonts.Render.write win s.fonts ~color ~idx:`Standard ~x:264 ~y:66 cash_s;
 
   let month, year = B.get_date s.backend in
-  let date_s = Printf.sprintf "%s %d" (Utils.str_of_month month) year in
+  let date_s = sp "%s %d" (Utils.str_of_month month) year in
   Fonts.Render.write win s.fonts ~color:Ega.black ~idx:`Standard ~x:264 ~y:74 date_s;
 
   (* Train area *)
@@ -1420,7 +1430,7 @@ let render_main win (s:State.t) v =
     match Backend.get_priority_shipment player_idx s.backend with
     | Some priority ->
       let bonus = Priority_shipment.compute_bonus priority @@ B.get_params s.backend in
-      let bonus_s = Printf.sprintf "bonus: %d,000" @@ M.to_int bonus in
+      let bonus_s = sp "bonus: %d,000" @@ M.to_int bonus in
       Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny ~x:258 ~y:194 bonus_s;
     | _ -> ()
   in

@@ -1,5 +1,6 @@
 # Tasks
 - Can't build within 5 of enemy station
+- Paper wehen we start
 - Rate war:
   - can't build facilities
 - Start menu:
