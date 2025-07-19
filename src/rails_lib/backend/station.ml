@@ -36,10 +36,11 @@ let to_range = function
   | `Station -> 2
   | `Terminal -> 3
 
-let price_of = function
+let price_of ?(union_station=false) = function
   | `SignalTower -> moi 25
   | `Depot -> moi 50
   | `Station -> moi 100
+  | `Terminal when union_station -> moi 100
   | `Terminal -> moi 200
 
 let maintenance_of_kind = function
@@ -162,17 +163,14 @@ type t = {
   signals: signals;
 } [@@deriving yojson]
 
-let with_info v f = match v.info with
-  | Some x -> Some (f x)
-  | _ -> None
+let with_info v default f = Option.map_or ~default f v.info
 
-let update_with_info v f = match v.info with
+let update_with_info v f = with_info v v @@
+  fun info ->
   (* None = don't update *)
-  | Some x -> begin match f x with
+    match f info with
     | Some _ as info -> {v with info}
     | None -> v
-    end
-  | _ -> v
 
 let get_age v year = year - v.year
 
@@ -192,19 +190,11 @@ let frame_color_of_signal = function
   | Go, NoOverride
   | Stop, NoOverride -> Ega.black
 
-let kind_str v =
-  match v.info with
-  | None -> "Signal Tower"
-  | Some {kind;_} -> show_kind kind
+let kind_str v = with_info v "Signal Tower" (fun info -> show_kind info.kind)
 
-let is_proper_station v =
-  match v.info with
-  | Some _ -> true
-  | None -> false
+let is_proper_station v = with_info v false (fun _ -> true)
 
-let get_upgrades v = match v.info with
-  | Some {upgrades;_} -> upgrades
-  | None -> Upgrades.empty
+let get_upgrades v = with_info v Upgrades.empty (fun info -> info.upgrades)
 
 let has_upgrade v upgrade =
   let upgrades = get_upgrades v in
@@ -314,17 +304,11 @@ let add_upgrade upgrade player v =
   in
   {v with info}
 
-let get_name v = match v.info with
-  | Some info -> info.name
-  | _ -> ""
+let get_name v = with_info v "" (fun info -> info.name)
 
-let get_short_name v = match v.info with
-  | Some info -> info.short_name
-  | _ -> ""
+let get_short_name v = with_info v "" (fun info -> info.short_name)
 
-let get_city v = match v.info with
-  | Some info -> Some(info.city)
-  | _ -> None
+let get_city v = with_info v None (fun info -> Some info.city)
 
 let get_loc v = v.loc
 
@@ -340,9 +324,7 @@ let get_lost_supply_exn v = match v.info with
   | Some info -> info.lost_supply
   | None -> failwith "not a proper station"
 
-let get_demand_exn v = match v.info with
-  | Some info -> info.demand
-  | None -> failwith "not a proper station"
+let get_demand_exn v = with_info v Goods.Set.empty (fun info -> info.demand)
 
    (* some supplies are lost every tick in a rate war. *)
 let check_rate_war_lose_supplies ~difficulty v =
@@ -464,10 +446,8 @@ let lose_supplies v =
         CCHashtbl.incr info.lost_supply good ~by:(amount - amount2);
       )
 
-let total_goods_revenue v =
-  match v.info with
-  | Some info -> Goods.Map.sum_cash (fun _ cash -> cash) info.cargo_revenue 
-  | _ -> Money.zero
+let total_goods_revenue v = with_info v Money.zero (fun info ->
+  Goods.Map.sum_cash (fun _ cash -> cash) info.cargo_revenue)
 
 let add_to_goods_revenue goods_rev info =
   let cargo_revenue = Goods.Map.merge_add_cash info.cargo_revenue goods_rev in
@@ -476,9 +456,7 @@ let add_to_goods_revenue goods_rev info =
 let add_to_goods_revenue goods_rev v =
   update_with_info v (fun info -> add_to_goods_revenue goods_rev info |> Option.some)
 
-let get_goods_revenue v = match v.info with
-  | Some info -> info.cargo_revenue
-  | None -> Goods.Map.empty
+let get_goods_revenue v = with_info v Goods.Map.empty (fun info -> info.cargo_revenue)
 
 let color_of_rates v = match v.info with
   | Some info -> begin match info.rates with
@@ -488,33 +466,22 @@ let color_of_rates v = match v.info with
     end
   | _ -> failwith "Shouldn't get here"
      
-let holds_priority_shipment v =
-  Option.map_or
-    ~default:false
-    (fun x -> x.holds_priority_shipment)
-    v.info
+let holds_priority_shipment v = with_info v false @@
+  fun info -> info.holds_priority_shipment
 
 let set_priority_shipment x v =
   update_with_info v
   (fun info ->
-    if Bool.equal info.holds_priority_shipment x then
-        None
-    else
-        Some {info with holds_priority_shipment = x})
+    if Bool.equal info.holds_priority_shipment x then None
+    else Some {info with holds_priority_shipment = x})
 
 let get_player_idx v = v.player
 
-let has_rate_war v = match v.info with
-  | Some {rates=`Half; _} -> true
-  | _ -> false
+let has_rate_war v = with_info v false (fun info -> match info.rates with `Half -> true | _ -> false)
 
-let has_double_rates v = match v.info with
-  | Some {rates=`Double; _} -> true
-  | _ -> false
+let has_double_rates v = with_info v false (fun info -> match info.rates with `Double -> true | _ -> false)
 
-let get_rates v = match v.info with
-  | Some {rates;_} -> rates
-  | _ -> `Normal
+let get_rates v = with_info v `Normal (fun info -> info.rates)
 
 let _set_rate_war x v = update_with_info v (fun info -> Some {info with rates=x})
 
@@ -524,43 +491,33 @@ let set_double_rates v = _set_rate_war `Double v
 
 let set_normal_rates v = _set_rate_war `Normal v
 
-let total_picked_up_goods v = match v.info with
-  | None -> 0
-  | Some info ->
+let total_picked_up_goods v = with_info v 0
+  (fun info ->
     let goods = info.picked_up_goods in
-    Hashtbl.sum (fun _ num -> num) goods
+    Hashtbl.sum (fun _ num -> num) goods)
   
-let total_lost_supply v = match v.info with
-  | None -> 0
-  | Some info ->
+let total_lost_supply v = with_info v 0
+  (fun info ->
     let supply = info.lost_supply in
-    Hashtbl.sum (fun _ num -> num) supply
+    Hashtbl.sum (fun _ num -> num) supply)
 
-let remove_goods goods v = match v.info with
-  | None -> ()
-  | Some info ->
+let remove_goods goods v = with_info v () @@
+  fun info ->
     Goods.Set.iter (fun good ->
       Hashtbl.update info.supply ~k:good ~f:(fun _ -> function _ -> None)
     ) goods
 
-let has_demand_for v good =
-  match v.info with
-  | None -> false
-  | Some info -> Goods.Set.mem good info.demand
+let has_demand_for v good = with_info v false @@ fun info -> Goods.Set.mem good info.demand
 
-let convert good region v = match v.info with
-  | Some info -> convert good region info
-  | None -> None
+let convert good region v = with_info v None @@ fun info -> convert good region info
 
-let end_of_period_reset v = match v.info with
-  | None -> v
-  | Some info ->
+let end_of_period_reset v = update_with_info v @@ fun info ->
     let rates = if has_double_rates v then `Normal else info.rates in
     let info = {info with
       picked_up_goods=Hashtbl.create 10;
       lost_supply=Hashtbl.create 10;
       cargo_revenue=Goods.Map.empty;
       rates;
-    }
-    in {v with info=Some info}
+    } in
+    Some info
 
