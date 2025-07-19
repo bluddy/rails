@@ -100,7 +100,15 @@ let ai_of_city city v = LocMap.get city v.ai_of_city
 
 let ai_of_city_map v = v.ai_of_city
 
-let city_rate_war city v = LocSet.mem city v.rate_war_at_city
+let city_has_rate_war city v = LocSet.mem city v.rate_war_at_city
+
+let set_city_rate_war city v =
+  let rate_war_at_city = LocSet.add city v.rate_war_at_city in
+  [%up{v with rate_war_at_city}]
+
+let end_city_rate_war city v =
+  let rate_war_at_city = LocSet.remove city v.rate_war_at_city in
+  [%up{v with rate_war_at_city}]
 
 let get_ai idx v = Owner.Map.get idx v.ais
 
@@ -173,7 +181,7 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap v
   let player_idx = Option.get_exn_or "AI player idx not found" @@ ai_of_city city1 v in
   let ai_player = Owner.Map.find player_idx v.ais in
   let value = _route_value city1 city2 ~tilemap ~params in
-  let div = if city_rate_war city1 v || city_rate_war city2 v then 6 else 3 in
+  let div = if city_has_rate_war city1 v || city_has_rate_war city2 v then 6 else 3 in
   let value = M.div value div in
   let value = M.mult value (ai_player.opponent.management + Climate.to_enum params.climate + 3) in
   (* Higher difficulty -> earns more *)
@@ -552,7 +560,7 @@ let _try_to_build_station ~tilemap ~stations ~tracks ~cities ~params ~city ~ai_i
       | _ ->
         let find_closest_ai_city_to_other_city ~src_city ~ai =
           LocMap.fold (fun tgt_city city_ai acc ->
-            if Owner.(ai = city_ai) && not @@ city_rate_war tgt_city v then
+            if Owner.(ai = city_ai) && not @@ city_has_rate_war tgt_city v then
               let dist = Utils.classic_dist src_city tgt_city in
               match acc with
                 | Some (min_dist, _) ->

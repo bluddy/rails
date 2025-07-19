@@ -420,9 +420,10 @@ let check_build_track loc ~dir (params:Params.t) v =
     | t, EnemyStation when Tile.is_ground t -> `RateWar loc2
     | _, _ -> `Illegal
 
-let check_build_station loc v =
+let check_build_station ?(rate_war=false) ?(union_station=false) loc v =
   let tile = get_tile loc v in
   if Tile.is_ground tile then `Ok
+  else if Tile.is_enemy_station tile && (rate_war || union_station) then `Ok
   else `Illegal
 
   (* Collect demand and supply in the vicinity of a tile *)

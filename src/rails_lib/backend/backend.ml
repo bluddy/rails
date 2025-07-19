@@ -166,13 +166,16 @@ let players_and_ai v =
 
 let is_illegal = function `Illegal -> true | _ -> false
 
-let check_build_station x y player_idx station_type v =
+let check_build_station ?(union_station=false) ?(rate_war=false) x y player_idx station_type v =
+  (* rate_war is only used by the internal system *)
   let loc = (x, y) in
   match Trackmap.check_build_station loc player_idx station_type v.track with
-  | `Ok -> Tilemap.check_build_station loc v.map
+  | `Ok -> Tilemap.check_build_station ~rate_war ~union_station loc v.map
   | x -> x
 
-let _build_station ((x,y) as loc) station_type player_idx v =
+let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) station_type player_idx v =
+  let is_ok = match check_build_station ~rate_war x y player_idx station_type v with `Ok -> true | _ -> false in
+  if not is_ok then v else
   let before = Scan.scan v.track loc player_idx in
   let track, build_new_track_dir = Trackmap.build_station v.track loc station_type in
   let after = Scan.scan track loc player_idx in
@@ -213,7 +216,7 @@ let _build_station ((x,y) as loc) station_type player_idx v =
   let players = Player.update v.players player_idx (fun player ->
     let player = player
       |> Player.add_station loc
-      |> Player.pay `StructuresEquipment (Station.price_of station_type)
+      |> Player.pay `StructuresEquipment (Station.price_of ~union_station station_type)
     in
     match build_new_track_dir with
     | Some dir -> Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map player
@@ -293,8 +296,26 @@ let _change_double_track loc player_idx ~double v =
     [%up {v with track; blocks}]
   ) else v
 
-let _handle_rate_war_declaration loc v = v
-(* TODO *)
+let _handle_rate_war_union_station player_idx loc v =
+  (* Rate war declared by player. Could be a union station *)
+  let city = Cities.find_close loc ~range:100 v.cities |> Option.get_exn_or "no city found" in
+  match Ai.ai_of_city city v.ai with
+  | None -> v
+  | Some ai_idx ->
+    match (if Stock_market.controls_company player_idx ~target:ai_idx v.stocks then `UnionStation else `RateWar) with
+    | `RateWar ->
+      let v = _build_station loc `Station player_idx v in
+      let stations = Station_map.update loc Station.set_rate_war v.stations in
+      let ai = Ai.set_city_rate_war city v.ai in
+      let msg = Ui_msg.RateWarDeclared{player_idx; other_player_idx=ai_idx; station=loc} in
+      send_ui_msg v msg;
+      {v with stations; ai}
+
+    | `UnionStation ->
+      let v = _build_station loc ~union_station:true `Terminal player_idx v in
+      let msg = Ui_msg.UnionStation {player_idx; station=loc} in
+      send_ui_msg v msg;
+      v
 
 let _build_track ((x, y) as loc) ~dir player_idx v =
   (* Can either create a new edge or a new node (ixn) *)
@@ -311,8 +332,11 @@ let _build_track ((x, y) as loc) ~dir player_idx v =
   let players = Player.update v.players player_idx @@
     Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map
   in
-  let v = match ret with `RateWar loc -> _handle_rate_war_declaration loc v | _ -> v in
-  [%up {v with graph; track; blocks; players}]
+  let v = [%up {v with graph; track; blocks; players}] in
+  let v = match ret with
+    | `RateWar loc -> _handle_rate_war_union_station player_idx loc v
+    | _ -> v in
+  v
 
 let is_ferry = function `Ferry -> true | _ -> false
 

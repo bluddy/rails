@@ -1,4 +1,7 @@
 # Tasks
+- Can't build within 5 of enemy station
+- Rate war:
+  - can't build facilities
 - Start menu:
   - See if we can support the original menu colors (use menu images from original)
   - Make menu highlight go all the way (solved by same solution)

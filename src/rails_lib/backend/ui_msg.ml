@@ -102,6 +102,7 @@ type t =
   | TrainBridgeAccident of {player_idx: Owner.t; engine: Engine.t}
   | FirstTrainArrives of {player_idx: Owner.t; station: loc}
   | RateWarDeclared of {player_idx: Owner.t; other_player_idx: Owner.t; station: loc}
+  | UnionStation of {player_idx: Owner.t; station: loc}
   | PlayerTakesControlOfOther of {player_idx: Owner.t; other: Owner.t}
   | OwnerFired of {player_idx: Owner.t; by:[`Stockholders | `Management]}
   | BridgeCreated of {player_idx: Owner.t; kind: Bridge.t}

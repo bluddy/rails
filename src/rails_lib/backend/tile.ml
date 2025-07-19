@@ -121,8 +121,12 @@ let to_enum = function
   | SheepFarm -> 35
 
 let is_ground = function
-  | River _ | Ocean _ | Harbor _ | Landing _ -> false
+  | River _ | Ocean _ | Harbor _ | Landing _ | EnemyStation -> false
   | _ -> true
+
+let is_enemy_station = function
+  | EnemyStation -> true
+  | _ -> false
 
   (* Whether a tile is something you can build *)
 let is_buildable = function
