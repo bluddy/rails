@@ -100,6 +100,9 @@ let ai_of_city city v = LocMap.get city v.ai_of_city
 
 let ai_of_city_map v = v.ai_of_city
 
+let remove_ai_of_city city v =
+  {v with ai_of_city=LocMap.remove city v.ai_of_city}
+
 let city_has_rate_war city v = LocSet.mem city v.rate_war_at_city
 
 let set_city_rate_war city v =
@@ -1016,4 +1019,39 @@ let get_build_order ai_idx v =
 let set_build_order ai_idx src dst v =
   modify_ai ai_idx v (fun ai_player->
     {ai_player with build_order=Some(src, dst)})
+
+let get_city_connections city v =
+  Vector.fold (fun acc routes ->
+  if U.equal_loc route.src city then route.dst :: acc
+  else if U.equal_loc route_dst city then route.src :: acc
+  else acc)
+  []
+  v.routes
+
+(* Recursively delete isolated cities *)
+let delete_city_rate_war city v =
+  let connected_cities = get_city_connections city v in
+  let cities_to_delete =
+    List.filter (fun city ->
+      List.is_empty @@ get_city_connections city v)
+    connected_cities
+  in
+  let v = List.fold_left (fun acc city ->
+    remove_ai_of_city city acc) v cities_to_delete
+  in
+  Vector.filter_in_place (fun route ->
+    not
+    (List.mem `eq:U.equal_loc route.src cities_to_delete ||
+     List.mem `eq:U.equal_loc route.dst cities_to_delete)) v.routes;
+
+
+
+
   
+let rate_war_ai_loss station city ai_idx v =
+  if not @@ city_has_rate_war city v then v else
+  let v = end_city_rate_war city v in
+
+
+
+
