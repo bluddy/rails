@@ -479,6 +479,13 @@ let check_build_industry_at x y wanted_tile ~region v =
     Tile.(possible_tile1 = wanted_tile || possible_tile2 = wanted_tile)
   | _ -> false
 
+let search_for_enemy_station_near (x, y as loc) ~player_idx v =
+  Utils.scan x y ~range:10 ~width:(get_width v) ~height:(get_height v)
+    ~f:(fun x y ->
+      match get_tile_xy x y v with
+      | EnemyStation {owner;_} when Owner.(owner = player_idx) -> true
+      | _ -> false)
+
   (* Search for a site to build a specific tile (industry) *)
 let search_for_industry_site x y wanted_tile ~region v =
   Utils.scan x y ~range:3 ~width:(get_width v) ~height:(get_height v)

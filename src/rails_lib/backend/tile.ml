@@ -24,7 +24,7 @@ type t =
   | PowerPlant (* 20 US, Europe *)
   | OilWell (* US *)
   | Refinery (* US *)
-  | EnemyStation
+  | EnemyStation of {over: t; owner: Owner.t} (* Tile it's covering *)
   | River of Dir.Set.t (* directions of river *)
   | Ocean of Dir.Set.t (* 25 *) (* dirs are directions of land *)
   | Harbor of Dir.Set.t (* same as ocean *)

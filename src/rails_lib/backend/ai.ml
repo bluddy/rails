@@ -1029,7 +1029,7 @@ let get_city_connections city v =
   v.routes
 
 (* Recursively delete isolated cities *)
-let delete_city_rate_war city v =
+let delete_city_rate_war city tilemap v =
   let connected_cities = get_city_connections city v in
   let cities_to_delete =
     List.filter (fun city ->
@@ -1039,10 +1039,21 @@ let delete_city_rate_war city v =
   let v = List.fold_left (fun acc city ->
     remove_ai_of_city city acc) v cities_to_delete
   in
+  (* Delete all routes with these cities *)
   Vector.filter_in_place (fun route ->
     not
     (List.mem `eq:U.equal_loc route.src cities_to_delete ||
      List.mem `eq:U.equal_loc route.dst cities_to_delete)) v.routes;
+  (* Delete from map *)
+  List.iter (fun city ->
+    let tile = Tilemap.get_tile city tilemap in
+    match tile with
+    | EnemyStation(prev_tile) -> Tilemap.set_tile city prev_tile
+  )
+  
+  
+  
+
 
 
 
