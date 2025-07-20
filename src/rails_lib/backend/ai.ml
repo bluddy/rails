@@ -269,7 +269,8 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
   let ais = Owner.Map.add ai.idx ai v.ais in
   let ai_of_city = LocMap.add city ai.idx v.ai_of_city in
   let v = {v with ais; ai_of_city} in
-  Tilemap.set_tile city Tile.EnemyStation tilemap;
+  let tile = Tilemap.get_tile city tilemap in
+  Tilemap.set_tile city (Tile.EnemyStation{owner=ai.idx; over=tile}) tilemap;
   let stocks = Stock_market.add_ai_player ai.idx ~num_fin_periods:params.num_fiscal_periods stocks in
   let ui_msg = Ui_msg.NewCompany{opponent=opponent.name; city} in
   `CreateAI(tilemap, v, stocks, ui_msg)
@@ -430,9 +431,9 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random =
       in
       let tracks, ai_track, at_station, ok = match tile, track with
        (* These things are only allowed if we're almost there *)
-       | (Tile.Ocean _ | EnemyStation), _ when real_dist > 1 -> tracks, ai_track, at_station, `Fail
+       | (Tile.Ocean _ | EnemyStation _), _ when real_dist > 1 -> tracks, ai_track, at_station, `Fail
        | _, Some _track when real_dist > 1 -> tracks, ai_track, at_station, `Fail
-       | EnemyStation, _ -> tracks, ai_track, `AtStation, `Ok
+       | EnemyStation _, _ -> tracks, ai_track, `AtStation, `Ok
        | (River _ | Landing _), _ -> build_track_of_kind @@ Track.Bridge Wood
        | _ when diag_surrounded && real_dist > 1 -> tracks, ai_track, at_station, `Fail
        | _ -> build_track_of_kind @@ Track.Track `Single
@@ -504,7 +505,8 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
         let track_length = ai_player.track_length + dist * 5 in
         let expand_ctr = 0 in
         let ai_of_city = LocMap.add tgt_city company v.ai_of_city in
-        Tilemap.set_tile tgt_loc Tile.EnemyStation tilemap; (* Even draw for union station, apparently *)
+        let tile = Tilemap.get_tile tgt_loc tilemap in
+        Tilemap.set_tile tgt_loc (Tile.EnemyStation{owner=company; over=tile}) tilemap; (* Even draw for union station, apparently *)
         let route = {owner=company; src=src_city; dst=tgt_city; track=List.rev ai_track |> Array.of_list} in
         Vector.push v.routes route; (* Add AI route *)
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
@@ -1021,9 +1023,9 @@ let set_build_order ai_idx src dst v =
     {ai_player with build_order=Some(src, dst)})
 
 let get_city_connections city v =
-  Vector.fold (fun acc routes ->
+  Vector.fold (fun acc route ->
   if U.equal_loc route.src city then route.dst :: acc
-  else if U.equal_loc route_dst city then route.src :: acc
+  else if U.equal_loc route.dst city then route.src :: acc
   else acc)
   []
   v.routes
