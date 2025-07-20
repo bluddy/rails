@@ -687,7 +687,7 @@ let _start_broker_timer player_idx v =
 let create_balance_sheet player_idx v =
   Balance_sheet.create player_idx v.players v.stocks v.stations v.params v.track v.map
 
-let _rate_war_info_one_station station v =
+let _rate_war_score_station station v =
   let city =
     let loc = Station.get_loc station in
     Cities.find_close loc ~range:10 v.cities |> Option.get_exn_or "Nearby city not found" in
@@ -770,7 +770,7 @@ let _rate_war_info player_idx v =
       v.stations
       ~init:[]
   in
-  List.map (fun station -> _rate_war_info_one_station station v) rate_wars
+  List.map (fun station -> _rate_war_score_station station v) rate_wars
 
 let _rate_war_handle_result loc result v =
   (* TODO: handle rate war loss/win fully *)
