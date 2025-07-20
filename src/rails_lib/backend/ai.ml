@@ -453,6 +453,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random =
   (* TODO: adjust player-owned flag logic for station *)
 let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
                   ~tilemap ~company ~stocks ~params random v =
+  let player_idx = C.player in
   let src_loc = src_city in
   let src_name = Cities.name_of_loc src_loc cities in
   let tgt_loc, tgt_name = match tgt_station with
@@ -472,16 +473,18 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
           Ui_msg.AiConnected {opponent; ai_name; src_name; tgt_name}
         in
         let update_station f = Station_map.update tgt_loc f stations in
-        let rate_war_at_city, stations = match ai_controlled_by_player, tgt_station with
+        let rate_war_at_city, stations, msgs = match ai_controlled_by_player, tgt_station with
           | true, Some _ ->
-              v.rate_war_at_city, update_station Station.set_to_union_station
+              let msg = Ui_msg.UnionStation{player_idx; station=tgt_loc} in
+              v.rate_war_at_city, update_station Station.set_to_union_station, [msg]
           | false, Some _ ->
               (* Rate war *)
               let rate_war_at_city = LocSet.add tgt_city v.rate_war_at_city in
               let stations = update_station Station.set_rate_war in
-              rate_war_at_city, stations
+              let msg = Ui_msg.RateWarDeclared{player_idx; other_player_idx=company; station=tgt_loc} in
+              rate_war_at_city, stations, [msg]
           | _ ->
-            v.rate_war_at_city, stations
+            v.rate_war_at_city, stations, []
         in
         (* Set AI player snd city *)
         let city2 = match (get_ai_exn company v).city2 with
@@ -504,8 +507,8 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
         let ai_player = {ai_player with city2; cash; track_length; expand_ctr} in
         let ais = Owner.Map.add company ai_player v.ais in
         let v = {v with ais; ai_of_city; routes=v.routes; rate_war_at_city} in
-        (* TODO: if not owned by player and connect to player, send rate war animation *)
-        tracks, tilemap, v, stations, Some ui_msg
+
+        tracks, tilemap, v, stations, ui_msg::msgs
     | None ->
       (* Failed to build *)
         let expand_ctr =
@@ -513,16 +516,16 @@ let _build_station tgt_city src_city ~tgt_station ~cities ~stations ~tracks
             ai_player.expand_ctr / 2
           else ai_player.expand_ctr
         in
-        let build_order, ui_msg =
+        let build_order, msgs =
           if ai_controlled_by_player then
             let ui_msg = Ui_msg.AiBuildOrderFailed{player_idx=C.player; ai_name; src_name; tgt_name} in
-            None, Some ui_msg
+            None, [ui_msg]
           else
-            ai_player.build_order, None
+            ai_player.build_order, []
         in
         let ai_player2 = [%up {ai_player with build_order; expand_ctr}] in
         let v = if ai_player2 === ai_player then v else {v with ais=Owner.Map.add company ai_player2 v.ais} in
-        tracks, tilemap, v, stations, ui_msg
+        tracks, tilemap, v, stations, msgs
 
 let new_route_text ai_name src_name tgt_name =
   Printf.sprintf
@@ -950,8 +953,8 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
 
 let ai_track_routines ?force_create ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v =
   match ai_track_routines ?force_create ~stocks ~params ~player_net_worth ~tilemap ~tracks ~cities random ~stations v with
-  | `Build(tracks, tilemap, v, stations, ui_msg) ->
-      tracks, tilemap, stations, stocks, v, Option.to_list ui_msg
+  | `Build(tracks, tilemap, v, stations, msgs) ->
+      tracks, tilemap, stations, stocks, v, msgs
   | `CreateAI(tilemap, v, stocks, ui_msg) ->
       tracks, tilemap, stations, stocks, v,  [ui_msg]
   | `Update v ->
