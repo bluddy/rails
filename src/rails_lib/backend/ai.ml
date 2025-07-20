@@ -1028,8 +1028,8 @@ let get_city_connections city v =
   []
   v.routes
 
-(* Recursively delete isolated cities *)
-let delete_city_rate_war city tilemap v =
+(* Recursively delete city, routes + another max 2 cities if they're isolated *)
+let delete_city_rate_war city ai_idx tilemap v =
   let connected_cities = get_city_connections city v in
   let cities_to_delete =
     List.filter (fun city ->
@@ -1040,29 +1040,25 @@ let delete_city_rate_war city tilemap v =
     remove_ai_of_city city acc) v cities_to_delete
   in
   (* Delete all routes with these cities *)
+  let has_city city = List.mem ~eq:U.equal_loc city cities_to_delete in
   Vector.filter_in_place (fun route ->
-    not
-    (List.mem `eq:U.equal_loc route.src cities_to_delete ||
-     List.mem `eq:U.equal_loc route.dst cities_to_delete)) v.routes;
+    not @@ has_city route.src || has_city route.dst) v.routes;
   (* Delete from map *)
   List.iter (fun city ->
-    let tile = Tilemap.get_tile city tilemap in
-    match tile with
-    | EnemyStation(prev_tile) -> Tilemap.set_tile city prev_tile
-  )
+    match Tilemap.find_enemy_station_near city ~player_idx:ai_idx tilemap with
+    | Some loc ->
+      let tile = Tilemap.get_tile loc tilemap in
+      begin match tile with
+      | EnemyStation{over; owner} when Owner.(owner = ai_idx) -> Tilemap.set_tile city over tilemap
+      | _ -> ()
+      end
+    | None -> failwith "No city station found")
+    cities_to_delete;
+  v
   
-  
-  
-
-
-
-
-
-  
-let rate_war_ai_loss station city ai_idx v =
+let rate_war_ai_loss city ai_idx tilemap v =
   if not @@ city_has_rate_war city v then v else
-  let v = end_city_rate_war city v in
-
-
-
+  v
+  |> end_city_rate_war city
+  |> delete_city_rate_war city ai_idx tilemap
 

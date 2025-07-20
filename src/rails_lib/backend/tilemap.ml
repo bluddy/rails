@@ -99,7 +99,7 @@ let pixel_of_tile = function
   | Factory
   | City -> City_pixel
   | Mountains -> Mountain_pixel
-  | EnemyStation -> EnemyStation_pixel
+  | EnemyStation _ -> EnemyStation_pixel
 
 let out_of_bounds_xy x y v = x < 0 || x >= v.width || y < 0 || y >= v.height
 let out_of_bounds (x, y) v = out_of_bounds_xy x y v
@@ -180,7 +180,9 @@ let tile_of_pixel_xy x y ~region ~pixel v =
     | Mountain_pixel -> Mountains
     | Ocean_pixel ->
         Ocean(water_dirs ~edge:false ~f:not_water)
-    | EnemyStation_pixel -> EnemyStation
+    | EnemyStation_pixel ->
+        (* We don't expect this to ever be run for real *)
+        Tile.default_enemy_station
   in
   (* NOTE: Does some region change the mappings?
       Otherwise why would clear pixels get complex mapping when they can't have anything? *)
@@ -417,7 +419,7 @@ let check_build_track loc ~dir (params:Params.t) v =
           let tile3 = get_tile loc3 v in
           if Tile.is_ground tile3 then `Bridge
           else `Illegal
-    | t, EnemyStation when Tile.is_ground t -> `RateWar loc2
+    | t, EnemyStation _ when Tile.is_ground t -> `RateWar loc2
     | _, _ -> `Illegal
 
 let check_build_station ?(rate_war=false) ?(union_station=false) loc v =
@@ -479,7 +481,7 @@ let check_build_industry_at x y wanted_tile ~region v =
     Tile.(possible_tile1 = wanted_tile || possible_tile2 = wanted_tile)
   | _ -> false
 
-let search_for_enemy_station_near (x, y as loc) ~player_idx v =
+let find_enemy_station_near (x, y) ~player_idx v =
   Utils.scan x y ~range:10 ~width:(get_width v) ~height:(get_height v)
     ~f:(fun x y ->
       match get_tile_xy x y v with

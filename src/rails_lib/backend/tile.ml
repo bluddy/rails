@@ -1,4 +1,5 @@
 open Containers
+module C = Constants
 
 type t =
   | Clear (* 0 *)
@@ -42,6 +43,8 @@ type t =
   | SheepFarm (* Eng, Eur *)
   [@@deriving eq, yojson, show]
 
+let default_enemy_station = EnemyStation{owner=C.player; over=Clear}
+
 let show = function
   | Clear -> "Clear"
   | Woods -> "Woods"
@@ -66,7 +69,7 @@ let show = function
   | PowerPlant -> "Power Plant"
   | OilWell -> "Oil Well"
   | Refinery -> "Refinery"
-  | EnemyStation -> "Enemy Station"
+  | EnemyStation _ -> "Enemy Station"
   | River _ -> "River"
   | Ocean _ -> "Ocean"
   | Harbor _ -> "Harbor"
@@ -105,7 +108,7 @@ let to_enum = function
   | PowerPlant  -> 19
   | OilWell  -> 20
   | Refinery  -> 21
-  | EnemyStation -> 22
+  | EnemyStation _ -> 22
   | River _ -> 23
   | Ocean _ -> 24
   | Harbor _ -> 25
@@ -121,11 +124,11 @@ let to_enum = function
   | SheepFarm -> 35
 
 let is_ground = function
-  | River _ | Ocean _ | Harbor _ | Landing _ | EnemyStation -> false
+  | River _ | Ocean _ | Harbor _ | Landing _ | EnemyStation _ -> false
   | _ -> true
 
 let is_enemy_station = function
-  | EnemyStation -> true
+  | EnemyStation _ -> true
   | _ -> false
 
   (* Whether a tile is something you can build *)
@@ -152,7 +155,6 @@ let is_buildable = function
   | _ -> false
 
 module Info = struct
-
 
   module TileHash = Hashtbl.Make(struct
     (* Specialized hashtable that ignores the inner arguments of the tile *)
@@ -197,7 +199,7 @@ module Info = struct
       Ocean empty, make 10;
       Farm, make 3;
       Slums, make 4;
-      EnemyStation, make 0;
+      default_enemy_station, make 0;
   ]
 
   let us_list = (std_list @ [
