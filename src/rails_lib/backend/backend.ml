@@ -369,21 +369,22 @@ let _build_ferry ((x, y) as loc) ~dir player_idx v =
 let check_remove_track loc ~dir player_idx v =
   Trackmap.check_remove_track loc ~dir player_idx v.track 
 
-let _remove_station ((x, y) as loc) ~dir player_idx v =
+let _remove_station ((x, y) as loc) ?dir player_idx v =
   let track, graph, stations, blocks = v.track, v.graph, v.stations, v.blocks in
   let before = Scan.scan track loc player_idx in
   (* Have to be careful with order here or we'll mess up state *)
   let blocks = Block_map.handle_remove_station graph track blocks loc before in
-  let track = Trackmap.remove_track loc player_idx ~dir track in
+  let track = match dir with | Some dir -> Trackmap.remove_track loc player_idx ~dir track | None -> track in
   let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_remove_track x y graph before after in
   let stations = Station_map.delete loc stations in
   (* TODO: Not sure this is right. Check this in build_station *)
   let players =
     Player.update v.players player_idx (fun player ->
-      player
-      |> Player.remove_station loc
-      |> Player.update_and_remove_track x y ~len:1 ~dir ~climate:v.params.climate v.map)
+      let player = Player.remove_station loc player in
+      match dir with
+      | Some dir -> Player.update_and_remove_track x y ~len:1 ~dir ~climate:v.params.climate v.map player
+      | None -> player)
   in
   [%up {v with stations; blocks; track; graph; players}]
 
@@ -785,20 +786,21 @@ let _rate_war_info player_idx v =
 
 let _rate_war_handle_result result v =
   (* TODO: handle rate war loss/win fully *)
-  let stations = v.stations in
-  let stations, ai =  match result with
-    | `PlayerWins (player_idx, ai_idx) ->
+  let stations, ai, ui_msgs =  match result.Ui_msg.winner with
+    | `Player ->
         (* Double rates for the rest of the fiscal period *)
-        let stations = Station_map.update loc Station.set_double_rates stations in
-        Ai.rate_war_ai_loss v.city v.map v.ai
-        (* TODO: Send UpdateMap *)
+        let loc = result.station in
+        let stations = Station_map.update loc Station.set_double_rates v.stations in
+        let ai = Ai.rate_war_ai_loss result.city v.map v.ai in
+        station, ai, [Ui_msg.UpdateMap]
     | `Ai ->
-        Station_map.delete loc stations
-    | `None -> stations
+        let v = _remove_station result.station result.player_idx v in
+        stations, v.ai, []
+
+    | `None -> stations, v.ai, []
   in
-  (* TODO:Remove AI station, route. If stranded, remove more *)
   (* TODO:Remove player stuff within radius of 3 *)
-  [%up {v with stations}]
+  [%up {v with stations; ai}], ui_msgs
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
