@@ -47,7 +47,9 @@ type share_price_change = {
 
 type rate_war_info = {
   ai_idx: Owner.t;
+  player_idx: Owner.t;
   city: loc;
+  station: loc;
   picked_up: int Freight.Map.t;
   ai_picked_up: int Freight.Map.t;
   pickup_scores: (int * int) Freight.Map.t; (* player, ai *)

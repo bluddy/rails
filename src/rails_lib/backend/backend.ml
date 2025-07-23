@@ -687,7 +687,8 @@ let _start_broker_timer player_idx v =
 let create_balance_sheet player_idx v =
   Balance_sheet.create player_idx v.players v.stocks v.stations v.params v.track v.map
 
-let _rate_war_score_station station v =
+let _station_rate_war_score_result station v =
+  let player_idx = Station.get_player_idx station in
   let city =
     let loc = Station.get_loc station in
     Cities.find_close loc ~range:10 v.cities |> Option.get_exn_or "Nearby city not found" in
@@ -756,28 +757,41 @@ let _rate_war_score_station station v =
     else if ai_score >= score * 2 then `Ai
     else `None
   in
-  let msg = Ui_msg.RateWar {
-      ai_idx; city; picked_up; ai_picked_up; pickup_scores; delivered; ai_delivered; delivery_scores; final_scores; winner;
-    }
-  in
-  (station.loc, winner), msg
+  Ui_msg.{
+     ai_idx;
+     player_idx;
+     city;
+     station;
+     picked_up;
+     ai_picked_up;
+     pickup_scores;
+     delivered;
+     ai_delivered;
+     delivery_scores;
+     final_scores;
+     winner;
+  }
 
 let _rate_war_info player_idx v =
   let rate_wars =
     Station_map.fold (fun station acc ->
-      if Owner.(Station.get_player_idx station = player_idx) && Station.has_rate_war station then station::acc
+      if Owner.(Station.get_player_idx station = player_idx) &&
+          Station.has_rate_war station then station::acc
       else acc)
       v.stations
       ~init:[]
   in
-  List.map (fun station -> _rate_war_score_station station v) rate_wars
+  List.map (fun station -> _station_rate_war_score_result station v) rate_wars
 
-let _rate_war_handle_result loc result v =
+let _rate_war_handle_result result v =
   (* TODO: handle rate war loss/win fully *)
   let stations = v.stations in
-  let stations =  match result with
-    | `Player -> Station_map.update loc Station.set_double_rates stations
-    | `Ai -> Station_map.delete loc stations
+  let stations, ai =  match result with
+    | `PlayerWins (player_idx, ai_idx) ->
+        let stations = Station_map.update loc Station.set_double_rates stations in
+        Ai.rate_war_ai_loss v.map v.ai
+    | `Ai ->
+        Station_map.delete loc stations
     | `None -> stations
   in
   (* TODO:Remove AI station, route. If stranded, remove more *)
@@ -796,11 +810,12 @@ let _fin_end_proceed player_idx v =
   (* TODO: handle dissolved company *)
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   let player = Player.fiscal_period_end_achievements ~revenue:total_revenue ~net_worth v.params player in
-  let rate_war_results, rw_msgs = _rate_war_info player_idx v |> List.split in
-  let v = List.fold_left (fun acc (loc, result) -> _rate_war_handle_result loc result acc) v rate_war_results in
+  let rate_war_results = _rate_war_info player_idx v |> List.split in
+  let v = List.fold_left (fun acc result -> _rate_war_handle_result result acc) v rate_war_results in
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
+  let rw_msgs = List.map (fun info -> Ui_msg.RateWar info) rate_war_results in
   let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
   send_ui_msg v ui_msg;
   let stations = Station_map.map Station.end_of_period_reset v.stations in

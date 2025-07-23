@@ -1031,7 +1031,7 @@ let get_city_connections city v =
   v.routes
 
 (* Recursively delete city, routes + another max 2 cities if they're isolated *)
-let delete_city_rate_war city ai_idx tilemap v =
+let _delete_city_rate_war city ai_idx tilemap v =
   let connected_cities = get_city_connections city v in
   let cities_to_delete =
     List.filter (fun city ->
@@ -1062,5 +1062,5 @@ let rate_war_ai_loss city ai_idx tilemap v =
   if not @@ city_has_rate_war city v then v else
   v
   |> end_city_rate_war city
-  |> delete_city_rate_war city ai_idx tilemap
+  |> _delete_city_rate_war city ai_idx tilemap
 
