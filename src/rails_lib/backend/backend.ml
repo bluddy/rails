@@ -788,8 +788,10 @@ let _rate_war_handle_result result v =
   let stations = v.stations in
   let stations, ai =  match result with
     | `PlayerWins (player_idx, ai_idx) ->
+        (* Double rates for the rest of the fiscal period *)
         let stations = Station_map.update loc Station.set_double_rates stations in
-        Ai.rate_war_ai_loss v.map v.ai
+        Ai.rate_war_ai_loss v.city v.map v.ai
+        (* TODO: Send UpdateMap *)
     | `Ai ->
         Station_map.delete loc stations
     | `None -> stations

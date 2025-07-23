@@ -121,6 +121,7 @@ let handle_tick win (s:State.t) time =
         (* Main game *)
         (* A tick starts with the backend *)
         let backend, ui_msgs, is_cycle = Backend.handle_tick s.backend time in
+        (* Check for need to update map texture *)
         if List.find_opt (function Ui_msg.UpdateMap -> true | _ -> false) ui_msgs |> Option.is_some then
           update_map win s s.backend.map;
         let ui = Main_ui.handle_tick s s.ui time is_cycle in
