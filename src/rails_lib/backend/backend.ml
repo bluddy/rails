@@ -690,8 +690,8 @@ let create_balance_sheet player_idx v =
 
 let _station_rate_war_score_result station v =
   let player_idx = Station.get_player_idx station in
+  let loc = Station.get_loc station in
   let city =
-    let loc = Station.get_loc station in
     Cities.find_close loc ~range:10 v.cities |> Option.get_exn_or "Nearby city not found" in
   let ai_idx = Ai.ai_of_city city v.ai |> Option.get_exn_or "AI missing for city" in
   let picked_up = Station.get_picked_up_goods_exn station
@@ -762,7 +762,7 @@ let _station_rate_war_score_result station v =
      ai_idx;
      player_idx;
      city;
-     station;
+     station=loc;
      picked_up;
      ai_picked_up;
      pickup_scores;
@@ -785,41 +785,34 @@ let _rate_war_info player_idx v =
   List.map (fun station -> _station_rate_war_score_result station v) rate_wars
 
 let _rate_war_handle_result result v =
-  (* TODO: handle rate war loss/win fully *)
   let module C = C.RateWar in
-  let track, stations, ai, ui_msgs =  match result.Ui_msg.winner with
+  let player_idx = result.Ui_msg.player_idx in
+  match result.Ui_msg.winner with
     | `Player ->
         (* Double rates for the rest of the fiscal period. Ai loses route(s) *)
         let loc = result.station in
         let stations = Station_map.update loc Station.set_double_rates v.stations in
-        let ai = Ai.rate_war_ai_loss result.city v.map v.ai in
-        v.track, station, ai, [Ui_msg.UpdateMap]
+        let ai = Ai.rate_war_ai_loss result.city result.ai_idx v.map v.ai in
+        {v with stations; ai}, true
     | `Ai ->
         (* Player loses station, trains, track within 3 squares *)
+        (* We have to use v because these operations affect many parts of v *)
         let x, y = result.station in
-        let v = _remove_station result.station result.player_idx v in
-        let trains_to_remove = 
-          let x, y = x - C.loss_radius, y - C.loss_radius in
-          let w = C.loss_radius * 2 + 1 in
-          Trainmap.find_trains_in_range ~x ~y ~range:C.loss_radius v.trains
+        let v = _remove_station result.station player_idx v in
+        let v =
+          update_player v player_idx (
+            Player.update_trains (fun trains ->
+              let trains_to_remove = Trainmap.find_trains_in_range ~x ~y ~range:C.loss_radius trains in
+              List.fold_left (fun acc train_id -> Trainmap.delete train_id acc)
+                trains
+                trains_to_remove))
         in
-        let trains =
-          List.fold_left (fun acc train_id -> Trainmap.delete train_id acc)
-            v.trains
-            trains_to_remove
+        let v =
+          let tracks_to_remove = Trackmap.find_track_in_range ~x ~y ~range:C.loss_radius player_idx v.track in
+          List.fold_left (fun acc (x,y,dir) -> _remove_track (x,y) ~dir player_idx acc) v tracks_to_remove
         in
-        let track_to_remove = Trackmap.find_track_in_range ~x ~y ~range:C.loss_radius v in
-        let track =
-          List.fold_left (fun acc (x,y,dir) -> _remove_track (x,y) ~dir player_idx acc)
-            v.tracks
-            track_to_remove
-        in
-        track, stations, v.ai, []
-
-    | `None -> v.track, v.stations, v.ai, []
-  in
-  (* TODO:Remove player stuff within radius of 3 *)
-  [%up {v with track; stations; ai}], ui_msgs
+        v, false
+    | `None -> v, false
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
@@ -833,12 +826,7 @@ let _fin_end_proceed player_idx v =
   (* TODO: handle dissolved company *)
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   let player = Player.fiscal_period_end_achievements ~revenue:total_revenue ~net_worth v.params player in
-
-  (* Update backend with rate war results, touching a whole bunch of things *)
   let rate_war_results = _rate_war_info player_idx v in
-  (* TODO: move this to the end, after end of year processing *)
-  let v = List.fold_left (fun acc result -> _rate_war_handle_result result acc) v rate_war_results in
-
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
@@ -853,7 +841,17 @@ let _fin_end_proceed player_idx v =
   let player = Player.clear_periodic params player in
   let dev_state = Tile_develop.end_of_period v.params v.dev_state in
   let v = update_player v player_idx (fun _ -> player) in
-  {v with params; ai; stocks; stations; dev_state}
+  let v = {v with params; ai; stocks; stations; dev_state} in
+  (* Now that we dealt with end of the year stuff, possibly deal with rate war result *)
+  let v, refresh_map =
+    List.fold_left (fun (v, refresh_acc) result ->
+      let v, refresh_map = _rate_war_handle_result result v in
+      v, refresh_map || refresh_acc)
+      (v, false)
+      rate_war_results in
+  if refresh_map then (
+    send_ui_msg v Ui_msg.UpdateMap);
+  v
 
 let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->

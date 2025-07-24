@@ -50,3 +50,5 @@ val subrange: Id.t -> num: int -> t -> int Iter.t * [`First | `NotFirst] * [`Las
 
 val first_train: t -> Id.t
 
+val find_trains_in_range: x:int -> y:int -> range:int -> t -> Id.t list
+

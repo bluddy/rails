@@ -171,7 +171,7 @@ let render_stock_eval win state (s:State.t) =
   in
   Menu.MsgBox.render win s state.stock_msgbox;
 
-  let ranked_owners = List.to_iter state.msgs |> Iter.map (fun x -> x.Ui_msg.player_idx) in
+  let ranked_owners = List.to_iter state.msgs |> Iter.map (fun (x:Ui_msg.share_price_change) -> x.player_idx) in
   draw_owner_portraits win s ranked_owners
 
 let get_warnings backend msgs =
