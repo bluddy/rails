@@ -140,3 +140,7 @@ module Intro = struct
   let wait_time = 2 (* secs *)
 end
 
+module RateWar = struct
+  let loss_radius = 3 (* How far we remove player stuff *)
+end
+

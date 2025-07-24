@@ -175,3 +175,13 @@ let subrange start ~num v =
 
 let first_train _ = Train.Id.of_int 0
 
+let find_trains_by_range ~x ~y ~range v =
+  Iter.fold (fun acc i ->
+     Iter.fold (fun acc j ->
+        let trains = Hashtbl.find v.tile_idx (j, i) in
+        trains @ acc)
+       acc
+       Iter.((x-range) -- (x+range)))
+    []
+    Iter.((y-range) -- (y+range))
+

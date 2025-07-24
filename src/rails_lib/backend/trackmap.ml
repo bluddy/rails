@@ -263,3 +263,15 @@ let calc_total_land_cost v ~player =
     else 0)
   v.map
 
+let find_ixns_in_range ~x ~y ~range v =
+  Iter.fold (fun acc i ->
+    Iter.fold (fun acc j ->
+      if get_xy j i |> Tile.is_ixn then
+        (j, i)::acc
+      else
+        acc)
+
+  )
+   
+  
+
