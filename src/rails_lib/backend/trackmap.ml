@@ -264,14 +264,14 @@ let calc_total_land_cost v ~player =
   v.map
 
 let find_ixns_in_range ~x ~y ~range v =
+  (* ixns are critical to the track graph *)
   Iter.fold (fun acc i ->
     Iter.fold (fun acc j ->
-      if get_xy j i |> Tile.is_ixn then
-        (j, i)::acc
-      else
-        acc)
-
+      if get_xy j i v |> Option.map_or ~default:false Track.is_ixn then (j, i)::acc
+      else acc)
+    acc
+    Iter.((x-range) -- (x+range))
   )
-   
-  
+  []
+  Iter.((y-range) -- (y+range))
 
