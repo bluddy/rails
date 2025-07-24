@@ -50,7 +50,7 @@ module Random = struct
   end
 
   let int maxval r =
-    if maxval = 0 then 0 else int maxval r
+    if maxval <= 0 then 0 else int maxval r
   
 end
 
