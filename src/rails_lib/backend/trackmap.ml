@@ -263,12 +263,15 @@ let calc_total_land_cost v ~player =
     else 0)
   v.map
 
-let find_ixns_in_range ~x ~y ~range v =
-  (* ixns are critical to the track graph *)
+let find_track_in_range ~x ~y ~range player_idx v =
+  (* return all track in range *)
   Iter.fold (fun acc i ->
     Iter.fold (fun acc j ->
-      if get_xy j i v |> Option.map_or ~default:false Track.is_ixn then (j, i)::acc
-      else acc)
+      match get_xy j i v with
+      | Some track when Owner.(track.player = player_idx) ->
+          let locds = Dir.Set.to_list track.dirs |> List.map (fun dir -> x, y, dir) in
+          locds @ acc
+      | _ -> acc)
     acc
     Iter.((x-range) -- (x+range))
   )

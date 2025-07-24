@@ -175,7 +175,8 @@ let subrange start ~num v =
 
 let first_train _ = Train.Id.of_int 0
 
-let find_trains_by_range ~x ~y ~range v =
+let find_trains_in_range ~x ~y ~range v =
+  (* Trains are always per-player so no need to worry *)
   Iter.fold (fun acc i ->
      Iter.fold (fun acc j ->
         let trains = Hashtbl.find v.tile_idx (j, i) in

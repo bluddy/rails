@@ -787,32 +787,39 @@ let _rate_war_info player_idx v =
 let _rate_war_handle_result result v =
   (* TODO: handle rate war loss/win fully *)
   let module C = C.RateWar in
-  let stations, ai, ui_msgs =  match result.Ui_msg.winner with
+  let track, stations, ai, ui_msgs =  match result.Ui_msg.winner with
     | `Player ->
-        (* Double rates for the rest of the fiscal period *)
+        (* Double rates for the rest of the fiscal period. Ai loses route(s) *)
         let loc = result.station in
         let stations = Station_map.update loc Station.set_double_rates v.stations in
         let ai = Ai.rate_war_ai_loss result.city v.map v.ai in
-        station, ai, [Ui_msg.UpdateMap]
+        v.track, station, ai, [Ui_msg.UpdateMap]
     | `Ai ->
+        (* Player loses station, trains, track within 3 squares *)
         let x, y = result.station in
         let v = _remove_station result.station result.player_idx v in
         let trains_to_remove = 
           let x, y = x - C.loss_radius, y - C.loss_radius in
           let w = C.loss_radius * 2 + 1 in
-          Trainmap.find_trains_by_rect ~x ~y ~w ~h:w v.trains
+          Trainmap.find_trains_in_range ~x ~y ~range:C.loss_radius v.trains
         in
         let trains =
           List.fold_left (fun acc train_id -> Trainmap.delete train_id acc)
             v.trains
             trains_to_remove
         in
-        stations, v.ai, []
+        let track_to_remove = Trackmap.find_track_in_range ~x ~y ~range:C.loss_radius v in
+        let track =
+          List.fold_left (fun acc (x,y,dir) -> _remove_track (x,y) ~dir player_idx acc)
+            v.tracks
+            track_to_remove
+        in
+        track, stations, v.ai, []
 
-    | `None -> stations, v.ai, []
+    | `None -> v.track, v.stations, v.ai, []
   in
   (* TODO:Remove player stuff within radius of 3 *)
-  [%up {v with stations; ai}], ui_msgs
+  [%up {v with track; stations; ai}], ui_msgs
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
@@ -826,8 +833,12 @@ let _fin_end_proceed player_idx v =
   (* TODO: handle dissolved company *)
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   let player = Player.fiscal_period_end_achievements ~revenue:total_revenue ~net_worth v.params player in
-  let rate_war_results = _rate_war_info player_idx v |> List.split in
+
+  (* Update backend with rate war results, touching a whole bunch of things *)
+  let rate_war_results = _rate_war_info player_idx v in
+  (* TODO: move this to the end, after end of year processing *)
   let v = List.fold_left (fun acc result -> _rate_war_handle_result result acc) v rate_war_results in
+
   let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
