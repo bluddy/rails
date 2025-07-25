@@ -67,7 +67,7 @@ let of_stream ?input ?(dump_files=None) s =
   Printf.printf "lzw_encoded: 0x%x\nbyte3: 0x%x\n" pani_lzw_encoded pani_byte3; (* debug *)
   let header_type = My_gen.get_bytei s in
   Printf.printf "header_type: 0x%x\n" header_type; (* debug *)
-  let _subheader =
+  let _metadata =
     match header_type with
     | 0 -> Gen.take 17 s |> My_gen.to_stringi
     | 1 -> ""
@@ -86,8 +86,7 @@ let of_stream ?input ?(dump_files=None) s =
 
   let pani_pics = Array.make 251 None in
 
-  let pic_bgnd =
-    match pani_type with
+  let pic_bgnd = match pani_type with
     | 0 -> None
     | 1 ->
         (* let byte = My_gen.get_bytei s in  (* optional *)

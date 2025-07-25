@@ -1,4 +1,3 @@
-open Tsdl
 open Containers
 
 module R = Renderer
@@ -12,6 +11,7 @@ type t = {
   interp: Pani_interp.t;
   mutable last_time: int;
   mutable textures: R.Texture.t option array;
+  mutable bg_tex: R.Texture.t option;
 }
 
 let create ?input filename =
@@ -20,37 +20,35 @@ let create ?input filename =
   let textures = [||] in
   let state = `Timeout in
   let last_time = 0 in
-  {state; interp; last_time; textures}
+  {state; interp; last_time; textures; bg_tex=None}
 
 
 let render win v =
   let no_textures = Array.length v.textures = 0 in
   if no_textures then (
     let textures = Array.map (Option.map (R.Texture.make win)) v.interp.pics in
-    v.textures <- textures
+    v.textures <- textures;
+    Option.iter (fun bg -> v.bg_tex <- R.Texture.make win bg |> Option.some) v.interp.background
   );
 
   R.clear_screen win;
 
-  (* Draw all backgrounds in correct order *)
-  let () = List.rev_iter (fun Pani_interp.{x; y; pic_idx} ->
-      match v.textures.(pic_idx) with
-      | None -> failwith @@ Printf.sprintf "No texture %d" pic_idx
-      | Some tex -> ignore(R.Texture.render win ~x ~y tex)
-    )
-    v.interp.backgrounds
-  in
+  Option.iter (fun bg_tex -> R.Texture.render win ~x:0 ~y:0 bg_tex) v.bg_tex;
 
-  (* Draw all textures as required by interpreter *)
+  List.iter (fun Pani_interp.{pic_idx; x; y} ->
+    (* Note: why does 0 turn up here and doesn't exist? *)
+    if pic_idx <> -1 && pic_idx <> 0 then
+    let tex = v.textures.(pic_idx) |> Option.get_exn_or (Printf.sprintf "missing texture %d" pic_idx) in
+    R.Texture.render win ~x ~y tex
+  ) v.interp.static_pics;
+
   Iter.iter (fun i ->
-    Pani_interp.anim_get_pic v.interp i
-    |> Option.iter (fun pic_idx ->
-       match v.textures.(pic_idx) with
-       | None -> failwith @@ Printf.sprintf "No pic_idx %d" pic_idx
-       | Some pic_tex ->
-         let x, y = Pani_interp.calc_anim_xy v.interp i in
-         R.Texture.render win ~x ~y pic_tex
-  ))
+    let sprite = Pani_interp.anim_get_pic v.interp i in
+    if sprite.active && sprite.pic_idx <> -1 then
+      let tex = v.textures.(sprite.pic_idx) |> Option.get_exn_or "missing texture" in
+      let x, y = Pani_interp.calc_anim_xy v.interp i in
+      R.Texture.render win ~x ~y tex
+  )
   Iter.(0 -- C.Pani.max_num_animations)
 
 let handle_tick time v =
@@ -66,63 +64,13 @@ let handle_tick time v =
   v
   
 let standalone win ~filename =
-  let stream = Pani.stream_of_file filename in
-  let pani_v = Pani.of_stream stream in
-  let pics_tex = pani_v.pics |>
-    Array.map (function
-      | None -> None
-      | Some ndarray -> Some (R.Texture.make win ndarray))
+  let handle_event v _event = v, false in
+  let v = create filename in
+  let funcs = Mainloop.{
+    handle_tick=(fun v time -> handle_tick time v);
+    render=render win;
+    handle_event;
+  }
   in
-
-  let last_state = ref `Timeout in
-  let last_time = ref @@ Sdl.get_ticks () in
-  let update_delta = 10l in
-
-  let handle_tick () _ =
-    begin match !last_state with
-    | `Done | `Error -> ()
-    | _ ->
-        let time = Sdl.get_ticks () in
-        let open Int32 in
-        if time - !last_time > update_delta
-        then (
-          last_time := time;
-          last_state := Pani_interp.step pani_v;
-        )
-    end;
-    ()
-  in
-
-  let render () =
-    (* let open Result.Infix in *)
-    let () = ignore(Sdl.render_clear win.R.renderer) in
-
-    (* Draw backgrounds *)
-    let () =
-      List.fold_right (fun Pani_interp.{x;y;pic_idx} _ ->
-        match pics_tex.(pic_idx) with
-        | None -> failwith @@ Printf.sprintf "No texture %d" pic_idx
-        | Some tex ->
-            ignore(R.Texture.render win ~x ~y tex)
-      )
-      pani_v.backgrounds
-      ()
-    in
-    (* Draw all pictures *)
-    Iter.fold (fun _acc i ->
-      match Pani_interp.anim_get_pic pani_v i with
-      | None -> ()
-      | Some pic_idx ->
-          match pics_tex.(pic_idx) with
-          | None -> failwith @@ Printf.sprintf "No pic_idx %d" pic_idx
-          | Some pic_tex ->
-            let x, y = Pani_interp.calc_anim_xy pani_v i in
-            ignore(R.Texture.render win ~x ~y pic_tex)
-    )
-    ()
-    Iter.(0 -- 50)
-
-  in 
-  let handle_event () _ = (), false in
-  ((), Mainloop.{handle_tick; render; handle_event})
+  v, funcs
 

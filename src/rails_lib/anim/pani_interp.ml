@@ -10,7 +10,7 @@ let debug = false
 type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
 
 (* background pic type *)
-type bg = {
+type pic = {
   x: int;
   y: int;
   pic_idx: int;
@@ -24,14 +24,14 @@ type t = {
   mutable read_ptr: int;
   mutable stack: int list;
   memory: int Array.t;
-  animations: Pani_anim.t Array.t;
+  sprites: Pani_sprite.t Array.t;
   pics: ndarray option Array.t;
-  mutable backgrounds: bg list; (* reversed *)
+  background: ndarray option;
+  mutable static_pics: pic list;
 }
 
 let make ?(input=[]) buf_str (background: ndarray option) pics =
   assert (Array.length pics = 251);
-  pics.(250) <- background;
   let memory = Array.make 52 0 in
   List.iter (fun (loc, v) -> memory.(loc) <- v) input;
   {
@@ -42,17 +42,18 @@ let make ?(input=[]) buf_str (background: ndarray option) pics =
     buffer=buf_str;
     stack=[];
     memory=Array.make 52 0;
-    animations=Array.init 51 (fun _ -> Pani_anim.empty ());
+    sprites=Array.init 51 (fun _ -> Pani_sprite.empty ());
     pics; (* size 251 *)
-    backgrounds = (match background with None -> [] | Some _ -> [{x=0; y=0; pic_idx=250}]);
+    background;
+    static_pics=[];
   }
 
 type op =
-  | CreateAnimation
-  | DeleteAnimation
+  | CreateSprite
+  | DeleteSprite
   | SetTimeout
   | AudioOutput
-  | SetToBackground
+  | MakeVisible
   | PushSetRegister
     (* Push to stack, either from register or from animation registers *)
   | SetRegisters 
@@ -77,11 +78,11 @@ type op =
   [@@deriving show {with_path=false}]
 
 let op_of_byte = function
-  | 0 -> CreateAnimation
-  | 1 -> DeleteAnimation
+  | 0 -> CreateSprite
+  | 1 -> DeleteSprite
   | 2 -> SetTimeout
   | 3 -> AudioOutput
-  | 4 -> SetToBackground
+  | 4 -> MakeVisible
   | 5 -> PushSetRegister
   | 6 -> SetRegisters
   | 7 -> Copy
@@ -106,6 +107,22 @@ let op_of_byte = function
 let str_of_stack v =
   "[" ^ (String.concat ", " @@ List.map Int.to_string v.stack) ^ "]"
 
+let calc_anim_xy v anim_idx =
+  let anim = v.sprites.(anim_idx) in
+  let open Pani_sprite in
+  match anim.other_anim_idx with
+  | -2 -> anim.x, anim.y
+  | other -> 
+      (* Assume other_anim_idx is valid or we can't use it *)
+      let anim2 = v.sprites.(other + 1) in
+      (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
+
+let save_sprite i v =
+    let anim = v.sprites.(i) in
+    let x, y = calc_anim_xy v i in
+    let pic = {x; y; pic_idx=anim.pic_idx} in
+    v.static_pics <- pic::v.static_pics
+
 let read_byte v =
   let ptr = v.read_ptr in
   v.read_ptr <- v.read_ptr + 1;
@@ -117,17 +134,6 @@ let read_word v =
   Bytes.get_int16_le v.buffer ptr
 
 let is_true x = x <> 0
-
-let calc_anim_xy v anim_idx =
-  let anim = v.animations.(anim_idx) in
-  let open Pani_anim in
-  match anim.other_anim_idx with
-  | -2 -> anim.x, anim.y
-  | other -> 
-      (* Assume other_anim_idx is valid or we can't use it *)
-      let anim2 = v.animations.(other + 1) in
-      (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
-
 
 let interpret v =
   let byte = read_byte v in
@@ -164,14 +170,14 @@ let interpret v =
         in
         v.stack <- stack';
         true
-    | CreateAnimation ->
+    | CreateSprite ->
         begin match v.stack with
         | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
           let anim_idx =
             if anim_idx = -1 then (
               if debug then
                 Printf.printf "-1: find unused anim. ";
-              begin match Array.find_idx (fun anim -> not anim.Pani_anim.used) v.animations with
+              begin match Array.find_idx (fun anim -> not anim.Pani_sprite.active) v.sprites with
               | Some(i,_) -> i
               | None -> 50 
               end
@@ -181,24 +187,26 @@ let interpret v =
             let anim = 
               let pic_far = pic_far = 1 in
               let buffer = v.buffer in
-              Pani_anim.make ~pic_far ~delay ~reset_x ~reset_y ~other_anim_idx ~data_ptr ~buffer
+              Pani_sprite.make ~pic_far ~delay ~reset_x ~reset_y ~other_anim_idx ~data_ptr ~buffer
             in
             if debug then
-              Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_anim.show anim);
-            v.animations.(anim_idx) <- anim
+              Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
+            v.sprites.(anim_idx) <- anim
           end;
           v.stack <- rest
         | _ -> print_endline "Invalid stack for animation creation"
         end;
         true
-    | DeleteAnimation ->
+    | DeleteSprite ->
         begin match v.stack with
         | anim_idx::rest ->
+            Printf.printf "delete sprite %d\n%!" anim_idx;
             if anim_idx >= 0 && anim_idx <= 50 then begin
               if debug then
                 Printf.printf "%d " anim_idx;
-              v.animations.(anim_idx).used <- false
+              v.sprites.(anim_idx).active <- false
             end;
+            save_sprite anim_idx v;
             v.stack <- rest
         | _ -> print_endline "DeleteAnimation: missing anim_idx on stack"
         end;
@@ -223,24 +231,18 @@ let interpret v =
         | _ -> failwith "AudioOutput: missing value argument"
         end;
         true
-    | SetToBackground ->
+    | MakeVisible ->
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx >= 0 && anim_idx <= 50 then (
               if debug then
                 Printf.printf "%d " anim_idx;
-              let anim = v.animations.(anim_idx) in
-              anim.background <- true;
+              let anim = v.sprites.(anim_idx) in
+              anim.visible <- true;
 
-              let update_background () =
-                let x, y = calc_anim_xy v anim_idx in
-                let new_bgnd = {x; y; pic_idx=anim.pic_idx} in
-                v.backgrounds <- new_bgnd :: v.backgrounds
-              in
               v.stack <- rest;
-              anim.update_fn <- Some update_background;
             )
-        | _ -> failwith "SetToBackground: missing argument"
+        | _ -> failwith "MakeVisible: missing argument"
         end;
         true
     | PushSetRegister ->
@@ -332,27 +334,23 @@ let interpret v =
   ret
 
 let step_all_animations v =
-  if Pani_anim.debug then
+  if Pani_sprite.debug then
     print_endline "\n--- Step through all animations ---\n";
 
   Array.iteri (fun i anim ->
-    Pani_anim.interpret_step anim i;
+    match Pani_sprite.interpret_step anim i with
+    | `Destroy -> save_sprite i v
+    | `None -> ()
   )
-  v.animations
+  v.sprites
 
-let enable_all_animations v =
-  if Pani_anim.debug then
-    print_endline "\n--- Bring all animations to foreground ---\n";
-
-  let open Pani_anim in
-  Array.iter (fun anim ->
-    if anim.used then
-      anim.background <- false;
-  )
-  v.animations
+let clear_anim_visibility_flags v =
+  let open Pani_sprite in
+  Array.iter (fun anim -> if anim.active then anim.visible <- false) v.sprites
 
 let step v =
-  let rec loop () =
+  (* clear_anim_visibility_flags v; *)
+  let rec delay_interp_loop () =
     if v.is_done then `Done else
 
     if v.timeout then (
@@ -360,23 +358,21 @@ let step v =
 
       if v.register = 0 then (
         v.timeout <- false;
-        loop ()
+        delay_interp_loop ()
       ) else
         `Timeout
     ) 
     else
       (* Do all processing steps *)
-      if interpret v then loop ()
+      if interpret v then delay_interp_loop ()
       else `Error
   in
-  match loop () with
+  match delay_interp_loop () with
   | `Timeout ->
-      for _i = 0 to 2 do
-        step_all_animations v
-      done;
-      enable_all_animations v;
+      step_all_animations v;
       `Timeout
-  | x -> x
+  | `Done -> `Done
+  | `Error -> `Error
 
 (* Entry point *)
 let run_to_end v =
@@ -389,10 +385,13 @@ let run_to_end v =
   loop ()
 
 let anim_get_pic v anim_idx =
-  let open Pani_anim in
-  let anim = v.animations.(anim_idx) in
-  match anim.used, anim.background, anim.pic_idx with
-  | _, _, -1 -> None
-  | true, false, i -> Some i
-  | _ -> None
+  v.sprites.(anim_idx)
+
+(* let anim_get_pic v anim_idx = *)
+(*   let open Pani_sprite in *)
+(*   let anim = v.sprites.(anim_idx) in *)
+(*   match anim.active, anim.visible, anim.pic_idx with *)
+(*   | _, _, -1 -> None *)
+(*   | true, false, i -> Some i *)
+(*   | _ -> None *)
 
