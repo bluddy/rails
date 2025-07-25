@@ -17,6 +17,7 @@ type t = {
   mutable dev_state: Tile_develop.t; (* State for gradual map developmnt *)
   stocks: Stock_market.t;
   ai: Ai.t;
+  delayed_action: (t -> t) option; (* We wait for the UI to advance our delayed action *)
   mutable ui_msgs: Ui_msg.t list;
   random: Utils.Random.State.t;
   seed: int;

@@ -35,7 +35,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Train stop by right click
 - [x] Accidents
 - [ ] Being driven out of town
-- [-] Rate war
+- [x] Rate war
 - [x] Integrate animations
 - [x] Record train arrivals
 - [x] Newspapers
@@ -49,11 +49,14 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Periodic reports
 - [x] Events (e.g. bridge washing out)
 - [x] Transition animation
+- [ ] Dissolve AI company
 - [ ] Music and Sound
-- [-] Testing and Fixes
+- [ ] Testing and Fixes
 
 ## Feature List for 1.0+
 
 - [ ] Externalize constants to JSON files.
-- [ ] Duplicate all graphics to make game free.
+- [ ] Duplicate all graphics.
 - [ ] Raise resolution.
+- [ ] Multiplayer? (lots of work, but basics are there)
+
