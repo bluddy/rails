@@ -18,8 +18,8 @@ type pic = {
 
 type t = {
   mutable is_done: bool;
-  mutable timeout: bool;
-  mutable register: int;    (* single register. also used for timeout *)
+  mutable delay: bool;
+  mutable delay_time: int;    (* single delay_time. also used for delay *)
   buffer: bytes;
   mutable read_ptr: int;
   mutable stack: int list;
@@ -36,8 +36,8 @@ let make ?(input=[]) buf_str (background: ndarray option) pics =
   List.iter (fun (loc, v) -> memory.(loc) <- v) input;
   {
     is_done=false;
-    timeout=false;
-    register=0;
+    delay=false;
+    delay_time=0;
     read_ptr=0;
     buffer=buf_str;
     stack=[];
@@ -55,9 +55,9 @@ type op =
   | AudioOutput
   | MakeVisible
   | PushSetRegister
-    (* Push to stack, either from register or from animation registers *)
+    (* Push to stack, either from delay_time or from animation registers *)
   | SetRegisters 
-    (* Set main register from code. If 0<value<=50, also set animation reg from stack *)
+    (* Set main delay_time from code. If 0<value<=50, also set animation reg from stack *)
   | Copy
   | Eq
   | Neq
@@ -213,13 +213,13 @@ let interpret v =
         true
     | SetTimeout ->
         begin match v.stack with
-        | timeout :: rest ->
+        | delay :: rest ->
             if debug then
-              Printf.printf "%d " timeout;
-            v.timeout <- true;
-            v.register <- timeout;
+              Printf.printf "%d " delay;
+            v.delay <- true;
+            v.delay_time <- delay;
             v.stack <- rest
-        | _ -> failwith "SetTimeout: missing timeout argument"
+        | _ -> failwith "SetTimeout: missing delay argument"
         end;
         true
     | AudioOutput ->
@@ -251,13 +251,13 @@ let interpret v =
         if is_true test then begin
           if debug then
             Printf.printf "%d from memory [%d] " v.memory.(value) value;
-          v.register <- v.memory.(value)
+          v.delay_time <- v.memory.(value)
         end else begin
           if debug then
             Printf.printf "%d " value;
-          v.register <- value
+          v.delay_time <- value
         end;
-        v.stack <- v.register::v.stack;
+        v.stack <- v.delay_time::v.stack;
         true
     | SetRegisters ->
         begin match v.stack with
@@ -265,7 +265,7 @@ let interpret v =
           let value = read_word v in
           if debug then
             Printf.printf "reg = %d " value;
-          v.register <- value;
+          v.delay_time <- value;
           if value >= 0 && value <= 50 then begin
             if debug then
               Printf.printf ", %d in animation_reg[%d] " newval value;
@@ -330,7 +330,7 @@ let interpret v =
         true
   in
   if debug then
-    Printf.printf "\t\treg: %d stack: %s\n" (v.register) (str_of_stack v);
+    Printf.printf "\t\treg: %d stack: %s\n" (v.delay_time) (str_of_stack v);
   ret
 
 let step_all_animations v =
@@ -353,11 +353,11 @@ let step v =
   let rec delay_interp_loop () =
     if v.is_done then `Done else
 
-    if v.timeout then (
-      v.register <- v.register - 1;
+    if v.delay then (
+      v.delay_time <- v.delay_time - 1;
 
-      if v.register = 0 then (
-        v.timeout <- false;
+      if v.delay_time = 0 then (
+        v.delay <- false;
         delay_interp_loop ()
       ) else
         `Timeout
