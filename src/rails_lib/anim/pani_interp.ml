@@ -4,8 +4,11 @@ open Containers
 (* Notes: pay attention to signed vs unsigned comparisons *)
 
 module Ndarray = Owl_base_dense_ndarray.Generic
+module C = Constants.Pani
 
 let debug = ref false
+
+let set_debug x = debug := x
 
 type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
 
@@ -14,6 +17,16 @@ type pic = {
   x: int;
   y: int;
   pic_idx: int;
+}
+
+type debugger = {
+  mutable cur_sprite: int;
+  mutable status: [`Delay | `Pause | `Done]
+}
+
+let default_debugger = {
+  cur_sprite=0;
+  status=`Pause;
 }
 
 type t = {
@@ -28,9 +41,10 @@ type t = {
   pics: ndarray option Array.t;
   background: ndarray option;
   mutable static_pics: pic list;
+  debugger: debugger option;
 }
 
-let make ?(input=[]) buf_str (background: ndarray option) pics =
+let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
   assert (Array.length pics = 251);
   let memory = Array.make 52 0 in
   List.iter (fun (loc, v) -> memory.(loc) <- v) input;
@@ -46,6 +60,7 @@ let make ?(input=[]) buf_str (background: ndarray option) pics =
     pics; (* size 251 *)
     background;
     static_pics=[];
+    debugger=if debug then Some default_debugger else None;
   }
 
 type op =
@@ -338,20 +353,19 @@ let interpret v =
     Printf.printf "\t\treg: %d stack: %s\n" (v.delay_time) (str_of_stack v);
   ret
 
-let step_all_animations v =
+let step_all_sprites v =
   if !Pani_sprite.debug then
     print_endline "\n--- Step through all animations ---\n";
-
-  Array.iteri (fun i anim ->
-    match Pani_sprite.interpret_step anim i with
+  Array.iteri (fun i sprite ->
+    match Pani_sprite.interpret_step sprite i with
     | `Destroy -> save_sprite i v
     | `None -> ()
   )
   v.sprites
 
-let clear_anim_visibility_flags v =
+let clear_sprite_visibility_flags v =
   let open Pani_sprite in
-  Array.iter (fun anim -> if anim.active then anim.visible <- false) v.sprites
+  Array.iter (fun sprite -> if sprite.active then sprite.visible <- false) v.sprites
 
 let step v =
   (* clear_anim_visibility_flags v; *)
@@ -372,9 +386,43 @@ let step v =
   in
   match loop () with
   | `Delay | `Pause ->
-      step_all_animations v;
+      step_all_sprites v;
       `Pause
   | `Done -> `Done
+
+let get_debugger v = Option.get_exn_or "Missing debugger" v.debugger 
+
+let debugger_step v =
+  (* clear_anim_visibility_flags v; *)
+  let rec loop () =
+    if v.is_done then `Done else
+    if v.delay then (
+      v.delay_time <- v.delay_time - 1;
+
+      if v.delay_time = 0 then (
+        v.delay <- false;
+        loop ()
+      ) else `Delay) 
+    else
+      (* Do all processing steps *)
+      match interpret v with
+      | `Pause -> `Pause
+      | `Stay -> loop ()
+  in
+  let debugger = get_debugger v in
+  debugger.status <- loop ()
+
+let debugger_step_sprite v =
+  let d = get_debugger v in 
+  if d.cur_sprite < C.max_num_sprites then (
+    let sprite = v.sprites.(d.cur_sprite) in
+    begin match Pani_sprite.interpret_step sprite d.cur_sprite with
+    | `Destroy -> save_sprite d.cur_sprite v
+    | `None -> ()
+    end;
+    d.cur_sprite <- d.cur_sprite + 1
+  ) else
+    print_endline "End of sprites"
 
 (* Entry point *)
 let dump_run_to_end v =
@@ -389,4 +437,5 @@ let dump_run_to_end v =
 
 let anim_get_pic v anim_idx =
   v.sprites.(anim_idx)
+
 

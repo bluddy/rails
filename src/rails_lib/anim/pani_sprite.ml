@@ -4,6 +4,8 @@ open Containers
 
 let debug = ref false
 
+let set_debug x = debug := x
+
 let print_hex fmt = Format.fprintf fmt "0x%x"
 
 type t = {

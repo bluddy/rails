@@ -14,9 +14,9 @@ type t = {
   mutable bg_tex: R.Texture.t option;
 }
 
-let create ?input filename =
+let create ?debug ?input filename =
   let stream = Pani.stream_of_file @@ "data/" ^ filename in
-  let interp = Pani.of_stream ?input stream in
+  let interp = Pani.of_stream ?debug ?input stream in
   let textures = [||] in
   let status = `Pause in
   let last_time = 0 in
@@ -49,7 +49,7 @@ let render win v =
       let x, y = Pani_interp.calc_anim_xy v.interp i in
       R.Texture.render win ~x ~y tex
   )
-  Iter.(0 -- C.Pani.max_num_animations)
+  Iter.(0 -- C.Pani.max_num_sprites)
 
 let handle_tick time v =
   let () = match v.status with
@@ -75,16 +75,21 @@ let standalone win ~filename =
   v, funcs
 
 let debugger win ~filename =
+  Pani_interp.set_debug true;
+  Pani_sprite.set_debug true;
   let handle_event v event = match event with
     | Event.Key {key=Event.N; down=true; _} ->
         let _ = Pani_interp.step v.interp in
+        v, false
+    | Event.Key {key=Event.S; down=true; _} ->
+        let _ = Pani_interp.debugger_step_sprite v.interp in
         v, false
     | Event.Key {key=Event.Q; down=true; _} ->
         v, true
     | _ ->
         v, false
   in
-  let v = create filename in
+  let v = create ~debug:true filename in
   let funcs = Mainloop.{
     handle_tick=(fun v _ -> v);
     render=render win;
