@@ -5,7 +5,7 @@ open Containers
 
 module Ndarray = Owl_base_dense_ndarray.Generic
 
-let debug = false
+let debug = ref false
 
 type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
 
@@ -138,7 +138,7 @@ let is_true x = x <> 0
 let interpret v =
   let byte = read_byte v in
   let op = op_of_byte byte in
-  if debug then
+  if !debug then
     Printf.printf "0x%x: %s(0x%x) " v.read_ptr (show_op op) byte;
 
   let ret =
@@ -163,7 +163,7 @@ let interpret v =
           match v.stack with
           | x::y::z ->
               let result = f y x in
-              if debug then
+              if !debug then
                 Printf.printf "%d %d = %d " y x result;
               result::z
           | _ -> failwith "Cannot add. Stack has < 2 elements"
@@ -175,7 +175,7 @@ let interpret v =
         | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
           let anim_idx =
             if anim_idx = -1 then (
-              if debug then
+              if !debug then
                 Printf.printf "-1: find unused anim. ";
               begin match Array.find_idx (fun anim -> not anim.Pani_sprite.active) v.sprites with
               | Some(i,_) -> i
@@ -189,7 +189,7 @@ let interpret v =
               let buffer = v.buffer in
               Pani_sprite.make ~pic_far ~delay ~reset_x ~reset_y ~other_anim_idx ~data_ptr ~buffer
             in
-            if debug then
+            if !debug then
               Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
             v.sprites.(anim_idx) <- anim
           ) else (
@@ -206,7 +206,7 @@ let interpret v =
         | anim_idx::rest ->
             Printf.printf "delete sprite %d\n%!" anim_idx;
             if anim_idx >= 0 && anim_idx <= 50 then begin
-              if debug then
+              if !debug then
                 Printf.printf "%d " anim_idx;
               v.sprites.(anim_idx).active <- false
             end;
@@ -219,7 +219,7 @@ let interpret v =
     | SetTimeout ->
         begin match v.stack with
         | delay :: rest ->
-            if debug then
+            if !debug then
               Printf.printf "%d " delay;
             v.delay <- true;
             v.delay_time <- delay;
@@ -230,7 +230,7 @@ let interpret v =
     | AudioOutput ->
         begin match v.stack with
         | x::rest ->
-            if debug then
+            if !debug then
               Printf.printf "audio: %d\n" x;
             v.stack <- rest
         | _ -> failwith "AudioOutput: missing value argument"
@@ -240,7 +240,7 @@ let interpret v =
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx >= 0 && anim_idx <= 50 then (
-              if debug then
+              if !debug then
                 Printf.printf "%d " anim_idx;
               let anim = v.sprites.(anim_idx) in
               anim.visible <- true;
@@ -254,11 +254,11 @@ let interpret v =
         let test = read_byte v in
         let value = read_word v in
         if is_true test then begin
-          if debug then
+          if !debug then
             Printf.printf "%d from memory [%d] " v.memory.(value) value;
           v.delay_time <- v.memory.(value)
         end else begin
-          if debug then
+          if !debug then
             Printf.printf "%d " value;
           v.delay_time <- value
         end;
@@ -268,11 +268,11 @@ let interpret v =
         begin match v.stack with
         | newval::rest ->
           let value = read_word v in
-          if debug then
+          if !debug then
             Printf.printf "reg = %d " value;
           v.delay_time <- value;
           if value >= 0 && value <= 50 then begin
-            if debug then
+            if !debug then
               Printf.printf ", %d in animation_reg[%d] " newval value;
             v.memory.(value) <- newval
           end;
@@ -283,7 +283,7 @@ let interpret v =
     | Copy ->
         begin match v.stack with
         | x::rest ->
-          if debug then
+          if !debug then
             Printf.printf "%d " x;
           v.stack <- x::x::rest
         | _ -> failwith "Copy: missing argument"
@@ -294,11 +294,11 @@ let interpret v =
         | do_jump::rest ->
             let addr = read_word v in
             if is_true do_jump then (
-              if debug then
+              if !debug then
                 Printf.printf "true, jump to 0x%x " addr;
               v.read_ptr <- addr
             ) else (
-              if debug then
+              if !debug then
                 Printf.printf "no jump to 0x%x " addr;
             );
             v.stack <- rest
@@ -307,7 +307,7 @@ let interpret v =
         `Stay
     | Jump ->
         let addr = read_word v in
-        if debug then
+        if !debug then
           Printf.printf "to 0x%x " addr;
         v.read_ptr <- addr;
         `Stay
@@ -320,7 +320,7 @@ let interpret v =
         let jump_addr = read_word v in
         v.stack <- v.read_ptr :: v.stack;
         v.read_ptr <- jump_addr;
-        if debug then
+        if !debug then
           Printf.printf "addr 0x%x " jump_addr;
         `Stay
     | Return ->
@@ -328,18 +328,18 @@ let interpret v =
         | ret_addr::rest ->
           v.read_ptr <- ret_addr;
           v.stack <- rest;
-          if debug then
+          if !debug then
             Printf.printf "to 0x%x "ret_addr;
         | _ -> failwith "Return: missing return address"
         end;
         `Stay
   in
-  if debug then
+  if !debug then
     Printf.printf "\t\treg: %d stack: %s\n" (v.delay_time) (str_of_stack v);
   ret
 
 let step_all_animations v =
-  if Pani_sprite.debug then
+  if !Pani_sprite.debug then
     print_endline "\n--- Step through all animations ---\n";
 
   Array.iteri (fun i anim ->
@@ -378,6 +378,8 @@ let step v =
 
 (* Entry point *)
 let dump_run_to_end v =
+  debug := true;
+  Pani_sprite.debug := true;
   let rec loop () =
     match step v with
     | `Pause -> loop ()

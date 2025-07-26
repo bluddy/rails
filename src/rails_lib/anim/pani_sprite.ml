@@ -2,7 +2,7 @@ open Containers
 
 (* Pani animations: interpret the code of the individual animations *)
 
-let debug = false
+let debug = ref false
 
 let print_hex fmt = Format.fprintf fmt "0x%x"
 
@@ -14,7 +14,6 @@ type t = {
   mutable x: int;
   mutable y: int;
   mutable counter_stack: int list;
-  mutable update_fn : (unit -> unit) option;
   other_anim_idx: int;
   reset_x: int;
   reset_y: int;
@@ -62,7 +61,6 @@ let op_of_byte ?(idx=0) = function
 let empty () = {
   active=false;
   visible=false;
-  update_fn=None;
   other_anim_idx=0;
   reset_x=0;
   reset_y=0;
@@ -131,7 +129,7 @@ let interpret_step v idx =
         let byte = read_byte v in
         let op = op_of_byte byte ~idx in
 
-        if debug then
+        if !debug then
           Printf.printf "anim[%d] 0x%x: %s(0x%x)\n" idx (v.read_ptr-1) (show_op op) byte;
 
         let action = match op with
@@ -202,7 +200,7 @@ let interpret_step v idx =
               v.active <- false;
               `Destroy
         in
-        if debug then print_endline @@ show v;
+        if !debug then print_endline @@ show v;
         match action with
         | `Stay -> interp_loop ()
         | `Exit -> `None
