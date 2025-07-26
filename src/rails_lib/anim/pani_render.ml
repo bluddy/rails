@@ -4,10 +4,10 @@ module R = Renderer
 module C = Constants
 module List = Utils.List
 
-type state = [`Timeout | `Done | `Error]
+type status = [`Pause | `Done ]
 
 type t = {
-  mutable state: state;
+  mutable status: status;
   interp: Pani_interp.t;
   mutable last_time: int;
   mutable textures: R.Texture.t option array;
@@ -18,9 +18,9 @@ let create ?input filename =
   let stream = Pani.stream_of_file @@ "data/" ^ filename in
   let interp = Pani.of_stream ?input stream in
   let textures = [||] in
-  let state = `Timeout in
+  let status = `Pause in
   let last_time = 0 in
-  {state; interp; last_time; textures; bg_tex=None}
+  {status; interp; last_time; textures; bg_tex=None}
 
 
 let render win v =
@@ -52,13 +52,13 @@ let render win v =
   Iter.(0 -- C.Pani.max_num_animations)
 
 let handle_tick time v =
-  let () = match v.state with
-    | `Done | `Error -> ()
-    | _ ->
+  let () = match v.status with
+    | `Done -> ()
+    | `Pause ->
         if time - v.last_time > C.Pani.update_delta
         then (
           v.last_time <- time;
-          v.state <- Pani_interp.step v.interp;
+          v.status <- Pani_interp.step v.interp;
         )
   in
   v

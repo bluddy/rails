@@ -74,7 +74,7 @@ type op =
   | SetDone
   | CallFunc
   | Return
-  | Error
+  | Pause
   [@@deriving show {with_path=false}]
 
 let op_of_byte = function
@@ -98,7 +98,7 @@ let op_of_byte = function
   | 17 -> Div
   | 18 -> JumpIfTrue
   | 19 -> Jump
-  | 20 -> Error
+  | 20 -> Pause
   | 21 -> SetDone
   | 22 -> Return
   | 23 -> CallFunc
@@ -169,7 +169,7 @@ let interpret v =
           | _ -> failwith "Cannot add. Stack has < 2 elements"
         in
         v.stack <- stack';
-        true
+        `Stay
     | CreateSprite ->
         begin match v.stack with
         | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
@@ -183,7 +183,7 @@ let interpret v =
               end
             ) else anim_idx
           in
-          if anim_idx >= 0 && anim_idx <= 50 then begin
+          if anim_idx > 0 && anim_idx <= 50 then (
             let anim = 
               let pic_far = pic_far = 1 in
               let buffer = v.buffer in
@@ -192,11 +192,15 @@ let interpret v =
             if debug then
               Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
             v.sprites.(anim_idx) <- anim
-          end;
+          ) else (
+            Printf.printf "Error: CreateSprite encountered bad anim idx %d on stack" anim_idx
+          );
           v.stack <- rest
+
         | _ -> print_endline "Invalid stack for animation creation"
         end;
-        true
+        `Stay
+
     | DeleteSprite ->
         begin match v.stack with
         | anim_idx::rest ->
@@ -210,7 +214,8 @@ let interpret v =
             v.stack <- rest
         | _ -> print_endline "DeleteAnimation: missing anim_idx on stack"
         end;
-        true
+        `Stay
+
     | SetTimeout ->
         begin match v.stack with
         | delay :: rest ->
@@ -221,7 +226,7 @@ let interpret v =
             v.stack <- rest
         | _ -> failwith "SetTimeout: missing delay argument"
         end;
-        true
+        `Stay
     | AudioOutput ->
         begin match v.stack with
         | x::rest ->
@@ -230,7 +235,7 @@ let interpret v =
             v.stack <- rest
         | _ -> failwith "AudioOutput: missing value argument"
         end;
-        true
+        `Stay
     | MakeVisible ->
         begin match v.stack with
         | anim_idx::rest ->
@@ -244,7 +249,7 @@ let interpret v =
             )
         | _ -> failwith "MakeVisible: missing argument"
         end;
-        true
+        `Stay
     | PushSetRegister ->
         let test = read_byte v in
         let value = read_word v in
@@ -258,7 +263,7 @@ let interpret v =
           v.delay_time <- value
         end;
         v.stack <- v.delay_time::v.stack;
-        true
+        `Stay
     | SetRegisters ->
         begin match v.stack with
         | newval::rest ->
@@ -274,7 +279,7 @@ let interpret v =
           v.stack <- rest
         | _ -> failwith "SetTimeoutWriteAnimArray: missing argument"
         end;
-        true
+        `Stay
     | Copy ->
         begin match v.stack with
         | x::rest ->
@@ -283,7 +288,7 @@ let interpret v =
           v.stack <- x::x::rest
         | _ -> failwith "Copy: missing argument"
         end;
-        true
+        `Stay
     | JumpIfTrue ->
         begin match v.stack with
         | do_jump::rest ->
@@ -299,25 +304,25 @@ let interpret v =
             v.stack <- rest
         | _ -> failwith "JumpIfTrue: missing argument"
         end;
-        true
+        `Stay
     | Jump ->
         let addr = read_word v in
         if debug then
           Printf.printf "to 0x%x " addr;
         v.read_ptr <- addr;
-        true
+        `Stay
     | SetDone ->
         v.is_done <- true;
-        true
-    | Error ->
-        false
+        `Stay
+    | Pause ->
+        `Pause
     | CallFunc ->
         let jump_addr = read_word v in
         v.stack <- v.read_ptr :: v.stack;
         v.read_ptr <- jump_addr;
         if debug then
           Printf.printf "addr 0x%x " jump_addr;
-        true
+        `Stay
     | Return ->
         begin match v.stack with
         | ret_addr::rest ->
@@ -327,7 +332,7 @@ let interpret v =
             Printf.printf "to 0x%x "ret_addr;
         | _ -> failwith "Return: missing return address"
         end;
-        true
+        `Stay
   in
   if debug then
     Printf.printf "\t\treg: %d stack: %s\n" (v.delay_time) (str_of_stack v);
@@ -350,48 +355,36 @@ let clear_anim_visibility_flags v =
 
 let step v =
   (* clear_anim_visibility_flags v; *)
-  let rec delay_interp_loop () =
+  let rec loop () =
     if v.is_done then `Done else
-
     if v.delay then (
       v.delay_time <- v.delay_time - 1;
 
       if v.delay_time = 0 then (
         v.delay <- false;
-        delay_interp_loop ()
-      ) else
-        `Timeout
-    ) 
+        loop ()
+      ) else `Delay) 
     else
       (* Do all processing steps *)
-      if interpret v then delay_interp_loop ()
-      else `Error
+      match interpret v with
+      | `Pause -> `Pause
+      | `Stay -> loop ()
   in
-  match delay_interp_loop () with
-  | `Timeout ->
+  match loop () with
+  | `Delay | `Pause ->
       step_all_animations v;
-      `Timeout
+      `Pause
   | `Done -> `Done
-  | `Error -> `Error
 
 (* Entry point *)
-let run_to_end v =
+let dump_run_to_end v =
   let rec loop () =
     match step v with
-    | `Timeout -> loop ()
+    | `Pause -> loop ()
     | `Done  -> print_endline "PANI done"
-    | `Error -> print_endline "PANI error"
   in
   loop ()
 
 let anim_get_pic v anim_idx =
   v.sprites.(anim_idx)
-
-(* let anim_get_pic v anim_idx = *)
-(*   let open Pani_sprite in *)
-(*   let anim = v.sprites.(anim_idx) in *)
-(*   match anim.active, anim.visible, anim.pic_idx with *)
-(*   | _, _, -1 -> None *)
-(*   | true, false, i -> Some i *)
-(*   | _ -> None *)
 

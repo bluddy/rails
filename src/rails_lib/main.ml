@@ -25,7 +25,7 @@ let main () =
   match !mode with
   | `Font -> Fonts.main !file
   | `Pic  -> Pic.png_of_file !file
-  | `Pani when !dump -> Pani.play !file
+  | `Pani when !dump -> Pani.dump_file !file
   | `Pani -> Mainloop.main @@ Pani_render.standalone ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Game_modules.run ()
