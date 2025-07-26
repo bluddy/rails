@@ -74,3 +74,21 @@ let standalone win ~filename =
   in
   v, funcs
 
+let debugger win ~filename =
+  let handle_event v event = match event with
+    | Event.Key {key=Event.N; down=true; _} ->
+        let _ = Pani_interp.step v.interp in
+        v, false
+    | Event.Key {key=Event.Q; down=true; _} ->
+        v, true
+    | _ ->
+        v, false
+  in
+  let v = create filename in
+  let funcs = Mainloop.{
+    handle_tick=(fun v _ -> v);
+    render=render win;
+    handle_event;
+  }
+  in
+  v, funcs
