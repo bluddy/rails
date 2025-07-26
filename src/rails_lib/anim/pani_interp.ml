@@ -20,12 +20,12 @@ type pic = {
 }
 
 type debugger = {
-  mutable cur_sprite: int;
+  mutable cur_sprite: [`Begin | `Some of int | `End];
   mutable status: [`Delay | `Pause | `Done]
 }
 
 let default_debugger = {
-  cur_sprite=0;
+  cur_sprite=`Begin;
   status=`Pause;
 }
 
@@ -368,7 +368,6 @@ let clear_sprite_visibility_flags v =
   Array.iter (fun sprite -> if sprite.active then sprite.visible <- false) v.sprites
 
 let step v =
-  (* clear_anim_visibility_flags v; *)
   let rec loop () =
     if v.is_done then `Done else
     if v.delay then (
@@ -393,6 +392,7 @@ let step v =
 let get_debugger v = Option.get_exn_or "Missing debugger" v.debugger 
 
 let debugger_step v =
+  (* TODO: finish the current step properly: loop all the remaining anims *)
   (* clear_anim_visibility_flags v; *)
   let rec loop () =
     if v.is_done then `Done else
@@ -410,19 +410,34 @@ let debugger_step v =
       | `Stay -> loop ()
   in
   let debugger = get_debugger v in
-  debugger.status <- loop ()
+  debugger.status <- loop ();
+  debugger.cur_sprite <- `Begin
 
 let debugger_step_sprite v =
   let d = get_debugger v in 
-  if d.cur_sprite < C.max_num_sprites then (
-    let sprite = v.sprites.(d.cur_sprite) in
-    begin match Pani_sprite.interpret_step sprite d.cur_sprite with
-    | `Destroy -> save_sprite d.cur_sprite v
-    | `None -> ()
-    end;
-    d.cur_sprite <- d.cur_sprite + 1
-  ) else
-    print_endline "End of sprites"
+  let find_idx start =
+    let rec loop x =
+      if x >= C.max_num_sprites then `End
+      else if v.sprites.(x).active then `Some x
+      else loop (x + 1)
+    in
+    loop start
+  in
+  match d.cur_sprite with
+  | `Some cur_sprite ->
+      d.cur_sprite <- find_idx (cur_sprite + 1)
+  | `Begin -> d.cur_sprite <- find_idx 0
+  | `End -> ();
+  match d.cur_sprite with 
+  | `Some cur_sprite ->
+      let sprite = v.sprites.(cur_sprite) in
+      Printf.printf "sprite %d: step" cur_sprite;
+      begin match Pani_sprite.interpret_step sprite cur_sprite with
+      | `Destroy -> save_sprite cur_sprite v
+      | `None -> ()
+      end;
+  | `Begin -> failwith "Shouldn't have seen Begin here"
+  | `End -> print_endline "End of sprites"
 
 (* Entry point *)
 let dump_run_to_end v =

@@ -44,10 +44,19 @@ let render win v =
 
   Iter.iter (fun i ->
     let sprite = Pani_interp.anim_get_pic v.interp i in
-    if sprite.active && sprite.pic_idx <> -1 then
+    if sprite.active && sprite.pic_idx <> -1 then (
       let tex = v.textures.(sprite.pic_idx) |> Option.get_exn_or "missing texture" in
       let x, y = Pani_interp.calc_anim_xy v.interp i in
-      R.Texture.render win ~x ~y tex
+      R.Texture.render win ~x ~y tex;
+
+      match v.interp.debugger with
+      | Some debugger ->
+          (match debugger.cur_sprite with
+          | `Some cur_sprite when i = cur_sprite ->
+            R.draw_rect win ~x ~y ~w:tex.w ~h:tex.h ~color:Ega.bred ~fill:false
+          | _ -> ())
+      | _ -> ()
+    )
   )
   Iter.(0 -- C.Pani.max_num_sprites)
 
@@ -79,7 +88,7 @@ let debugger win ~filename =
   Pani_sprite.set_debug true;
   let handle_event v event = match event with
     | Event.Key {key=Event.N; down=true; _} ->
-        let _ = Pani_interp.step v.interp in
+        let _ = Pani_interp.debugger_step v.interp in
         v, false
     | Event.Key {key=Event.S; down=true; _} ->
         let _ = Pani_interp.debugger_step_sprite v.interp in
@@ -90,6 +99,8 @@ let debugger win ~filename =
         v, false
   in
   let v = create ~debug:true filename in
+  (* Do one step to set up all the animations *)
+  let _ = Pani_interp.step v.interp in
   let funcs = Mainloop.{
     handle_tick=(fun v _ -> v);
     render=render win;
