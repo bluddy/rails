@@ -63,7 +63,7 @@ let op_of_byte ?(idx=0) = function
   | 8 -> ResetReadPtr
   | 9 -> Pause
   | 10 -> Deactivate
-  | x -> failwith @@ Printf.sprintf "anim[%d]: Unsupported byte %d" idx x
+  | x -> failwith @@ Printf.sprintf "sprite[%d]: Unsupported byte %d" idx x
 
 let empty () = {
   active=false;
@@ -137,7 +137,7 @@ let interpret_step v idx =
         let op = op_of_byte byte ~idx in
 
         if !debug then
-          Printf.printf "  anim[%d] 0x%x: %s(0x%x)\n%!" idx (v.read_ptr-1) (show_op op) byte;
+          Printf.printf "  sprite[%d] 0x%x: %s(0x%x)\n%!" idx (v.read_ptr-1) (show_op op) byte;
 
         let action = match op with
           | SetPicIdx ->

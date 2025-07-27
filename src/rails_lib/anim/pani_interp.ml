@@ -70,7 +70,7 @@ let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
 type op =
   | CreateSprite
   | DeleteSprite
-  | SetTimeout
+  | SetDelay
   | AudioOutput
   | MakeVisible
   | PushSetRegister
@@ -99,7 +99,7 @@ type op =
 let op_of_byte = function
   | 0 -> CreateSprite
   | 1 -> DeleteSprite
-  | 2 -> SetTimeout
+  | 2 -> SetDelay
   | 3 -> AudioOutput
   | 4 -> MakeVisible
   | 5 -> PushSetRegister
@@ -209,7 +209,7 @@ let interpret v =
               Pani_sprite.make ~pic_far ~delay ~reset_x ~reset_y ~other_sprite ~data_ptr ~buffer
             in
             if !debug then
-              Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
+              Printf.printf "sprite[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
             v.sprites.(anim_idx) <- anim
           ) else (
             Printf.printf "Error: CreateSprite encountered bad anim idx %d on stack" anim_idx
@@ -223,7 +223,6 @@ let interpret v =
     | DeleteSprite ->
         begin match v.stack with
         | anim_idx::rest ->
-            Printf.printf "delete sprite %d\n%!" anim_idx;
             if anim_idx >= 0 && anim_idx <= 50 then begin
               if !debug then
                 Printf.printf "%d " anim_idx;
@@ -235,7 +234,7 @@ let interpret v =
         end;
         `Stay
 
-    | SetTimeout ->
+    | SetDelay ->
         begin match v.stack with
         | delay :: rest ->
             if !debug then
@@ -243,7 +242,7 @@ let interpret v =
             v.delay <- true;
             v.delay_time <- delay;
             v.stack <- rest
-        | _ -> failwith "SetTimeout: missing delay argument"
+        | _ -> failwith "SetDelay: missing delay argument"
         end;
         `Stay
     | AudioOutput ->
@@ -296,7 +295,7 @@ let interpret v =
             v.memory.(value) <- newval
           end;
           v.stack <- rest
-        | _ -> failwith "SetTimeoutWriteAnimArray: missing argument"
+        | _ -> failwith "SetDelayWriteAnimArray: missing argument"
         end;
         `Stay
     | Copy ->
@@ -418,7 +417,6 @@ let debugger_step_sprite v =
       `Interp
   | `Some cur_sprite ->
       let sprite = v.sprites.(cur_sprite) in
-      Printf.printf "sprite %d: step" cur_sprite;
       begin match Pani_sprite.interpret_step sprite cur_sprite with
       | `Destroy -> save_sprite cur_sprite v
       | `None -> ()
@@ -428,8 +426,9 @@ let debugger_step_sprite v =
 
 let debugger_step v =
   let d = get_debugger v in
-  begin match d.cur_sprite with
-  | `Interp -> ()
+  begin match d.cur_sprite, d.status with
+  | `Interp, _ -> ()
+  | _, `Done -> ()
   | _ ->
     let rec loop () = match debugger_step_sprite v with
       | `Interp -> ()
@@ -438,21 +437,30 @@ let debugger_step v =
     loop()
   end;
   (* Move to next interp instruction *)
-  begin match d.cur_sprite with `Interp -> () | _ -> assert false end;
   let rec loop () =
-    if v.is_done then `Done else
-    if v.delay then (
-      v.delay_time <- v.delay_time - 1;
-
-      if v.delay_time = 0 then (
-        v.delay <- false;
-        loop ()
-      ) else `Delay) 
+    if v.is_done then (
+      print_endline "Interp Done";
+      `Done
+    )
     else
-      (* Do all processing steps *)
-      match interpret v with
-      | `Pause -> `Pause
-      | `Stay -> loop ()
+      if v.delay then (
+        let delay_time = v.delay_time in
+        v.delay_time <- v.delay_time - 1;
+
+        if delay_time = 0 then (
+          v.delay <- false;
+          loop ()
+        ) else ( 
+           print_endline "Interp Delay";
+          `Delay
+        ))
+      else
+        (* Do all processing steps *)
+        match interpret v with
+        | `Pause ->
+            print_endline "Interp Pause";
+            `Pause
+        | `Stay -> loop ()
   in
   d.status <- loop ();
   d.cur_sprite <- `Begin
