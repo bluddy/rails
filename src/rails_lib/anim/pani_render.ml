@@ -16,9 +16,9 @@ type t = {
   mutable bg_tex: R.Texture.t option;
 }
 
-let create ?debug ?input filename =
+let create ?(dump=false) ?debug ?input filename =
   let stream = Pani.stream_of_file @@ "data/" ^ filename in
-  let interp = Pani.of_stream ?debug ?input stream in
+  let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
   let status = `Pause in
   let last_time = 0 in
@@ -46,7 +46,7 @@ let render win v =
 
   Iter.iter (fun i ->
     let sprite = Pani_interp.anim_get_pic v.interp i in
-    if sprite.active && sprite.pic_idx <> -1 then (
+    if sprite.active && sprite.pic_idx <> -1 && sprite.pic_idx <> 0 then (
       let tex = v.textures.(sprite.pic_idx) |> Option.get_exn_or @@ sp "missing texture %d" sprite.pic_idx in
       let x, y = Pani_interp.calc_anim_xy v.interp i in
       R.Texture.render win ~x ~y tex;
@@ -85,7 +85,7 @@ let standalone win ~filename =
   in
   v, funcs
 
-let debugger win ~filename =
+let debugger ?(dump=false) win ~filename =
   Pani_interp.set_debug true;
   Pani_sprite.set_debug true;
   let handle_event v event = match event with
@@ -100,7 +100,7 @@ let debugger win ~filename =
     | _ ->
         v, false
   in
-  let v = create ~debug:true filename in
+  let v = create ~dump ~debug:true filename in
   (* Do one step to set up all the animations *)
   let _ = Pani_interp.step v.interp in
   let funcs = Mainloop.{

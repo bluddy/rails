@@ -27,6 +27,7 @@ let main () =
   match !mode with
   | `Font -> Fonts.main !file
   | `Pic  -> Pic.png_of_file !file
+  | `Pani when !debugger && !dump -> Mainloop.main @@ Pani_render.debugger ~dump:true ~filename:!file
   | `Pani when !dump -> Pani.dump_file !file
   | `Pani when !debugger -> Mainloop.main @@ Pani_render.debugger ~filename:!file
   | `Pani -> Mainloop.main @@ Pani_render.standalone ~filename:!file
