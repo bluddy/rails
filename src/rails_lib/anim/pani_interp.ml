@@ -129,10 +129,10 @@ let str_of_stack v =
 let calc_anim_xy v anim_idx =
   let anim = v.sprites.(anim_idx) in
   let open Pani_sprite in
-  match anim.other_anim_idx with
+  match anim.other_sprite with
   | -2 -> anim.x, anim.y
   | other -> 
-      (* Assume other_anim_idx is valid or we can't use it *)
+      (* Assume other_sprite is valid or we can't use it *)
       let anim2 = v.sprites.(other + 1) in
       (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
 
@@ -191,7 +191,7 @@ let interpret v =
         `Stay
     | CreateSprite ->
         begin match v.stack with
-        | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
+        | pic_far::delay::reset_y::reset_x::other_sprite::anim_idx::data_ptr::rest -> 
           let anim_idx =
             if anim_idx = -1 then (
               if !debug then
@@ -206,7 +206,7 @@ let interpret v =
             let anim = 
               let pic_far = pic_far = 1 in
               let buffer = v.buffer in
-              Pani_sprite.make ~pic_far ~delay ~reset_x ~reset_y ~other_anim_idx ~data_ptr ~buffer
+              Pani_sprite.make ~pic_far ~delay ~reset_x ~reset_y ~other_sprite ~data_ptr ~buffer
             in
             if !debug then
               Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_sprite.show anim);

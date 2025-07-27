@@ -6,6 +6,8 @@ let debug = ref false
 
 let set_debug x = debug := x
 
+let pp = Printf.printf
+
 let print_hex fmt = Format.fprintf fmt "0x%x"
 
 type t = {
@@ -16,7 +18,7 @@ type t = {
   mutable x: int;
   mutable y: int;
   mutable counter_stack: int list;
-  other_anim_idx: int;
+  other_sprite: int;
   reset_x: int;
   reset_y: int;
   reset_delay: int;
@@ -26,7 +28,10 @@ type t = {
   data_size: int;
   buffer: bytes; [@opaque]
 } 
-[@@deriving show]
+
+let show v =
+  Printf.sprintf "Sprite {x=%d, y=%d, pic_idx=%d, rx=%d, ry=%d, d=%d, a=%d, osprt=%d}"
+    v.x v.y v.pic_idx v.reset_x v.reset_y v.delay (if v.active then 1 else 0) v.other_sprite
 
 type op =
   | SetPicIdx
@@ -44,7 +49,7 @@ type op =
   | ResetReadPtr
   | Pause
   | Deactivate
-  [@@deriving show]
+  [@@deriving show {with_path=false}]
 
 let op_of_byte ?(idx=0) = function
   | 0 -> SetPicIdx
@@ -63,7 +68,7 @@ let op_of_byte ?(idx=0) = function
 let empty () = {
   active=false;
   visible=false;
-  other_anim_idx=0;
+  other_sprite=0;
   reset_x=0;
   reset_y=0;
   x=0;
@@ -79,14 +84,14 @@ let empty () = {
   buffer=Bytes.empty
 }
 
-let make ~data_ptr ~other_anim_idx ~reset_x ~reset_y ~delay ~pic_far ~buffer =
+let make ~data_ptr ~other_sprite ~reset_x ~reset_y ~delay ~pic_far ~buffer =
   let _f = pic_far in
   let a = empty () in
-  let other_anim_idx = other_anim_idx - 1 in
+  let other_sprite = other_sprite - 1 in
   let x, y =
     (* Independent animations reset to the reset values. 
        Dependent animations reset to 0 *)
-    if other_anim_idx = -2
+    if other_sprite = -2
     then reset_x, reset_y
     else 0, 0
   in
@@ -95,7 +100,7 @@ let make ~data_ptr ~other_anim_idx ~reset_x ~reset_y ~delay ~pic_far ~buffer =
     visible=false;
     reset_read_ptr=data_ptr;
     read_ptr=data_ptr;
-    other_anim_idx;
+    other_sprite;
     reset_x; reset_y;
     x; y;
     reset_delay=delay;
@@ -132,7 +137,7 @@ let interpret_step v idx =
         let op = op_of_byte byte ~idx in
 
         if !debug then
-          Printf.printf "anim[%d] 0x%x: %s(0x%x)\n" idx (v.read_ptr-1) (show_op op) byte;
+          Printf.printf "  anim[%d] 0x%x: %s(0x%x)\n%!" idx (v.read_ptr-1) (show_op op) byte;
 
         let action = match op with
           | SetPicIdx ->
@@ -178,11 +183,11 @@ let interpret_step v idx =
               end;
               `Stay
           | Reset ->
-              if v.other_anim_idx = -2 then (
+              if v.other_sprite = -2 then (
                 v.x <- v.reset_x;
                 v.y <- v.reset_y
               ) else (
-                v.x <- 0;
+                v.x <- 0; (* We're going to add the dependent idx vals *)
                 v.y <- 0
               );
               v.delay <- v.reset_delay;
@@ -202,7 +207,7 @@ let interpret_step v idx =
               v.active <- false;
               `Destroy
         in
-        if !debug then print_endline @@ show v;
+        if !debug then pp "    %s\n%!" @@ show v;
         match action with
         | `Stay -> interp_loop ()
         | `Exit -> `None
