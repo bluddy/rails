@@ -374,9 +374,10 @@ let step v =
   let rec loop () =
     if v.is_done then `Done else
     if v.delay then (
+      let delay_time = v.delay_time in
       v.delay_time <- v.delay_time - 1;
 
-      if v.delay_time = 0 then (
+      if delay_time = 0 then (
         v.delay <- false;
         loop ()
       ) else `Delay) 
