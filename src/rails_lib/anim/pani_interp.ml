@@ -438,6 +438,7 @@ let debugger_step v =
     loop()
   end;
   (* Move to next interp instruction *)
+  begin match d.cur_sprite with `Interp -> () | _ -> assert false end;
   let rec loop () =
     if v.is_done then `Done else
     if v.delay then (
