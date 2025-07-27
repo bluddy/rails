@@ -205,7 +205,7 @@ let interpret v =
               end
             ) else anim_idx
           in
-          if anim_idx > 0 && anim_idx <= 50 then (
+          if anim_idx >= 0 && anim_idx <= 50 then (
             let anim = 
               let pic_far = pic_far = 1 in
               let buffer = v.buffer in
