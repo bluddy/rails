@@ -1064,3 +1064,21 @@ let rate_war_ai_loss city ai_idx tilemap v =
   |> end_city_rate_war city
   |> _delete_city_rate_war city ai_idx tilemap
 
+let dissolve_ai ai_idx v =
+  let ai_cities = LocMap.to_iter v.ai_of_city
+    |> Iter.filter (fun (_loc, owner) -> Owner.(owner = ai_idx))
+    |> Iter.map fst
+    |> LocSet.of_iter
+  in
+  let ai_of_city = LocMap.filter (fun _ ai -> Owner.(ai <> ai_idx)) v.ai_of_city in
+  let routes = Vector.filter_in_place (fun route -> Owner.(route.owner <> ai_idx)) v.routes; v.routes in
+  (* TODO: how to fix route_history? Fix all of history mechanic *)
+  let rate_war_at_city = LocSet.diff v.rate_war_at_city ai_cities in
+  let ais = Owner.Map.remove ai_idx v.ais in
+  let last_ai_to_buy_player_stock = match v.last_ai_to_buy_player_stock with
+    | Some ai when Owner.(ai = ai_idx) -> None
+    | x -> x
+  in
+  {v with routes; ai_of_city; rate_war_at_city; ais; last_ai_to_buy_player_stock}
+  
+

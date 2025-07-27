@@ -1,0 +1,369 @@
+lzw_encoded: 0x1
+byte3: 0x1
+header_type: 0x0
+pani_type: 0x1
+Loading background image
+Post-Background pos: 0x2d28
+51 pictures expected
+pos: 0x2f1c
+Load pic. Idx: 4. Pos: 0x2f1c.
+pos: 0x2f2f
+junking odd position
+Load pic. Idx: 5. Pos: 0x2f30.
+pos: 0x2f4e
+Load pic. Idx: 7. Pos: 0x2f4e.
+pos: 0x2f88
+Load pic. Idx: 8. Pos: 0x2f88.
+pos: 0x2fc5
+junking odd position
+Load pic. Idx: 20. Pos: 0x2fc6.
+pos: 0x3187
+junking odd position
+Load pic. Idx: 21. Pos: 0x3188.
+pos: 0x365b
+junking odd position
+Load pic. Idx: 22. Pos: 0x365c.
+pos: 0x3995
+junking odd position
+Load pic. Idx: 23. Pos: 0x3996.
+pos: 0x3c3b
+junking odd position
+Load pic. Idx: 24. Pos: 0x3c3c.
+pos: 0x3c99
+junking odd position
+Load pic. Idx: 25. Pos: 0x3c9a.
+pos: 0x3cfa
+Load pic. Idx: 26. Pos: 0x3cfa.
+pos: 0x3d25
+junking odd position
+Load pic. Idx: 27. Pos: 0x3d26.
+pos: 0x3d82
+Load pic. Idx: 28. Pos: 0x3d82.
+pos: 0x3dd6
+Load pic. Idx: 32. Pos: 0x3dd6.
+pos: 0x3df6
+Load pic. Idx: 33. Pos: 0x3df6.
+pos: 0x3e17
+junking odd position
+Load pic. Idx: 34. Pos: 0x3e18.
+pos: 0x3e31
+junking odd position
+Load pic. Idx: 35. Pos: 0x3e32.
+pos: 0x3e4a
+Load pic. Idx: 36. Pos: 0x3e4a.
+pos: 0x3e66
+Load pic. Idx: 37. Pos: 0x3e66.
+pos: 0x3e7f
+junking odd position
+Load pic. Idx: 38. Pos: 0x3e80.
+pos: 0x3e98
+Load pic. Idx: 39. Pos: 0x3e98.
+pos: 0x3eb3
+junking odd position
+Load pic. Idx: 40. Pos: 0x3eb4.
+pos: 0x3ecd
+junking odd position
+Load pic. Idx: 41. Pos: 0x3ece.
+pos: 0x3ee3
+junking odd position
+Load pic. Idx: 42. Pos: 0x3ee4.
+pos: 0x3ef4
+Load pic. Idx: 43. Pos: 0x3ef4.
+pos: 0x3f06
+Load pic. Idx: 44. Pos: 0x3f06.
+pos: 0x3f18
+Load pic. Idx: 45. Pos: 0x3f18.
+pos: 0x3f28
+Load pic. Idx: 46. Pos: 0x3f28.
+pos: 0x3f56
+Load pic. Idx: 47. Pos: 0x3f56.
+pos: 0x3f84
+Load pic. Idx: 48. Pos: 0x3f84.
+pos: 0x3fb1
+junking odd position
+Load pic. Idx: 49. Pos: 0x3fb2.
+pos: 0x3fdf
+junking odd position
+Load pic. Idx: 50. Pos: 0x3fe0.
+pos: 0x3ff2
+Load pic. Idx: 51. Pos: 0x3ff2.
+pos: 0x4002
+Load pic. Idx: 52. Pos: 0x4002.
+pos: 0x4015
+junking odd position
+Load pic. Idx: 53. Pos: 0x4016.
+pos: 0x4026
+Load pic. Idx: 54. Pos: 0x4026.
+pos: 0x4036
+Load pic. Idx: 55. Pos: 0x4036.
+pos: 0x4046
+Load pic. Idx: 56. Pos: 0x4046.
+pos: 0x4056
+Load pic. Idx: 57. Pos: 0x4056.
+pos: 0x4066
+Load pic. Idx: 61. Pos: 0x4066.
+pos: 0x4295
+junking odd position
+Load pic. Idx: 62. Pos: 0x4296.
+pos: 0x44c3
+junking odd position
+Load pic. Idx: 64. Pos: 0x44c4.
+pos: 0x44cf
+junking odd position
+Load pic. Idx: 65. Pos: 0x44d0.
+pos: 0x44fb
+junking odd position
+Load pic. Idx: 66. Pos: 0x44fc.
+pos: 0x4527
+junking odd position
+Load pic. Idx: 67. Pos: 0x4528.
+pos: 0x4556
+Load pic. Idx: 69. Pos: 0x4556.
+pos: 0x4590
+Load pic. Idx: 70. Pos: 0x4590.
+pos: 0x45b4
+Load pic. Idx: 71. Pos: 0x45b4.
+pos: 0x45d9
+junking odd position
+Load pic. Idx: 72. Pos: 0x45da.
+pos: 0x4603
+junking odd position
+Load pic. Idx: 73. Pos: 0x4604.
+pos: 0x4628
+Load pic. Idx: 74. Pos: 0x4628.
+0x464c: 594 16-byte entries
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o o o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x x o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x x x x x x x x o x o x o o o o o o o x o o o o o o o o o x x o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o x o o o o o o o o o o o o o o o o o x o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o x o o o o o o o o o o o o o o o o o x o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o x o o o o o o o o o o o o o o o o o x o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o x o o o o o o o o o o o o o o o o o x o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o x o o o o o o o o o o o o o o o o o x o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o x o o o o o o o o o o o o o o o o o x o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o x o o o o o o o o o o o o o o o o o x o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o
+o x o x o x x o o o x o o o o o o o o o o o o o o o o o o o o o o o x x x x x o o o o o o o o o o o o

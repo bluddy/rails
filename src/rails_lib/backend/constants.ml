@@ -122,7 +122,7 @@ let newspaper_cost_ref_year = 1775
 
 module Pani = struct
   let update_delta = 10
-  let max_num_animations = 50
+  let max_num_sprites = 50
   let wood_bridge = "WOOD2.PAN"
   let iron_bridge = "IRONM.PAN"
   let flood_us = "FLOODM.PAN"

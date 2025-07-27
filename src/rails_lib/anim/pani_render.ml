@@ -1,128 +1,112 @@
-open Tsdl
 open Containers
 
 module R = Renderer
 module C = Constants
 module List = Utils.List
 
-type state = [`Timeout | `Done | `Error]
+type status = [`Pause | `Done ]
+
+let sp = Printf.sprintf
 
 type t = {
-  mutable state: state;
+  mutable status: status;
   interp: Pani_interp.t;
   mutable last_time: int;
   mutable textures: R.Texture.t option array;
+  mutable bg_tex: R.Texture.t option;
 }
 
-let create ?input filename =
+let create ?(dump=false) ?debug ?input filename =
   let stream = Pani.stream_of_file @@ "data/" ^ filename in
-  let interp = Pani.of_stream ?input stream in
+  let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
-  let state = `Timeout in
+  let status = `Pause in
   let last_time = 0 in
-  {state; interp; last_time; textures}
+  {status; interp; last_time; textures; bg_tex=None}
 
 
 let render win v =
   let no_textures = Array.length v.textures = 0 in
   if no_textures then (
     let textures = Array.map (Option.map (R.Texture.make win)) v.interp.pics in
-    v.textures <- textures
+    v.textures <- textures;
+    Option.iter (fun bg -> v.bg_tex <- R.Texture.make win bg |> Option.some) v.interp.background
   );
 
   R.clear_screen win;
 
-  (* Draw all backgrounds in correct order *)
-  let () = List.rev_iter (fun Pani_interp.{x; y; pic_idx} ->
-      match v.textures.(pic_idx) with
-      | None -> failwith @@ Printf.sprintf "No texture %d" pic_idx
-      | Some tex -> ignore(R.Texture.render win ~x ~y tex)
-    )
-    v.interp.backgrounds
-  in
+  Option.iter (fun bg_tex -> R.Texture.render win ~x:0 ~y:0 bg_tex) v.bg_tex;
 
-  (* Draw all textures as required by interpreter *)
+  List.rev_iter (fun Pani_interp.{pic_idx; x; y} ->
+    (* Note: why does 0 turn up here and doesn't exist? *)
+    if pic_idx <> -1 && pic_idx <> 0 then
+    let tex = v.textures.(pic_idx) |> Option.get_exn_or @@ sp "missing texture %d" pic_idx in
+    R.Texture.render win ~x ~y tex
+  ) v.interp.static_pics;
+
   Iter.iter (fun i ->
-    Pani_interp.anim_get_pic v.interp i
-    |> Option.iter (fun pic_idx ->
-       match v.textures.(pic_idx) with
-       | None -> failwith @@ Printf.sprintf "No pic_idx %d" pic_idx
-       | Some pic_tex ->
-         let x, y = Pani_interp.calc_anim_xy v.interp i in
-         R.Texture.render win ~x ~y pic_tex
-  ))
-  Iter.(0 -- C.Pani.max_num_animations)
+    let sprite = Pani_interp.anim_get_pic v.interp i in
+    if sprite.active && sprite.pic_idx <> -1 && sprite.pic_idx <> 0 then (
+      let tex = v.textures.(sprite.pic_idx) |> Option.get_exn_or @@ sp "missing texture %d" sprite.pic_idx in
+      let x, y = Pani_interp.calc_anim_xy v.interp i in
+      R.Texture.render win ~x ~y tex;
+
+      match v.interp.debugger with
+      | Some debugger ->
+          (match debugger.cur_sprite with
+          | `Some cur_sprite when i = cur_sprite ->
+            R.draw_rect win ~x ~y ~w:tex.w ~h:tex.h ~color:Ega.bred ~fill:false
+          | _ -> ())
+      | _ -> ()
+    )
+  )
+  Iter.(0 -- C.Pani.max_num_sprites)
 
 let handle_tick time v =
-  let () = match v.state with
-    | `Done | `Error -> ()
-    | _ ->
+  let () = match v.status with
+    | `Done -> ()
+    | `Pause ->
         if time - v.last_time > C.Pani.update_delta
         then (
           v.last_time <- time;
-          v.state <- Pani_interp.step v.interp;
+          v.status <- Pani_interp.step v.interp;
         )
   in
   v
   
 let standalone win ~filename =
-  let stream = Pani.stream_of_file filename in
-  let pani_v = Pani.of_stream stream in
-  let pics_tex = pani_v.pics |>
-    Array.map (function
-      | None -> None
-      | Some ndarray -> Some (R.Texture.make win ndarray))
+  let handle_event v _event = v, false in
+  let v = create filename in
+  let funcs = Mainloop.{
+    handle_tick=(fun v time -> handle_tick time v);
+    render=render win;
+    handle_event;
+  }
   in
+  v, funcs
 
-  let last_state = ref `Timeout in
-  let last_time = ref @@ Sdl.get_ticks () in
-  let update_delta = 10l in
-
-  let handle_tick () _ =
-    begin match !last_state with
-    | `Done | `Error -> ()
+let debugger ?(dump=false) win ~filename =
+  Pani_interp.set_debug true;
+  Pani_sprite.set_debug true;
+  let handle_event v event = match event with
+    | Event.Key {key=Event.N; down=true; _} ->
+        let _ = Pani_interp.debugger_step v.interp in
+        v, false
+    | Event.Key {key=Event.S; down=true; _} ->
+        let _ = Pani_interp.debugger_step_sprite v.interp in
+        v, false
+    | Event.Key {key=Event.Q; down=true; _} ->
+        v, true
     | _ ->
-        let time = Sdl.get_ticks () in
-        let open Int32 in
-        if time - !last_time > update_delta
-        then (
-          last_time := time;
-          last_state := Pani_interp.step pani_v;
-        )
-    end;
-    ()
+        v, false
   in
-
-  let render () =
-    (* let open Result.Infix in *)
-    let () = ignore(Sdl.render_clear win.R.renderer) in
-
-    (* Draw backgrounds *)
-    let () =
-      List.fold_right (fun Pani_interp.{x;y;pic_idx} _ ->
-        match pics_tex.(pic_idx) with
-        | None -> failwith @@ Printf.sprintf "No texture %d" pic_idx
-        | Some tex ->
-            ignore(R.Texture.render win ~x ~y tex)
-      )
-      pani_v.backgrounds
-      ()
-    in
-    (* Draw all pictures *)
-    Iter.fold (fun _acc i ->
-      match Pani_interp.anim_get_pic pani_v i with
-      | None -> ()
-      | Some pic_idx ->
-          match pics_tex.(pic_idx) with
-          | None -> failwith @@ Printf.sprintf "No pic_idx %d" pic_idx
-          | Some pic_tex ->
-            let x, y = Pani_interp.calc_anim_xy pani_v i in
-            ignore(R.Texture.render win ~x ~y pic_tex)
-    )
-    ()
-    Iter.(0 -- 50)
-
-  in 
-  let handle_event () _ = (), false in
-  ((), Mainloop.{handle_tick; render; handle_event})
-
+  let v = create ~dump ~debug:true filename in
+  (* Do one step to set up all the animations *)
+  let _ = Pani_interp.step v.interp in
+  let funcs = Mainloop.{
+    handle_tick=(fun v _ -> v);
+    render=render win;
+    handle_event;
+  }
+  in
+  v, funcs

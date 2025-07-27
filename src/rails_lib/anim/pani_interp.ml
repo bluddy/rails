@@ -4,59 +4,79 @@ open Containers
 (* Notes: pay attention to signed vs unsigned comparisons *)
 
 module Ndarray = Owl_base_dense_ndarray.Generic
+module C = Constants.Pani
 
-let debug = false
+let sp = Printf.sprintf
+let pp = Printf.printf
+
+let debug = ref false
+
+let set_debug x = debug := x
 
 type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
 
 (* background pic type *)
-type bg = {
+type pic = {
   x: int;
   y: int;
   pic_idx: int;
 }
 
+type debugger = {
+  mutable cur_sprite: [`Interp | `Begin | `Some of int ];
+  mutable status: [`Delay | `Pause | `Done]
+}
+
+let default_debugger = {
+  cur_sprite=`Interp;
+  status=`Pause;
+}
+
 type t = {
   mutable is_done: bool;
-  mutable timeout: bool;
-  mutable register: int;    (* single register. also used for timeout *)
+  mutable delay: bool;
+  mutable delay_time: int;    (* single delay_time. also used for delay *)
   buffer: bytes;
   mutable read_ptr: int;
   mutable stack: int list;
   memory: int Array.t;
-  animations: Pani_anim.t Array.t;
+  sprites: Pani_sprite.t Array.t;
   pics: ndarray option Array.t;
-  mutable backgrounds: bg list; (* reversed *)
+  background: ndarray option;
+  mutable static_pics: pic list;
+  debugger: debugger option;
 }
 
-let make ?(input=[]) buf_str (background: ndarray option) pics =
+let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
   assert (Array.length pics = 251);
-  pics.(250) <- background;
   let memory = Array.make 52 0 in
   List.iter (fun (loc, v) -> memory.(loc) <- v) input;
+  pp "Buffer length is %d\n" (Bytes.length buf_str);
   {
     is_done=false;
-    timeout=false;
-    register=0;
+    delay=false;
+    delay_time=0;
     read_ptr=0;
     buffer=buf_str;
     stack=[];
     memory=Array.make 52 0;
-    animations=Array.init 51 (fun _ -> Pani_anim.empty ());
+    sprites=Array.init 51 (fun _ -> Pani_sprite.empty ());
     pics; (* size 251 *)
-    backgrounds = (match background with None -> [] | Some _ -> [{x=0; y=0; pic_idx=250}]);
+    background;
+    static_pics=[];
+    debugger=if debug then Some default_debugger else None;
   }
 
 type op =
-  | CreateAnimation
-  | DeleteAnimation
-  | SetTimeout
+  | CreateSprite
+  | DeleteSprite
+  | SetDelay
   | AudioOutput
-  | SetToBackground
+  | MakeBackground
   | PushSetRegister
-    (* Push to stack, either from register or from animation registers *)
+    (* Push to stack, either from delay_time or from animation registers *)
   | SetRegisters 
-    (* Set main register from code. If 0<value<=50, also set animation reg from stack *)
+    (* Set main delay_time from code. If 0<value<=50, also set animation reg from stack *)
   | Copy
   | Eq
   | Neq
@@ -73,15 +93,15 @@ type op =
   | SetDone
   | CallFunc
   | Return
-  | Error
+  | Pause
   [@@deriving show {with_path=false}]
 
 let op_of_byte = function
-  | 0 -> CreateAnimation
-  | 1 -> DeleteAnimation
-  | 2 -> SetTimeout
+  | 0 -> CreateSprite
+  | 1 -> DeleteSprite
+  | 2 -> SetDelay
   | 3 -> AudioOutput
-  | 4 -> SetToBackground
+  | 4 -> MakeBackground
   | 5 -> PushSetRegister
   | 6 -> SetRegisters
   | 7 -> Copy
@@ -97,7 +117,7 @@ let op_of_byte = function
   | 17 -> Div
   | 18 -> JumpIfTrue
   | 19 -> Jump
-  | 20 -> Error
+  | 20 -> Pause
   | 21 -> SetDone
   | 22 -> Return
   | 23 -> CallFunc
@@ -105,6 +125,25 @@ let op_of_byte = function
 
 let str_of_stack v =
   "[" ^ (String.concat ", " @@ List.map Int.to_string v.stack) ^ "]"
+
+let calc_anim_xy v anim_idx =
+  let anim = v.sprites.(anim_idx) in
+  let open Pani_sprite in
+  match anim.other_sprite with
+  | -2 -> anim.x, anim.y
+  | other -> 
+      (* Assume other_sprite is valid or we can't use it *)
+      let anim2 = v.sprites.(other + 1) in
+      (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
+
+let save_sprite i v =
+    (* We only save if there's a background flag.
+       Also, we only save on deletion since that's when the sprite disappears *)
+    let anim = v.sprites.(i) in
+    if anim.background then (
+      let x, y = calc_anim_xy v i in
+      let pic = {x; y; pic_idx=anim.pic_idx} in
+      v.static_pics <- pic::v.static_pics)
 
 let read_byte v =
   let ptr = v.read_ptr in
@@ -118,21 +157,10 @@ let read_word v =
 
 let is_true x = x <> 0
 
-let calc_anim_xy v anim_idx =
-  let anim = v.animations.(anim_idx) in
-  let open Pani_anim in
-  match anim.other_anim_idx with
-  | -2 -> anim.x, anim.y
-  | other -> 
-      (* Assume other_anim_idx is valid or we can't use it *)
-      let anim2 = v.animations.(other + 1) in
-      (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
-
-
 let interpret v =
   let byte = read_byte v in
   let op = op_of_byte byte in
-  if debug then
+  if !debug then
     Printf.printf "0x%x: %s(0x%x) " v.read_ptr (show_op op) byte;
 
   let ret =
@@ -157,242 +185,308 @@ let interpret v =
           match v.stack with
           | x::y::z ->
               let result = f y x in
-              if debug then
+              if !debug then
                 Printf.printf "%d %d = %d " y x result;
               result::z
           | _ -> failwith "Cannot add. Stack has < 2 elements"
         in
         v.stack <- stack';
-        true
-    | CreateAnimation ->
+        `Stay
+    | CreateSprite ->
         begin match v.stack with
-        | pic_far::delay::reset_y::reset_x::other_anim_idx::anim_idx::data_ptr::rest -> 
+        | pic_far::delay::reset_y::reset_x::other_sprite::anim_idx::data_ptr::rest -> 
           let anim_idx =
             if anim_idx = -1 then (
-              if debug then
+              if !debug then
                 Printf.printf "-1: find unused anim. ";
-              begin match Array.find_idx (fun anim -> not anim.Pani_anim.used) v.animations with
+              begin match Array.find_idx (fun anim -> not anim.Pani_sprite.active) v.sprites with
               | Some(i,_) -> i
               | None -> 50 
               end
             ) else anim_idx
           in
-          if anim_idx >= 0 && anim_idx <= 50 then begin
+          if anim_idx >= 0 && anim_idx <= 50 then (
             let anim = 
               let pic_far = pic_far = 1 in
               let buffer = v.buffer in
-              Pani_anim.make ~pic_far ~delay ~reset_x ~reset_y ~other_anim_idx ~data_ptr ~buffer
+              Pani_sprite.make ~pic_far ~delay ~reset_x ~reset_y ~other_sprite ~data_ptr ~buffer
             in
-            if debug then
-              Printf.printf "anim[%d]\n%s\n" anim_idx (Pani_anim.show anim);
-            v.animations.(anim_idx) <- anim
-          end;
+            if !debug then
+              Printf.printf "sprite[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
+            (* If we're replacing a live sprite, see if we should save it to background first *)
+            if v.sprites.(anim_idx).active then save_sprite anim_idx v;
+            v.sprites.(anim_idx) <- anim
+          ) else (
+            Printf.printf "Error: CreateSprite encountered bad anim idx %d on stack" anim_idx
+          );
           v.stack <- rest
+
         | _ -> print_endline "Invalid stack for animation creation"
         end;
-        true
-    | DeleteAnimation ->
+        `Stay
+
+    | DeleteSprite ->
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx >= 0 && anim_idx <= 50 then begin
-              if debug then
+              if !debug then
                 Printf.printf "%d " anim_idx;
-              v.animations.(anim_idx).used <- false
+              v.sprites.(anim_idx).active <- false
             end;
+            save_sprite anim_idx v;
             v.stack <- rest
         | _ -> print_endline "DeleteAnimation: missing anim_idx on stack"
         end;
-        true
-    | SetTimeout ->
+        `Stay
+
+    | SetDelay ->
         begin match v.stack with
-        | timeout :: rest ->
-            if debug then
-              Printf.printf "%d " timeout;
-            v.timeout <- true;
-            v.register <- timeout;
+        | delay :: rest ->
+            if !debug then
+              Printf.printf "%d " delay;
+            v.delay <- true;
+            v.delay_time <- delay;
             v.stack <- rest
-        | _ -> failwith "SetTimeout: missing timeout argument"
+        | _ -> failwith "SetDelay: missing delay argument"
         end;
-        true
+        `Stay
     | AudioOutput ->
         begin match v.stack with
         | x::rest ->
-            if debug then
+            if !debug then
               Printf.printf "audio: %d\n" x;
             v.stack <- rest
         | _ -> failwith "AudioOutput: missing value argument"
         end;
-        true
-    | SetToBackground ->
+        `Stay
+    | MakeBackground ->
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx >= 0 && anim_idx <= 50 then (
-              if debug then
+              if !debug then
                 Printf.printf "%d " anim_idx;
-              let anim = v.animations.(anim_idx) in
+              let anim = v.sprites.(anim_idx) in
               anim.background <- true;
 
-              let update_background () =
-                let x, y = calc_anim_xy v anim_idx in
-                let new_bgnd = {x; y; pic_idx=anim.pic_idx} in
-                v.backgrounds <- new_bgnd :: v.backgrounds
-              in
               v.stack <- rest;
-              anim.update_fn <- Some update_background;
             )
-        | _ -> failwith "SetToBackground: missing argument"
+        | _ -> failwith "MakeBackground: missing argument"
         end;
-        true
+        `Stay
     | PushSetRegister ->
         let test = read_byte v in
         let value = read_word v in
         if is_true test then begin
-          if debug then
+          if !debug then
             Printf.printf "%d from memory [%d] " v.memory.(value) value;
-          v.register <- v.memory.(value)
+          v.delay_time <- v.memory.(value)
         end else begin
-          if debug then
+          if !debug then
             Printf.printf "%d " value;
-          v.register <- value
+          v.delay_time <- value
         end;
-        v.stack <- v.register::v.stack;
-        true
+        v.stack <- v.delay_time::v.stack;
+        `Stay
     | SetRegisters ->
         begin match v.stack with
         | newval::rest ->
           let value = read_word v in
-          if debug then
+          if !debug then
             Printf.printf "reg = %d " value;
-          v.register <- value;
+          v.delay_time <- value;
           if value >= 0 && value <= 50 then begin
-            if debug then
+            if !debug then
               Printf.printf ", %d in animation_reg[%d] " newval value;
             v.memory.(value) <- newval
           end;
           v.stack <- rest
-        | _ -> failwith "SetTimeoutWriteAnimArray: missing argument"
+        | _ -> failwith "SetDelayWriteAnimArray: missing argument"
         end;
-        true
+        `Stay
     | Copy ->
         begin match v.stack with
         | x::rest ->
-          if debug then
+          if !debug then
             Printf.printf "%d " x;
           v.stack <- x::x::rest
         | _ -> failwith "Copy: missing argument"
         end;
-        true
+        `Stay
     | JumpIfTrue ->
         begin match v.stack with
         | do_jump::rest ->
             let addr = read_word v in
             if is_true do_jump then (
-              if debug then
+              if !debug then
                 Printf.printf "true, jump to 0x%x " addr;
               v.read_ptr <- addr
             ) else (
-              if debug then
+              if !debug then
                 Printf.printf "no jump to 0x%x " addr;
             );
             v.stack <- rest
         | _ -> failwith "JumpIfTrue: missing argument"
         end;
-        true
+        `Stay
     | Jump ->
         let addr = read_word v in
-        if debug then
+        if !debug then
           Printf.printf "to 0x%x " addr;
         v.read_ptr <- addr;
-        true
+        `Stay
     | SetDone ->
         v.is_done <- true;
-        true
-    | Error ->
-        false
+        `Stay
+    | Pause ->
+        `Pause
     | CallFunc ->
         let jump_addr = read_word v in
         v.stack <- v.read_ptr :: v.stack;
         v.read_ptr <- jump_addr;
-        if debug then
+        if !debug then
           Printf.printf "addr 0x%x " jump_addr;
-        true
+        `Stay
     | Return ->
         begin match v.stack with
         | ret_addr::rest ->
           v.read_ptr <- ret_addr;
           v.stack <- rest;
-          if debug then
+          if !debug then
             Printf.printf "to 0x%x "ret_addr;
         | _ -> failwith "Return: missing return address"
         end;
-        true
+        `Stay
   in
-  if debug then
-    Printf.printf "\t\treg: %d stack: %s\n" (v.register) (str_of_stack v);
+  if !debug then
+    Printf.printf "\t\treg: %d stack: %s\n" (v.delay_time) (str_of_stack v);
   ret
 
-let step_all_animations v =
-  if Pani_anim.debug then
+let step_all_sprites v =
+  if !Pani_sprite.debug then
     print_endline "\n--- Step through all animations ---\n";
-
-  Array.iteri (fun i anim ->
-    Pani_anim.interpret_step anim i;
+  Array.iteri (fun i sprite ->
+    match Pani_sprite.interpret_step sprite i with
+    | `Destroy -> save_sprite i v
+    | `None -> ()
   )
-  v.animations
+  v.sprites
 
-let enable_all_animations v =
-  if Pani_anim.debug then
-    print_endline "\n--- Bring all animations to foreground ---\n";
-
-  let open Pani_anim in
-  Array.iter (fun anim ->
-    if anim.used then
-      anim.background <- false;
-  )
-  v.animations
+let clear_sprite_background_flags v =
+  (* We reuse sprites and don't want them all to be background *)
+  let open Pani_sprite in
+  Array.iter (fun sprite -> if sprite.active then sprite.background <- false) v.sprites
 
 let step v =
   let rec loop () =
     if v.is_done then `Done else
+    if v.delay then (
+      let delay_time = v.delay_time in
+      v.delay_time <- v.delay_time - 1;
 
-    if v.timeout then (
-      v.register <- v.register - 1;
-
-      if v.register = 0 then (
-        v.timeout <- false;
+      if delay_time = 0 then (
+        v.delay <- false;
         loop ()
-      ) else
-        `Timeout
-    ) 
+      ) else `Delay) 
     else
       (* Do all processing steps *)
-      if interpret v then loop ()
-      else `Error
+      match interpret v with
+      | `Pause -> `Pause
+      | `Stay -> loop ()
   in
+  (* clear_sprite_background_flags v; *)
   match loop () with
-  | `Timeout ->
-      for _i = 0 to 2 do
-        step_all_animations v
-      done;
-      enable_all_animations v;
-      `Timeout
-  | x -> x
+  | `Delay | `Pause ->
+      step_all_sprites v;
+      `Pause
+  | `Done -> `Done
+
+let get_debugger v = Option.get_exn_or "Missing debugger" v.debugger 
+
+let find_idx start v =
+  let rec loop x =
+    if x >= C.max_num_sprites then `Interp
+    else if v.sprites.(x).active then `Some x
+    else loop (x + 1)
+  in
+  loop start
+
+let debugger_step_sprite v =
+  let d = get_debugger v in 
+  begin match d.cur_sprite with
+  | `Interp -> ()
+  | `Some cur_sprite ->
+      d.cur_sprite <- find_idx (cur_sprite + 1) v
+  | `Begin ->
+      d.cur_sprite <- find_idx 0 v
+  end;
+  match d.cur_sprite with 
+  | `Interp ->
+      print_endline "Need interp step";
+      `Interp
+  | `Some cur_sprite ->
+      let sprite = v.sprites.(cur_sprite) in
+      begin match Pani_sprite.interpret_step sprite cur_sprite with
+      | `Destroy -> save_sprite cur_sprite v
+      | `None -> ()
+      end;
+      `Some cur_sprite
+  | `Begin -> failwith "Shouldn't have seen Begin here"
+
+let debugger_step v =
+  let d = get_debugger v in
+  begin match d.cur_sprite, d.status with
+  | `Interp, _ -> ()
+  | _, `Done -> ()
+  | (`Begin | `Some _), _ ->
+    (* Catch up on sprites *)
+    let rec loop () = match debugger_step_sprite v with
+      | `Interp -> ()
+      | _ -> loop ()
+    in
+    loop()
+  end;
+  (* Move to next interp instruction *)
+  let rec loop () =
+    if v.is_done then (
+      print_endline "Interp Done";
+      `Done
+    )
+    else
+      if v.delay then (
+        let delay_time = v.delay_time in
+        v.delay_time <- v.delay_time - 1;
+
+        if delay_time = 0 then (
+          v.delay <- false;
+          loop ()
+        ) else ( 
+           print_endline "Interp Delay";
+          `Delay
+        ))
+      else
+        (* Do all processing steps *)
+        match interpret v with
+        | `Pause ->
+            print_endline "Interp Pause";
+            `Pause
+        | `Stay -> loop ()
+  in
+  (* clear_sprite_background_flags v; *)
+  d.status <- loop ();
+  d.cur_sprite <- `Begin
 
 (* Entry point *)
-let run_to_end v =
+let dump_run_to_end v =
+  debug := true;
+  Pani_sprite.debug := true;
   let rec loop () =
     match step v with
-    | `Timeout -> loop ()
+    | `Pause -> loop ()
     | `Done  -> print_endline "PANI done"
-    | `Error -> print_endline "PANI error"
   in
   loop ()
 
 let anim_get_pic v anim_idx =
-  let open Pani_anim in
-  let anim = v.animations.(anim_idx) in
-  match anim.used, anim.background, anim.pic_idx with
-  | _, _, -1 -> None
-  | true, false, i -> Some i
-  | _ -> None
+  v.sprites.(anim_idx)
+
 

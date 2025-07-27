@@ -37,6 +37,7 @@ let default = {
   dev_state=Tile_develop.default;
   stocks=Stock_market.default;
   ai=Ai.default ();
+  delayed_action=None;
   ui_msgs=[];
   random=Random.get_state ();
   seed=0;
@@ -78,6 +79,7 @@ let make region resources ~reality_levels ~difficulty ~random ~seed =
     random;
     seed;
     pause=false;
+    delayed_action=None;
     dev_state=Tile_develop.default;
     stocks;
     ai = Ai.default ();
