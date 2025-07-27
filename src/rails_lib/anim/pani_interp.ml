@@ -6,6 +6,9 @@ open Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
 module C = Constants.Pani
 
+let sp = Printf.sprintf
+let pp = Printf.printf
+
 let debug = ref false
 
 let set_debug x = debug := x
@@ -20,12 +23,12 @@ type pic = {
 }
 
 type debugger = {
-  mutable cur_sprite: [`Begin | `Some of int | `End];
+  mutable cur_sprite: [`Interp | `Begin | `Some of int ];
   mutable status: [`Delay | `Pause | `Done]
 }
 
 let default_debugger = {
-  cur_sprite=`Begin;
+  cur_sprite=`Interp;
   status=`Pause;
 }
 
@@ -48,6 +51,7 @@ let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
   assert (Array.length pics = 251);
   let memory = Array.make 52 0 in
   List.iter (fun (loc, v) -> memory.(loc) <- v) input;
+  pp "Buffer length is %d\n" (Bytes.length buf_str);
   {
     is_done=false;
     delay=false;
@@ -393,7 +397,7 @@ let get_debugger v = Option.get_exn_or "Missing debugger" v.debugger
 
 let find_idx start v =
   let rec loop x =
-    if x >= C.max_num_sprites then `End
+    if x >= C.max_num_sprites then `Interp
     else if v.sprites.(x).active then `Some x
     else loop (x + 1)
   in
@@ -402,12 +406,16 @@ let find_idx start v =
 let debugger_step_sprite v =
   let d = get_debugger v in 
   begin match d.cur_sprite with
+  | `Interp -> ()
   | `Some cur_sprite ->
       d.cur_sprite <- find_idx (cur_sprite + 1) v
-  | `Begin -> d.cur_sprite <- find_idx 0 v
-  | `End -> ()
+  | `Begin ->
+      d.cur_sprite <- find_idx 0 v
   end;
   match d.cur_sprite with 
+  | `Interp ->
+      print_endline "Need interp step";
+      `Interp
   | `Some cur_sprite ->
       let sprite = v.sprites.(cur_sprite) in
       Printf.printf "sprite %d: step" cur_sprite;
@@ -417,16 +425,18 @@ let debugger_step_sprite v =
       end;
       `Some cur_sprite
   | `Begin -> failwith "Shouldn't have seen Begin here"
-  | `End ->
-      print_endline "End of sprites";
-      `End
 
 let debugger_step v =
-  let rec loop () = match debugger_step_sprite v with
-    | `End -> ()
-    | _ -> loop ()
-  in
-  loop();
+  let d = get_debugger v in
+  begin match d.cur_sprite with
+  | `Interp -> ()
+  | _ ->
+    let rec loop () = match debugger_step_sprite v with
+      | `Interp -> ()
+      | _ -> loop ()
+    in
+    loop()
+  end;
   (* Move to next interp instruction *)
   let rec loop () =
     if v.is_done then `Done else
@@ -443,9 +453,8 @@ let debugger_step v =
       | `Pause -> `Pause
       | `Stay -> loop ()
   in
-  let debugger = get_debugger v in
-  debugger.status <- loop ();
-  debugger.cur_sprite <- `Begin
+  d.status <- loop ();
+  d.cur_sprite <- `Begin
 
 (* Entry point *)
 let dump_run_to_end v =
