@@ -6,6 +6,8 @@ module List = Utils.List
 
 type status = [`Pause | `Done ]
 
+let sp = Printf.sprintf
+
 type t = {
   mutable status: status;
   interp: Pani_interp.t;
@@ -38,14 +40,14 @@ let render win v =
   List.iter (fun Pani_interp.{pic_idx; x; y} ->
     (* Note: why does 0 turn up here and doesn't exist? *)
     if pic_idx <> -1 && pic_idx <> 0 then
-    let tex = v.textures.(pic_idx) |> Option.get_exn_or (Printf.sprintf "missing texture %d" pic_idx) in
+    let tex = v.textures.(pic_idx) |> Option.get_exn_or @@ sp "missing texture %d" pic_idx in
     R.Texture.render win ~x ~y tex
   ) v.interp.static_pics;
 
   Iter.iter (fun i ->
     let sprite = Pani_interp.anim_get_pic v.interp i in
     if sprite.active && sprite.pic_idx <> -1 then (
-      let tex = v.textures.(sprite.pic_idx) |> Option.get_exn_or "missing texture" in
+      let tex = v.textures.(sprite.pic_idx) |> Option.get_exn_or @@ sp "missing texture %d" sprite.pic_idx in
       let x, y = Pani_interp.calc_anim_xy v.interp i in
       R.Texture.render win ~x ~y tex;
 

@@ -391,9 +391,43 @@ let step v =
 
 let get_debugger v = Option.get_exn_or "Missing debugger" v.debugger 
 
+let find_idx start v =
+  let rec loop x =
+    if x >= C.max_num_sprites then `End
+    else if v.sprites.(x).active then `Some x
+    else loop (x + 1)
+  in
+  loop start
+
+let debugger_step_sprite v =
+  let d = get_debugger v in 
+  begin match d.cur_sprite with
+  | `Some cur_sprite ->
+      d.cur_sprite <- find_idx (cur_sprite + 1) v
+  | `Begin -> d.cur_sprite <- find_idx 0 v
+  | `End -> ()
+  end;
+  match d.cur_sprite with 
+  | `Some cur_sprite ->
+      let sprite = v.sprites.(cur_sprite) in
+      Printf.printf "sprite %d: step" cur_sprite;
+      begin match Pani_sprite.interpret_step sprite cur_sprite with
+      | `Destroy -> save_sprite cur_sprite v
+      | `None -> ()
+      end;
+      `Some cur_sprite
+  | `Begin -> failwith "Shouldn't have seen Begin here"
+  | `End ->
+      print_endline "End of sprites";
+      `End
+
 let debugger_step v =
-  (* TODO: finish the current step properly: loop all the remaining anims *)
-  (* clear_anim_visibility_flags v; *)
+  let rec loop () = match debugger_step_sprite v with
+    | `End -> ()
+    | _ -> loop ()
+  in
+  loop();
+  (* Move to next interp instruction *)
   let rec loop () =
     if v.is_done then `Done else
     if v.delay then (
@@ -412,32 +446,6 @@ let debugger_step v =
   let debugger = get_debugger v in
   debugger.status <- loop ();
   debugger.cur_sprite <- `Begin
-
-let debugger_step_sprite v =
-  let d = get_debugger v in 
-  let find_idx start =
-    let rec loop x =
-      if x >= C.max_num_sprites then `End
-      else if v.sprites.(x).active then `Some x
-      else loop (x + 1)
-    in
-    loop start
-  in
-  match d.cur_sprite with
-  | `Some cur_sprite ->
-      d.cur_sprite <- find_idx (cur_sprite + 1)
-  | `Begin -> d.cur_sprite <- find_idx 0
-  | `End -> ();
-  match d.cur_sprite with 
-  | `Some cur_sprite ->
-      let sprite = v.sprites.(cur_sprite) in
-      Printf.printf "sprite %d: step" cur_sprite;
-      begin match Pani_sprite.interpret_step sprite cur_sprite with
-      | `Destroy -> save_sprite cur_sprite v
-      | `None -> ()
-      end;
-  | `Begin -> failwith "Shouldn't have seen Begin here"
-  | `End -> print_endline "End of sprites"
 
 (* Entry point *)
 let dump_run_to_end v =
