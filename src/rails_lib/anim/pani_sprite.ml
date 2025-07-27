@@ -12,7 +12,7 @@ let print_hex fmt = Format.fprintf fmt "0x%x"
 
 type t = {
   mutable active: bool;     (* not active: deleted *)
-  mutable visible: bool;
+  mutable background: bool;
   mutable read_ptr: int   [@printer print_hex];  (* offset into buffer *)
   mutable pic_idx: int;   (* -1: no pic *)
   mutable x: int;
@@ -30,8 +30,8 @@ type t = {
 } 
 
 let show v =
-  Printf.sprintf "Sprite {x=%d, y=%d, pic_idx=%d, rx=%d, ry=%d, d=%d, a=%d, osprt=%d}"
-    v.x v.y v.pic_idx v.reset_x v.reset_y v.delay (if v.active then 1 else 0) v.other_sprite
+  Printf.sprintf "Sprite {x=%d, y=%d, pic_idx=%d, bg=%s, rx=%d, ry=%d, d=%d, a=%d, osprt=%d}"
+    v.x v.y v.pic_idx (if v.background then "!!!" else "0") v.reset_x v.reset_y v.delay (if v.active then 1 else 0) v.other_sprite
 
 type op =
   | SetPicIdx
@@ -67,7 +67,7 @@ let op_of_byte ?(idx=0) = function
 
 let empty () = {
   active=false;
-  visible=false;
+  background=false;
   other_sprite=0;
   reset_x=0;
   reset_y=0;
@@ -97,7 +97,7 @@ let make ~data_ptr ~other_sprite ~reset_x ~reset_y ~delay ~pic_far ~buffer =
   in
   {a with
     active=true;
-    visible=false;
+    background=false;
     reset_read_ptr=data_ptr;
     read_ptr=data_ptr;
     other_sprite;

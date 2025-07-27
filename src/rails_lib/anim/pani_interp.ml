@@ -72,7 +72,7 @@ type op =
   | DeleteSprite
   | SetDelay
   | AudioOutput
-  | MakeVisible
+  | MakeBackground
   | PushSetRegister
     (* Push to stack, either from delay_time or from animation registers *)
   | SetRegisters 
@@ -101,7 +101,7 @@ let op_of_byte = function
   | 1 -> DeleteSprite
   | 2 -> SetDelay
   | 3 -> AudioOutput
-  | 4 -> MakeVisible
+  | 4 -> MakeBackground
   | 5 -> PushSetRegister
   | 6 -> SetRegisters
   | 7 -> Copy
@@ -137,10 +137,13 @@ let calc_anim_xy v anim_idx =
       (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
 
 let save_sprite i v =
+    (* We only save if there's a background flag.
+       Also, we only save on deletion since that's when the sprite disappears *)
     let anim = v.sprites.(i) in
-    let x, y = calc_anim_xy v i in
-    let pic = {x; y; pic_idx=anim.pic_idx} in
-    v.static_pics <- pic::v.static_pics
+    if anim.background then (
+      let x, y = calc_anim_xy v i in
+      let pic = {x; y; pic_idx=anim.pic_idx} in
+      v.static_pics <- pic::v.static_pics)
 
 let read_byte v =
   let ptr = v.read_ptr in
@@ -210,6 +213,8 @@ let interpret v =
             in
             if !debug then
               Printf.printf "sprite[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
+            (* If we're replacing a live sprite, see if we should save it to background first *)
+            if v.sprites.(anim_idx).active then save_sprite anim_idx v;
             v.sprites.(anim_idx) <- anim
           ) else (
             Printf.printf "Error: CreateSprite encountered bad anim idx %d on stack" anim_idx
@@ -254,18 +259,18 @@ let interpret v =
         | _ -> failwith "AudioOutput: missing value argument"
         end;
         `Stay
-    | MakeVisible ->
+    | MakeBackground ->
         begin match v.stack with
         | anim_idx::rest ->
             if anim_idx >= 0 && anim_idx <= 50 then (
               if !debug then
                 Printf.printf "%d " anim_idx;
               let anim = v.sprites.(anim_idx) in
-              anim.visible <- true;
+              anim.background <- true;
 
               v.stack <- rest;
             )
-        | _ -> failwith "MakeVisible: missing argument"
+        | _ -> failwith "MakeBackground: missing argument"
         end;
         `Stay
     | PushSetRegister ->
@@ -366,9 +371,10 @@ let step_all_sprites v =
   )
   v.sprites
 
-let clear_sprite_visibility_flags v =
+let clear_sprite_background_flags v =
+  (* We reuse sprites and don't want them all to be background *)
   let open Pani_sprite in
-  Array.iter (fun sprite -> if sprite.active then sprite.visible <- false) v.sprites
+  Array.iter (fun sprite -> if sprite.active then sprite.background <- false) v.sprites
 
 let step v =
   let rec loop () =
@@ -387,6 +393,7 @@ let step v =
       | `Pause -> `Pause
       | `Stay -> loop ()
   in
+  (* clear_sprite_background_flags v; *)
   match loop () with
   | `Delay | `Pause ->
       step_all_sprites v;
@@ -430,7 +437,8 @@ let debugger_step v =
   begin match d.cur_sprite, d.status with
   | `Interp, _ -> ()
   | _, `Done -> ()
-  | _ ->
+  | (`Begin | `Some _), _ ->
+    (* Catch up on sprites *)
     let rec loop () = match debugger_step_sprite v with
       | `Interp -> ()
       | _ -> loop ()
@@ -463,6 +471,7 @@ let debugger_step v =
             `Pause
         | `Stay -> loop ()
   in
+  (* clear_sprite_background_flags v; *)
   d.status <- loop ();
   d.cur_sprite <- `Begin
 

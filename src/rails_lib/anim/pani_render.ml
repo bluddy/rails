@@ -37,7 +37,7 @@ let render win v =
 
   Option.iter (fun bg_tex -> R.Texture.render win ~x:0 ~y:0 bg_tex) v.bg_tex;
 
-  List.iter (fun Pani_interp.{pic_idx; x; y} ->
+  List.rev_iter (fun Pani_interp.{pic_idx; x; y} ->
     (* Note: why does 0 turn up here and doesn't exist? *)
     if pic_idx <> -1 && pic_idx <> 0 then
     let tex = v.textures.(pic_idx) |> Option.get_exn_or @@ sp "missing texture %d" pic_idx in
