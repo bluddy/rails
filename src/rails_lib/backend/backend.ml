@@ -513,7 +513,7 @@ let _build_industry ((x, y) as loc) tile player_idx v =
     send_ui_msg v @@ IndustryBuilt {player_idx; tile};
     v
   ) else v
-  
+
 let _remove_train train_idx player_idx v =
   (* Same function called by Backend *)
   let players = Player.update v.players player_idx @@ fun player ->
@@ -630,7 +630,7 @@ let _operate_rr_take_money player_idx ~company ~amount v =
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player_idx; company; amount});
   [%up {v with players}]
-  
+
 let _operate_rr_give_money player_idx ~company ~amount v =
   let players = v.players in
   let players = Player.update players player_idx @@ Player.add_cash @@ M.neg amount in
@@ -896,7 +896,6 @@ let _handle_cheat player_idx cheat v = match cheat with
     in
     List.iter (send_ui_msg v) ui_msgs;
     [%up {v with track; map; stations; stocks; ai}]
-    
 
 let get_priority_shipment player_idx v =
   let player = Player.get player_idx v.players in
