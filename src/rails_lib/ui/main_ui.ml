@@ -584,13 +584,13 @@ let handle_event (s:State.t) v (event:Event.t) =
             let state = Train_income_report.create s in
             {v with mode=TrainIncome state}, nobaction
         | On (`Stocks), _ ->
-          {v with mode=GenericScreen {render_fn=Stock_graph.render}}, nobaction
+          {v with mode=make_generic_screen Stock_graph.render}, nobaction
         | On (`Accomplishments), _ ->
-          {v with mode=GenericScreen{render_fn=Accomplishments.render}}, nobaction
+          {v with mode=make_generic_screen Accomplishments.render}, nobaction
         | On (`History), _ ->
           {v with mode=History (History.create s)}, nobaction
         | On (`Efficiency_report), _ ->
-            {v with mode=GenericScreen{render_fn=Efficiency_report.render}}, nobaction
+            {v with mode=make_generic_screen Efficiency_report.render}, nobaction
         | On (`Call_broker), _ ->
             v, B.Action.CallBroker{player_idx}
         | On (`Name_rr), _ ->
@@ -943,14 +943,14 @@ let handle_msgs (s:State.t) v ui_msgs =
           else
             let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg =
               Fiscal_period_end.handle_msgs b msgs in
-            let background = GenericScreen{render_fn=Fiscal_period_end.render_bg} in
+            let background = make_generic_screen Fiscal_period_end.render_bg in
             let modes = [] in
             let modes = List.fold_left (fun acc rate_war_msg ->
-              let mode = GenericScreen{render_fn=Fiscal_end_rate_war.render rate_war_msg} in
+              let mode = make_generic_screen @@ Fiscal_end_rate_war.render rate_war_msg in
               let acc = mode::acc in
               match rate_war_msg.winner with
               | `Player | `Ai ->
-                   let mode = GenericScreen{render_fn=Fiscal_end_rate_war.render_council rate_war_msg} in
+                   let mode = make_generic_screen @@ Fiscal_end_rate_war.render_council rate_war_msg in
                    mode::acc
               | `None -> acc)
               modes rate_wars
@@ -969,7 +969,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             let modes = match job_msg with
             | Some job ->
                 let render_fn = Job_offer.create job s |> Job_offer.render in
-                GenericScreen{render_fn}::modes
+                (make_generic_screen render_fn)::modes
             | None -> modes
             in
             set_modes (List.rev modes) v
@@ -1229,7 +1229,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             let state = B.create_balance_sheet player_idx s.backend in
             let income_stmt = Income_statement state in
             let bal_sheet = Balance_sheet {state; end_of_year=true} in
-            let mode = GenericScreen{render_fn=Fiscal_period_end.render_bg} in
+            let mode = make_generic_screen Fiscal_period_end.render_bg in
             {v with mode; next_modes=[income_stmt; bal_sheet]}
 
       | UpdateMap (* We don't handle it here *)
