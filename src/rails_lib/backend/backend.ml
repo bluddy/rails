@@ -804,7 +804,7 @@ let _rate_war_handle_result result v =
   (* Delayed function to modify the backend with things that can't be done
      while the UI is running.
      *)
-let _fin_end_remove_players_delay v =
+let _fin_end_remove_players_delay players v =
   v
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
@@ -820,11 +820,11 @@ let _fin_end_proceed player_idx v =
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   let player = Player.fiscal_period_end_achievements ~revenue:total_revenue ~net_worth v.params player in
   let rate_war_results = _rate_war_info player_idx v in
-  let ai, stocks, ui_msgs3 = Ai.fiscal_period_end_stock_eval stocks v.ai in
+  let ai, stocks, ai_msgs = Ai.fiscal_period_end_stock_eval stocks v.ai in
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
   let rw_msgs = List.map (fun info -> Ui_msg.RateWar info) rate_war_results in
-  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ui_msgs3) in
+  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ai_msgs) in
   send_ui_msg v ui_msg;
   let stations = Station_map.map Station.end_of_period_reset v.stations in
   let cycle = if v.params.cycle > 20000 then 0 else v.params.cycle in
@@ -842,8 +842,14 @@ let _fin_end_proceed player_idx v =
       v, refresh_map || refresh_acc)
       (v, false)
       rate_war_results in
-  if refresh_map then (
-    send_ui_msg v Ui_msg.UpdateMap);
+  if refresh_map then (send_ui_msg v Ui_msg.UpdateMap);
+  let v =
+    let players_to_dissolve =
+      ai_msgs |> List.filter_map (function SharePriceChange{player_idx; fired=true} -> Some player_idx | _ -> None)
+    in
+    if List.is_empty dissolve_msgs then v
+    else {v with delayed_fn=Some _fin_end_remove_players_delay players_to_dissolve}
+  in
   v
 
   (* Returns ui_msgs and whether we have a cycle *)
