@@ -874,7 +874,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Balance_sheet state ->
       (* Balance sheet at the fin period end is the last before we do housecleaning *)
       if Event.is_left_click event || Event.key_modal_dismiss event then
-        let action = if state.end_of_year then B.Action.DelayedFnRun C.player else nobaction in
+        let action = if state.end_of_year then B.Action.RunDelayedFn C.player else nobaction in
         let v = if state.end_of_year then v else {v with mode=Normal} in
         v, action
       else
@@ -897,10 +897,15 @@ let handle_event (s:State.t) v (event:Event.t) =
       | `None, state2 when state2 === state -> v, nobaction
       | `None, state2 -> {v with mode=History state2}, nobaction
       end
-  
 
+    | GenericScreen {send_delayed_fn=true;_} ->
+        if Event.is_left_click event || Event.key_modal_dismiss event then
+          {v with mode=Normal}, B.Action.RunDelayedFn C.player
+        else
+          v, nobaction
+  
     | Income_statement _
-    | GenericScreen _
+    | GenericScreen {send_delayed_fn=false;_}
     | FiscalPeriodEndStocks _
     | Animation _ -> modal_screen_no_input v event
         

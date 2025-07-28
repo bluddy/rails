@@ -951,7 +951,7 @@ module Action = struct
     | NameRR of {player_idx: Owner.t; name: string; handle: string}
     | Cheat of Owner.t * Cheat_d.t (* player *)
     | Quit_game
-    | DelayedFnRun of Owner.t (* Move past first stage of fin_end *)
+    | RunDelayedFn of Owner.t (* Move past first stage of fin_end *)
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -1028,7 +1028,7 @@ module Action = struct
           _name_train player_idx train name backend
       | NameRR {player_idx; name; handle} ->
           _name_rr player_idx name handle backend
-      | DelayedFnRun player_idx ->
+      | RunDelayedFn player_idx ->
           begin match backend.delayed_fn with
           | Some fn ->
               let backend = {backend with delayed_fn=None} in
