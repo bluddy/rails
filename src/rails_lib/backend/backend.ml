@@ -801,6 +801,12 @@ let _rate_war_handle_result result v =
         v, false
     | `None -> v, false
 
+  (* Delayed function to modify the backend with things that can't be done
+     while the UI is running.
+     *)
+let _fin_end_remove_players_delay v =
+  v
+
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
 let _fin_end_proceed player_idx v =
