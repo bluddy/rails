@@ -874,7 +874,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Balance_sheet state ->
       (* Balance sheet at the fin period end is the last before we do housecleaning *)
       if Event.is_left_click event || Event.key_modal_dismiss event then
-        let action = if state.end_of_year then B.Action.FinEndProceed C.player else nobaction in
+        let action = if state.end_of_year then B.Action.DelayedFnRun C.player else nobaction in
         let v = if state.end_of_year then v else {v with mode=Normal} in
         v, action
       else

@@ -37,7 +37,7 @@ let default = {
   dev_state=Tile_develop.default;
   stocks=Stock_market.default;
   ai=Ai.default ();
-  delayed_action=None;
+  delayed_fn=None;
   ui_msgs=[];
   random=Random.get_state ();
   seed=0;
@@ -79,7 +79,7 @@ let make region resources ~reality_levels ~difficulty ~random ~seed =
     random;
     seed;
     pause=false;
-    delayed_action=None;
+    delayed_fn=None;
     dev_state=Tile_develop.default;
     stocks;
     ai = Ai.default ();
@@ -525,21 +525,6 @@ let _remove_train train_idx player_idx v =
 let reset_tick v =
   v.last_tick <- 0
 
-  (* Returns ui_msgs and whether we have a cycle *)
-let handle_tick v cur_time =
-  let delay_mult = B_options.delay_mult_of_speed v.params.options.speed in
-  let tick_delta = delay_mult * C.tick_ms in
-  let new_time = v.last_tick + tick_delta in
-  let ui_msgs = v.ui_msgs in
-  v.ui_msgs <- [];
-
-  if cur_time >= new_time then (
-    v.last_tick <- cur_time;
-    let v, misc_msgs = Backend_low.handle_cycle v in
-    v, ui_msgs @ misc_msgs, true)
-  else
-    v, ui_msgs, false
-
 (* Each time period is both 2 years and a 24 hour day *)
 
 let _month_of_time time = (time / C.month_ticks) mod 12
@@ -855,6 +840,22 @@ let _fin_end_proceed player_idx v =
     send_ui_msg v Ui_msg.UpdateMap);
   v
 
+  (* Returns ui_msgs and whether we have a cycle *)
+let handle_tick v cur_time =
+  let delay_mult = B_options.delay_mult_of_speed v.params.options.speed in
+  let tick_delta = delay_mult * C.tick_ms in
+  let new_time = v.last_tick + tick_delta in
+  let ui_msgs = v.ui_msgs in
+  v.ui_msgs <- [];
+
+  if cur_time >= new_time then (
+    v.last_tick <- cur_time;
+    let v, misc_msgs = Backend_low.handle_cycle ~delayed_fn:_fin_end_proceed v in
+    v, ui_msgs @ misc_msgs, true)
+  else
+    v, ui_msgs, false
+
+
 let _handle_cheat player_idx cheat v = match cheat with
   | Cheat_d.Add500Cash ->
     update_player v player_idx @@ Player.add_cash @@ M.of_int 500
@@ -944,7 +945,7 @@ module Action = struct
     | NameRR of {player_idx: Owner.t; name: string; handle: string}
     | Cheat of Owner.t * Cheat_d.t (* player *)
     | Quit_game
-    | FinEndProceed of Owner.t (* Move past first stage of fin_end *)
+    | DelayedFnRun of Owner.t (* Move past first stage of fin_end *)
     [@@deriving show]
 
   let has_action = function NoAction -> false | _ -> true
@@ -1021,7 +1022,13 @@ module Action = struct
           _name_train player_idx train name backend
       | NameRR {player_idx; name; handle} ->
           _name_rr player_idx name handle backend
-      | FinEndProceed player_idx -> _fin_end_proceed player_idx backend
+      | DelayedFnRun player_idx ->
+          begin match backend.delayed_fn with
+          | Some fn ->
+              let backend = {backend with delayed_fn=None} in
+              fn player_idx backend
+          | None -> backend
+          end
       | Pause -> {backend with pause=true}
       | Unpause -> {backend with pause=false}
       | NoAction -> backend

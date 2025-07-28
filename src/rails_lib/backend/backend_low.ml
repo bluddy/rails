@@ -863,8 +863,10 @@ let _year_end_checks player ai engines params =
   in
   player, ai, ui_msgs
 
+
 (** Most time-based work happens here **)
-let handle_cycle v =
+(* delayed_fn: function to save if needed for fiscal end *)
+let handle_cycle ~delayed_fn v =
   let time_step () =
     v.params.cycle <- v.params.cycle + 1;
 
@@ -903,22 +905,23 @@ let handle_cycle v =
         player, []
     in
 
-    let stations, player, dev_state, active_station, pause, pr_msgs =
+    let stations, player, dev_state, active_station, pause, delayed_fn, pr_msgs =
       if cycle mod C.Cycles.rare_bgnd_events = 0 then
         let stations, player, msgs = _try_to_create_priority_shipment player stations params v.random in
         let dev_state, active_station, map_msgs = _develop_tiles v player in
         let msgs = msgs @ map_msgs in
 
-        let msgs, pause = if params.time > C.fin_period_ticks then
-          (* We announce here and wait for the response from the UI *)
-          (UIM.FiscalPeriodEnd player_idx)::msgs, true
-          else msgs, v.pause in
+        let msgs, pause, delayed_fn =
+          if params.time > C.fin_period_ticks then
+            (* We announce here and wait for the response from the UI *)
+            (UIM.FiscalPeriodEnd player_idx)::msgs, true, Some delayed_fn
+          else msgs, v.pause, v.delayed_fn in
 
         (* Player.fiscal_period_end stations params player in *)
         let player = Player.track_maintenance_random_spot track v.random player in
-        stations, player, dev_state, active_station, pause, msgs
+        stations, player, dev_state, active_station, pause, delayed_fn, msgs
       else
-        stations, player, v.dev_state, player.active_station, v.pause, []
+        stations, player, v.dev_state, player.active_station, v.pause, v.delayed_fn, []
     in
 
     let track, map, stations, stocks, ai, ai_msgs =
@@ -984,7 +987,7 @@ let handle_cycle v =
     let player = [%up {player with active_station; trains; m}] in
     let players = if player =!= player_old then Player.set player_idx player players else players in
 
-    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params; pause}] in
+    let v = [%up {v with players; stations; dev_state; map; track; ai; stocks; params; pause; delayed_fn}] in
     let ui_msgs = del_msgs @ cp_msgs @ br_msgs @ sd_msgs @ pr_msgs @ tr_msgs @ ai_msgs @
       fin_msgs @ climate_msgs @ event_msgs @ year_end_msgs @ crash_msgs
     in
