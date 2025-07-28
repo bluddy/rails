@@ -120,7 +120,7 @@ and 'state mode =
   | Name_rr of Name_rr_d.t
   | FindCity of Find_city.t
   (* A screen with only rendering and no interaction *)
-  | GenericScreen of { render_fn: Renderer.window -> 'state -> unit}
+  | GenericScreen of { render_fn: Renderer.window -> 'state -> unit; send_delayed_fn: bool}
   | FiscalPeriodEndStocks of 'state Fiscal_period_end_d.t
   | TrainIncome of Train_income_report_d.t
   | History of History_d.t
@@ -128,6 +128,9 @@ and 'state mode =
 let is_normal_mode = function
   | Normal -> true
   | _ -> false
+
+let make_generic_screen ?(send_delayed=false) render_fn =
+  GenericScreen{render_fn; send_delayed_fn=send_delayed}
 
 let make_modal ?(background=Normal) menu data = {menu; data; background}
 
