@@ -804,7 +804,7 @@ let _rate_war_handle_result result v =
   (* Delayed function to modify the backend with things that can't be done
      while the UI is running.
      *)
-let _fin_end_remove_players_delay players v =
+let _fin_end_remove_players_delay players _ v =
   v
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
@@ -845,10 +845,12 @@ let _fin_end_proceed player_idx v =
   if refresh_map then (send_ui_msg v Ui_msg.UpdateMap);
   let v =
     let players_to_dissolve =
-      ai_msgs |> List.filter_map (function SharePriceChange{player_idx; fired=true} -> Some player_idx | _ -> None)
+      ai_msgs |> List.filter_map (function Ui_msg.SharePriceChange{player_idx; fired=`Fired;_} -> Some player_idx | _ -> None)
     in
-    if List.is_empty dissolve_msgs then v
-    else {v with delayed_fn=Some _fin_end_remove_players_delay players_to_dissolve}
+    if List.is_empty players_to_dissolve then v
+    else
+      let delayed_fn = _fin_end_remove_players_delay players_to_dissolve |> Option.some in
+      {v with delayed_fn}
   in
   v
 
