@@ -121,15 +121,9 @@ let stream_of_file filename =
   let stream = My_gen.of_stringi str in
   stream
 
-let dump_file ?(debug=false) filename =
+let dump_file filename =
   (* For dumping *)
   let stream = stream_of_file filename in
-  let dump_files =
-    if debug then
-      let filepath = Filename.remove_extension filename in
-      Some filepath
-    else None
-  in
   let pani_v = of_stream stream ~dump:true in
   Pani_interp.dump_run_to_end pani_v
 
