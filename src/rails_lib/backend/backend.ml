@@ -910,9 +910,9 @@ let get_priority_shipment player_idx v =
   let player = Player.get player_idx v.players in
   player.priority
 
-let get_job_and_bonus player_idx v =
+let job_bonus_diff_factor player_idx v =
   get_player player_idx v
-  |> Player.job_and_bonus ~fired:false v.stocks v.params
+  |> Player.job_bonus_diff_factor ~fired:false v.stocks v.params
 
 module Action = struct
   type stop = [`Stop of int | `Priority] [@@deriving show]

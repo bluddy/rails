@@ -712,7 +712,7 @@ let check_update_speed_record speed v =
     {v with record={v.record with train_speed=speed}}
   else v
 
-let job_and_bonus ~fired stocks params v =
+let job_bonus_diff_factor ~fired stocks params v =
   let player_idx = v.idx in
   let owned_ais = Stock_market.other_companies_controlled_by player_idx stocks |> List.length in
   let age = Params.age params |> Utils.clip ~min:1 ~max:999 in
@@ -745,10 +745,10 @@ let job_and_bonus ~fired stocks params v =
       job_idx, retirement_bonus
   in
   let job = Jobs.of_enum params.region job_idx in
-  job, retirement_bonus
+  job, retirement_bonus, difficulty_factor 
 
 let update_retirement_bonus_and_job ~fired stocks params v =
-  let job, _retirement_bonus = job_and_bonus ~fired stocks params v in
+  let job, _, _ = job_bonus_diff_factor ~fired stocks params v in
   let ret () = Some job, {v with record={v.record with job=Some job}} in
   match v.record.job with
   | Some cur_job when Jobs.to_enum job > Jobs.to_enum cur_job -> ret ()
