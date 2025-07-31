@@ -22,6 +22,8 @@ let create_human () = create ~human:true ()
 let is_human = function
   | Human _ -> true | _ -> false
 
+let is_ai x = not @@ is_human x
+
 module Map = UMap.Make(struct
   type nonrec t = t
   let compare = compare
