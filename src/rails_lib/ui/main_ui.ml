@@ -596,6 +596,10 @@ let handle_event (s:State.t) v (event:Event.t) =
         | On (`Name_rr), _ ->
             let state = Name_rr.init b.stations b.cities player_idx b in
             {v with mode=Name_rr state}, nobaction
+        | On (`Retire), _ ->
+            let state = Job_offer.create_retire s in
+            let render_fn = Job_offer.render state in
+            {v with mode=make_generic_screen render_fn}, nobaction
         | On (`Cheat x), _ ->
             v, B.Action.Cheat(C.player, x)
         | Off (`Options option), _ ->
