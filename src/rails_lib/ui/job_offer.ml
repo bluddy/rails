@@ -26,13 +26,27 @@ let create_retire (s:State.t) =
   let b = s.backend in
   let player_idx = C.player in
   let fonts = s.fonts in
+  let region = b.params.region in
   let job, bonus = B.get_job_and_bonus player_idx b in
+  let balance_sheet = B.create_balance_sheet player_idx b in
+  let asset_value = Balance_sheet.compute_assets balance_sheet in
   let text = sp
-    "You are offered a job as\n\
+    "Final asset value:\n\
+    %s\n\
+    Difficulty Factor: %d%%\n\
+    Retirement Bonus:\n\
+    --- %s ---\n\
+    \n\
+    Upon your retirement\n\
+    you embark on a\n\
+    new career as\n\
     %s."
+    (Money.print ~region asset_value)
+    difficulty_factor
+    (Money.print ~region bonus)
     (Jobs.show job)
   in
-  let msgbox = Menu.MsgBox.make_basic ~x:154 ~y:8 ~fonts s text in
+  let msgbox = Menu.MsgBox.make_basic ~x:4 ~y:100 ~fonts s text in
   {job; msgbox}
 
 let render state win (s:State.t) =
