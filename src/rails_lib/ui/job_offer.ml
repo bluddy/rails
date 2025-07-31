@@ -27,9 +27,9 @@ let create_retire (s:State.t) =
   let player_idx = C.player in
   let fonts = s.fonts in
   let region = b.params.region in
-  let job, bonus = B.get_job_and_bonus player_idx b in
-  let balance_sheet = B.create_balance_sheet player_idx b in
-  let asset_value = Balance_sheet.compute_assets balance_sheet in
+  let job, bonus, difficulty_factor = B.job_bonus_diff_factor player_idx b in
+  let player = B.get_player player_idx b in
+  let asset_value = Player.get_net_worth player in
   let text = sp
     "Final asset value:\n\
     %s\n\
