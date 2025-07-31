@@ -802,10 +802,17 @@ let _rate_war_handle_result result v =
     | `None -> v, false
 
   (* Delayed function to modify the backend with things that can't be done
-     while the UI is running.
-     *)
+     while the UI is running, specifically dissolving companies
+    *)
 let _fin_end_remove_players_delay players _ v =
+  List.fold_left (fun v player_idx ->
+    if Owner.is_ai player_idx then 
+      let ai = Ai.dissolve_ai player_idx v.ai in
+      {v with ai}
+    else
+      v)
   v
+  players
 
   (* Find end 1st stage in backend_low: cyan screen, income statement, balance sheet
      then we get this message from the UI to continue to the next stage *)
@@ -816,7 +823,6 @@ let _fin_end_proceed player_idx v =
   let player = get_player player_idx v in
   let player, total_revenue, ui_msgs1 = Player.fiscal_period_end net_worth v.stations v.params player in
   (* TODO handle fired *)
-  (* TODO: handle dissolved company *)
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   let player = Player.fiscal_period_end_achievements ~revenue:total_revenue ~net_worth v.params player in
   let rate_war_results = _rate_war_info player_idx v in
@@ -835,7 +841,7 @@ let _fin_end_proceed player_idx v =
   let dev_state = Tile_develop.end_of_period v.params v.dev_state in
   let v = update_player v player_idx (fun _ -> player) in
   let v = {v with params; ai; stocks; stations; dev_state} in
-  (* Now that we dealt with end of the year stuff, possibly deal with rate war result *)
+  (* Now that we dealt with end of the year stuff, optionally deal with rate war result *)
   let v, refresh_map =
     List.fold_left (fun (v, refresh_acc) result ->
       let v, refresh_map = _rate_war_handle_result result v in
@@ -843,6 +849,7 @@ let _fin_end_proceed player_idx v =
       (v, false)
       rate_war_results in
   if refresh_map then (send_ui_msg v Ui_msg.UpdateMap);
+  (* Dissolving a company happens in a delayed function so the UI can get info until then *)
   let v =
     let players_to_dissolve =
       ai_msgs |> List.filter_map (function Ui_msg.SharePriceChange{player_idx; fired=`Fired;_} -> Some player_idx | _ -> None)

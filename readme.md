@@ -49,7 +49,7 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [x] Periodic reports
 - [x] Events (e.g. bridge washing out)
 - [x] Transition animation
-- [ ] Dissolve AI company
+- [x] Dissolve AI company
 - [ ] Do route history (player and AI) properly
 - [ ] Music and Sound
 - [ ] Testing and Fixes
