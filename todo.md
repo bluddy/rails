@@ -1,4 +1,5 @@
 # Tasks
+- Check what difficulty is used by retirement job offer
 - Change enemy stations to be at track level?
   - Requires special structures for rate war/union station
   - Can then just be removed, revealing tiles
