@@ -22,6 +22,19 @@ let create job (s:State.t) =
   let msgbox = Menu.MsgBox.make_basic ~x:154 ~y:8 ~fonts s text in
   {job; msgbox}
 
+let create_retire (s:State.t) =
+  let b = s.backend in
+  let player_idx = C.player in
+  let fonts = s.fonts in
+  let job, bonus = B.get_job_and_bonus player_idx b in
+  let text = sp
+    "You are offered a job as\n\
+    %s."
+    (Jobs.show job)
+  in
+  let msgbox = Menu.MsgBox.make_basic ~x:154 ~y:8 ~fonts s text in
+  {job; msgbox}
+
 let render state win (s:State.t) =
   let region = s.backend.params.region in
   let fonts = s.fonts in
