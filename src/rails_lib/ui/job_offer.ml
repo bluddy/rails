@@ -7,10 +7,7 @@ module C = Constants
 
 let sp = Printf.sprintf
 
-type t = {
-  job: Jobs.t;
-  msgbox: (unit, State.t) Menu.MsgBox.t;
-}
+include Job_offer_d
 
 let create job (s:State.t) =
   let fonts = s.fonts in

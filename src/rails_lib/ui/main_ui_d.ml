@@ -124,6 +124,7 @@ and 'state mode =
   | FiscalPeriodEndStocks of 'state Fiscal_period_end_d.t
   | TrainIncome of Train_income_report_d.t
   | History of History_d.t
+  | EndGame of 'state Endgame_d.t
 
 let is_normal_mode = function
   | Normal -> true
