@@ -75,7 +75,7 @@ type op =
   | MakeBackground
   | PushSetRegister
     (* Push to stack, either from delay_time or from animation registers *)
-  | SetRegisters 
+  | SetRegisters
     (* Set main delay_time from code. If 0<value<=50, also set animation reg from stack *)
   | Copy
   | Eq
