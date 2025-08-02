@@ -6,3 +6,5 @@ type mode =
 type t = {
   mode: mode;
 }
+
+let make = ()
