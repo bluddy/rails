@@ -9,7 +9,11 @@ let sp = Printf.sprintf
 
 include Retirement_bonus_d
 
-let render_retirement (s:State.t) win (v:t) =
+let make ~fired player_idx b =
+  let _, _, diff_factor = B.job_bonus_diff_factor player_idx b in
+  {diff_factor; fired}
+
+let render_retirement (s:State.t) (v:t) win =
   let b = s.backend in
   let params = b.Backend_d.params in
   let fonts = s.fonts in
