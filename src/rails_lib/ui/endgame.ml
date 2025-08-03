@@ -1,4 +1,5 @@
 open !Containers
+module R = Renderer
 
 (* Deals with all possible end game situations *)
 
