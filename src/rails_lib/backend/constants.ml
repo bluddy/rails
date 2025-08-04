@@ -144,3 +144,7 @@ module RateWar = struct
   let loss_radius = 3 (* How far we remove player stuff *)
 end
 
+module HallOfFame = struct
+  let max_entries = 5
+end
+
