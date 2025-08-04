@@ -3,6 +3,9 @@ module C = Constants.HallOfFame
 module List = Utils.List
 module M = Money
 module R = Renderer
+module B = Backend
+
+open Utils.Infix
 
 let sp = Printf.sprintf
 
@@ -12,20 +15,20 @@ include Hall_of_fame_d
 
 let hof_file = "hof.dat"
 
-let make ?(bonus=M.zero) () =
+let make ?(bonus=M.zero) ~fired () =
   let text_entry () = EnterName(Text_entry.make "Your Name?" ~x:80 ~y:112 ~chars:24) in
   if IO.File.exists hof_file then
     let s = IO.File.read_exn hof_file in
     let entries = Yojson.Safe.from_string s |> entries_of_yojson in
     match List.find_idx (fun entry -> M.(bonus > entry.bonus)) entries with
     | Some (i, _) ->
-        {mode=text_entry (); entries; idx=Some i}
+        {mode=text_entry (); entries; idx=Some i; fired}
     | None when List.length entries < C.max_entries ->
-        {mode=text_entry (); entries; idx=List.length entries |> Option.some}
+        {mode=text_entry (); entries; idx=List.length entries |> Option.some; fired}
     | None ->
-        {mode=Display; entries; idx=None}
+        {mode=Display; entries; idx=None; fired}
   else
-    {mode=text_entry (); entries=[]; idx=Some 0}
+    {mode=text_entry (); entries=[]; idx=Some 0; fired}
 
 let render win (s:State.t) v =
   let b = s.backend in
@@ -77,4 +80,32 @@ let render win (s:State.t) v =
       (1, 41)
       v.entries
       |> ignore
+
+let handle_event event (s:State.t) v =
+  let b = s.backend in
+  let player = B.get_player player_idx b in
+  let region = B.get_region b in
+  let p = b.params in
+  let create_entry name =
+    let rr_name = B.get_name player_idx b in
+    let job, bonus, _ = Player.job_bonus_diff_factor ~fired:v.fired b.stocks b.params player in
+    let difficulty, year, year_start = p.options.difficulty, p.year, p.year_start in
+    let entry = {player=name; rr_name; job; bonus; region; difficulty; year; year_start} in
+    let entries = match v.idx with
+      | Some i -> List.modify_at_idx i (fun _ -> entry) v.entries
+      | _ -> v.entries
+    in
+    entries
+  in
+  match v.mode with
+  | EnterName text ->
+      begin match Text_entry.handle_event text event with
+      | text2, (`Stay | `Exit) when text2 === text ->  `Stay, v
+      | text2, (`Stay | `Exit) -> `Stay, {v with mode=EnterName text2}
+      | _, `Return name ->
+          let entries = create_entry name in
+          `Stay, {v with mode=Display; entries}
+      end
+  | Display when Event.key_modal_dismiss event -> `Quit, v
+  | _ -> `Stay, v
 

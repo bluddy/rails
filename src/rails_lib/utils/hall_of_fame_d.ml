@@ -22,4 +22,5 @@ type t = {
   mode: mode;
   entries: entries;
   idx: int option;
+  fired: bool;
 }
