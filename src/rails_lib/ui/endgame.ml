@@ -15,7 +15,8 @@ let retire_menu fonts =
 include Endgame_d
 
 let make s =
-  JobOffer{state=Job_offer.create_retire s; menu=None}
+  let state = Job_offer.create_retire s in
+  JobOffer {state; menu=None}
 
 let render state win (s:State.t) = match state with
   | JobOffer {state; menu} ->
@@ -24,7 +25,7 @@ let render state win (s:State.t) = match state with
         Menu.MsgBox.render win s menu
       ) menu
   | RetirementBonus {render_fn} -> render_fn win s
-  | HallOfFame hall -> Hall_of_fame.render win hall s
+  | HallOfFame hall -> Hall_of_fame.render win s hall
 
 let handle_event event (s:State.t) v = match v.mode with
   | JobOffer {menu=None; state} when Event.key_modal_dismiss event ->
