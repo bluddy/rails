@@ -38,7 +38,9 @@ let handle_event event (s:State.t) v = match v.mode with
   | JobOffer {menu=None; _} when Event.key_modal_dismiss event ->
       let render_fn =
         let state = Retirement_bonus.make ~fired:false C.player s.backend in
-        Retirement_bonus.render state in
+        Retirement_bonus.render state
+      in
+      print_endline "joboffer none";
       `Stay, {v with mode=RetirementBonus {render_fn}}
 
   | RetirementBonus _ when Event.key_modal_dismiss event ->
