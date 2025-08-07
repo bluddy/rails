@@ -9,7 +9,6 @@ module L = Utils.List
 module CharMap = Utils.CharMap
 
 let menu_font = `Caps
-let num_menus = 5
 let max_width = 320
 
   type 'a action =
@@ -476,8 +475,7 @@ module Title = struct
   let is_title_clicked v ~x ~y =
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
-  let is_enabled s v =
-    match v.test_enabled with
+  let is_enabled s v = match v.test_enabled with
     | None -> true
     | Some f -> f s
 
@@ -490,8 +488,9 @@ module Title = struct
     {v with msgbox}, action
 
     (* Draw titles only *)
-  let render win ~fonts v =
-    Fonts.Render.write win fonts v.name ~idx:menu_font ~x:v.x ~y:v.y ~color:Ega.bcyan ~active_color:Ega.white
+  let render win s ~fonts v =
+    let active_color, color = if is_enabled s v then Ega.white, Ega.bcyan else Ega.gray, Ega.gray in
+    Fonts.Render.write win fonts v.name ~idx:menu_font ~x:v.x ~y:v.y ~color ~active_color
 
   let close_menu v =
     let msgbox = MsgBox.close v.msgbox in
@@ -514,6 +513,7 @@ module Global = struct
     menu_h: int;
     open_menu: int option;
     menus: ('msg, 'state) Title.t list;
+    num_menus: int;
     index: (char, int) Hashtbl.t; (* for speed of search *)
   }
 
@@ -528,6 +528,7 @@ module Global = struct
     menu_h;
     open_menu=None;
     menus;
+    num_menus=List.length menus;
     index;
   }
 
@@ -630,7 +631,7 @@ module Global = struct
                   |> L.modify_at_idx (open_menu - 1) (Title.do_open_menu s)
                 in
                 menus, Some(open_menu - 1), KeyInMsgBox
-            | NoAction, Event.Right when open_menu < (num_menus - 1) ->
+            | NoAction, Event.Right when open_menu < v.num_menus - 1 ->
                 let menus =
                   L.modify_at_idx open_menu Title.close_menu menus
                   |> L.modify_at_idx (open_menu + 1) (Title.do_open_menu s)
@@ -644,8 +645,7 @@ module Global = struct
 
   let update s v (event:Event.t) =
     (* Returns new v and the action derived from the menu *)
-    let v, action =
-      match event with
+    let v, action = match event with
       | MouseButton {down=true; x; y; _} ->
           handle_click s v ~x ~y
       | Key {down=true; key; _ } ->
@@ -667,11 +667,10 @@ module Global = struct
   let render win s fonts v ~w ~h =
     Renderer.draw_rect win ~x:0 ~y:0 ~w ~h ~color:Ega.cyan ~fill:true;
     (* Render menu titles *)
-    List.iter (Title.render win ~fonts) v.menus;
+    List.iter (Title.render win s ~fonts) v.menus;
     match v.open_menu with
     | None -> ()
-    | Some i ->
-        Title.render_msgbox win s (List.nth v.menus i)
+    | Some i -> Title.render_msgbox win s (List.nth v.menus i)
 
 end
 
