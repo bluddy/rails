@@ -27,8 +27,9 @@ let render (v:t) win (s:State.t) =
   let write_lg = write ~idx:`Large in
   let write = write ~idx:`Standard in
   let x_l, x_r, x_mult = 48, 228, 256 in
-  write_lg ~x:x_l ~y:16 "Retirement Bonus";
-  let y = 24 in
+  let y = 16 in
+  write_lg ~x:x_l ~y "Retirement Bonus";
+  let y = y + 24 in
 
   write ~x:x_l ~y "Final asset value:";
   let net_worth = Player.get_net_worth player in
@@ -56,7 +57,7 @@ let render (v:t) win (s:State.t) =
     value
   in
 
-  let y = y + 16 in
+  let y = y + 24 in
 
   let owned_ais =
     Stock_market.other_companies_controlled_by player_idx b.stocks |> List.length in
