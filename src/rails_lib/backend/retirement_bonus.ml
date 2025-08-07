@@ -57,7 +57,7 @@ let render (v:t) win (s:State.t) =
     value
   in
 
-  let y = y + 24 in
+  let y = y + 28 in
 
   let owned_ais =
     Stock_market.other_companies_controlled_by player_idx b.stocks |> List.length in
@@ -77,10 +77,8 @@ let render (v:t) win (s:State.t) =
     value
   in
 
-  let y = y + 16 in
-
-  let value =
-    if not v.fired then value else (
+  let y, value =
+    if not v.fired then y, value else y + 16, (
       write ~x:x_l ~y "Involuntary Retirement ";
       write_g ~x:x_mult ~y "x 75%";
 
@@ -94,7 +92,7 @@ let render (v:t) win (s:State.t) =
     )
   in
 
-  let y = y + 16 in
+  let y = y + 28 in
 
   let _retirement_bonus =
     write ~x:x_l ~y "Difficulty Factor:";
