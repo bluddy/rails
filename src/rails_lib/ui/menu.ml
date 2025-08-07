@@ -105,7 +105,7 @@ module MsgBox = struct
     }
 
     (* Compute menu size dynamically. Must be called. *)
-  let do_open_menu ?(x=0) ?(y=0) ?(selected=None) s v =
+  let do_open_menu ?(x=0) ?(y=0) ?(selected=Some 0) s v =
     (* start calculating internal y *)
     let max_h = v.border_y in
     (* entry coordinates are internal to the msgbox *)
@@ -187,16 +187,16 @@ module MsgBox = struct
     | _ -> y < v.y + v.h
 
   let is_entry_open v = match v.kind with
-    | Interactive {fire=MsgBox(true, _);_} -> true
-    | _ -> false
+    | Interactive {fire=MsgBox(true, _);_} -> true | _ -> false
 
   let is_entry_enabled v = match v.kind with
-    | Interactive {enabled; _} -> enabled
-    | _ -> true
+    | Interactive {enabled; _} -> enabled | _ -> true
 
   let is_entry_msgbox v = match v.kind with
-    | Interactive {fire=MsgBox _; _} -> true
-    | _ -> false
+    | Interactive {fire=MsgBox _; _} -> true | _ -> false
+
+  let is_entry_static v = match v.kind with
+    | Static _ -> true | _ -> false
 
   let find_clicked_entry_shallow v ~y =
     List.find_idx (is_entry_clicked_shallow ~y) v.entries
@@ -378,7 +378,7 @@ module MsgBox = struct
       v, action
 
     let render_entry win s font v ~bg_color ~use_prefix ~selected ~x ~border_x ~y ~w =
-      if selected then (
+      if selected && not @@ is_entry_static v then (
         let x = if use_prefix then x + 3 else x in
         Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:bg_color
       );
