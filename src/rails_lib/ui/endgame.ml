@@ -35,9 +35,10 @@ let render win v (s:State.t) = match v.mode with
   | Advert {render_fn} -> render_fn win s
 
 let handle_event event (s:State.t) v = match v.mode with
-  | JobOffer {menu=None; state} when Event.key_modal_dismiss event ->
-      let state = Retirement_bonus.make ~fired:false C.player s.backend in
-      let render_fn = Retirement_bonus.render state in
+  | JobOffer {menu=None; _} when Event.key_modal_dismiss event ->
+      let render_fn =
+        let state = Retirement_bonus.make ~fired:false C.player s.backend in
+        Retirement_bonus.render state in
       `Stay, {v with mode=RetirementBonus {render_fn}}
 
   | RetirementBonus _ when Event.key_modal_dismiss event ->
@@ -55,7 +56,8 @@ let handle_event event (s:State.t) v = match v.mode with
           let state = Hall_of_fame.make ~fired:false () in
           `Stay, {v with mode=HallOfFame state}
       | _ when menu2 === menu -> `Stay, v
-      | _ -> `Stay, {v with mode=JobOffer{menu=Some menu2; state}}
+      | _ ->
+          `Stay, {v with mode=JobOffer{menu=Some menu2; state}}
       end
 
   | HallOfFame state ->
@@ -66,8 +68,7 @@ let handle_event event (s:State.t) v = match v.mode with
       | `Exit -> `Stay, {v with mode=Advert{render_fn=render_ad}}
       end
 
-  | Advert _ when Event.key_modal_dismiss event ->
-      `QuitGame, v
+  | Advert _ when Event.key_modal_dismiss event -> `QuitGame, v
 
   | _ -> `Stay, v
 
