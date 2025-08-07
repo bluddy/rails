@@ -1,5 +1,7 @@
 open !Containers
 module R = Renderer
+module C = Constants
+open Utils.Infix
 
 (* Deals with all possible end game situations *)
 
@@ -16,9 +18,9 @@ include Endgame_d
 
 let make s =
   let state = Job_offer.create_retire s in
-  JobOffer {state; menu=None}
+  {mode=JobOffer {state; menu=None}; kind=`RetireEarly}
 
-let render state win (s:State.t) = match state with
+let render win v (s:State.t) = match v.mode with
   | JobOffer {state; menu} ->
       Job_offer.render state win s;
       Option.iter (fun menu ->
@@ -30,24 +32,33 @@ let render state win (s:State.t) = match state with
 let handle_event event (s:State.t) v = match v.mode with
   | JobOffer {menu=None; state} when Event.key_modal_dismiss event ->
       let menu = retire_menu s.fonts |> Menu.MsgBox.do_open_menu s in
-      {v with mode=JobOffer{state; menu=Some menu}}
+      `Stay, {v with mode=JobOffer{state; menu=Some menu}}
 
   | JobOffer {menu=Some menu; state} ->
       let menu2, action = Menu.MsgBox.update s menu event in
       begin match action with
-      | Menu.On(Some `DontQuit) ->
-          `Exit, v (* stay in game *)
-      | Menu.On(Some `Quit) ->
-          (* Go on with quitting game *)
+      | Menu.On(`DontQuit) ->
+          `Exit, v (* exit menu but stay in game *)
+      | Menu.On(`Quit) ->
+          (* Go on with retirement *)
           let state = Retirement_bonus.make ~fired:false C.player s.backend in
-          let render_fn = Retirement_bonus.render s state in
+          let render_fn = Retirement_bonus.render state in
           `Stay, {v with mode=RetirementBonus {render_fn}}
       | _ when menu2 === menu -> `Stay, v
-      | _ -> `Stay, {v with mode=JobOffer{menu=menu2; state}}
+      | _ -> `Stay, {v with mode=JobOffer{menu=Some menu2; state}}
       end
 
   | RetirementBonus _ when Event.key_modal_dismiss event ->
-      {v with mode=HallOfFame Hall_of_fame.make}
+      let state = Hall_of_fame.make ~fired:false () in
+      `Stay, {v with mode=HallOfFame state}
 
-  | HallOfFame state -> Hall_of_fame.handle_event event s state
+  | HallOfFame state ->
+      let ret, state2 = Hall_of_fame.handle_event event s state in
+      begin match ret with
+      | `Stay when state2 === state -> `Stay, v
+      | `Stay -> `Stay, {v with mode=HallOfFame state2}
+      | `Exit -> `QuitGame, v
+      end
+
+  | _ -> `Stay, v
 

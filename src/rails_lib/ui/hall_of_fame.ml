@@ -106,6 +106,6 @@ let handle_event event (s:State.t) v =
           let entries = create_entry name in
           `Stay, {v with mode=Display; entries}
       end
-  | Display when Event.key_modal_dismiss event -> `Quit, v
+  | Display when Event.key_modal_dismiss event -> `Exit, v
   | _ -> `Stay, v
 

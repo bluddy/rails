@@ -13,7 +13,7 @@ let make ~fired player_idx b =
   let _, _, diff_factor = B.job_bonus_diff_factor player_idx b in
   {diff_factor; fired}
 
-let render_retirement (s:State.t) (v:t) win =
+let render (v:t) win (s:State.t) =
   let b = s.backend in
   let params = b.Backend_d.params in
   let fonts = s.fonts in

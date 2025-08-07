@@ -904,11 +904,11 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
 
     | EndGame state ->
-      begin match Endgame.handle_event state s event with
-      | `ReturnToGame, _ -> {v with mode=Normal}, nobaction
-      | `Quit -> v, B.Action.Quit_game
-      | `None, state2 when state2 === state -> v, nobaction
-      | `None, state2 -> {v with mode=History state2}, nobaction
+      begin match Endgame.handle_event event s state with
+      | `Exit, _ -> {v with mode=Normal}, nobaction
+      | `QuitGame, _ -> v, B.Action.Quit_game
+      | `Stay, state2 when state2 === state -> v, nobaction
+      | `Stay, state2 -> {v with mode=EndGame state2}, nobaction
       end
 
     | GenericScreen {send_delayed_fn=true;_} ->
