@@ -8,7 +8,8 @@ open Utils.Infix
 let retire_menu fonts =
   let open Menu in
   let open MsgBox in
-  make ~fonts
+  let heading = "Are you sure you want\nto end the game?" in
+  make ~heading ~fonts ~font_idx:`Standard ~x:100 ~y:60
   [
     make_entry "No, Just Kidding." @@ `Action `DontQuit;
     make_entry "Yes, bye" @@ `Action `Quit;

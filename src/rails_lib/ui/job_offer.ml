@@ -43,7 +43,7 @@ let create_retire (s:State.t) =
     (Money.print ~region bonus)
     (Jobs.show job)
   in
-  let msgbox = Menu.MsgBox.make_basic ~x:4 ~y:100 ~fonts s text in
+  let msgbox = Menu.MsgBox.make_basic ~x:160 ~y:6 ~fonts s text in
   {job; msgbox}
 
 let render state win (s:State.t) =
