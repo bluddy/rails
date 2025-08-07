@@ -36,6 +36,12 @@ let render win v (s:State.t) = match v.mode with
 
 let handle_event event (s:State.t) v = match v.mode with
   | JobOffer {menu=None; state} when Event.key_modal_dismiss event ->
+      let state = Retirement_bonus.make ~fired:false C.player s.backend in
+      let render_fn = Retirement_bonus.render state in
+      `Stay, {v with mode=RetirementBonus {render_fn}}
+
+  | RetirementBonus _ when Event.key_modal_dismiss event ->
+      let state = Job_offer.create_retire s in
       let menu = retire_menu s.fonts |> Menu.MsgBox.do_open_menu s in
       `Stay, {v with mode=JobOffer{state; menu=Some menu}}
 
@@ -46,19 +52,11 @@ let handle_event event (s:State.t) v = match v.mode with
           `Exit, v (* exit menu but stay in game *)
       | Menu.On(`Quit) ->
           (* Go on with retirement *)
-          let state = Retirement_bonus.make ~fired:false C.player s.backend in
-          let render_fn = Retirement_bonus.render state in
-          `Stay, {v with mode=RetirementBonus {render_fn}}
+          let state = Hall_of_fame.make ~fired:false () in
+          `Stay, {v with mode=HallOfFame state}
       | _ when menu2 === menu -> `Stay, v
       | _ -> `Stay, {v with mode=JobOffer{menu=Some menu2; state}}
       end
-
-  | RetirementBonus _ when Event.key_modal_dismiss event ->
-      let state = Hall_of_fame.make ~fired:false () in
-      `Stay, {v with mode=HallOfFame state}
-
-  | Advert _ when Event.key_modal_dismiss event ->
-      `QuitGame, v
 
   | HallOfFame state ->
       let ret, state2 = Hall_of_fame.handle_event event s state in
@@ -67,6 +65,9 @@ let handle_event event (s:State.t) v = match v.mode with
       | `Stay -> `Stay, {v with mode=HallOfFame state2}
       | `Exit -> `Stay, {v with mode=Advert{render_fn=render_ad}}
       end
+
+  | Advert _ when Event.key_modal_dismiss event ->
+      `QuitGame, v
 
   | _ -> `Stay, v
 
