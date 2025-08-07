@@ -20,6 +20,10 @@ let make s =
   let state = Job_offer.create_retire s in
   {mode=JobOffer {state; menu=None}; kind=`RetireEarly}
 
+let render_ad win (s:State.t) =
+  let tex = Hashtbl.find s.textures.misc `Advert in
+  R.Texture.render win tex ~x:0 ~y:0
+
 let render win v (s:State.t) = match v.mode with
   | JobOffer {state; menu} ->
       Job_offer.render state win s;
@@ -28,6 +32,7 @@ let render win v (s:State.t) = match v.mode with
       ) menu
   | RetirementBonus {render_fn} -> render_fn win s
   | HallOfFame hall -> Hall_of_fame.render win s hall
+  | Advert {render_fn} -> render_fn win s
 
 let handle_event event (s:State.t) v = match v.mode with
   | JobOffer {menu=None; state} when Event.key_modal_dismiss event ->
@@ -52,12 +57,15 @@ let handle_event event (s:State.t) v = match v.mode with
       let state = Hall_of_fame.make ~fired:false () in
       `Stay, {v with mode=HallOfFame state}
 
+  | Advert _ when Event.key_modal_dismiss event ->
+      `QuitGame, v
+
   | HallOfFame state ->
       let ret, state2 = Hall_of_fame.handle_event event s state in
       begin match ret with
       | `Stay when state2 === state -> `Stay, v
       | `Stay -> `Stay, {v with mode=HallOfFame state2}
-      | `Exit -> `QuitGame, v
+      | `Exit -> `Stay, {v with mode=Advert{render_fn=render_ad}}
       end
 
   | _ -> `Stay, v
