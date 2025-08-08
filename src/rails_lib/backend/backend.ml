@@ -57,11 +57,11 @@ let make region resources ~reality_levels ~difficulty ~random ~seed =
   in
   let track = Trackmap.empty width height in
   let stations = Station_map.empty in
+  let players = Owner.Map.singleton C.player @@ Player.default C.player in
   let year_start = Region.start_year region in
   let graph = Track_graph.make () in
   let engines = Engine.of_region region |> Engine.randomize_year random in
   let params = Params.make ~year_start ~reality_levels ~difficulty ~region () in
-  let players = Owner.Map.singleton C.player @@ Player.default C.player params in
   let stocks = Stock_market.default
     |> Stock_market.add_human_player C.player params in
   {

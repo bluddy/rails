@@ -173,6 +173,26 @@ type t = {
 } [@@deriving yojson]
 
 
+let default idx = {
+  idx;
+  name=None;
+  station_locs = [];
+  m = default_monetary;
+  trains = Trainmap.empty ();
+  track_length = 0;
+  track = Vector.create ();
+  goods_delivered=Goods.Set.empty;
+  goods_picked_up=Goods.Set.empty;
+  broker_timer=None;
+  priority=None;
+  active_station=None;
+  event=None;
+  periodic=(make_periodic (), make_periodic ());
+  total_difficulty=0;
+  history = History.default;
+  record = Record.default;
+  achievements = Achievement.default;
+}
 
 let get_cash v = v.m.cash
 
@@ -738,27 +758,4 @@ let update_retirement_bonus_and_job ~fired stocks params v =
 let get_achievements v = v.achievements
 
 let get_track_pieces_history v = v.history.track_pieces
-
-let default idx params =
-  let v = {
-    idx;
-    name=None;
-    station_locs = [];
-    m = default_monetary;
-    trains = Trainmap.empty ();
-    track_length = 0;
-    track = Vector.create ();
-    goods_delivered=Goods.Set.empty;
-    goods_picked_up=Goods.Set.empty;
-    broker_timer=None;
-    priority=None;
-    active_station=None;
-    event=None;
-    periodic=(make_periodic (), make_periodic ());
-    total_difficulty=0;
-    history = History.default;
-    record = Record.default;
-    achievements = Achievement.default;
-  }
-  in v |> add_to_total_difficulty params
 
