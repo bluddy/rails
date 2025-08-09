@@ -54,11 +54,11 @@ let render win (s:State.t) v =
       let write_lg = write_b ~idx:`Large in
       write_lg ~x:64 ~y:5 "RailRoad Tycoon";
       write_lg ~x:80 ~y:22 "HALL OF FAME";
-      let write_cy = write ~idx:`Standard ~color:Ega.bcyan in
+      let write_cy = write ~idx:`Standard ~color:Ega.cyan in
       let write = write_b ~idx:`Standard in
 
       List.fold_left (fun (i, y) entry ->
-        let s = sp "%d. %s's     %s" i entry.player entry.rr_name in
+        let s = sp "%d. %s's     %s" (i + 1) entry.player entry.rr_name in
         write ~x:16 ~y s;
         let s = sp 
           "%s, %s\n\
@@ -70,15 +70,15 @@ let render win (s:State.t) v =
           entry.year_start
           entry.year
         in
-        write_cy ~x:64 ~y:101 s;
+        write_cy ~x:64 ~y:(y+8) s;
 
         (match v.idx with
         | Some j when i = j ->
-            R.draw_rect win ~x:8 ~y:(y-2) ~w:303 ~h:25 ~color:Ega.bred ~fill:false
+            R.draw_rect win ~x:8 ~y:(y-2) ~w:303 ~h:28 ~color:Ega.bred ~fill:false
         | _ -> ());
 
         (i + 1, y + 26))
-      (1, 41)
+      (0, 41)
       v.entries
       |> ignore
 
@@ -87,13 +87,14 @@ let handle_event event (s:State.t) v =
   let player = B.get_player player_idx b in
   let region = B.get_region b in
   let p = b.params in
-  let create_entry name =
+  let create_entry name entries =
     let rr_name = B.get_name player_idx b in
     let job, bonus, _ = Player.job_bonus_diff_factor ~fired:v.fired b.stocks b.params player in
     let difficulty, year, year_start = p.options.difficulty, p.year, p.year_start in
     let entry = {player=name; rr_name; job; bonus; region; difficulty; year; year_start} in
     let entries = match v.idx with
-      | Some i -> List.modify_at_idx i (fun _ -> entry) v.entries
+      | Some i when List.length v.entries > i -> List.modify_at_idx i (fun _ -> entry) entries
+      | Some _ -> entries @ [entry]
       | _ -> v.entries
     in
     entries
@@ -104,7 +105,9 @@ let handle_event event (s:State.t) v =
       | text2, (`Stay | `Exit) when text2 === text ->  `Stay, v
       | text2, (`Stay | `Exit) -> `Stay, {v with mode=EnterName text2}
       | _, `Return name ->
-          let entries = create_entry name in
+          let entries = create_entry name v.entries in
+          let entries_s = yojson_of_entries entries |> Yojson.Safe.to_string in
+          ignore @@ IO.File.write hof_file entries_s;
           `Stay, {v with mode=Display; entries}
       end
   | Display when Event.key_modal_dismiss event -> `Exit, v
