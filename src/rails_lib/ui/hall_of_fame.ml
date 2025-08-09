@@ -16,7 +16,7 @@ include Hall_of_fame_d
 let hof_file = "hof.dat"
 
 let make ?(bonus=M.zero) ~fired () =
-  let text_entry () = EnterName(Text_entry.make "Your Name?" ~x:80 ~y:112 ~chars:24) in
+  let text_entry () = EnterName(Text_entry.make "" ~x:80 ~y:112 ~chars:24) in
   if IO.File.exists hof_file then
     let s = IO.File.read_exn hof_file in
     let entries = Yojson.Safe.from_string s |> entries_of_yojson in
@@ -44,6 +44,7 @@ let render win (s:State.t) v =
       let write_lg = write_b ~idx:`Large in
       write ~x:80 ~y:16 "You have qualified for the";
       write_lg ~x:80 ~y:24 "Hall of Fame!";
+      write ~x:80 ~y:104 "Your name?";
       Text_entry.render win fonts text_entry
 
   | Display ->
