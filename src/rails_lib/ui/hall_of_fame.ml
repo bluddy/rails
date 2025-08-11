@@ -15,11 +15,15 @@ include Hall_of_fame_d
 
 let hof_file = "hof.dat"
 
+let sort_entries entries =
+    (* highest to lowest *)
+    List.sort (fun x y -> if M.(x.bonus < y.bonus) then 1 else -1) entries
+
 let make ?(bonus=M.zero) ~fired () =
   let text_entry () = EnterName(Text_entry.make "" ~x:80 ~y:112 ~chars:24) in
   if IO.File.exists hof_file then
     let s = IO.File.read_exn hof_file in
-    let entries = Yojson.Safe.from_string s |> entries_of_yojson in
+    let entries = Yojson.Safe.from_string s |> entries_of_yojson |> sort_entries in
     match List.find_idx (fun entry -> M.(bonus > entry.bonus)) entries with
     | Some (i, _) ->
         {mode=text_entry (); entries; idx=Some i; fired}
