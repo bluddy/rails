@@ -18,7 +18,7 @@ let retire_menu fonts =
 include Endgame_d
 
 let make s =
-  let state = Job_offer.create_retire s in
+  let state = Job_offer.create_retire ~fired:false s in
   {mode=JobOffer {state; menu=None}; kind=`RetireEarly}
 
 let render_ad win (s:State.t) =
@@ -45,7 +45,7 @@ let handle_event event (s:State.t) v = match v.mode with
       `Stay, {v with mode=RetirementBonus {render_fn}}
 
   | RetirementBonus _ when Event.key_modal_dismiss event ->
-      let state = Job_offer.create_retire s in
+      let state = Job_offer.create_retire ~fired:false s in
       let menu = retire_menu s.fonts |> Menu.MsgBox.do_open_menu s in
       `Stay, {v with mode=JobOffer{state; menu=Some menu}}
 

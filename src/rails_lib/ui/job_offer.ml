@@ -19,7 +19,7 @@ let create job (s:State.t) =
   let msgbox = Menu.MsgBox.make_basic ~x:154 ~y:8 ~fonts s text in
   {job; msgbox}
 
-let create_retire (s:State.t) =
+let create_retire ~fired (s:State.t) =
   let b = s.backend in
   let player_idx = C.player in
   let fonts = s.fonts in
@@ -34,13 +34,18 @@ let create_retire (s:State.t) =
     Retirement Bonus:\n\
     --- %s ---\n\
     \n\
-    Upon your retirement\n\
-    you embark on a\n\
+    %s\n\
     new career as\n\
     %s."
     (Money.print ~region asset_value)
     difficulty_factor
     (Money.print ~region bonus)
+    (if fired then
+      "Following your sudden\n\
+       retirement, you find a"
+    else
+      "Upon your retirement\n\
+       you embark on a")
     (Jobs.show job)
   in
   let msgbox = Menu.MsgBox.make_basic ~x:160 ~y:6 ~fonts s text in
