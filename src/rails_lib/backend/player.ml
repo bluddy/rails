@@ -731,11 +731,11 @@ let job_bonus_diff_factor ~fired stocks params v =
     M.(value + (value / C.max_num_players) * mult_val)
   in
   let job_idx, retirement_bonus =
-    Printf.printf "net worth is %d\n" (net_worth |> M.to_int);
     (* In the original code, net_worth was div 10 to allow for precision. We multiply all values by 10 *)
     if M.(net_worth < of_int 1000) then (
       let job_idx = M.(net_worth / 200) |> Utils.clip_cash ~min:0 ~max:4 |> M.to_int in
-      let retirement_bonus = modify_by_owned_ais net_worth in
+      let retirement_bonus = M.(net_worth / 10) in
+      let retirement_bonus = modify_by_owned_ais retirement_bonus in
       job_idx, retirement_bonus
     ) else (
       let retirement_bonus = M.((net_worth / 10 / Int.(age + 20)) * difficulty_factor) in
