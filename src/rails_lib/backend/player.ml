@@ -756,10 +756,10 @@ let job_bonus_diff_factor ~fired stocks params v =
   )
   in
   let job = Jobs.of_enum params.region job_idx in
-  job, retirement_bonus, difficulty_factor 
+  job, job_idx, retirement_bonus, difficulty_factor 
 
 let update_retirement_bonus_and_job ~fired stocks params v =
-  let job, _, _ = job_bonus_diff_factor ~fired stocks params v in
+  let job, _, _, _ = job_bonus_diff_factor ~fired stocks params v in
   let ret () = Some job, {v with record={v.record with job=Some job}} in
   match v.record.job with
   | Some cur_job when Jobs.to_enum job > Jobs.to_enum cur_job -> ret ()

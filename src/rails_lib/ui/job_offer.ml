@@ -24,7 +24,7 @@ let create_retire ~fired (s:State.t) =
   let player_idx = C.player in
   let fonts = s.fonts in
   let region = b.params.region in
-  let job, bonus, difficulty_factor = B.job_bonus_diff_factor player_idx b in
+  let job, job_idx, bonus, difficulty_factor = B.job_bonus_diff_factor player_idx b in
   let player = B.get_player player_idx b in
   let asset_value = Player.get_net_worth player in
   let text = sp
@@ -48,7 +48,16 @@ let create_retire ~fired (s:State.t) =
        you embark on a")
     (Jobs.show job)
   in
-  let msgbox = Menu.MsgBox.make_basic ~x:160 ~y:6 ~fonts s text in
+  let tex = Hashtbl.find s.textures.jobs job in
+  let x, y =
+    if tex.h >= 100 then (* tall pic *)
+      if job_idx >= 9 then 4, 100
+      else 4, 4
+    else (* short pic *)
+      if job_idx = 19 then 154, 100
+      else 154, 8
+  in
+  let msgbox = Menu.MsgBox.make_basic ~x ~y ~fonts s text in
   {job; msgbox}
 
 let render state win (s:State.t) =

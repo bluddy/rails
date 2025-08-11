@@ -93,7 +93,7 @@ let handle_event event (s:State.t) v =
   let p = b.params in
   let create_entry name entries =
     let rr_name = B.get_name player_idx b in
-    let job, bonus, _ = Player.job_bonus_diff_factor ~fired:v.fired b.stocks b.params player in
+    let job, _, bonus, _ = Player.job_bonus_diff_factor ~fired:v.fired b.stocks b.params player in
     let difficulty, year, year_start = p.options.difficulty, p.year, p.year_start in
     let entry = {player=name; rr_name; job; bonus; region; difficulty; year; year_start} in
     let entries = match v.idx with
