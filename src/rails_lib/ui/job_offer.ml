@@ -7,10 +7,7 @@ module C = Constants
 
 let sp = Printf.sprintf
 
-type t = {
-  job: Jobs.t;
-  msgbox: (unit, State.t) Menu.MsgBox.t;
-}
+include Job_offer_d
 
 let create job (s:State.t) =
   let fonts = s.fonts in
@@ -22,12 +19,12 @@ let create job (s:State.t) =
   let msgbox = Menu.MsgBox.make_basic ~x:154 ~y:8 ~fonts s text in
   {job; msgbox}
 
-let create_retire (s:State.t) =
+let create_retire ~fired (s:State.t) =
   let b = s.backend in
   let player_idx = C.player in
   let fonts = s.fonts in
   let region = b.params.region in
-  let job, bonus, difficulty_factor = B.job_bonus_diff_factor player_idx b in
+  let job, job_idx, bonus, difficulty_factor = B.job_bonus_diff_factor player_idx b in
   let player = B.get_player player_idx b in
   let asset_value = Player.get_net_worth player in
   let text = sp
@@ -37,16 +34,30 @@ let create_retire (s:State.t) =
     Retirement Bonus:\n\
     --- %s ---\n\
     \n\
-    Upon your retirement\n\
-    you embark on a\n\
+    %s\n\
     new career as\n\
     %s."
     (Money.print ~region asset_value)
     difficulty_factor
     (Money.print ~region bonus)
+    (if fired then
+      "Following your sudden\n\
+       retirement, you find a"
+    else
+      "Upon your retirement\n\
+       you embark on a")
     (Jobs.show job)
   in
-  let msgbox = Menu.MsgBox.make_basic ~x:4 ~y:100 ~fonts s text in
+  let tex = Hashtbl.find s.textures.jobs job in
+  let x, y =
+    if tex.h >= 100 then (* tall pic *)
+      if job_idx >= 9 then 4, 100
+      else 4, 4
+    else (* short pic *)
+      if job_idx = 19 then 154, 100
+      else 154, 8
+  in
+  let msgbox = Menu.MsgBox.make_basic ~x ~y ~fonts s text in
   {job; msgbox}
 
 let render state win (s:State.t) =
@@ -62,7 +73,7 @@ let render state win (s:State.t) =
   in
 
   let x = 8 in
-  Jobs.fold region (fun (y:int) job ->
+  Jobs.fold_rev region (fun (y:int) job ->
     let job_s = Jobs.show job in
     let color = if Jobs.equal job state.job then Ega.black else Ega.gray in
     Fonts.Render.write win fonts ~idx:`Standard ~x ~y ~color job_s;

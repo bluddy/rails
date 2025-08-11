@@ -146,9 +146,9 @@ let show = function
   | `GeneralOfArmies -> "General Of The Armies"
   | `PresidentOfUnitedStates -> "President Of The United States"
 
-let fold region f acc =
+let fold_rev region f acc =
   let max_val = max in
   Iter.fold (fun acc i -> f acc (of_enum region i))
     acc
-    Iter.(0 -- max_val)
+    @@ Iter.rev @@ Iter.(0 -- max_val)
 

@@ -597,9 +597,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             let state = Name_rr.init b.stations b.cities player_idx b in
             {v with mode=Name_rr state}, nobaction
         | On (`Retire), _ ->
-            let state = Job_offer.create_retire s in
-            let render_fn = Job_offer.render state in
-            {v with mode=make_generic_screen render_fn}, nobaction
+            let mode = EndGame(Endgame.make s) in
+            {v with mode}, nobaction
         | On (`Cheat x), _ ->
             v, B.Action.Cheat(C.player, x)
         | Off (`Options option), _ ->
@@ -900,6 +899,14 @@ let handle_event (s:State.t) v (event:Event.t) =
       | `Exit, _ -> {v with mode=Normal}, nobaction
       | `None, state2 when state2 === state -> v, nobaction
       | `None, state2 -> {v with mode=History state2}, nobaction
+      end
+
+    | EndGame state ->
+      begin match Endgame.handle_event event s state with
+      | `Exit, _ -> {v with mode=Normal}, nobaction
+      | `QuitGame, _ -> v, B.Action.Quit_game
+      | `Stay, state2 when state2 === state -> v, nobaction
+      | `Stay, state2 -> {v with mode=EndGame state2}, nobaction
       end
 
     | GenericScreen {send_delayed_fn=true;_} ->
@@ -1523,6 +1530,8 @@ let render (win:R.window) (s:State.t) v =
       Train_income_report.render win state s
     | History state ->
        History.render win state s
+    | EndGame state ->
+       Endgame.render win state s
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in
