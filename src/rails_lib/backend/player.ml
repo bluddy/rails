@@ -10,6 +10,8 @@ open! Utils.Infix
 let src = Logs.Src.create "player" ~doc:"Player"
 module Log = (val Logs.src_log src: Logs.LOG)
 
+let sp = Printf.sprintf
+
 module IntMap = Utils.IntMap
 module Vector = Utils.Vector
 module U = Utils
@@ -22,7 +24,7 @@ type monetary = {
   stockholders_equity : Money.t; (* not sure how this changes *)
   owned_industry: Money.t;
   yearly_interest_payment: Money.t;
-  net_worth: Money.t;
+  net_worth: Money.t; (* In the game, it's net_worth/10 to allow for more precision *)
   profit: Money.t;
   in_receivership: bool; (* bankruptcy *)
   income_statement: Income_statement_d.t;
@@ -719,30 +721,39 @@ let job_bonus_diff_factor ~fired stocks params v =
   let net_worth = get_net_worth v in
   let difficulty_factor = (get_total_difficulty v * 10 / age) / 2 in
   let modify_by_owned_ais value =
-    let mult_val = Int.shift_left 1 (owned_ais - 1) in
+    let mult_val = match owned_ais with
+    | 0 -> 0
+    | 1 -> 1
+    | 2 -> 2
+    | 3 -> 4
+    | _ -> assert false
+    in
     M.(value + (value / C.max_num_players) * mult_val)
   in
   let job_idx, retirement_bonus =
-    if M.(net_worth < of_int 100) then
-      let job_idx = M.(net_worth / 20) |> Utils.clip_cash ~min:0 ~max:4 |> M.to_int in
+    Printf.printf "net worth is %d\n" (net_worth |> M.to_int);
+    (* In the original code, net_worth was div 10 to allow for precision. We multiply all values by 10 *)
+    if M.(net_worth < of_int 1000) then (
+      let job_idx = M.(net_worth / 200) |> Utils.clip_cash ~min:0 ~max:4 |> M.to_int in
       let retirement_bonus = modify_by_owned_ais net_worth in
       job_idx, retirement_bonus
-    else
-      let retirement_bonus = M.((net_worth / Int.(age + 20)) * difficulty_factor) in
+    ) else (
+      let retirement_bonus = M.((net_worth / 10 / Int.(age + 20)) * difficulty_factor) in
       let retirement_bonus = modify_by_owned_ais retirement_bonus in
       (* fired penalty *)
       let retirement_bonus = if fired then M.(retirement_bonus * 3 / 4) else retirement_bonus in
-      let rec loop value i =
+      let rec loop value job =
         let value = (value / 4) * 3 in
-        if value > 200 && i < Jobs.max then
-          loop value (i + 1)
-        else i
+        if value > 200 && job < Jobs.max then
+          loop value (job + 1)
+        else job
       in 
       let job_idx =
         if M.to_int retirement_bonus >= 10000 then Jobs.max
-        else loop (M.to_int retirement_bonus) (4 + 1)
+        else loop (M.to_int retirement_bonus) 4
       in
       job_idx, retirement_bonus
+  )
   in
   let job = Jobs.of_enum params.region job_idx in
   job, retirement_bonus, difficulty_factor 
