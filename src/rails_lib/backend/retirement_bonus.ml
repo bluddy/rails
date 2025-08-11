@@ -57,13 +57,11 @@ let render (v:t) win (s:State.t) =
     value
   in
 
-  let y = y + 28 in
+  let y, value =
+    let owned_ais = Stock_market.other_companies_controlled_by player_idx b.stocks |> List.length in
+    if owned_ais = 0 then y, value else y + 16, (
+    write ~x:x_l ~y @@ sp "Railroad Mogul Bonus:\n(You control %d RR)" owned_ais;
 
-  let owned_ais =
-    Stock_market.other_companies_controlled_by player_idx b.stocks |> List.length in
-  write ~x:x_l ~y @@ sp "Railroad Mogul Bonus:\n(You control %d RR)" owned_ais;
-
-  let value =
     let owned_ai_factor = (1 lsl (owned_ais - 1)) in
     let owned_ai_pct = (owned_ai_factor * 25) + 100 in
     let value = M.(value + (value * owned_ai_factor / 4)) in
@@ -75,6 +73,7 @@ let render (v:t) win (s:State.t) =
     let y = y + 2 in
     write ~x:x_r ~y (Money.print ~region value);
     value
+    )
   in
 
   let y, value =
