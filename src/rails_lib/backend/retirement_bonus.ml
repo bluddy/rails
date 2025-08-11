@@ -42,7 +42,8 @@ let render (v:t) win (s:State.t) =
     R.draw_line win ~x1:228 ~x2:288 ~y1:y ~y2:y ~color:Ega.black
   in
 
-  let value = net_worth in
+  let value = M.(net_worth / 10) in (* correct for game format *)
+  (* We get punished the longer it took *)
   let age = Params.age params in
   let value =
     let pct = 1000 / (age + 20) in
