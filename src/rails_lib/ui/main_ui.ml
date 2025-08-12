@@ -957,7 +957,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       | FiscalPeriodEndMsgs(player_idx, msgs) ->
           if Owner.(player_idx <> main_player_idx) then v
           else
-            let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg =
+            let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg, forced_retire =
               Fiscal_period_end.handle_msgs b msgs in
             let background = make_generic_screen Fiscal_period_end.render_bg in
             let modes = [] in
@@ -981,8 +981,22 @@ let handle_msgs (s:State.t) v ui_msgs =
             let modes = if String.length records > 0 then
               (make_msgbox_mode s ~x:80 ~y:60 records ~background)::modes else modes
             in
-            let modes = (FiscalPeriodEndStocks (Fiscal_period_end.create_stock_eval stock_msgs s))::modes in
+            let stock_eval_mode = FiscalPeriodEndStocks (Fiscal_period_end.create_stock_eval stock_msgs s) in
+            let modes = stock_eval_mode::modes in
+            let modes =
+              if forced_retire then
+                let text = sp
+                  "After 100 years of faithful\n\
+                  service you must retire\n\
+                  from the Presidency of\n\
+                  the %s."
+                  (B.get_name player_idx b)
+                in
+                (make_msgbox_mode ~x:64 ~y:16 ~background:stock_eval_mode s text)::modes
+              else modes in
             let modes = match job_msg with
+            | Some job when forced_retire ->
+                (EndGame (Endgame.make s))::modes
             | Some job ->
                 let render_fn = Job_offer.create job s |> Job_offer.render in
                 (make_generic_screen render_fn)::modes
