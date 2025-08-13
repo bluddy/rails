@@ -597,7 +597,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             let state = Name_rr.init b.stations b.cities player_idx b in
             {v with mode=Name_rr state}, nobaction
         | On (`Retire), _ ->
-            let mode = EndGame(Endgame.make s) in
+            let mode = EndGame(Endgame.make `RetireEarly s) in
             {v with mode}, nobaction
         | On (`Cheat x), _ ->
             v, B.Action.Cheat(C.player, x)
@@ -995,8 +995,8 @@ let handle_msgs (s:State.t) v ui_msgs =
                 (make_msgbox_mode ~x:64 ~y:16 ~background:stock_eval_mode s text)::modes
               else modes in
             let modes = match job_msg with
-            | Some job when forced_retire ->
-                (EndGame (Endgame.make s))::modes
+            | Some _ when forced_retire ->
+                (EndGame (Endgame.make `Fired s))::modes
             | Some job ->
                 let render_fn = Job_offer.create job s |> Job_offer.render in
                 (make_generic_screen render_fn)::modes

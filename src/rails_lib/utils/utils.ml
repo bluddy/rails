@@ -359,7 +359,15 @@ module List = struct
       | _ -> None
     in
     loop 0 l
-        
+
+  let has f l =
+    let rec loop = function
+      | [] -> false
+      | x::_ when f x -> true
+      | _::xs -> loop xs
+    in
+    loop l
+
   let modify_at_idx i f l0 =
     let rec loop i acc = function
       | [] -> l0
@@ -405,7 +413,7 @@ module List = struct
       | [] -> ()
     in
     loop f l
-    
+
 end
 
 module Bool = struct
