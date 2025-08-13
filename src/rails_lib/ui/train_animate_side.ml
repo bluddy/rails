@@ -6,6 +6,9 @@ module R = Renderer
 let fps = 15
 let wait_time = 1000/fps
 
+(* wheels: temp_cycle /2 mod 3 is offset *)
+(* smoke: temp_cycle /3 mod 6 is offset *)
+
 let smoke_x_off = 76 (* depends on smoke image *)
 
 let init ?x (s:State.t) ~engine ~cars ~station ~rail ~paused =
@@ -18,8 +21,7 @@ let init ?x (s:State.t) ~engine ~cars ~station ~rail ~paused =
   in
   {
     x;  (* left index of train engine *)
-    anim_idx=0;
-    smoke_idx=0;
+    ctr=0;
     last_time=0;
     rail;
     engine;
@@ -83,24 +85,22 @@ let render ?(show_name=true) win (s:State.t) v =
       if not v.paused then begin
         let engine = Hashtbl.find s.textures.engine_anim v.engine in
         let engine_h = R.Texture.get_h engine.tex in
-        let draw_wheel_anim () =
+        let _draw_wheel_anim =
           let len = Array.length engine.anim in
           if len > 0 then
-            R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(y-engine_h+engine.anim_y) engine.anim.(v.anim_idx);
+            let anim_idx = (v.ctr / 2) mod len in
+            R.Texture.render win ~x:(v.x+engine.anim_x) ~y:(y-engine_h+engine.anim_y) engine.anim.(anim_idx);
         in
-        draw_wheel_anim ();
-
-        let draw_smoke () =
-          begin match engine.smoke_x with
-          | None -> ()
-          | Some smoke_x ->
+        let _draw_smoke =
+          Option.iter (fun smoke_x ->
               let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
-              let smoke_tex = smoke_arr.(v.smoke_idx) in
+              let smoke_idx = (v.ctr / 3) mod (Array.length smoke_arr) in
+              let smoke_tex = smoke_arr.(smoke_idx) in
               let smoke_h = R.Texture.get_h smoke_tex in
               R.Texture.render win ~x:(v.x + smoke_x - smoke_x_off) ~y:(y - engine_h - smoke_h) smoke_tex
-          end;
+          ) engine.smoke_x;
         in
-        draw_smoke ();
+        ()
       end;
 
       draw_cars win s v.x y v.cars |> ignore
@@ -122,25 +122,10 @@ let handle_tick (s:State.t) v time =
           v
 
     | `Front ->
-        let engine = Hashtbl.find s.textures.engine_anim v.engine in
-
-        if not v.paused then begin
-          (* Run wheel animation if present *)
-          let anim_len = Array.length engine.anim in
-          if anim_len > 0 then
-            v.anim_idx <- (v.anim_idx + 1) mod anim_len;
-
-          (* Run smoke animation if present *)
-          begin match engine.smoke_x with
-          | Some _ ->
-            let smoke_arr = Hashtbl.find s.textures.smoke `SmokeSideBig in
-            let smoke_len = Array.length smoke_arr in
-            v.smoke_idx <- (v.smoke_idx + 1) mod smoke_len
-          | None -> ()
-          end;
-
+        if not v.paused then (
+          v.ctr <- v.ctr + 1;
           v.x <- v.x + 1;
-        end;
+        );
         v
   )
 

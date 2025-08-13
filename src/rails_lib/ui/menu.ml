@@ -395,8 +395,8 @@ module MsgBox = struct
       let name = if use_prefix then prefix^v.name else v.name in
       Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
 
-    let render_box win x y w h =
-      Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.gray ~fill:true;
+    let render_box ?(color=Ega.gray) win x y w h =
+      Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
       Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
 

@@ -830,7 +830,7 @@ let _fin_end_proceed player_idx v =
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
   let rw_msgs = List.map (fun info -> Ui_msg.RateWar info) rate_war_results in
-  let retire_msgs = if Params.age v.params > 100 then [Ui_msg.ForcedRetirement] else [] in
+  let retire_msgs = if Params.age v.params > 100 then [Ui_msg.EndOfRun] else [] in
   let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ai_msgs @ retire_msgs) in
   send_ui_msg v ui_msg;
   let stations = Station_map.map Station.end_of_period_reset v.stations in

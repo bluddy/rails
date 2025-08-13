@@ -399,6 +399,8 @@ let build_industry cost (v:t) =
   let owned_industry = Money.(v.m.owned_industry + cost) in
   {v with m={v.m with owned_industry}}
 
+let get_first_station v = List.rev v.station_locs |> List.head_opt
+
 let _get_first_2_cities station_map cities v =
   (* Getting the name if it's not custom is... complicated *)
   List.fold_right (fun loc acc ->

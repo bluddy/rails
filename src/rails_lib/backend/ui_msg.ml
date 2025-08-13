@@ -75,7 +75,7 @@ type fiscal_period_end_msg =
   | SharePriceChange of share_price_change
   | RateWar of rate_war_info
   | JobOffer of Jobs.t
-  | ForcedRetirement
+  | EndOfRun
   [@@deriving yojson]
 
 type t =
