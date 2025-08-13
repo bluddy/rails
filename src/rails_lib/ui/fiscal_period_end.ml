@@ -283,5 +283,6 @@ let handle_msgs backend msgs =
   let records = get_records backend msgs  in
   let stock_msgs = get_stock_msgs msgs in
   let job_msg = get_job_msg msgs in
-  rate_war_msgs, record_earnings, warnings, records, stock_msgs, job_msg
+  let forced_retire = List.has (function | Ui_msg.ForcedRetirement -> true | _ -> false) msgs in
+  rate_war_msgs, record_earnings, warnings, records, stock_msgs, job_msg, forced_retire
 

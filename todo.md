@@ -1,10 +1,4 @@
 # Tasks
-- Jobs: print in reverse order
-- Check computation of retirement bonus
-- Check what difficulty is used by retirement job offer
-- Change enemy stations to be at track level?
-  - Requires special structures for rate war/union station
-  - Can then just be removed, revealing tiles
 - For playback, use list of variants, not the current system
   - Deletions mess it up
 - Can't build within 5 of enemy station

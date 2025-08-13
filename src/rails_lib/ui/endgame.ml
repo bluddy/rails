@@ -17,9 +17,13 @@ let retire_menu fonts =
 
 include Endgame_d
 
-let make s =
-  let state = Job_offer.create_retire ~fired:false s in
-  {mode=JobOffer {state; menu=None}; kind=`RetireEarly}
+let is_fired = function `Fired -> true | `FinishRun | `RetireEarly -> false
+let is_final = function `Fired | `FinishRun -> true | `RetireEarly -> false
+
+let make kind s =
+  let fired = is_fired kind in
+  let state = Job_offer.create_retire ~fired s in
+  {mode=JobOffer {state; menu=None}; kind}
 
 let render_ad win (s:State.t) =
   let tex = Hashtbl.find s.textures.misc `Advert in
@@ -37,17 +41,21 @@ let render win v (s:State.t) = match v.mode with
 
 let handle_event event (s:State.t) v = match v.mode with
   | JobOffer {menu=None; _} when Event.key_modal_dismiss event ->
+      let fired = is_fired v.kind in
       let render_fn =
-        let state = Retirement_bonus.make ~fired:false C.player s.backend in
-        Retirement_bonus.render state
-      in
-      print_endline "joboffer none";
+        let state = Retirement_bonus.make ~fired C.player s.backend in
+        Retirement_bonus.render state in
       `Stay, {v with mode=RetirementBonus {render_fn}}
 
   | RetirementBonus _ when Event.key_modal_dismiss event ->
-      let state = Job_offer.create_retire ~fired:false s in
-      let menu = retire_menu s.fonts |> Menu.MsgBox.do_open_menu s in
-      `Stay, {v with mode=JobOffer{state; menu=Some menu}}
+      let fired = is_fired v.kind in
+      if is_final v.kind then
+        let state = Hall_of_fame.make ~fired () in
+        `Stay, {v with mode=HallOfFame state}
+      else
+        let state = Job_offer.create_retire ~fired s in
+        let menu = retire_menu s.fonts |> Menu.MsgBox.do_open_menu s in
+        `Stay, {v with mode=JobOffer{state; menu=Some menu}}
 
   | JobOffer {menu=Some menu; state} ->
       let menu2, action = Menu.MsgBox.update s menu event in
@@ -56,7 +64,8 @@ let handle_event event (s:State.t) v = match v.mode with
           `Exit, v (* exit menu but stay in game *)
       | Menu.On(`Quit) ->
           (* Go on with retirement *)
-          let state = Hall_of_fame.make ~fired:false () in
+          let fired = is_fired v.kind in
+          let state = Hall_of_fame.make ~fired () in
           `Stay, {v with mode=HallOfFame state}
       | _ when menu2 === menu -> `Stay, v
       | _ ->

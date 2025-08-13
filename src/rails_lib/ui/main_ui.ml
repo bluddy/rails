@@ -597,7 +597,7 @@ let handle_event (s:State.t) v (event:Event.t) =
             let state = Name_rr.init b.stations b.cities player_idx b in
             {v with mode=Name_rr state}, nobaction
         | On (`Retire), _ ->
-            let mode = EndGame(Endgame.make s) in
+            let mode = EndGame(Endgame.make `RetireEarly s) in
             {v with mode}, nobaction
         | On (`Cheat x), _ ->
             v, B.Action.Cheat(C.player, x)
@@ -914,12 +914,12 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with mode=Normal}, B.Action.RunDelayedFn C.player
         else
           v, nobaction
-  
+
     | Income_statement _
     | GenericScreen {send_delayed_fn=false;_}
     | FiscalPeriodEndStocks _
     | Animation _ -> modal_screen_no_input v event
-        
+
   in
   (* See if we need to pause or unpause *)
   let pause_msgs = check_add_pause_msg old_mode old_menu v in
@@ -957,7 +957,7 @@ let handle_msgs (s:State.t) v ui_msgs =
       | FiscalPeriodEndMsgs(player_idx, msgs) ->
           if Owner.(player_idx <> main_player_idx) then v
           else
-            let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg =
+            let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg, forced_retire =
               Fiscal_period_end.handle_msgs b msgs in
             let background = make_generic_screen Fiscal_period_end.render_bg in
             let modes = [] in
@@ -981,8 +981,22 @@ let handle_msgs (s:State.t) v ui_msgs =
             let modes = if String.length records > 0 then
               (make_msgbox_mode s ~x:80 ~y:60 records ~background)::modes else modes
             in
-            let modes = (FiscalPeriodEndStocks (Fiscal_period_end.create_stock_eval stock_msgs s))::modes in
+            let stock_eval_mode = FiscalPeriodEndStocks (Fiscal_period_end.create_stock_eval stock_msgs s) in
+            let modes = stock_eval_mode::modes in
+            let modes =
+              if forced_retire then
+                let text = sp
+                  "After 100 years of faithful\n\
+                  service you must retire\n\
+                  from the Presidency of\n\
+                  the %s."
+                  (B.get_name player_idx b)
+                in
+                (make_msgbox_mode ~x:64 ~y:16 ~background:stock_eval_mode s text)::modes
+              else modes in
             let modes = match job_msg with
+            | Some _ when forced_retire ->
+                (EndGame (Endgame.make `Fired s))::modes
             | Some job ->
                 let render_fn = Job_offer.create job s |> Job_offer.render in
                 (make_generic_screen render_fn)::modes
@@ -1262,7 +1276,7 @@ let handle_msgs (s:State.t) v ui_msgs =
   (* Handle pausing/unpausing *)
   let pause_msg = check_add_pause_msg old_mode old_menu v in
   v, pause_msg
-  
+
 
   (* Mostly animations. *)
 let handle_tick s v time is_cycle = match v.mode with
@@ -1313,7 +1327,7 @@ let handle_tick s v time is_cycle = match v.mode with
     | `Stay -> {v with mode=StationUpgrade {state with transition = Some t2}}
     | `Exit -> v (* we don't allow exit by ticks here *)
     end
-    
+
   | _ -> v
 
 let draw_train_roster win (s:State.t) v =
@@ -1458,7 +1472,7 @@ let render_main win (s:State.t) v =
 
 let should_render_mouse = function
   | _ -> true
-  
+
 let render_mouse win textures =
   let cursor_tex = Hashtbl.find textures.Textures.misc `Cursor in
   R.draw_cursor win cursor_tex

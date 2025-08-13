@@ -830,12 +830,11 @@ let _fin_end_proceed player_idx v =
   let job, player = Player.update_retirement_bonus_and_job ~fired:false stocks v.params player in
   let job_msg = match job with Some job -> [Ui_msg.JobOffer job] | None -> [] in
   let rw_msgs = List.map (fun info -> Ui_msg.RateWar info) rate_war_results in
-  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ai_msgs) in
+  let retire_msgs = if Params.age v.params > 100 then [Ui_msg.ForcedRetirement] else [] in
+  let ui_msg = Ui_msg.FiscalPeriodEndMsgs (player_idx, job_msg @ ui_msgs1 @ ui_msgs2 @ rw_msgs @ ai_msgs @ retire_msgs) in
   send_ui_msg v ui_msg;
   let stations = Station_map.map Station.end_of_period_reset v.stations in
   let cycle = if v.params.cycle > 20000 then 0 else v.params.cycle in
-  (* TODO: check 100 years, "After 20*difficulty+40 years of faithful\nservcice you must retire\n
-     from the presidency of the name\n" *)
   let params = {v.params with current_period=Params.next_period v.params; time=0; cycle} in
   let player = Player.clear_periodic params player in
   let dev_state = Tile_develop.end_of_period v.params v.dev_state in
