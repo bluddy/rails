@@ -914,12 +914,12 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with mode=Normal}, B.Action.RunDelayedFn C.player
         else
           v, nobaction
-  
+
     | Income_statement _
     | GenericScreen {send_delayed_fn=false;_}
     | FiscalPeriodEndStocks _
     | Animation _ -> modal_screen_no_input v event
-        
+
   in
   (* See if we need to pause or unpause *)
   let pause_msgs = check_add_pause_msg old_mode old_menu v in
@@ -1276,7 +1276,7 @@ let handle_msgs (s:State.t) v ui_msgs =
   (* Handle pausing/unpausing *)
   let pause_msg = check_add_pause_msg old_mode old_menu v in
   v, pause_msg
-  
+
 
   (* Mostly animations. *)
 let handle_tick s v time is_cycle = match v.mode with
@@ -1327,7 +1327,7 @@ let handle_tick s v time is_cycle = match v.mode with
     | `Stay -> {v with mode=StationUpgrade {state with transition = Some t2}}
     | `Exit -> v (* we don't allow exit by ticks here *)
     end
-    
+
   | _ -> v
 
 let draw_train_roster win (s:State.t) v =
@@ -1472,7 +1472,7 @@ let render_main win (s:State.t) v =
 
 let should_render_mouse = function
   | _ -> true
-  
+
 let render_mouse win textures =
   let cursor_tex = Hashtbl.find textures.Textures.misc `Cursor in
   R.draw_cursor win cursor_tex
