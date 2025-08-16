@@ -125,6 +125,7 @@ and 'state mode =
   | TrainIncome of Train_income_report_d.t
   | History of History_d.t
   | EndGame of 'state Endgame_d.t
+  | FiredAnimation of 'state Fired_animation_d.t
 
 let is_normal_mode = function
   | Normal -> true

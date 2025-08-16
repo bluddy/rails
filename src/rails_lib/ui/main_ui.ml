@@ -896,9 +896,16 @@ let handle_event (s:State.t) v (event:Event.t) =
 
     | History state ->
       begin match History.handle_event state s event with
-      | `Exit, _ -> {v with mode=Normal}, nobaction
+      | `Exit, _ -> next_mode v, nobaction
       | `None, state2 when state2 === state -> v, nobaction
       | `None, state2 -> {v with mode=History state2}, nobaction
+      end
+
+    | FiredAnimation state ->
+      begin match Fired_animation.handle_event event state with
+      | `Exit, _ -> next_mode v, nobaction
+      | `None, state2 when state2 === state -> v, nobaction
+      | `None, state2 -> {v with mode=FiredAnimation state2}, nobaction
       end
 
     | EndGame state ->
@@ -981,7 +988,10 @@ let handle_msgs (s:State.t) v ui_msgs =
             let modes = if String.length records > 0 then
               (make_msgbox_mode s ~x:80 ~y:60 records ~background)::modes else modes
             in
-            let stock_eval_mode = FiscalPeriodEndStocks (Fiscal_period_end.create_stock_eval stock_msgs s) in
+            let stock_eval_mode, player_fired =
+              let state, player_fired = Fiscal_period_end.create_stock_eval stock_msgs s in
+              FiscalPeriodEndStocks state, player_fired in
+            let player_fired = match player_fired with `None -> false | `PlayerFired -> true in
             let modes = stock_eval_mode::modes in
             let modes =
               if end_of_run then
@@ -996,7 +1006,11 @@ let handle_msgs (s:State.t) v ui_msgs =
               else modes in
             let modes = match job_msg with
             | Some _ when end_of_run -> (EndGame (Endgame.make `FinishRun s))::modes
+            | Some _ when player_fired ->
+                let state = Fired_animation.make s ~fired_by:`Stockholders player_idx in
+                (EndGame (Endgame.make `Fired s))::(FiredAnimation state)::modes
             | Some job ->
+                (* New job offer *)
                 let render_fn = Job_offer.create job s |> Job_offer.render in
                 (make_generic_screen render_fn)::modes
             | None -> modes
@@ -1327,6 +1341,11 @@ let handle_tick s v time is_cycle = match v.mode with
     | `Exit -> v (* we don't allow exit by ticks here *)
     end
 
+  | FiredAnimation state ->
+    let state2 = Fired_animation.handle_tick time state in
+    if state2 === state then v
+    else {v with mode=FiredAnimation state2}
+
   | _ -> v
 
 let draw_train_roster win (s:State.t) v =
@@ -1545,6 +1564,8 @@ let render (win:R.window) (s:State.t) v =
        History.render win state s
     | EndGame state ->
        Endgame.render win state s
+    | FiredAnimation state ->
+       Fired_animation.render win s state
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in

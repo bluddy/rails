@@ -13,12 +13,12 @@ let next_frame = function
   | `Escape1 -> `Escape2
   | `Escape2 -> `Escape1
 
-let make (s:State.t) ~fired_by player_ctr =
+let make (s:State.t) ~fired_by player_idx =
   let b = s.backend in
-  let player = B.get_player player_ctr b in
+  let player = B.get_player player_idx b in
   let station_loc = Player.get_first_station player in
   let text =
-    sp "%s president leaves" @@ B.get_handle player_ctr b,
+    sp "%s president leaves" @@ B.get_handle player_idx b,
     "town after meeting",
     sp "with %s."
       @@ match fired_by with `Management -> "new managements" | `Stockholders -> "stockholders"
@@ -46,11 +46,16 @@ let render win (s:State.t) v =
   ) v.station_loc;
   Newspaper.render win s v.newspaper
 
-let handle_tick v time =
+let handle_tick time v =
   if time - v.last_time < wait_time || v.ctr > 320 then v
   else (
     v.last_time <- time;
     v.ctr <- v.ctr + 1;
     v
   )
+
+let handle_event event v =
+  if Event.key_modal_dismiss event || Event.is_left_click event then `Exit, v
+  else `None, v
+
 

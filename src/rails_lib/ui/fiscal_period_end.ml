@@ -41,11 +41,17 @@ let create_stock_eval stock_data (s:State.t) =
   let b = s.backend in
   let price_s money = Money.print ~ks:false ~decimal:true ~region:b.params.region money in
   let money_s money = Money.print ~spaces:6 ~show_neg:false ~region:b.params.region money in
-  let heading =
+  let heading, player_fired =
     (* Write player msg *)
     let msg = fst stock_data in
     let avg_growth = msg.Ui_msg.share_price_growth in
-    Printf.sprintf
+    let text, player_fired = match msg.fired with
+        | `Fired -> "\nYou are replaced by NEW MANAGEMENT!", `PlayerFired
+        | `Warning -> "\nThey are looking for a new president!", `None
+        | `MinorWarning -> "\nThey may replace you as president!", `None
+        | `Normal -> "", `None
+    in
+    let s = Printf.sprintf
       "%s%s\n\
       %d,000 shares outstanding.\n\
       %s\n\
@@ -55,11 +61,8 @@ let create_stock_eval stock_data (s:State.t) =
       (Stock_market.total_shares player_idx b.stocks)
       (_share_price_growth_s avg_growth)
       (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
-      (match msg.fired with
-        | `Fired -> "\nYou are replaced by NEW MANAGEMENT!"
-        | `Warning -> "\nThey are looking for a new president!"
-        | `MinorWarning -> "\nThey may replace you as president!"
-        | `Normal -> "")
+      text
+    in s, player_fired
   in
   let text =
     let player = B.get_player player_idx b in
@@ -99,7 +102,7 @@ let create_stock_eval stock_data (s:State.t) =
     msgs
   in
   let stock_msgbox = Menu.MsgBox.make_basic ~x:2 ~y:2 ~heading ~fonts:s.fonts s text in
-  { stock_msgbox; msgs }
+  { stock_msgbox; msgs }, player_fired
 
 let draw_owner_portraits win (s:State.t) ranked_owners =
   let player_idx = C.player in
