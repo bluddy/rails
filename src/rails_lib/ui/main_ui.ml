@@ -1117,7 +1117,8 @@ let handle_msgs (s:State.t) v ui_msgs =
         let text = Ai.financial_text ~cities:b.cities ~region:b.params.region ui_msg b.ai in
         let modes = (make_news @@ Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent)::[] in
         let state = Fired_animation.make s ~fired_by:`Management C.player in
-        let modes = (EndGame (Endgame.make `Fired s))::(FiredAnimation state)::modes in
+        let modes = (FiredAnimation state)::modes in
+        let modes = (EndGame (Endgame.make `Fired s))::modes in
         set_modes (List.rev modes) v
 
       | (AiBuySellOwnStock {opponent;_}

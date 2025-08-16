@@ -43,6 +43,10 @@ let default = {
   seed=0;
 } 
 
+let send_ui_msg v msg =
+  (* Mutation. Line up ui msg for when we can send it *)
+  v.ui_msgs <- msg::v.ui_msgs
+
 let make region resources ~reality_levels ~difficulty ~random ~seed = 
   let map = List.assoc ~eq:(Stdlib.(=)) region resources.Resources.res_maps in
   let map = Tilemap.of_ndarray ~region ~seed map in
@@ -64,7 +68,7 @@ let make region resources ~reality_levels ~difficulty ~random ~seed =
   let params = Params.make ~year_start ~reality_levels ~difficulty ~region () in
   let stocks = Stock_market.default
     |> Stock_market.add_human_player C.player params in
-  {
+  let v = {
     params;
     last_tick=0;
     players;
@@ -84,6 +88,10 @@ let make region resources ~reality_levels ~difficulty ~random ~seed =
     stocks;
     ai = Ai.default ();
   }
+  in
+  let msg = Ui_msg.NewPlayerCompany{num_shares=C.Stock.starting_num} in
+  send_ui_msg v msg;
+  v
 
 let get_speed v = v.params.options.speed
 
@@ -132,10 +140,6 @@ let get_train idx player_idx v =
 let iter_cities f v = Cities.iter f v.cities
 
 let find_close_city x y ~range v = Cities.find_close_xy x y v.cities ~range
-
-let send_ui_msg v msg =
-  (* Mutation. Line up ui msg for when we can send it *)
-  v.ui_msgs <- msg::v.ui_msgs
 
 let get_player player_idx v = Player.get player_idx v.players
 
