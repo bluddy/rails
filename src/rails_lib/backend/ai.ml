@@ -905,9 +905,8 @@ let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t)
     let takeover = Stock_market.controls_company ai_idx ~target:C.player stocks in
     let stocks = if takeover then Stock_market.hostile_takeover ~ai_idx ~player_idx stocks else stocks in
     let v = modify_ai ai_idx v (fun ai_player ->
-      let open M in
-      let cash = ai_player.cash - cost in
-      let cash = if takeover then cash + player_cash else cash in
+      let cash = M.(ai_player.cash - cost) in
+      let cash = if takeover then M.(cash + player_cash) else cash in
       {ai_player with cash})
     in
     let v = {v with last_ai_to_buy_player_stock=Some ai_idx} in
