@@ -8,10 +8,10 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 let palette =
   [|
-    0x0;      (* 0, black/transparent, magenta *)
-    0xAA;     (* 1, blue *)
-    0xAA00;   (* 2, green *)
-    0xAAAA;   (* 3, cyan *)
+    0x000000; (* 0, black/transparent, magenta *)
+    0x0000AA; (* 1, blue *)
+    0x00AA00; (* 2, green *)
+    0x00AAAA; (* 3, cyan *)
     0xAA0000; (* 4, red *)
     0xAA00AA; (* 5, black *)
     0xAA5500; (* 6, brown *)
