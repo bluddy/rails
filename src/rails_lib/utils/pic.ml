@@ -94,7 +94,7 @@ let translate_ega ~transparent arr ~f ~w ~h =
       let write_color x y index =
         let color, alpha =
           Ega.get_color index ~transparent ~debug:!debug_images in
-        let r, g, b = color lsr 16, (color lsr 8) land 0xFF, color land 0xFF in
+        let r, g, b = (color lsr 16) land 0xFF, (color lsr 8) land 0xFF, color land 0xFF in
         (* Printf.printf "x:%d y:%d\n" x y; *)
         f ~x ~y ~r ~g ~b ~alpha;
       in

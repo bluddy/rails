@@ -72,7 +72,6 @@ type t = {
 let make win random =
   let w, h = win.inner_w, win.inner_w in
   let r = win.renderer in
-  let format = Sdl.Pixel.format_rgba8888 in
   let offscreen_tex = Sdl.create_texture r format Sdl.Texture.access_target ~w ~h |> get_exn |> Option.some in 
   let pixels = Bigarray.Array1.(create Bigarray.int32 Bigarray.c_layout (h*w)) in
   let tex = Sdl.create_texture r format Sdl.Texture.access_streaming ~w ~h |> get_exn in 
@@ -150,7 +149,6 @@ module Texture = struct
     h: int;
     w: int;
     texture: Sdl.texture;
-    (* surface: Sdl.surface; *)
     mutable ndarray: (int, Bigarray.int8_unsigned_elt) Sdl.bigarray;
     dst: Sdl.rect;
     mutable dirty_rect: bool;
@@ -159,23 +157,16 @@ module Texture = struct
   let get_w t = t.w
   let get_h t = t.h
 
-  let make win (arr:Pic.ndarray) =
+  let make ?(stream=false) win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
     let ndarray = Bigarray.reshape_1 arr (w*h*4) in
-    (* let texture = Sdl.create_texture win.renderer Sdl.Pixel.format_rgba8888 Sdl.Texture.access_static ~w ~h |> get_exn in *)
-    (* Sdl.update_texture texture None ndarray (w*4) |> get_exn; *)
-    let surface =
-      Sdl.create_rgb_surface_with_format_from ndarray
-        ~w ~h ~depth:32 ~pitch:(w*4) Sdl.Pixel.format_rgba8888
-      |> get_exn
-    in
-    let texture = Sdl.create_texture_from_surface win.renderer surface
-      |> get_exn
-    in
+    let texture = Sdl.create_texture win.renderer Sdl.Pixel.format_rgba8888 Sdl.Texture.access_static ~w ~h |> get_exn in
+    Sdl.update_texture texture None ndarray (w*4) |> get_exn;
+    Sdl.set_texture_blend_mode texture Sdl.Blend.mode_blend |> get_exn;
     let w' = zoom win w in
     let h' = zoom win h in
     let dst = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
-    { w; h; ndarray; texture; (* surface; *) dst; dirty_rect=true}
+    { w; h; ndarray; texture; dst; dirty_rect=true}
 
   let destroy tex =
     Sdl.destroy_texture tex.texture
@@ -312,14 +303,6 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
         x1, y1, x2, y2
     in
     plot_line_high ~x1 ~y1 ~x2 ~y2
-
-
-(*
-let draw_line win ~x1 ~y1 ~x2 ~y2 ~color = 
-  let (r,g,b,a) = color in
-  Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
-  Sdl.render_draw_line win.renderer x1 y1 x2 y2 |> get_exn
-  *)
 
 let draw_cursor win texture =
   let _, (mouse_x, mouse_y) = Sdl.get_mouse_state () in
