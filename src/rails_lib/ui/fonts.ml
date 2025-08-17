@@ -169,7 +169,7 @@ let get_font idx v = v.(face_to_enum idx)
 
 let of_file filename : t =
   let bytes =
-    IO.with_in filename @@
+    IO.with_in ~flags:[Open_binary] filename @@
       fun in_channel -> IO.read_all_bytes in_channel
   in
   let index = 0 in
