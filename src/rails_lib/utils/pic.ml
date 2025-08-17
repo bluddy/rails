@@ -104,10 +104,10 @@ let translate_ega ~transparent arr ~f ~w ~h =
   ()
 
 let img_write arr ~x ~y ~r ~g ~b ~alpha =
-  Ndarray.set arr [|y;x;0|] r;
-  Ndarray.set arr [|y;x;1|] g;
-  Ndarray.set arr [|y;x;2|] b;
-  Ndarray.set arr [|y;x;3|] alpha;
+  Ndarray.set arr [|y;x;3|] r;
+  Ndarray.set arr [|y;x;2|] g;
+  Ndarray.set arr [|y;x;1|] b;
+  Ndarray.set arr [|y;x;0|] alpha;
   ()
 
 

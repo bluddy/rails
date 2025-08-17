@@ -13,6 +13,8 @@ type window = {
   opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
 }
 
+let format = Sdl.Pixel.format_rgba8888
+
 let do_hide_cursor = false  (* It's buggy on WSL *)
 
 let get_exn = function
@@ -21,8 +23,6 @@ let get_exn = function
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
-
-let format = Sdl.Pixel.format_argb8888
 
 let create w h ~zoom =
   let out_w = Int.of_float @@ zoom *. Float.of_int w in
@@ -72,7 +72,7 @@ type t = {
 let make win random =
   let w, h = win.inner_w, win.inner_w in
   let r = win.renderer in
-  let format = Sdl.Pixel.format_argb8888 in
+  let format = Sdl.Pixel.format_rgba8888 in
   let offscreen_tex = Sdl.create_texture r format Sdl.Texture.access_target ~w ~h |> get_exn |> Option.some in 
   let pixels = Bigarray.Array1.(create Bigarray.int32 Bigarray.c_layout (h*w)) in
   let tex = Sdl.create_texture r format Sdl.Texture.access_streaming ~w ~h |> get_exn in 
@@ -94,15 +94,6 @@ let lock_write write_fn v  =
     Sdl.unlock_texture v.tex;
     x
 
-(* let clear v = *)
-(*   lock_write (fun buf pitch -> *)
-(*     for i = 0 to v.h - 1 do *)
-(*       for j = 0 to v.w - 1 do *)
-(*         Bigarray.Array1.set buf (i * pitch + j) 0; *)
-(*       done *)
-(*     done) *)
-(*     v *)
-
 let copy_pixels_to_tex v =
   lock_write (fun buf pitch ->
     for i = 0 to v.h - 1 do
@@ -120,14 +111,14 @@ let render_offscreen win old_render_fn render_fn v =
   (* Old image *)
   old_render_fn win;
   (* Read from texture target to a buffer we can read from *)
-  Sdl.render_read_pixels win.renderer None None v.pixels (win.inner_w * 4) |> get_exn;
+  Sdl.render_read_pixels win.renderer None (Some format) v.pixels (win.inner_w * 4) |> get_exn;
   (* Copy all pixels to our streaming texture *)
   copy_pixels_to_tex v;
 
   (* New image *)
   render_fn win;
   (* Read from texture target to a buffer we can read from *)
-  Sdl.render_read_pixels win.renderer None None v.pixels (win.inner_w * 4) |> get_exn;
+  Sdl.render_read_pixels win.renderer None (Some format) v.pixels (win.inner_w * 4) |> get_exn;
   (* Restore render target to the main screen *)
   Sdl.set_render_target win.renderer None |> get_exn
 
@@ -159,7 +150,7 @@ module Texture = struct
     h: int;
     w: int;
     texture: Sdl.texture;
-    surface: Sdl.surface;
+    (* surface: Sdl.surface; *)
     mutable ndarray: (int, Bigarray.int8_unsigned_elt) Sdl.bigarray;
     dst: Sdl.rect;
     mutable dirty_rect: bool;
@@ -171,9 +162,11 @@ module Texture = struct
   let make win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
     let ndarray = Bigarray.reshape_1 arr (w*h*4) in
+    (* let texture = Sdl.create_texture win.renderer Sdl.Pixel.format_rgba8888 Sdl.Texture.access_static ~w ~h |> get_exn in *)
+    (* Sdl.update_texture texture None ndarray (w*4) |> get_exn; *)
     let surface =
       Sdl.create_rgb_surface_with_format_from ndarray
-        ~w ~h ~depth:32 ~pitch:(w*4) Sdl.Pixel.format_abgr8888
+        ~w ~h ~depth:32 ~pitch:(w*4) Sdl.Pixel.format_rgba8888
       |> get_exn
     in
     let texture = Sdl.create_texture_from_surface win.renderer surface
@@ -182,7 +175,7 @@ module Texture = struct
     let w' = zoom win w in
     let h' = zoom win h in
     let dst = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
-    { w; h; ndarray; texture; surface; dst; dirty_rect=true}
+    { w; h; ndarray; texture; (* surface; *) dst; dirty_rect=true}
 
   let destroy tex =
     Sdl.destroy_texture tex.texture
