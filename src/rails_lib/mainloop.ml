@@ -10,7 +10,7 @@ type 'a t = {
 }
 
 let main init_fn =
-  let zoom = 4. in
+  let zoom = 3. in
   let win = R.create 320 200 ~zoom in
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)

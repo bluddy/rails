@@ -3,7 +3,8 @@ open Tsdl
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 type window = {
-  zoom: float;
+  zoom_x: float;
+  zoom_y: float;
   inner_w: int;
   inner_h: int;
   renderer: Sdl.renderer;
@@ -25,15 +26,16 @@ let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
 
 let create w h ~zoom =
-  let out_w = Int.of_float @@ zoom *. Float.of_int w in
-  let out_h = Int.of_float @@ zoom *. Float.of_int h in
+  let zoom_x, zoom_y = zoom, zoom *. 1.2 in
+  let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
+  let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
   let window, renderer =
-    match Sdl.init Sdl.Init.video with
-    | Error(`Msg e) -> Sdl.log "Init error: %s" e; exit 1
-    | Ok () ->
-      match Sdl.create_window_and_renderer ~w:out_w ~h:out_h Sdl.Window.opengl with
+    Sdl.init Sdl.Init.video |> get_exn;
+    let w, r = match Sdl.create_window_and_renderer ~w:out_w ~h:out_h Sdl.Window.opengl with
       | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
       | Ok (w,r) -> w,r
+    in
+    w, r
   in
   let hide_cursor () =
     match Sdl.show_cursor false with
@@ -42,13 +44,19 @@ let create w h ~zoom =
   in
   if do_hide_cursor then hide_cursor ();
   Sdl.set_window_grab window true;
-  Sdl.render_set_scale renderer zoom zoom |> get_exn;
+  Sdl.render_set_scale renderer zoom (zoom *. 1.2) |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   Sdl.set_render_draw_blend_mode renderer Sdl.Blend.mode_blend |> get_exn;
-  { inner_w=w; inner_h=h;
-    renderer; window;
-    zoom; rect; rect2;
+  { 
+    inner_w=w;
+    inner_h=h;
+    renderer;
+    window;
+    zoom_x;
+    zoom_y;
+    rect;
+    rect2;
     opt_rect=Some rect;
   }
 
@@ -157,7 +165,7 @@ module Texture = struct
   let get_w t = t.w
   let get_h t = t.h
 
-  let make ?(stream=false) win (arr:Pic.ndarray) =
+  let make win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
     let ndarray = Bigarray.reshape_1 arr (w*h*4) in
     let texture = Sdl.create_texture win.renderer Sdl.Pixel.format_rgba8888 Sdl.Texture.access_static ~w ~h |> get_exn in
@@ -307,8 +315,8 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
 let draw_cursor win texture =
   let _, (mouse_x, mouse_y) = Sdl.get_mouse_state () in
   (* let win_w, win_h = Sdl.get_window_size win.window in *)
-  let mouse_x = (float_of_int mouse_x) /. win.zoom |> int_of_float in
-  let mouse_y = (float_of_int mouse_y) /. win.zoom |> int_of_float in
+  let mouse_x = (float_of_int mouse_x) /. win.zoom_x |> int_of_float in
+  let mouse_y = (float_of_int mouse_y) /. win.zoom_y |> int_of_float in
   Texture.render ~x:mouse_x ~y:mouse_y win texture
 
 
