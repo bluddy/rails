@@ -283,7 +283,7 @@ let add_city_list r region (city_list:(int * int * string) list) : (int * int) l
 let load_city_list region  =
   let num = Region.to_enum region in
   let filename = Printf.sprintf "./data/CITIES%d.DTA" num in
-  let str = CCIO.with_in filename CCIO.read_all in
+  let str = CCIO.with_in ~flags:[Open_binary] filename CCIO.read_all in
   let stream = Gen.of_string str in
   let parse acc _ =
     let x = My_gen.get_word stream in

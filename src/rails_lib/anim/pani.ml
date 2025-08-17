@@ -115,7 +115,7 @@ let of_stream ?debug ?input ?(dump=false) s =
 
 let stream_of_file filename =
   let str =
-    IO.with_in filename @@
+    IO.with_in ~flags:[Open_binary] filename @@
       fun in_channel -> IO.read_all in_channel
   in
   let stream = My_gen.of_stringi str in

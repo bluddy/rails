@@ -84,7 +84,7 @@ let ndarray_of_stream (stream: (int * char) Gen.t) : ndarray =
   arr
 
 let ndarray_of_file filename : ndarray =
-  let str = IO.with_in filename IO.read_all in
+  let str = IO.with_in ~flags:[Open_binary] filename IO.read_all in
   let stream = My_gen.of_stringi str in
   ndarray_of_stream stream
 
