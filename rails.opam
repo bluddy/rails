@@ -21,6 +21,7 @@ depends: [
   "owl-base"
   "ocamlgraph"
   "logs"
+  "re"
   "ppx_import"
   "ppx_deriving"
   "ppx_hash"
