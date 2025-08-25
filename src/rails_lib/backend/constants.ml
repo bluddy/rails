@@ -148,3 +148,7 @@ module HallOfFame = struct
   let max_entries = 5
 end
 
+module Save = struct
+  let version = 1
+end
+
