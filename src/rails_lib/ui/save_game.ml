@@ -1,7 +1,8 @@
 open! Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module B = Backend
-module C = Constants.Save
+module C = Constants
+module CS = Constants.Save
 
 let version = 1
 
@@ -69,11 +70,12 @@ let _make action (s:State.t) =
   let open MsgBox in
   let entries = List.map (fun entry ->
     let s = Option.get_or ~default:"EMPTY" entry.header in
-    make_entry s `Action(entry))
+    make_entry s @@ `Action(entry))
     entries
   in
   let menu =
-    make ~fonts entries ~x:20 ~y:20 |> Menu.MsgBox.do_open_menu s
+    make ~fonts:s.fonts entries ~x:20 ~y:20
+     |> Menu.MsgBox.do_open_menu s
   in
   {menu; action}
 
@@ -91,14 +93,14 @@ let save_title (s:State.t) =
 
 let save_game (s:State.t) slot =
   let to_string = Yojson.Safe.to_string in
-  let header = {title=save_title s; version=C.version} |> Header.yojson_of_t |> to_string in
-  let backend = Backend.yojson_of_t state.backend |> to_string in
-  let options = Main_ui_d.yojson_of_options state.ui.options |> to_string in
-  let mapview = Mapview_d.yojson_of_t state.ui.view |> to_string in
+  let header = {save_title=save_title s; version=CS.version} |> Header.yojson_of_t |> to_string in
+  let backend = Backend.yojson_of_t s.backend |> to_string in
+  let options = Main_ui_d.yojson_of_options s.ui.options |> to_string in
+  let mapview = Mapview_d.yojson_of_t s.ui.view |> to_string in
   let s = String.concat "====" [header; backend; options; mapview] in
   let game_name = save_game_of_i slot in
   ignore(IO.File.write game_name s);
-  print_endline "Saved game to "^game_name^"."
+  print_endline @@ "Saved game to "^game_name^"."
 
 let load_game slot win =
   let game_name = save_game_of_i slot in
