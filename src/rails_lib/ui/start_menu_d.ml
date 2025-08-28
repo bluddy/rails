@@ -1,7 +1,7 @@
 
 type 'state mode =
   | Action of ([`NewGame | `LoadGame], 'state) Menu.MsgBox.t
-  | LoadGame
+  | LoadGame of 'state Save_game_d.t
   | Region of (Region.t, 'state) Menu.MsgBox.t
   | Difficulty of (B_options.difficulty, 'state) Menu.MsgBox.t
   | Reality of {

@@ -98,7 +98,8 @@ let render win v (s:State.t) =
   | Action menu ->
       write ~x:54 ~y:30 "Will you  ...";
       Menu.MsgBox.render win s menu
-  | LoadGame -> ()
+  | LoadGame state ->
+      Save_game.render win s state
   | Region menu ->
       write ~x:54 ~y:30 "Select area...";
       Menu.MsgBox.render win s menu
@@ -123,7 +124,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     let menu2, action = Menu.MsgBox.update s menu event in
     begin match action with
     | Menu.On(`NewGame) -> `None, {v with mode=Region(region_menu fonts s)}
-    | Menu.On(`LoadGame) -> `None, {v with mode=LoadGame}
+    | Menu.On(`LoadGame) -> `None, {v with mode=LoadGame(Save_game.make_load s)}
     | _ when menu2 === menu -> default
     | _ -> `None, {v with mode=Action menu2}
     end

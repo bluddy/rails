@@ -84,7 +84,7 @@ let make_save s = _make `Save s
 let make_load s = _make `Load s
 
 let render win (s:State.t) v =
-  Menu.MsgBox.render win s v
+  Menu.MsgBox.render win s v.menu
 
 let save_title (s:State.t) =
   let b = s.backend in
