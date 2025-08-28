@@ -58,29 +58,6 @@ let make_state win ~region ~reality_levels ~difficulty prev_state =
     random = Random.get_state ();
   }
 
-(* Make state out of loaded game *)
-let load_state backend ui_options ui_view win =
-  let resources = Resources.load_all () in
-  let region =  backend.Backend_d.params.region in
-  let textures = Textures.of_resources win resources in
-  let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
-  let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
-  let fonts = Fonts.load win in
-  let ui = Main_ui.default ~options:ui_options ~view:ui_view win fonts region in
-  {
-    State.map_tex;
-    map_silhouette_tex;
-    mode=State.Game;
-    backend;
-    resources;
-    textures;
-    fonts;
-    ui;
-    win;
-    random = Random.get_state ();
-  }
-
-
 let handle_tick win (s:State.t) time =
   let state =
     match s.mode with
@@ -209,21 +186,9 @@ let run ?load () : unit =
   let init_fn win =
 
     let state = match load with
-      | Some savefile ->
-          Printf.printf "Loading %s...\n" savefile;
-          let s = IO.File.read_exn savefile in
-          let lst = String.split s ~by:"====" in
-          (* Printf.printf "len[%d]\n%!" (List.length lst); *)
-          begin match lst with
-          | [backend; options; view] ->
-              let backend = Yojson.Safe.from_string backend |> Backend.t_of_yojson in
-              let backend = {backend with pause = false} in
-              Backend.reset_tick backend;
-              let ui_options = Yojson.Safe.from_string options |> Main_ui_d.options_of_yojson in
-              let ui_view = Yojson.Safe.from_string view |> Mapview_d.t_of_yojson in
-              load_state backend ui_options ui_view win
-          | _ -> assert false
-          end
+      | Some slot ->
+          Printf.printf "Loading from slot %d...\n" slot;
+          Save_game.load_game slot win
 
       | None ->
         (* New game. Use a basic default state *)

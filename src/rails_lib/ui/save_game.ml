@@ -1,5 +1,6 @@
 open! Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+module R = Renderer
 module B = Backend
 module C = Constants
 module CS = Constants.Save
@@ -102,6 +103,28 @@ let save_game (s:State.t) slot =
   ignore(IO.File.write game_name s);
   print_endline @@ "Saved game to "^game_name^"."
 
+(* Make state out of loaded game *)
+let load_state backend ui_options ui_view win =
+  let resources = Resources.load_all () in
+  let region =  backend.Backend_d.params.region in
+  let textures = Textures.of_resources win resources in
+  let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
+  let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
+  let fonts = Fonts.load win in
+  let ui = Main_ui.default ~options:ui_options ~view:ui_view win fonts region in
+  {
+    State.map_tex;
+    map_silhouette_tex;
+    mode=State.Game;
+    backend;
+    resources;
+    textures;
+    fonts;
+    ui;
+    win;
+    random = Random.get_state ();
+  }
+
 let load_game slot win =
   let game_name = save_game_of_i slot in
   let s = IO.File.read_exn game_name in
@@ -119,12 +142,16 @@ let load_game slot win =
   
 let handle_event event (s:State.t) v =
   if Event.pressed_esc event then `Exit, v else
-  match Menu.update s v.menu event with
+  match Menu.MsgBox.update s v.menu event with
   | menu2, Menu.On(entry) -> (* load entry *)
+      let v = {v with menu=menu2} in
       let slot = entry.slot in
-      match v.action with
+      begin match v.action with
       | `Load -> `LoadGame (load_game slot), v
-      | `Save -> save_game s slot; `Exit, v
+      | `Save ->
+          save_game s slot;
+          `Exit, v
+      end
   | menu2, _ when menu2 === v.menu -> `Stay, v
   | menu2, _ -> `Stay, {v with menu=menu2}
   

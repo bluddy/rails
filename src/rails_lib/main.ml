@@ -3,12 +3,17 @@ open Arg
 type actions = [ `Font | `Pic | `Pani | `City | `Game | `LoadGame]
 
 let file = ref ""
+let file_slot = ref 0
 let mode : actions ref = ref `Game
 let dump = ref false
 let debugger = ref false
 
 let set v f =
   file := f;
+  mode := v
+
+let set_slot v n =
+  file_slot := n;
   mode := v
 
 let arglist =
@@ -19,7 +24,7 @@ let arglist =
     "--city", String (set `City), "Dump city info file";
     "--dump", Set dump, "Dump the file";
     "--debug", Set debugger, "Run the debugger";
-    "--load", String (set `LoadGame), "Load a save file";
+    "--load", Int (set_slot `LoadGame), "Load a save file";
   ]
 
 let main () =
@@ -33,5 +38,5 @@ let main () =
   | `Pani -> Mainloop.main @@ Pani_render.standalone ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Game_modules.run ()
-  | `LoadGame -> Game_modules.run ~load:!file ()
+  | `LoadGame -> Game_modules.run ~load:!file_slot ()
 
