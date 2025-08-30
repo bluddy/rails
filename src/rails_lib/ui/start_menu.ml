@@ -129,7 +129,12 @@ let handle_event (s:State.t) v (event:Event.t) =
     | _ -> `None, {v with mode=Action menu2}
     end
 
-  | LoadGame -> default
+  | LoadGame state ->
+      begin match Save_game.handle_event event s state with
+      | `LoadGame s, _ -> `LoadGame s, v
+      | (`Stay | `Exit), state2 when state2 === state -> `None, v
+      | (`Stay | `Exit), state2 -> `None, {v with mode=LoadGame state2}
+      end
 
   | Region menu ->
     let menu2, action = Menu.MsgBox.update s menu event in

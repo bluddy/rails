@@ -139,7 +139,7 @@ let load_game slot win =
       let ui_view = from_string view |> Mapview_d.t_of_yojson in
       load_state backend ui_options ui_view win
   | _ -> failwith "Bad save game format"
-  
+
 let handle_event event (s:State.t) v =
   if Event.pressed_esc event then `Exit, v else
   match Menu.MsgBox.update s v.menu event with
@@ -147,7 +147,7 @@ let handle_event event (s:State.t) v =
       let v = {v with menu=menu2} in
       let slot = entry.slot in
       begin match v.action with
-      | `Load -> `LoadGame (load_game slot), v
+      | `Load -> `LoadGame (load_game slot s.win), v
       | `Save ->
           save_game s slot;
           `Exit, v

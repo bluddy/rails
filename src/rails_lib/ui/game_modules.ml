@@ -129,6 +129,7 @@ let handle_event win (s:State.t) (event:Event.t) =
         | `None, state2 when state2 === state -> s, false
         | `None, state2 ->
             {s with mode=Menu state2}, false
+        | `LoadGame s, _ -> s, false
         | `Choose (region, difficulty, reality_levels), _ ->
             let s = make_state win ~region ~reality_levels ~difficulty s in
             {s with mode=MapGen None}, false
