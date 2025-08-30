@@ -126,8 +126,8 @@ let handle_event win (s:State.t) (event:Event.t) =
 
     | Menu state ->
         begin match Start_menu.handle_event s state event with
-        | `None, state2 when state2 === state -> s, false
-        | `None, state2 ->
+        | `Stay, state2 when state2 === state -> s, false
+        | `Stay, state2 ->
             {s with mode=Menu state2}, false
         | `LoadGame s, _ -> s, false
         | `Choose (region, difficulty, reality_levels), _ ->

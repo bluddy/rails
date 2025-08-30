@@ -117,34 +117,35 @@ let render win v (s:State.t) =
   ()
 
 let handle_event (s:State.t) v (event:Event.t) =
-  let default = `None, v in
+  let def = `Stay, v in
   let fonts = s.fonts in
   match v.mode with
   | Action menu ->
     let menu2, action = Menu.MsgBox.update s menu event in
     begin match action with
-    | Menu.On(`NewGame) -> `None, {v with mode=Region(region_menu fonts s)}
-    | Menu.On(`LoadGame) -> `None, {v with mode=LoadGame(Save_game.make_load s)}
-    | _ when menu2 === menu -> default
-    | _ -> `None, {v with mode=Action menu2}
+    | Menu.On(`NewGame) -> `Stay, {v with mode=Region(region_menu fonts s)}
+    | Menu.On(`LoadGame) -> `Stay, {v with mode=LoadGame(Save_game.make_load s)}
+    | _ when menu2 === menu -> def
+    | _ -> `Stay, {v with mode=Action menu2}
     end
 
   | LoadGame state ->
       begin match Save_game.handle_event event s state with
       | `LoadGame s, _ -> `LoadGame s, v
-      | (`Stay | `Exit), state2 when state2 === state -> `None, v
-      | (`Stay | `Exit), state2 -> `None, {v with mode=LoadGame state2}
+      | `Exit, _ -> `Stay, default s
+      | `Stay, state2 when state2 === state -> `Stay, v
+      | `Stay, state2 -> `Stay, {v with mode=LoadGame state2}
       end
 
   | Region menu ->
     let menu2, action = Menu.MsgBox.update s menu event in
     begin match action with
     | Menu.On(region) ->
-        `None, {v with mode=Difficulty(difficulty_menu fonts s); region=Some region}
+        `Stay, {v with mode=Difficulty(difficulty_menu fonts s); region=Some region}
     | Menu.Selected(region) ->
-        `None, {v with mode=Region menu2; region=Some region}
-    | _ when menu2 === menu -> default
-    | _ -> `None, {v with mode=Region menu2}
+        `Stay, {v with mode=Region menu2; region=Some region}
+    | _ when menu2 === menu -> def
+    | _ -> `Stay, {v with mode=Region menu2}
     end
 
   | Difficulty menu ->
@@ -153,11 +154,11 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Menu.On(difficulty) ->
         let reality = B_options.reality_levels_default in
         let mode = Reality{menu=reality_menu fonts reality s; reality} in
-        `None, {v with mode; difficulty=Some difficulty}
+        `Stay, {v with mode; difficulty=Some difficulty}
     | Menu.Selected(difficulty) ->
-        `None, {v with mode=Difficulty menu2; difficulty=Some difficulty}
-    | _ when menu2 === menu -> default
-    | _ -> `None, {v with mode=Difficulty menu2}
+        `Stay, {v with mode=Difficulty menu2; difficulty=Some difficulty}
+    | _ when menu2 === menu -> def
+    | _ -> `Stay, {v with mode=Difficulty menu2}
     end
 
   | Reality state ->
@@ -171,9 +172,9 @@ let handle_event (s:State.t) v (event:Event.t) =
     | Menu.On(#B_options.reality_level as reality_lvl) ->
         let reality = B_options.RealityLevels.toggle reality_lvl state.reality in
         let menu = reality_menu fonts reality s in
-        `None, {v with mode=Reality {menu; reality}}
-    | _ when menu2 === state.menu -> default
-    | _ -> `None, {v with mode=Reality {state with menu=menu2}}
+        `Stay, {v with mode=Reality {menu; reality}}
+    | _ when menu2 === state.menu -> def
+    | _ -> `Stay, {v with mode=Reality {state with menu=menu2}}
     end
 
 
