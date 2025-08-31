@@ -39,6 +39,7 @@
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
 - Bug:
+  - Can't build bridge over light river
   - Trains init regardless of station/track orientation
   - Tunnel always too long
   - Windows crash on start
