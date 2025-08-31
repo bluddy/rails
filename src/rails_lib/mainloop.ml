@@ -10,8 +10,8 @@ type 'a t = {
 }
 
 let main init_fn =
-  let zoom = 3. in
-  let win = R.create 320 200 ~zoom in
+  let zoom_x, zoom_y = 3., 3. *. 1.2  in
+  let win = R.create 320 200 ~zoom_x ~zoom_y in
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)
 
@@ -32,7 +32,7 @@ let main init_fn =
     let rec event_loop data =
       let event =
         (* convert to our Event.t *)
-        if Sdl.poll_event some_event then Event.of_sdl event ~zoom
+        if Sdl.poll_event some_event then Event.of_sdl event ~zoom_x ~zoom_y
         else Event.NoEvent
       in
       match event with

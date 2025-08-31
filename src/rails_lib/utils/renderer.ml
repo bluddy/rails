@@ -25,8 +25,7 @@ let get_exn = function
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
 
-let create w h ~zoom =
-  let zoom_x, zoom_y = zoom, zoom *. 1.2 in
+let create w h ~zoom_x ~zoom_y =
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
   let window, renderer =
@@ -44,7 +43,7 @@ let create w h ~zoom =
   in
   if do_hide_cursor then hide_cursor ();
   Sdl.set_window_grab window true;
-  Sdl.render_set_scale renderer zoom (zoom *. 1.2) |> get_exn;
+  Sdl.render_set_scale renderer zoom_x zoom_y |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   Sdl.set_render_draw_blend_mode renderer Sdl.Blend.mode_blend |> get_exn;
