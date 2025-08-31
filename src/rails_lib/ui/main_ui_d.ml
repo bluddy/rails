@@ -126,6 +126,7 @@ and 'state mode =
   | History of History_d.t
   | EndGame of 'state Endgame_d.t
   | FiredAnimation of 'state Fired_animation_d.t
+  | SaveGame of 'state Save_game_d.t
 
 let is_normal_mode = function
   | Normal -> true

@@ -189,7 +189,7 @@ let run ?load () : unit =
     let state = match load with
       | Some slot ->
           Printf.printf "Loading from slot %d...\n" slot;
-          Save_game.load_game slot win
+          Load_game.load_game slot win
 
       | None ->
         (* New game. Use a basic default state *)

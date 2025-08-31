@@ -541,8 +541,8 @@ let handle_event (s:State.t) v (event:Event.t) =
             let mode = StationUpgrade{transition=None; loc; old_station=station} in
             {v with mode}, ImproveStation{x; y; player_idx; upgrade}
         | On `Save_game, _ ->
-            save_game s;
-            v, nobaction
+            let mode = SaveGame (Save_game.make_save s) in
+            {v with mode}, nobaction
         | On `Find_city, _ ->
             let state = Find_city.init () in
             {v with mode=FindCity state}, nobaction
@@ -921,6 +921,13 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with mode=Normal}, B.Action.RunDelayedFn C.player
         else
           v, nobaction
+
+    | SaveGame state ->
+      begin match Save_game.handle_event event s state with
+      | `Stay, state2 when state2 === state -> v, nobaction
+      | `Stay, state2 -> {v with mode=SaveGame state2}, nobaction
+      | `Exit, _ -> {v with mode=Normal}, nobaction
+      end
 
     | Income_statement _
     | GenericScreen {send_delayed_fn=false;_}
@@ -1574,6 +1581,8 @@ let render (win:R.window) (s:State.t) v =
        Endgame.render win state s
     | FiredAnimation state ->
        Fired_animation.render win s state
+    | SaveGame state ->
+        Save_game.render win s state
     | GenericScreen {render_fn; _} ->
        render_fn win s
   in
