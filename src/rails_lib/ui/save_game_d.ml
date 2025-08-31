@@ -25,14 +25,16 @@ end
 let save_game_of_i i = sp "game%d.sav" i
 
 let make_entries () = 
-  let regex = Re.compile Re.(seq [str "game"; rep digit; str ".sav"]) in
+  let regex = Re.compile Re.(seq [str "game"; group @@ rep digit; str ".sav"]) in
   let files = IO.File.read_dir @@ IO.File.make "./" in
   let save_files = Gen.filter (fun s ->
     try ignore @@ Re.exec regex s; true
     with Not_found -> false) files 
     |> Gen.to_list
   in
-  let i_files = List.map (fun s -> Re.matches regex s |> List.hd |> Int.of_string_exn, s) save_files in
+  let i_files = List.map (fun s -> Re.exec regex s
+    |> (fun grp -> Re.Group.get grp 1)
+    |> Int.of_string_exn, s) save_files in
   let entries =
     Iter.map (fun i ->
       try
