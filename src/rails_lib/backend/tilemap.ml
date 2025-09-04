@@ -446,18 +446,17 @@ let collect_demand_supply_xy x y ~range v =
     collect_amount tileinfo.supply supply_h;
     (demand_h, supply_h)
   )
-let collect_demand_supply (x, y) ~range v = collect_demand_supply_xy x y ~range v
+let collect_demand_supply (x, y) ~range v =
+  collect_demand_supply_xy x y ~range v
 
 let demand_supply_sum loc ~range v =
-  (* In the OG, mail and passenger demand gets multiplied by 3
-     by using the bit layout of the cargo types (0-2 = mail, 3-5 = passengers)
-   *)
+  (* In the OG, bits cause roughly multiplication by 3:
+     for each freight type we track demand level, and we add for each demand good in the freight class
+     It's a tiny bit off still, but close enough. Not sure why they do this - could be a bug.
+    *)
   let demand, supply = collect_demand_supply loc v ~range in
-  let mult good num = match good with
-    | Goods.Mail | Passengers -> num * 3
-    | _ -> num
-  in
-  (Hashtbl.sum mult demand) + (Hashtbl.sum mult supply)
+  let fn _ num = num in
+  3 * ((Hashtbl.sum fn demand) + (Hashtbl.sum fn supply))
 
  (* track_cost already includes economic climate *) 
 let track_land_expense ~track_expense ~x ~y ~dir ~len v =
