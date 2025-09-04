@@ -449,8 +449,15 @@ let collect_demand_supply_xy x y ~range v =
 let collect_demand_supply (x, y) ~range v = collect_demand_supply_xy x y ~range v
 
 let demand_supply_sum loc ~range v =
+  (* In the OG, mail and passenger demand gets multiplied by 3
+     by using the bit layout of the cargo types (0-2 = mail, 3-5 = passengers)
+   *)
   let demand, supply = collect_demand_supply loc v ~range in
-  (Hashtbl.sum (fun _ i -> i) demand) + (Hashtbl.sum (fun _ i -> i) supply)
+  let mult good num = match good with
+    | Goods.Mail | Passengers -> num * 3
+    | _ -> num
+  in
+  (Hashtbl.sum mult demand) + (Hashtbl.sum mult supply)
 
  (* track_cost already includes economic climate *) 
 let track_land_expense ~track_expense ~x ~y ~dir ~len v =
