@@ -217,7 +217,7 @@ let add_resources_list region =
         make Foothills_pixel CoalMine_pixel CoalMine count "Coal Mines" 32; 
         make Clear_pixel OilWell_pixel SheepFarm count "Farms" 64; 
       ]
-      
+
 let pixel_apply_city = function
   | Clear_pixel
   | Woods_pixel
@@ -252,11 +252,7 @@ let add_city_list r region (city_list:(int * int * string) list) : (int * int) l
     let x_y_func = Utils.clip x_y_func ~min:0 ~max:767 in
     let max_val = x_y_func / 16 + factor / 4 in
     (* n is 0 to 24 *)
-    let n =
-      if max_val > 0 then
-        Random.int max_val r |> Utils.clip ~min:0 ~max:24
-      else 0
-    in
+    let n = Random.int max_val r |> Utils.clip ~min:0 ~max:24 in
     (* x_y_func is at most 767. /32 = 23 *)
     let factor = factor + (x_y_func / 32) - n in
     if debug then
@@ -265,7 +261,7 @@ let add_city_list r region (city_list:(int * int * string) list) : (int * int) l
     (* Add extra population around towns *)
     let add_population acc _i =
       let offset = Random.int 48 r in              (* Use swirl of offsets *)
-      let offset = if offset > 0 then offset - Random.int offset r else 0 in (* Closer to middle *)
+      let offset = offset - Random.int offset r in (* Closer to middle *)
       let x = x + Dir.x_offset.(offset) in
       let y = y + Dir.y_offset.(offset) in
       (* Here too, the game relies on borders and we need bounds checking *)
