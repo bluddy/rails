@@ -205,11 +205,14 @@ let _route_earn_money route_idx ~stocks ~params main_player_net_worth ~tilemap v
 
 let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Params.t) ~city ~stocks random v =
   (* New company creation test at this city *)
+  Log.debug (fun f -> f "_try_to_create_ai. first_ai: %b. city: %s" first_ai (Utils.show_loc city));
   let player_idx = C.player in
   let demand_supply = Tilemap.demand_supply_sum city tilemap ~range:2 in
   let age = (params.year - C.ref_year_ai_build_value) / 2 in
   let value = demand_supply / age in
+  (* at 8192, reach min of 36 *)
   let cycles_value = 100 - (params.cycle mod 8192) / 128 in
+  Log.debug (fun f -> f "_try_to_create_ai 1 age %d, value %d, cycles_value %d" age value cycles_value);
   if cycles_value >= value && not force then `Update v else
   let find_closest_player_station_check_distance () =
     let closest_station = Station_map.find_nearest ~player_idx city stations in
@@ -230,6 +233,7 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
   in
   let closest_station, create =
     find_closest_player_station_check_distance () in
+  Log.debug (fun f -> f "_try_to_create_ai 2");
   if not create && not force then `Update v else
   let rec create_leader_loop () =
     let leader = Opponent.random_of_region params.region random in
