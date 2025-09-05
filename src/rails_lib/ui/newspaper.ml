@@ -11,7 +11,7 @@ include Newspaper_d
 let make_simple (s:State.t) kind ?heading text opponent = Simple {
     opponent;
     kind;
-    msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ~wh:(177, 51) ?heading ~fonts:s.fonts s text;
+    msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ?heading ~fonts:s.fonts s text;
 }
 
 let day_of_year time = ((time * 3) / 17) mod 360
