@@ -1,8 +1,19 @@
 # Tasks
+- Fix standard movement speed to match game at 3000 cycles
+- Straddle station updates so they're smaller and they don't seem as coordinated, like in game.
+- Sidetrack new train starts after engine bay
+- Handle > 32 trains with some visual display
+  - arrows?
+  - scroll bar?
+- Menu:
+  - Highlight where mouse is
+  - Animate selection with white
+- Selecting zoom with mouse opens msgbox to choose center
+- Animate zoom transition
+- Click on zoom1 should take to visual zoom2
 - For playback, use list of variants, not the current system
   - Deletions mess it up
 - Can't build within 5 of enemy station
-- Paper when we start
 - Rate war:
   - can't build facilities
 - Start menu:
@@ -10,21 +21,16 @@
   - Make menu highlight go all the way (solved by same solution)
   - Select default value
 - History: does it include anything from the current period?
+  - No
 - History depends on a lot of present data being relevant for past. Check.
   - e.g. company being dissolved.
   - We can do a much cleaner job with dedicated history stuff.
-- Fancy paper announcement of new player.
-- Handle track removal: messes up history
 - Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
 - Train income: check multiple pages of trains work well
 - Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
-- Building into an ai station
-- Rate war loss
-- Player loss (fired), AI company dissolved
 - Check that active_station only works for 20 years per station
-- Move block_map and track_graph to player
+- Move block_map and track_graph to player?
 - Can't rebuild bridge under repair
-- Straddle station updates so they're smaller and they don't seem as coordinated, like in game.
 - Allow upgrading station while keeping station data
 - Stock broker: print ownership of AI stock
 - Way we changed random things (e.g. track maintenance) isn't right
@@ -33,44 +39,46 @@
 - What happens when we delete a station and a train is heading there?
 - Check computation of wait time
 - F10 for survey
-- cursor
+- cursor fix?
+  - software cursor?
 - Check if we actually need to loop in _update_train (print out if we ever do multiple updates)
+  - I think we do for high speeds
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
 - Bug:
-  - Can't build bridge over light river
-  - Trains init regardless of station/track orientation
+  - Trains init regardless of station orientation
+  - Can't build bridge over landing
   - Tunnel always too long
-  - Windows crash on start
   - Europe scrolling: tile chemical plant not found
   - England: generation fails
   - Year doesn't switch at end of December.
+    - May be in original game too
   - Fiscal end stock eval: msgbox weird size thing
-  - AI companies msgbox is off
-  - AIs don't seem to get created.
-  - 2 stations: 1 station not being delivered to.
+  - 2 stations: 1 station not being delivered to?
   - B and P in priority shipment are off left by one
-  - Fancy paper: press any key is too high
   - Station screen has name in wrong place
-  - Can't upgrade station
-  - Animation: old timing issues
+  - Can't upgrade station to new station
+  - Animation: minor bugs remain
+    - e.g. missing left train in title
   - Delivery + priority pickup: no delivery message
-  - Can't change light from f2/f3
-  - Need better feedback for clicking on menu
+  - Can't change station light from f2/f3
   - Create a train with no station: msgbox to build a station first
   - New train doesn't pick up stuff from starting station
-    - this may be normal
+    - this may be normal behavior
   - Clicking on map during train creation crashes
   - First engines use one-chimney img. Check in code.
+    - At some point switches, but when?
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game
   - joining a track from another track either refuses or crashes
   - Going into negative should be red money
+    I think fixed
  
 - Post 1.0
   - Add maps from Deluxe
   - Supporting hi-res might involve making a proper UI system
+    - Or just scale modal windows somewhat
     - windows holding widgets with focus
     - can be laid out properly
     - can hold current menu/msgbox stuff

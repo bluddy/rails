@@ -1,5 +1,4 @@
 - From the manual:
-  - build first station, pay for engine shop
   - difficulty factor
   - turbo speed doesn't stop for messages or end of year
   - at end of year, charged interest on bonds and short term loans
