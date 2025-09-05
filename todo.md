@@ -1,6 +1,6 @@
 # Tasks
-- Fix standard movement speed to match game at 3000 cycles
 - Straddle station updates so they're smaller and they don't seem as coordinated, like in game.
+- Sound
 - Sidetrack new train starts after engine bay
 - Handle > 32 trains with some visual display
   - arrows?
@@ -67,8 +67,6 @@
   - New train doesn't pick up stuff from starting station
     - this may be normal behavior
   - Clicking on map during train creation crashes
-  - First engines use one-chimney img. Check in code.
-    - At some point switches, but when?
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game
   - joining a track from another track either refuses or crashes
