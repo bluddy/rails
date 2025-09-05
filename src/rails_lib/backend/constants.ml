@@ -12,7 +12,7 @@ let max_num_players = 4
 let max_ai_players = 3
 let max_num_cities = 100
 
-let tick_ms = 15 (* ms *)
+let tick_ms = 5 (* ms *)
 
 let year_ticks = 2032 (* really 170*12 = 2040 is new year, but any time we go over 2032 we stop the year *)
 let fin_period_ticks = 4080
