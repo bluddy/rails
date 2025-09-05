@@ -19,7 +19,7 @@ let default dims =
   {
     const_box_x = 0; const_box_y = 0;
     center_x = 0; center_y = 0;
-    zoom = Zoom4;
+    zoom = Zoom1;
     dims;
     build_mode = true;
     survey = false;
