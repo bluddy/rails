@@ -31,7 +31,7 @@ let init ?pickup ?delivery (s:State.t) good loc engine cars =
 let nobaction = Backend.Action.NoAction
 
 let handle_event v event =
-  if (Event.pressed_esc event || Event.is_left_click event) then
+  if (Event.key_modal_dismiss event || Event.is_left_click event) then
     if v.finished then v, `Exit
     else
       {v with finished=true}, `Stay

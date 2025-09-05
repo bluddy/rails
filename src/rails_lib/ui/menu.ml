@@ -104,7 +104,7 @@ module MsgBox = struct
     }
 
     (* Compute menu size dynamically. Must be called. *)
-  let do_open_menu ?(x=0) ?(y=0) ?(selected=Some 0) s v =
+  let do_open_menu ?(x=0) ?(y=0) ?wh ?(selected=Some 0) s v =
     (* start calculating internal y *)
     let max_h = v.border_y in
     (* entry coordinates are internal to the msgbox *)
@@ -149,6 +149,7 @@ module MsgBox = struct
       else
         v.x, v.y
     in
+    let w, h = Option.get_or ~default:(w, h) wh in
     {v with entries; w; h; x; y; selected}
 
   let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(select_color=Ega.bcyan) ?(draw_bg=true) ?(use_prefix=true)
@@ -430,7 +431,7 @@ module MsgBox = struct
           end
       | _ -> ()
 
-    let make_basic ?x ?y ?heading ~fonts s text =
+    let make_basic ?x ?y ?wh ?heading ~fonts s text =
       (* Easy to use msgbox with just text *)
       let y = Option.get_or ~default:80 y in
       let x = match x with
@@ -444,7 +445,7 @@ module MsgBox = struct
       let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
       let entry = static_entry ~color:entry_color text in
       let menu =
-        make ~x ~y ?heading ~fonts [entry] ~font_idx:`Standard |> do_open_menu s
+        make ~x ~y ?heading ~fonts [entry] ~font_idx:`Standard |> do_open_menu ?wh s
       in
       menu
 end

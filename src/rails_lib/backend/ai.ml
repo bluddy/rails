@@ -849,7 +849,7 @@ let financial_text ~cities ~region ui_msg v =
       Printf.sprintf
         "%s\n\
         %s %d,000 shares of\n\
-        treasury stock.\n
+        treasury stock.\n\
         Price %s to %s.00/share.\n"
         (name ai_idx)
         (if buy then "adds" else "sells")

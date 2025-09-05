@@ -11,7 +11,7 @@ include Newspaper_d
 let make_simple (s:State.t) kind ?heading text opponent = Simple {
     opponent;
     kind;
-    msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ?heading ~fonts:s.fonts s text;
+    msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ~wh:(177, 51) ?heading ~fonts:s.fonts s text;
 }
 
 let day_of_year time = ((time * 3) / 17) mod 360
@@ -46,7 +46,7 @@ let make_fancy (s:State.t) text params =
   Fancy {
     source;
     text;
-    msgbox=Menu.MsgBox.make_basic ~x:58 ~y:98 ~fonts:s.fonts s "Press any key to continue";
+    msgbox=Menu.MsgBox.make_basic ~x:80 ~y:128 ~fonts:s.fonts s "Press any key to continue";
     cost_s=Printf.sprintf "%d cents" cost;
     date_s=date_s;
     tear_vals;
