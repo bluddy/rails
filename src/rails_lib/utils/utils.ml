@@ -183,6 +183,10 @@ module IntMap = Map.Make(struct
   type t = int [@@deriving yojson, ord]
 end)
 
+module StringMap = Map.Make(struct
+  type t = string [@@deriving yojson, ord]
+end)
+
 module LocMap = Map.Make(struct
   type t = loc [@@deriving yojson]
   let compare = compare_loc
