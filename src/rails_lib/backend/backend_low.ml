@@ -822,22 +822,27 @@ let _develop_tiles v (player:Player.t) =
   else
     v.dev_state, player.active_station, []
 
-let _update_station_supply_demand player_idx stations map params =
+let _update_station_supply_demand i player_idx stations map params =
+  (* Optimization: use a data structure to jump more efficiently by 32 *)
   let difficulty = params.Params.options.difficulty in
   let ui_msgs =
+    snd @@
     Station_map.fold 
-      (fun station old_msgs ->
-        Station.check_rate_war_lose_supplies station ~difficulty;
-        let msgs = Station.update_supply_demand map params station in
-        Station.lose_supplies station;
-        let msgs =
-          List.map (fun (good, add) ->
-            UIM.DemandChanged {player_idx; x=fst station.loc; y=snd station.loc; good; add})
-            msgs
-        in
-        msgs @ old_msgs)
+      (fun station (n, old_msgs) ->
+        if n mod C.Cycles.station_supply_demand_skip <> i then
+          (n+1, old_msgs)
+        else (
+          Station.check_rate_war_lose_supplies station ~difficulty;
+          let msgs = Station.update_supply_demand map params station in
+          Station.lose_supplies station;
+          let msgs =
+            List.map (fun (good, add) ->
+              UIM.DemandChanged {player_idx; x=fst station.loc; y=snd station.loc; good; add})
+              msgs
+          in
+          (n+1, msgs @ old_msgs)))
     stations
-    ~init:[]
+    ~init:(0, [])
   in
   stations, ui_msgs
 
@@ -934,8 +939,10 @@ let handle_cycle ~delayed_fn v =
     in
 
     let stations, sd_msgs =
-      if cycle mod C.Cycles.station_supply_demand = 0 then (
-        _update_station_supply_demand C.player stations map params
+      let num = C.Cycles.station_supply_demand in
+      if cycle mod num = 0 then (
+        let i = (cycle / num) mod C.Cycles.station_supply_demand_skip in
+        _update_station_supply_demand i C.player stations map params
       ) else stations, []
     in
 
