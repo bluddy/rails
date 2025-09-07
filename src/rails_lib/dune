@@ -1,7 +1,7 @@
 (include_subdirs unqualified)
 (library
   (name rails_lib)
-  (libraries iter containers containers-data gen imagelib imagelib.unix tsdl tsdl-mixer owl-base ocamlgraph logs logs.fmt re)
+  (libraries iter containers containers-data gen imagelib imagelib.unix tsdl owl-base ocamlgraph logs logs.fmt re)
   (inline_tests)
   (wrapped true)
   (preprocess
