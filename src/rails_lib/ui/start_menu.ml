@@ -121,7 +121,7 @@ let handle_event (s:State.t) v (event:Event.t) =
   let fonts = s.fonts in
   match v.mode with
   | Action menu ->
-    let menu2, action = Menu.MsgBox.update s menu event in
+    let menu2, action = Menu.MsgBox.handle_event s menu event in
     begin match action with
     | Menu.On(`NewGame) -> `Stay, {v with mode=Region(region_menu fonts s)}
     | Menu.On(`LoadGame) -> `Stay, {v with mode=LoadGame(Load_game.make s)}
@@ -138,7 +138,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
 
   | Region menu ->
-    let menu2, action = Menu.MsgBox.update s menu event in
+    let menu2, action = Menu.MsgBox.handle_event s menu event in
     begin match action with
     | Menu.On(region) ->
         `Stay, {v with mode=Difficulty(difficulty_menu fonts s); region=Some region}
@@ -149,7 +149,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     end
 
   | Difficulty menu ->
-    let menu2, action = Menu.MsgBox.update s menu event in
+    let menu2, action = Menu.MsgBox.handle_event s menu event in
     begin match action with
     | Menu.On(difficulty) ->
         let reality = B_options.reality_levels_default in
@@ -162,7 +162,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     end
 
   | Reality state ->
-    let menu2, action = Menu.MsgBox.update s state.menu event in
+    let menu2, action = Menu.MsgBox.handle_event s state.menu event in
     begin match action with
     | Menu.On `Continue ->
         let region = v.region |> Option.get_exn_or "missing region" in

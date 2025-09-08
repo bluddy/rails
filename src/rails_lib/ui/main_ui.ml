@@ -471,7 +471,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           (modal: (State.t, b, c) modalmenu)
           (build_fn:(State.t, b, c) modalmenu -> State.t mode)
           (process_fn:(State.t, b, c) modalmenu -> b -> State.t t * B.Action.t) ->
-      let menu, action = Menu.MsgBox.update s modal.menu event in
+      let menu, action = Menu.MsgBox.handle_event s modal.menu event in
       let exit_mode () = next_mode v, B.Action.NoAction in
       begin match action with
       | Menu.On(None) -> exit_mode ()
@@ -496,7 +496,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     match v.mode with
     | Normal ->
       (* Main gameplay view *)
-      let menu, menu_action, event = Menu.Global.update s v.menu event in
+      let menu, menu_action, event = Menu.Global.handle_event s v.menu event in
       let v = if menu =!= v.menu then {v with menu} else v in
       let view = match menu_action with
         | On(`Survey)  -> Mapview.set_survey true v.view 

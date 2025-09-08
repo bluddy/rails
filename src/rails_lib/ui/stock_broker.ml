@@ -218,7 +218,7 @@ let handle_event (s:State.t) v (event:Event.t) =
   let player_idx = C.player in
   match v.modal with
   | Normal ->
-    let menu, menu_action, event = Menu.Global.update s v.menu event in
+    let menu, menu_action, event = Menu.Global.handle_event s v.menu event in
     let exit, v, bk_action = match menu_action with
     | Menu.On(`SellBond) -> `Stay, v, B.Action.SellBond {player_idx}
     | Menu.On(`RepayBond) -> `Stay, v, B.Action.RepayBond {player_idx}

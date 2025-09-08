@@ -55,7 +55,7 @@ let _save_game (s:State.t) slot =
 
 let handle_event event (s:State.t) v =
   if Event.pressed_esc event then `Exit, v else
-  match Menu.MsgBox.update s v.menu event with
+  match Menu.MsgBox.handle_event s v.menu event with
   | menu2, Menu.On(entry) -> (* load entry *)
       let v = {v with menu=menu2} in
       let slot = entry.slot in

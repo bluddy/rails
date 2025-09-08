@@ -361,7 +361,7 @@ module MsgBox = struct
       in
       {v with entries; selected}, action
 
-    let update s v (event:Event.t) =
+    let handle_event s v (event:Event.t) =
       (* Returns new v and action *)
       let v, action =
         match event with
@@ -644,7 +644,7 @@ module Global = struct
           in
           {v with menus; open_menu}, action
 
-  let update s v (event:Event.t) =
+  let handle_event s v (event:Event.t) =
     (* Returns new v and the action derived from the menu *)
     let v, action = match event with
       | MouseButton {down=true; x; y; _} ->
@@ -677,7 +677,7 @@ end
 
 let modal_handle_event = fun (type a) ?(is_msgbox=false) s (menu: (a, 'state) MsgBox.t) event ->
   (* Handle all events for modal msgboxes/menus *)
-  let menu, action = MsgBox.update s menu event in
+  let menu, action = MsgBox.handle_event s menu event in
   match action with
   | NoAction when Event.pressed_esc event -> `Exit
   | NoAction when is_msgbox && Event.key_modal_dismiss event -> `Exit

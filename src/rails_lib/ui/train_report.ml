@@ -321,7 +321,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | Normal, (Some(car_menu, stop) as current) ->
       (* Car menu selection open *)
-      let car_menu2, action = Menu.MsgBox.update s car_menu event in
+      let car_menu2, action = Menu.MsgBox.handle_event s car_menu event in
       let car_menu, b_action = match action with
         | Menu.On(`Caboose) ->
             None, Backend.Action.RemoveAllStopCars({train=v.train; stop; player_idx})
@@ -339,7 +339,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       false, v, b_action
 
   | Normal, _ ->
-      let menu, action, event = Menu.Global.update s v.menu event in
+      let menu, action, event = Menu.Global.handle_event s v.menu event in
       let train = Backend.get_train v.train player_idx s.backend in
       let line_h = 10 in
       let xstart = 160 in

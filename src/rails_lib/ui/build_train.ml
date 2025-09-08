@@ -45,7 +45,7 @@ module AddCars = struct
 
   let handle_event (s:State.t) v event =
     if v.show_menu then
-      let menu, action = Menu.MsgBox.update s v.menu event in
+      let menu, action = Menu.MsgBox.handle_event s v.menu event in
       let anim, show_menu, train_done =
         match action with
         | Menu.On(`AddCar good) ->

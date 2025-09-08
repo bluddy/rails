@@ -58,7 +58,7 @@ let handle_event event (s:State.t) v = match v.mode with
         `Stay, {v with mode=JobOffer{state; menu=Some menu}}
 
   | JobOffer {menu=Some menu; state} ->
-      let menu2, action = Menu.MsgBox.update s menu event in
+      let menu2, action = Menu.MsgBox.handle_event s menu event in
       begin match action with
       | Menu.On(`DontQuit) ->
           `Exit, v (* exit menu but stay in game *)
