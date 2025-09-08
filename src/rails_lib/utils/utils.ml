@@ -37,6 +37,8 @@ module Infix = struct
   type ro = [`RO] [@@deriving yojson]
 end
 
+open Infix
+
 module Random = struct
   (* Expand Random to serialize the state *)
   include Random
@@ -376,7 +378,9 @@ module List = struct
     let rec loop i acc = function
       | [] -> l0
       | y::ys when i=0 ->
-          List.rev_append acc ((f y) :: ys)
+          let y' = f y in
+          if y' === y then l0
+          else List.rev_append acc @@ y' :: ys
       | y::ys ->
           loop (i-1) (y::acc) ys
     in
@@ -387,7 +391,9 @@ module List = struct
       | [] -> l0, None
       | y::ys when i=0 ->
           let y', prod = f y in
-          List.rev_append acc (y' :: ys), Some prod
+          if y' === y then l0, Some prod
+          else
+            List.rev_append acc (y' :: ys), Some prod
       | y::ys ->
           loop (i-1) (y::acc) ys
     in
