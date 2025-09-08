@@ -15,7 +15,7 @@ let init ?x (s:State.t) ~engine ~cars ~station ~rail ~paused =
   let engine_tex = Hashtbl.find s.textures.engine_anim engine in
   let x = match x, rail with
     | Some x, `Back -> x
-    | _, `Back -> 62
+    | _, `Back -> 32
     | Some x, `Front -> x - engine_tex.w
     | _, `Front -> 0 - engine_tex.w
   in
