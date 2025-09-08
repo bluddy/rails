@@ -15,21 +15,22 @@ let get_tex (s:State.t) x =
   let h = R.Texture.get_h tex in
   tex, w, h
 
-let engineshop_x = 64
-let ground_y = 186
+let render_background (s:State.t) win =
+  (* Background *)
+  let win_h, win_w = R.height win, R.width win in
+  R.draw_rect win ~fill:true ~x:0 ~y:0 ~w:win_w ~h:win_h ~color:Ega.cyan;
+  let tex, _, h = get_tex s `Background in
+  R.Texture.render ~x:0 ~y:(win_h-h) win tex
 
-let render ?(show_name=true) win (s:State.t) ?station loc ~show_demand =
+let render_foreground ?(show_name=true) win (s:State.t) ?station loc ~show_demand =
+  let win_h, win_w = R.height win, R.width win in
+  let engineshop_x = 64 in
+  let ground_y = 186 in
   let switchingyard_x = 0 in
   let station_x = 111 in
   let hotel_x = 207 in
   let restaurant_x = 242 in
   let storage_x = 285 in
-
-  (* Background *)
-  let win_h, win_w = R.height win, R.width win in
-  R.draw_rect win ~fill:true ~x:0 ~y:0 ~w:win_w ~h:win_h ~color:Ega.cyan;
-  let tex, _, h = get_tex s `Background in
-  R.Texture.render ~x:0 ~y:(win_h-h) win tex;
 
   let draw_rest_bottom () =
     let tex, _, h = get_tex s `Rest_bottom in
@@ -208,17 +209,7 @@ let render ?(show_name=true) win (s:State.t) ?station loc ~show_demand =
     write_name ~shadow:true ~x:8 ~y:104 ~color:Ega.white
   )
 
-  (* Render the engine bay again in front of the train *)
-let post_render win (s:State.t) ?station loc =
-  let station = match station with
-    | Some station -> station
-    | _ -> Backend.get_station loc s.backend |> Option.get_exn_or "station"
-  in
-  Station.Upgrades.iter (function
-    | MaintenanceShop ->
-        let tex, _, h = get_tex s `Barn in
-        R.Texture.render ~x:engineshop_x ~y:(ground_y-h) win tex
-    | _ -> ())
-  (Station.get_upgrades station);
-
+let render ?(show_name=true) win (s:State.t) ?station loc ~show_demand =
+  render_background s win;
+  render_foreground ~show_name win s ?station loc ~show_demand
 

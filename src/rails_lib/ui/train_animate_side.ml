@@ -69,15 +69,17 @@ let train_end_at_screen_edge (s:State.t) v =
   | `Back -> false
 
 let render ?(show_name=true) win (s:State.t) v =
-  Station_report.render win s v.station ~show_demand:false ~show_name;
   match v.rail with
   | `Back ->
+      Station_report.render_background s win;
       let y = 186 in
       let engine_tex = Hashtbl.find s.textures.small_engine v.engine in
       let h = R.Texture.get_h engine_tex in
-      R.Texture.render win ~x:v.x ~y:(y-h) engine_tex
+      R.Texture.render win ~x:v.x ~y:(y-h) engine_tex;
+      Station_report.render_foreground win s v.station ~show_demand:false ~show_name
 
   | `Front ->
+      Station_report.render win s v.station ~show_demand:false ~show_name;
       let y = 193 in
 
       draw_engine win s v.x y v.engine;
