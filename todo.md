@@ -1,5 +1,4 @@
 # Tasks
-- Straddle station updates so they're smaller and they don't seem as coordinated, like in game.
 - Sound
 - Sidetrack new train starts after engine bay
 - Handle > 32 trains with some visual display
