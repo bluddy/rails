@@ -7,6 +7,7 @@ open Containers
 
 module L = Utils.List
 module CharMap = Utils.CharMap
+open Utils.Infix
 
 let menu_font = `Caps
 let max_width = 320
@@ -225,6 +226,8 @@ module MsgBox = struct
         {v with kind=e}, action
     | Static _ -> v, NoAction
 
+  (* let handle_mouse_move s v ~x ~y =  *)
+
   let rec close_entry v = match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         let box = close box in
@@ -242,8 +245,10 @@ module MsgBox = struct
     match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         (* open msgbox -> recurse *)
-        let box, action = handle_click s box ~x ~y in
-        {v with kind=Interactive {e with fire=MsgBox(true, box)}}, action
+        let box', action = handle_click s box ~x ~y in
+        if box' === box then v, action
+        else
+          {v with kind=Interactive {e with fire=MsgBox(true, box')}}, action
     | _ ->
         v, NoAction
 
@@ -286,7 +291,7 @@ module MsgBox = struct
           (* Got an action, pass it on *)
           entries, action, v.selected
     in
-    {v with entries; selected}, action
+    [%up {v with entries; selected}], action
 
     let rec handle_entry_key_deep s v ~key =
       match v.kind with
@@ -452,7 +457,7 @@ end
 
 module Title = struct
 
-  (* menu in the upper bar *)
+  (* menu name in the upper bar. Forwards to actual menus if open. *)
   type ('msg, 'state) t = {
     x: int;
     y: int;
@@ -480,13 +485,17 @@ module Title = struct
     | None -> true
     | Some f -> f s
 
+  let handle_mouse_move s v ~x ~y =
+    let msgbox, action = MsgBox.handle_mouse_move s v.msgbox ~x ~y in
+    [%up {v with msgbox}], action
+
   let handle_click s v ~x ~y =
     let msgbox, action = MsgBox.handle_click s v.msgbox ~x ~y in
-    {v with msgbox}, action
+    [%up {v with msgbox}], action
 
   let handle_key s v ~key =
     let msgbox, action = MsgBox.handle_key s v.msgbox ~key in
-    {v with msgbox}, action
+    [%up {v with msgbox}], action
 
     (* Draw titles only *)
   let render win s ~fonts v =
@@ -495,7 +504,7 @@ module Title = struct
 
   let close_menu v =
     let msgbox = MsgBox.close v.msgbox in
-    {v with msgbox}
+    [%up {v with msgbox}]
 
   let render_msgbox win s v =
     MsgBox.render win s v.msgbox
@@ -503,12 +512,13 @@ module Title = struct
   let do_open_menu s v =
     if is_enabled s v then
       let msgbox = MsgBox.do_open_menu s v.msgbox in
-      {v with msgbox}
+      [%up {v with msgbox}]
     else v
 
 end
 
 module Global = struct
+  (* The global menu bar at the top and the attached menus *)
 
   type ('msg, 'state) t = {
     menu_h: int;
@@ -553,10 +563,17 @@ module Global = struct
     in
     {v with menus; open_menu=None}
 
+  let handle_mouse_move s v ~x ~y =
+    match v.open_menu with
+    | None -> v
+    | Some mopen ->
+        let menus = L.modify_at_idx mopen Title.handle_mouse_move v.menus in
+        [%up {v with menus}]
+
   let handle_click s v ~x ~y = 
     (* Check for closed menu *)
       if is_not_clicked v ~x ~y && is_closed v then
-        (v, NoAction)
+        v, NoAction
       else (
         (* Handle a top menu click first *)
         let menus = v.menus in
@@ -596,7 +613,7 @@ module Global = struct
               | _ ->
                   sopen, action, menus
             in
-            ({v with menus; open_menu}, action)
+            [%up {v with menus; open_menu}], action
         | None, None ->
             (* no menu open *)
             v, NoAction
@@ -647,6 +664,8 @@ module Global = struct
   let handle_event s v (event:Event.t) =
     (* Returns new v and the action derived from the menu *)
     let v, action = match event with
+      | MouseMotion {x; y; _} when is_open v ->
+          handle_mouse_move s v ~x ~y
       | MouseButton {down=true; x; y; _} ->
           handle_click s v ~x ~y
       | Key {down=true; key; _ } ->
