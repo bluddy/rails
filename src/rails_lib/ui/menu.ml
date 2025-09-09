@@ -187,7 +187,7 @@ module MsgBox = struct
     | Interactive {enabled=false; _} -> false
     | _ -> y < v.y + v.h
 
-  let is_entry_open v = match v.kind with
+  let is_entry_open_msgbox v = match v.kind with
     | Interactive {fire=MsgBox(true, _);_} -> true | _ -> false
 
   let is_entry_enabled v = match v.kind with
@@ -205,26 +205,66 @@ module MsgBox = struct
   let mouse_check_shallow v ~x ~y =
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
+    (* Only search depth-first *)
+  let rec handle_entry_hover_deep v ~x ~y =
+    match v.kind with
+    | Interactive ({fire=MsgBox(true, box); _} as e) ->
+        (* msgbox is open so recurse *)
+        let box' = handle_hover box ~x ~y in
+        if box' === box then v, `NoDeep
+        else
+          {v with kind=Interactive {e with fire=MsgBox(true, box')}}, `Deep
+    | _ ->
+        v, `NoDeep
+
+  and handle_hover (v:('a, 'b) t) ~x ~y =
+    let entries, deep =
+      match v.selected with
+      | Some idx ->
+          (* selection exists, deep search first *)
+          L.modify_make_at_idx idx (handle_entry_hover_deep ~x ~y) v.entries
+      | None ->
+          (* Nothing selected, we're done *)
+          v.entries, Some `NoDeep
+    in
+    let entries, selected =
+      let default = entries, v.selected in
+      match deep with
+      | (None | Some `NoDeep) when mouse_check_shallow v ~x ~y ->
+          (* Didn't find in deep search, passed shallow search in this msgbox *)
+          begin match find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
+          | Some (entry_idx, _), Some cur_select when entry_idx <> cur_select ->
+              (* hovered over an entry, handle and switch selection if not a msgbox *)
+              let entry = List.nth v.entries cur_select in
+              (* don't change msgbox *)
+              if is_entry_open_msgbox entry then default
+              else entries, Some entry_idx
+          | _ -> default
+          end
+
+      | _ -> entries, v.selected
+    in
+    [%up {v with entries; selected}]
+
     (* Do not recurse deeply *)
-  let handle_entry_activate_shallow ~full s ~x v =
+  let handle_entry_activate_shallow s ~x v =
     (* Assume we were clicked. Only handle shallow events
        full: an actual activation vs just msgbox open/close
      *)
     match v.kind with
     | Interactive e as e_in ->
         let e, action = match e.fire with
-          | MsgBox(false, box) when full ->
+          | MsgBox(false, box) ->
               let box = do_open_menu s ~x ~y:(v.y) box in
               Interactive {e with fire=MsgBox(true, box)}, OpenMsgBox
-          | MsgBox(true, box) when full ->
+          | MsgBox(true, box) ->
               Interactive {e with fire=MsgBox(false, box)}, CloseMsgBox
-          | Action action when full ->
+          | Action action ->
               e_in, On(action)
-          | Checkbox(action, fn) when full && fn s ->
+          | Checkbox(action, fn) when fn s ->
               e_in, Off(action)
-          | Checkbox(action, _) when full ->
+          | Checkbox(action, _) ->
               e_in, On(action)
-          | _ -> e_in, NoAction
         in
         [%up {v with kind=e}], action
     | Static _ -> v, NoAction
@@ -242,24 +282,24 @@ module MsgBox = struct
     | None -> v
 
     (* Only search depth-first *)
-  let rec handle_entry_mouse_deep ~click s v ~x ~y =
+  let rec handle_entry_click_deep s v ~x ~y =
     match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         (* msgbox is open so recurse *)
-        let box', action = handle_mouse ~click s box ~x ~y in
+        let box', action = handle_click s box ~x ~y in
         if box' === box then v, action
         else
           {v with kind=Interactive {e with fire=MsgBox(true, box')}}, action
     | _ ->
         v, NoAction
 
-  and handle_mouse ~click s (v:('a, 'b) t) ~x ~y =
+  and handle_click s (v:('a, 'b) t) ~x ~y =
     let entries, action =
       match v.selected with
       | Some idx ->
           (* deep search first *)
           let a, b =
-            L.modify_make_at_idx idx (handle_entry_mouse_deep ~click s ~x ~y) v.entries
+            L.modify_make_at_idx idx (handle_entry_click_deep s ~x ~y) v.entries
           in
           a, b |> Option.get_exn_or "error"
       | None ->
@@ -271,7 +311,7 @@ module MsgBox = struct
       | NoAction when mouse_check_shallow v ~x ~y ->
           (* Didn't find in deep search, do shallow search in this msgbox *)
           begin match find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
-          | None, None when click ->
+          | None, None ->
               (* clicked in msgbox but not an option *)
               entries, ClickInMsgBox, v.selected
           | None, Some entry_idx ->
@@ -282,11 +322,9 @@ module MsgBox = struct
               (* clicked an entry, handle and switch selection *)
               let entries, action =
                 L.modify_make_at_idx entry_idx
-                (handle_entry_activate_shallow ~full:click ~x:v.x s) v.entries
+                (handle_entry_activate_shallow ~x:v.x s) v.entries
               in
               entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
-
-          | _ -> entries, action, None
           end
 
       | _ ->
@@ -341,7 +379,7 @@ module MsgBox = struct
                 handle_selection_change entry_idx new_idx
             | None, (Some idx as sidx), Enter ->
                 let entries, action =
-                  L.modify_make_at_idx idx (handle_entry_activate_shallow ~full:true s ~x:v.x) entries
+                  L.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
                   |> Utils.snd_option
                 in
                 entries, action, sidx
@@ -353,7 +391,7 @@ module MsgBox = struct
                 handle_selection_change sidx (idx + 1)
             | None, (Some idx as sidx), Up when idx > 0 ->
                 handle_selection_change sidx (idx - 1)
-            | None, Some idx, Escape when is_entry_open (List.nth entries idx) ->
+            | None, Some idx, Escape when is_entry_open_msgbox (List.nth entries idx) ->
                 let entries = L.modify_at_idx idx close_entry entries in
                 entries, KeyInMsgBox, Some idx
             | None, _, _ when Event.is_letter key ->
@@ -371,8 +409,8 @@ module MsgBox = struct
     let handle_event s v (event:Event.t) =
       (* Returns new v and action *)
       let v, action = match event with
-        | MouseMotion {x; y; _} -> handle_mouse ~click:false s v ~x ~y
-        | MouseButton {down=true; x; y; _} -> handle_mouse ~click:true s v ~x ~y
+        | MouseMotion {x; y; _} -> handle_hover v ~x ~y, NoAction
+        | MouseButton {down=true; x; y; _} -> handle_click s v ~x ~y
         | Key {down=true; key; _ } -> handle_key s v ~key
         | _ -> v, NoAction
       in
@@ -486,7 +524,10 @@ module Title = struct
     | Some f -> f s
 
   let handle_mouse ~click s v ~x ~y =
-    let msgbox, action = MsgBox.handle_mouse ~click s v.msgbox ~x ~y in
+    let msgbox, action =
+      if click then MsgBox.handle_click s v.msgbox ~x ~y
+      else MsgBox.handle_hover v.msgbox ~x ~y, NoAction
+    in
     [%up {v with msgbox}], action
 
   let handle_key s v ~key =
