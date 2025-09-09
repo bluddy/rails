@@ -181,7 +181,7 @@ module MsgBox = struct
     | Interactive {select_action; _} -> select_action
     | _ -> None
 
-  let is_entry_clicked_shallow v ~y =
+  let is_entry_mouse_shallow v ~y =
     match v.kind with
     | Static _ -> false
     | Interactive {enabled=false; _} -> false
@@ -199,10 +199,10 @@ module MsgBox = struct
   let is_entry_static v = match v.kind with
     | Static _ -> true | _ -> false
 
-  let find_clicked_entry_shallow v ~y =
-    List.find_idx (is_entry_clicked_shallow ~y) v.entries
+  let find_mouse_entry_shallow v ~y =
+    List.find_idx (is_entry_mouse_shallow ~y) v.entries
 
-  let is_clicked_shallow v ~x ~y =
+  let mouse_check_shallow v ~x ~y =
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Do not recurse deeply *)
@@ -267,9 +267,9 @@ module MsgBox = struct
     in
     let entries, action, selected =
       match action with
-      | NoAction when is_clicked_shallow v ~x ~y ->
+      | NoAction when mouse_check_shallow v ~x ~y ->
           (* Didn't find in deep search, do shallow search in this msgbox *)
-          begin match find_clicked_entry_shallow v ~y:(y-v.y), v.selected with
+          begin match find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
           | None, None ->
               (* clicked in msgbox but not an option *)
               entries, ClickInMsgBox, v.selected
