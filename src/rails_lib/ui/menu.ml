@@ -206,8 +206,10 @@ module MsgBox = struct
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Do not recurse deeply *)
-  let handle_entry_activate_shallow s ~x v =
-    (* Assume we were clicked. Only handle shallow events *)
+  let handle_entry_activate_shallow ~full s ~x v =
+    (* Assume we were clicked. Only handle shallow events
+       full: an actual activation vs just msgbox open/close
+     *)
     match v.kind with
     | Interactive e as e_in ->
         let e, action = match e.fire with
@@ -216,17 +218,16 @@ module MsgBox = struct
               Interactive {e with fire=MsgBox(true, box)}, OpenMsgBox
           | MsgBox(true, box) ->
               Interactive {e with fire=MsgBox(false, box)}, CloseMsgBox
-          | Action action ->
+          | Action action when full ->
               e_in, On(action)
-          | Checkbox(action, fn) when fn s ->
+          | Checkbox(action, fn) when full && fn s ->
               e_in, Off(action)
-          | Checkbox(action, _) ->
+          | Checkbox(action, _) when full ->
               e_in, On(action)
+          | _ -> e_in, NoAction
         in
-        {v with kind=e}, action
+        [%up {v with kind=e}], action
     | Static _ -> v, NoAction
-
-  (* let handle_mouse_move s v ~x ~y =  *)
 
   let rec close_entry v = match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
@@ -241,24 +242,24 @@ module MsgBox = struct
     | None -> v
 
     (* Only search depth-first *)
-  let rec handle_entry_click_deep s v ~x ~y =
+  let rec handle_entry_mouse_deep ~click s v ~x ~y =
     match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
-        (* open msgbox -> recurse *)
-        let box', action = handle_click s box ~x ~y in
+        (* msgbox is open so recurse *)
+        let box', action = handle_mouse ~click s box ~x ~y in
         if box' === box then v, action
         else
           {v with kind=Interactive {e with fire=MsgBox(true, box')}}, action
     | _ ->
         v, NoAction
 
-  and handle_click s (v:('a, 'b) t) ~x ~y =
+  and handle_mouse ~click s (v:('a, 'b) t) ~x ~y =
     let entries, action =
       match v.selected with
       | Some idx ->
           (* deep search first *)
           let a, b =
-            L.modify_make_at_idx idx (handle_entry_click_deep s ~x ~y) v.entries
+            L.modify_make_at_idx idx (handle_entry_mouse_deep ~click s ~x ~y) v.entries
           in
           a, b |> Option.get_exn_or "error"
       | None ->
@@ -270,21 +271,22 @@ module MsgBox = struct
       | NoAction when mouse_check_shallow v ~x ~y ->
           (* Didn't find in deep search, do shallow search in this msgbox *)
           begin match find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
-          | None, None ->
+          | None, None when click ->
               (* clicked in msgbox but not an option *)
               entries, ClickInMsgBox, v.selected
           | None, Some entry_idx ->
               (* clear selection *)
-              let entries =
-                L.modify_at_idx entry_idx (close_entry) v.entries
-              in
+              let entries = L.modify_at_idx entry_idx close_entry v.entries in
               entries, action, None
           | Some (entry_idx, _), _ ->
               (* clicked an entry, handle and switch selection *)
-            let entries, action =
-              L.modify_make_at_idx entry_idx (handle_entry_activate_shallow ~x:v.x s) v.entries
-            in
-            entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
+              let entries, action =
+                L.modify_make_at_idx entry_idx
+                (handle_entry_activate_shallow ~full:click ~x:v.x s) v.entries
+              in
+              entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
+
+          | _ -> entries, action, None
           end
 
       | _ ->
@@ -339,7 +341,7 @@ module MsgBox = struct
                 handle_selection_change entry_idx new_idx
             | None, (Some idx as sidx), Enter ->
                 let entries, action =
-                  L.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
+                  L.modify_make_at_idx idx (handle_entry_activate_shallow ~full:true s ~x:v.x) entries
                   |> Utils.snd_option
                 in
                 entries, action, sidx
@@ -371,7 +373,7 @@ module MsgBox = struct
       let v, action =
         match event with
         | MouseButton {down=true; x; y; _} ->
-            handle_click s v ~x ~y
+            handle_mouse ~click:true s v ~x ~y
         | Key {down=true; key; _ } ->
             handle_key s v ~key
         | _ -> v, NoAction
@@ -485,12 +487,8 @@ module Title = struct
     | None -> true
     | Some f -> f s
 
-  let handle_mouse_move s v ~x ~y =
-    let msgbox, action = MsgBox.handle_mouse_move s v.msgbox ~x ~y in
-    [%up {v with msgbox}], action
-
-  let handle_click s v ~x ~y =
-    let msgbox, action = MsgBox.handle_click s v.msgbox ~x ~y in
+  let handle_mouse ~click s v ~x ~y =
+    let msgbox, action = MsgBox.handle_mouse ~click s v.msgbox ~x ~y in
     [%up {v with msgbox}], action
 
   let handle_key s v ~key =
@@ -567,10 +565,12 @@ module Global = struct
     match v.open_menu with
     | None -> v
     | Some mopen ->
-        let menus = L.modify_at_idx mopen Title.handle_mouse_move v.menus in
+        let menus = L.modify_at_idx mopen
+          (Title.handle_mouse ~click:false s v ~x ~y) v.menus
+        in
         [%up {v with menus}]
 
-  let handle_click s v ~x ~y = 
+  let handle_mouse_click s v ~x ~y = 
     (* Check for closed menu *)
       if is_not_clicked v ~x ~y && is_closed v then
         v, NoAction
@@ -601,7 +601,7 @@ module Global = struct
             (* clicked elsewhere with open top menu *)
             let menus, action = 
               (* check menu itself *)
-              L.modify_make_at_idx mopen (Title.handle_click s ~x ~y) menus
+              L.modify_make_at_idx mopen (Title.handle_mouse ~click:true s ~x ~y) menus
             in
             let action = action |> Option.get_exn_or "error" in
             (* Close the menu if it's a random click *)
@@ -667,7 +667,7 @@ module Global = struct
       | MouseMotion {x; y; _} when is_open v ->
           handle_mouse_move s v ~x ~y
       | MouseButton {down=true; x; y; _} ->
-          handle_click s v ~x ~y
+          handle_mouse_click s v ~x ~y
       | Key {down=true; key; _ } ->
           handle_key s v ~key
       | _ -> v, NoAction
