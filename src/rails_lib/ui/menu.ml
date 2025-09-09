@@ -213,10 +213,10 @@ module MsgBox = struct
     match v.kind with
     | Interactive e as e_in ->
         let e, action = match e.fire with
-          | MsgBox(false, box) ->
+          | MsgBox(false, box) when full ->
               let box = do_open_menu s ~x ~y:(v.y) box in
               Interactive {e with fire=MsgBox(true, box)}, OpenMsgBox
-          | MsgBox(true, box) ->
+          | MsgBox(true, box) when full ->
               Interactive {e with fire=MsgBox(false, box)}, CloseMsgBox
           | Action action when full ->
               e_in, On(action)
@@ -370,12 +370,10 @@ module MsgBox = struct
 
     let handle_event s v (event:Event.t) =
       (* Returns new v and action *)
-      let v, action =
-        match event with
-        | MouseButton {down=true; x; y; _} ->
-            handle_mouse ~click:true s v ~x ~y
-        | Key {down=true; key; _ } ->
-            handle_key s v ~key
+      let v, action = match event with
+        | MouseMotion {x; y; _} -> handle_mouse ~click:false s v ~x ~y
+        | MouseButton {down=true; x; y; _} -> handle_mouse ~click:true s v ~x ~y
+        | Key {down=true; key; _ } -> handle_key s v ~key
         | _ -> v, NoAction
       in
       let v = match action with
@@ -565,8 +563,8 @@ module Global = struct
     match v.open_menu with
     | None -> v
     | Some mopen ->
-        let menus = L.modify_at_idx mopen
-          (Title.handle_mouse ~click:false s v ~x ~y) v.menus
+        let menus, _ = L.modify_make_at_idx mopen
+          (Title.handle_mouse ~click:false s ~x ~y) v.menus
         in
         [%up {v with menus}]
 
@@ -665,7 +663,7 @@ module Global = struct
     (* Returns new v and the action derived from the menu *)
     let v, action = match event with
       | MouseMotion {x; y; _} when is_open v ->
-          handle_mouse_move s v ~x ~y
+          handle_mouse_move s v ~x ~y, NoAction
       | MouseButton {down=true; x; y; _} ->
           handle_mouse_click s v ~x ~y
       | Key {down=true; key; _ } ->
