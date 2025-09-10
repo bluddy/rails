@@ -1361,7 +1361,7 @@ let handle_tick s v time is_cycle = match v.mode with
     if state2 === state then v
     else {v with mode=FiredAnimation state2}
 
-  | _ -> v
+  | _ -> v, B.Action.NoAction
 
 let draw_train_roster win (s:State.t) v =
   train_roster_iter s v

@@ -210,7 +210,7 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
       | state2, _ when state === state2 -> `Stay, modal, nobaction
       | state2, _ -> `Stay, RR_build state2, nobaction
       end
-  
+
 let handle_event (s:State.t) v (event:Event.t) =
   let basic_msgbox text = MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text) in
   let nobaction = B.Action.NoAction in

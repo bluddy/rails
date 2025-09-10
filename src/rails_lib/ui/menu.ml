@@ -707,7 +707,6 @@ module Global = struct
           handle_key s v ~key
       | _ -> v, NoAction
     in
-    (* TODO: add activation animation, blue and white *)
     let v = match action with
       | On _ | Off _ -> close v
       | _ -> v
