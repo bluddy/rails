@@ -16,13 +16,7 @@ let max_width = 320
     | On of 'a
     | Off of 'a
     | Selected of 'a
-    | Handled
-    | OpenMsgBox
-    | CloseMsgBox
     | ClickInMsgBox (* a click but no action *)
-    | KeyInMsgBox (* Not a selection, but noop *)
-    | OpenMenu
-    | CloseMenu
     | NoAction
     [@@deriving show]
 
@@ -80,6 +74,7 @@ module MsgBox = struct
       draw_bg: bool;
       select_color: Ega.color;
       use_prefix: bool; (* entry prefix for checked v space *)
+      delayed_msg: 'msg option; (* delay message before sending *)
     }
 
   let get_entry_w_h font v =
@@ -175,6 +170,7 @@ module MsgBox = struct
       draw_bg;
       use_prefix;
       select_color;
+      delayed_msg=None;
     }
 
   let get_entry_selection_action v = match v.kind with
@@ -256,9 +252,9 @@ module MsgBox = struct
         let e, action = match e.fire with
           | MsgBox(false, box) ->
               let box = do_open_menu s ~x ~y:(v.y) box in
-              Interactive {e with fire=MsgBox(true, box)}, OpenMsgBox
+              Interactive {e with fire=MsgBox(true, box)}, NoAction
           | MsgBox(true, box) ->
-              Interactive {e with fire=MsgBox(false, box)}, CloseMsgBox
+              Interactive {e with fire=MsgBox(false, box)}, NoAction
           | Action action ->
               e_in, On(action)
           | Checkbox(action, fn) when fn s ->
@@ -362,7 +358,7 @@ module MsgBox = struct
           let select_action = List.nth entries new_idx |> get_entry_selection_action in
           let action = match select_action with
             | Some action -> Selected action
-            | None -> KeyInMsgBox
+            | None -> NoAction
           in
           entries, action, Some new_idx
         in
@@ -393,7 +389,7 @@ module MsgBox = struct
                 handle_selection_change sidx (idx - 1)
             | None, Some idx, Escape when is_entry_open_msgbox (List.nth entries idx) ->
                 let entries = L.modify_at_idx idx close_entry entries in
-                entries, KeyInMsgBox, Some idx
+                entries, NoAction, Some idx
             | None, _, _ when Event.is_letter key ->
                 (* nothing matches but still a letter: don't leak back to previous menu *)
                 entries, KeyInMsgBox, v.selected
@@ -624,18 +620,18 @@ module Global = struct
         | Some (i, _), Some mopen when i = mopen ->
             (* clicked top menu, same menu is open *)
             let menus = L.modify_at_idx mopen Title.close_menu menus in
-            {v with menus; open_menu = None}, CloseMenu
+            {v with menus; open_menu = None}, NoAction
         | Some (i, _), Some mopen ->
             (* clicked top menu, some other is open *)
             let menus =
               L.modify_at_idx mopen Title.close_menu menus
               |> L.modify_at_idx i (Title.do_open_menu s)
             in
-            {v with menus; open_menu = Some i}, OpenMenu
+            {v with menus; open_menu = Some i}, NoAction
         | Some (i, _), None ->
             (* clicked top menu, none are open *)
             let menus = L.modify_at_idx i (Title.do_open_menu s) menus in
-            {v with menus; open_menu = Some i}, OpenMenu
+            {v with menus; open_menu = Some i}, NoAction
         | None, (Some mopen as sopen) ->
             (* clicked elsewhere with open top menu *)
             let menus, action = 
@@ -648,7 +644,7 @@ module Global = struct
               match action with
               | NoAction ->
                   let menus = L.modify_at_idx mopen Title.close_menu menus in
-                  None, CloseMenu, menus
+                  None, NoAction, menus
               | _ ->
                   sopen, action, menus
             in
@@ -670,7 +666,7 @@ module Global = struct
           | None -> v, NoAction
           | Some idx as sidx ->
             let menus = L.modify_at_idx idx (Title.do_open_menu s) v.menus in
-            {v with open_menu=sidx; menus}, OpenMenu
+            {v with open_menu=sidx; menus}, NoAction
           end
       | (Some open_menu as some_menu) ->
           (* Open menu -> send it on *)
@@ -681,21 +677,21 @@ module Global = struct
           let menus, open_menu, action =
             match action, key with
             | NoAction, Event.Escape ->
-                menus, None, KeyInMsgBox
+                menus, None, NoAction
             | NoAction, Event.Left when open_menu > 0 ->
                 let menus =
                   L.modify_at_idx open_menu Title.close_menu menus
                   |> L.modify_at_idx (open_menu - 1) (Title.do_open_menu s)
                 in
-                menus, Some(open_menu - 1), KeyInMsgBox
+                menus, Some(open_menu - 1), NoAction
             | NoAction, Event.Right when open_menu < v.num_menus - 1 ->
                 let menus =
                   L.modify_at_idx open_menu Title.close_menu menus
                   |> L.modify_at_idx (open_menu + 1) (Title.do_open_menu s)
                 in
-                menus, Some(open_menu + 1), KeyInMsgBox
+                menus, Some(open_menu + 1), NoAction
             (* Avoid events leaking out when menu is open *)
-            | NoAction, _ -> menus, some_menu, KeyInMsgBox
+            | NoAction, _ -> menus, some_menu, NoAction
             | _ -> menus, some_menu, action
           in
           {v with menus; open_menu}, action
