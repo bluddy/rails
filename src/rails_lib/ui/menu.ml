@@ -21,7 +21,7 @@ let max_width = 320
     [@@deriving show]
 
   let is_action = function
-    | NoAction -> false
+    | NoAction | ClickInMsgBox -> false
     | _ -> true
 
     (* Get the active char for the menu item *)
@@ -392,7 +392,7 @@ module MsgBox = struct
                 entries, NoAction, Some idx
             | None, _, _ when Event.is_letter key ->
                 (* nothing matches but still a letter: don't leak back to previous menu *)
-                entries, KeyInMsgBox, v.selected
+                entries, NoAction, v.selected
             | None, _, _ ->
                 (* nothing matches: leak other things *)
                 entries, NoAction, v.selected
