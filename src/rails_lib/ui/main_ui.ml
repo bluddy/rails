@@ -21,7 +21,7 @@ let save_game (state:State.t) =
   print_endline "Saved Game"
 
 (* Create menu *)
-let main_menu fonts menu_h region =
+let main_menu fonts ~h ~w region =
   let open Menu in
   let game_speed =
     let check_speed speed (s:State.t) =
@@ -203,7 +203,7 @@ let main_menu fonts menu_h region =
       make ~fonts ~x:252 ~y:1 "Ac&tions" actions_menu; (* was x:242 *)
     ]
   in
-  Menu.Global.make ~menu_h titles
+  Menu.Global.make ~h ~w s.fonts titles
 
 let default ?options ?view win fonts region =
   let screen = Utils.{
@@ -280,7 +280,7 @@ let default ?options ?view win fonts region =
     | Some view -> view
     | None -> Mapview.default dims.mapview
   in
-  let menu = main_menu fonts dims.menu.h region in
+  let menu = main_menu fonts ~w:dims.menu.w ~h:dims.menu.h region in
   {
     dims;
     menu;

@@ -435,6 +435,11 @@ module MsgBox = struct
       let name = if use_prefix then prefix^v.name else v.name in
       Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
 
+    let handle_tick s v time =
+      match v.delayed_msg with
+      | Some action -> {v with delayed_msg=None}, action
+      | None -> v, NoAction
+
     let render_box ?(color=Ega.gray) win x y w h =
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
@@ -512,10 +517,10 @@ module Title = struct
       test_enabled;
     }
 
-  let is_title_clicked v ~x ~y =
+  let _is_title_clicked v ~x ~y =
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
-  let is_enabled s v = match v.test_enabled with
+  let _is_enabled s v = match v.test_enabled with
     | None -> true
     | Some f -> f s
 
@@ -526,14 +531,18 @@ module Title = struct
     in
     [%up {v with msgbox}], action
 
+  let handle_tick s v time =
+    let msgbox, action = MsgBox.handle_tick s v.msgbox time in
+    [%up {v with msgbox}], action
+
   let handle_key s v ~key =
     let msgbox, action = MsgBox.handle_key s v.msgbox ~key in
     [%up {v with msgbox}], action
 
     (* Draw titles only *)
-  let render win s ~fonts v =
-    let active_color, color = if is_enabled s v then Ega.white, Ega.bcyan else Ega.gray, Ega.gray in
-    Fonts.Render.write win fonts v.name ~idx:menu_font ~x:v.x ~y:v.y ~color ~active_color
+  let render win s ~font v =
+    let active_color, color = if _is_enabled s v then Ega.white, Ega.bcyan else Ega.gray, Ega.gray in
+    Fonts.Font.write win font v.name ~x:v.x ~y:v.y ~color ~active_color
 
   let close_menu v =
     let msgbox = MsgBox.close v.msgbox in
@@ -543,7 +552,7 @@ module Title = struct
     MsgBox.render win s v.msgbox
 
   let do_open_menu s v =
-    if is_enabled s v then
+    if _is_enabled s v then
       let msgbox = MsgBox.do_open_menu s v.msgbox in
       [%up {v with msgbox}]
     else v
@@ -554,14 +563,17 @@ module Global = struct
   (* The global menu bar at the top and the attached menus *)
 
   type ('msg, 'state) t = {
-    menu_h: int;
     open_menu: int option;
     menus: ('msg, 'state) Title.t list;
     num_menus: int;
     index: (char, int) Hashtbl.t; (* for speed of search *)
+    w: int;
+    h: int;
+    font: Fonts.Font.t;
   }
 
-  let make ~menu_h menus =
+  let make fonts ?(font_idx=menu_font) menus ~w ~h =
+    let font=Fonts.get_font font_idx fonts in
     let index = Hashtbl.create 10 in
     List.iteri (fun i title ->
       match get_active_char title.Title.name with
@@ -569,26 +581,28 @@ module Global = struct
       | None -> ()) (* Hashtbl.replace index title.name.[0] i) *)
     menus;
   {
-    menu_h;
     open_menu=None;
     menus;
     num_menus=List.length menus;
     index;
+    font;
+    w;
+    h;
   }
 
   let is_not_clicked v ~x ~y =
     let _x = x in
-    y > v.menu_h && Option.is_none v.open_menu
+    y > v.h && Option.is_none v.open_menu
 
   let is_enabled s v i =
     (* Check if a menu index is enabled *)
     let menu = List.nth v.menus i in
     Title.is_enabled s menu
 
-  let is_open v = Option.is_some v.open_menu
-  let is_closed v = Option.is_none v.open_menu
+  let _is_open v = Option.is_some v.open_menu
+  let _is_closed v = Option.is_none v.open_menu
 
-  let close v =
+  let _close v =
     let menus =
       match v.open_menu with
       | Some idx -> L.modify_at_idx idx Title.close_menu v.menus
@@ -607,14 +621,14 @@ module Global = struct
 
   let handle_mouse_click s v ~x ~y = 
     (* Check for closed menu *)
-      if is_not_clicked v ~x ~y && is_closed v then
+      if is_not_clicked v ~x ~y && _is_closed v then
         v, NoAction
       else (
         (* Handle a top menu click first *)
         let menus = v.menus in
-        let clicked_top_menu = List.find_idx (Title.is_title_clicked ~x ~y) menus in
+        let clicked_top_menu = List.find_idx (Title._is_title_clicked ~x ~y) menus in
         match clicked_top_menu, v.open_menu with
-        | Some (i, _), _ when not @@ is_enabled s v i ->
+        | Some (i, _), _ when not @@ _is_enabled s v i ->
             (* Non-enabled menu *)
             v, NoAction
         | Some (i, _), Some mopen when i = mopen ->
@@ -699,7 +713,7 @@ module Global = struct
   let handle_event s v (event:Event.t) =
     (* Returns new v and the action derived from the menu *)
     let v, action = match event with
-      | MouseMotion {x; y; _} when is_open v ->
+      | MouseMotion {x; y; _} when _is_open v ->
           handle_mouse_move s v ~x ~y, NoAction
       | MouseButton {down=true; x; y; _} ->
           handle_mouse_click s v ~x ~y
@@ -708,7 +722,7 @@ module Global = struct
       | _ -> v, NoAction
     in
     let v = match action with
-      | On _ | Off _ -> close v
+      | On _ | Off _ -> _close v
       | _ -> v
     in
     (* Cancel events we handled *)
@@ -718,14 +732,43 @@ module Global = struct
     in
     v, action, event
 
-  let render win s fonts v ~w ~h =
-    Renderer.draw_rect win ~x:0 ~y:0 ~w ~h ~color:Ega.cyan ~fill:true;
+  let handle_tick s v time = match v.open_menu with
+    | None -> v, NoAction
+    | Some idx ->
+        let menus, event = L.modify_make_at_idx idx (fun v -> Title.handle_tick s v time) v.entries in
+        [%up {v with menus}], event
+
+  let render win s v =
+    Renderer.draw_rect win ~x:0 ~y:0 ~w:v.w ~h:v.h ~color:Ega.cyan ~fill:true;
     (* Render menu titles *)
-    List.iter (Title.render win s ~fonts) v.menus;
+    List.iter (Title.render win s ~font:v.font) v.menus;
     match v.open_menu with
     | None -> ()
     | Some i -> Title.render_msgbox win s (List.nth v.menus i)
 
+end
+
+module Animated = struct
+
+  type ('msg, 'state) menu =
+    | Global of ('msg, 'state) Global.t
+    | MsgBox of ('msg, 'state) MsgBox.t
+
+  type ('msg, 'state) t = {
+    menu: ('msg, 'state) menu;
+    last_msg: 'msg option;
+  }
+
+  let render win s v = match v.menu with
+    | Global g -> Global.render win s g
+    | MsgBox m -> MsgBox.render win s m
+
+  let handle_event s v (event:Event.t) = match v.menu with
+    | Global g ->
+        let g, action, event = Global.handle_event s g event
+    | MsgBox m ->
+        let m, action = MsgBox.handle_event s m event in
+        {v with menu=MsgBox m}, action
 end
 
 let modal_handle_event = fun (type a) ?(is_msgbox=false) s (menu: (a, 'state) MsgBox.t) event ->
