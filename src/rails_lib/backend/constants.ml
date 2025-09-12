@@ -120,6 +120,10 @@ let stone_bridge_fail_odds = 8  (* The extra odds of a stone bridge failing *)
 
 let newspaper_cost_ref_year = 1775
 
+module Menu = struct
+  let exit_time = 1000 (* ms *)
+end
+
 module Pani = struct
   let update_delta = 10
   let max_num_sprites = 50

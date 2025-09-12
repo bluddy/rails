@@ -5,6 +5,7 @@ open Containers
   2. The type of the data it reads into its checkbox and visibility lambdas
 *)
 
+module C = Constants
 module L = Utils.List
 module CharMap = Utils.CharMap
 open Utils.Infix
@@ -12,20 +13,20 @@ open Utils.Infix
 let menu_font = `Caps
 let max_width = 320
 
-  type 'a action =
-    | On of 'a
-    | Off of 'a
-    | Selected of 'a
-    | ClickInMsgBox (* a click but no action *)
-    | NoAction
-    [@@deriving show]
+type 'a action =
+  | On of 'a
+  | Off of 'a
+  | Selected of 'a
+  | ClickInMsgBox (* a click but no action *)
+  | NoAction
+  [@@deriving show]
 
-  let is_action = function
-    | NoAction | ClickInMsgBox -> false
-    | _ -> true
+let _is_action = function
+  | NoAction | ClickInMsgBox -> false
+  | _ -> true
 
     (* Get the active char for the menu item *)
-let get_active_char str =
+let _get_active_char str =
   String.fold (fun (amp, letter) c ->
     match c with
     | '&' -> (true, None)
@@ -152,7 +153,7 @@ module MsgBox = struct
     let font=Fonts.get_font font_idx fonts in
     let index =
       List.foldi (fun acc i entry ->
-        match get_active_char entry.name with
+        match _get_active_char entry.name with
         | Some c -> CharMap.add c i acc
         | None -> CharMap.add entry.name.[0] i acc)
       CharMap.empty
@@ -565,7 +566,7 @@ module Global = struct
     let font=Fonts.get_font font_idx fonts in
     let index = Hashtbl.create 10 in
     List.iteri (fun i title ->
-      match get_active_char title.Title.name with
+      match _get_active_char title.Title.name with
       | Some c -> Hashtbl.replace index c i
       | None -> ()) (* Hashtbl.replace index title.name.[0] i) *)
     menus;
@@ -740,7 +741,7 @@ module Animated = struct
 
   type ('msg, 'state) t = {
     menu: ('msg, 'state) menu;
-    last_msg: ('msg * int) option; (* end_time *)
+    last_msg: ('msg action * int) option; (* end_time *)
   }
 
   let render win s v = match v.menu with
@@ -748,14 +749,21 @@ module Animated = struct
     | MsgBox m -> MsgBox.render win s m
 
   let handle_event s v (event:Event.t) time = match v.menu with
+    (* Intercept actions and save for later *)
     | Global g ->
+        (* Can let events through *)
         let g', action, event = Global.handle_event s g event time in
-        if g' === g then v, action, event else
-        {v with menu=Global g'}, action, event
+        let menu = if g' === g then v.menu else Global g' in
+        let last_msg, event = if _is_action action then Some (action, time + C.Menu.exit_time), Event.NoEvent
+          else v.last_msg, event
+        in
+        ([%up {v with menu; last_msg}], event) [@warning "-23"]
     | MsgBox m ->
+        (* Always swallows up events *)
         let m', action = MsgBox.handle_event s m event time in
-        if m' === m then v, action, event else
-        {v with menu=MsgBox m'}, action, event
+        let menu = if m' === m then v.menu else MsgBox m' in
+        let last_msg = if _is_action action then Some (action, time + C.Menu.exit_time) else v.last_msg in
+        ([%up {v with menu; last_msg}], Event.NoEvent) [@warning "-23"]
 
   let handle_tick _s v time = match v.last_msg with
     | Some (msg, t) when time > t -> {v with last_msg=None}, msg
