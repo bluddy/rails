@@ -401,7 +401,7 @@ module MsgBox = struct
       in
       {v with entries; selected}, action
 
-    let handle_event s v (event:Event.t) _time =
+    let handle_event ?(do_close=true) s v (event:Event.t) _time =
       (* Returns new v and action *)
       let v, action = match event with
         | MouseMotion {x; y; _} -> handle_hover v ~x ~y, NoAction
@@ -410,15 +410,15 @@ module MsgBox = struct
         | _ -> v, NoAction
       in
       let v = match action with
-        | On _ | Off _ -> close v
+        | (On _ | Off _) when do_close -> close v
         | _ -> v
       in
       v, action
 
-    let _render_entry win s font v ~bg_color ~use_prefix ~selected ~x ~border_x ~y ~w =
+    let _render_entry win s font v ~select_color ~use_prefix ~selected ~x ~border_x ~y ~w =
       if selected && not @@ is_entry_static v then (
         let x = if use_prefix then x + 3 else x in
-        Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:bg_color
+        Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:select_color
       );
 
       let prefix = match v.kind with
@@ -439,7 +439,7 @@ module MsgBox = struct
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
       Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
 
-    let rec render win s v =
+    let rec render ?select_color win s v =
       (* draw background *)
       if v.draw_bg then (
         _render_box win v.x v.y v.w v.h
@@ -454,8 +454,9 @@ module MsgBox = struct
 
       (* draw entries and selection *)
       let selected = Option.get_or v.selected ~default:(-1) in
+      let select_color = Option.get_or ~default:v.select_color select_color in
       List.iteri (fun i entry ->
-        _render_entry win s v.font ~bg_color:v.select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
+        _render_entry win s v.font ~select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
           ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
         v.entries;
 
@@ -538,8 +539,8 @@ module Title = struct
     let msgbox = MsgBox.close v.msgbox in
     [%up {v with msgbox}]
 
-  let render_msgbox win s v =
-    MsgBox.render win s v.msgbox
+  let render_msgbox ?select_color win s v =
+    MsgBox.render ?select_color win s v.msgbox
 
   let do_open_menu s v =
     if _is_enabled s v then
@@ -700,7 +701,7 @@ module Global = struct
           in
           {v with menus; open_menu}, action
 
-  let handle_event s v (event:Event.t) _time =
+  let handle_event ?(do_close=true) s v (event:Event.t) _time =
     (* Returns new v and the action derived from the menu *)
     let v, action = match event with
       | MouseMotion {x; y; _} when is_open v ->
@@ -712,7 +713,7 @@ module Global = struct
       | _ -> v, NoAction
     in
     let v = match action with
-      | On _ | Off _ -> _close v
+      | (On _ | Off _) when do_close -> _close v
       | _ -> v
     in
     (* Cancel events we handled *)
@@ -722,13 +723,13 @@ module Global = struct
     in
     v, action, event
 
-  let render win s v =
+  let render ?select_color win s v =
     Renderer.draw_rect win ~x:0 ~y:0 ~w:v.w ~h:v.h ~color:Ega.cyan ~fill:true;
     (* Render menu titles *)
     List.iter (Title.render win s ~font:v.font) v.menus;
     match v.open_menu with
     | None -> ()
-    | Some i -> Title.render_msgbox win s (List.nth v.menus i)
+    | Some i -> Title.render_msgbox ?select_color win s (List.nth v.menus i)
 
 end
 
@@ -755,15 +756,17 @@ module Animated = struct
     | Global g -> Global.is_open g
     | MsgBox _ -> true
 
-  let render win s v = match v.menu with
-    | Global g -> Global.render win s g
-    | MsgBox m -> MsgBox.render win s m
+  let render win s v =
+    let select_color = if Option.is_some v.last_msg then Ega.white else Ega.bcyan in
+    match v.menu with
+    | Global g -> Global.render ~select_color win s g
+    | MsgBox m -> MsgBox.render ~select_color win s m
 
   let handle_event s v (event:Event.t) time = match v.menu with
     (* Intercept actions and save for later *)
     | Global g ->
         (* Can let events through *)
-        let g', action, event = Global.handle_event s g event time in
+        let g', action, event = Global.handle_event ~do_close:false s g event time in
         let menu = if g' === g then v.menu else Global g' in
         let last_msg, event = if _is_action action then Some (action, time + C.Menu.exit_time), Event.NoEvent
           else v.last_msg, event
@@ -771,7 +774,7 @@ module Animated = struct
         ([%up {v with menu; last_msg}], event) [@warning "-23"]
     | MsgBox m ->
         (* Always swallows up events *)
-        let m', action = MsgBox.handle_event s m event time in
+        let m', action = MsgBox.handle_event ~do_close:false s m event time in
         let menu = if m' === m then v.menu else MsgBox m' in
         let last_msg = if _is_action action then Some (action, time + C.Menu.exit_time) else v.last_msg in
         ([%up {v with menu; last_msg}], Event.NoEvent) [@warning "-23"]
