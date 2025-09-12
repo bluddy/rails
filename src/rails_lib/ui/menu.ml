@@ -16,7 +16,7 @@ let max_width = 320
 type 'a action =
   | On of 'a
   | Off of 'a
-  | Selected of 'a
+  | Selected of 'a (* special action that happens when we select e.g. for main menu *)
   | ClickInMsgBox (* a click but no action *)
   | NoAction
   [@@deriving show]
@@ -264,7 +264,7 @@ module MsgBox = struct
         [%up {v with kind=e}], action
     | Static _ -> v, NoAction
 
-  let rec close_entry v = match v.kind with
+  let rec _close_entry v = match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         let box = close box in
         {v with kind=Interactive {e with fire=MsgBox(false, box)}}
@@ -272,7 +272,7 @@ module MsgBox = struct
 
   and close v = match v.selected with
     | Some i ->
-        let entries = L.modify_at_idx i close_entry v.entries in
+        let entries = L.modify_at_idx i _close_entry v.entries in
         {v with entries; selected=None}
     | None -> v
 
@@ -311,7 +311,7 @@ module MsgBox = struct
               entries, ClickInMsgBox, v.selected
           | None, Some entry_idx ->
               (* clear selection *)
-              let entries = L.modify_at_idx entry_idx close_entry v.entries in
+              let entries = L.modify_at_idx entry_idx _close_entry v.entries in
               entries, action, None
           | Some (entry_idx, _), _ ->
               (* clicked an entry, handle and switch selection *)
@@ -328,21 +328,21 @@ module MsgBox = struct
     in
     [%up {v with entries; selected}], action
 
-    let rec handle_entry_key_deep s v ~key =
+    let rec _handle_entry_key_deep s v ~key =
       match v.kind with
       | Interactive ({fire=MsgBox(true, box);_} as e) ->
           (* open msgbox -> recurse *)
-          let box, action = handle_key s box ~key in
+          let box, action = _handle_key s box ~key in
           {v with kind=Interactive {e with fire=MsgBox(true, box)}}, action
       | _ ->
           v, NoAction
 
-    and handle_key s v ~key =
+    and _handle_key s v ~key =
       let entries, action =
         match v.selected with
         | Some idx ->
           (* deep search first *)
-          L.modify_make_at_idx idx (handle_entry_key_deep s ~key) v.entries
+          L.modify_make_at_idx idx (_handle_entry_key_deep s ~key) v.entries
           |> Utils.snd_option
         | None ->
             (* Nothing selected, we're done *)
@@ -351,7 +351,7 @@ module MsgBox = struct
       let entries, action, selected =
         let handle_selection_change old_idx new_idx =
           let entries = match old_idx with
-            | Some old_idx -> L.modify_at_idx old_idx close_entry entries
+            | Some old_idx -> L.modify_at_idx old_idx _close_entry entries
             | None -> entries
           in
           let select_action = List.nth entries new_idx |> get_entry_selection_action in
@@ -387,7 +387,7 @@ module MsgBox = struct
             | None, (Some idx as sidx), Up when idx > 0 ->
                 handle_selection_change sidx (idx - 1)
             | None, Some idx, Escape when is_entry_open_msgbox (List.nth entries idx) ->
-                let entries = L.modify_at_idx idx close_entry entries in
+                let entries = L.modify_at_idx idx _close_entry entries in
                 entries, NoAction, Some idx
             | None, _, _ when Event.is_letter key ->
                 (* nothing matches but still a letter: don't leak back to previous menu *)
@@ -406,7 +406,7 @@ module MsgBox = struct
       let v, action = match event with
         | MouseMotion {x; y; _} -> handle_hover v ~x ~y, NoAction
         | MouseButton {down=true; x; y; _} -> handle_click s v ~x ~y
-        | Key {down=true; key; _ } -> handle_key s v ~key
+        | Key {down=true; key; _ } -> _handle_key s v ~key
         | _ -> v, NoAction
       in
       let v = match action with
@@ -415,7 +415,7 @@ module MsgBox = struct
       in
       v, action
 
-    let render_entry win s font v ~bg_color ~use_prefix ~selected ~x ~border_x ~y ~w =
+    let _render_entry win s font v ~bg_color ~use_prefix ~selected ~x ~border_x ~y ~w =
       if selected && not @@ is_entry_static v then (
         let x = if use_prefix then x + 3 else x in
         Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:bg_color
@@ -434,7 +434,7 @@ module MsgBox = struct
       let name = if use_prefix then prefix^v.name else v.name in
       Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
 
-    let render_box ?(color=Ega.gray) win x y w h =
+    let _render_box ?(color=Ega.gray) win x y w h =
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
       Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
@@ -442,7 +442,7 @@ module MsgBox = struct
     let rec render win s v =
       (* draw background *)
       if v.draw_bg then (
-        render_box win v.x v.y v.w v.h
+        _render_box win v.x v.y v.w v.h
       );
 
       (* draw heading *)
@@ -455,7 +455,7 @@ module MsgBox = struct
       (* draw entries and selection *)
       let selected = Option.get_or v.selected ~default:(-1) in
       List.iteri (fun i entry ->
-        render_entry win s v.font ~bg_color:v.select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
+        _render_entry win s v.font ~bg_color:v.select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
           ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
         v.entries;
 
@@ -525,8 +525,8 @@ module Title = struct
     in
     [%up {v with msgbox}], action
 
-  let handle_key s v ~key =
-    let msgbox, action = MsgBox.handle_key s v.msgbox ~key in
+  let _handle_key s v ~key =
+    let msgbox, action = MsgBox._handle_key s v.msgbox ~key in
     [%up {v with msgbox}], action
 
     (* Draw titles only *)
@@ -600,7 +600,7 @@ module Global = struct
     in
     {v with menus; open_menu=None}
 
-  let handle_mouse_move s v ~x ~y =
+  let _handle_mouse_move s v ~x ~y =
     match v.open_menu with
     | None -> v
     | Some mopen ->
@@ -609,7 +609,7 @@ module Global = struct
         in
         [%up {v with menus}]
 
-  let handle_mouse_click s v ~x ~y = 
+  let _handle_mouse_click s v ~x ~y = 
     (* Check for closed menu *)
       if _is_not_clicked v ~x ~y && is_closed v then
         v, NoAction
@@ -658,7 +658,7 @@ module Global = struct
             v, NoAction
       )
 
-  let handle_key s v ~key =
+  let _handle_key s v ~key =
       let get_char () =
         if Event.is_letter key then
           Hashtbl.find_opt v.index (Event.char_of_key ~shift:true key)
@@ -675,7 +675,7 @@ module Global = struct
       | (Some open_menu as some_menu) ->
           (* Open menu -> send it on *)
           let menus, action =
-            L.modify_make_at_idx open_menu (Title.handle_key s ~key) v.menus
+            L.modify_make_at_idx open_menu (Title._handle_key s ~key) v.menus
             |> Utils.snd_option
           in
           let menus, open_menu, action =
@@ -704,11 +704,11 @@ module Global = struct
     (* Returns new v and the action derived from the menu *)
     let v, action = match event with
       | MouseMotion {x; y; _} when is_open v ->
-          handle_mouse_move s v ~x ~y, NoAction
+          _handle_mouse_move s v ~x ~y, NoAction
       | MouseButton {down=true; x; y; _} ->
-          handle_mouse_click s v ~x ~y
+          _handle_mouse_click s v ~x ~y
       | Key {down=true; key; _ } ->
-          handle_key s v ~key
+          _handle_key s v ~key
       | _ -> v, NoAction
     in
     let v = match action with
@@ -733,7 +733,9 @@ module Global = struct
 end
 
 module Animated = struct
-  (* Caches the last message to allow animation of menu *)
+  (* Caches the last message to allow animation of menu, both msgbox and global
+     These need to be taken care of in handle_tick
+   *)
 
   type ('msg, 'state) menu =
     | Global of ('msg, 'state) Global.t
@@ -743,6 +745,15 @@ module Animated = struct
     menu: ('msg, 'state) menu;
     last_msg: ('msg action * int) option; (* end_time *)
   }
+
+  let make_global fonts ?font_idx menus ~w ~h = Global.make fonts ?font_idx menus ~w ~h
+
+  let make_msgbox ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries =
+    MsgBox.make ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries
+
+  let is_open v = match v.menu with
+    | Global g -> Global.is_open g
+    | MsgBox _ -> true
 
   let render win s v = match v.menu with
     | Global g -> Global.render win s g
