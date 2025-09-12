@@ -203,7 +203,7 @@ let main_menu fonts ~h ~w region =
       make ~fonts ~x:252 ~y:1 "Ac&tions" actions_menu; (* was x:242 *)
     ]
   in
-  Menu.Global.make ~h ~w fonts titles
+  Menu.Animated.make_global ~h ~w fonts titles
 
 let default ?options ?view win fonts region =
   let screen = Utils.{
