@@ -12,7 +12,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let sp = Printf.sprintf
 
-let make_menu (b:Backend.t) cities region fonts =
+let make_menu (b:Backend.t) cities region fonts (dims:Main_ui_d.dims) =
   let open Menu in
   let open MsgBox in
   let player_idx = C.player in
@@ -98,11 +98,11 @@ let make_menu (b:Backend.t) cities region fonts =
       make ~test_enabled:owns_some_company ~fonts ~x:220 ~y:1 "&Operate RR" operate_rr_menu;
     ]
   in
-  Menu.Global.make ~menu_h:C.menu_h titles
+  Menu.Global.make fonts ~h:dims.screen.h ~w:dims.screen.w titles
 
 let make (s:State.t) =
   let b = s.backend in
-  let menu = make_menu b b.cities (B.get_region b) s.fonts in
+  let menu = make_menu b b.cities (B.get_region b) s.fonts s.ui.dims in
   {
     menu;
     modal = Normal;
@@ -168,7 +168,7 @@ let render win (s:State.t) v =
   in
   Iter.fold (fun y player_idx -> render_opponent player_idx s.textures.opponents s.backend y) y @@ B.players_and_ai s.backend |> ignore;
 
-  Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:C.menu_h;
+  Menu.Global.render win s v.menu;
 
   match v.modal with
   | Normal -> ()

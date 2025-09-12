@@ -13,9 +13,7 @@ open Train_route_orders
 
 let nobaction = B.Action.NoAction
 
-let menu_h = 8
-
-let make_menu fonts train_idx ~engine_make ~engines ~year =
+let make_menu (dims:Main_ui_d.dims) fonts train_idx ~engine_make ~engines ~year =
   let open Menu in
   let engine_menu =
     let open MsgBox in
@@ -61,7 +59,7 @@ let make_menu fonts train_idx ~engine_make ~engines ~year =
       make ~fonts ~x:160 ~y:1 "&Route map" route_map_menu;
     ]
   in
-  Menu.Global.make ~menu_h titles
+  Menu.Global.make ~w:dims.screen.w ~h:dims.screen.h fonts titles
 
 let open_car_menu (s:State.t) stop =
   let open Menu.MsgBox in
@@ -75,7 +73,7 @@ let open_car_menu (s:State.t) stop =
 let make (s:State.t) train_idx =
   let player_idx = C.player in
   let train = Backend.get_train train_idx player_idx s.backend in
-  let menu = make_menu s.fonts train_idx ~engines:s.backend.engines
+  let menu = make_menu s.ui.dims s.fonts train_idx ~engines:s.backend.engines
     ~year:(B.get_year s.backend) ~engine_make:train.engine.make in
   {
     train=train_idx;
@@ -276,7 +274,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     end;
 
     (* Menu bar - last so we draw over all else *)
-    Menu.Global.render win s s.fonts v.menu ~w:s.ui.dims.screen.w ~h:8;
+    Menu.Global.render win s v.menu;
     ()
 
 let _find_clicked_stop (train:ro Train.t) click_y =
@@ -309,7 +307,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     begin match Choose_engine.handle_event event s.backend.engines ~year:(B.get_year s.backend) with
     | Some engine ->
       let menu =
-        make_menu s.fonts v.train ~engines:s.backend.engines ~year:(B.get_year s.backend) ~engine_make:engine.make
+        make_menu s.ui.dims s.fonts v.train ~engines:s.backend.engines ~year:(B.get_year s.backend) ~engine_make:engine.make
       in
       let baction =
         B.Action.TrainReplaceEngine {train=v.train; engine=engine.make; player_idx}

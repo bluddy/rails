@@ -203,7 +203,7 @@ let main_menu fonts ~h ~w region =
       make ~fonts ~x:252 ~y:1 "Ac&tions" actions_menu; (* was x:242 *)
     ]
   in
-  Menu.Global.make ~h ~w s.fonts titles
+  Menu.Global.make ~h ~w fonts titles
 
 let default ?options ?view win fonts region =
   let screen = Utils.{
@@ -1307,13 +1307,18 @@ let handle_msgs (s:State.t) v ui_msgs =
 
 
   (* Mostly animations. *)
-let handle_tick s v time is_cycle = match v.mode with
+let handle_tick s v time is_cycle =
+  let nobaction = [] in
+  let default = v, nobaction in
+  match v.mode with
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
-      if state === state2 then v else {v with mode=BuildTrain(`AddCars state2)}
+      if state === state2 then default
+      else {v with mode=BuildTrain(`AddCars state2)}, nobaction
   | TrainReport state ->
       let state2 = Train_report.handle_tick state time in
-      if state === state2 then v else {v with mode=TrainReport state2}
+      if state === state2 then default
+      else {v with mode=TrainReport state2}, nobaction
   | Normal ->
       let view = Mapview.handle_tick s v.view time is_cycle in
       let decr_train_msgs () =
@@ -1324,20 +1329,23 @@ let handle_tick s v time is_cycle = match v.mode with
         | _::msgs -> msgs
         | [] -> []
         in
-        [%up {v with view; train_arrival_msgs}]
+        [%up {v with view; train_arrival_msgs}], nobaction
       in
       decr_train_msgs ()
   | Animation state ->
       let state2 = Pani_render.handle_tick time state in
-      if state2 === state then v else {v with mode=Animation state2}
+      if state2 === state then default
+      else {v with mode=Animation state2}, nobaction
 
   | NewGoodDeliveryPickup d ->
       let d2 = New_delivery_pickup.handle_tick s time d in
-      if d2 === d then v else {v with mode=NewGoodDeliveryPickup d}
+      if d2 === d then default
+      else {v with mode=NewGoodDeliveryPickup d}, nobaction
 
   | History state ->
      let state2 = History.handle_tick s time state in
-     if state2 === state then v else {v with mode=History state2}
+     if state2 === state then default
+     else {v with mode=History state2}, nobaction
 
   | StationUpgrade ({transition=None; old_station; loc} as state) ->
     (* Iniitialize transition *)
@@ -1346,22 +1354,21 @@ let handle_tick s v time is_cycle = match v.mode with
     let render_fn win = Station_report.render win s loc ~show_demand:false in
     let transition = Transition.make s.win s.random ~wait_time:0 ~old_render_fn ~render_fn |> Option.some in
     let mode = StationUpgrade {state with transition} in
-    {v with mode}
+    {v with mode}, nobaction
 
   | StationUpgrade ({transition=Some t; _} as state) ->
     let status, t2 = Transition.handle_tick time t in
     begin match status with
-    | `Stay when t2 === t -> v
-    | `Stay -> {v with mode=StationUpgrade {state with transition = Some t2}}
-    | `Exit -> v (* we don't allow exit by ticks here *)
+    | `Stay when t2 =!= t -> {v with mode=StationUpgrade {state with transition = Some t2}}, nobaction
+    | `Stay | `Exit -> default (* we don't allow exit by ticks here *)
     end
 
   | FiredAnimation state ->
     let state2 = Fired_animation.handle_tick time state in
-    if state2 === state then v
-    else {v with mode=FiredAnimation state2}
+    if state2 === state then default
+    else {v with mode=FiredAnimation state2}, nobaction
 
-  | _ -> v, B.Action.NoAction
+  | _ -> default
 
 let draw_train_roster win (s:State.t) v =
   train_roster_iter s v
@@ -1500,7 +1507,7 @@ let render_main win (s:State.t) v =
   draw_priority ();
 
   (* Menu bar *)
-  Menu.Global.render win s s.fonts v.menu ~w:dims.screen.w ~h:dims.menu.h;
+  Menu.Global.render win s v.menu;
   ()
 
 let should_render_mouse = function
