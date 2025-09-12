@@ -434,7 +434,7 @@ module MsgBox = struct
       let name = if use_prefix then prefix^v.name else v.name in
       Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
 
-    let _render_box ?(color=Ega.gray) win x y w h =
+    let render_box ?(color=Ega.gray) win x y w h =
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
       Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
@@ -442,7 +442,7 @@ module MsgBox = struct
     let rec render ?select_color win s v =
       (* draw background *)
       if v.draw_bg then (
-        _render_box win v.x v.y v.w v.h
+        render_box win v.x v.y v.w v.h
       );
 
       (* draw heading *)
@@ -747,10 +747,13 @@ module Animated = struct
     last_msg: ('msg action * int) option; (* end_time *)
   }
 
-  let make_global fonts ?font_idx menus ~w ~h = Global.make fonts ?font_idx menus ~w ~h
+  let make_global fonts ?font_idx menus ~w ~h =
+    let menu = Global.make fonts ?font_idx menus ~w ~h in
+    {menu=Global menu; last_msg=None}
 
   let make_msgbox ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries =
-    MsgBox.make ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries
+    let menu = MsgBox.make ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries in
+    {menu=MsgBox menu; last_msg=None}
 
   let is_open v = match v.menu with
     | Global g -> Global.is_open g
