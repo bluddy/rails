@@ -4,7 +4,7 @@ open Tsdl
 module R = Renderer
 
 type 'a t = {
-  handle_event: 'a -> Event.t -> 'a * bool;
+  handle_event: 'a -> Event.t -> int -> 'a * bool;
   handle_tick: 'a -> int -> 'a;
   render: 'a -> unit;
 }
@@ -50,7 +50,8 @@ let main init_fn =
           ) else
             data
         in
-        let data, quit = v.handle_event data event in
+        let time = Sdl.get_ticks () |> Int32.to_int in
+        let data, quit = v.handle_event data event time in
         if quit then data, `Quit
         else
           event_loop data

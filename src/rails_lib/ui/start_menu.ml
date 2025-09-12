@@ -116,12 +116,12 @@ let render win v (s:State.t) =
   end;
   ()
 
-let handle_event (s:State.t) v (event:Event.t) =
+let handle_event (s:State.t) v (event:Event.t) time =
   let def = `Stay, v in
   let fonts = s.fonts in
   match v.mode with
   | Action menu ->
-    let menu2, action = Menu.MsgBox.handle_event s menu event in
+    let menu2, action = Menu.MsgBox.handle_event s menu event time in
     begin match action with
     | Menu.On(`NewGame) -> `Stay, {v with mode=Region(region_menu fonts s)}
     | Menu.On(`LoadGame) -> `Stay, {v with mode=LoadGame(Load_game.make s)}
@@ -130,7 +130,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     end
 
   | LoadGame state ->
-      begin match Load_game.handle_event event s state with
+      begin match Load_game.handle_event s state event time with
       | `LoadGame s, _ -> `LoadGame s, v
       | `Exit, _ -> `Stay, default s
       | `Stay, state2 when state2 === state -> `Stay, v
@@ -138,7 +138,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
 
   | Region menu ->
-    let menu2, action = Menu.MsgBox.handle_event s menu event in
+    let menu2, action = Menu.MsgBox.handle_event s menu event time in
     begin match action with
     | Menu.On(region) ->
         `Stay, {v with mode=Difficulty(difficulty_menu fonts s); region=Some region}
@@ -149,7 +149,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     end
 
   | Difficulty menu ->
-    let menu2, action = Menu.MsgBox.handle_event s menu event in
+    let menu2, action = Menu.MsgBox.handle_event s menu event time in
     begin match action with
     | Menu.On(difficulty) ->
         let reality = B_options.reality_levels_default in
@@ -162,13 +162,13 @@ let handle_event (s:State.t) v (event:Event.t) =
     end
 
   | Reality state ->
-    let menu2, action = Menu.MsgBox.handle_event s state.menu event in
+    let menu2, action = Menu.MsgBox.handle_event s state.menu event time in
     begin match action with
     | Menu.On `Continue ->
         let region = v.region |> Option.get_exn_or "missing region" in
         let difficulty = v.difficulty |> Option.get_exn_or "missing difficulty" in
         `Choose (region, difficulty, state.reality), v
-        
+
     | Menu.On(#B_options.reality_level as reality_lvl) ->
         let reality = B_options.RealityLevels.toggle reality_lvl state.reality in
         let menu = reality_menu fonts reality s in

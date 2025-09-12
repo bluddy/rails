@@ -75,7 +75,7 @@ let handle_tick time v =
   v
   
 let standalone win ~filename =
-  let handle_event v _event = v, false in
+  let handle_event v _event _time = v, false in
   let v = create filename in
   let funcs = Mainloop.{
     handle_tick=(fun v time -> handle_tick time v);
@@ -88,7 +88,7 @@ let standalone win ~filename =
 let debugger ?(dump=false) win ~filename =
   Pani_interp.set_debug true;
   Pani_sprite.set_debug true;
-  let handle_event v event = match event with
+  let handle_event v event _time = match event with
     | Event.Key {key=Event.N; down=true; _} ->
         let _ = Pani_interp.debugger_step v.interp in
         v, false

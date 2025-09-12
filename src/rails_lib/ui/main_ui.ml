@@ -460,7 +460,7 @@ let check_add_pause_msg old_mode old_menu v =
    | `Unpause, _ | _, `Unpause -> [B.Action.Unpause]
    | _ -> []
 
-let handle_event (s:State.t) v (event:Event.t) =
+let handle_event (s:State.t) v (event:Event.t) time =
   (* Handle most stuff for regular menus and msgboxes
      process_fn: main processing on choice
      build_fn: rebuild: new state
@@ -471,7 +471,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           (modal: (State.t, b, c) modalmenu)
           (build_fn:(State.t, b, c) modalmenu -> State.t mode)
           (process_fn:(State.t, b, c) modalmenu -> b -> State.t t * B.Action.t) ->
-      let menu, action = Menu.MsgBox.handle_event s modal.menu event in
+      let menu, action = Menu.MsgBox.handle_event s modal.menu event time in
       let exit_mode () = next_mode v, B.Action.NoAction in
       begin match action with
       | Menu.On(None) -> exit_mode ()
@@ -496,7 +496,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     match v.mode with
     | Normal ->
       (* Main gameplay view *)
-      let menu, menu_action, event = Menu.Global.handle_event s v.menu event in
+      let menu, menu_action, event = Menu.Global.handle_event s v.menu event time in
       let v = if menu =!= v.menu then {v with menu} else v in
       let view = match menu_action with
         | On(`Survey)  -> Mapview.set_survey true v.view 
@@ -708,7 +708,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         (fun _ () -> v, nobaction)
 
     | Newspaper news ->
-        let v = match Newspaper.handle_event s news.state event with
+        let v = match Newspaper.handle_event s news.state event time with
           | `Exit -> next_mode v
           | _ -> v
         in
@@ -786,7 +786,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with mode=Normal}, StationSetSignal{x; y; dir; cmd})
 
     | BuildTrain state ->
-        let state2, action = Build_train.handle_event s state event in
+        let state2, action = Build_train.handle_event s state event time in
         let v = 
           if state2 =!= state then {v with mode=BuildTrain(state2)} else v
         in
@@ -814,7 +814,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           {v with mode=Normal}, B.Action.BuildIndustry{player_idx; x; y; tile})
 
     | TrainReport state ->
-        let exit_state, state2, action = Train_report.handle_event s state event in
+        let exit_state, state2, action = Train_report.handle_event s state event time in
         let v =
           if exit_state then next_mode v
           else if state =!= state2 then {v with mode=TrainReport state2}
@@ -823,7 +823,7 @@ let handle_event (s:State.t) v (event:Event.t) =
         v, action
 
     | Stock_broker state ->
-       let exit_state, state2, action = Stock_broker.handle_event s state event in
+       let exit_state, state2, action = Stock_broker.handle_event s state event time in
         let v =
           if Utils.is_exit exit_state then {v with mode=Normal}
           else if state =!= state2 then {v with mode=Stock_broker state2}
@@ -909,7 +909,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       end
 
     | EndGame state ->
-      begin match Endgame.handle_event event s state with
+      begin match Endgame.handle_event s state event time with
       | `Exit, _ -> {v with mode=Normal}, nobaction
       | `QuitGame, _ -> v, B.Action.Quit_game
       | `Stay, state2 when state2 === state -> v, nobaction
@@ -923,7 +923,7 @@ let handle_event (s:State.t) v (event:Event.t) =
           v, nobaction
 
     | SaveGame state ->
-      begin match Save_game.handle_event event s state with
+      begin match Save_game.handle_event s state event time with
       | `Stay, state2 when state2 === state -> v, nobaction
       | `Stay, state2 -> {v with mode=SaveGame state2}, nobaction
       | `Exit, _ -> {v with mode=Normal}, nobaction

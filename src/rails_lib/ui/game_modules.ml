@@ -111,7 +111,7 @@ let handle_tick win (s:State.t) time =
   in
   state
 
-let handle_event win (s:State.t) (event:Event.t) =
+let handle_event win (s:State.t) (event:Event.t) time =
   (* Handle an input event, starting with the UI.
      (Store the win in closure so we can create the full game state when needed 
    *)
@@ -125,7 +125,7 @@ let handle_event win (s:State.t) (event:Event.t) =
         end
 
     | Menu state ->
-        begin match Start_menu.handle_event s state event with
+        begin match Start_menu.handle_event s state event time with
         | `Stay, state2 when state2 === state -> s, false
         | `Stay, state2 ->
             {s with mode=Menu state2}, false
@@ -146,7 +146,7 @@ let handle_event win (s:State.t) (event:Event.t) =
 
     | Game ->
         (* Main map view mode *)
-        let ui, backend_msgs = Main_ui.handle_event s s.ui event in
+        let ui, backend_msgs = Main_ui.handle_event s s.ui event time in
         let backend = Backend.Action.handle_msgs s.backend backend_msgs in
         (* The backend buffers further msgs to ui and sends on next tick *)
         [%upf s.ui <- ui];

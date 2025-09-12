@@ -103,9 +103,9 @@ let render win (s:State.t) v =
   | Simple x -> render_simple win s x
   | Fancy x -> render_fancy win s x
 
-let handle_event s v event =
+let handle_event s v event time =
   let msgbox = match v with Fancy x -> x.msgbox | Simple x -> x.msgbox in
-  begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event with
+  begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event time with
   | `Exit -> `Exit
   | _ -> `Stay
   end

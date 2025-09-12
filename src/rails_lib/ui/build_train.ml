@@ -43,9 +43,9 @@ module AddCars = struct
 
   let nobaction = Backend.Action.NoAction
 
-  let handle_event (s:State.t) v event =
+  let handle_event (s:State.t) v event time =
     if v.show_menu then
-      let menu, action = Menu.MsgBox.handle_event s v.menu event in
+      let menu, action = Menu.MsgBox.handle_event s v.menu event time in
       let anim, show_menu, train_done =
         match action with
         | Menu.On(`AddCar good) ->
@@ -100,7 +100,7 @@ end
 
 let nobaction = Backend.Action.NoAction
 
-let handle_event (s:State.t) v (event:Event.t) = match v with
+let handle_event (s:State.t) v (event:Event.t) time = match v with
   | `ChooseEngine ->
       let engine_opt =
         Choose_engine.handle_event event s.backend.engines ~year:(B.get_year s.backend)
@@ -113,7 +113,7 @@ let handle_event (s:State.t) v (event:Event.t) = match v with
           `ChooseEngine, nobaction
       end
   | `AddCars state ->
-      let state2, action = AddCars.handle_event s state event in
+      let state2, action = AddCars.handle_event s state event time in
       if state =!= state2 then
         `AddCars state2, action
       else

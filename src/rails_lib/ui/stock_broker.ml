@@ -177,23 +177,23 @@ let render win (s:State.t) v =
   | Newspaper newspaper -> Newspaper.render win s newspaper
   | RR_build state -> Rr_command.render win s.fonts state
 
-let handle_modal_event (s:State.t) modal (event:Event.t) =
+let handle_modal_event (s:State.t) modal (event:Event.t) time =
   let player_idx = C.player in
   let nobaction = B.Action.NoAction in
   match modal with
   | Normal -> `Exit, Normal, nobaction
   | MsgBox msgbox -> 
-     begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event with
+     begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event time with
      | `Stay _ -> `Stay, modal, nobaction
      | _ -> `Exit, Normal, nobaction
      end
   | Newspaper newspaper ->
-     begin match Newspaper.handle_event s newspaper event with
+     begin match Newspaper.handle_event s newspaper event time with
      | `Stay -> `Stay, modal, nobaction
      | `Exit -> `Exit, Normal, nobaction
      end
   | Confirm_menu menu ->
-     begin match Menu.modal_handle_event ~is_msgbox:false s menu event with
+     begin match Menu.modal_handle_event ~is_msgbox:false s menu event time with
      | `Stay modal -> `Stay, Confirm_menu modal, nobaction
      | `Activate(`BuyStock stock) -> `Stay, Normal, B.Action.BuyStock{player_idx; stock}
      | `Activate(`Declare_bankruptcy) -> `Stay, Normal, B.Action.Declare_bankruptcy{player_idx}
@@ -211,14 +211,14 @@ let handle_modal_event (s:State.t) modal (event:Event.t) =
       | state2, _ -> `Stay, RR_build state2, nobaction
       end
 
-let handle_event (s:State.t) v (event:Event.t) =
+let handle_event (s:State.t) v (event:Event.t) time =
   let basic_msgbox text = MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text) in
   let nobaction = B.Action.NoAction in
   let b = s.backend in
   let player_idx = C.player in
   match v.modal with
   | Normal ->
-    let menu, menu_action, event = Menu.Global.handle_event s v.menu event in
+    let menu, menu_action, event = Menu.Global.handle_event s v.menu event time in
     let exit, v, bk_action = match menu_action with
     | Menu.On(`SellBond) -> `Stay, v, B.Action.SellBond {player_idx}
     | Menu.On(`RepayBond) -> `Stay, v, B.Action.RepayBond {player_idx}
@@ -304,7 +304,7 @@ let handle_event (s:State.t) v (event:Event.t) =
     exit, v, bk_action
 
   | modal ->
-    let exit, modal, bk_action = handle_modal_event s modal event in
+    let exit, modal, bk_action = handle_modal_event s modal event time in
     let v = [%up {v with modal}] in
     exit, v, bk_action
 

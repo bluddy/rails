@@ -287,7 +287,7 @@ let _find_clicked_stop (train:ro Train.t) click_y =
     None
     train.route
 
-let handle_event (s:State.t) v (event:Event.t) =
+let handle_event (s:State.t) v (event:Event.t) time =
   let player_idx = C.player in
   match v.screen, v.car_menu with
   | TrainRouteOrders state, _ ->
@@ -319,7 +319,7 @@ let handle_event (s:State.t) v (event:Event.t) =
 
   | Normal, (Some(car_menu, stop) as current) ->
       (* Car menu selection open *)
-      let car_menu2, action = Menu.MsgBox.handle_event s car_menu event in
+      let car_menu2, action = Menu.MsgBox.handle_event s car_menu event time in
       let car_menu, b_action = match action with
         | Menu.On(`Caboose) ->
             None, Backend.Action.RemoveAllStopCars({train=v.train; stop; player_idx})
@@ -337,7 +337,7 @@ let handle_event (s:State.t) v (event:Event.t) =
       false, v, b_action
 
   | Normal, _ ->
-      let menu, action, event = Menu.Global.handle_event s v.menu event in
+      let menu, action, event = Menu.Global.handle_event s v.menu event time in
       let train = Backend.get_train v.train player_idx s.backend in
       let line_h = 10 in
       let xstart = 160 in

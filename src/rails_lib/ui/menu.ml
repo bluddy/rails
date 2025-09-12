@@ -400,7 +400,7 @@ module MsgBox = struct
       in
       {v with entries; selected}, action
 
-    let handle_event s v (event:Event.t) =
+    let handle_event s v (event:Event.t) _time =
       (* Returns new v and action *)
       let v, action = match event with
         | MouseMotion {x; y; _} -> handle_hover v ~x ~y, NoAction
@@ -699,7 +699,7 @@ module Global = struct
           in
           {v with menus; open_menu}, action
 
-  let handle_event s v (event:Event.t) =
+  let handle_event s v (event:Event.t) _time =
     (* Returns new v and the action derived from the menu *)
     let v, action = match event with
       | MouseMotion {x; y; _} when is_open v ->
@@ -731,14 +731,6 @@ module Global = struct
 
 end
 
-module type MenuLike = sig
-  type ('msg, 'state) t
-
-  val handle_event: 'state -> ('msg, 'state) t -> Event.t -> ('msg, 'state) t * 'msg action * Event.t
-  val render:  Renderer.window -> 'state -> ('msg, 'state) t
-  
-end
-
 module Animated = struct
   (* Caches the last message to allow animation of menu *)
 
@@ -755,13 +747,13 @@ module Animated = struct
     | Global g -> Global.render win s g
     | MsgBox m -> MsgBox.render win s m
 
-  let handle_event s v (event:Event.t) = match v.menu with
+  let handle_event s v (event:Event.t) time = match v.menu with
     | Global g ->
-        let g', action, event = Global.handle_event s g event in
+        let g', action, event = Global.handle_event s g event time in
         if g' === g then v, action, event else
         {v with menu=Global g'}, action, event
     | MsgBox m ->
-        let m', action = MsgBox.handle_event s m event in
+        let m', action = MsgBox.handle_event s m event time in
         if m' === m then v, action, event else
         {v with menu=MsgBox m'}, action, event
 
@@ -771,9 +763,9 @@ module Animated = struct
 
 end
 
-let modal_handle_event = fun (type a) ?(is_msgbox=false) s (menu: (a, 'state) MsgBox.t) event ->
+let modal_handle_event = fun (type a) ?(is_msgbox=false) s (menu: (a, 'state) MsgBox.t) event time ->
   (* Handle all events for modal msgboxes/menus *)
-  let menu, action = MsgBox.handle_event s menu event in
+  let menu, action = MsgBox.handle_event s menu event time in
   match action with
   | NoAction when Event.pressed_esc event -> `Exit
   | NoAction when is_msgbox && Event.key_modal_dismiss event -> `Exit

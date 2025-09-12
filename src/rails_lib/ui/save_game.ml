@@ -53,9 +53,9 @@ let _save_game (s:State.t) slot =
   ignore(IO.File.write game_name s);
   print_endline @@ "Saved game to "^game_name^"."
 
-let handle_event event (s:State.t) v =
+let handle_event (s:State.t) v event time =
   if Event.pressed_esc event then `Exit, v else
-  match Menu.MsgBox.handle_event s v.menu event with
+  match Menu.MsgBox.handle_event s v.menu event time with
   | menu2, Menu.On(entry) -> (* load entry *)
       let v = {v with menu=menu2} in
       let slot = entry.slot in

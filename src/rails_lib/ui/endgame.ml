@@ -39,7 +39,7 @@ let render win v (s:State.t) = match v.mode with
   | HallOfFame hall -> Hall_of_fame.render win s hall
   | Advert {render_fn} -> render_fn win s
 
-let handle_event event (s:State.t) v = match v.mode with
+let handle_event (s:State.t) v event time = match v.mode with
   | JobOffer {menu=None; _} when Event.key_modal_dismiss event ->
       let fired = is_fired v.kind in
       let render_fn =
@@ -58,7 +58,7 @@ let handle_event event (s:State.t) v = match v.mode with
         `Stay, {v with mode=JobOffer{state; menu=Some menu}}
 
   | JobOffer {menu=Some menu; state} ->
-      let menu2, action = Menu.MsgBox.handle_event s menu event in
+      let menu2, action = Menu.MsgBox.handle_event s menu event time in
       begin match action with
       | Menu.On(`DontQuit) ->
           `Exit, v (* exit menu but stay in game *)
