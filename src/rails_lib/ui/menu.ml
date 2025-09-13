@@ -10,6 +10,9 @@ module L = Utils.List
 module CharMap = Utils.CharMap
 open Utils.Infix
 
+let src = Logs.Src.create "menu" ~doc:"Menu"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 let menu_font = `Caps
 let max_width = 320
 
@@ -17,12 +20,12 @@ type 'a action =
   | On of 'a
   | Off of 'a
   | Selected of 'a (* special action that happens when we select e.g. for main menu *)
-  | ClickInMsgBox (* a click but no action *)
+  | HandledEvent (* handled event somewhere, but no action results *)
   | NoAction
   [@@deriving show]
 
 let _is_action = function
-  | NoAction | ClickInMsgBox -> false
+  | NoAction | HandledEvent -> false
   | _ -> true
 
     (* Get the active char for the menu item *)
@@ -281,14 +284,14 @@ module MsgBox = struct
     match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         (* msgbox is open so recurse *)
-        let box', action = handle_click s box ~x ~y in
+        let box', action = _handle_click s box ~x ~y in
         if box' === box then v, action
         else
           {v with kind=Interactive {e with fire=MsgBox(true, box')}}, action
     | _ ->
         v, NoAction
 
-  and handle_click s (v:('a, 'b) t) ~x ~y =
+  and _handle_click s (v:('a, 'b) t) ~x ~y =
     let entries, action =
       match v.selected with
       | Some idx ->
@@ -308,7 +311,7 @@ module MsgBox = struct
           begin match find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
           | None, None ->
               (* clicked in msgbox but not an option *)
-              entries, ClickInMsgBox, v.selected
+              entries, HandledEvent, v.selected
           | None, Some entry_idx ->
               (* clear selection *)
               let entries = L.modify_at_idx entry_idx _close_entry v.entries in
@@ -331,22 +334,30 @@ module MsgBox = struct
     let rec _handle_entry_key_deep s v ~key =
       match v.kind with
       | Interactive ({fire=MsgBox(true, box);_} as e) ->
+          Log.debug (fun f -> f "recurse into msgbox");
           (* open msgbox -> recurse *)
-          let box, action = _handle_key s box ~key in
-          {v with kind=Interactive {e with fire=MsgBox(true, box)}}, action
+          let box', action = _handle_key s box ~key in
+          let kind =
+            if box' === box then v.kind
+            else
+              Interactive {e with fire=MsgBox(true, box')}
+          in
+          [%up {v with kind}], action
       | _ ->
           v, NoAction
 
     and _handle_key s v ~key =
+      Log.debug (fun f -> f "handle key");
+      let entries = v.entries in
       let entries, action =
         match v.selected with
         | Some idx ->
           (* deep search first *)
-          L.modify_make_at_idx idx (_handle_entry_key_deep s ~key) v.entries
+          L.modify_make_at_idx idx (_handle_entry_key_deep s ~key) entries
           |> Utils.snd_option
         | None ->
             (* Nothing selected, we're done *)
-            v.entries, NoAction
+            entries, NoAction
       in
       let entries, action, selected =
         let handle_selection_change old_idx new_idx =
@@ -357,7 +368,7 @@ module MsgBox = struct
           let select_action = List.nth entries new_idx |> get_entry_selection_action in
           let action = match select_action with
             | Some action -> Selected action
-            | None -> NoAction
+            | None -> HandledEvent
           in
           entries, action, Some new_idx
         in
@@ -388,10 +399,10 @@ module MsgBox = struct
                 handle_selection_change sidx (idx - 1)
             | None, Some idx, Escape when is_entry_open_msgbox (List.nth entries idx) ->
                 let entries = L.modify_at_idx idx _close_entry entries in
-                entries, NoAction, Some idx
+                entries, HandledEvent, Some idx
             | None, _, _ when Event.is_letter key ->
                 (* nothing matches but still a letter: don't leak back to previous menu *)
-                entries, NoAction, v.selected
+                entries, HandledEvent, v.selected
             | None, _, _ ->
                 (* nothing matches: leak other things *)
                 entries, NoAction, v.selected
@@ -405,7 +416,7 @@ module MsgBox = struct
       (* Returns new v and action *)
       let v, action = match event with
         | MouseMotion {x; y; _} -> handle_hover v ~x ~y, NoAction
-        | MouseButton {down=true; x; y; _} -> handle_click s v ~x ~y
+        | MouseButton {down=true; x; y; _} -> _handle_click s v ~x ~y
         | Key {down=true; key; _ } -> _handle_key s v ~key
         | _ -> v, NoAction
       in
@@ -521,7 +532,7 @@ module Title = struct
 
   let handle_mouse ~click s v ~x ~y =
     let msgbox, action =
-      if click then MsgBox.handle_click s v.msgbox ~x ~y
+      if click then MsgBox._handle_click s v.msgbox ~x ~y
       else MsgBox.handle_hover v.msgbox ~x ~y, NoAction
     in
     [%up {v with msgbox}], action
@@ -673,7 +684,7 @@ module Global = struct
             let menus = L.modify_at_idx idx (Title.do_open_menu s) v.menus in
             {v with open_menu=sidx; menus}, NoAction
           end
-      | (Some open_menu as some_menu) ->
+      | Some open_menu as some_menu ->
           (* Open menu -> send it on *)
           let menus, action =
             L.modify_make_at_idx open_menu (Title._handle_key s ~key) v.menus
@@ -808,7 +819,7 @@ let modal_handle_event = fun (type a) ?(is_msgbox=false) s (menu: (a, 'state) Ms
   match action with
   | NoAction when Event.pressed_esc event -> `Exit
   | NoAction when is_msgbox && Event.key_modal_dismiss event -> `Exit
-  | ClickInMsgBox when is_msgbox -> `Exit
+  | HandledEvent when is_msgbox -> `Exit
   | On(choice) -> `Activate choice
   | NoAction -> `Stay menu
   | _ -> `Stay menu

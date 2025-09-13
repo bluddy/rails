@@ -477,7 +477,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
       | Menu.On(None) -> exit_mode ()
       | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
       | Menu.NoAction when is_msgbox && Event.key_modal_dismiss event -> exit_mode ()
-      | Menu.ClickInMsgBox when is_msgbox -> exit_mode ()
+      | Menu.HandledEvent when is_msgbox -> exit_mode ()
       | Menu.On(Some choice) -> process_fn modal choice
       | Menu.NoAction -> v, B.Action.NoAction
       | _ -> {v with mode=build_fn {modal with menu}}, B.Action.NoAction
