@@ -454,7 +454,7 @@ module MsgBox = struct
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
       Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
 
-    let rec render ?select_color win s v =
+    let rec render ?final_select_color win s v =
       (* draw background *)
       if v.draw_bg then (
         render_box win v.x v.y v.w v.h
@@ -469,18 +469,32 @@ module MsgBox = struct
 
       (* draw entries and selection *)
       let selected = Option.get_or v.selected ~default:(-1) in
-      let select_color = Option.get_or ~default:v.select_color select_color in
+      (* Get selected entry *)
+      let selected_entry = match v.selected with
+        | Some selected ->
+            let entry = List.nth v.entries selected in
+            Some entry
+        | _ -> None
+      in
+      Log.debug (fun f -> f "selected entry is open_msgbox(%b) some(%b)"
+        (Option.map is_entry_open_msgbox selected_entry |> Option.get_or ~default:false)
+        (Option.is_some selected_entry));
+
+      (* Determine color by nature of selected entry *)
+      let select_color = match final_select_color, selected_entry with
+        | Some color, Some entry when not @@ is_entry_open_msgbox entry -> color
+        | _ -> v.select_color
+      in
       List.iteri (fun i entry ->
         _render_entry win s v.font ~select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
           ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
         v.entries;
 
       (* recurse to sub-msgbox *)
-      match v.selected with
-      | Some selected ->
-          let entry = List.nth v.entries selected in
+      match selected_entry with
+      | Some entry ->
           begin match entry.kind with
-          | Interactive {fire=MsgBox(true, box);_} -> render win s box
+          | Interactive {fire=MsgBox(true, box);_} -> render ?final_select_color win s box
           | _ -> ()
           end
       | _ -> ()
@@ -554,8 +568,8 @@ module Title = struct
     let msgbox = MsgBox.close v.msgbox in
     [%up {v with msgbox}]
 
-  let render_msgbox ?select_color win s v =
-    MsgBox.render ?select_color win s v.msgbox
+  let render_msgbox ?final_select_color win s v =
+    MsgBox.render ?final_select_color win s v.msgbox
 
   let do_open_menu s v =
     if _is_enabled s v then
@@ -735,13 +749,13 @@ module Global = struct
     in
     v, action, event
 
-  let render ?select_color win s v =
+  let render ?final_select_color win s v =
     Renderer.draw_rect win ~x:0 ~y:0 ~w:v.w ~h:v.h ~color:Ega.cyan ~fill:true;
     (* Render menu titles *)
     List.iter (Title.render win s ~font:v.font) v.menus;
     match v.open_menu with
     | None -> ()
-    | Some i -> Title.render_msgbox ?select_color win s (List.nth v.menus i)
+    | Some i -> Title.render_msgbox ?final_select_color win s (List.nth v.menus i)
 
 end
 
@@ -787,10 +801,10 @@ module Animated = struct
   let is_closed v = not @@ is_open v
 
   let render win s v =
-    let select_color = if Option.is_some v.last_msg then Ega.white else Ega.bcyan in
+    let final_select_color = if Option.is_some v.last_msg then Ega.white else Ega.bcyan in
     match v.menu with
-    | Global g -> Global.render ~select_color win s g
-    | MsgBox m -> MsgBox.render ~select_color win s m
+    | Global g -> Global.render ~final_select_color win s g
+    | MsgBox m -> MsgBox.render ~final_select_color win s m
 
   let handle_event s v (event:Event.t) time = match v.menu with
     (* Intercept actions and save for later *)
