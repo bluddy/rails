@@ -140,7 +140,7 @@ let make_modal ?(background=Normal) menu data = {menu; data; background}
 type 'state t = {
   dims: dims;
   options: options;
-  menu: (menu_action, 'state) Menu.Global.t;
+  menu: (menu_action, 'state) Menu.Animated.t;
   mode: 'state mode; (* determines mode of operation *)
   next_modes: 'state mode list;
   train_ui_start: int; (* which train we start showing in the UI *)

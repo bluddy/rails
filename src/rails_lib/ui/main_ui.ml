@@ -454,7 +454,7 @@ let check_add_pause_msg old_mode old_menu v =
     | _ -> `DoNothing
   in
   let mode_pause = check_pause (is_normal_mode old_mode) (is_normal_mode v.mode) in
-  let menu_pause = check_pause (Menu.Global.is_closed old_menu) (Menu.Global.is_closed v.menu) in
+  let menu_pause = check_pause (Menu.Animated.is_closed old_menu) (Menu.Animated.is_closed v.menu) in
   match mode_pause, menu_pause with
    | `Pause, _ | _, `Pause -> [B.Action.Pause]
    | `Unpause, _ | _, `Unpause -> [B.Action.Unpause]
@@ -491,133 +491,34 @@ let handle_event (s:State.t) v (event:Event.t) time =
       v, nobaction
   in
   let old_mode, old_menu = v.mode, v.menu in
-  let b = s.backend in
-  let v, backend_msg =
-    match v.mode with
+  let v, backend_msg = match v.mode with
     | Normal ->
       (* Main gameplay view *)
-      let menu, menu_action, event = Menu.Global.handle_event s v.menu event time in
-      let v = if menu =!= v.menu then {v with menu} else v in
-      let view = match menu_action with
-        | On(`Survey)  -> Mapview.set_survey true v.view 
-        | Off(`Survey) -> Mapview.set_survey false v.view
-        | _ -> v.view
-      in
+      let menu, event = Menu.Animated.handle_event s v.menu event time in
+      let v = [%up {v with menu}] in
       let v, view_action = handle_train_roster_event s v event in
-      let view, view_action =
-        match view_action with
-        | `NoAction -> Mapview.handle_event s view event ~minimap:v.dims.minimap
-        | _ -> view, view_action
+      let view, view_action = match view_action with
+        | `NoAction -> Mapview.handle_event s v.view event ~minimap:v.dims.minimap
+        | _ -> v.view, view_action
       in
       if v.view =!= view then v.view <- view;
 
-      let v, backend_action =
-        match menu_action, view_action with
-        | On `Build_train, _ ->
-            {v with mode=BuildTrain(`ChooseEngine)}, nobaction
-        | _, `EditTrain train_idx ->
-            {v with mode=TrainReport(Train_report.make s train_idx)}, nobaction
-        | _, `HoldTrainToggle train_idx ->
-            v, B.Action.TrainToggleHold {player_idx; train_idx}
-        | On `Build_station, _ ->
-            let menu =
-              build_station_menu s.fonts (B.get_region s.backend)
-              |> Menu.MsgBox.do_open_menu s in
-            let modal = make_modal menu () in
-            {v with mode=BuildStation modal}, nobaction
-        | On `Build_industry, _ ->
-            let menu =
-              build_industry_menu s.fonts (B.get_region s.backend)
-              |> Menu.MsgBox.do_open_menu s in
-            let modal = make_modal menu () in
-            {v with mode=BuildIndustry(`ChooseIndustry modal)}, nobaction
-        | On `BuildTrack, _ ->
-            {v with view=Mapview.set_build_mode v.view true}, nobaction 
-        | On `RemoveTrack, _ ->
-            {v with view=Mapview.set_build_mode v.view false}, nobaction 
-        | On `ImproveStation upgrade, _ ->
-            let (x, y) as loc = Mapview.get_cursor_pos v.view in
-            let station = B.get_station loc b |> Option.get_exn_or "station not found" in
-            let mode = StationUpgrade{transition=None; loc; old_station=station} in
-            {v with mode}, ImproveStation{x; y; player_idx; upgrade}
-        | On `Save_game, _ ->
-            let mode = SaveGame (Save_game.make_save s) in
-            {v with mode}, nobaction
-        | On `Find_city, _ ->
-            let state = Find_city.init () in
-            {v with mode=FindCity state}, nobaction
-        | On `Quit_game, _ ->
-            v, B.Action.Quit_game
-        | On (`Speed speed), _ -> v, B.Action.SetSpeed speed
-        | On (`Message setting), _ ->
-            let options = {v.options with message_speed=setting} in
-            {v with options}, nobaction
-        | On (`News newstype), _ ->
-            let options = v.options in
-            let news = NewsTypes.add newstype options.news in
-            let options = {options with news} in
-            {v with options}, nobaction
-        | Off (`News newstype), _ ->
-            let options = v.options in
-            let news = NewsTypes.remove newstype options.news in
-            let options = {options with news} in
-            {v with options}, nobaction
-        | On (`Features feature), _ ->
-            let options = v.options in
-            let features = Features.add feature options.features in
-            let options = {options with features} in
-            {v with options}, nobaction
-        | Off (`Features feature), _ ->
-            let options = v.options in
-            let features = Features.remove feature options.features in
-            let options = {options with features} in
-            {v with options}, nobaction
-        | On (`Options option), _ ->
-            {v with view=Mapview.update_option option true v.view }, nobaction
-        | On (`Balance_sheet), _ ->
-            let state = B.create_balance_sheet player_idx s.backend in
-            {v with mode=Balance_sheet {state; end_of_year=false}}, nobaction
-        | On (`Income_statement), _ ->
-            let state = B.create_balance_sheet player_idx s.backend in
-            {v with mode=Income_statement state}, nobaction
-        | On (`Train_income), _ ->
-            let state = Train_income_report.create s in
-            {v with mode=TrainIncome state}, nobaction
-        | On (`Stocks), _ ->
-          {v with mode=make_generic_screen Stock_graph.render}, nobaction
-        | On (`Accomplishments), _ ->
-          {v with mode=make_generic_screen Accomplishments.render}, nobaction
-        | On (`History), _ ->
-          {v with mode=History (History.create s)}, nobaction
-        | On (`Efficiency_report), _ ->
-            {v with mode=make_generic_screen Efficiency_report.render}, nobaction
-        | On (`Call_broker), _ ->
-            v, B.Action.CallBroker{player_idx}
-        | On (`Name_rr), _ ->
-            let state = Name_rr.init b.stations b.cities player_idx b in
-            {v with mode=Name_rr state}, nobaction
-        | On (`Retire), _ ->
-            let mode = EndGame(Endgame.make `RetireEarly s) in
-            {v with mode}, nobaction
-        | On (`Cheat x), _ ->
-            v, B.Action.Cheat(C.player, x)
-        | Off (`Options option), _ ->
-            {v with view=Mapview.update_option option false v.view}, nobaction
-        | _, `BuildTrack msg  -> v, B.Action.BuildTrack msg
-        | _, `RemoveTrack msg -> v, B.Action.RemoveTrack msg
-        | _, `BuildFerry msg  -> v, B.Action.BuildFerry msg
-        | _, `BuildBridge msg ->
+      let v, backend_action = match view_action with
+        | `BuildTrack msg  -> v, B.Action.BuildTrack msg
+        | `RemoveTrack msg -> v, B.Action.RemoveTrack msg
+        | `BuildFerry msg  -> v, B.Action.BuildFerry msg
+        | `BuildBridge msg ->
             let menu = build_bridge_menu s.fonts (B.get_region s.backend)
               |> Menu.MsgBox.do_open_menu s in
             let modal = make_modal menu msg in
             {v with mode=BuildBridge modal}, nobaction
-        | _, `HighGradeTrack(msg, grade, tunnel) ->
+        | `HighGradeTrack(msg, grade, tunnel) ->
             let menu = build_high_grade_menu ~grade ~tunnel s.fonts
               |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
             in
             let modal = make_modal menu msg in
             {v with mode=BuildHighGrade modal}, nobaction
-        | _, `ShowTileInfo (x, y, tile) ->
+        | `ShowTileInfo (x, y, tile) ->
             let info = Tile.Info.get (B.get_region s.backend) tile in
             let open Menu.MsgBox in
             let entries =
@@ -682,7 +583,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
             let mode = ModalMsgbox modal in
             {v with mode}, nobaction
 
-        | _, `SignalMenu(x, y, dir, screen_x, screen_y) ->
+        | `SignalMenu(x, y, dir, screen_x, screen_y) ->
             let menu =
               build_signal_menu s.fonts screen_x screen_y
               (* build_signal_menu s.fonts 10 10 (*((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y) *) *)
@@ -691,14 +592,19 @@ let handle_event (s:State.t) v (event:Event.t) time =
             let modal = make_modal menu (x, y, dir) in
             {v with mode=SignalMenu modal}, nobaction
 
-        | _, `StationView(x, y) ->
+        | `StationView(x, y) ->
             {v with mode=StationReport(x, y)}, nobaction
 
-        | _, `DoubleTrack(double, x, y, player_idx) ->
+        | `DoubleTrack(double, x, y, player_idx) ->
             v, B.Action.DoubleTrack{x; y; double; player_idx}
 
-        | _ ->
-            v, nobaction
+        | `EditTrain train_idx ->
+            {v with mode=TrainReport(Train_report.make s train_idx)}, nobaction
+
+        | `HoldTrainToggle train_idx ->
+            v, B.Action.TrainToggleHold {player_idx; train_idx}
+
+        | _ -> v, nobaction
       in
       v, backend_action
 
@@ -1307,10 +1213,121 @@ let handle_msgs (s:State.t) v ui_msgs =
 
 
   (* Mostly animations. *)
-let handle_tick s v time is_cycle =
+let handle_tick (s:State.t) v time is_cycle =
   let nobaction = [] in
   let default = v, nobaction in
+  let player_idx = C.player in
   match v.mode with
+  | Normal ->
+      let b, view = s.backend, v.view in
+      let menu, menu_action = Menu.Animated.handle_tick s v.menu time in
+      let view = match menu_action with
+        | On(`Survey)  -> Mapview.set_survey true view 
+        | Off(`Survey) -> Mapview.set_survey false view
+        | _ -> view
+      in
+      let v, backend_action = match menu_action with
+      | On `Build_train ->
+          {v with mode=BuildTrain(`ChooseEngine)}, nobaction
+      | On `Build_station ->
+          let menu =
+            build_station_menu s.fonts (B.get_region s.backend)
+            |> Menu.MsgBox.do_open_menu s in
+          let modal = make_modal menu () in
+          {v with mode=BuildStation modal}, nobaction
+      | On `Build_industry ->
+          let menu =
+            build_industry_menu s.fonts (B.get_region s.backend)
+            |> Menu.MsgBox.do_open_menu s in
+          let modal = make_modal menu () in
+          {v with mode=BuildIndustry(`ChooseIndustry modal)}, nobaction
+      | On `BuildTrack ->
+          {v with view=Mapview.set_build_mode view true}, nobaction 
+      | On `RemoveTrack ->
+          {v with view=Mapview.set_build_mode view false}, nobaction 
+      | On `ImproveStation upgrade ->
+          let (x, y) as loc = Mapview.get_cursor_pos view in
+          let station = B.get_station loc b |> Option.get_exn_or "station not found" in
+          let mode = StationUpgrade{transition=None; loc; old_station=station} in
+          {v with mode}, [B.Action.ImproveStation{x; y; player_idx; upgrade}]
+      | On `Save_game ->
+          let mode = SaveGame (Save_game.make_save s) in
+          {v with mode}, nobaction
+      | On `Find_city ->
+          let state = Find_city.init () in
+          {v with mode=FindCity state}, nobaction
+      | On `Quit_game ->
+          v, [B.Action.Quit_game]
+      | On (`Speed speed) -> v, [B.Action.SetSpeed speed]
+      | On (`Message setting) ->
+          let options = {v.options with message_speed=setting} in
+          {v with options}, nobaction
+      | On (`News newstype) ->
+          let options = v.options in
+          let news = NewsTypes.add newstype options.news in
+          let options = {options with news} in
+          {v with options}, nobaction
+      | Off (`News newstype) ->
+          let options = v.options in
+          let news = NewsTypes.remove newstype options.news in
+          let options = {options with news} in
+          {v with options}, nobaction
+      | On (`Features feature) ->
+          let options = v.options in
+          let features = Features.add feature options.features in
+          let options = {options with features} in
+          {v with options}, nobaction
+      | Off (`Features feature) ->
+          let options = v.options in
+          let features = Features.remove feature options.features in
+          let options = {options with features} in
+          {v with options}, nobaction
+      | On (`Options option) ->
+          {v with view=Mapview.update_option option true view }, nobaction
+      | On (`Balance_sheet) ->
+          let state = B.create_balance_sheet player_idx s.backend in
+          {v with mode=Balance_sheet {state; end_of_year=false}}, nobaction
+      | On (`Income_statement) ->
+          let state = B.create_balance_sheet player_idx s.backend in
+          {v with mode=Income_statement state}, nobaction
+      | On (`Train_income) ->
+          let state = Train_income_report.create s in
+          {v with mode=TrainIncome state}, nobaction
+      | On (`Stocks) ->
+        {v with mode=make_generic_screen Stock_graph.render}, nobaction
+      | On (`Accomplishments) ->
+        {v with mode=make_generic_screen Accomplishments.render}, nobaction
+      | On (`History) ->
+        {v with mode=History (History.create s)}, nobaction
+      | On (`Efficiency_report) ->
+          {v with mode=make_generic_screen Efficiency_report.render}, nobaction
+      | On (`Call_broker) ->
+          v, [B.Action.CallBroker{player_idx}]
+      | On (`Name_rr) ->
+          let state = Name_rr.init b.stations b.cities player_idx b in
+          {v with mode=Name_rr state}, nobaction
+      | On (`Retire) ->
+          let mode = EndGame(Endgame.make `RetireEarly s) in
+          {v with mode}, nobaction
+      | On (`Cheat x) ->
+          v, [B.Action.Cheat(C.player, x)]
+      | Off (`Options option) ->
+          {v with view=Mapview.update_option option false view}, nobaction
+      | On ((`Repeat_message | `Upgrade_bridge | `Reality_level _| `Display _ | `Survey) as ma) ->
+          Printf.printf "Unhandled message %s\n" (show_menu_action ma);
+          v, nobaction
+      | _ -> v, nobaction
+      in
+      let view = Mapview.handle_tick s view time is_cycle in
+      (* decr_train_msgs *)
+      let train_arrival_msgs = match v.train_arrival_msgs with
+      | ((_, t)::_) as msgs when !t > 0 ->
+          decr t;
+          msgs
+      | _::msgs -> msgs
+      | [] -> []
+      in
+      [%up {v with menu; view; train_arrival_msgs}], backend_action
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
       if state === state2 then default
@@ -1319,19 +1336,6 @@ let handle_tick s v time is_cycle =
       let state2 = Train_report.handle_tick state time in
       if state === state2 then default
       else {v with mode=TrainReport state2}, nobaction
-  | Normal ->
-      let view = Mapview.handle_tick s v.view time is_cycle in
-      let decr_train_msgs () =
-        let train_arrival_msgs = match v.train_arrival_msgs with
-        | ((_, t)::_) as msgs when !t > 0 ->
-            decr t;
-            msgs
-        | _::msgs -> msgs
-        | [] -> []
-        in
-        [%up {v with view; train_arrival_msgs}], nobaction
-      in
-      decr_train_msgs ()
   | Animation state ->
       let state2 = Pani_render.handle_tick time state in
       if state2 === state then default
@@ -1507,7 +1511,7 @@ let render_main win (s:State.t) v =
   draw_priority ();
 
   (* Menu bar *)
-  Menu.Global.render win s v.menu;
+  Menu.Animated.render win s v.menu;
   ()
 
 let should_render_mouse = function

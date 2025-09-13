@@ -759,6 +759,8 @@ module Animated = struct
     | Global g -> Global.is_open g
     | MsgBox _ -> true
 
+  let is_closed v = not @@ is_open v
+
   let render win s v =
     let select_color = if Option.is_some v.last_msg then Ega.white else Ega.bcyan in
     match v.menu with
