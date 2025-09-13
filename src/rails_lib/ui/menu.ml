@@ -599,7 +599,7 @@ module Global = struct
       | Some idx -> L.modify_at_idx idx Title.close_menu v.menus
       | None -> v.menus
     in
-    {v with menus; open_menu=None}
+    [%up {v with menus; open_menu=None}]
 
   let _handle_mouse_move s v ~x ~y =
     match v.open_menu with
@@ -755,6 +755,19 @@ module Animated = struct
     let menu = MsgBox.make ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries in
     {menu=MsgBox menu; last_msg=None}
 
+  let _close v =
+    let menu = match v.menu with
+      | Global g ->
+          let g' = Global._close g in
+          if g' === g then v.menu
+          else Global g'
+      | MsgBox m ->
+          let m' = MsgBox.close m in
+          if m' === m then v.menu
+          else MsgBox m'
+    in
+    [%up {v with menu}]
+
   let is_open v = match v.menu with
     | Global g -> Global.is_open g
     | MsgBox _ -> true
@@ -785,7 +798,9 @@ module Animated = struct
         ([%up {v with menu; last_msg}], Event.NoEvent) [@warning "-23"]
 
   let handle_tick _s v time = match v.last_msg with
-    | Some (msg, t) when time > t -> {v with last_msg=None}, msg
+    | Some (msg, t) when time > t ->
+        let v =  _close v in
+        {v with last_msg=None}, msg
     | _ -> v, NoAction
 
 end
