@@ -80,7 +80,7 @@ module MsgBox = struct
       use_prefix: bool; (* entry prefix for checked v space *)
     }
 
-  let get_entry_w_h font v =
+  let _get_entry_w_h font v =
     Fonts.Font.get_str_w_h ~skip_amp:true font @@ " "^v.name
 
   let static_entry name ~color =
@@ -116,7 +116,7 @@ module MsgBox = struct
     in
     let (w, h), entries =
       List.fold_map (fun (max_w, max_h) entry ->
-        let w, h = get_entry_w_h v.font entry in
+        let w, h = _get_entry_w_h v.font entry in
         let kind = match entry.kind with
           | Interactive e ->
             let enabled = match e.test_enabled with
@@ -175,11 +175,11 @@ module MsgBox = struct
       select_color;
     }
 
-  let get_entry_selection_action v = match v.kind with
+  let _get_entry_selection_action v = match v.kind with
     | Interactive {select_action; _} -> select_action
     | _ -> None
 
-  let is_entry_mouse_shallow v ~y =
+  let _is_entry_mouse_shallow v ~y =
     match v.kind with
     | Static _ -> false
     | Interactive {enabled=false; _} -> false
@@ -194,13 +194,13 @@ module MsgBox = struct
   let is_entry_msgbox v = match v.kind with
     | Interactive {fire=MsgBox _; _} -> true | _ -> false
 
-  let is_entry_static v = match v.kind with
+  let _is_entry_static v = match v.kind with
     | Static _ -> true | _ -> false
 
-  let find_mouse_entry_shallow v ~y =
-    List.find_idx (is_entry_mouse_shallow ~y) v.entries
+  let _find_mouse_entry_shallow v ~y =
+    List.find_idx (_is_entry_mouse_shallow ~y) v.entries
 
-  let mouse_check_shallow v ~x ~y =
+  let _mouse_check_shallow v ~x ~y =
     x >= v.x && x <= v.x + v.w && y >= v.y && y <= v.y + v.h
 
     (* Only search depth-first *)
@@ -228,9 +228,9 @@ module MsgBox = struct
     let entries, selected =
       let default = entries, v.selected in
       match deep with
-      | (None | Some `NoDeep) when mouse_check_shallow v ~x ~y ->
+      | (None | Some `NoDeep) when _mouse_check_shallow v ~x ~y ->
           (* Didn't find in deep search, passed shallow search in this msgbox *)
-          begin match find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
+          begin match _find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
           | Some (entry_idx, _), Some cur_select when entry_idx <> cur_select ->
               (* hovered over an entry, handle and switch selection if not a msgbox *)
               let entry = List.nth v.entries cur_select in
@@ -306,9 +306,9 @@ module MsgBox = struct
     in
     let entries, action, selected =
       match action with
-      | NoAction when mouse_check_shallow v ~x ~y ->
+      | NoAction when _mouse_check_shallow v ~x ~y ->
           (* Didn't find in deep search, do shallow search in this msgbox *)
-          begin match find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
+          begin match _find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
           | None, None ->
               (* clicked in msgbox but not an option *)
               entries, HandledEvent, v.selected
@@ -365,7 +365,7 @@ module MsgBox = struct
             | Some old_idx -> L.modify_at_idx old_idx _close_entry entries
             | None -> entries
           in
-          let select_action = List.nth entries new_idx |> get_entry_selection_action in
+          let select_action = List.nth entries new_idx |> _get_entry_selection_action in
           let action = match select_action with
             | Some action -> Selected action
             | None -> HandledEvent
@@ -427,7 +427,7 @@ module MsgBox = struct
       v, action
 
     let _render_entry win s font v ~select_color ~use_prefix ~selected ~x ~border_x ~y ~w =
-      if selected && not @@ is_entry_static v then (
+      if selected && not @@ _is_entry_static v then (
         let x = if use_prefix then x + 3 else x in
         Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:select_color
       );
