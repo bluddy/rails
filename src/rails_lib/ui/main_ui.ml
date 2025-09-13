@@ -1337,7 +1337,7 @@ let handle_tick (s:State.t) v time is_cycle =
       if state === state2 then default
       else {v with mode=TrainReport state2}, nobaction
   | Animation state ->
-      let state2 = Pani_render.handle_tick time state in
+      let state2, _ = Pani_render.handle_tick time state in
       if state2 === state then default
       else {v with mode=Animation state2}, nobaction
 

@@ -4,8 +4,8 @@ open Tsdl
 module R = Renderer
 
 type 'a t = {
-  handle_event: 'a -> Event.t -> int -> 'a * bool;
-  handle_tick: 'a -> int -> 'a;
+  handle_event: 'a -> Event.t -> int -> 'a * [`Exit | `Stay];
+  handle_tick: 'a -> int -> 'a * [`Exit | `Stay];
   render: 'a -> unit;
 }
 
@@ -36,40 +36,41 @@ let main init_fn =
         else Event.NoEvent
       in
       match event with
-      | Quit -> data, `Quit
-      | NoEvent -> data, `NoEvent
+      | Quit -> data, `Exit
+      | NoEvent -> data, `Stay
       | EventNotRelevant ->
           (* Get rid of events we don't care about *)
           event_loop data
       | _ -> 
         let time = Sdl.get_ticks () |> Int32.to_int in
-        let data =
+        let data, quit =
           if time - !last_tick_time > tick_wait_time then (
             last_tick_time := time;
             v.handle_tick data time
           ) else
-            data
+            data, `Stay
         in
+        match quit with `Exit -> data, `Exit | _ ->
         let time = Sdl.get_ticks () |> Int32.to_int in
         let data, quit = v.handle_event data event time in
-        if quit then data, `Quit
-        else
-          event_loop data
+        match quit with `Exit -> data, `Exit
+        | _ -> event_loop data
     in
     (* first handle all events *)
     let data, response = event_loop data in
     match response with
-    | `Quit -> ()
+    | `Exit -> ()
     | _ ->
       let time = Sdl.get_ticks () |> Int32.to_int in
       let tick_diff = time - !last_tick_time in
-      let data =
+      let data, quit =
         if tick_diff >= tick_wait_time then (
           last_tick_time := time;
           v.handle_tick data time
         )
-        else data
+        else data, `Stay
       in
+      match quit with `Exit -> () | _ ->
       let render_diff = time - !last_render_time in
       if render_diff >= render_wait_time then (
         last_render_time := time;

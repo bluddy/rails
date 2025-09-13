@@ -62,20 +62,22 @@ let handle_tick win (s:State.t) time =
   let state =
     match s.mode with
     | Intro state ->
-        let status, state2 = Intro.handle_tick time state in
-        begin match status with
-        | `Stay when state2 === state -> s
-        | `Stay -> {s with mode = Intro state2}
-        | `Exit -> {s with mode=Menu(Start_menu.default s)}
-        end
+        let state2, status = Intro.handle_tick time state in
+        let s =
+          match status with
+          | `Stay when state2 === state -> s
+          | `Stay -> {s with mode = Intro state2}
+          | `Exit -> {s with mode=Menu(Start_menu.default s)}
+        in
+        s, `Stay
 
-    | Menu _ -> s
+    | Menu _ -> s, `Stay
 
     | MapGen None ->
         (* Prepare mapgen with init *)
         let cities = B.get_cities s.backend in
         let data = Mapgen.init s.backend.random (B.get_region s.backend) cities in
-        {s with mode=MapGen(Some data)}
+        {s with mode=MapGen(Some data)}, `Stay
 
     | MapGen Some data ->
         let done_fn () =
@@ -92,7 +94,7 @@ let handle_tick win (s:State.t) time =
           (data, B.get_map s.backend)
         in
         let backend = {s.backend with map} in
-        {s with backend; mode=MapGen(Some data)}
+        {s with backend; mode=MapGen(Some data)}, `Stay
 
     | Game ->
         (* Main game *)
@@ -103,10 +105,12 @@ let handle_tick win (s:State.t) time =
           update_map win s s.backend.map;
         let ui, tick_backend_msgs = Main_ui.handle_tick s s.ui time is_cycle in
         let ui, backend_msgs = Main_ui.handle_msgs s ui ui_msgs in
-        let backend = Backend.Action.handle_msgs backend @@ tick_backend_msgs@backend_msgs in
+        let backend_msgs = tick_backend_msgs @ backend_msgs in
+        let quit = if List.exists (function Backend.Action.Quit_game -> true | _ -> false) backend_msgs then `Exit else `Stay in
+        let backend = Backend.Action.handle_msgs backend backend_msgs in
         [%upf s.ui <- ui];
         [%upf s.backend <- backend];
-        s
+        s, quit
 
   in
   state
@@ -119,30 +123,30 @@ let handle_event win (s:State.t) (event:Event.t) time =
     match s.mode with
     | Intro state ->
         begin match Intro.handle_event event state with
-        | `Stay, state2 when state2 === state -> s, false
-        | `Stay, state2 -> {s with mode=Intro state2}, false
-        | `Exit, _ -> {s with mode=Menu(Start_menu.default s)}, false
+        | state2, `Stay when state2 === state -> s, `Stay
+        | state2, `Stay -> {s with mode=Intro state2}, `Stay
+        | _, `Exit -> {s with mode=Menu(Start_menu.default s)}, `Stay
         end
 
     | Menu state ->
         begin match Start_menu.handle_event s state event time with
-        | `Stay, state2 when state2 === state -> s, false
-        | `Stay, state2 ->
-            {s with mode=Menu state2}, false
-        | `LoadGame s, _ -> s, false
-        | `Choose (region, difficulty, reality_levels), _ ->
+        | state2, `Stay when state2 === state -> s, `Stay
+        | state2, `Stay ->
+            {s with mode=Menu state2}, `Stay
+        | _, `LoadGame s -> s, `Stay
+        | _, `Choose (region, difficulty, reality_levels) ->
             let s = make_state win ~region ~reality_levels ~difficulty s in
-            {s with mode=MapGen None}, false
+            {s with mode=MapGen None}, `Stay
         end
 
     | MapGen Some {state=`Done; _} ->
         (* Only for map generation *)
         begin match event with
-        | Key {down=true; _} -> {s with mode = Game}, false
-        | _ -> s, false
+        | Key {down=true; _} -> {s with mode = Game}, `Stay
+        | _ -> s, `Stay
         end
 
-    | MapGen _ -> s, false
+    | MapGen _ -> s, `Stay
 
     | Game ->
         (* Main map view mode *)
@@ -155,7 +159,7 @@ let handle_event win (s:State.t) (event:Event.t) time =
           | Backend.Action.Quit_game -> true
           | _ -> false) backend_msgs
         in
-        s, quit
+        s, if quit then `Exit else `Stay
 
   in
   state, quit

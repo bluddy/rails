@@ -50,8 +50,8 @@ let next_mode v = match v.next_modes with
   | _ -> None
 
 let set_next_mode v = match v.next_modes with
-  | _::_ -> `Stay, set_modes v.next_modes v
-  | [] -> `Exit, v
+  | _::_ -> set_modes v.next_modes v, `Stay
+  | [] -> v, `Exit
 
 let render win v = match v.mode with
   | TransitionScreen t -> Transition.render win t
@@ -60,26 +60,26 @@ let render win v = match v.mode with
 
 let handle_event event v = match v.mode with
   | (GenericScreen _ | Animation _) when Event.is_left_click event || Event.key_modal_dismiss event -> set_next_mode v
-  | GenericScreen _ | Animation _ -> `Stay, v
+  | GenericScreen _ | Animation _ -> v, `Stay
   | TransitionScreen state ->
       begin match Transition.handle_event event state with
-      | `Stay -> `Stay, v
+      | `Stay -> v, `Stay
       | `Exit -> set_next_mode v
       end
 
 let handle_tick time v = match v.mode with
   | Animation state ->
-      let state2 = Pani_render.handle_tick time state in
-      if state2 === state then `Stay, v else `Stay, {v with mode=Animation state2}
+      let state2, quit = Pani_render.handle_tick time state in
+      if state2 === state then v, quit else {v with mode=Animation state2}, quit
   | TransitionScreen state ->
       let status, state2 = Transition.handle_tick time state in
       begin match status with
-      | `Stay when state2 === state -> `Stay, v
-      | `Stay -> `Stay, {v with mode=TransitionScreen state2}
+      | `Stay when state2 === state -> v, `Stay
+      | `Stay -> {v with mode=TransitionScreen state2}, `Stay
       | `Exit -> set_next_mode v
       end
-  | GenericScreen ({timeout=Some 0;_} as state) -> `Stay, {v with mode=GenericScreen{state with timeout=Some(time + C.wait_time * 1000)}}
+  | GenericScreen ({timeout=Some 0;_} as state) -> {v with mode=GenericScreen{state with timeout=Some(time + C.wait_time * 1000)}}, `Stay
   | GenericScreen {timeout=Some end_time;_} when time >= end_time -> set_next_mode v
-  | GenericScreen _ -> `Stay, v
+  | GenericScreen _ -> v, `Stay
 
 

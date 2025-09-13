@@ -72,10 +72,10 @@ let handle_tick time v =
           v.status <- Pani_interp.step v.interp;
         )
   in
-  v
-  
+  v, `Stay
+ 
 let standalone win ~filename =
-  let handle_event v _event _time = v, false in
+  let handle_event v _event _time = v, `Stay in
   let v = create filename in
   let funcs = Mainloop.{
     handle_tick=(fun v time -> handle_tick time v);
@@ -91,20 +91,20 @@ let debugger ?(dump=false) win ~filename =
   let handle_event v event _time = match event with
     | Event.Key {key=Event.N; down=true; _} ->
         let _ = Pani_interp.debugger_step v.interp in
-        v, false
+        v, `Stay
     | Event.Key {key=Event.S; down=true; _} ->
         let _ = Pani_interp.debugger_step_sprite v.interp in
-        v, false
+        v, `Stay
     | Event.Key {key=Event.Q; down=true; _} ->
-        v, true
+        v, `Exit
     | _ ->
-        v, false
+        v, `Stay
   in
   let v = create ~dump ~debug:true filename in
   (* Do one step to set up all the animations *)
   let _ = Pani_interp.step v.interp in
   let funcs = Mainloop.{
-    handle_tick=(fun v _ -> v);
+    handle_tick=(fun v _ -> v, `Stay);
     render=render win;
     handle_event;
   }
