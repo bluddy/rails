@@ -712,14 +712,11 @@ module Global = struct
           _handle_key s v ~key
       | _ -> v, NoAction
     in
+    (* Cancel events if menu is open *)
+    let event = if is_open v then Event.NoEvent else event in
     let v = match action with
       | (On _ | Off _) when do_close -> _close v
       | _ -> v
-    in
-    (* Cancel events we handled *)
-    let event = match action with
-      | NoAction -> event
-      | _ -> NoEvent
     in
     v, action, event
 

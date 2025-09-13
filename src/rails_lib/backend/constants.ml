@@ -121,7 +121,7 @@ let stone_bridge_fail_odds = 8  (* The extra odds of a stone bridge failing *)
 let newspaper_cost_ref_year = 1775
 
 module Menu = struct
-  let exit_time = 500 (* ms *)
+  let exit_time = 300 (* ms *)
 end
 
 module Pani = struct
