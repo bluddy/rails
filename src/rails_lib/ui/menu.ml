@@ -208,14 +208,14 @@ module MsgBox = struct
     match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         (* msgbox is open so recurse *)
-        let box' = handle_hover box ~x ~y in
+        let box' = _handle_hover box ~x ~y in
         if box' === box then v, `NoDeep
         else
           {v with kind=Interactive {e with fire=MsgBox(true, box')}}, `Deep
     | _ ->
         v, `NoDeep
 
-  and handle_hover (v:('a, 'b) t) ~x ~y =
+  and _handle_hover (v:('a, 'b) t) ~x ~y =
     let entries, deep =
       match v.selected with
       | Some idx ->
@@ -245,7 +245,7 @@ module MsgBox = struct
     [%up {v with entries; selected}]
 
     (* Do not recurse deeply *)
-  let handle_entry_activate_shallow s ~x v =
+  let _handle_entry_activate_shallow s ~x v =
     (* Assume we were clicked. Only handle shallow events
        full: an actual activation vs just msgbox open/close
      *)
@@ -280,7 +280,7 @@ module MsgBox = struct
     | None -> v
 
     (* Only search depth-first *)
-  let rec handle_entry_click_deep s v ~x ~y =
+  let rec _handle_entry_click_deep s v ~x ~y =
     match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
         (* msgbox is open so recurse *)
@@ -297,7 +297,7 @@ module MsgBox = struct
       | Some idx ->
           (* deep search first *)
           let a, b =
-            L.modify_make_at_idx idx (handle_entry_click_deep s ~x ~y) v.entries
+            L.modify_make_at_idx idx (_handle_entry_click_deep s ~x ~y) v.entries
           in
           a, b |> Option.get_exn_or "error"
       | None ->
@@ -320,7 +320,7 @@ module MsgBox = struct
               (* clicked an entry, handle and switch selection *)
               let entries, action =
                 L.modify_make_at_idx entry_idx
-                (handle_entry_activate_shallow ~x:v.x s) v.entries
+                (_handle_entry_activate_shallow ~x:v.x s) v.entries
               in
               entries, (action |> Option.get_exn_or "bad state"), Some entry_idx
           end
@@ -385,7 +385,7 @@ module MsgBox = struct
                 handle_selection_change entry_idx new_idx
             | None, (Some idx as sidx), Enter ->
                 let entries, action =
-                  L.modify_make_at_idx idx (handle_entry_activate_shallow s ~x:v.x) entries
+                  L.modify_make_at_idx idx (_handle_entry_activate_shallow s ~x:v.x) entries
                   |> Utils.snd_option
                 in
                 entries, action, sidx
@@ -415,7 +415,7 @@ module MsgBox = struct
     let handle_event ?(do_close=true) s v (event:Event.t) _time =
       (* Returns new v and action *)
       let v, action = match event with
-        | MouseMotion {x; y; _} -> handle_hover v ~x ~y, NoAction
+        | MouseMotion {x; y; _} -> _handle_hover v ~x ~y, NoAction
         | MouseButton {down=true; x; y; _} -> _handle_click s v ~x ~y
         | Key {down=true; key; _ } -> _handle_key s v ~key
         | _ -> v, NoAction
@@ -533,7 +533,7 @@ module Title = struct
   let handle_mouse ~click s v ~x ~y =
     let msgbox, action =
       if click then MsgBox._handle_click s v.msgbox ~x ~y
-      else MsgBox.handle_hover v.msgbox ~x ~y, NoAction
+      else MsgBox._handle_hover v.msgbox ~x ~y, NoAction
     in
     [%up {v with msgbox}], action
 
