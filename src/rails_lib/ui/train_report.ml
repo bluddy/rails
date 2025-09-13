@@ -59,7 +59,7 @@ let make_menu (dims:Main_ui_d.dims) fonts train_idx ~engine_make ~engines ~year 
       make ~fonts ~x:160 ~y:1 "&Route map" route_map_menu;
     ]
   in
-  Menu.Global.make ~w:dims.screen.w ~h:dims.screen.h fonts titles
+  Menu.Global.make ~w:dims.menu.w ~h:dims.menu.h fonts titles
 
 let open_car_menu (s:State.t) stop =
   let open Menu.MsgBox in

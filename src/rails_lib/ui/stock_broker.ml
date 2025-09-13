@@ -98,7 +98,7 @@ let make_menu (b:Backend.t) cities region fonts (dims:Main_ui_d.dims) =
       make ~test_enabled:owns_some_company ~fonts ~x:220 ~y:1 "&Operate RR" operate_rr_menu;
     ]
   in
-  Menu.Global.make fonts ~h:dims.screen.h ~w:dims.screen.w titles
+  Menu.Global.make fonts ~h:dims.menu.h ~w:dims.menu.w titles
 
 let make (s:State.t) =
   let b = s.backend in
