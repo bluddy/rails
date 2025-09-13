@@ -283,7 +283,6 @@ module MsgBox = struct
   let rec _handle_entry_click_deep s v ~x ~y =
     match v.kind with
     | Interactive ({fire=MsgBox(true, box); _} as e) ->
-        Log.debug (fun f -> f "recurse into msgbox");
         (* msgbox is open so recurse *)
         let box', action = _handle_click s box ~x ~y in
         if box' === box then v, action
@@ -293,7 +292,6 @@ module MsgBox = struct
         v, NoAction
 
   and _handle_click s v ~x ~y =
-    Log.debug (fun f -> f "handle click");
     let entries, action =
       match v.selected with
       | Some idx ->
@@ -309,21 +307,17 @@ module MsgBox = struct
     let entries, action, selected =
       match action with
       | NoAction when _mouse_check_shallow v ~x ~y ->
-          Log.debug (fun f -> f "Found local click");
           (* Didn't find in deep search, do shallow search in this msgbox *)
           begin match _find_mouse_entry_shallow v ~y:(y-v.y), v.selected with
           | None, None ->
-              Log.debug (fun f -> f "empty click");
               (* clicked in msgbox but not an option *)
               entries, HandledEvent, v.selected
           | None, Some entry_idx ->
-              Log.debug (fun f -> f "entry %d" entry_idx);
               (* clear selection *)
               let entries = L.modify_at_idx entry_idx _close_entry v.entries in
               entries, action, None
           | Some (entry_idx, _), _ ->
               (* clicked an entry, handle and switch selection *)
-              Log.debug (fun f -> f "switch to entry %d" entry_idx);
               let entries, action =
                 L.modify_make_at_idx entry_idx
                 (_handle_entry_activate_shallow ~x:v.x s) v.entries
@@ -476,10 +470,6 @@ module MsgBox = struct
             Some entry
         | _ -> None
       in
-      Log.debug (fun f -> f "selected entry is open_msgbox(%b) some(%b)"
-        (Option.map is_entry_open_msgbox selected_entry |> Option.get_or ~default:false)
-        (Option.is_some selected_entry));
-
       (* Determine color by nature of selected entry *)
       let select_color = match final_select_color, selected_entry with
         | Some color, Some entry when not @@ is_entry_open_msgbox entry -> color
