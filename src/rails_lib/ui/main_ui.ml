@@ -721,10 +721,10 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event time in
-        let v =
-          if exit_state then next_mode v
-          else if state =!= state2 then {v with mode=TrainReport state2}
-          else v
+        let v = match exit_state with
+          | `Exit -> next_mode v
+          | `Stay when state =!= state2 -> {v with mode=TrainReport state2}
+          | `Stay -> v
         in
         v, action
 
@@ -1333,9 +1333,13 @@ let handle_tick (s:State.t) v time is_cycle =
       if state === state2 then default
       else {v with mode=BuildTrain(`AddCars state2)}, nobaction
   | TrainReport state ->
-      let state2 = Train_report.handle_tick state time in
-      if state === state2 then default
-      else {v with mode=TrainReport state2}, nobaction
+      let status, state2, baction = Train_report.handle_tick s state time in
+      let v = match status with
+        | `Exit -> next_mode v
+        | `Stay when state2 =!= state -> {v with mode=TrainReport state2}
+        | `Stay -> v
+      in
+      v, baction
   | Animation state ->
       let state2, _ = Pani_render.handle_tick time state in
       if state2 === state then default

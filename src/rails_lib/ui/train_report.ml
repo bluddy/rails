@@ -59,7 +59,7 @@ let make_menu (dims:Main_ui_d.dims) fonts train_idx ~engine_make ~engines ~year 
       make ~fonts ~x:160 ~y:1 "&Route map" route_map_menu;
     ]
   in
-  Menu.Global.make ~w:dims.menu.w ~h:dims.menu.h fonts titles
+  Menu.Animated.make_global ~w:dims.menu.w ~h:dims.menu.h fonts titles
 
 let open_car_menu (s:State.t) stop =
   let open Menu.MsgBox in
@@ -274,7 +274,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     end;
 
     (* Menu bar - last so we draw over all else *)
-    Menu.Global.render win s v.menu;
+    Menu.Animated.render win s v.menu;
     ()
 
 let _find_clicked_stop (train:ro Train.t) click_y =
@@ -294,14 +294,14 @@ let handle_event (s:State.t) v (event:Event.t) time =
       let exit, state2, b_action = Train_route_orders.handle_event s state event in
       let v = if state =!= state2 then {v with screen=TrainRouteOrders state2} else v in
       let v = if exit then {v with screen=Normal} else v in
-      false, v, b_action
+      `Stay, v, b_action
 
   | EngineInfo _, _ ->
-    let v = match Engine_info.handle_event event with
-      | `Exit -> {v with screen=Normal}
-      | _ -> v
-    in
-    false, v, nobaction
+      let v = match Engine_info.handle_event event with
+        | `Exit -> {v with screen=Normal}
+        | _ -> v
+      in
+      `Stay, v, nobaction
 
   | ChooseEngine, _ ->
     begin match Choose_engine.handle_event event s.backend.engines ~year:(B.get_year s.backend) with
@@ -312,9 +312,9 @@ let handle_event (s:State.t) v (event:Event.t) time =
       let baction =
         B.Action.TrainReplaceEngine {train=v.train; engine=engine.make; player_idx}
       in
-      false, {v with screen=Normal; menu}, baction
+      `Stay, {v with screen=Normal; menu}, baction
     | _ -> 
-      false, v, nobaction
+      `Stay, v, nobaction
     end
 
   | Normal, (Some(car_menu, stop) as current) ->
@@ -334,10 +334,10 @@ let handle_event (s:State.t) v (event:Event.t) time =
             car_menu, nobaction
       in
       let v = [%up {v with car_menu}] in
-      false, v, b_action
+      `Stay, v, b_action
 
   | Normal, _ ->
-      let menu, action, event = Menu.Global.handle_event s v.menu event time in
+      let menu, event = Menu.Animated.handle_event s v.menu event time in
       let train = Backend.get_train v.train player_idx s.backend in
       let line_h = 10 in
       let xstart = 160 in
@@ -361,35 +361,17 @@ let handle_event (s:State.t) v (event:Event.t) time =
       in
 
       let exit, screen, car_menu, bk_action =
-        match action, event with
-          (* Global menu choice: route map view *)
-        | Menu.On(`ShowMap), _ ->
-            let screen = TrainRouteOrders (Train_route_orders.make s.backend.graph v.train `ShowRoute) in
-            false, screen, None, nobaction
-
-        | Menu.On(`Type typ), _ ->
-            false, v.screen, None, B.Action.TrainSetType{train=v.train; typ; player_idx}
-
-        | Menu.On(`EngineInfo engine_make), _ ->
-            let engine = Engine.t_of_make s.backend.engines engine_make in
-            let screen = EngineInfo (Engine_info.make engine) in
-            false, screen, None, nobaction
-
-        | Menu.On(`RetireTrain), _ ->
-            true, v.screen, None, B.Action.RemoveTrain {idx=v.train; player_idx}
-
-        | Menu.On(`ReplaceEngine), _ ->
-            false, ChooseEngine, None, nobaction
+        match event with
 
           (* Click on priority stop -> open route map *)
-        | _, MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->
+        | MouseButton {x; y; button=`Left; down=true; _} when x <= 120 && y >= 137 && y <= 147 ->
             let screen = 
               TrainRouteOrders (Train_route_orders.make s.backend.graph v.train `EditPriority)
             in
             false, screen, None, nobaction
 
           (* Click on a stop -> open route map *)
-        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 24 && x <= 120 && y >= 159 ->
+        | MouseButton {x; y; button=`Left; down=true; _} when x >= 24 && x <= 120 && y >= 159 ->
             let ystart = 167 in
             let res =
               Iter.foldi (fun acc i _ -> match acc with
@@ -408,7 +390,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
             end
 
           (* Click next to station to wait or unwait *)
-        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 9 && x <= 23 && y >= 159 ->
+        | MouseButton {x; y; button=`Left; down=true; _} when x >= 9 && x <= 23 && y >= 159 ->
           let stop = _find_clicked_stop train y in
           let b_action = match stop with
             | Some stop ->
@@ -418,7 +400,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
           false, v.screen, None, b_action
 
           (* Click on car to delete, or space in priority stop to open the menu *)
-        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 137 && y <= 147 ->
+        | MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 137 && y <= 147 ->
             let msg = match train.priority_stop with
               | Some {consist_change=Some cars;_} -> make_car_msg `Priority cars x
               | Some {consist_change=None;_} -> `AddCarMenu `Priority
@@ -426,7 +408,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
             in
             handle_car_msg msg
 
-        | _, MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
+        |  MouseButton {x; y; button=`Left; down=true; _} when x >= 160 && y >= 159 ->
             let stop = _find_clicked_stop train y in
             let msg = Option.map_or ~default:`None
               (fun i ->
@@ -442,13 +424,45 @@ let handle_event (s:State.t) v (event:Event.t) time =
           false, v.screen, None, nobaction
       in
       let v = [%up {v with menu; screen; car_menu}] in
-      let exit = Event.pressed_esc event || exit in
+      let exit = if (Event.pressed_esc event || exit) then `Exit else `Stay in
       exit, v, bk_action
 
-let handle_tick v time =
-  begin match v.screen with
-  | TrainRouteOrders state -> Train_route_orders.handle_tick state time
-  | _ -> ()
-  end;
-  v
+let handle_tick (s:State.t) v time =
+  let b = s.backend in
+  let player_idx = C.player in
+  match v.screen with
+| Normal ->
+    let menu, action = Menu.Animated.handle_tick () v.menu time in
+    let exit, screen, car_menu, bk_action =
+      match action with
+        (* Global menu choice: route map view *)
+      | Menu.On(`ShowMap) ->
+          let screen = TrainRouteOrders (Train_route_orders.make b.graph v.train `ShowRoute) in
+          `Stay, screen, None, nobaction
+
+      | Menu.On(`Type typ) ->
+          `Stay, v.screen, None, B.Action.TrainSetType{train=v.train; typ; player_idx}
+
+      | Menu.On(`EngineInfo engine_make) ->
+          let engine = Engine.t_of_make s.backend.engines engine_make in
+          let screen = EngineInfo (Engine_info.make engine) in
+          `Stay, screen, None, nobaction
+
+      | Menu.On(`RetireTrain) ->
+          `Exit, v.screen, None, B.Action.RemoveTrain {idx=v.train; player_idx}
+
+      | Menu.On(`ReplaceEngine) ->
+          `Stay, ChooseEngine, None, nobaction
+
+      | _ ->
+          `Stay, v.screen, None, nobaction
+    in
+    let v = [%up {v with menu; screen; car_menu}] in
+    exit, v, bk_action
+
+| TrainRouteOrders state ->
+    Train_route_orders.handle_tick state time;
+    `Stay, v, nobaction
+| _ ->
+    `Stay, v, nobaction
 

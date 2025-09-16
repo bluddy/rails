@@ -28,7 +28,7 @@ type screen =
 
 type 'state t = {
   train: Trainmap.Id.t;
-  menu: (msg, 'state) Menu.Global.t;
+  menu: (msg, 'state) Menu.Animated.t;
   car_menu: (([`AddCar of Goods.t | `Done | `Caboose], 'state) Menu.MsgBox.t * Backend.Action.stop) option; (* stop *)
   screen: screen;
 }
