@@ -438,31 +438,31 @@ let handle_tick (s:State.t) v time =
         (* Global menu choice: route map view *)
       | Menu.On(`ShowMap) ->
           let screen = TrainRouteOrders (Train_route_orders.make b.graph v.train `ShowRoute) in
-          `Stay, screen, None, nobaction
+          `Stay, screen, None, []
 
       | Menu.On(`Type typ) ->
-          `Stay, v.screen, None, B.Action.TrainSetType{train=v.train; typ; player_idx}
+          `Stay, v.screen, None, [B.Action.TrainSetType{train=v.train; typ; player_idx}]
 
       | Menu.On(`EngineInfo engine_make) ->
           let engine = Engine.t_of_make s.backend.engines engine_make in
           let screen = EngineInfo (Engine_info.make engine) in
-          `Stay, screen, None, nobaction
+          `Stay, screen, None, []
 
       | Menu.On(`RetireTrain) ->
-          `Exit, v.screen, None, B.Action.RemoveTrain {idx=v.train; player_idx}
+          `Exit, v.screen, None, [B.Action.RemoveTrain {idx=v.train; player_idx}]
 
       | Menu.On(`ReplaceEngine) ->
-          `Stay, ChooseEngine, None, nobaction
+          `Stay, ChooseEngine, None, []
 
       | _ ->
-          `Stay, v.screen, None, nobaction
+          `Stay, v.screen, None, []
     in
     let v = [%up {v with menu; screen; car_menu}] in
     exit, v, bk_action
 
 | TrainRouteOrders state ->
     Train_route_orders.handle_tick state time;
-    `Stay, v, nobaction
+    `Stay, v, []
 | _ ->
-    `Stay, v, nobaction
+    `Stay, v, []
 
