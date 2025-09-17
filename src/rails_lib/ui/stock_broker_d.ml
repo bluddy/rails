@@ -30,7 +30,7 @@ type 'state modal =
   | RR_build of Rr_command.t
 
 type 'state t = {
-  menu: (msg, 'state) Menu.Global.t;
+  menu: (msg, 'state) Menu.Animated.t;
   modal: 'state modal;
 }
 

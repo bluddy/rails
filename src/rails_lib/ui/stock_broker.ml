@@ -98,7 +98,7 @@ let make_menu (b:Backend.t) cities region fonts (dims:Main_ui_d.dims) =
       make ~test_enabled:owns_some_company ~fonts ~x:220 ~y:1 "&Operate RR" operate_rr_menu;
     ]
   in
-  Menu.Global.make fonts ~h:dims.menu.h ~w:dims.menu.w titles
+  Menu.Animated.make_global fonts ~h:dims.menu.h ~w:dims.menu.w titles
 
 let make (s:State.t) =
   let b = s.backend in
@@ -168,7 +168,7 @@ let render win (s:State.t) v =
   in
   Iter.fold (fun y player_idx -> render_opponent player_idx s.textures.opponents s.backend y) y @@ B.players_and_ai s.backend |> ignore;
 
-  Menu.Global.render win s v.menu;
+  Menu.Animated.render win s v.menu;
 
   match v.modal with
   | Normal -> ()
@@ -212,28 +212,40 @@ let handle_modal_event (s:State.t) modal (event:Event.t) time =
       end
 
 let handle_event (s:State.t) v (event:Event.t) time =
-  let basic_msgbox text = MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text) in
   let nobaction = B.Action.NoAction in
+  match v.modal with
+  | Normal ->
+      let menu, event = Menu.Animated.handle_event s v.menu event time in
+      let status = if Event.key_modal_dismiss event then `Exit else `Stay in
+      status, [%up {v with menu}], nobaction
+
+  | modal ->
+      let exit, modal, bk_action = handle_modal_event s modal event time in
+      let v = [%up {v with modal}] in
+      exit, v, bk_action
+
+let handle_tick (s:State.t) v time =
+  let basic_msgbox text = MsgBox(Menu.MsgBox.make_basic ~x:80 ~y:8 ~fonts:s.fonts s text) in
   let b = s.backend in
   let player_idx = C.player in
   match v.modal with
   | Normal ->
-    let menu, menu_action, event = Menu.Global.handle_event s v.menu event time in
+    let menu, menu_action = Menu.Animated.handle_tick s v.menu time in
     let exit, v, bk_action = match menu_action with
-    | Menu.On(`SellBond) -> `Stay, v, B.Action.SellBond {player_idx}
-    | Menu.On(`RepayBond) -> `Stay, v, B.Action.RepayBond {player_idx}
+    | Menu.On(`SellBond) -> `Stay, v, [B.Action.SellBond {player_idx}]
+    | Menu.On(`RepayBond) -> `Stay, v, [B.Action.RepayBond {player_idx}]
     | Menu.On(`BuyStock stock) ->
       let difficulty = B.get_difficulty b in
       begin match Stock_market.can_buy_stock player_idx ~target:stock ~cash:(B.get_cash player_idx b) b.params b.stocks with
-      | `Ok -> `Stay, v, B.Action.BuyStock {player_idx; stock}
-      | `Error -> `Stay, v, B.Action.NoAction
+      | `Ok -> `Stay, v, [B.Action.BuyStock {player_idx; stock}]
+      | `Error -> `Stay, v, []
       | `Anti_trust_violation max_num ->
           let msgbox = Menu.MsgBox.make_basic ~x:180 ~y:8 ~fonts:s.fonts s @@
             Printf.sprintf "Anti-Trust Violation\nAs a %s you are\nonly authorized to invest\nin %d other RailRoad%s."
               (B_options.show_difficulty difficulty)
               max_num (if max_num > 1 then "s" else "")
           in
-          `Stay, {v with modal=MsgBox msgbox}, nobaction
+          `Stay, {v with modal=MsgBox msgbox}, []
       | `Offer_takeover(share_price, shares_to_buy) ->
           let open Menu in
           let open MsgBox in
@@ -248,10 +260,10 @@ let handle_event (s:State.t) v (event:Event.t) time =
               make_entry "Buy Stock" @@ `Action (`BuyStock stock);
             ]
           in
-          `Stay, {v with modal=Confirm_menu(menu)}, nobaction
+          `Stay, {v with modal=Confirm_menu(menu)}, []
       end
     | Menu.On(`SellStock stock) ->
-        `Stay, v, B.Action.SellStock {player_idx; stock}
+        `Stay, v, [B.Action.SellStock {player_idx; stock}]
     | Menu.On(`Declare_bankruptcy) ->
         let menu =
           let text = "Are you sure you want\nto declare bankruptcy?" in
@@ -262,7 +274,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
             make_entry "YES" @@ `Action(`Declare_bankruptcy);
           ]
         in
-        `Stay, {v with modal=Confirm_menu(menu)}, nobaction
+        `Stay, {v with modal=Confirm_menu(menu)}, []
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
         let ai = Ai.get_ai_exn company_idx b.ai in
         (* TODO : AI *)
@@ -280,33 +292,26 @@ let handle_event (s:State.t) v (event:Event.t) time =
           (Ai.get_yearly_interest ai |> M.print ~region)
           build_order_s
         in
-        `Stay, {v with modal=basic_msgbox text}, nobaction
+        `Stay, {v with modal=basic_msgbox text}, []
 
     | Menu.On(`OperateRR (company, `TakeMoney amount)) ->
-        `Stay, v, OperateRR{player_idx; company; action=RRTakeMoney(M.of_int amount)}
+        `Stay, v, [OperateRR{player_idx; company; action=RRTakeMoney(M.of_int amount)}]
 
     | Menu.On(`OperateRR (company, `GiveMoney amount)) ->
-        `Stay, v, OperateRR{player_idx; company; action=RRGiveMoney(M.of_int amount)}
+        `Stay, v, [OperateRR{player_idx; company; action=RRGiveMoney(M.of_int amount)}]
 
     | Menu.On(`OperateRR (company, `BuildTrack)) ->
-        `Stay, {v with modal=RR_build(Rr_command.make company)}, nobaction
-        (* false, v, OperateRR{player_idx; company; action=RRBuildTrack((0,0),(0,0))} *)
+        `Stay, {v with modal=RR_build(Rr_command.make company)}, []
 
     | Menu.On(`OperateRR (company, `RepayBond)) ->
-        `Stay, v, OperateRR{player_idx; company; action=RRRepayBond}
-      
-    | _ when Event.key_modal_dismiss event ->
-        `Exit, v, nobaction
-    | _ ->
-        `Stay, v, nobaction
+        `Stay, v, [OperateRR{player_idx; company; action=RRRepayBond}]
+
+    | _ -> `Stay, v, []
     in
     let v = [%up {v with menu}] in
     exit, v, bk_action
 
-  | modal ->
-    let exit, modal, bk_action = handle_modal_event s modal event time in
-    let v = [%up {v with modal}] in
-    exit, v, bk_action
+  | _ -> `Stay, v, []
 
 let handle_msg (s:State.t) v ui_msg =
   (* Create a msgbox *)

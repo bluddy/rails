@@ -1371,6 +1371,15 @@ let handle_tick (s:State.t) v time is_cycle =
     | `Stay | `Exit -> default (* we don't allow exit by ticks here *)
     end
 
+  | Stock_broker state ->
+      let status, state2, actions = Stock_broker.handle_tick s state time in
+      let v =
+        if Utils.is_exit status then next_mode v
+        else if state2 =!= state then {v with mode=Stock_broker state2}
+        else v
+      in
+      v, actions
+
   | FiredAnimation state ->
     let state2 = Fired_animation.handle_tick time state in
     if state2 === state then default
