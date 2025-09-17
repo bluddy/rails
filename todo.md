@@ -3,9 +3,6 @@
 - Handle > 32 trains with some visual display
   - arrows?
   - scroll bar?
-- Menu:
-  - Highlight where mouse is
-  - Animate selection with white
 - Selecting zoom with mouse opens msgbox to choose center
 - Animate zoom transition
 - Click on zoom1 should take to visual zoom2
