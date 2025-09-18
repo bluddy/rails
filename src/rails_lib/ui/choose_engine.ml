@@ -53,11 +53,14 @@ let render win (s:State.t) ~engines ~year =
 
 let handle_event (event:Event.t) engines ~year =
   match event with
+  | Key {down=true; key=Event.Escape; _} -> `Exit
   | MouseButton {y; _} when Event.is_left_click event ->
     let engines = get_relevant_engines engines year in
-    if y <= 24 then List.nth engines 0 |> Option.some else
+    if y <= 24 then
+      `Select(List.nth engines 0)
+    else
       let click_idx = ((y - engine_start_y) / engine_each_y) + 1 in
-      if click_idx >= List.length engines then None
-      else List.nth engines click_idx |> Option.some
-  | _ -> None
+      if click_idx >= List.length engines then `Stay
+      else `Select(List.nth engines click_idx)
+  | _ -> `Stay
 

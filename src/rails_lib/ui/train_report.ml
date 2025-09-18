@@ -305,7 +305,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
   | ChooseEngine, _ ->
     begin match Choose_engine.handle_event event s.backend.engines ~year:(B.get_year s.backend) with
-    | Some engine ->
+    | `Select engine ->
       let menu =
         make_menu s.ui.dims s.fonts v.train ~engines:s.backend.engines ~year:(B.get_year s.backend) ~engine_make:engine.make
       in
@@ -313,8 +313,10 @@ let handle_event (s:State.t) v (event:Event.t) time =
         B.Action.TrainReplaceEngine {train=v.train; engine=engine.make; player_idx}
       in
       `Stay, {v with screen=Normal; menu}, baction
-    | _ -> 
-      `Stay, v, nobaction
+    | `Stay ->
+        `Stay, v, nobaction
+    | `Exit ->
+        `Stay, {v with screen=Normal}, nobaction
     end
 
   | Normal, (Some(car_menu, stop) as current) ->

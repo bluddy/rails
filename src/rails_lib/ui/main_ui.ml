@@ -718,11 +718,12 @@ let handle_event (s:State.t) v (event:Event.t) time =
           {v with mode=Normal}, StationSetSignal{x; y; dir; cmd})
 
     | BuildTrain state ->
-        let state2, action = Build_train.handle_event s state event time in
-        let v = 
-          if state2 =!= state then {v with mode=BuildTrain(state2)} else v
-        in
-        v, action
+        let state2, status, action = Build_train.handle_event s state event time in
+        let v = if state2 =!= state then {v with mode=BuildTrain(state2)} else v in
+        if Utils.is_exit status then
+          {v with mode=Normal}, action
+        else
+          v, action
 
     | BuildIndustry(`ChooseIndustry(industry_menu)) ->
       handle_modal_menu_events industry_menu
