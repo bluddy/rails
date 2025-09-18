@@ -1,4 +1,5 @@
 # Tasks
+- Upgrade bridge only when over bridge
 - Sound
 - Handle > 32 trains with some visual display
   - arrows?
@@ -34,7 +35,6 @@
 - Check default state of development_map and block_map
 - What happens when we delete a station and a train is heading there?
 - Check computation of wait time
-- F10 for survey
 - cursor fix?
   - software cursor?
 - Check if we actually need to loop in _update_train (print out if we ever do multiple updates)
