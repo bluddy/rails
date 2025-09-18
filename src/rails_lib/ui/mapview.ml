@@ -292,7 +292,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
     match v.zoom with
       | Zoom1 ->
           let y = y - v.dims.y in
-          {v with center_x=x; center_y=y; const_box_x=x; const_box_y=y; zoom=def_zoom2}, `NoAction
+          {v with center_x=x; center_y=y; const_box_x=x; const_box_y=y; zoom=def_zoom3}, `NoAction
       | _ when x > minimap.x && y > minimap.y && y < minimap.y + minimap.h ->
           (* click on minimap *)
           let start_x_tile, start_y_tile, _, _ = minimap_bounds v ~minimap in

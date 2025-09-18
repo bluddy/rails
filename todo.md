@@ -6,7 +6,6 @@
   - scroll bar?
 - Selecting zoom with mouse opens msgbox to choose center
 - Animate zoom transition
-- Click on zoom1 should take to visual zoom2
 - For playback, use list of variants, not the current system
   - Deletions mess it up
 - Can't build within 5 of enemy station
