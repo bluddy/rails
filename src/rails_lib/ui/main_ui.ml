@@ -432,7 +432,7 @@ let handle_train_roster_event (s:State.t) v event =
           | _ -> `NoAction
         in
         v, action
-        
+
   | _ -> v, `NoAction
 
 let nobaction = B.Action.NoAction
@@ -460,6 +460,20 @@ let check_add_pause_msg old_mode old_menu v =
    | `Unpause, _ | _, `Unpause -> [B.Action.Unpause]
    | _ -> []
 
+let modal_screen_no_input v event =
+  let v =
+    if Event.is_left_click event || Event.key_modal_dismiss event then
+      next_mode v
+    else v in
+  v, nobaction
+
+let _build_station_mode (s:State.t) v =
+  let menu =
+    build_station_menu s.fonts (B.get_region s.backend)
+    |> Menu.MsgBox.do_open_menu s in
+  let modal = make_modal menu () in
+  {v with mode=BuildStation modal}
+
 let handle_event (s:State.t) v (event:Event.t) time =
   (* Handle most stuff for regular menus and msgboxes
      process_fn: main processing on choice
@@ -484,12 +498,6 @@ let handle_event (s:State.t) v (event:Event.t) time =
       end
   in
   let player_idx = C.player in
-  let modal_screen_no_input v event =
-    if Event.is_left_click event || Event.key_modal_dismiss event then
-      next_mode v, nobaction
-    else
-      v, nobaction
-  in
   let old_mode, old_menu = v.mode, v.menu in
   let v, backend_msg = match v.mode with
     | Normal ->
@@ -604,7 +612,25 @@ let handle_event (s:State.t) v (event:Event.t) time =
         | `HoldTrainToggle train_idx ->
             v, B.Action.TrainToggleHold {player_idx; train_idx}
 
-        | _ -> v, nobaction
+        | `IncomeStatement ->
+            let state = B.create_balance_sheet player_idx s.backend in
+            {v with mode=Income_statement state}, nobaction
+
+        | `TrainIncome ->
+            let state = Train_income_report.create s in
+            {v with mode=TrainIncome state}, nobaction
+
+        | `BuildTrain ->
+            {v with mode=BuildTrain(`ChooseEngine)}, nobaction
+
+        | `BuildStation ->
+            _build_station_mode s v, nobaction
+
+        | `CallBroker ->
+            v, B.Action.CallBroker{player_idx}
+
+        | `NoAction -> v, nobaction
+
       in
       v, backend_action
 
@@ -1211,7 +1237,6 @@ let handle_msgs (s:State.t) v ui_msgs =
   let pause_msg = check_add_pause_msg old_mode old_menu v in
   v, pause_msg
 
-
   (* Mostly animations. *)
 let handle_tick (s:State.t) v time is_cycle =
   let nobaction = [] in
@@ -1230,11 +1255,7 @@ let handle_tick (s:State.t) v time is_cycle =
       | On `Build_train ->
           {v with mode=BuildTrain(`ChooseEngine)}, nobaction
       | On `Build_station ->
-          let menu =
-            build_station_menu s.fonts (B.get_region s.backend)
-            |> Menu.MsgBox.do_open_menu s in
-          let modal = make_modal menu () in
-          {v with mode=BuildStation modal}, nobaction
+          _build_station_mode s v, nobaction
       | On `Build_industry ->
           let menu =
             build_industry_menu s.fonts (B.get_region s.backend)

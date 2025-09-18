@@ -171,6 +171,8 @@ let get_survey v = v.survey
 
 let set_survey b v = {v with survey=b}
 
+let toggle_survey v = {v with survey=not v.survey}
+
 let update_option option value v =
   let options = 
     if value then
@@ -370,11 +372,23 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         set_zoom def_zoom3 v, `NoAction
     | Key {down=true; key=F4; _} ->
         set_zoom Zoom4 v, `NoAction
-    | MouseButton {down=true; x; y; button; _} ->
-        handle_mouse_button v x y button
+    | Key {down=true; key=F5; _} ->
+        v, `IncomeStatement
+    | Key {down=true; key=F6; _} ->
+        v, `TrainIncome
+    | Key {down=true; key=F7; _} ->
+        v, `BuildTrain
+    | Key {down=true; key=F8; _} ->
+        v, `BuildStation
+    | Key {down=true; key=F9; _} ->
+        v, `CallBroker
+    | Key {down=true; key=F10; _} ->
+        toggle_survey v, `NoAction
     | Key {down=true; key; modifiers; _} when is_zoom4 v ->
         let build = Event.Modifiers.shift modifiers in
         handle_key_zoom4 v key ~build
+    | MouseButton {down=true; x; y; button; _} ->
+        handle_mouse_button v x y button
     | _ -> v, `NoAction
   in
   v, actions
