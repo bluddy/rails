@@ -531,7 +531,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
       R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2);
       let water_tex = Hashtbl.find misc_h `WaterOnBridge in
       R.Texture.render win water_tex ~x:(screen_x-2) ~y:(screen_y-2)
-      
+
     | Some track, _ ->
       let tex = Textures.Tracks.find track_h track in
       R.Texture.render win tex ~x:(screen_x-2) ~y:(screen_y-2)
@@ -805,9 +805,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
     Trainmap.iter (fun train ->
       (* Draw cars *)
       List.iteri (fun i car ->
-        let car_x, car_y, car_dir =
-          Train.calc_car_loc ~car_pixels:12 s.backend.track i train 
-        in
+        let car_x, car_y, car_dir = Train.calc_car_loc ~car_pixels:12 s.backend.track i train in
         if is_in_view car_x car_y then (
           let freight = Freight.of_good car.Train.Car.good in
           let tex = Hashtbl.find s.textures.cars_top (Car freight, car_dir) in
