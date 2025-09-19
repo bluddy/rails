@@ -39,16 +39,17 @@ module History = struct
     speed_factor: int;
   } [@@deriving yojson, show]
 
-  let empty =
-    {x=0; y=0; dir=Dir.Up; speed_factor=0}
+  let empty dir =
+    (* dir: start with engine direction *)
+    {x=0; y=0; dir; speed_factor=0}
 
   type t = {
     history: elem array;
     mutable idx: int;
   } [@@deriving yojson, show]
 
-  let make () = {
-    history=Array.make (C.train_max_size + 1) empty;
+  let make dir = {
+    history=Array.make (C.train_max_size + 1) (empty dir);
     idx=0;
   }
 
@@ -263,7 +264,7 @@ let make ((x,y) as station) engine cars other_station ~dir player =
     holds_priority_shipment=false;
     freight=freight_of_cars cars;
     typ=Local;
-    history=History.make ();
+    history=History.make dir;
     stop=0;
     route;
     name=None;
