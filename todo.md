@@ -41,7 +41,9 @@
 - Update_train: handle freight class priority movement
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
+- New train should ask where we want to build
 - Bug:
+  - New train crashes into old one if one segment
   - Trains init regardless of station orientation
   - Can't build bridge over landing
   - Tunnel always too long
