@@ -44,7 +44,6 @@
 - New train should ask where we want to build
 - Bug:
   - New train crashes into old one if one segment
-  - Trains init regardless of station orientation
   - Can't build bridge over landing
   - Tunnel always too long
   - Europe scrolling: tile chemical plant not found
