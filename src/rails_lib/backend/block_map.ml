@@ -157,7 +157,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
       add_station (loc, Dir.to_upper dir) block_id v;
       let _, double = Scan.scan_station_block trackmap trains loc dir player_idx in
       set_block_double block_id double v;
-      
+
       (* New block for missing end *)
       let block_id = new_block v in
       add_station (loc, Dir.to_upper @@ Dir.opposite dir) block_id v;

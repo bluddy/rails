@@ -425,14 +425,25 @@ let _build_train station engine cars player_idx v =
   let loc = station in 
   let players =
     let engine_t = Engine.t_of_make v.engines engine in
-    let other_station =
-      Track_graph.connected_stations_dirs v.graph v.track [station]
-      |> Utils.LocuHSet.to_iter |> Iter.head |> Option.map fst
-    in
     let train =
-      (* TODO: Temporary solution for getting track dir *)
+      (* Find any other station to face dir-wise *)
+      let other_station_upper_dir =
+        Track_graph.connected_stations_dirs v.graph v.track [station]
+        |> Utils.LocuHSet.to_iter |> Iter.head
+      in
       let track = Trackmap.get loc v.track |> Option.get_exn_or "trackmap" in
-      let dir, _ = Dir.Set.pop track.dirs in
+      (* Extract dir or take any dir from track *)
+      let other_station, dir = match other_station_upper_dir  with
+      | Some(station, upper) ->
+          begin match Dir.Set.dir_of_upper upper track.dirs with
+          | Some dir -> Some station, Some dir
+          | None -> None, None
+          end
+      | None -> None, None
+      in
+      let dir = Option.get_lazy
+        (fun () -> Dir.Set.pop track.dirs |> fst) dir
+      in
       Train.make loc engine_t cars other_station ~dir player_idx
     in
     Player.update v.players player_idx (fun player ->

@@ -36,7 +36,11 @@ let to_upper x =
   if x <= DownRight then `Lower else `Upper
 let opposite_upper = function `Lower -> `Upper | `Upper -> `Lower
 let is_lower x = match to_upper x with `Lower -> true | _ -> false
-let is_upper x = not (is_lower x)
+let is_upper x = not @@ is_lower x
+let match_upper up x = match up with
+  | `Upper when is_upper x -> true
+  | `Upper -> false
+  | _ -> true
 
 let cw = function
   | Up -> UpRight
@@ -140,6 +144,11 @@ module Set = struct
     None
 
   let x_shape = empty |> add UpLeft |> add UpRight |> add DownLeft |> add DownRight
+
+  let dir_of_upper upper v =
+    (* Find the first dir matching with the upper *)
+    find_opt v (fun dir -> match_upper upper dir)
+
 end
 
 
