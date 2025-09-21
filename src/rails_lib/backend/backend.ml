@@ -421,9 +421,14 @@ let _improve_station loc player_idx ~upgrade v =
   in
   [%up {v with stations; players}]
 
-let _build_train loc engine cars other_station player_idx v =
+let _build_train station engine cars player_idx v =
+  let loc = station in 
   let players =
     let engine_t = Engine.t_of_make v.engines engine in
+    let other_station =
+      Track_graph.connected_stations_dirs v.graph v.track [station]
+      |> Utils.LocuHSet.to_iter |> Iter.head |> Option.map fst
+    in
     let train =
       (* TODO: Temporary solution for getting track dir *)
       let track = Trackmap.get loc v.track |> Option.get_exn_or "trackmap" in
@@ -948,7 +953,7 @@ module Action = struct
     | ImproveStation of {x:int; y:int; player_idx: Owner.t; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
     | BuildTrain of {engine: Engine.make; cars: Goods.t list;
-                     station: int * int; other_station: (int * int) option; player_idx: Owner.t} 
+                     station: int * int; player_idx: Owner.t}
     | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int; player_idx: Owner.t}
     | RemoveStop of {train: Trainmap.Id.t; stop: stop; player_idx: Owner.t}
     | AddStopCar of {train: Trainmap.Id.t; stop: stop; car: Goods.t; player_idx: Owner.t}
@@ -999,8 +1004,8 @@ module Action = struct
           _improve_station (x,y) player_idx ~upgrade backend
       | SetSpeed speed ->
           _set_speed backend speed
-      | BuildTrain {engine; cars; station; other_station; player_idx} ->
-          _build_train station engine cars other_station player_idx backend
+      | BuildTrain {engine; cars; station; player_idx} ->
+          _build_train station engine cars player_idx backend
       | RemoveStopCar {train; stop; car; player_idx} ->
           _remove_stop_car train ~stop ~car player_idx backend
       | SetStopStation {train; stop; station; player_idx} ->

@@ -64,14 +64,9 @@ module AddCars = struct
       v, nobaction
     else if v.train_done && (Event.pressed_esc event || Event.is_left_click event) then
       let station = v.anim.station in
-      let other_station =
-        Track_graph.connected_stations_dirs s.backend.graph s.backend.track [station]
-        |> Utils.LocuHSet.to_iter |> Iter.head |> Option.map fst
-      in
       v, Backend.Action.BuildTrain{engine=v.anim.engine;
                                    cars=v.anim.cars;
                                    station;
-                                   other_station;
                                    player_idx=C.player}
     else
       v, nobaction
