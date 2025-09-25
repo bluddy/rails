@@ -123,6 +123,24 @@ let to_enum = function
   | GlassWorks -> 34
   | SheepFarm -> 35
 
+module DirHashtbl = Hashtbl.Make(struct
+  (* Specialized hashtable that keeps the dir arguments of the tile
+     but not other inner arguments, for drawing lookup
+   *)
+  type nonrec t = t
+  let equal x y = match x, y with
+    | EnemyStation _, EnemyStation _ -> true
+    | _ -> equal x y
+
+  let hash x = match x with
+    | Landing d
+    | River d
+    | Ocean d
+    | Harbor d -> to_enum x lxor Dir.Set.hash d
+    | _ -> to_enum x
+end)
+
+
 let is_ground = function
   | River _ | Ocean _ | Harbor _ | Landing _ | EnemyStation _ -> false
   | _ -> true
@@ -156,7 +174,7 @@ let is_buildable = function
 
 module Info = struct
 
-  module TileHash = Hashtbl.Make(struct
+  module TileHashtbl = Hashtbl.Make(struct
     (* Specialized hashtable that ignores the inner arguments of the tile *)
     type nonrec t = t
     let equal x y =
@@ -278,9 +296,9 @@ module Info = struct
       SheepFarm, make 5 ~supply:[Livestock, 5 * 32]; (* Eng, Eur *)
     ])
 
-  let us_tbl = List.to_seq us_list |> TileHash.of_seq
-  let eu_tbl = List.to_seq eu_list |> TileHash.of_seq
-  let en_tbl = List.to_seq en_list |> TileHash.of_seq
+  let us_tbl = List.to_seq us_list |> TileHashtbl.of_seq
+  let eu_tbl = List.to_seq eu_list |> TileHashtbl.of_seq
+  let en_tbl = List.to_seq en_list |> TileHashtbl.of_seq
 
   let get region tile =
     let tbl = match region with
@@ -288,7 +306,7 @@ module Info = struct
       | Europe -> eu_tbl
       | Britain -> en_tbl
     in
-    TileHash.find tbl tile
+    TileHashtbl.find tbl tile
 
   let map_industry region f =
     let list = match region with

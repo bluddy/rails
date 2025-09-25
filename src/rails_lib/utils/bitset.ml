@@ -18,6 +18,8 @@ module Make(E: Elem) = struct
 
   let to_int v = v
 
+  let hash v = to_int v
+
   let empty = 0
 
   let is_empty v =

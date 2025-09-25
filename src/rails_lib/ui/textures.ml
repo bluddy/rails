@@ -5,6 +5,7 @@ module R = Renderer
 module C = Constants
 
 module TileTex = struct
+  module HT = Tile.DirHashtbl
 
   type t =
     | Single of R.Texture.t
@@ -14,8 +15,8 @@ module TileTex = struct
   (* Load and separate sprites *)
   let slice_tiles win res =
     let open Tilemap in
-    let tiles = Hashtbl.create 40 in
-    let small_tiles = Hashtbl.create 40 in
+    let tiles = HT.create 40 in
+    let small_tiles = HT.create 40 in
 
     let pair_part ~ndarray ~y ~mult i =
       let x1, x2 = i * mult, (i+1) * mult - 1 in
@@ -27,7 +28,7 @@ module TileTex = struct
     in
     let pair_fn ~tiles ~ndarray ~y ~mult key i =
       let p = pair_part ~ndarray ~y ~mult i in
-      Hashtbl.replace tiles key p
+      HT.replace tiles key p
     in
     let single_fn ~tiles ~ndarray ~y ~mult key i =
       let x1, x2 = i * mult, (i+1) * mult - 1 in
@@ -36,7 +37,7 @@ module TileTex = struct
       let p1 =
         Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray |> R.Texture.make win
       in
-      Hashtbl.replace tiles key @@ Single p1
+      HT.replace tiles key @@ Single p1
     in
 
     let us_ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
@@ -55,8 +56,6 @@ module TileTex = struct
       pair Foothills 3;
       pair Hills 4;
       pair Mountains 5;
-      (* pair City 6; *)
-      (* pair Village 7; *)
       pair Farm 8;
       pair Slums 9;
       top FoodProc 10;
@@ -71,7 +70,7 @@ module TileTex = struct
       bottom PowerPlant 10;
       bottom OilWell 11;
       bottom Refinery 12;
-      (* bottom EnemyRR 13; *)
+      bottom Tile.default_enemy_station 13;
       bottom TextileMill 14;
     in
     load_us_tiles ~tiles ~y:0 ~mult:16;
@@ -110,7 +109,7 @@ module TileTex = struct
       let us = pair_part ~ndarray:us_ndarray ~y ~mult i in
       let england = pair_part ~ndarray:en_ndarray ~y ~mult i in
       let europe = pair_part ~ndarray:eu_ndarray ~y ~mult i in
-      Hashtbl.replace tiles key @@ Localized{us;england;europe}
+      HT.replace tiles key @@ Localized{us;england;europe}
     in
     load_localized ~tiles ~y:0 ~mult:16 City 6;
     load_localized ~tiles ~y:0 ~mult:16 Village 7;
@@ -125,7 +124,7 @@ module TileTex = struct
           Ndarray.get_slice [[y1; y2]; [x1; x2]] ndarray
           |> R.Texture.make win
         in
-        Hashtbl.replace tiles (key @@ Dir.Set.of_list dirs) @@ Single slice
+        HT.replace tiles (key @@ Dir.Set.of_list dirs) @@ Single slice
       in
       let open Dir in
       img 0 [];
@@ -157,13 +156,13 @@ module TileTex = struct
     load_dir_tiles ~tiles:small_tiles ~key:harbor ~y:32 ~x:160 ~mult:8 ~ndarray:extra_ndarray;
     load_dir_tiles ~tiles:small_tiles ~key:river ~y:40 ~x:160 ~mult:8 ~ndarray:us_ndarray;
     load_dir_tiles ~tiles:small_tiles ~key:landing ~y:40 ~x:160 ~mult:8 ~ndarray:extra_ndarray;
-    
+
     (tiles, small_tiles)
 
     let find hash tile ~region ~alt =
-      let v = 
+      let v =
         try
-          Hashtbl.find hash tile
+          HT.find hash tile
         with Not_found ->
           failwith @@ Printf.sprintf "Tile %s not found" (Tile.show tile)
       in
@@ -556,7 +555,7 @@ module EngineDetail = struct
     tex BoBoBo 100 "ELOCOS3";
     tex TGV 150 "ELOCOS3";
     hash
-    
+
 end
 
 module TrainAnim = struct
@@ -1032,8 +1031,8 @@ end
 type t = {
   pics: (string, R.Texture.t) Hashtbl.t;
   pixel: R.Texture.t; (* white pixel *)
-  tiles: (Tile.t, TileTex.t) Hashtbl.t;
-  small_tiles: (Tile.t, TileTex.t) Hashtbl.t;
+  tiles: TileTex.t Tile.DirHashtbl.t;
+  small_tiles: TileTex.t Tile.DirHashtbl.t;
   tracks: R.Texture.t Track.Htbl.t;
   station_us: (StationTex.hash, R.Texture.t) Hashtbl.t;
   station_en: (StationTex.hash, R.Texture.t) Hashtbl.t;

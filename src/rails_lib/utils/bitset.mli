@@ -50,6 +50,8 @@ module type S = sig
 
   val to_int: t -> int
 
+  val hash: t -> int
+
   val pp: Format.formatter -> t -> unit
 
 end
