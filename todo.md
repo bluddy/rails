@@ -1,4 +1,5 @@
 # Tasks
+- AI now established too early
 - Upgrade bridge only when over bridge
 - Sound
 - Handle > 32 trains with some visual display
@@ -43,6 +44,9 @@
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
 - Bug:
+  - Speed record set too easily
+  - Dismiss build train animation with enter
+  - Station resource window doesn't appear when station close to edge of window.
   - New train crashes into old one if one segment
   - Can't build bridge over landing
   - Tunnel always too long
