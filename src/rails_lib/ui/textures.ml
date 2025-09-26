@@ -70,6 +70,7 @@ module TileTex = struct
       bottom PowerPlant 10;
       bottom OilWell 11;
       bottom Refinery 12;
+      bottom ChemicalPlant 12;
       bottom Tile.default_enemy_station 13;
       bottom TextileMill 14;
     in
