@@ -1,4 +1,6 @@
 # Tasks
+- Region-based stuff is missing: check in dosbox
+- Poke in memory ds:0FCA to find what power plant maps to in britain
 - AI now established too early
 - Upgrade bridge only when over bridge
 - Sound
