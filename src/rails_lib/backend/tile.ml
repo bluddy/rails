@@ -182,6 +182,8 @@ module Info = struct
     let hash = to_enum
   end)
 
+  let show_tile = show
+
   type t = {
     cost: Money.t;
     supply: (Goods.t * int) list;
@@ -306,7 +308,10 @@ module Info = struct
       | Europe -> eu_tbl
       | Britain -> en_tbl
     in
-    TileHashtbl.find tbl tile
+    try
+      TileHashtbl.find tbl tile
+    with Not_found ->
+      failwith @@ Printf.sprintf "Couldn't find tile info for %s" (show_tile tile)
 
   let map_industry region f =
     let list = match region with

@@ -165,37 +165,55 @@ let tile_of_pixel_xy x y ~region ~pixel v =
     | Slum_pixel -> Tile.Slums
     | Clear_pixel -> Clear
     | Woods_pixel -> Woods
-    | Harbor_pixel ->
-        Harbor(water_dirs ~edge:false ~f:not_water)
+    | Harbor_pixel -> Harbor(water_dirs ~edge:false ~f:not_water)
     | CoalMine_pixel -> CoalMine
+    | Desert_pixel when Region.is_west_us region -> Desert
     | Desert_pixel -> Swamp
     | Foothills_pixel -> Foothills
-    | OilWell_pixel -> Factory (* TODO check *)
-    | River_pixel ->
-        River(water_dirs ~edge:false ~f:is_water)
+    | OilWell_pixel -> Factory
+    | River_pixel -> River(water_dirs ~edge:false ~f:is_water)
     | Farm_pixel -> Farm
     | Hills_pixel -> Hills
     | Village_pixel -> Village
     | City_pixel -> City
     | Mountain_pixel -> Mountains
-    | Ocean_pixel ->
-        Ocean(water_dirs ~edge:false ~f:not_water)
-    | EnemyStation_pixel ->
-        (* We don't expect this to ever be run for real *)
-        Tile.default_enemy_station
+    | Ocean_pixel -> Ocean(water_dirs ~edge:false ~f:not_water)
+    | EnemyStation_pixel -> Tile.default_enemy_station
   in
-  (* NOTE: Does some region change the mappings?
-      Otherwise why would clear pixels get complex mapping when they can't have anything? *)
   let complex_mapping pixel xy_random =
     (* xy_random is 0-3 *)
-    match (pixel, xy_random) with
-    | River_pixel, (0 | 2) ->
-        Tile.Landing(water_dirs ~edge:false ~f:is_water)
-    | River_pixel, _ ->
-        River(water_dirs ~edge:false ~f:is_water)
+    match region with
+    | Region.Britain -> begin match pixel, xy_random with
+      | Clear_pixel, 0 -> Tile.GlassWorks
+      | Clear_pixel, 3 -> SheepFarm
+      | Foothills_pixel, 1 -> TextileMill
+      | OilWell_pixel, _ -> SaltMine
+      | River_pixel, 2 -> Tile.Landing(water_dirs ~edge:false ~f:is_water)
+      | Farm_pixel, (0 | 2) -> GrainElev
+      | Farm_pixel, 3 -> SheepFarm
+      | (City_pixel | Village_pixel), 0 -> SteelMill
+      | (City_pixel | Village_pixel), 1 -> Factory
+      | (City_pixel | Village_pixel), 2 -> Brewery
+      | (City_pixel | Village_pixel), 3 -> ChemicalPlant
+      | _ -> simple_mapping pixel
+      end
+    | Europe -> begin match pixel, xy_random with
+      | Foothills_pixel, 1 -> TextileMill
+      | OilWell_pixel, _ -> SheepFarm
+      | Farm_pixel, (0 | 2) -> Vineyard
+      | Farm_pixel, 3 -> Fort
+      | (City_pixel | Village_pixel), 0 -> SteelMill
+      | (City_pixel | Village_pixel), 1 -> Factory
+      | (City_pixel | Village_pixel), 2 -> Winery
+      | Village_pixel, 3 -> ChemicalPlant
+      | City_pixel, 3 -> PowerPlant
+      | _ -> simple_mapping pixel
+      end
+  | EastUS | WestUS -> begin match pixel, xy_random with
+    | River_pixel, (0 | 2) -> Tile.Landing(water_dirs ~edge:false ~f:is_water)
+    | River_pixel, _ -> River(water_dirs ~edge:false ~f:is_water)
     | Farm_pixel, 0 -> GrainElev
     | Farm_pixel, 3 -> Ranch
-    | Farm_pixel, _ -> Farm
     | Village_pixel, 0 -> Stockyard
     | Village_pixel, 1 -> Factory
     | Village_pixel, 2 -> FoodProc
@@ -205,59 +223,28 @@ let tile_of_pixel_xy x y ~region ~pixel v =
     | City_pixel, 2 -> Refinery
     | City_pixel, 3 -> PowerPlant
     | _ -> simple_mapping pixel
+      end
   in
   let upper_3bits = (xy_random lsr 5) land 7 in
   let mid_2bits = (xy_random lsr 3) land 3 in
   let low_3bits = xy_random land 7 in
-  let us_tile = 
-    match pixel with
-    | CoalMine_pixel | OilWell_pixel ->
-        let low_2bits = seed land 3 in
-        let x = x + low_2bits in
-        let next_2bits = (seed lsr 4) land 3 in
-        let y = y / 2 + next_2bits in
-        if x land 2 = y land 3 then Tile.OilWell
-        else if x land 3 = y land 3 then LumberMill
-        else CoalMine
-    | Farm_pixel | Clear_pixel when upper_3bits = mid_2bits && low_3bits = 0 ->
-          complex_mapping pixel mid_2bits
-    | Farm_pixel | Clear_pixel ->
-          simple_mapping pixel
-    | _ when low_3bits = 0 ->
-          complex_mapping pixel mid_2bits
-    | _ ->
-          simple_mapping pixel
-  in
-  let alternative_tile region tile = match region with
-    | Region.Britain ->
-        begin match tile with
-        | Tile.FoodProc -> Tile.Brewery
-        | Ranch -> SheepFarm
-        | Stockyard -> GlassWorks
-        | PaperMill -> TextileMill
-        | OilWell -> SaltMine
-        | Refinery -> ChemicalPlant (* same image *)
-        | x -> x
-        end
-    | Europe ->
-        begin match tile with
-        | FoodProc -> Winery
-        | Ranch -> Fort
-        | Stockyard -> SheepFarm
-        | GrainElev -> Vineyard
-        | PaperMill -> TextileMill
-        | OilWell -> SheepFarm
-        | Refinery -> ChemicalPlant (* same image *)
-        | x -> x
-        end
-    | WestUS ->
-        begin match tile with
-        | Swamp -> Desert
-        | x -> x
-        end
-    | _ -> tile
-  in
-  alternative_tile region us_tile
+  match pixel with
+  | CoalMine_pixel | OilWell_pixel ->
+      let low_2bits = seed land 3 in
+      let x = x + low_2bits in
+      let next_2bits = (seed lsr 4) land 3 in
+      let y = y / 2 + next_2bits in
+      if x land 2 = y land 3 then Tile.OilWell
+      else if x land 3 = y land 3 then LumberMill
+      else CoalMine
+  | Farm_pixel | Clear_pixel when upper_3bits = mid_2bits && low_3bits = 0 ->
+        complex_mapping pixel mid_2bits
+  | Farm_pixel | Clear_pixel ->
+        simple_mapping pixel
+  | _ when low_3bits = 0 ->
+        complex_mapping pixel mid_2bits
+  | _ ->
+        simple_mapping pixel
 
 let tile_of_pixel (x, y) ~region ~pixel v = tile_of_pixel_xy x y ~region ~pixel v
 
