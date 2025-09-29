@@ -1,4 +1,5 @@
 # Tasks
+- Can keep building into minus
 - Rivers at land edge don't look good
 - Harbors near river should be closed in
 - AI now established too early
@@ -50,7 +51,6 @@
   - Dismiss build train animation with enter
   - Station resource window doesn't appear when station close to edge of window.
   - New train crashes into old one if one segment
-  - Tunnel always too long
   - Year doesn't switch at end of December.
     - May be in original game too
   - Fiscal end stock eval: msgbox weird size thing
