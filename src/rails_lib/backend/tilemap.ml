@@ -356,8 +356,7 @@ let get_grade loc ~dir v =
 
     (* Get the length of a tunnel needed.
        We stop when we reach the same height more or less *)
-let check_build_tunnel ((x,y) as loc) ~dir v =
-   let dx, dy = Dir.to_offsets dir in
+let check_build_tunnel loc ~dir v =
    let base_dist = Dir.diag_adjust dir C.track_length in
    let start_height = get_tile_height loc v in
    let rec loop loc n =
@@ -366,15 +365,15 @@ let check_build_tunnel ((x,y) as loc) ~dir v =
      else
       match get_tile loc v with
       | Ocean _ | River _ | Landing _ | Harbor _ -> `HitWater
-      | _ -> 
+      | _ ->
         let height = get_tile_height loc v in
         if height <= start_height + 8 then
           (* we're done *)
           `Tunnel(n, n * base_dist, Money.(C.tunnel_cost * n * base_dist))
         else
-          loop (x+dx, y+dy) (n+1)
+          loop (Dir.adjust_loc dir loc) (n+1)
    in
-   loop (x+dx, y+dy) 1
+   loop (Dir.adjust_loc dir loc) 1
 
 let check_build_track loc ~dir (params:Params.t) v =
    let tile1 = get_tile loc v in

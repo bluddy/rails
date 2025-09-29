@@ -36,7 +36,7 @@ let goods_div = 4
 let speed_mult = 5 (* multiply speed by this *)
 let min_maintenance_cost = moi 2
 
-let track_length = 2
+let track_length = 2 (* basic length of unit of track *)
 
 let tunnel_min_height = 80 (* height needed for tunnel *)
 let tunnel_max_length = 9
