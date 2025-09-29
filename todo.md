@@ -1,4 +1,6 @@
 # Tasks
+- Rivers at land edge don't look good
+- Harbors near river should be closed in
 - AI now established too early
 - Upgrade bridge only when over bridge
 - Sound
