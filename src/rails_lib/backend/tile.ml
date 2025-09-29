@@ -140,6 +140,9 @@ module DirHashtbl = Hashtbl.Make(struct
     | _ -> to_enum x
 end)
 
+let is_water = function
+  | River _ | Ocean _ | Harbor _ | Landing _ -> true
+  | _ -> false
 
 let is_ground = function
   | River _ | Ocean _ | Harbor _ | Landing _ | EnemyStation _ -> false

@@ -363,15 +363,15 @@ let check_build_tunnel loc ~dir v =
      if out_of_bounds loc v then `OutOfBounds
      else if n > C.tunnel_max_length then `TooLong
      else
-      match get_tile loc v with
-      | Ocean _ | River _ | Landing _ | Harbor _ -> `HitWater
-      | _ ->
-        let height = get_tile_height loc v in
-        if height <= start_height + 8 then
-          (* we're done *)
-          `Tunnel(n, n * base_dist, Money.(C.tunnel_cost * n * base_dist))
-        else
-          loop (Dir.adjust_loc dir loc) (n+1)
+       let tile = get_tile loc v in
+       if Tile.is_water tile then `HitWater
+       else
+         let height = get_tile_height loc v in
+         if height <= start_height + 8 then
+           (* we're done *)
+           `Tunnel(n, n * base_dist, Money.(C.tunnel_cost * n * base_dist))
+         else
+           loop (Dir.adjust_loc dir loc) (n+1)
    in
    loop (Dir.adjust_loc dir loc) 1
 
