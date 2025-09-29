@@ -50,7 +50,6 @@
   - Dismiss build train animation with enter
   - Station resource window doesn't appear when station close to edge of window.
   - New train crashes into old one if one segment
-  - Can't build bridge over landing
   - Tunnel always too long
   - Year doesn't switch at end of December.
     - May be in original game too
