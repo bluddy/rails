@@ -399,7 +399,7 @@ let check_build_track loc ~dir (params:Params.t) v =
         else
           `Ok
     (* Bridge *)
-    | t, River _ when Tile.is_ground t && Dir.is_cardinal dir ->
+    | t, (River _ | Landing _ ) when Tile.is_ground t && Dir.is_cardinal dir ->
         let loc3 = Dir.adjust_loc dir loc2 in
         if out_of_bounds loc3 v then `Illegal
         else

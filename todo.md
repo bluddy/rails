@@ -1,6 +1,4 @@
 # Tasks
-- Region-based stuff is missing: check in dosbox
-- Poke in memory ds:0FCA to find what power plant maps to in britain
 - AI now established too early
 - Upgrade bridge only when over bridge
 - Sound
@@ -52,8 +50,6 @@
   - New train crashes into old one if one segment
   - Can't build bridge over landing
   - Tunnel always too long
-  - Europe scrolling: tile chemical plant not found
-  - England: generation fails
   - Year doesn't switch at end of December.
     - May be in original game too
   - Fiscal end stock eval: msgbox weird size thing
