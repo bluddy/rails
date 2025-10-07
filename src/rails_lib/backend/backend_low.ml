@@ -117,7 +117,6 @@ module Train_update = struct
         in
         msg, max_speed
       else [], 0 
-          
 
   let _ui_msgs_of_new_goods_delivered goods_delivered goods_delivered_map player cars_delivered_speed money_from_goods train station =
     let new_goods = Goods.Set.diff goods_delivered player.Player.goods_delivered in
@@ -404,9 +403,8 @@ module Train_update = struct
       in
       let train = _update_train_target_speed v train track ~idx ~cycle loc ~dir in
       train, stations, active_stations, ui_msgs
-    ) else (
+    ) else
       {train with state=Train.StoppedAtSignal dir}, stations, [], ui_msgs
-    )
 
   let _check_train_crash loc train_idx tracks player =
     let trainmap = Player.get_trains player in
@@ -660,7 +658,8 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
     let rec train_update_loop train speed_bound stations player ui_msg_acc =
       let speed = Train.get_speed train in
-        if speed_bound >= speed then train, stations, player, ui_msg_acc, []
+      if speed_bound >= speed then
+        train, stations, player, ui_msg_acc, []
       else (
         let speed =
           if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3 else speed
@@ -674,7 +673,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
         let update_val = update_val / region_div |> min Train.update_array_length in
 
         let train, stations, data, active_stations, ui_msgs, crash_info =
-          if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then begin
+          if (Train.update_cycle_array.(update_val) land cycle_bit) <> 0 then (
             let is_mid_tile =
               (train.x mod C.tile_w) = C.tile_w / 2 &&
               (train.y mod C.tile_h) = C.tile_h / 2
@@ -690,13 +689,13 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
                   let a, b, c, d, e =
                     _handle_train_mid_tile ~idx ~cycle:params.cycle v train stations player loc
                   in
-                    a, b, c, d, e, []
+                  a, b, c, d, e, []
             | false, true ->
                 travel_state.traveling_past_station <- false;
                 Train.advance train, stations, None, [], [], []
             | _ ->
                 Train.advance train, stations, None, [], [], []
-          end else
+          ) else
               train, stations, None, [], [], []
         in
         let player = _update_player_with_data player data active_stations current_period v.random in

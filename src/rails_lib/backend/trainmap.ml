@@ -6,6 +6,7 @@ module Vector = Utils.Vector
 module C = Constants
 open Utils.Infix
 
+module IntMap = Utils.IntMap
 module Id = Train.Id
 
 (* It's very important to keep the tile_idx updated all the time.
@@ -18,10 +19,15 @@ type ro = Train.ro
 type t = {
   trains: (rw Train.t) Vector.vector;
   tile_idx: (Utils.loc, Id.t list) Hashtbl.t;  (* Tiles of train locations. *)
+  priorities: Id.t list IntMap.t;
 }
 [@@deriving yojson]
 
-let empty () = { trains=Vector.create (); tile_idx=Hashtbl.create 10 }
+let empty () = {
+  trains=Vector.create ();
+  tile_idx=Hashtbl.create 10;
+  priorities=IntMap.empty;
+}
 
 let _calc_train_loc (train:'a Train.t) = train.x / C.tile_dim, train.y / C.tile_dim
 
@@ -50,19 +56,47 @@ let _get v idx =
 let get idx v : ro Train.t =
   Vector.get (_freeze_all v.trains) @@ Id.to_int idx
 
+module Priorities = struct
+  (* Deal with priority data structure *)
+let add priority train_id priorities =
+  let priorities = IntMap.update priority
+    (function 
+      | Some l -> Some (train_id::l)
+      | None -> Some [train_id])
+    priorities
+  in
+  priorities
+
+let remove priority train_id priorities =
+  let priorities = IntMap.update priority
+    (function 
+      | Some l ->
+          let l = List.filter (fun x -> not @@ Id.equal x train_id) l in
+          if List.is_empty l then None else Some l
+      | None -> None)
+    priorities
+  in
+  priorities
+end
+
 let add train v =
   Vector.push v.trains train;
   let train_id = Id.of_int @@ Vector.size v.trains - 1 in
   let loc = _calc_train_loc train in
   _add_train_loc loc train_id v;
-  v
+  let priority = Train.calc_priority train in
+  let priorities = Priorities.add priority train_id v.priorities in
+  {v with priorities}
 
-let delete idx v =
+let delete train_id v =
   (* We need the train for the loc *)
-  let loc = get idx v |> _calc_train_loc in
-  _remove_train_loc loc idx v ;
-  Vector.remove_and_shift v.trains @@ Id.to_int idx;
-  v
+  let train = get train_id v in
+  let loc = _calc_train_loc train in
+  _remove_train_loc loc train_id v ;
+  Vector.remove_and_shift v.trains @@ Id.to_int train_id;
+  let priority = Train.calc_priority train in
+  let priorities = Priorities.remove priority train_id v.priorities in
+  {v with priorities}
 
 let _with_update_loc v idx train f =
   (* Any r/w action on trains needs to update their positions in the index *)
@@ -164,7 +198,7 @@ let remove_goods_in_all_trains remove_goods v =
     Train.remove_goods remove_goods train)
   v.trains;
   v
-  
+
 let subrange start ~num v =
   let start = Id.to_int start in
   if start < size v - 1 || num <= 0 then Iter.empty, `First, `Last else

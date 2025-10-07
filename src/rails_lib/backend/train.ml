@@ -671,3 +671,9 @@ let toggle_hold_at_next_station v =
 
 let get_train_hold v = v.hold_at_next_station
 
+(* Compute priority for which train passes first *)
+let calc_priority v =
+  let freight_num = v.freight |> Freight.to_enum in
+  let type_num = v.typ |> train_type_to_enum in
+  freight_num * 3 - type_num + 2
+
