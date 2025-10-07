@@ -718,7 +718,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
     (* Run every cycle, updating every train's position and speed *)
   let _update_all_trains (v:t) (player:Player.t) =
-    (* TODO: We update the high priority trains before the low priority *)
+    (* TODO: We need to update the high priority trains before the low priority *)
     (* Trains are in a vector, updated in-place *)
     let stations, player, ui_msgs, crash_info =
       Trainmap.fold_mapi_in_place (fun idx (stations, player, ui_msg_acc, crash_info_acc) train ->

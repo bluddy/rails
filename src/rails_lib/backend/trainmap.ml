@@ -165,6 +165,18 @@ let fold_mapi_in_place f v ~init =
     ~init
     v.trains
 
+  (* Similar to fold-map, but goes by priority. Also, we make sure
+     to update the priority structure as needed per train for the next iteration
+     TODO: stopped here. update _with_update_loc_pair to handle priority as well,
+     then loop by priority
+   *)
+let fold_mapi_by_priority f v ~init =
+  Vector.fold_mapi_in_place (fun i acc train ->
+    let id = Id.of_int i in
+    _with_update_loc_pair id train v (f id acc))
+    ~init
+    v.trains
+
   (* Return the index of a train that matches *)
 let find_ret_index (f:ro Train.t -> bool) (v:t) =
   let exception Stop of Id.t in
