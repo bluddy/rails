@@ -718,16 +718,14 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
 
     (* Run every cycle, updating every train's position and speed *)
   let _update_all_trains (v:t) (player:Player.t) =
-    (* TODO: We need to update the high priority trains before the low priority *)
-    (* Trains are in a vector, updated in-place *)
-    let stations, player, ui_msgs, crash_info =
-      Trainmap.fold_mapi_in_place (fun idx (stations, player, ui_msg_acc, crash_info_acc) train ->
+    let (stations, player, ui_msgs, crash_info), trains =
+      Trainmap.fold_mapi_by_priority (fun idx (stations, player, ui_msg_acc, crash_info_acc) train ->
         let train, stations, player, ui_msgs, crash_info = _update_train v idx train stations player v.params in
         (stations, player, ui_msgs @ ui_msg_acc, crash_info @ crash_info_acc), train)
         player.trains
         ~init:(v.stations, player, [], [])
     in
-    player.trains, stations, player, ui_msgs, crash_info
+    trains, stations, player, ui_msgs, crash_info
 end
 
 let _try_to_create_priority_shipment ?(force=false) (player:Player.t) stations params random =

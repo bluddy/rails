@@ -32,6 +32,8 @@ val mapi_in_place: (Id.t -> rw Train.t -> rw Train.t) -> t -> t
 
 val fold_mapi_in_place: (Id.t -> 'a -> rw Train.t -> 'a * rw Train.t) -> t -> init:'a -> 'a
 
+val fold_mapi_by_priority: (Id.t -> 'a -> rw Train.t -> 'a * rw Train.t) -> t -> init:'a -> 'a * t
+
 val find_ret_index: (ro Train.t -> bool) -> t -> Id.t option
 
 val get_at_loc: Utils.loc -> t -> Id.t list

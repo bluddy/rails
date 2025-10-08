@@ -104,7 +104,7 @@ let add train v =
   let loc = _calc_train_loc train in
   _add_train_loc loc train_id v;
   let priority = Train.calc_priority train in
-  let p_to_ids, id_to_p = Priorities.add priority train_id v.p_to_ids v.id_to_p in
+  let id_to_p, p_to_ids = Priorities.add priority train_id v.id_to_p v.p_to_ids in
   {v with p_to_ids; id_to_p}
 
 let delete train_id v =
@@ -112,7 +112,7 @@ let delete train_id v =
   let loc = _calc_train_loc train in
   _remove_train_loc loc train_id v ;
   Vector.remove_and_shift v.trains @@ Id.to_int train_id;
-  let p_to_ids, id_to_p = Priorities.remove train_id v.p_to_ids v.id_to_p in
+  let id_to_p, p_to_ids = Priorities.remove train_id v.id_to_p v.p_to_ids in
   {v with p_to_ids; id_to_p}
 
 let _with_update_loc v idx train f =
@@ -193,15 +193,15 @@ let fold_mapi_in_place f v ~init =
 
   (* Similar to fold-map, but goes by priority (0->up). Also, we make sure
      to update the priority structure as needed per train for the next iteration
-     TODO: stopped here. update _with_update_loc_pair to handle priority as well,
-     then loop by priority
    *)
 let fold_mapi_by_priority f v ~init =
   let acc, v, id_to_p, p_to_ids =
     Priorities.fold (fun train_id (acc, v, id_to_p, p_to_ids) ->
-      let p, v =
+      let (p, acc), v =
         update_get_val train_id v (fun train ->
-           Train.calc_priority train, f train_id acc) in
+           let acc, train = f train_id acc train in
+           (Train.calc_priority train, acc), train) in
+      (* Update priority if needed for next loop *)
       let saved_p = Priorities.find train_id id_to_p in
       let id_to_p, p_to_ids =
         if p <> saved_p then
