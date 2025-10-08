@@ -8,6 +8,7 @@ open Utils.Infix
 
 module IntMap = Utils.IntMap
 module Id = Train.Id
+module IdMap = Train.IdMap
 
 (* It's very important to keep the tile_idx updated all the time.
    We do this using r/w and r/o access functions
@@ -19,14 +20,16 @@ type ro = Train.ro
 type t = {
   trains: (rw Train.t) Vector.vector;
   tile_idx: (Utils.loc, Id.t list) Hashtbl.t;  (* Tiles of train locations. *)
-  priorities: Id.t list IntMap.t;
+  p_to_ids: Id.t list IntMap.t; (* p = priority *)
+  id_to_p: int IdMap.t (* p = priority *)
 }
 [@@deriving yojson]
 
 let empty () = {
   trains=Vector.create ();
   tile_idx=Hashtbl.create 10;
-  priorities=IntMap.empty;
+  p_to_ids=IntMap.empty;
+  id_to_p=IdMap.empty;
 }
 
 let _calc_train_loc (train:'a Train.t) = train.x / C.tile_dim, train.y / C.tile_dim
@@ -57,26 +60,42 @@ let get idx v : ro Train.t =
   Vector.get (_freeze_all v.trains) @@ Id.to_int idx
 
 module Priorities = struct
-  (* Deal with priority data structure *)
-let add priority train_id priorities =
-  let priorities = IntMap.update priority
-    (function 
-      | Some l -> Some (train_id::l)
-      | None -> Some [train_id])
-    priorities
-  in
-  priorities
+    (* Deal with priority data structure *)
+  let add priority train_id id_to_p p_to_ids =
+    let p_to_ids = IntMap.update priority
+      (function 
+        | Some l -> Some (train_id::l)
+        | None -> Some [train_id])
+      p_to_ids
+    in
+    let id_to_p = IdMap.add train_id priority id_to_p in
+    id_to_p, p_to_ids
 
-let remove priority train_id priorities =
-  let priorities = IntMap.update priority
-    (function 
-      | Some l ->
-          let l = List.filter (fun x -> not @@ Id.equal x train_id) l in
-          if List.is_empty l then None else Some l
-      | None -> None)
-    priorities
-  in
-  priorities
+  let remove train_id id_to_p p_to_ids =
+    let priority = IdMap.find train_id id_to_p in
+    let p_to_ids = IntMap.update priority
+      (function 
+        | Some l ->
+            let l = List.filter (fun x -> not @@ Id.equal x train_id) l in
+            if List.is_empty l then None else Some l
+        | None -> None)
+      p_to_ids
+    in
+    let id_to_p = IdMap.remove train_id id_to_p in
+    id_to_p, p_to_ids
+
+  let find train_id v = IdMap.find train_id v
+
+  (* fold on the int -> id list structure *)
+  let fold f ~init v =
+    IntMap.fold (fun _prio train_list acc ->
+      (* don't care about priority, it's just for order *)
+      List.fold_left (fun acc train_id -> f train_id acc)
+        acc
+        train_list)
+      v
+      init
+
 end
 
 let add train v =
@@ -85,18 +104,16 @@ let add train v =
   let loc = _calc_train_loc train in
   _add_train_loc loc train_id v;
   let priority = Train.calc_priority train in
-  let priorities = Priorities.add priority train_id v.priorities in
-  {v with priorities}
+  let p_to_ids, id_to_p = Priorities.add priority train_id v.p_to_ids v.id_to_p in
+  {v with p_to_ids; id_to_p}
 
 let delete train_id v =
-  (* We need the train for the loc *)
   let train = get train_id v in
   let loc = _calc_train_loc train in
   _remove_train_loc loc train_id v ;
   Vector.remove_and_shift v.trains @@ Id.to_int train_id;
-  let priority = Train.calc_priority train in
-  let priorities = Priorities.remove priority train_id v.priorities in
-  {v with priorities}
+  let p_to_ids, id_to_p = Priorities.remove train_id v.p_to_ids v.id_to_p in
+  {v with p_to_ids; id_to_p}
 
 let _with_update_loc v idx train f =
   (* Any r/w action on trains needs to update their positions in the index *)
@@ -110,7 +127,7 @@ let _with_update_loc v idx train f =
   train
 
 let _with_update_loc_pair idx train v f =
-  (* Any r/w action on trains needs to update their positions in the index *)
+  (* Same as above, returning a value too *)
   let loc1 = _calc_train_loc train in
   let x, train = f train in
   let loc2 = _calc_train_loc train in
@@ -122,12 +139,21 @@ let _with_update_loc_pair idx train v f =
 
   (* Update a train. R/W *)
 let update idx v f =
-  let train1 = _get v idx in
-  let train2 = _with_update_loc v idx train1 f in
-  if train1 =!= train2 then (
-    Vector.set v.trains (Id.to_int idx) train2
+  let train = _get v idx in
+  let train' = _with_update_loc v idx train f in
+  if train =!= train' then (
+    Vector.set v.trains (Id.to_int idx) train'
   );
   v
+
+  (* Update a train. R/W *)
+let update_get_val idx v f =
+  let train = _get v idx in
+  let x, train' = _with_update_loc_pair idx train v f in
+  if train =!= train' then (
+    Vector.set v.trains (Id.to_int idx) train'
+  );
+  x, v
 
 let size v = Vector.size v.trains
 
@@ -165,17 +191,29 @@ let fold_mapi_in_place f v ~init =
     ~init
     v.trains
 
-  (* Similar to fold-map, but goes by priority. Also, we make sure
+  (* Similar to fold-map, but goes by priority (0->up). Also, we make sure
      to update the priority structure as needed per train for the next iteration
      TODO: stopped here. update _with_update_loc_pair to handle priority as well,
      then loop by priority
    *)
 let fold_mapi_by_priority f v ~init =
-  Vector.fold_mapi_in_place (fun i acc train ->
-    let id = Id.of_int i in
-    _with_update_loc_pair id train v (f id acc))
-    ~init
-    v.trains
+  let acc, v, id_to_p, p_to_ids =
+    Priorities.fold (fun train_id (acc, v, id_to_p, p_to_ids) ->
+      let p, v =
+        update_get_val train_id v (fun train ->
+           Train.calc_priority train, f train_id acc) in
+      let saved_p = Priorities.find train_id id_to_p in
+      let id_to_p, p_to_ids =
+        if p <> saved_p then
+          Priorities.add p train_id id_to_p p_to_ids
+        else
+          id_to_p, p_to_ids
+      in
+      acc, v, id_to_p, p_to_ids)
+      ~init:(init, v, v.id_to_p, v.p_to_ids)
+      v.p_to_ids
+  in
+  acc, [%up {v with id_to_p; p_to_ids}]
 
   (* Return the index of a train that matches *)
 let find_ret_index (f:ro Train.t -> bool) (v:t) =

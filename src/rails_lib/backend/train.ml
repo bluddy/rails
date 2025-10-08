@@ -145,6 +145,7 @@ let is_wait = function `Wait -> true | `NoWait -> false
 
 module Id = Int_id.Make(struct end) [@@deriving yojson]
 module IdSet = Set.Make(Id)
+module IdMap = Map.Make(Id)
 
 (* 'mut is so we can't mutate a train from the wrong api *)
 type 'mut t = {
