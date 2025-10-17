@@ -498,7 +498,6 @@ module Train_update = struct
   let _handle_train_mid_tile ~idx ~cycle (v:t) (train:rw Train.t) stations player loc =
     (* All major computation happens mid-tile *)
     (* Log.debug (fun f -> f "_update_train_mid_tile"); *)
-    (* TODO: check for colocated trains (accidents/stop a train) *)
     (* Trains can be stopped by 3 things:
       1. R-click: told to stop at next stop
          Don't process train arrival
@@ -597,7 +596,7 @@ module Train_update = struct
               let train = {train with state = Train.start_traveling ~past_station:false s.block} in
               train, stations, None, [], []
         in
-        Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state));
+        (* Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state)); *)
         train, stations, data, active_stations, ui_msgs
 
     (* --- Below this trains cannot stop so must be traveling --- *)

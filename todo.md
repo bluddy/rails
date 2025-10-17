@@ -47,6 +47,10 @@
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
 - Bug:
+  - turbo doesn't seem so fast
+  - trains don't take turns on semaphores
+  - setting speed doesn't unpause menu
+  - Build station before track: send notification that need track first
   - England: infinite loop at coal creation stage
   - Speed record set too easily
   - Dismiss build train animation with enter
