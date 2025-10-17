@@ -449,7 +449,8 @@ let _build_train station engine cars player_idx v =
     let player = Player.get player_idx v.players in
     let trains, train_id = Trainmap.add train player.trains in
     let train', stations, _, _ =
-      Backend_low.Train_update.enter_station v train_id train v.stations player station in
+      let loc = train.x / C.tile_w, train.y / C.tile_h in
+      Backend_low.Train_update.enter_station v train_id train v.stations player loc in
     let trains =
       if train' =!= train then Trainmap.update train_id trains (fun _ -> train') else trains in
     let players = Player.update v.players player_idx (fun player ->
@@ -539,11 +540,12 @@ let _build_industry ((x, y) as loc) tile player_idx v =
 
 let _remove_train train_idx player_idx v =
   (* Same function called by Backend *)
-  let players = Player.update v.players player_idx @@ fun player ->
-    let trains = Train_station.remove_train train_idx v.blocks player.trains in
-    [%up {player with trains}]
+  let players, stations = Player.update' v.players player_idx @@ fun player ->
+    let trains, stations =
+      Train_station.remove_train train_idx v.blocks player.trains v.stations in
+    [%up {player with trains}], stations
   in
-  [%up {v with players}]
+  [%up {v with players; stations}]
 
 let reset_tick v =
   v.last_tick <- 0

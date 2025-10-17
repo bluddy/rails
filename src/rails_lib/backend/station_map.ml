@@ -55,3 +55,12 @@ let remove_goods goods v =
   iter (Station.remove_goods goods) v;
   v
 
+let update_signals locus signal v =
+  List.fold_left (fun v (loc, upper) ->
+    Loc_map.update loc (fun station ->
+      Station.set_signal_upper upper signal station)
+    v)
+  v
+  locus
+
+

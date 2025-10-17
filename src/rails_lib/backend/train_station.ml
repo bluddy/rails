@@ -117,14 +117,16 @@ let train_stops_at (station:Station.t) train =
   | Some _ when Utils.equal_loc (Train.get_dest train) @@ Station.get_loc station -> true
   | _ -> false
 
-let remove_train train_idx blocks trainmap =
+let remove_train train_idx blocks trainmap stations =
   (* Same function called by Backend *)
-  let () =
-    let train = Trainmap.get train_idx trainmap in
-    match train.state with
-    | Traveling {block; _} -> Block_map.block_decr_train block blocks
-    | _ -> ()
+  let train = Trainmap.get train_idx trainmap in
+  let stations = match train.state with
+    | Traveling {block; _} ->
+        let locus, signal = Block_map.decr_train_stations_to_update block blocks in
+        Station_map.update_signals locus signal stations
+
+    | _ -> stations
   in
-  Trainmap.delete train_idx trainmap
+  Trainmap.delete train_idx trainmap, stations
 
 

@@ -212,14 +212,16 @@ let has_hotel v = has_upgrade v Hotel
 let get_signal (v:t) dir =
   if Dir.is_lower dir then v.signals.lower else v.signals.upper
 
-let set_signal dir signal (v:t) =
-  let signals =
-    if Dir.is_lower dir then
+let set_signal_upper upper signal v =
+  let signals = match upper with
+    | `Lower ->
       {v.signals with lower=(signal, snd v.signals.lower)}
-    else
+    | `Upper ->
       {v.signals with upper=(signal, snd v.signals.upper)}
   in
   {v with signals}
+
+let set_signal dir signal v = set_signal_upper (Dir.to_upper dir) signal v
 
 let set_override dir override (v:t) =
   let signals =

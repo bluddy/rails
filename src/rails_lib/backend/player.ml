@@ -675,9 +675,14 @@ let handle_bridge_washout tracks params random v =
 let update v idx f =
   let p = Owner.Map.find idx v in
   let p' = f p in
-  if p =!= p' then
-    Owner.Map.add idx p' v
+  if p =!= p' then Owner.Map.add idx p' v
   else v
+
+let update' v idx f =
+  let p = Owner.Map.find idx v in
+  let p', x = f p in
+  if p =!= p' then Owner.Map.add idx p' v, x
+  else v, x
 
 let get idx v = Owner.Map.find idx v
 

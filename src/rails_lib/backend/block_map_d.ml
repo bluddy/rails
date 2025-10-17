@@ -11,6 +11,7 @@ type info = {
 type t = {
   info: (Id.t, info) Utils.Hashtbl.t;
   stations: (Utils.loc * Dir.upper, Id.t) Utils.Hashtbl.t;
+  id_stations: (Id.t, (Utils.loc * Dir.upper) list) Utils.Hashtbl.t;
 } [@@deriving yojson, show]
 
 

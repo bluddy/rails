@@ -366,6 +366,7 @@ module Train_update = struct
     train, stations, data, ui_msgs
 
   let _exit_station ~(idx:Train.Id.t) ~cycle (v:t) (train: rw Train.t) stations (track:Track.t) loc =
+    Log.debug (fun f -> f "exit_station");
     let compute_dir_to_dest graph =
       (* This is expensive *)
       let dest = Train.get_dest train in
@@ -394,9 +395,9 @@ module Train_update = struct
       (* enter block *)
       let locd = (loc, dir) in
       let locu = Utils.locu_of_locd locd in
-      let block = Block_map.block_incr_train locu v.blocks in
-      let train = 
-        {train with
+      let block, station_locus, signal = Block_map.incr_train_stations_to_update locu v.blocks in
+      let stations = Station_map.update_signals station_locus signal stations in
+      let train = { train with
           state=Train.start_traveling ~past_station:true block;
           economic_activity=false; (* reset *)
         }
@@ -454,9 +455,10 @@ module Train_update = struct
       let stations = Station_map.remove_goods destroyed_goods stations in
       (* Have to sort train ids to make sure indices are valid *)
       let train_ids = Train.IdSet.to_list trains_to_remove |> List.rev in
-      let trainmap =
-        List.fold_left (fun acc train_id -> Train_station.remove_train train_id blocks acc)
-          trainmap
+      let trainmap, stations =
+        List.fold_left (fun (trains, stations) train_id ->
+          Train_station.remove_train train_id blocks trains stations)
+          (trainmap, stations)
           train_ids
       in
       stations, trainmap
@@ -514,7 +516,8 @@ module Train_update = struct
 
             (* This is before possibly entering the station *)
           | Traveling s ->
-              Block_map.block_decr_train s.block v.blocks;
+              let station_locus, signal = Block_map.decr_train_stations_to_update s.block v.blocks in
+              let stations = Station_map.update_signals station_locus signal stations in
               let train, stations, data, ui_msgs =
                 if train.hold_at_next_station then
                   {train with state = HoldingAtStation}, stations, None, []
