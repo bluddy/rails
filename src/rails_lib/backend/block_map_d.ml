@@ -5,7 +5,7 @@ module Id = Int_id.Make(struct end)
 
 type info = {
   mutable count: int;
-  mutable double: Track.double;
+  double: Track.double;
 } [@@deriving yojson, show]
 
 type t = {

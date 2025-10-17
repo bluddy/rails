@@ -67,7 +67,7 @@ let set_block_double id double v =
   (* Update with new double state *)
   Log.debug (fun f -> f "Block_map: set block %s double to %s" (Id.show id) @@ Track.show_double double);
   let info = Hashtbl.find v.info id in
-  if not @@ Track.equal_double info.double double then 
+  if not @@ Track.equal_double info.double double then
     Hashtbl.replace v.info id {info with double=double}
   else ()
 
@@ -99,8 +99,10 @@ let merge_blocks ~from_id to_id v =
   (* combine counts *)
   let info = Hashtbl.find v.info to_id in
   let from_info = Hashtbl.find v.info from_id in
-  info.count <- info.count + from_info.count;
-  info.double <- Track.combine_double info.double from_info.double;
+  let count = info.count + from_info.count in
+  let double = Track.combine_double info.double from_info.double in
+  let info = {count; double} in
+  Hashtbl.replace v.info to_id info;
   remap_station_block_ids ~from_id to_id v;
   remove_block from_id v
 
@@ -336,7 +338,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
       | Station [] ->
         (* Both sides need to be deleted *)
         [], dirs
-      
+
       | _ -> assert false
     in
     (* Check if we have more empty dirs, i.e. no stations but just ixns *)
