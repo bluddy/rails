@@ -423,7 +423,7 @@ let _improve_station loc player_idx ~upgrade v =
 
 let _build_train station engine cars player_idx v =
   let loc = station in 
-  let players =
+  let players, stations, msg =
     let engine_t = Engine.t_of_make v.engines engine in
     let train =
       (* Find any other station to face dir-wise *)
@@ -446,17 +446,20 @@ let _build_train station engine cars player_idx v =
       in
       Train.make loc engine_t cars other_station ~dir player_idx
     in
-    Player.update v.players player_idx (fun player ->
-    let trains = Trainmap.add train player.trains in
-    let player = Player.pay `Train engine_t.price player in
-    [%up {player with trains}])
-  in
-  let msg =
-    let trains = get_trains player_idx v in
-    UIM.TrainBuilt (Trainmap.Id.of_int (Trainmap.size trains - 1))
+    let player = Player.get player_idx v.players in
+    let trains, train_id = Trainmap.add train player.trains in
+    let train', stations, _, _ =
+      Backend_low.Train_update.enter_station v train_id train v.stations player station in
+    let trains =
+      if train' =!= train then Trainmap.update train_id trains (fun _ -> train') else trains in
+    let players = Player.update v.players player_idx (fun player ->
+      let player = Player.pay `Train engine_t.price player in
+      [%up {player with trains}]) in
+    let msg = UIM.TrainBuilt train_id in
+    players, stations, msg
   in
   send_ui_msg v msg;
-  [%up {v with players}]
+  [%up {v with players; stations}]
 
 let _remove_stop_car train ~stop ~car player_idx v =
   let players = Player.update v.players player_idx (fun player ->

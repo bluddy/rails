@@ -347,7 +347,7 @@ module Train_update = struct
       (* TODO: young_station_reached if age <= 20 *)
       (* add income/2 to other_income type *)
 
-  let _enter_station (v:t) idx (train: rw Train.t) stations player loc  =
+  let enter_station (v:t) idx (train: rw Train.t) stations player loc  =
     let station' = Station_map.get_exn loc stations in
     let last_station, priority_stop, stop, train, station, data, ui_msgs =
       if Station.is_proper_station station' then (
@@ -519,7 +519,7 @@ module Train_update = struct
                 if train.hold_at_next_station then
                   {train with state = HoldingAtStation}, stations, None, []
                 else
-                  _enter_station v idx train stations player loc
+                  enter_station v idx train stations player loc
               in
               if Train.is_traveling train then
                 (* No stopping at this station *)
@@ -572,7 +572,7 @@ module Train_update = struct
 
           | HoldingAtStation ->
               (* Hold happens before we enter the station *)
-              let train, stations, data, ui_msgs = _enter_station v idx train stations player loc in
+              let train, stations, data, ui_msgs = enter_station v idx train stations player loc in
               train, stations, data, [], ui_msgs
 
           | StoppedAtSignal dir ->

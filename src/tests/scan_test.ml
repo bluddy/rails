@@ -195,7 +195,7 @@ let%expect_test "train_scan map one train" =
     |> build_road ~y:10 5 15 
   in
   let trains = Trainmap.empty () in
-  let trains = Trainmap.add (dummy_train (8, 10) Right) trains in
+  let trains = Trainmap.add (dummy_train (8, 10) Right) trains |> fst in
   S.scan_station_block tracks trains (5, 10) Right player |> print_sscan;
   [%expect {|
     1,
@@ -206,7 +206,7 @@ let%expect_test "train_scan map double" =
     |> build_road ~track:(T.Track `Double) ~y:10 5 15 
   in
   let trains = Trainmap.empty () in
-  let trains = Trainmap.add (dummy_train (8, 10) Right) trains in
+  let trains = Trainmap.add (dummy_train (8, 10) Right) trains |> fst in
   S.scan_station_block tracks trains (5, 10) Right player |> print_sscan;
   [%expect {|
     1,
@@ -217,8 +217,8 @@ let%expect_test "train_scan map two trains" =
     |> build_road ~y:10 5 15 
   in
   let trains = Trainmap.empty ()
-    |> Trainmap.add @@ dummy_train (8, 10) Right
-    |> Trainmap.add @@ dummy_train (14, 10) Right
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst
+    |> Trainmap.add @@ dummy_train (14, 10) Right |> fst
   in
   S.scan_station_block tracks trains (5, 10) Right player |> print_sscan;
   [%expect {|
@@ -230,8 +230,8 @@ let%expect_test "train_scan map two trains same place" =
     |> build_road ~y:10 5 15 
   in
   let trains = Trainmap.empty ()
-    |> Trainmap.add @@ dummy_train (8, 10) Right
-    |> Trainmap.add @@ dummy_train (8, 10) Right in
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst in
   S.scan_station_block tracks trains (5, 10) Right player |> print_sscan;
   [%expect {|
     2,
@@ -243,8 +243,8 @@ let%expect_test "train_scan map two trains, ixn in middle" =
     |> TM.set (10, 10) (track [Left;Right;UpRight])
   in
   let trains = Trainmap.empty ()
-    |> Trainmap.add @@ dummy_train (8, 10) Right
-    |> Trainmap.add @@ dummy_train (14, 10) Right
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst
+    |> Trainmap.add @@ dummy_train (14, 10) Right |> fst
   in
   S.scan_station_block tracks trains (5, 10) Right player |> print_sscan;
   [%expect {|
@@ -257,8 +257,8 @@ let%expect_test "train_scan map two trains, station in middle" =
     |> TM.set (10, 10) (station [Left;Right])
   in
   let trains = Trainmap.empty ()
-    |> Trainmap.add @@ dummy_train (8, 10) Right
-    |> Trainmap.add @@ dummy_train (14, 10) Right
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst
+    |> Trainmap.add @@ dummy_train (14, 10) Right |> fst
   in
   S.scan_station_block tracks trains (5, 10) Right player |> print_sscan;
   (* Get just 1 till end of block *)
@@ -272,8 +272,8 @@ let%expect_test "train_scan double map two trains, station in middle" =
     |> TM.set (10, 10) (station [Left;Right])
   in
   let trains = Trainmap.empty ()
-    |> Trainmap.add @@ dummy_train (8, 10) Right
-    |> Trainmap.add @@ dummy_train (14, 10) Right
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst
+    |> Trainmap.add @@ dummy_train (14, 10) Right |> fst
   in
   S.scan_station_block tracks trains (5, 10) Right player |> print_sscan;
   (* Get just 1 till end of block, but double *)

@@ -98,14 +98,17 @@ module Priorities = struct
 
 end
 
+let last_train_id v =
+  Id.of_int @@ Vector.size v.trains - 1
+
 let add train v =
   Vector.push v.trains train;
-  let train_id = Id.of_int @@ Vector.size v.trains - 1 in
+  let train_id = last_train_id v in
   let loc = _calc_train_loc train in
   _add_train_loc loc train_id v;
   let priority = Train.calc_priority train in
   let id_to_p, p_to_ids = Priorities.add priority train_id v.id_to_p v.p_to_ids in
-  {v with p_to_ids; id_to_p}
+  {v with p_to_ids; id_to_p}, train_id
 
 let delete train_id v =
   let train = get train_id v in

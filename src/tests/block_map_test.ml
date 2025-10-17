@@ -370,8 +370,8 @@ let%expect_test "3 connected stations in a line, trains and double track" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   let _trains = Trainmap.empty ()
-    |> Trainmap.add @@ dummy_train (8, 10) Right
-    |> Trainmap.add @@ dummy_train (9, 10) Right in
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst
+    |> Trainmap.add @@ dummy_train (9, 10) Right |> fst in
   let locu = ((5, 10), `Lower) in
   ignore @@ Block_map.block_incr_train locu blocks;
   ignore @@ Block_map.block_incr_train locu blocks;
@@ -397,8 +397,8 @@ let%expect_test "2 connected stations in a line, trains, add station" =
     |> build_station (15, 10) ~dirs:[Left; Right]
   in
   let trainmap = Trainmap.empty ()
-    |> Trainmap.add @@ dummy_train (8, 10) Right
-    |> Trainmap.add @@ dummy_train (9, 10) Right
+    |> Trainmap.add @@ dummy_train (8, 10) Right |> fst
+    |> Trainmap.add @@ dummy_train (9, 10) Right |> fst
   in
   let locu = ((5, 10), `Lower) in
   ignore @@ Block_map.block_incr_train locu blocks;

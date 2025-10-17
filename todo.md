@@ -47,6 +47,7 @@
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
 - Bug:
+  - England: infinite loop at coal creation stage
   - Speed record set too easily
   - Dismiss build train animation with enter
   - Station resource window doesn't appear when station close to edge of window.
