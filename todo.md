@@ -47,6 +47,9 @@
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
 - Bug:
+  - Original: double rail cannot crash ever
+    - no concept of limit
+    - check in ida
   - turbo doesn't seem so fast
   - trains don't take turns on semaphores
   - setting speed doesn't unpause menu
