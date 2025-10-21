@@ -19,7 +19,6 @@ type reality_level =
   [`DispatcherOps | `ComplexEconomy | `CutthroatCompetition]
   [@@deriving enum, eq, yojson, show]
 
-  (* TODO *)
 let show_reality_level ?(pos=true) v = match v, pos with
   | `DispatcherOps, true -> "Dispatcher Ops"
   | `DispatcherOps, false -> "'No-collision' Operation"

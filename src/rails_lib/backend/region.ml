@@ -14,7 +14,6 @@ let show = function
   | Britain -> "England"
   | Europe -> "Europe"
 
-  (* TODO: fix years *)
 let start_year = function
   | EastUS -> 1830
   | WestUS -> 1866

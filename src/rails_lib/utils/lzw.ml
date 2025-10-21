@@ -1,8 +1,6 @@
 (** Lempel-Ziv-Welch compression algorithm *)
 open Containers
 
-(* TODO: dynamic bit sizes *)
-
 let debug = ref false
 
 (** compress a string to a list of output symbols *)

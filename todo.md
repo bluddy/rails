@@ -56,7 +56,12 @@
   - Honk when new train leaves station
   - Honk when quit
   - New record song
-- 
+- Center on event (bridge washout)
+- Accomplishments multiple pages
+- Operate_rr_take_money/give_money
+  - Check if need to update ai valuation
+- Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
+
 - Bug:
   - Too many ai players? goes off screen on broker
   - Income statement weird

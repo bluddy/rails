@@ -880,7 +880,6 @@ let financial_text ~cities ~region ui_msg v =
         (if takeover then "Your RR has been\nTAKEN OVER!\n" else "")
   | _ -> ""
 
-(* TODO: handle loss from takeover, probably in UI *)
 let ai_financial_routines ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   let player_idx = C.player in
   match _ai_financial_decision  ~ai_idx ~stocks ~cycle ~player_cash ~params v with

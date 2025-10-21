@@ -272,7 +272,6 @@ let _build_bridge ((x, y) as loc) ~dir player_idx ~kind v =
   let graph = G.Track.handle_build_track_simple v.graph before after in
   let blocks =
     let trains = get_trains player_idx v in
-    (* TODO: this was v.track. Check if it's now ok *)
     Block_map.handle_build_track player_idx graph track trains v.blocks before after
   in
   let players = Player.update v.players player_idx (fun player ->
@@ -364,7 +363,6 @@ let _build_ferry ((x, y) as loc) ~dir player_idx v =
   let track = Trackmap.build_track loc ~dir player_idx ~kind1 ~kind2 v.track in
   let after = Scan.scan track loc player_idx in
   let graph = G.Track.handle_build_track_simple v.graph before after in
-  (* TODO: check if this needs v.track *)
   let blocks =
     let trains = get_trains player_idx v in
     Block_map.handle_build_track player_idx graph track trains v.blocks before after
@@ -571,7 +569,6 @@ let _sell_bond player_idx v =
     v
   ) else v
 
-  (* TODO: evaluate ai company value *)
 let _repay_bond player_idx v =
   if Player.check_repay_bond (get_player player_idx v) then (
     let v = update_player v player_idx Player.repay_bond in
@@ -652,7 +649,6 @@ let _operate_rr_take_money player_idx ~company ~amount v =
   let players = v.players in
   let players = Player.update players player_idx @@ Player.add_cash amount in
   let players = Player.update players company @@ Player.add_cash @@ M.neg amount in
-  (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredFrom{player_idx; company; amount});
   [%up {v with players}]
@@ -661,7 +657,6 @@ let _operate_rr_give_money player_idx ~company ~amount v =
   let players = v.players in
   let players = Player.update players player_idx @@ Player.add_cash @@ M.neg amount in
   let players = Player.update players company @@ Player.add_cash amount in
-  (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(MoneyTransferredTo{company; player_idx; amount});
   [%up {v with players}]
@@ -677,12 +672,10 @@ let _name_rr player_idx name handle v =
 
 let _operate_rr_repay_bond player_idx ~company_idx v =
   let v = update_player v company_idx Player.repay_bond in
-  (* TODO: fix this *)
   (* Player.update_ai_valuation v.players player_idx; *)
   send_ui_msg v @@ StockBroker(AiBondRepaid {player_idx; company=company_idx});
   v
 
-  (* TODO: RR build track *)
 let _operate_rr_build_track player_idx ai_idx src dst v =
   if Stock_market.controls_company player_idx ~target:ai_idx v.stocks then
     let ai = Ai.set_build_order ai_idx src dst v.ai in
@@ -848,7 +841,6 @@ let _fin_end_proceed player_idx v =
     Balance_sheet.compute_profit balance_sheet in
   let player = get_player player_idx v in
   let player, total_revenue, ui_msgs1 = Player.fiscal_period_end net_worth v.stations v.params player in
-  (* TODO handle fired *)
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in
   let player = Player.fiscal_period_end_achievements ~revenue:total_revenue ~net_worth v.params player in
   let rate_war_results = _rate_war_info player_idx v in

@@ -179,7 +179,6 @@ let can_buy_stock player_idx ~target ~cash (params:Params.t) v =
       let shares_to_buy = shares_owned_by_all_companies target ~exclude:player_idx v in
       `Offer_takeover(share_price, shares_to_buy)
   else (* buy public shares *)
-    (* TODO: what about buying the rest of *your* own shares? *)
     let share_price = share_price target v in
     let cost = M.(share_price * C.num_buy_shares) in
     if M.(cash >= cost) && public_shares > 0 then `Ok
@@ -201,11 +200,6 @@ let _sell_buy_stock player_idx ~target ~buy v =
   let v = add_shares player_idx ~owned:target ~num v in
   cost, v
 
-  (* TODO: compare logic to player buying/selling.
-     1: it should be public shares, not non-treasury-shares
-     2: the cost should be determined early, not afterwards
-     3: ai selling its own stock has a weird order of operations
-   *)
 let ai_buy_stock ~ai_idx ~player_idx ~human v =
   let modify = if human then M.(fun x -> x + of_int 1) else Fun.id in
   let cost = M.((share_price player_idx v) * C.num_buy_shares) in

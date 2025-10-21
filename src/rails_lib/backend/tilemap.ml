@@ -351,7 +351,6 @@ let get_grade loc ~dir v =
   let height2 = get_tile_height loc2 v in
   let grade = abs(height1 - height2) in
   (* Even out grades for diagonals and non-diagonals *)
-  (* TODO: check this *)
   if not @@ Dir.is_diagonal dir then Dir.diag_adjust_x grade else grade
 
     (* Get the length of a tunnel needed.

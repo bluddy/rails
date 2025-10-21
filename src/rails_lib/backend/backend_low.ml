@@ -508,7 +508,6 @@ module Train_update = struct
     let default_ret = train, stations, None, [], [] in
     match track.kind with
     | Station _ ->
-        (* TODO: remove override Proceed after one train *)
         let train, stations, data, active_stations, ui_msgs = match train.state with
             (* This is only when we've already processed the train *)
           | Traveling s when s.traveling_past_station -> default_ret
@@ -805,9 +804,6 @@ let _develop_tiles v (player:Player.t) =
   let age = v.params.year - v.params.year_start in
   (* Originally & with 0x8
      We're already filtering with mod 8 = 0, so this is effectively mod 16 after 25 years
-     TODO: update zoom1 map
-     TODO: check this condition logic. Always update?
-     TODO: end of period updates
    *)
   if age < 25 || v.params.cycle mod 16 >= 8 then
       let two_devs = Region.is_us v.params.region && age < 40 in
@@ -875,8 +871,6 @@ let handle_cycle ~delayed_fn v =
     v.params.cycle <- v.params.cycle + 1;
 
     let cycle = v.params.cycle in
-
-    (* TODO: make player logic work for all human players *)
 
     let player_idx = C.player in
 

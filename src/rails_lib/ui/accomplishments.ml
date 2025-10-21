@@ -9,7 +9,6 @@ let sp = Printf.sprintf
 
 module IntMap = Utils.IntMap
 
-  (* TODO: allow multiple pages *)
 let render win (s:State.t) =
   let b = s.backend in
   let fonts = s.fonts in

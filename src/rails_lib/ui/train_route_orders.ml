@@ -67,7 +67,6 @@ let render win (s:State.t) (v:Train_report_d.train_route_orders) =
   let trains = Backend.get_player player_idx s.backend |> Player.get_trains in
   let train = Trainmap.get v.train trains in
   let route = Train.get_route train in
-  (* TODO: wait *)
   Vector.iteri (fun i (_, (stop:Train.stop)) ->
     let station = Station_map.get_exn (stop.x, stop.y) s.backend.stations in
     let name = Printf.sprintf "%d.%s" (i+1) (Station.get_name station) in

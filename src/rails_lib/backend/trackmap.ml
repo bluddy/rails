@@ -225,10 +225,8 @@ let remove_track loc ~dir player_idx v =
     if Owner.(track1.player = player_idx) then
       match track1.kind with
       | Track _ | Ferry _ ->
-          (* TODO: handle ixn *)
           remove_track_dir loc ~dir v;
       | Station _ ->
-          (* TODO: handle station removal *)
           remove loc v
       | Bridge _ | Tunnel ->
           remove loc v

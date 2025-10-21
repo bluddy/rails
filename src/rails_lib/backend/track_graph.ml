@@ -180,9 +180,7 @@ let find_ixn_from_ixn_dir v ~ixn ~dir =
   with Invalid_argument _ -> None
 
   (* Find the shortest path branch from an ixn given a from_dir entering the ixn,
-     which is excluded
-     TODO: improve. e.g. iterate over direct branches and do multiple shortest path
-     *)
+     which is excluded *)
 let shortest_path_branch ~ixn ~cur_dir ~dest v =
   (* Block all dirs that aren't within 90 degrees of initial dir *)
   G.iter_succ_e

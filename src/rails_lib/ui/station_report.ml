@@ -182,7 +182,6 @@ let render_foreground ?(show_name=true) win (s:State.t) ?station loc ~show_deman
     (* Demand side *)
     let x = 192 in
     Fonts.Font.write win font ~x ~y:1 ~color:Ega.black "Will pay for...";
-    (* TODO: transition to new cars with year X *)
     let _ =
       Goods.Set.fold (fun good y ->
         Fonts.Font.write win font ~x ~y ~color:Ega.black (Goods.show good);

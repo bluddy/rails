@@ -1008,7 +1008,7 @@ let handle_msgs (s:State.t) v ui_msgs =
                  | `Slow -> C.slow_message_time
                  in
                  Log.debug (fun f -> f "Setting train arrival message with %d time" time);
-                 {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] } (* TODO: get proper timer *)
+                 {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] }
               )
               msg_speed
           in
@@ -1098,7 +1098,6 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode = make_news @@ Newspaper.make_simple s Newspaper.FinancialNews text @@ Some opponent in
         {v with mode}
 
-        (* TODO: center on event *)
       | BridgeWashout {player_idx; loc; fixed} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let mode =

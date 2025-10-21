@@ -440,8 +440,7 @@ let%expect_test "3 connected stations in a line, trains and double track" =
       -> [((15, 10), `Lower)], 0 -> [((5, 10), `Upper)], 1
       -> [((10, 10), `Upper); ((5, 10), `Lower)] }
     |}]
-  
-  (* TODO *)
+
 let%expect_test "2 connected stations in a line, trains, add station" =
   let graph, blocks = TG.make (), SM.make () in
   let tmap = build_road ~track:(Track.Track `Double) ~y:10 5 10 tmap in

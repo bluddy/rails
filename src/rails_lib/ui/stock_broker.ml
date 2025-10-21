@@ -123,7 +123,6 @@ let render win (s:State.t) v =
 
   let render_player_info (player_idx:Owner.t) backend y =
     let name = B.get_name player_idx backend in
-    (* TODO: render owned stock by player in ai *)
     let is_ai, color = 
       if Owner.is_human player_idx then (
         write ~x:x_left ~y name;
@@ -277,7 +276,6 @@ let handle_tick (s:State.t) v time =
         `Stay, {v with modal=Confirm_menu(menu)}, []
     | Menu.On(`OperateRR (company_idx, `FinancialReport)) ->
         let ai = Ai.get_ai_exn company_idx b.ai in
-        (* TODO : AI *)
         let build_order_s = match Ai.get_build_order company_idx b.ai with
           | None -> ""
           | Some(src, dst) ->

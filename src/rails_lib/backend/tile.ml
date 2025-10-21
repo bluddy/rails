@@ -268,7 +268,6 @@ module Info = struct
       Factory, make 20 ~supply:[Armaments, 32] ~demand:[Steel, 64];
       CoalMine, make 5 ~supply:[Coal, 96];
       SteelMill, make 15 ~demand:[Coal, 64];
-      (* TODO: power plant conversion makes no sense. Only due to simplicity of conversion system *)
       PowerPlant, make 25 ~demand:[Coal, 64; Nitrates, 64];
       SheepFarm, make 5 ~supply:[Nitrates, 96; Wool, 96]; (* Eng, Eur *)
       TextileMill, make 10 ~demand:[Wool, 64];(* Eng, Eur *)
