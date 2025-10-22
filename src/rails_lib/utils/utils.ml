@@ -598,3 +598,9 @@ let is_third = function `Third -> true | _ -> false
 
 let is_exit = function `Exit -> true | _ -> false
 
+let files_of_dir dir =
+  Sys.readdir dir |> Array.to_list
+  |> List.filter (fun name ->
+    let path = Filename.concat dir name in
+    Sys.is_regular_file path)
+
