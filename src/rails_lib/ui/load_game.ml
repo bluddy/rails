@@ -34,7 +34,7 @@ let render win (s:State.t) v =
   Menu.MsgBox.render win s v.menu
 
 (* Make state out of loaded game *)
-let _load_state backend ui_options ui_view win =
+let _load_state backend ui_options ui_view win sound =
   let resources = Resources.load_all () in
   let region =  backend.Backend_d.params.region in
   let textures = Textures.of_resources win resources in
@@ -53,9 +53,10 @@ let _load_state backend ui_options ui_view win =
     ui;
     win;
     random = Random.get_state ();
+    sound;
   }
 
-let load_game slot win =
+let load_game slot win sound =
   let game_name = save_game_of_i slot in
   let s = IO.File.read_exn game_name in
   let lst = String.split s ~by:"====" in
@@ -67,7 +68,7 @@ let load_game slot win =
       Backend.reset_tick backend;
       let ui_options = from_string options |> Main_ui_d.options_of_yojson in
       let ui_view = from_string view |> Mapview_d.t_of_yojson in
-      _load_state backend ui_options ui_view win
+      _load_state backend ui_options ui_view win sound
   | _ -> failwith "Bad save game format"
 
 let handle_event (s:State.t) v event time =
@@ -77,7 +78,7 @@ let handle_event (s:State.t) v event time =
       let v = {v with menu=menu2} in
       let slot = entry.slot in
       begin match v.action with
-      | `Load -> `LoadGame (load_game slot s.win), v
+      | `Load -> `LoadGame (load_game slot s.win s.sound), v
       | _ -> assert false
       end
   | menu2, _ when menu2 === v.menu -> `Stay, v

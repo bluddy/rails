@@ -22,5 +22,6 @@ and t = {
   fonts: Fonts.t;
   win: Renderer.window;
   random: Utils.Random.State.t; (* separate random state for UI stuff *)
+  sound: Sound.t;
 }
 

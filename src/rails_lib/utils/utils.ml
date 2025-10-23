@@ -600,7 +600,7 @@ let is_exit = function `Exit -> true | _ -> false
 
 let files_of_dir dir =
   Sys.readdir dir |> Array.to_list
-  |> List.filter (fun name ->
-    let path = Filename.concat dir name in
+  |> List.map (Filename.concat dir)
+  |> List.filter (fun path ->
     Sys.is_regular_file path)
 

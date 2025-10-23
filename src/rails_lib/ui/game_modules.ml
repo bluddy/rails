@@ -9,7 +9,7 @@ open Utils.Infix
 let update_map _win v map =
   R.Texture.update v.State.map_tex @@ Tilemap.to_img map
 
-let default_state win : State.t =
+let default_state win sound : State.t =
   let resources = Resources.load_all () in
   let textures = Textures.of_resources win resources in
   let fonts = Fonts.load win in
@@ -26,11 +26,12 @@ let default_state win : State.t =
     mode=State.Game;
     ui;
     win;
+    sound;
     random = Random.get_state ();
   }
 
 (* Createa a new state out of the default state for starting the program. *)
-let make_state win ~region ~reality_levels ~difficulty prev_state =
+let make_state win sound ~region ~reality_levels ~difficulty prev_state =
   let s = prev_state in
 
   let resources = s.State.resources in
@@ -55,6 +56,7 @@ let make_state win ~region ~reality_levels ~difficulty prev_state =
     fonts;
     ui;
     win;
+    sound;
     random = Random.get_state ();
   }
 
@@ -135,7 +137,7 @@ let handle_event win (s:State.t) (event:Event.t) time =
             {s with mode=Menu state2}, `Stay
         | _, `LoadGame s -> s, `Stay
         | _, `Choose (region, difficulty, reality_levels) ->
-            let s = make_state win ~region ~reality_levels ~difficulty s in
+            let s = make_state win s.sound ~region ~reality_levels ~difficulty s in
             {s with mode=MapGen None}, `Stay
         end
 
@@ -190,14 +192,15 @@ let run ?load () : unit =
 
   let init_fn win =
 
+    let sound = Sound.init () in
     let state = match load with
       | Some slot ->
           Printf.printf "Loading from slot %d...\n" slot;
-          Load_game.load_game slot win
+          Load_game.load_game slot win sound
 
       | None ->
         (* New game. Use a basic default state *)
-        let s = default_state win in
+        let s = default_state win sound in
         let state = Intro.make s in
         {s with mode=Intro state}
     in

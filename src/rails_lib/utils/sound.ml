@@ -17,7 +17,7 @@ let init () =
     let sound = Mixer.load_wav file |> Result.get_ok in
     let basename = Filename.basename file |> Filename.chop_extension in
     Hashtbl.replace sound_h basename sound)
-  sound_files;
+    sound_files;
   {
     sounds=sound_h;
   }
