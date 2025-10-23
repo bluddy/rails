@@ -45,7 +45,7 @@ let sound_of_str = function
   | "train_horn_long" -> Train_horn_long
   | "train_horn_very_long" -> Train_horn_very_long
   | "train_woosh" -> Train_woosh
-  | _ -> failwith "Not a sound file"
+  | s -> failwith @@ Printf.sprintf "Not a sound file %s" s
 
 module SoundMap = Map.Make(struct type t = sound let compare = compare end)
 
