@@ -32,10 +32,16 @@ let main () =
   match !mode with
   | `Font -> Fonts.main !file
   | `Pic  -> Pic.png_of_file !file
-  | `Pani when !debugger && !dump -> Mainloop.main @@ Pani_render.debugger ~dump:true ~filename:!file
+  | `Pani when !debugger && !dump ->
+      let sound_engine = Sound.init () in
+      Mainloop.main @@ Pani_render.debugger ~sound_engine ~dump:true ~filename:!file
   | `Pani when !dump -> Pani.dump_file !file
-  | `Pani when !debugger -> Mainloop.main @@ Pani_render.debugger ~filename:!file
-  | `Pani -> Mainloop.main @@ Pani_render.standalone ~filename:!file
+  | `Pani when !debugger ->
+      let sound_engine = Sound.init () in
+      Mainloop.main @@ Pani_render.debugger ~sound_engine ~filename:!file
+  | `Pani -> 
+      let sound_engine = Sound.init () in
+      Mainloop.main @@ Pani_render.standalone ~sound_engine ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Game_modules.run ()
   | `LoadGame -> Game_modules.run ~load:!file_slot ()

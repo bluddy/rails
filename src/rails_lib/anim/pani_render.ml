@@ -14,16 +14,18 @@ type t = {
   mutable last_time: int;
   mutable textures: R.Texture.t option array;
   mutable bg_tex: R.Texture.t option;
+  sound: Sound.Music.t option;
+  sound_engine: Sound.t;
 }
 
-let create ?(dump=false) ?debug ?input filename =
+let create ?(dump=false) ?debug ?input ?sound sound_engine filename =
   let stream = Pani.stream_of_file @@ "data/" ^ filename in
   let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
   let status = `Pause in
   let last_time = 0 in
-  {status; interp; last_time; textures; bg_tex=None}
-
+  Option.iter (fun sound -> Sound.play_music sound sound_engine) sound;
+  {status; interp; last_time; textures; bg_tex=None; sound; sound_engine}
 
 let render win v =
   let no_textures = Array.length v.textures = 0 in
@@ -64,7 +66,9 @@ let render win v =
 
 let handle_tick time v =
   let () = match v.status with
-    | `Done -> ()
+    | `Done ->
+        Sound.stop_music ();
+        ()
     | `Pause ->
         if time - v.last_time > C.Pani.update_delta
         then (
@@ -74,9 +78,9 @@ let handle_tick time v =
   in
   v, `Stay
  
-let standalone win ~filename =
+let standalone win ~sound_engine ~filename =
   let handle_event v _event _time = v, `Stay in
-  let v = create filename in
+  let v = create sound_engine filename in
   let funcs = Mainloop.{
     handle_tick=(fun v time -> handle_tick time v);
     render=render win;
@@ -85,7 +89,7 @@ let standalone win ~filename =
   in
   v, funcs
 
-let debugger ?(dump=false) win ~filename =
+let debugger ?(dump=false) win ~sound_engine ~filename =
   Pani_interp.set_debug true;
   Pani_sprite.set_debug true;
   let handle_event v event _time = match event with
@@ -100,7 +104,7 @@ let debugger ?(dump=false) win ~filename =
     | _ ->
         v, `Stay
   in
-  let v = create ~dump ~debug:true filename in
+  let v = create ~dump ~debug:true sound_engine filename in
   (* Do one step to set up all the animations *)
   let _ = Pani_interp.step v.interp in
   let funcs = Mainloop.{
@@ -110,3 +114,4 @@ let debugger ?(dump=false) win ~filename =
   }
   in
   v, funcs
+

@@ -94,9 +94,9 @@ let play_sound ?(loop=0) sound v =
   let sound = Sound.Map.find sound v.sounds in
   Mixer.play_channel (-1) sound loop |> ignore
 
-let start_music music v =
+let play_music music v =
   let music = Music.Map.find music v.music in
   Mixer.play_music music (-1) |> ignore
 
-let stop_music = Mixer.halt_music ()
+let stop_music () = Mixer.halt_music () |> ignore
 

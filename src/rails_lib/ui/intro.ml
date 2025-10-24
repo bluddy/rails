@@ -36,7 +36,8 @@ let make (s:State.t) =
   let modes = (GenericScreen {render_fn=make_render_fn `Credits; timeout=Some 0})::modes in
   let modes =
     let file = "TITLEM.PAN" in
-    Animation(Pani_render.create file)::modes in
+    let sound = Sound.Music.Main_theme in
+    Animation(Pani_render.create s.sound ~sound file)::modes in
   match List.rev modes with
   | x::xs -> {mode=x; next_modes=xs}
   | _ -> assert false

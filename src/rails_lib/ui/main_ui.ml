@@ -1108,7 +1108,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state = 
           let value = if Region.is_us b.params.region then 0 else 1 in
           let input = [0, value; 1, value] in
-          Pani_render.create ~input C.Pani.wreck
+          Pani_render.create ~input s.sound C.Pani.wreck
         in
         let next_modes = [accident player_idx] in
         {v with mode=Animation state; next_modes}
@@ -1117,7 +1117,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state = 
           let filename = if Region.is_us b.params.region then C.Pani.flood_us else C.Pani.flood_eu in
           let input = [10, 1; 0, engine.bridge_val] in
-          Pani_render.create ~input filename in
+          Pani_render.create ~input s.sound filename in
         let next_modes = [accident player_idx] in
         {v with mode=Animation state; next_modes}
 
@@ -1194,7 +1194,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           | Iron -> Some C.Pani.iron_bridge
           | _ -> None in
         begin match file with
-        | Some file -> {v with mode= Animation(Pani_render.create file)}
+        | Some file -> {v with mode= Animation(Pani_render.create s.sound file)}
         | None -> v
         end
 
@@ -1251,14 +1251,22 @@ let handle_tick (s:State.t) v time is_cycle =
   let player_idx = C.player in
   match v.mode with
   | Normal ->
-      let b, view = s.backend, v.view in
+      let b = s.backend in
       let menu, menu_action = Menu.Animated.handle_tick s v.menu time in
-      let view = match menu_action with
-        | On(`Survey)  -> Mapview.set_survey true view 
-        | Off(`Survey) -> Mapview.set_survey false view
-        | _ -> view
+      let v =
+        let view = Mapview.handle_tick s v.view time is_cycle in
+        (* decr_train_msgs *)
+        let train_arrival_msgs = match v.train_arrival_msgs with
+          | ((_, t)::_) as msgs when !t > 0 ->
+              decr t;
+              msgs
+          | _::msgs -> msgs
+          | [] -> []
+        in
+        [%up {v with view; menu; train_arrival_msgs}]
       in
-      let v, backend_action = match menu_action with
+
+      begin match menu_action with
       | On `Build_train ->
           {v with mode=BuildTrain(`ChooseEngine)}, nobaction
       | On `Build_station ->
@@ -1269,12 +1277,16 @@ let handle_tick (s:State.t) v time is_cycle =
             |> Menu.MsgBox.do_open_menu s in
           let modal = make_modal menu () in
           {v with mode=BuildIndustry(`ChooseIndustry modal)}, nobaction
+      | On `Survey  ->
+          {v with view=Mapview.set_survey true v.view}, nobaction
+      | Off `Survey ->
+          {v with view=Mapview.set_survey false v.view}, nobaction
       | On `BuildTrack ->
-          {v with view=Mapview.set_build_mode view true}, nobaction 
+          {v with view=Mapview.set_build_mode v.view true}, nobaction
       | On `RemoveTrack ->
-          {v with view=Mapview.set_build_mode view false}, nobaction 
+          {v with view=Mapview.set_build_mode v.view false}, nobaction
       | On `ImproveStation upgrade ->
-          let (x, y) as loc = Mapview.get_cursor_pos view in
+          let (x, y) as loc = Mapview.get_cursor_pos v.view in
           let station = B.get_station loc b |> Option.get_exn_or "station not found" in
           let mode = StationUpgrade{transition=None; loc; old_station=station} in
           {v with mode}, [B.Action.ImproveStation{x; y; player_idx; upgrade}]
@@ -1311,7 +1323,7 @@ let handle_tick (s:State.t) v time is_cycle =
           let options = {options with features} in
           {v with options}, nobaction
       | On (`Options option) ->
-          {v with view=Mapview.update_option option true view }, nobaction
+          {v with view=Mapview.update_option option true v.view }, nobaction
       | On (`Balance_sheet) ->
           let state = B.create_balance_sheet player_idx s.backend in
           {v with mode=Balance_sheet {state; end_of_year=false}}, nobaction
@@ -1322,11 +1334,11 @@ let handle_tick (s:State.t) v time is_cycle =
           let state = Train_income_report.create s in
           {v with mode=TrainIncome state}, nobaction
       | On (`Stocks) ->
-        {v with mode=make_generic_screen Stock_graph.render}, nobaction
+          {v with mode=make_generic_screen Stock_graph.render}, nobaction
       | On (`Accomplishments) ->
-        {v with mode=make_generic_screen Accomplishments.render}, nobaction
+          {v with mode=make_generic_screen Accomplishments.render}, nobaction
       | On (`History) ->
-        {v with mode=History (History.create s)}, nobaction
+          {v with mode=History (History.create s)}, nobaction
       | On (`Efficiency_report) ->
           {v with mode=make_generic_screen Efficiency_report.render}, nobaction
       | On (`Call_broker) ->
@@ -1340,22 +1352,13 @@ let handle_tick (s:State.t) v time is_cycle =
       | On (`Cheat x) ->
           v, [B.Action.Cheat(C.player, x)]
       | Off (`Options option) ->
-          {v with view=Mapview.update_option option false view}, nobaction
-      | On ((`Repeat_message | `Upgrade_bridge | `Reality_level _| `Display _ | `Survey) as ma) ->
+          {v with view=Mapview.update_option option false v.view}, nobaction
+      | On ((`Repeat_message | `Upgrade_bridge | `Reality_level _| `Display _ ) as ma) ->
           Printf.printf "Unhandled message %s\n" (show_menu_action ma);
           v, nobaction
       | _ -> v, nobaction
-      in
-      let view = Mapview.handle_tick s view time is_cycle in
-      (* decr_train_msgs *)
-      let train_arrival_msgs = match v.train_arrival_msgs with
-      | ((_, t)::_) as msgs when !t > 0 ->
-          decr t;
-          msgs
-      | _::msgs -> msgs
-      | [] -> []
-      in
-      [%up {v with menu; view; train_arrival_msgs}], backend_action
+      end
+
   | BuildTrain(`AddCars state) ->
       let state2 = Build_train.AddCars.handle_tick s state time in
       if state === state2 then default
@@ -1400,13 +1403,13 @@ let handle_tick (s:State.t) v time is_cycle =
     end
 
   | Stock_broker state ->
-      let status, state2, actions = Stock_broker.handle_tick s state time in
-      let v =
-        if Utils.is_exit status then next_mode v
-        else if state2 =!= state then {v with mode=Stock_broker state2}
-        else v
-      in
-      v, actions
+    let status, state2, actions = Stock_broker.handle_tick s state time in
+    let v =
+      if Utils.is_exit status then next_mode v
+      else if state2 =!= state then {v with mode=Stock_broker state2}
+      else v
+    in
+    v, actions
 
   | FiredAnimation state ->
     let state2 = Fired_animation.handle_tick time state in
