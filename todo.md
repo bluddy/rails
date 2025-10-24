@@ -8,6 +8,9 @@
 - Handle > 32 trains with some visual display
   - arrows?
   - scroll bar?
+- Handle updgrade_bridge
+- Handle display menu options
+- Handle repeate message
 - Selecting zoom with mouse opens msgbox to choose center
 - Animate zoom transition
 - For playback, use list of variants, not the current system
