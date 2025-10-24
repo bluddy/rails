@@ -1,3 +1,4 @@
+open! Containers
 open Tsdl
 open Tsdl_mixer
 
@@ -52,26 +53,50 @@ type t = {
 let init () =
   Sdl.init Sdl.Init.audio |> ignore;
   Mixer.open_audio 44100 Mixer.default_format 2 1024 |> ignore;
-  let files = Utils.files_of_dir "sound" in
-  let sound_files = List.filter (fun file ->
+  let get_files_of_dir dirname =
+    let files = Utils.files_of_dir dirname in
+    List.filter (fun file ->
     String.equal (Filename.extension file) ".ogg") files
   in
+  let sound_files = get_files_of_dir "sound" in
   let sounds =
     List.fold_left (fun acc file ->
-      let sound = Mixer.load_wav file |> Result.get_ok in
+      let sound = Mixer.load_wav file |> Result.get_exn in
       let sound_name = Filename.basename file
         |> Filename.chop_extension
-        |> sound_of_str
+        |> Sound.of_string
+        |> Option.get_exn_or "Unknown sound file"
       in
-      SoundMap.add sound_name sound acc)
-    SoundMap.empty
+      Sound.Map.add sound_name sound acc)
+    Sound.Map.empty
     sound_files
+  in
+  let music_files = get_files_of_dir "music" in
+  let music =
+    List.fold_left (fun acc file ->
+      let music = Mixer.load_mus file |> Result.get_exn in
+      let music_name = Filename.basename file
+        |> Filename.chop_extension
+        |> Music.of_string
+        |> Option.get_exn_or "Unknown music file"
+      in
+      Music.Map.add music_name music acc)
+    Music.Map.empty
+    music_files
   in
   {
     sounds;
+    music;
   }
 
-let play sound_name v =
-  let sound = SoundMap.find sound_name v.sounds in
-  Mixer.play_channel (-1) sound
+let play_sound ?(loop=0) sound v =
+  (* We can discard the channel - we don't expect a sound to be stopped *)
+  let sound = Sound.Map.find sound v.sounds in
+  Mixer.play_channel (-1) sound loop |> ignore
+
+let start_music music v =
+  let music = Music.Map.find music v.music in
+  Mixer.play_music music (-1) |> ignore
+
+let stop_music = Mixer.halt_music ()
 
