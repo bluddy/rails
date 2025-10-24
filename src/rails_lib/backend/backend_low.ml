@@ -8,7 +8,7 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module G = Track_graph
 module C = Constants
-module IS = Income_statement
+module eS = Income_statement
 module UIM = Ui_msg
 module M = Money
 module U = Utils

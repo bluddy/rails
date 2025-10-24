@@ -143,7 +143,7 @@ type wait = [`Wait | `NoWait]
 
 let is_wait = function `Wait -> true | `NoWait -> false
 
-module Id = Int_id.Make(struct end) [@@deriving yojson]
+module Id = Int_id.Make(struct end)
 module IdSet = Set.Make(Id)
 module IdMap = Map.Make(Id)
 

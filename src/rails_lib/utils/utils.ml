@@ -604,3 +604,5 @@ let files_of_dir dir =
   |> List.filter (fun path ->
     Sys.is_regular_file path)
 
+let upper_first string =
+  String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) string
