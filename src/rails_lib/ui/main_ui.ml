@@ -512,9 +512,15 @@ let handle_event (s:State.t) v (event:Event.t) time =
       if v.view =!= view then v.view <- view;
 
       let v, backend_action = match view_action with
-        | `BuildTrack msg  -> v, B.Action.BuildTrack msg
-        | `RemoveTrack msg -> v, B.Action.RemoveTrack msg
-        | `BuildFerry msg  -> v, B.Action.BuildFerry msg
+        | `BuildTrack msg  ->
+            Sound.play_sound Sound.Sound.Track_build s.sound;
+            v, B.Action.BuildTrack msg
+        | `RemoveTrack msg ->
+            Sound.play_sound Sound.Sound.Track_remove s.sound;
+            v, B.Action.RemoveTrack msg
+        | `BuildFerry msg  ->
+            Sound.play_sound Sound.Sound.Track_build s.sound;
+            v, B.Action.BuildFerry msg
         | `BuildBridge msg ->
             let menu = build_bridge_menu s.fonts (B.get_region s.backend)
               |> Menu.MsgBox.do_open_menu s in

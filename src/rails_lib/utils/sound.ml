@@ -52,7 +52,7 @@ type t = {
 
 let init () =
   Sdl.init Sdl.Init.audio |> ignore;
-  Mixer.open_audio 44100 Mixer.default_format 2 1024 |> ignore;
+  Mixer.open_audio 48000 Mixer.default_format 2 1024 |> ignore;
   let get_files_of_dir dirname =
     let files = Utils.files_of_dir dirname in
     List.filter (fun file ->
