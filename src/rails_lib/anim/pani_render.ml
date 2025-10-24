@@ -4,7 +4,7 @@ module R = Renderer
 module C = Constants
 module List = Utils.List
 
-type status = [`Pause | `Done ]
+type status = [`Pause | `Done | `Init ]
 
 let sp = Printf.sprintf
 
@@ -22,9 +22,8 @@ let create ?(dump=false) ?debug ?input ?sound sound_engine filename =
   let stream = Pani.stream_of_file @@ "data/" ^ filename in
   let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
-  let status = `Pause in
+  let status = `Init in
   let last_time = 0 in
-  Option.iter (fun sound -> Sound.play_music sound sound_engine) sound;
   {status; interp; last_time; textures; bg_tex=None; sound; sound_engine}
 
 let render win v =
@@ -65,16 +64,20 @@ let render win v =
   Iter.(0 -- C.Pani.max_num_sprites)
 
 let handle_tick time v =
-  let () = match v.status with
-    | `Done ->
-        Sound.stop_music ();
-        ()
+  let v = match v.status with
+    | `Init ->
+        Option.iter (fun sound -> Sound.play_music sound v.sound_engine) v.sound;
+        {v with status=`Pause}
     | `Pause ->
         if time - v.last_time > C.Pani.update_delta
         then (
           v.last_time <- time;
           v.status <- Pani_interp.step v.interp;
-        )
+        );
+        v
+    | `Done ->
+        Sound.stop_music ();
+        v
   in
   v, `Stay
  

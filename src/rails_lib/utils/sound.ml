@@ -51,6 +51,7 @@ type t = {
 }
 
 let init () =
+  print_endline "Init audio...";
   Sdl.init Sdl.Init.audio |> ignore;
   Mixer.open_audio 48000 Mixer.default_format 2 1024 |> ignore;
   let get_files_of_dir dirname =
