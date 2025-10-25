@@ -1,4 +1,5 @@
   open! Containers
+  open Ppx_yojson_conv_lib.Yojson_conv.Primitives
   module A = Bigarray.Array1
 
 (* Tilebuffer: buffer for keeping track of tiles and boxes on screen
@@ -7,32 +8,30 @@
 
   type t = {
     width: int;
-    buffer: (int, Bigarray.int_elt, Bigarray.c_layout) A.t; 
-  }
+    buffer: int array;
+  } [@@deriving yojson]
 
   let create width height =
     {
       width=width;
-      buffer=A.(init Int C_layout (width * height) (fun _ -> 0))
+      buffer=Array.make (width * height) 0
     }
 
   let calc_offset v x y = 
     y * v.width + x
 
-  let get v x y =
-    A.get v.buffer (calc_offset v x y)
+  let get v x y = v.buffer.(calc_offset v x y)
 
   let get_loc v x y =
     (* Gets us locations on-screen *)
-    let d = get v x y in
-    if d > 0 then Some (d mod v.width, d / v.width)
-    else None
+    try
+      let d = get v x y in
+      if d > 0 then Some (d mod v.width, d / v.width)
+      else None
+    with
+      Invalid_argument _ -> invalid_arg @@ Printf.sprintf "out of bounds for (%d,%d)" x y
 
-  let set v x y ~value =
-    A.set v.buffer (calc_offset v x y) value
-
-  (* let reset v x y = *)
-  (*   A.fill v.buffer 0 *)
+  let set v x y ~value = v.buffer.(calc_offset v x y) <- value
 
   let is_empty_box v x y ~w ~h =
     let exception Stop in
@@ -55,17 +54,5 @@
       done
     done
 
-  let clear v =
-    A.fill v.buffer 0
-
-    (* Don't save the contents of the buffer *)
-  let t_of_yojson x = match x with
-    | `Tuple [`Int w; `Int h] -> create w h
-    | _ -> invalid_arg "Bad json values"
-
-  let yojson_of_t v =
-    let w = v.width in
-    let h = (A.dim v.buffer) / w in
-    `Tuple [`Int w; `Int h]
-
+  let clear v = Array.fill v.buffer 0 (Array.length v.buffer) 0
 
