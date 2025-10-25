@@ -82,6 +82,7 @@
   - joining a track from another track either refuses or crashes
   - Going into negative should be red money
     I think fixed
+  - Consider not painting tilebuffer every render of zoom3/2
  
 - Post 1.0
   - Add maps from Deluxe
