@@ -1009,6 +1009,13 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state = Stock_broker.make s in
         {v with mode=Stock_broker state}
 
+      | StationBuilt{player_idx; loc} ->
+        let x, y = loc in
+        if Owner.(player_idx <> main_player_idx) then v else (
+        Sound.play_sound Sound.Sound.Station_build s.sound;
+        let mode = StationReport(x, y) in
+        {v with mode})
+
       | PriorityShipmentCanceled{player_idx} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None in

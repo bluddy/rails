@@ -228,6 +228,7 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
     | Some dir -> Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map player
     | _ -> player)
   in
+  send_ui_msg v @@ StationBuilt{player_idx; loc};
   [%up {v with players; stations; graph; track; blocks}]
 
 let check_build_tunnel loc ~dir player_idx v =
