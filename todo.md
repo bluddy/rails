@@ -1,4 +1,6 @@
 # Tasks
+- Can't enter stock broker
+  - Has to do with pause state getting messed up after load
 - Can keep building into minus
 - Rivers at land edge don't look good
 - Harbors near river should be closed in

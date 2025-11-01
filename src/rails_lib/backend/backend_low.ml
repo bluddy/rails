@@ -959,11 +959,11 @@ let handle_cycle ~delayed_fn v =
 
     let player, br_msgs =
       (* Check broker *)
-      if Player.has_broker_timer player then
+      if Player.has_broker_timer player then (
         let player, send_msg = Player.incr_broker_timer player in
         player,
           if send_msg then [(UIM.OpenStockBroker{player_idx})] else []
-      else player, []
+      ) else player, []
     in
 
     (* NOTE: only this part deals with all players for now *)

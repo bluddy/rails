@@ -764,7 +764,9 @@ let handle_event (s:State.t) v (event:Event.t) time =
     | Stock_broker state ->
        let exit_state, state2, action = Stock_broker.handle_event s state event time in
         let v =
-          if Utils.is_exit exit_state then {v with mode=Normal}
+          if Utils.is_exit exit_state then (
+            Sound.stop_music ();
+            {v with mode=Normal})
           else if state =!= state2 then {v with mode=Stock_broker state2}
           else v
         in
@@ -1005,9 +1007,10 @@ let handle_msgs (s:State.t) v ui_msgs =
           if v === v' then v else v'
 
       | OpenStockBroker{player_idx} ->
-        if Owner.(player_idx <> main_player_idx) then v else
+        if Owner.(player_idx <> main_player_idx) then v else (
+        Sound.play_music Sound.Music.Broker s.sound;
         let state = Stock_broker.make s in
-        {v with mode=Stock_broker state}
+        {v with mode=Stock_broker state})
 
       | StationBuilt{player_idx; loc} ->
         let x, y = loc in
@@ -1412,8 +1415,10 @@ let handle_tick (s:State.t) v time is_cycle =
   | Stock_broker state ->
     let status, state2, actions = Stock_broker.handle_tick s state time in
     let v =
-      if Utils.is_exit status then next_mode v
-      else if state2 =!= state then {v with mode=Stock_broker state2}
+      if Utils.is_exit status then (
+        Sound.stop_music ();
+        next_mode v
+      ) else if state2 =!= state then {v with mode=Stock_broker state2}
       else v
     in
     v, actions
