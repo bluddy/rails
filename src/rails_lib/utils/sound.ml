@@ -99,5 +99,17 @@ let play_music music v =
   let music = Music.Map.find music v.music in
   Mixer.play_music music (-1) |> ignore
 
+let num_end_year_music = 4
+
+let play_end_year_music i v =
+  let open Music in
+  let music =
+    [ End_period_short_1; End_period_short_2; End_period_short_3; End_period_short_4]
+  in
+  if i >= 0 && i < num_end_year_music then (
+    let music = List.nth music i in
+    play_music music v
+  )
+
 let stop_music () = Mixer.halt_music () |> ignore
 

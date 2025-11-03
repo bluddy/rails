@@ -979,7 +979,9 @@ let handle_cycle ~delayed_fn v =
 
     let params, end_of_year = 
       if params.time mod C.year_ticks = 0 then
-        {params with year=params.year + 1}, true
+        let year = params.year + 1 in
+        let num_fiscal_periods = (year - params.year_start) / 2 in
+        { params with year; num_fiscal_periods }, true
       else params, false
     in
 

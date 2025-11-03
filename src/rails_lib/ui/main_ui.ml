@@ -914,7 +914,11 @@ let handle_msgs (s:State.t) v ui_msgs =
           else
             let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg, end_of_run =
               Fiscal_period_end.handle_msgs b msgs in
-            let background = make_generic_screen Fiscal_period_end.render_bg in
+            let start_fn (state: State.t) =
+              let i = (state.backend.params.num_fiscal_periods) mod Sound.num_end_year_music in
+              Sound.play_end_year_music i state.sound
+            in
+            let background = make_generic_screen ~start_fn Fiscal_period_end.render_bg in
             let modes = [] in
             let modes = List.fold_left (fun acc rate_war_msg ->
               let mode = make_generic_screen @@ Fiscal_end_rate_war.render rate_war_msg in
