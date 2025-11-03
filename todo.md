@@ -10,7 +10,7 @@
 - Handle > 32 trains with some visual display
   - arrows?
   - scroll bar?
-- Handle updgrade_bridge
+- Handle updgradegbridge
 - Handle display menu options
 - Handle repeate message
 - Selecting zoom with mouse opens msgbox to choose center
@@ -33,7 +33,7 @@
 - Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
 - Train income: check multiple pages of trains work well
 - Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
-- Check that active_station only works for 20 years per station
+- Check that activegstation only works for 20 years per station
 - Move block_map and track_graph to player?
 - Can't rebuild bridge under repair
 - Allow upgrading station while keeping station data
@@ -52,9 +52,11 @@
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
 - Bug:
-  - Original: double rail cannot crash ever
-    - no concept of limit
-    - check in ida
+  - Speed too slow (fast not fast enough)
+  - Bonus from priority delivery doesn't go away after delivery
+  - AI Companies dissolve after one fin period
+  - No music for end of year
+  - Light in traffic light too dark (red)
   - turbo doesn't seem so fast
   - trains don't take turns on semaphores
   - setting speed doesn't unpause menu
