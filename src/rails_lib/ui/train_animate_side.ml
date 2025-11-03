@@ -125,6 +125,9 @@ let handle_tick (s:State.t) v time =
 
     | `Front ->
         if not v.paused then (
+          if v.ctr mod 8 = 0 then (
+            Sound.play_sound Sound.Sound.Train_woosh s.sound
+          );
           v.ctr <- v.ctr + 1;
           v.x <- v.x + 1;
         );
