@@ -182,7 +182,7 @@ let color_of_signal = function
   | _, OverrideProceed -> Ega.yellow
   | _, OverrideHold -> Ega.bred
   | Go, NoOverride -> Ega.bgreen
-  | Stop, NoOverride -> Ega.red
+  | Stop, NoOverride -> Ega.bred
 
 let frame_color_of_signal = function
   | _, OverrideProceed
