@@ -54,6 +54,8 @@
 - Bug:
   - Speed too slow (fast not fast enough)
   - Bonus from priority delivery doesn't go away after delivery
+  - Bonus too high for distance
+  - Bonus added to money too high (maybe not decremented)
   - AI Companies dissolve after one fin period
   - No music for end of year
   - Light in traffic light too dark (red)
