@@ -462,8 +462,7 @@ let check_add_pause_msg old_mode old_menu v =
 
 let modal_screen_no_input v event =
   let v =
-    if Event.is_left_click event || Event.key_modal_dismiss event then
-      next_mode v
+    if Event.modal_dismiss event then next_mode v
     else v in
   v, nobaction
 
@@ -490,7 +489,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
       begin match action with
       | Menu.On(None) -> exit_mode ()
       | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
-      | Menu.NoAction when is_msgbox && Event.key_modal_dismiss event -> exit_mode ()
+      | Menu.NoAction when is_msgbox && Event.modal_dismiss event -> exit_mode ()
       | Menu.HandledEvent when is_msgbox -> exit_mode ()
       | Menu.On(Some choice) -> process_fn modal choice
       | Menu.NoAction -> v, B.Action.NoAction
@@ -817,7 +816,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
     | Balance_sheet state ->
       (* Balance sheet at the fin period end is the last before we do housecleaning *)
-      if Event.is_left_click event || Event.key_modal_dismiss event then
+      if Event.modal_dismiss event then
         let action = if state.end_of_year then B.Action.RunDelayedFn C.player else nobaction in
         let v = if state.end_of_year then v else {v with mode=Normal} in
         v, action
@@ -858,7 +857,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
       end
 
     | GenericScreen {send_delayed_fn=true;_} ->
-        if Event.is_left_click event || Event.key_modal_dismiss event then
+        if Event.modal_dismiss event then
           {v with mode=Normal}, B.Action.RunDelayedFn C.player
         else
           v, nobaction

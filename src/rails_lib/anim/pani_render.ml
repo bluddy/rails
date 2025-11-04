@@ -82,7 +82,7 @@ let handle_tick time v =
   v, `Stay
 
 let handle_event event v =
-  if Event.is_left_click event || Event.key_modal_dismiss event then (
+  if Event.modal_dismiss event then (
     Sound.stop_music ();
     {v with status=`Done}, `Exit
   ) else

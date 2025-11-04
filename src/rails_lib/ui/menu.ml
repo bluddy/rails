@@ -826,7 +826,7 @@ let modal_handle_event = fun (type a) ?(is_msgbox=false) s (menu: (a, 'state) Ms
   let menu, action = MsgBox.handle_event s menu event time in
   match action with
   | NoAction when Event.pressed_esc event -> `Exit
-  | NoAction when is_msgbox && Event.key_modal_dismiss event -> `Exit
+  | NoAction when is_msgbox && Event.modal_dismiss event -> `Exit
   | HandledEvent when is_msgbox -> `Exit
   | On(choice) -> `Activate choice
   | NoAction -> `Stay menu

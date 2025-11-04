@@ -55,7 +55,6 @@ let handle_tick time v =
   )
 
 let handle_event event v =
-  if Event.key_modal_dismiss event || Event.is_left_click event then `Exit, v
+  if Event.modal_dismiss event then `Exit, v
   else `None, v
-
 

@@ -60,7 +60,7 @@ let render win v = match v.mode with
   | GenericScreen {render_fn; _} -> render_fn win
 
 let handle_event event v = match v.mode with
-  | GenericScreen _ when Event.is_left_click event || Event.key_modal_dismiss event -> set_next_mode v
+  | GenericScreen _ when Event.modal_dismiss event -> set_next_mode v
   | GenericScreen _ -> v, `Stay
   | Animation state ->
       begin match Pani_render.handle_event event state with

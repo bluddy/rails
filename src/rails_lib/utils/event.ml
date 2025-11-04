@@ -270,5 +270,5 @@ let is_left_click = function
   | MouseButton {button=`Left; down=true; _} -> true
   | _ -> false
 
-
+let modal_dismiss event = key_modal_dismiss event || is_left_click event
 

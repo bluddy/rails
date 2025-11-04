@@ -114,6 +114,6 @@ let handle_event event (s:State.t) v =
           ignore @@ IO.File.write hof_file entries_s;
           `Stay, {v with mode=Display; entries}
       end
-  | Display when Event.key_modal_dismiss event -> `Exit, v
+  | Display when Event.modal_dismiss event -> `Exit, v
   | _ -> `Stay, v
 
