@@ -1,10 +1,10 @@
 # Tasks
-- Can't enter stock broker
+- Can't enter stock broker after load
   - Has to do with pause state getting messed up after load
 - Can keep building into minus
 - Rivers at land edge don't look good
 - Harbors near river should be closed in
-- AI now established too early
+- AI now established too early?
 - Upgrade bridge only when over bridge
 - Sound
 - Handle > 32 trains with some visual display
@@ -26,7 +26,6 @@
   - Select default value
 - History: does it include anything from the current period?
   - No
-- Animation: move faster by default
 - History depends on a lot of present data being relevant for past. Check.
   - e.g. company being dissolved.
   - We can do a much cleaner job with dedicated history stuff.
@@ -51,6 +50,8 @@
   - Data structure sorted by priority?
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
+- Handle upgrade bridge - make sure
+- 
 - Bug:
   - Speed too slow (fast not fast enough)
   - Bonus from priority delivery doesn't go away after delivery
@@ -58,16 +59,13 @@
   - Bonus added to money too high (maybe not decremented)
   - AI Companies dissolve after one fin period
   - No music for end of year
-  - Light in traffic light too dark (red)
   - turbo doesn't seem so fast
   - trains don't take turns on semaphores
   - setting speed doesn't unpause menu
   - Build station before track: send notification that need track first
-  - England: infinite loop at coal creation stage
   - Speed record set too easily
   - Dismiss build train animation with enter
   - Station resource window doesn't appear when station close to edge of window.
-  - New train crashes into old one if one segment
   - Year doesn't switch at end of December.
     - May be in original game too
   - Fiscal end stock eval: msgbox weird size thing
@@ -80,9 +78,6 @@
   - Delivery + priority pickup: no delivery message
   - Can't change station light from f2/f3
   - Create a train with no station: msgbox to build a station first
-  - New train doesn't pick up stuff from starting station
-    - this may be normal behavior
-  - Clicking on map during train creation crashes
   - Where does smoke originate? Check in code.
   - Smoke seems to go in different direction from game
   - joining a track from another track either refuses or crashes
