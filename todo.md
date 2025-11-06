@@ -51,8 +51,20 @@
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
 - Handle upgrade bridge - make sure
+- Sound:
+  - Dings for delivery: figure out logic
+  - Honk when new train leaves station
+  - Honk when quit
+  - New record song
 - 
 - Bug:
+  - Too many ai players? goes off screen on broker
+  - Income statement weird
+   - Expenses are low but get to 600k somehow (what's counting there?)
+   - Leads to negative
+  - Train income:
+    - Revenue ytd not updating properly
+  - Stocks view causes crash (because we add too many AI players)
   - Speed too slow (fast not fast enough)
   - Bonus from priority delivery doesn't go away after delivery
   - Bonus too high for distance
