@@ -154,9 +154,9 @@ let ai_exists idx v = Owner.Map.mem idx v.ais
 let nth_or_none n v =
   Owner.Map.nth_key n v.ais
 
-let random_or_none random v =
+let _random_ai_or_none random v =
   (* Roll from 0 to max_ai_players + 1. If we get a player, return it *)
-  let roll = Random.int (C.max_ai_players + 1) random in
+  let roll = Random.int C.max_ai_players random in
   nth_or_none roll v
 
 let _route_value city1 city2 ~tilemap ~(params:Params.t) =
@@ -686,7 +686,7 @@ let ai_track_routines ?(force_create=false) ~stocks ~params ~player_net_worth ~t
   let city = random_city () in
   if Trackmap.has_track city tracks then `Update v else (* Proceed only if no track at city *)
   let first_ai = Owner.Map.is_empty v.ais in
-  match random_or_none random v with
+  match _random_ai_or_none random v with
   | None ->
     _try_to_create_ai ~force:force_create ~tilemap ~stations ~params ~city ~stocks ~first_ai random v
   | Some ai_idx ->
