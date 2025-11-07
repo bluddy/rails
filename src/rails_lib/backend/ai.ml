@@ -155,7 +155,7 @@ let nth_or_none n v =
   Owner.Map.nth_key n v.ais
 
 let _random_ai_or_none random v =
-  (* Roll from 0 to max_ai_players + 1. If we get a player, return it *)
+  (* Roll. If we get a player, return it *)
   let roll = Random.int C.max_ai_players random in
   nth_or_none roll v
 
