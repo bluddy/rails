@@ -303,6 +303,7 @@ let next_mode s v = match v.next_modes with
   | x::xs ->
       {v with mode=x; next_modes=xs}
   | [] ->
+      Sound.stop_music ();
       [%up {v with mode=Normal}]
 
 let build_station_menu fonts region =
@@ -787,7 +788,9 @@ let handle_event (s:State.t) v (event:Event.t) time =
       let state2, retval, b_action = Speed_record.handle_event state event in
       let v = if state2 === state then v else {v with mode = Speed_record state2} in
       begin match retval with
-      | `Exit -> {v with mode=Normal}, b_action
+      | `Exit ->
+          Sound.stop_music ();
+          {v with mode=Normal}, b_action
       | `Stay -> v, b_action
       end
 
@@ -918,11 +921,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           else
             let rate_wars, records_earnings, warnings, records, stock_msgs, job_msg, end_of_run =
               Fiscal_period_end.handle_msgs b msgs in
-            let start_fn (state: State.t) =
-              let i = (state.backend.params.num_fiscal_periods) mod Sound.num_end_year_music in
-              Sound.play_end_year_music i state.sound
-            in
-            let background = make_generic_screen ~start_fn Fiscal_period_end.render_bg in
+            let background = make_generic_screen Fiscal_period_end.render_bg in
             let modes = [] in
             let modes = List.fold_left (fun acc rate_war_msg ->
               let mode = make_generic_screen @@ Fiscal_end_rate_war.render rate_war_msg in
@@ -935,7 +934,8 @@ let handle_msgs (s:State.t) v ui_msgs =
               modes rate_wars
             in
             let modes = match records_earnings with
-             | Some texts -> (make_news ~background @@ Newspaper.make_fancy s texts b.params)::modes
+             | Some texts ->
+                 (make_news ~background @@ Newspaper.make_fancy s texts b.params)::modes
              | None -> modes
             in
             let modes = if String.length warnings > 0 then
@@ -961,15 +961,15 @@ let handle_msgs (s:State.t) v ui_msgs =
                 (make_msgbox_mode ~x:64 ~y:16 ~background:stock_eval_mode s text)::modes
               else modes in
             let modes = match job_msg with
-            | Some _ when end_of_run -> (EndGame (Endgame.make `FinishRun s))::modes
-            | Some _ when player_fired ->
-                let state = Fired_animation.make s ~fired_by:`Stockholders player_idx in
-                (EndGame (Endgame.make `Fired s))::(FiredAnimation state)::modes
-            | Some job ->
-                (* New job offer *)
-                let render_fn = Job_offer.create job s |> Job_offer.render in
-                (make_generic_screen render_fn)::modes
-            | None -> modes
+              | Some _ when end_of_run -> (EndGame (Endgame.make `FinishRun s))::modes
+              | Some _ when player_fired ->
+                  let state = Fired_animation.make s ~fired_by:`Stockholders player_idx in
+                  (EndGame (Endgame.make `Fired s))::(FiredAnimation state)::modes
+              | Some job ->
+                  (* New job offer *)
+                  let render_fn = Job_offer.create job s |> Job_offer.render in
+                  (make_generic_screen render_fn)::modes
+              | None -> modes
             in
             set_modes (List.rev modes) v
       | _ -> v
@@ -1235,6 +1235,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         else
           let trains = B.get_trains main_player_idx b in
           let state = Speed_record.make d.speed ~src:d.src ~dst:d.dst d.train_idx trains b.stations b.cities in
+          Sound.play_music End_period_song_main s.sound;
           {v with mode=Speed_record state}
 
       | FiscalPeriodEnd player_idx ->
@@ -1245,6 +1246,7 @@ let handle_msgs (s:State.t) v ui_msgs =
             let income_stmt = Income_statement state in
             let bal_sheet = Balance_sheet {state; end_of_year=true} in
             let mode = make_generic_screen Fiscal_period_end.render_bg in
+            Sound.play_end_year_music s.backend.params.num_fiscal_periods s.sound;
             {v with mode; next_modes=[income_stmt; bal_sheet]}
 
       | UpdateMap (* We don't handle it here *)

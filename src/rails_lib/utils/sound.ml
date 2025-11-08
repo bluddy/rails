@@ -35,6 +35,7 @@ module Music = struct
     | End_period_short_2
     | End_period_short_3
     | End_period_short_4
+    | End_period_song_main
     | Main_theme
     [@@deriving of_string, to_string, ord]
 
@@ -97,12 +98,13 @@ let play_sound ?(loop=0) sound v =
 
 let play_music music v =
   let music = Music.Map.find music v.music in
-  Mixer.play_music music (-1) |> ignore
+  Mixer.play_music music 1 |> ignore
 
 let num_end_year_music = 4
 
-let play_end_year_music i v =
+let play_end_year_music num_fiscal_periods v =
   let open Music in
+  let i = num_fiscal_periods mod num_end_year_music in
   let music =
     [ End_period_short_1; End_period_short_2; End_period_short_3; End_period_short_4]
   in
