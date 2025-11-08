@@ -296,9 +296,14 @@ let set_modes l v = match l with
   | x::xs -> {v with mode=x; next_modes=xs}
   | [] -> v
 
-let next_mode v = match v.next_modes with
-  | x::xs -> {v with mode=x; next_modes=xs}
-  | [] -> [%up {v with mode=Normal}]
+let next_mode s v = match v.next_modes with
+  | (GenericScreen{start_fn; _} as x)::xs ->
+      start_fn s;
+      {v with mode=x; next_modes=xs}
+  | x::xs ->
+      {v with mode=x; next_modes=xs}
+  | [] ->
+      [%up {v with mode=Normal}]
 
 let build_station_menu fonts region =
   let open Menu in
@@ -460,9 +465,9 @@ let check_add_pause_msg old_mode old_menu v =
    | `Unpause, _ | _, `Unpause -> [B.Action.Unpause]
    | _ -> []
 
-let modal_screen_no_input v event =
+let modal_screen_no_input s v event =
   let v =
-    if Event.modal_dismiss event then next_mode v
+    if Event.modal_dismiss event then next_mode s v
     else v in
   v, nobaction
 
@@ -485,7 +490,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
           (build_fn:(State.t, b, c) modalmenu -> State.t mode)
           (process_fn:(State.t, b, c) modalmenu -> b -> State.t t * B.Action.t) ->
       let menu, action = Menu.MsgBox.handle_event s modal.menu event time in
-      let exit_mode () = next_mode v, B.Action.NoAction in
+      let exit_mode () = next_mode s v, B.Action.NoAction in
       begin match action with
       | Menu.On(None) -> exit_mode ()
       | Menu.NoAction when Event.pressed_esc event -> exit_mode ()
@@ -646,7 +651,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
     | Newspaper news ->
         let v = match Newspaper.handle_event s news.state event time with
-          | `Exit -> next_mode v
+          | `Exit -> next_mode s v
           | _ -> v
         in
         v, nobaction
@@ -655,12 +660,12 @@ let handle_event (s:State.t) v (event:Event.t) time =
         handle_modal_menu_events build_menu
         (fun x -> BuildStation x)
         (fun _ station_kind ->
-            let exit_mode () = next_mode v, nobaction in
+            let exit_mode () = next_mode s v, nobaction in
             let x, y = Mapview.get_cursor_pos v.view in
             match Backend.check_build_station x y player_idx station_kind s.backend with
             | `Ok ->
                 let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
-                next_mode v, backend_action
+                next_mode s v, backend_action
                 (* TODO: handle other cases *)
             | _ -> exit_mode ()
             )
@@ -674,9 +679,9 @@ let handle_event (s:State.t) v (event:Event.t) time =
             if Backend.check_build_bridge (x, y) ~dir player_idx s.backend then
                 let backend_action = B.Action.BuildBridge(modal.data, bridge_kind) in
                 let view = Mapview.move_const_box v.view dir 2 in
-                {(next_mode v) with view}, backend_action
+                {(next_mode s v) with view}, backend_action
             else
-                next_mode v, nobaction
+                next_mode s v, nobaction
             )
 
     | BuildHighGrade build_menu ->
@@ -685,7 +690,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
         (fun {data={x;y;dir;player_idx} as msg;_} -> function
           | `BuildTrack ->
               let view = Mapview.move_const_box v.view dir 1 in
-              {(next_mode v) with view}, B.Action.BuildTrack msg
+              {(next_mode s v) with view}, B.Action.BuildTrack msg
           | `BuildTunnel ->
               match B.check_build_tunnel (x, y) player_idx ~dir s.backend with
               | `Tunnel(length, disp_length, cost) ->
@@ -754,7 +759,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
     | TrainReport state ->
         let exit_state, state2, action = Train_report.handle_event s state event time in
         let v = match exit_state with
-          | `Exit -> next_mode v
+          | `Exit -> next_mode s v
           | `Stay when state =!= state2 -> {v with mode=TrainReport state2}
           | `Stay -> v
         in
@@ -809,9 +814,9 @@ let handle_event (s:State.t) v (event:Event.t) time =
       in v, nobaction
 
     | EngineInfo _
-    | StationReport _ -> modal_screen_no_input v event
+    | StationReport _ -> modal_screen_no_input s v event
 
-    | StationUpgrade {transition=Some t;_} when Transition.is_finished t -> modal_screen_no_input v event
+    | StationUpgrade {transition=Some t;_} when Transition.is_finished t -> modal_screen_no_input s v event
     | StationUpgrade _ -> v, nobaction
 
     | Balance_sheet state ->
@@ -825,7 +830,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
     | TrainIncome tstate ->
         let v = begin match Train_income_report.handle_event tstate s event with
-        | _, `Exit -> next_mode v
+        | _, `Exit -> next_mode s v
         | tstate, `OpenTrain idx ->
             let state = Train_report.make s idx in
             {v with mode=TrainReport state; next_modes=[TrainIncome tstate]}
@@ -836,14 +841,14 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
     | History state ->
       begin match History.handle_event state s event with
-      | `Exit, _ -> next_mode v, nobaction
+      | `Exit, _ -> next_mode s v, nobaction
       | `None, state2 when state2 === state -> v, nobaction
       | `None, state2 -> {v with mode=History state2}, nobaction
       end
 
     | FiredAnimation state ->
       begin match Fired_animation.handle_event event state with
-      | `Exit, _ -> next_mode v, nobaction
+      | `Exit, _ -> next_mode s v, nobaction
       | `None, state2 when state2 === state -> v, nobaction
       | `None, state2 -> {v with mode=FiredAnimation state2}, nobaction
       end
@@ -872,7 +877,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
     | Income_statement _
     | GenericScreen {send_delayed_fn=false;_}
     | FiscalPeriodEndStocks _
-    | Animation _ -> modal_screen_no_input v event
+    | Animation _ -> modal_screen_no_input s v event
 
   in
   (* See if we need to pause or unpause *)
@@ -1379,7 +1384,7 @@ let handle_tick (s:State.t) v time is_cycle =
   | TrainReport state ->
       let status, state2, baction = Train_report.handle_tick s state time in
       let v = match status with
-        | `Exit -> next_mode v
+        | `Exit -> next_mode s v
         | `Stay when state2 =!= state -> {v with mode=TrainReport state2}
         | `Stay -> v
       in
@@ -1420,7 +1425,7 @@ let handle_tick (s:State.t) v time is_cycle =
     let v =
       if Utils.is_exit status then (
         Sound.stop_music ();
-        next_mode v
+        next_mode s v
       ) else if state2 =!= state then {v with mode=Stock_broker state2}
       else v
     in
