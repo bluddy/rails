@@ -1001,7 +1001,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews text None in
         {v with mode}
 
-      | (TrainArrival t) ->
+      | TrainArrival t ->
           let msg_speed = train_arrival_msg_speed v in
           let v' =
             Option.map_or ~default:v
