@@ -1011,6 +1011,8 @@ let handle_msgs (s:State.t) v ui_msgs =
                  | `Slow -> C.slow_message_time
                  in
                  Log.debug (fun f -> f "Setting train arrival message with %d time" time);
+                 let sound_times = (Money.to_int t.revenue) / 50 in
+                 Sound.play_sound ~loop:sound_times Sound.Sound.Train_delivery_bell s.sound;
                  {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] }
               )
               msg_speed
