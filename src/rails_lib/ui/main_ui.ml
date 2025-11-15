@@ -1001,7 +1001,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews text None in
         {v with mode}
 
-      | TrainArrival t ->
+      | TrainArrival msg ->
           let msg_speed = train_arrival_msg_speed v in
           let v' =
             Option.map_or ~default:v
@@ -1011,9 +1011,8 @@ let handle_msgs (s:State.t) v ui_msgs =
                  | `Slow -> C.slow_message_time
                  in
                  Log.debug (fun f -> f "Setting train arrival message with %d time" time);
-                 let sound_times = (Money.to_int t.revenue) / 50 in
-                 Sound.play_sound ~loop:sound_times Sound.Sound.Train_delivery_bell s.sound;
-                 {v with train_arrival_msgs=v.train_arrival_msgs @ [t, ref time] }
+                 let train_arrival = {msg; time; sound_played=false} in
+                 {v with train_arrival_msgs=v.train_arrival_msgs @ [train_arrival]}
               )
               msg_speed
           in
@@ -1283,8 +1282,13 @@ let handle_tick (s:State.t) v time is_cycle =
         let view = Mapview.handle_tick s v.view time is_cycle in
         (* decr_train_msgs *)
         let train_arrival_msgs = match v.train_arrival_msgs with
-          | ((_, t)::_) as msgs when !t > 0 ->
-              decr t;
+          | (({time; _} as msg)::_) as msgs when time > 0 ->
+              if not msg.sound_played then (
+                 let sound_times = (Money.to_int msg.msg.revenue) / C.Sound.bell_per_money in
+                 Sound.play_sound ~loop:sound_times Sound.Sound.Train_delivery_bell s.sound;
+                 msg.sound_played <- true;
+              );
+              msg.time <- msg.time - 1;
               msgs
           | _::msgs -> msgs
           | [] -> []
@@ -1545,7 +1549,7 @@ let render_main win (s:State.t) v =
     Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny ~x:258 ~y:12 msg_s
   in
   begin match v.train_arrival_msgs with
-  | (msg, _)::_ -> draw_train_arrival_msg msg
+  | {msg; _}::_ -> draw_train_arrival_msg msg
   | _ -> ()
   end;
 

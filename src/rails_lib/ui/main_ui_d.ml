@@ -145,6 +145,12 @@ let make_generic_screen ?(send_delayed=false) ?(start_fn=fun _ -> ()) render_fn 
 
 let make_modal ?(background=Normal) menu data = {menu; data; background}
 
+type train_arrival = {
+  msg: Ui_msg.train_arrival_msg;
+  mutable time: int;
+  mutable sound_played: bool;
+}
+
 type 'state t = {
   dims: dims;
   options: options;
@@ -153,7 +159,7 @@ type 'state t = {
   next_modes: 'state mode list;
   train_ui_start: int; (* which train we start showing in the UI *)
   (* Top-right UI arrival message, time to display *)
-  train_arrival_msgs: (Ui_msg.train_arrival_msg * int ref) list;
+  train_arrival_msgs: train_arrival list;
   mutable view: Mapview_d.t;
 }
 

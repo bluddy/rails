@@ -156,3 +156,7 @@ module Save = struct
   let version = 1
 end
 
+module Sound = struct
+  let bell_per_money = 50
+end
+
