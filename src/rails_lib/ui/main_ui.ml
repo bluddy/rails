@@ -300,6 +300,9 @@ let next_mode s v = match v.next_modes with
   | (GenericScreen{start_fn; _} as x)::xs ->
       start_fn s;
       {v with mode=x; next_modes=xs}
+  | (Income_statement{start_fn; _} as x)::xs ->
+      start_fn s;
+      {v with mode=x; next_modes=xs}
   | x::xs ->
       {v with mode=x; next_modes=xs}
   | [] ->
@@ -625,7 +628,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
         | `IncomeStatement ->
             let state = B.create_balance_sheet player_idx s.backend in
-            {v with mode=Income_statement state}, nobaction
+            {v with mode=Income_statement {state; start_fn=fun _ -> ()}}, nobaction
 
         | `TrainIncome ->
             let state = Train_income_report.create s in
@@ -1242,7 +1245,9 @@ let handle_msgs (s:State.t) v ui_msgs =
           else
             (* Create a chain of modes *)
             let state = B.create_balance_sheet player_idx s.backend in
-            let income_stmt = Income_statement state in
+            let income_stmt =
+              let start_fn (s:State.t) = Sound.play_music Sound.Music.End_period_song_main s.sound in
+              Income_statement {state; start_fn} in
             let bal_sheet = Balance_sheet {state; end_of_year=true} in
             let mode = make_generic_screen Fiscal_period_end.render_bg in
             Sound.play_end_year_music s.backend.params.num_fiscal_periods s.sound;
@@ -1348,7 +1353,7 @@ let handle_tick (s:State.t) v time is_cycle =
           {v with mode=Balance_sheet {state; end_of_year=false}}, nobaction
       | On (`Income_statement) ->
           let state = B.create_balance_sheet player_idx s.backend in
-          {v with mode=Income_statement state}, nobaction
+          {v with mode=Income_statement {state; start_fn=fun _ -> ()}}, nobaction
       | On (`Train_income) ->
           let state = Train_income_report.create s in
           {v with mode=TrainIncome state}, nobaction
@@ -1634,7 +1639,7 @@ let render (win:R.window) (s:State.t) v =
         Stock_broker.render win s state
     | Balance_sheet {state;_} ->
         Balance_sheet_view.render win s state
-    | Income_statement state ->
+    | Income_statement {state;_} ->
         Income_statement_view.render win s state
     | Animation state ->
         Pani_render.render win state

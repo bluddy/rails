@@ -112,7 +112,7 @@ and 'state mode =
   | TrainReport of 'state Train_report_d.t
   | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of {state: Balance_sheet_d.t; end_of_year: bool}
-  | Income_statement of Balance_sheet_d.t  (* we use the stock part *)
+  | Income_statement of {state: Balance_sheet_d.t; start_fn: 'state -> unit}  (* we use the stock part *)
   | EngineInfo of Engine_info.t
   | Animation of Pani_render.t 
   | NewGoodDeliveryPickup of New_delivery_pickup_d.t
