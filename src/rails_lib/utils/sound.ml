@@ -46,10 +46,23 @@ module Music = struct
   module Map = Map.Make(struct type nonrec t = t let compare = compare end)
 end
 
+type sound_queue = {
+  sound: Sound.t;
+  time: int option;
+  loop: int;
+}
+
 type t = {
   sounds: Mixer.chunk Sound.Map.t;
+  mutable to_play: sound_queue list;
   music: Mixer.music Music.Map.t;
 }
+
+let play_sound ?(loop=0) ?time sound v =
+  let sound = Sound.Map.find sound v.sounds in
+  let time = Option.get_or ~default:(-1) time in
+  let channel = -1 in
+  Mixer.play_channel_timed channel sound loop time |> ignore
 
 let init () =
   print_endline "Init audio...";
@@ -86,15 +99,17 @@ let init () =
     Music.Map.empty
     music_files
   in
-  {
-    sounds;
-    music;
-  }
+  let v = {
+      sounds;
+      to_play=[];
+      music;
+    }
+  in
+  v
 
-let play_sound ?(loop=0) sound v =
-  (* We can discard the channel - we don't expect a sound to be stopped *)
-  let sound = Sound.Map.find sound v.sounds in
-  Mixer.play_channel (-1) sound loop |> ignore
+  (* queue for when the current sound finishes *)
+let queue_sound ?(loop=0) ?time sound v =
+  v.to_play <- v.to_play @ [{sound; time; loop}]
 
 let play_music music v =
   let music = Music.Map.find music v.music in
@@ -114,4 +129,15 @@ let play_end_year_music num_fiscal_periods v =
   )
 
 let stop_music () = Mixer.halt_music () |> ignore
+
+(* Call this to enable handling of queueing properly.
+   Not required for most situations *)
+let handle_tick v =
+  if Mixer.playing None then () else (
+  match v.to_play with
+  | {sound; time; loop}::xs ->
+      play_sound ~loop ?time sound v;
+      v.to_play <- xs
+  | _ -> ()
+  )
 

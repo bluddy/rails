@@ -1285,7 +1285,8 @@ let handle_tick (s:State.t) v time is_cycle =
           | (({time; _} as msg)::_) as msgs when time > 0 ->
               if not msg.sound_played then (
                  let sound_times = (Money.to_int msg.msg.revenue) / C.Sound.bell_per_money in
-                 Sound.play_sound ~loop:sound_times Sound.Sound.Train_delivery_bell s.sound;
+                 Sound.play_sound ~loop:sound_times ~time:200 Sound.Sound.Train_delivery_bell s.sound;
+                 Sound.queue_sound Sound.Sound.Train_delivery_bell s.sound;
                  msg.sound_played <- true;
               );
               msg.time <- msg.time - 1;
@@ -1674,6 +1675,7 @@ let render (win:R.window) (s:State.t) v =
        render_fn win s
   in
   render_mode v.mode;
+  Sound.handle_tick s.sound;
   if should_render_mouse v.mode then
     render_mouse win s.textures
 
