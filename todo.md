@@ -1,4 +1,7 @@
 # Tasks
+- Money issue is big
+  - We divide notified money in train arrival msg
+  - Currently seem to generate way too much
 - Can't enter stock broker after load
   - Has to do with pause state getting messed up after load
 - Can keep building into minus
@@ -6,7 +9,11 @@
 - Harbors near river should be closed in
 - AI now established too early?
 - Upgrade bridge only when over bridge
-- Sound
+- Sound wip. Missing:
+  - Honk on leaving back rail in station report/creation of train
+  - Regular bell on train leaving station
+  - Honk when quit
+  - Audio for animations
 - Handle > 32 trains with some visual display
   - arrows?
   - scroll bar?
@@ -51,11 +58,6 @@
 - New stations should have double rates for one fiscal period.
 - New train should ask where we want to build
 - Handle upgrade bridge - make sure
-- Sound:
-  - Dings for delivery: figure out logic
-  - Honk when new train leaves station
-  - Honk when quit
-  - New record song
 - Center on event (bridge washout)
 - Accomplishments multiple pages
 - Operate_rr_take_money/give_money
@@ -63,7 +65,6 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
-  - Too many ai players? goes off screen on broker
   - Income statement weird
    - Expenses are low but get to 600k somehow (what's counting there?)
    - Leads to negative
@@ -75,7 +76,6 @@
   - Bonus too high for distance
   - Bonus added to money too high (maybe not decremented)
   - AI Companies dissolve after one fin period
-  - No music for end of year
   - turbo doesn't seem so fast
   - trains don't take turns on semaphores
   - setting speed doesn't unpause menu
