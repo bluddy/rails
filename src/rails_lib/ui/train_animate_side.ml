@@ -28,6 +28,7 @@ let init ?x (s:State.t) ~engine ~cars ~station ~rail ~paused =
     cars;
     paused;
     station;
+    honked=false;
   }
 
 let pause v = {v with paused=true}
@@ -112,6 +113,10 @@ let handle_tick (s:State.t) v time =
     v.last_time <- time;
     match v.rail with
     | `Back ->
+        let v = if v.honked then v else (
+          Sound.play_sound Sound.Sound.Train_horn s.sound;
+          {v with honked=true})
+        in
         let engine_tex = Hashtbl.find s.textures.small_engine v.engine in
         let width = R.Texture.get_w engine_tex in
         v.x <- v.x - 1;

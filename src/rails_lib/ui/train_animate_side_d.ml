@@ -8,4 +8,5 @@ type t = {
   cars: Goods.t list;
   station: int * int;
   paused: bool;
+  honked: bool;
 }
