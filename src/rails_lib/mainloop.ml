@@ -17,7 +17,7 @@ let main init_fn =
 
   let fps = 30 in (* WSL has limited fps support *)
   let render_wait_time = 1000/fps in
-  let tick_fps = 15 in (* How fast we want to update state *)
+  let tick_fps = 20 in (* How fast we want to update state *)
   let tick_wait_time = 1000/tick_fps in
   let sleep_time = 30 in (* less than render_wait_time *)
   let sleep_time_l = sleep_time |> Int32.of_int in

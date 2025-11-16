@@ -3,7 +3,7 @@ open Train_animate_side_d
 
 module R = Renderer
 
-let fps = 15
+let fps = 20
 let wait_time = 1000/fps
 
 (* wheels: temp_cycle /2 mod 3 is offset *)
