@@ -8,7 +8,10 @@ module Sound = struct
     | Track_remove
     | Station_build
     | Track_build
-    | Train_delivery_bell
+    | Delivery_bell_very_low
+    | Delivery_bell_low
+    | Delivery_bell_mid
+    | Delivery_bell_high
     | Train_horn
     | Train_horn_double
     | Train_horn_short
@@ -20,6 +23,9 @@ module Sound = struct
   let to_string sound = to_string sound |> String.lowercase_ascii
 
   let of_string str = Utils.upper_first str |> of_string
+
+  let random_delivery_bell r =
+    Random.choose_return [Delivery_bell_high; Delivery_bell_low; Delivery_bell_mid; Delivery_bell_very_low] r
 
   module Map = Map.Make(struct type nonrec t = t let compare = compare end)
 
@@ -42,6 +48,7 @@ module Music = struct
   let to_string sound = to_string sound |> String.lowercase_ascii
 
   let of_string str = Utils.upper_first str |> of_string
+
 
   module Map = Map.Make(struct type nonrec t = t let compare = compare end)
 end

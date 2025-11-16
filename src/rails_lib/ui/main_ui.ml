@@ -1285,8 +1285,9 @@ let handle_tick (s:State.t) v time is_cycle =
           | (({time; _} as msg)::_) as msgs when time > 0 ->
               if not msg.sound_played then (
                  let sound_times = (Money.to_int msg.msg.revenue) / C.Sound.bell_per_money in
-                 Sound.play_sound ~loop:sound_times ~time:200 Sound.Sound.Train_delivery_bell s.sound;
-                 Sound.queue_sound Sound.Sound.Train_delivery_bell s.sound;
+                 let bell = Sound.Sound.random_delivery_bell s.backend.random in
+                 Sound.play_sound ~loop:sound_times ~time:200 bell s.sound;
+                 Sound.queue_sound bell s.sound;
                  msg.sound_played <- true;
               );
               msg.time <- msg.time - 1;
