@@ -471,7 +471,7 @@ let car_delivery_ton_miles ~loc ~car ~region =
   let dist_amount = dist * (Car.get_amount car) in
   dist_amount / C.car_amount
 
-let car_delivery_money_speed ~loc ~train ~car ~rates ~(params:Params.t) =
+let car_delivery_money_and_speed ~loc ~train ~car ~rates ~(params:Params.t) =
   let calc_dist = Utils.dist params.region loc (Car.get_source car) in
   let car_age = Car.get_age car params.cycle in
   let speed = calc_dist * 16 / (car_age / 24) in
@@ -500,6 +500,10 @@ let car_delivery_money_speed ~loc ~train ~car ~rates ~(params:Params.t) =
     | Passengers when Option.is_some train.name -> money * 3 / 2 (* Passengers pay more for exclusive trains *)
     | _ -> money
   in 
+  (* NOTE: in the OG, money is halved late, right before display.
+     This makes it hard to be consistent. We just do it early.
+   *)
+  let money = money / 2 in
   money |> M.of_int, speed
 
 let update_speed ~cycle ~cycle_check ~cycle_bit (v:rw t) =

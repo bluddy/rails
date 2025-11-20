@@ -7,6 +7,8 @@ let file_slot = ref 0
 let mode : actions ref = ref `Game
 let dump = ref false
 let debugger = ref false
+let zoom = ref 3
+let adjust_ar = ref false
 
 let set v f =
   file := f;
@@ -25,6 +27,8 @@ let arglist =
     "--dump", Set dump, "Dump the file";
     "--debug", Set debugger, "Run the debugger";
     "--load", Int (set_slot `LoadGame), "Load a save file";
+    "--zoom", Int (fun x -> zoom := x), "Set zoom (default =3)";
+    "--adjust-ar", Set adjust_ar, "Adjust aspect ratio";
   ]
 
 let main () =
@@ -39,10 +43,10 @@ let main () =
   | `Pani when !debugger ->
       let sound_engine = Sound.init () in
       Mainloop.main @@ Pani_render.debugger ~sound_engine ~filename:!file
-  | `Pani -> 
+  | `Pani ->
       let sound_engine = Sound.init () in
       Mainloop.main @@ Pani_render.standalone ~sound_engine ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `Game -> Game_modules.run ()
-  | `LoadGame -> Game_modules.run ~load:!file_slot ()
+  | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ()
+  | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ()
 

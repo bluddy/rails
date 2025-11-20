@@ -163,7 +163,7 @@ module Train_update = struct
           List.fold_left (fun (money_acc, speed_acc) (car, delivered) ->
             if delivered then
               let money, speed =
-                Train.car_delivery_money_speed ~loc ~train ~car ~rates:(Station.get_rates station) ~params:v.params
+                Train.car_delivery_money_and_speed ~loc ~train ~car ~rates:(Station.get_rates station) ~params:v.params
               in
               let money_acc =
                 let good = Train.Car.get_good car in

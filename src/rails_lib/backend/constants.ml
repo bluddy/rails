@@ -157,6 +157,7 @@ module Save = struct
 end
 
 module Sound = struct
-  let bell_per_money = 50
+  (* Allow more bells to deal with money / 2 thing throughout *)
+  let bell_per_money = 50 / 2
 end
 

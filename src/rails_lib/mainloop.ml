@@ -9,8 +9,10 @@ type 'a t = {
   render: 'a -> unit;
 }
 
-let main init_fn =
-  let zoom_x, zoom_y = 3., 3. *. 1.2  in
+let main ?(zoom=3) ?(adjust_ar=false) init_fn =
+  let zoom = float_of_int zoom in
+  let zoom_x, zoom_y = zoom, zoom in
+  let zoom_y = if adjust_ar then zoom_y *. 1.2 else zoom_y in
   let win = R.create 320 200 ~zoom_x ~zoom_y in
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)

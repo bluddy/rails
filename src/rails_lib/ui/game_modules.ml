@@ -183,7 +183,7 @@ let render win (s:State.t) = match s.mode with
 
   | Game -> Main_ui.render win s s.ui
 
-let run ?load () : unit =
+let run ?load ~zoom ~adjust_ar () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
   Logs.set_level (Some Debug);
 
@@ -212,5 +212,5 @@ let run ?load () : unit =
       render=render win;
     }
   in
-  Mainloop.main init_fn
+  Mainloop.main ~zoom ~adjust_ar init_fn
 
