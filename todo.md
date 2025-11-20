@@ -1,7 +1,6 @@
 # Tasks
-- Money issue is big
-  - We divide notified money in train arrival msg
-  - Currently seem to generate way too much
+- Make sure handling of money is complete
+  - Possible remove other /2 places
 - Can't enter stock broker after load
   - Has to do with pause state getting messed up after load
 - Can keep building into minus
