@@ -71,10 +71,9 @@ let render win state (s:State.t) =
     let current_period = B.get_period b in
     let last_period = Params.last_period b.params in
     let money_s = Money.print ~region:b.params.region ~spaces:6 in
-    (* TODO: why divide by 2 here? *)
-    let last_revenue = M.(Train.get_revenue last_period train / 2) |> money_s in
-    let cur_revenue = M.(Train.get_revenue current_period train / 2) |> money_s in
-    let total_revenue = M.(Train.get_total_revenue train / 2) |> money_s in
+    let last_revenue = M.(Train.get_revenue last_period train) |> money_s in
+    let cur_revenue = M.(Train.get_revenue current_period train) |> money_s in
+    let total_revenue = M.(Train.get_total_revenue train) |> money_s in
     let text = sp "%s  %s  %s" last_revenue cur_revenue total_revenue in
     write ~x:128 ~y text;
 

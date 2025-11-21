@@ -344,9 +344,6 @@ module Train_update = struct
          {train with had_maintenance=true}, station, None, []
     | _ -> train, station, None, []
 
-      (* TODO: young_station_reached if age <= 20 *)
-      (* add income/2 to other_income type *)
-
   let enter_station (v:t) idx (train: rw Train.t) stations player loc  =
     let station' = Station_map.get_exn loc stations in
     let last_station, priority_stop, stop, train, station, data, ui_msgs =

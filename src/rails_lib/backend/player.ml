@@ -285,6 +285,7 @@ let fiscal_period_end net_worth stations params v =
   let total_revenue = revenue_sum v in
   let total_income_statement = Income_statement.merge v.m.total_income_statement v.m.income_statement in
   let ui_msgs =
+    (* This division is aside from our regular money division *)
     if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
       (Ui_msg.ConsiderBankruptcy)::ui_msgs else ui_msgs
   in

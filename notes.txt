@@ -1,20 +1,12 @@
 Notes:
 
-- Money is always added directly (at system level), but viewed /2 and saved /2
-  - Print out money / 2 in train ui arrival msg
-  - Feels like a last-minute adjustment they made
-  - Add money / 2 to money array, also to money
-  - Train view:
-    - Money added directly
-    - But when viewing, money / 2, money per period / 2
-  - Station box:
-    - div money by 2
-  - Priority completion:
-    - mult by 2 before div by 2 to cancel it out
+- Coding modifications:
+  - In the OG, for some reason, income is added directly from the trains, but is presented divided by 2. It's added /2 to the income array, but e.g. in the train data structure, is added directly and then divided by 2 in presentation. The station box also divides by 2 when presenting the amount earned this period, and for priority shipment, we multiply by 2 in order to cancel out the late division by 2.
+  All of this is very confusing, and was probably a last minute adjustment. Instead, we just do the division by 2 early (when earning the money), and everything is simplified from that point on, aside from the number of dings when the train delivers.
 
 - Fixes/Alterations:
   - The way the code is written, some metal bridges are just cursed. Changed it to be more fair.
-  - According to the manual, there should be a small chance of stone bridges washing out. Added.
+  - According to the manual, there should be a small chance of stone bridges washing out, but this was not present in the code. Added to make stone bridges' advantage not so absolute.
 
 - Enhancement Ideas:
   - Have tile development rate depend on economic climate (not present currently)
