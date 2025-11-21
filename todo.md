@@ -66,6 +66,8 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Cannot buy AI stock (nothing happens)
+  - Train shows Passenger3 on delivery
   - Income statement weird
    - Expenses are low but get to 600k somehow (what's counting there?)
    - Leads to negative
