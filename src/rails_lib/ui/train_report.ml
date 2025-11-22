@@ -422,6 +422,9 @@ let handle_event (s:State.t) v (event:Event.t) time =
             in
             handle_car_msg msg
 
+        |  MouseButton {x; y; button=`Left; down=true; _} when x >= 288 && y >= 38 && y <= 50 ->
+          true, v.screen, None, nobaction
+
         | _ ->
           false, v.screen, None, nobaction
       in
