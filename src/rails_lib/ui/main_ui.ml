@@ -457,7 +457,7 @@ let make_msgbox ?x ?y s v text =
   {v with mode}, nobaction
 
 let check_add_pause_msg old_mode old_menu v =
-  let check_pause old _new = match old,_new with
+  let check_pause old new_ = match old,new_ with
     | true, false -> `Pause
     | false, true -> `Unpause
     | _ -> `DoNothing
@@ -1272,9 +1272,10 @@ let handle_msgs (s:State.t) v ui_msgs =
   (* Mostly animations. *)
 let handle_tick (s:State.t) v time is_cycle =
   let nobaction = [] in
-  let default = v, nobaction in
+  let default = v, [] in
   let player_idx = C.player in
-  match v.mode with
+  let old_mode, old_menu = v.mode, v.menu in
+  let v, backend_msg = match v.mode with
   | Normal ->
       let b = s.backend in
       let menu, menu_action = Menu.Animated.handle_tick s v.menu time in
@@ -1451,6 +1452,9 @@ let handle_tick (s:State.t) v time is_cycle =
     else {v with mode=FiredAnimation state2}, nobaction
 
   | _ -> default
+  in
+  let pause_msgs = check_add_pause_msg old_mode old_menu v in
+  v, backend_msg @ pause_msgs
 
 let draw_train_roster win (s:State.t) v =
   train_roster_iter s v

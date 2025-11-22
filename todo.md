@@ -1,8 +1,6 @@
 # Tasks
 
 - young_station_reached if age <= 20 *)
-- Can't enter stock broker after load
-  - Has to do with pause state getting messed up after load
 - Can keep building into minus
 - Rivers at land edge don't look good
 - Harbors near river should be closed in
@@ -13,10 +11,10 @@
   - Regular bell on train leaving station
   - Honk when quit
   - Audio for animations
+  - Woosh + honk for first delivery
 - Handle > 32 trains with some visual display
   - arrows?
   - scroll bar?
-- Handle updgradegbridge
 - Handle display menu options
 - Handle repeate message
 - Selecting zoom with mouse opens msgbox to choose center
@@ -64,6 +62,7 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Train report exit button
   - Cannot buy AI stock (nothing happens)
   - Train shows Passenger3 on delivery
   - Income statement weird
@@ -71,18 +70,12 @@
    - Leads to negative
   - Train income:
     - Revenue ytd not updating properly
-  - Stocks view causes crash (because we add too many AI players)
-  - Speed too slow (fast not fast enough)
   - Bonus from priority delivery doesn't go away after delivery
   - Bonus too high for distance
   - Bonus added to money too high (maybe not decremented)
   - AI Companies dissolve after one fin period
-  - turbo doesn't seem so fast
-  - trains don't take turns on semaphores
-  - setting speed doesn't unpause menu
   - Build station before track: send notification that need track first
   - Speed record set too easily
-  - Dismiss build train animation with enter
   - Station resource window doesn't appear when station close to edge of window.
   - Year doesn't switch at end of December.
     - May be in original game too
