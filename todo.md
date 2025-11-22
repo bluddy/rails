@@ -1,8 +1,6 @@
 # Tasks
 
 - young_station_reached if age <= 20 *)
-- Make sure handling of money is complete
-  - Possible remove other /2 places
 - Can't enter stock broker after load
   - Has to do with pause state getting messed up after load
 - Can keep building into minus
