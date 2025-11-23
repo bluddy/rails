@@ -1,5 +1,8 @@
 # Tasks
 
+- Handle > 32 trains with some visual display
+  - arrows?
+  - scroll bar?
 - young_station_reached if age <= 20 *)
 - Can keep building into minus
 - Rivers at land edge don't look good
@@ -12,9 +15,6 @@
   - Honk when quit
   - Audio for animations
   - Woosh + honk for first delivery
-- Handle > 32 trains with some visual display
-  - arrows?
-  - scroll bar?
 - Handle display menu options
 - Handle repeate message
 - Selecting zoom with mouse opens msgbox to choose center

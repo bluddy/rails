@@ -403,12 +403,12 @@ let confirm_build_site_menu fonts =
 
   (* Iterate over trains in train roster *)
 let train_roster_iter (s:State.t) v f =
-  let train_h = v.dims.train_ui_train_h in
-  let max_fit_trains = v.dims.train_ui.h / train_h in
   let player_idx = C.player in
-  let max_draw_trains = min max_fit_trains @@
-    (Trainmap.size @@ B.get_trains player_idx s.backend) - v.train_ui_start
-  in
+  let train_h = v.dims.train_ui_train_h in
+  (* Subtract height for priority and arrows *)
+  let max_fit_trains = (v.dims.train_ui.h - 5 - 5)  / train_h in
+  let num_trains = Trainmap.size @@ B.get_trains player_idx s.backend in
+  let max_draw_trains = min max_fit_trains @@ num_trains - v.train_ui_start in
   Iter.iter (fun i ->
     f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
   )
@@ -1457,8 +1457,25 @@ let handle_tick (s:State.t) v time is_cycle =
   v, backend_msg @ pause_msgs
 
 let draw_train_roster win (s:State.t) v =
-  train_roster_iter s v
-  (fun y_bot idx ->
+  let draw_arrows x y =
+    let color = Ega.bgreen in
+    let draw_vline win ~x ~y1 ~y2 ~color = R.draw_line win ~x1:x ~x2:x ~y1 ~y2 ~color in
+    let draw_larrow x y =
+      R.draw_point win ~x ~y:(y+2) ~color;
+      draw_vline win ~x:(x+2) ~y1:y ~y2:(y+5) ~color;
+      draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
+    in
+    let draw_rarrow x y =
+      draw_vline win ~x ~y1:y ~y2:(y+5) ~color;
+      draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
+      R.draw_point win ~x:(x+2) ~y:(y+2) ~color
+    in
+    draw_larrow (x+4) y;
+    draw_rarrow (v.dims.train_ui.w - 5) y;
+  in
+  draw_arrows (v.dims.train_ui.x) (v.dims.train_ui.y + v.dims.train_ui.h - 10);
+
+  train_roster_iter s v (fun y_bot idx ->
     let train = B.get_train (Trainmap.Id.of_int idx) C.player s.backend in
     let x = v.dims.train_ui.x + 1 in
     let y = y_bot in
