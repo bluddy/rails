@@ -9,6 +9,8 @@ type dims = {
   infobar: Utils.rect;
   train_ui: Utils.rect;
   train_ui_train_h: int;
+  train_ui_train_area_h: int;
+  train_ui_bonus_y: int;
 } [@@deriving yojson]
 
 type message_speed =

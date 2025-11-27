@@ -265,6 +265,8 @@ let default ?options ?view win fonts region =
       infobar;
       train_ui;
       train_ui_train_h=5;
+      train_ui_train_area_h=105;
+      train_ui_bonus_y=194;
     }
   in
   let options = match options with
@@ -1462,18 +1464,18 @@ let draw_train_roster win (s:State.t) v =
     let draw_vline win ~x ~y1 ~y2 ~color = R.draw_line win ~x1:x ~x2:x ~y1 ~y2 ~color in
     let draw_larrow x y =
       R.draw_point win ~x ~y:(y+2) ~color;
-      draw_vline win ~x:(x+2) ~y1:y ~y2:(y+5) ~color;
       draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
+      draw_vline win ~x:(x+2) ~y1:y ~y2:(y+4) ~color;
     in
     let draw_rarrow x y =
-      draw_vline win ~x ~y1:y ~y2:(y+5) ~color;
+      draw_vline win ~x ~y1:y ~y2:(y+4) ~color;
       draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
       R.draw_point win ~x:(x+2) ~y:(y+2) ~color
     in
     draw_larrow (x+4) y;
-    draw_rarrow (v.dims.train_ui.w - 5) y;
+    draw_rarrow (v.dims.train_ui.x + v.dims.train_ui.w - 6) y;
   in
-  draw_arrows (v.dims.train_ui.x) (v.dims.train_ui.y + v.dims.train_ui.h - 10);
+  draw_arrows (v.dims.train_ui.x) (v.dims.train_ui.y + v.dims.train_ui.h - 11);
 
   train_roster_iter s v (fun y_bot idx ->
     let train = B.get_train (Trainmap.Id.of_int idx) C.player s.backend in
@@ -1604,7 +1606,9 @@ let render_main win (s:State.t) v =
     | Some priority ->
       let bonus = Priority_shipment.compute_bonus priority @@ B.get_params s.backend in
       let bonus_s = sp "bonus: %d,000" @@ M.to_int bonus in
-      Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny ~x:258 ~y:194 bonus_s;
+      let y = v.dims.train_ui_bonus_y in
+      let x = v.dims.train_ui.x + 4 in
+      Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny ~x ~y bonus_s;
     | _ -> ()
   in
   draw_priority ();
