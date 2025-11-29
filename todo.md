@@ -1,8 +1,8 @@
 # Tasks
 
+- Check priority delivery price vs game
 - Handle > 32 trains with some visual display
-  - arrows?
-  - scroll bar?
+  - test
 - young_station_reached if age <= 20 *)
 - Can keep building into minus
 - Rivers at land edge don't look good
@@ -35,7 +35,6 @@
   - We can do a much cleaner job with dedicated history stuff.
 - Efficiency Report: check difference between ton-miles delivered and ton-miles traveled
 - Train income: check multiple pages of trains work well
-- Why divide lifetime train money by 2? Makes some sense for 2-year fiscal period, but lifetime?
 - Check that activegstation only works for 20 years per station
 - Move block_map and track_graph to player?
 - Can't rebuild bridge under repair
