@@ -460,7 +460,6 @@ let handle_event (s:State.t) v event =
               v
           in
           v, `NoAction
-
         else
           let train_idx =
             ui_train_find (fun y_bot train_idx ->
@@ -475,6 +474,60 @@ let handle_event (s:State.t) v event =
           v, action
 
   | _ -> v, `NoAction
+
+let draw win (s:State.t) v =
+  let draw_arrows x y =
+    let color = Ega.bgreen in
+    let draw_vline win ~x ~y1 ~y2 ~color = R.draw_line win ~x1:x ~x2:x ~y1 ~y2 ~color in
+    let draw_larrow x y =
+      R.draw_point win ~x ~y:(y+2) ~color;
+      draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
+      draw_vline win ~x:(x+2) ~y1:y ~y2:(y+4) ~color;
+    in
+    let draw_rarrow x y =
+      draw_vline win ~x ~y1:y ~y2:(y+4) ~color;
+      draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
+      R.draw_point win ~x:(x+2) ~y:(y+2) ~color
+    in
+    draw_larrow (x+4) y;
+    draw_rarrow (v.dims.train_ui.x + v.dims.train_ui.w - 6) y;
+  in
+  draw_arrows (v.dims.train_ui.x) (v.dims.train_ui.y + v.dims.train_ui.h - 11);
+
+  iter s v (fun y_bot idx ->
+    let train = B.get_train (Trainmap.Id.of_int idx) C.player s.backend in
+    let x = v.dims.train_ui.x + 1 in
+    let y = y_bot in
+    let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
+    let _draw_speed_line =
+      let color = if Train.get_train_hold train then Ega.bred else Ega.dgray in
+      R.draw_line win ~x1:x ~y1:y ~x2 ~y2:y ~color;
+      let x1 = x2 - (Train.get_speed train) * 2 in
+      R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
+    in
+    let _draw_engine =
+      let color = if Train.holds_priority_shipment train then Ega.bgreen else Ega.black in
+      R.draw_line win ~x1:(x+3) ~y1:(y-3) ~x2:(x+3) ~y2:y ~color;
+      R.draw_line win ~x1:(x+4) ~y1:(y-2) ~x2:(x+4) ~y2:(y-1) ~color;
+      R.draw_rect win ~x:(x+5) ~y:(y-3) ~w:2 ~h:4 ~color ~fill:true;
+    in
+    let _draw_cars =
+      List.fold_left (fun x car ->
+        let full = Train.Car.get_amount car > C.car_amount / 2 in
+        let freight = Train.Car.get_good car in
+        Ui_common.draw_ui_car win ~x ~y:(y-2) ~full freight;
+        x + 5)
+      (x + 8)
+      train.cars
+    in
+    let _write_destination =
+      let loc = Train.get_dest train in
+      let station = Station_map.get_exn loc s.backend.stations in
+      let short_name = Station.get_short_name station in
+      Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny short_name ~x:(x2-11) ~y:(y-4)
+    in
+    ()
+  )
 
 end
 
@@ -546,7 +599,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
       (* Main gameplay view *)
       let menu, event = Menu.Animated.handle_event s v.menu event time in
       let v = [%up {v with menu}] in
-      let v, view_action = handle_train_roster_event s v event in
+      let v, view_action = Train_roster.handle_event s v event in
       let view, view_action = match view_action with
         | `NoAction -> Mapview.handle_event s v.view event ~minimap:v.dims.minimap
         | _ -> v.view, view_action
@@ -1490,60 +1543,6 @@ let handle_tick (s:State.t) v time is_cycle =
   let pause_msgs = check_add_pause_msg old_mode old_menu v in
   v, backend_msg @ pause_msgs
 
-let draw_train_roster win (s:State.t) v =
-  let draw_arrows x y =
-    let color = Ega.bgreen in
-    let draw_vline win ~x ~y1 ~y2 ~color = R.draw_line win ~x1:x ~x2:x ~y1 ~y2 ~color in
-    let draw_larrow x y =
-      R.draw_point win ~x ~y:(y+2) ~color;
-      draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
-      draw_vline win ~x:(x+2) ~y1:y ~y2:(y+4) ~color;
-    in
-    let draw_rarrow x y =
-      draw_vline win ~x ~y1:y ~y2:(y+4) ~color;
-      draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
-      R.draw_point win ~x:(x+2) ~y:(y+2) ~color
-    in
-    draw_larrow (x+4) y;
-    draw_rarrow (v.dims.train_ui.x + v.dims.train_ui.w - 6) y;
-  in
-  draw_arrows (v.dims.train_ui.x) (v.dims.train_ui.y + v.dims.train_ui.h - 11);
-
-  train_roster_iter s v (fun y_bot idx ->
-    let train = B.get_train (Trainmap.Id.of_int idx) C.player s.backend in
-    let x = v.dims.train_ui.x + 1 in
-    let y = y_bot in
-    let x2 = v.dims.train_ui.x + v.dims.train_ui.w - 1 in
-    let _draw_speed_line =
-      let color = if Train.get_train_hold train then Ega.bred else Ega.dgray in
-      R.draw_line win ~x1:x ~y1:y ~x2 ~y2:y ~color;
-      let x1 = x2 - (Train.get_speed train) * 2 in
-      R.draw_line win ~x1 ~y1:y ~x2 ~y2:y ~color:Ega.bgreen;
-    in
-    let _draw_engine =
-      let color = if Train.holds_priority_shipment train then Ega.bgreen else Ega.black in
-      R.draw_line win ~x1:(x+3) ~y1:(y-3) ~x2:(x+3) ~y2:y ~color;
-      R.draw_line win ~x1:(x+4) ~y1:(y-2) ~x2:(x+4) ~y2:(y-1) ~color;
-      R.draw_rect win ~x:(x+5) ~y:(y-3) ~w:2 ~h:4 ~color ~fill:true;
-    in
-    let _draw_cars =
-      List.fold_left (fun x car ->
-        let full = Train.Car.get_amount car > C.car_amount / 2 in
-        let freight = Train.Car.get_good car in
-        Ui_common.draw_ui_car win ~x ~y:(y-2) ~full freight;
-        x + 5)
-      (x + 8)
-      train.cars
-    in
-    let _write_destination =
-      let loc = Train.get_dest train in
-      let station = Station_map.get_exn loc s.backend.stations in
-      let short_name = Station.get_short_name station in
-      Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny short_name ~x:(x2-11) ~y:(y-4)
-    in
-    ()
-  )
-
 let render_main win (s:State.t) v =
   let dims = v.dims in
   let player_idx = C.player in
@@ -1630,7 +1629,7 @@ let render_main win (s:State.t) v =
   (* Train area *)
   let y = y + dims.infobar.h in
   R.draw_rect win ~x:(x+1) ~y:y ~h:dims.train_ui.h ~w:(dims.ui.w-1) ~color:Ega.bblue ~fill:true;
-  draw_train_roster win s v;
+  Train_roster.draw win s v;
 
   (* Priority time remaining *)
   let draw_priority () =
