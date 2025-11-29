@@ -420,11 +420,17 @@ let iter (s:State.t) v f =
   )
   Iter.(0 -- (max_draw_trains - 1))
 
+let prev_page_exists v = v.train_ui_start > 0
+
 let prev_page_start v =
   if v.train_ui_start = 0 then None
   else
     let start = v.train_ui_start - max_fit_trains v in
     min 0 start |> Option.some
+
+let next_page_exists (s:State.t) v =
+  let start = v.train_ui_start + max_fit_trains v in
+  start < num_trains s
 
 let next_page_start (s:State.t) v =
   let start = v.train_ui_start + max_fit_trains v in
@@ -477,20 +483,21 @@ let handle_event (s:State.t) v event =
 
 let draw win (s:State.t) v =
   let draw_arrows x y =
-    let color = Ega.bgreen in
     let draw_vline win ~x ~y1 ~y2 ~color = R.draw_line win ~x1:x ~x2:x ~y1 ~y2 ~color in
-    let draw_larrow x y =
+    let draw_larrow color x y =
       R.draw_point win ~x ~y:(y+2) ~color;
       draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
       draw_vline win ~x:(x+2) ~y1:y ~y2:(y+4) ~color;
     in
-    let draw_rarrow x y =
+    let draw_rarrow color x y =
       draw_vline win ~x ~y1:y ~y2:(y+4) ~color;
       draw_vline win ~x:(x+1) ~y1:(y+1) ~y2:(y+3) ~color;
       R.draw_point win ~x:(x+2) ~y:(y+2) ~color
     in
-    draw_larrow (x+4) y;
-    draw_rarrow (v.dims.train_ui.x + v.dims.train_ui.w - 6) y;
+    let color = if prev_page_exists v then Ega.bgreen else Ega.gray in
+    draw_larrow color (x+4) y;
+    let color = if next_page_exists s v then Ega.bgreen else Ega.gray in
+    draw_rarrow color (v.dims.train_ui.x + v.dims.train_ui.w - 6) y;
   in
   draw_arrows (v.dims.train_ui.x) (v.dims.train_ui.y + v.dims.train_ui.h - 11);
 
