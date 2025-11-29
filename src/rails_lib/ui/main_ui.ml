@@ -403,27 +403,42 @@ let confirm_build_site_menu fonts =
     make_entry "Cancel" @@ `Action None;
   ]
 
+module Train_roster = struct
+
+let player_idx = C.player
+
+let max_fit_trains v = v.dims.train_ui_train_area_h  / v.dims.train_ui_train_h
+
+let num_trains (s:State.t) = Trainmap.size @@ B.get_trains player_idx s.backend
+
   (* Iterate over trains in train roster *)
-let train_roster_iter (s:State.t) v f =
-  let player_idx = C.player in
+let iter (s:State.t) v f =
+  let max_draw_trains = min (max_fit_trains v) @@ (num_trains s) - v.train_ui_start in
   let train_h = v.dims.train_ui_train_h in
-  (* Subtract height for priority and arrows *)
-  let max_fit_trains = (v.dims.train_ui.h - 5 - 5)  / train_h in
-  let num_trains = Trainmap.size @@ B.get_trains player_idx s.backend in
-  let max_draw_trains = min max_fit_trains @@ num_trains - v.train_ui_start in
   Iter.iter (fun i ->
     f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
   )
   Iter.(0 -- (max_draw_trains - 1))
 
-let handle_train_roster_event (s:State.t) v event =
+let prev_page_start v =
+  if v.train_ui_start = 0 then None
+  else
+    let start = v.train_ui_start - max_fit_trains v in
+    min 0 start |> Option.some
+
+let next_page_start (s:State.t) v =
+  let start = v.train_ui_start + max_fit_trains v in
+  if start >= num_trains s then None
+  else Some start
+
+let num_pages (s:State.t) v = (num_trains s) / (max_fit_trains v) + 1
+
+let cur_page v = v.train_ui_start / (max_fit_trains v) + 1
+
+let handle_event (s:State.t) v event =
   let ui_train_find f =
     let train_h = v.dims.train_ui_train_h in
-    let max_fit_trains = v.dims.train_ui.h / train_h in
-    let player_idx = C.player in
-    let max_draw_trains = min max_fit_trains @@
-      (Trainmap.size @@ B.get_trains player_idx s.backend) - v.train_ui_start
-    in
+    let max_draw_trains = min (max_fit_trains v) (num_trains s - v.train_ui_start) in
     Iter.find (fun i ->
       f (v.dims.train_ui.y + 1 + (i + 1) * train_h) (v.train_ui_start + i)
     )
@@ -432,19 +447,36 @@ let handle_train_roster_event (s:State.t) v event =
   match event with
   | Event.MouseButton {x; y; button; down=true; _} when
       x > v.dims.train_ui.x && y > v.dims.train_ui.y ->
-        let train_idx =
-          ui_train_find (fun y_bot train_idx ->
-            if y < y_bot then Some (Trainmap.Id.of_int train_idx)
-            else None)
-        in
-        let action = match train_idx, button with
-          | Some idx, `Left -> `EditTrain idx
-          | Some idx, `Right -> `HoldTrainToggle idx
-          | _ -> `NoAction
-        in
-        v, action
+        if y > v.dims.train_ui.y + v.dims.train_ui_train_area_h then
+          (* Handle next/prev buttons *)
+          let v =
+            if x < v.dims.train_ui.x + 8 then
+              let train_ui_start = Option.get_or ~default:v.train_ui_start @@ next_page_start s v in
+              [%up {v with train_ui_start}]
+            else if x > v.dims.train_ui.x + v.dims.train_ui.w - 6 then 
+              let train_ui_start = Option.get_or ~default:v.train_ui_start @@ prev_page_start v in
+              [%up {v with train_ui_start}]
+            else
+              v
+          in
+          v, `NoAction
+
+        else
+          let train_idx =
+            ui_train_find (fun y_bot train_idx ->
+              if y < y_bot then Some (Trainmap.Id.of_int train_idx)
+              else None)
+          in
+          let action = match train_idx, button with
+            | Some idx, `Left -> `EditTrain idx
+            | Some idx, `Right -> `HoldTrainToggle idx
+            | _ -> `NoAction
+          in
+          v, action
 
   | _ -> v, `NoAction
+
+end
 
 let nobaction = B.Action.NoAction
 
