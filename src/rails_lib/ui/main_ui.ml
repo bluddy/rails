@@ -499,7 +499,11 @@ let draw win (s:State.t) v =
     let color = if next_page_exists s v then Ega.bgreen else Ega.gray in
     draw_rarrow color (v.dims.train_ui.x + v.dims.train_ui.w - 6) y;
   in
-  draw_arrows (v.dims.train_ui.x) (v.dims.train_ui.y + v.dims.train_ui.h - 11);
+  draw_arrows v.dims.train_ui.x (v.dims.train_ui.y + v.dims.train_ui_train_area_h);
+  let num_pages, cur_page = num_pages s v, cur_page v in
+  let page_s = Printf.sprintf "%d of %d" cur_page num_pages in
+  Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny page_s ~x:(v.dims.train_ui.x + 22)
+    ~y:(v.dims.train_ui.y + v.dims.train_ui_train_area_h);
 
   iter s v (fun y_bot idx ->
     let train = B.get_train (Trainmap.Id.of_int idx) C.player s.backend in
