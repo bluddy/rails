@@ -1,7 +1,6 @@
 open Containers
 open Tsdl
 open Sdl.Gl
-open Tgl3
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 type window = {
@@ -14,7 +13,7 @@ type window = {
   rect: Sdl.rect; (* For drawing rectangles *)
   rect2: Sdl.rect;
   opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
-  shader_program: int option; (* program is an int *)
+  shader_prog: int option; (* program is an int *)
 }
 
 let format = Sdl.Pixel.format_rgba8888
@@ -25,26 +24,6 @@ let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
 
-module Shader = struct
-(* Helper: Load and compile shader source *)
-let load_shader source shader_type =
-  let open Tgl3.Gl in
-  let shader = create_shader shader_type in
-  shader_source shader [| source |];
-  compile_shader shader;
-  (* Check status *)
-  let status = ref 0 in
-  get_shaderiv shader compile_status status;
-  if !status = 0 then begin
-    let log_len = ref 0 in
-    get_shaderiv shader info_log_length log_len;
-    let log = String.make !log_len '\000' in
-    get_shader_info_log shader !log_len log;
-    failwith ("Shader compile error: " ^ log)
-  end;
-  shader
-
-end
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
@@ -52,13 +31,13 @@ let clear_screen win =
 let create w h ~zoom_x ~zoom_y =
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
-  let window, renderer =
+  let window, renderer, shader_prog =
     Sdl.init Sdl.Init.video |> get_exn;
-    let w, r = match Sdl.create_window_and_renderer ~w:out_w ~h:out_h Sdl.Window.opengl with
-      | Error(`Msg e) -> Sdl.log "Create window error: %s" e; exit 1
-      | Ok (w,r) -> w,r
-    in
-    w, r
+    let window = Sdl.create_window ~w ~h "Open Railroad Tycoon" Sdl.Window.opengl |> get_exn in
+    let _ctx = Sdl.gl_create_context window |> get_exn in
+    let renderer = Sdl.create_renderer window ~flags:Sdl.Renderer.accelerated |> get_exn in
+    let shader_prog = Option.map Shader.load_crt_shader shader_file in
+    window, renderer, shader_prog
   in
   let hide_cursor () =
     match Sdl.show_cursor false with
@@ -81,6 +60,7 @@ let create w h ~zoom_x ~zoom_y =
     rect;
     rect2;
     opt_rect=Some rect;
+    shader_prog;
   }
 
 let zoom _win x = x
