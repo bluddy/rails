@@ -1,5 +1,7 @@
 open Containers
 open Tsdl
+open Sdl.Gl
+open Tgl3
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 type window = {
@@ -12,6 +14,7 @@ type window = {
   rect: Sdl.rect; (* For drawing rectangles *)
   rect2: Sdl.rect;
   opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
+  shader_program: int option; (* program is an int *)
 }
 
 let format = Sdl.Pixel.format_rgba8888
@@ -21,6 +24,27 @@ let do_hide_cursor = false  (* It's buggy on WSL *)
 let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
+
+module Shader = struct
+(* Helper: Load and compile shader source *)
+let load_shader source shader_type =
+  let open Tgl3.Gl in
+  let shader = create_shader shader_type in
+  shader_source shader [| source |];
+  compile_shader shader;
+  (* Check status *)
+  let status = ref 0 in
+  get_shaderiv shader compile_status status;
+  if !status = 0 then begin
+    let log_len = ref 0 in
+    get_shaderiv shader info_log_length log_len;
+    let log = String.make !log_len '\000' in
+    get_shader_info_log shader !log_len log;
+    failwith ("Shader compile error: " ^ log)
+  end;
+  shader
+
+end
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
