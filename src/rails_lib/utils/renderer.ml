@@ -71,6 +71,18 @@ let zoom _win x = x
 let height window = window.inner_h
 let width window = window.inner_w
 
+(* New: Render to offscreen texture *)
+let render_to_texture t ~w ~h f =
+  let tex = Sdl.create_texture t.renderer `ARGB8888 ~w ~h in
+  Sdl.set_render_target t.renderer (Some tex);
+  Sdl.set_render_draw_color t.renderer 0 0 0 255;
+  Sdl.render_clear t.renderer;
+  f ();  (* e.g., render_map (); render_trains (); *)
+  Sdl.set_render_target t.renderer None;
+  (* Get GL texture ID: Use ctypes to query (simplified; expand as needed) *)
+  let gl_tex = get_sdl_texture_gl_id tex in  (* Implement via ctypes/GL.GetInteger *)
+  tex, gl_tex
+
 module Transition = struct
 
 type t = {
@@ -324,4 +336,35 @@ let draw_cursor win texture =
   let mouse_y = (float_of_int mouse_y) /. win.zoom_y |> int_of_float in
   Texture.render ~x:mouse_x ~y:mouse_y win texture
 
+(* Helper: Fullscreen quad (immediate mode for simplicity; use VAO for perf) *)
+let draw_fullscreen_quad () =
+  Tgl3.begin_end `triangles (fun () ->
+    (* Quad as two triangles; add tex coords if needed *)
+    Tgl3.vertex2 (-1.0) (-1.0); Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 (-1.0) 1.0;
+    Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 1.0 1.0; Tgl3.vertex2 (-1.0) 1.0;
+  ) 
+
+(* Modified render: Your main loop entry *)
+let render t =
+  match t.shader_state with
+  | None ->
+      (* No shader: Your original flow *)
+      Sdl.render_clear t.renderer;
+      (* Your render_texture calls *)
+      Sdl.render_present t.renderer
+  | Some state ->
+      (* With shader *)
+      let win_w, win_h = Sdl.get_window_size t.window in
+      let _, gl_tex = render_to_texture t ~w:win_w ~h:win_h (fun () ->
+        Sdl.render_clear t.renderer;
+        (* Your existing render calls here *)
+      ) in
+      (* GL Post-Pass *)
+      Tgl3.use_program state.program;
+      Tgl3.active_texture Tgl3.texture0;
+      Tgl3.bind_texture Tgl3.texture_2d gl_tex;
+      (* Set uniforms, e.g., Tgl3.uniform1i (get_uniform_loc state "inputTexture") 0;
+         Tgl3.uniform2f (get_uniform_loc state "resolution") (float win_w) (float win_h); *)
+      draw_fullscreen_quad ();
+      Sdl_gl.swap_window t.window
 
