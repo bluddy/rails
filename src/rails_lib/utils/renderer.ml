@@ -13,6 +13,7 @@ type window = {
   rect: Sdl.rect; (* For drawing rectangles *)
   rect2: Sdl.rect;
   opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
+  offscreen_tex: Sdl.texture option;  (* Used for shader effects. *)
   shader_prog: int option; (* program is an int *)
 }
 
@@ -33,7 +34,7 @@ let create w h ~zoom_x ~zoom_y =
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
   let window, renderer, shader_prog =
     Sdl.init Sdl.Init.video |> get_exn;
-    let window = Sdl.create_window ~w ~h "Open Railroad Tycoon" Sdl.Window.opengl |> get_exn in
+    let window = Sdl.create_window ~w:out_w ~h:out_h "Open Railroad Tycoon" Sdl.Window.opengl |> get_exn in
     let _ctx = Sdl.gl_create_context window |> get_exn in
     let renderer = Sdl.create_renderer window ~flags:Sdl.Renderer.accelerated |> get_exn in
     let shader_prog = Option.map Shader.load_crt_shader shader_file in
@@ -61,6 +62,7 @@ let create w h ~zoom_x ~zoom_y =
     rect2;
     opt_rect=Some rect;
     shader_prog;
+    offscreen_tex=None;
   }
 
 let zoom _win x = x
