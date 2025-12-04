@@ -52,7 +52,8 @@ let create_geometry () =
   Gl.bind_vertex_array gid;
   Gl.bind_buffer Gl.element_array_buffer iid;
   bind_attrib vid 0 3 Gl.float;
-  (* bind_attrib cid 1 3 Gl.float; *)
+
+  (* Clean up *)
   Gl.bind_vertex_array 0;
   Gl.bind_buffer Gl.array_buffer 0;
   Gl.bind_buffer Gl.element_array_buffer 0
@@ -94,11 +95,12 @@ let load_crt_shader file_path =
   let prog = create_program (simple_vert_src ()) frag_src in
   Some prog
 
-let draw pid gid win =
+let draw pid gid r =
   Gl.clear_color 0. 0. 0. 1.;
   Gl.clear Gl.color_buffer_bit;
   Gl.use_program pid;
   Gl.bind_vertex_array gid;
   Gl.draw_elements Gl.triangles 3 Gl.unsigned_byte (`Offset 0);
   Gl.bind_vertex_array 0;
-  Sdl.gl_swap_window win
+  Tsdl.Sdl.gl_swap_window r
+
