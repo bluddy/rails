@@ -1,4 +1,8 @@
+open Containers
 open Tgl3
+open Result
+
+let ( >>= ) x f = match x with Ok v -> f v | Error _ as e -> e
 
 let bigarray_create k len = Bigarray.(Array1.create k c_layout len)
 
@@ -9,6 +13,10 @@ let get_int =
 let set_int =
   let a = bigarray_create Bigarray.int32 1 in
   fun f i -> a.{0} <- Int32.of_int i; f a
+
+let get_string len f =
+  let a = bigarray_create Bigarray.char len in
+  f a; Gl.string_of_bigarray a
 
 let set_3d ba i x y z =
   let start = i * 3 in
@@ -41,6 +49,7 @@ let create_buffer b =
   id
 
 let create_geometry () =
+  (* Create geometry for a simple quad *)
   let gid = get_int (Gl.gen_vertex_arrays 1) in
   let iid = create_buffer indices in
   let vid = create_buffer vertices in
@@ -56,7 +65,8 @@ let create_geometry () =
   (* Clean up *)
   Gl.bind_vertex_array 0;
   Gl.bind_buffer Gl.array_buffer 0;
-  Gl.bind_buffer Gl.element_array_buffer 0
+  Gl.bind_buffer Gl.element_array_buffer 0;
+  gid
 
 let compile_shader src typ =
   let get_shader sid e = get_int (Gl.get_shaderiv sid e) in
@@ -68,9 +78,9 @@ let compile_shader src typ =
   let log = get_string len (Gl.get_shader_info_log sid len None) in
   (Gl.delete_shader sid; Error (`Msg log))
 
-let create_program glsl_v =
-  compile_shader (vertex_shader glsl_v) Gl.vertex_shader >>= fun vid ->
-  compile_shader (fragment_shader glsl_v) Gl.fragment_shader >>= fun fid ->
+let create_program vertex_shader fragment_shader =
+  compile_shader vertex_shader Gl.vertex_shader >>= fun vid ->
+  compile_shader fragment_shader Gl.fragment_shader >>= fun fid ->
   let pid = Gl.create_program () in
   let get_program pid e = get_int (Gl.get_programiv pid e) in
   Gl.attach_shader pid vid; Gl.delete_shader vid;
@@ -91,11 +101,11 @@ let simple_vert_src () = "#version 330 core\nin vec2 position; out vec2 vTexCoor
 
 (* Load CRT shader from file *)
 let load_crt_shader file_path =
-  let frag_src = Core.In_channel.read_all file_path in
+  let frag_src = IO.with_in file_path IO.read_all in
   let prog = create_program (simple_vert_src ()) frag_src in
   Some prog
 
-let draw pid gid r =
+let draw_quad pid gid r =
   Gl.clear_color 0. 0. 0. 1.;
   Gl.clear Gl.color_buffer_bit;
   Gl.use_program pid;
