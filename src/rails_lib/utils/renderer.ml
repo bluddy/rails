@@ -1,6 +1,6 @@
 open Containers
 open Tsdl
-open Sdl.Gl
+open Tgl3
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 type window = {
@@ -26,11 +26,67 @@ let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
 
+let bigarray_create k len = Bigarray.(Array1.create k c_layout len)
+
+let get_int =
+  let a = bigarray_create Bigarray.int32 1 in
+  fun f -> f a; Int32.to_int a.{0}
+
+let set_int =
+  let a = bigarray_create Bigarray.int32 1 in
+  fun f i -> a.{0} <- Int32.of_int i; f a
+
+let set_3d ba i x y z =
+  let start = i * 3 in
+  ba.{start} <- x; ba.{start + 1} <- y; ba.{start + 2} <- z
+
+let vertices =
+  let vs = bigarray_create Bigarray.float32 4 in
+  set_3d vs 0 (-1.0) (-1.0) 0.;
+  set_3d vs 0 (-1.0) 1.0 0.;
+  set_3d vs 0 1.0 (-1.0) 0.;
+  set_3d vs 0 1.0 1.0 0.;
+  vs
+
+let indices =
+  let vs = bigarray_create Bigarray.int8_unsigned 6 in
+  vs.{0} <- 0;
+  vs.{1} <- 2;
+  vs.{2} <- 1;
+
+  vs.{3} <- 2;
+  vs.{4} <- 3;
+  vs.{5} <- 1;
+  vs
+
+let create_buffer b =
+  let id = get_int (Gl.gen_buffers 1) in
+  let bytes = Gl.bigarray_byte_size b in
+  Gl.bind_buffer Gl.array_buffer id;
+  Gl.buffer_data Gl.array_buffer bytes (Some b) Gl.static_draw;
+  id
+
+let create_geometry () =
+  let gid = get_int (Gl.gen_vertex_arrays 1) in
+  let iid = create_buffer indices in
+  let vid = create_buffer vertices in
+  let bind_attrib id loc dim typ =
+    Gl.bind_buffer Gl.array_buffer id;
+    Gl.enable_vertex_attrib_array loc;
+    Gl.vertex_attrib_pointer loc dim typ false 0 (`Offset 0);
+  in
+  Gl.bind_vertex_array gid;
+  Gl.bind_buffer Gl.element_array_buffer iid;
+  bind_attrib vid 0 3 Gl.float;
+  (* bind_attrib cid 1 3 Gl.float; *)
+  Gl.bind_vertex_array 0;
+  Gl.bind_buffer Gl.array_buffer 0;
+  Gl.bind_buffer Gl.element_array_buffer 0
 
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
 
-let create w h ~zoom_x ~zoom_y =
+let create w h ~zoom_x ~zoom_y ~shader_file =
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
   let window, renderer, shader_prog =
@@ -55,7 +111,7 @@ let create w h ~zoom_x ~zoom_y =
   let offscreen_tex = Sdl.create_texture renderer format Sdl.Texture.access_target ~w ~h |> get_exn in 
   let offscreen_gl_id =
     let _ = Sdl.gl_bind_texture offscreen_tex |> get_exn in
-    let gl_int = Bigarray.Array1.create Bigarray.int32 Bigarray.c_layout 1 in
+    let gl_int = bigarray_create Bigarray.int32 1 in
     Tgl3.Gl.get_integerv Tgl3.Gl.texture_binding_2d gl_int;
     Sdl.gl_unbind_texture offscreen_tex |> get_exn;
     gl_int
@@ -353,25 +409,26 @@ let render_wrap win f =
       (* Your render_texture calls *)
       f win;
       Sdl.render_present win.renderer |> get_exn;
+
   | Some state ->
       (* Helper: Fullscreen quad (immediate mode for simplicity; use VAO for perf) *)
       (* With shader *)
       let win_w, win_h = Sdl.get_window_size t.window in
-      render_to_texture t ~w:win_w ~h:win_h (fun () ->
-        Sdl.render_clear t.renderer;
+      render_to_texture win ~w:win_w ~h:win_h (fun () ->
+        Sdl.render_clear win.renderer;
         f win;
       );
       (* GL Post-Pass *)
-      Tgl3.use_program state.program;
-      Tgl3.active_texture Tgl3.texture0;
-      Tgl3.bind_texture Tgl3.texture_2d gl_tex;
+      Tgl3.Gl.use_program win.shader_prog;
+      Tgl3.Gl.active_texture Tgl3.Gl.texture0;
+      Tgl3.Gl.bind_texture Tgl3.Gl.texture_2d win.offscreen_gl_id;
       (* Set uniforms, e.g., Tgl3.uniform1i (get_uniform_loc state "inputTexture") 0;
          Tgl3.uniform2f (get_uniform_loc state "resolution") (float win_w) (float win_h); *)
       let draw_fullscreen_quad () =
-        Tgl3.begin_end `triangles @@ fun () ->
+        Tgl3.Gl.begin_end `triangles @@ fun () ->
           (* Quad as two triangles; add tex coords if needed *)
-          Tgl3.vertex2 (-1.0) (-1.0); Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 (-1.0) 1.0;
-          Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 1.0 1.0; Tgl3.vertex2 (-1.0) 1.0;
+          Tgl3.Gl.vertex2 (-1.0) (-1.0); Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 (-1.0) 1.0;
+          Tgl3.Gl.vertex2 1.0 (-1.0); Tgl3.vertex2 1.0 1.0; Tgl3.vertex2 (-1.0) 1.0;
       in
       draw_fullscreen_quad ();
       Sdl_gl.swap_window t.window
