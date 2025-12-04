@@ -14,6 +14,7 @@ type window = {
   rect2: Sdl.rect;
   opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
   offscreen_tex: Sdl.texture option;  (* Used for shader effects. *)
+  offscreen_gl_id: int; (* OpenGL id for offscreen texture *)
   shader_prog: int option; (* program is an int *)
 }
 
@@ -51,7 +52,15 @@ let create w h ~zoom_x ~zoom_y =
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   Sdl.set_render_draw_blend_mode renderer Sdl.Blend.mode_blend |> get_exn;
-  { 
+  let offscreen_tex = Sdl.create_texture renderer format Sdl.Texture.access_target ~w ~h |> get_exn in 
+  let offscreen_gl_id =
+    let _ = Sdl.gl_bind_texture offscreen_tex |> get_exn in
+    let gl_int = Bigarray.Array1.create Bigarray.int32 Bigarray.c_layout 1 in
+    Tgl3.Gl.get_integerv Tgl3.Gl.texture_binding_2d gl_int;
+    Sdl.gl_unbind_texture offscreen_tex |> get_exn;
+    gl_int
+  in
+  {
     inner_w=w;
     inner_h=h;
     renderer;
@@ -62,7 +71,8 @@ let create w h ~zoom_x ~zoom_y =
     rect2;
     opt_rect=Some rect;
     shader_prog;
-    offscreen_tex=None;
+    offscreen_tex=Some offscreen_tex;
+    offscreen_gl_id;
   }
 
 let zoom _win x = x
@@ -70,18 +80,6 @@ let zoom _win x = x
 
 let height window = window.inner_h
 let width window = window.inner_w
-
-(* New: Render to offscreen texture *)
-let render_to_texture t ~w ~h f =
-  let tex = Sdl.create_texture t.renderer `ARGB8888 ~w ~h in
-  Sdl.set_render_target t.renderer (Some tex);
-  Sdl.set_render_draw_color t.renderer 0 0 0 255;
-  Sdl.render_clear t.renderer;
-  f ();  (* e.g., render_map (); render_trains (); *)
-  Sdl.set_render_target t.renderer None;
-  (* Get GL texture ID: Use ctypes to query (simplified; expand as needed) *)
-  let gl_tex = get_sdl_texture_gl_id tex in  (* Implement via ctypes/GL.GetInteger *)
-  tex, gl_tex
 
 module Transition = struct
 
@@ -130,6 +128,7 @@ let copy_pixels_to_tex v =
 
 let render_offscreen win old_render_fn render_fn v =
   (* Do once with final transition image. Render offscreen the next image to our texture. *)
+  let old_tgt = Sdl.get_render_target win.renderer in
   Sdl.set_render_target win.renderer v.offscreen_tex |> get_exn;
 
   (* Old image *)
@@ -144,7 +143,7 @@ let render_offscreen win old_render_fn render_fn v =
   (* Read from texture target to a buffer we can read from *)
   Sdl.render_read_pixels win.renderer None (Some format) v.pixels (win.inner_w * 4) |> get_exn;
   (* Restore render target to the main screen *)
-  Sdl.set_render_target win.renderer None |> get_exn
+  Sdl.set_render_target win.renderer old_tgt |> get_exn
 
 let step num_pixels v =
   lock_write (fun buf pitch ->
@@ -336,35 +335,44 @@ let draw_cursor win texture =
   let mouse_y = (float_of_int mouse_y) /. win.zoom_y |> int_of_float in
   Texture.render ~x:mouse_x ~y:mouse_y win texture
 
-(* Helper: Fullscreen quad (immediate mode for simplicity; use VAO for perf) *)
-let draw_fullscreen_quad () =
-  Tgl3.begin_end `triangles (fun () ->
-    (* Quad as two triangles; add tex coords if needed *)
-    Tgl3.vertex2 (-1.0) (-1.0); Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 (-1.0) 1.0;
-    Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 1.0 1.0; Tgl3.vertex2 (-1.0) 1.0;
-  ) 
+(* New: Render to offscreen texture *)
+let render_to_texture win ~w ~h f =
+  let old_tgt = Sdl.get_render_target win.renderer in
+  Sdl.set_render_target win.renderer win.offscreen_tex |> get_exn;
+  (* Sdl.set_render_draw_color t.renderer 0 0 0 255; *)
+  (* Sdl.render_clear t.renderer; *)
+  f ();  (* e.g., render_map (); render_trains (); *)
+  Sdl.set_render_target win.renderer old_tgt |> get_exn
 
 (* Modified render: Your main loop entry *)
-let render t =
-  match t.shader_state with
+let render_wrap win f =
+  match win.shader_prog with
   | None ->
       (* No shader: Your original flow *)
-      Sdl.render_clear t.renderer;
+      Sdl.render_clear win.renderer |> get_exn;
       (* Your render_texture calls *)
-      Sdl.render_present t.renderer
+      f win;
+      Sdl.render_present win.renderer |> get_exn;
   | Some state ->
+      (* Helper: Fullscreen quad (immediate mode for simplicity; use VAO for perf) *)
       (* With shader *)
       let win_w, win_h = Sdl.get_window_size t.window in
-      let _, gl_tex = render_to_texture t ~w:win_w ~h:win_h (fun () ->
+      render_to_texture t ~w:win_w ~h:win_h (fun () ->
         Sdl.render_clear t.renderer;
-        (* Your existing render calls here *)
-      ) in
+        f win;
+      );
       (* GL Post-Pass *)
       Tgl3.use_program state.program;
       Tgl3.active_texture Tgl3.texture0;
       Tgl3.bind_texture Tgl3.texture_2d gl_tex;
       (* Set uniforms, e.g., Tgl3.uniform1i (get_uniform_loc state "inputTexture") 0;
          Tgl3.uniform2f (get_uniform_loc state "resolution") (float win_w) (float win_h); *)
+      let draw_fullscreen_quad () =
+        Tgl3.begin_end `triangles @@ fun () ->
+          (* Quad as two triangles; add tex coords if needed *)
+          Tgl3.vertex2 (-1.0) (-1.0); Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 (-1.0) 1.0;
+          Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 1.0 1.0; Tgl3.vertex2 (-1.0) 1.0;
+      in
       draw_fullscreen_quad ();
       Sdl_gl.swap_window t.window
 

@@ -77,7 +77,7 @@ let main ?(zoom=3) ?(adjust_ar=false) init_fn =
       if render_diff >= render_wait_time then (
         last_render_time := time;
         v.render data;
-        Sdl.render_present win.renderer;
+        R.post_render win;
       );
       if render_wait_time - render_diff >= sleep_time && tick_wait_time - tick_diff >= sleep_time then (
         (* nap *)
