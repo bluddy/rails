@@ -1,6 +1,5 @@
 open Containers
 open Tsdl
-open Tgl3
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 type window = {
@@ -15,7 +14,7 @@ type window = {
   opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
   offscreen_tex: Sdl.texture option;  (* Used for shader effects. *)
   offscreen_gl_id: int; (* OpenGL id for offscreen texture *)
-  shader_prog: int option; (* program is an int *)
+  shader_prog: Opengl.t option; (* program is an int *)
 }
 
 let format = Sdl.Pixel.format_rgba8888
@@ -26,67 +25,10 @@ let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
 
-let bigarray_create k len = Bigarray.(Array1.create k c_layout len)
-
-let get_int =
-  let a = bigarray_create Bigarray.int32 1 in
-  fun f -> f a; Int32.to_int a.{0}
-
-let set_int =
-  let a = bigarray_create Bigarray.int32 1 in
-  fun f i -> a.{0} <- Int32.of_int i; f a
-
-let set_3d ba i x y z =
-  let start = i * 3 in
-  ba.{start} <- x; ba.{start + 1} <- y; ba.{start + 2} <- z
-
-let vertices =
-  let vs = bigarray_create Bigarray.float32 4 in
-  set_3d vs 0 (-1.0) (-1.0) 0.;
-  set_3d vs 0 (-1.0) 1.0 0.;
-  set_3d vs 0 1.0 (-1.0) 0.;
-  set_3d vs 0 1.0 1.0 0.;
-  vs
-
-let indices =
-  let vs = bigarray_create Bigarray.int8_unsigned 6 in
-  vs.{0} <- 0;
-  vs.{1} <- 2;
-  vs.{2} <- 1;
-
-  vs.{3} <- 2;
-  vs.{4} <- 3;
-  vs.{5} <- 1;
-  vs
-
-let create_buffer b =
-  let id = get_int (Gl.gen_buffers 1) in
-  let bytes = Gl.bigarray_byte_size b in
-  Gl.bind_buffer Gl.array_buffer id;
-  Gl.buffer_data Gl.array_buffer bytes (Some b) Gl.static_draw;
-  id
-
-let create_geometry () =
-  let gid = get_int (Gl.gen_vertex_arrays 1) in
-  let iid = create_buffer indices in
-  let vid = create_buffer vertices in
-  let bind_attrib id loc dim typ =
-    Gl.bind_buffer Gl.array_buffer id;
-    Gl.enable_vertex_attrib_array loc;
-    Gl.vertex_attrib_pointer loc dim typ false 0 (`Offset 0);
-  in
-  Gl.bind_vertex_array gid;
-  Gl.bind_buffer Gl.element_array_buffer iid;
-  bind_attrib vid 0 3 Gl.float;
-  (* bind_attrib cid 1 3 Gl.float; *)
-  Gl.bind_vertex_array 0;
-  Gl.bind_buffer Gl.array_buffer 0;
-  Gl.bind_buffer Gl.element_array_buffer 0
-
 let clear_screen win =
   Sdl.render_clear win.renderer |> get_exn
 
-let create w h ~zoom_x ~zoom_y ~shader_file =
+let create ?shader_file w h ~zoom_x ~zoom_y =
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
   let window, renderer, shader_prog =
@@ -94,7 +36,9 @@ let create w h ~zoom_x ~zoom_y ~shader_file =
     let window = Sdl.create_window ~w:out_w ~h:out_h "Open Railroad Tycoon" Sdl.Window.opengl |> get_exn in
     let _ctx = Sdl.gl_create_context window |> get_exn in
     let renderer = Sdl.create_renderer window ~flags:Sdl.Renderer.accelerated |> get_exn in
-    let shader_prog = Option.map Shader.load_crt_shader shader_file in
+    let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
+    print_endline s;
+    let shader_prog = Option.map Opengl.create shader_file in
     window, renderer, shader_prog
   in
   let hide_cursor () =
@@ -109,13 +53,7 @@ let create w h ~zoom_x ~zoom_y ~shader_file =
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   Sdl.set_render_draw_blend_mode renderer Sdl.Blend.mode_blend |> get_exn;
   let offscreen_tex = Sdl.create_texture renderer format Sdl.Texture.access_target ~w ~h |> get_exn in 
-  let offscreen_gl_id =
-    let _ = Sdl.gl_bind_texture offscreen_tex |> get_exn in
-    let gl_int = bigarray_create Bigarray.int32 1 in
-    Tgl3.Gl.get_integerv Tgl3.Gl.texture_binding_2d gl_int;
-    Sdl.gl_unbind_texture offscreen_tex |> get_exn;
-    gl_int
-  in
+  let offscreen_gl_id = Opengl.gl_id_of_sdl_tex offscreen_tex in
   {
     inner_w=w;
     inner_h=h;
@@ -326,7 +264,7 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
         1, dx
     in
     let d = 2 * dx - dy in
-    
+
     let rec loop x y d =
       if y > y2 then ()
       else (
@@ -351,7 +289,7 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
         1, dy
     in
     let d = 2 * dy - dx in
-    
+
     let rec loop x y d =
       if x > x2 then ()
       else (
@@ -392,44 +330,26 @@ let draw_cursor win texture =
   Texture.render ~x:mouse_x ~y:mouse_y win texture
 
 (* New: Render to offscreen texture *)
-let render_to_texture win ~w ~h f =
+let render_to_texture win f =
   let old_tgt = Sdl.get_render_target win.renderer in
   Sdl.set_render_target win.renderer win.offscreen_tex |> get_exn;
-  (* Sdl.set_render_draw_color t.renderer 0 0 0 255; *)
-  (* Sdl.render_clear t.renderer; *)
-  f ();  (* e.g., render_map (); render_trains (); *)
+  f ();
   Sdl.set_render_target win.renderer old_tgt |> get_exn
 
 (* Modified render: Your main loop entry *)
-let render_wrap win f =
+let render_wrap win f x =
   match win.shader_prog with
   | None ->
-      (* No shader: Your original flow *)
+      (* No shader: original flow *)
       Sdl.render_clear win.renderer |> get_exn;
-      (* Your render_texture calls *)
-      f win;
-      Sdl.render_present win.renderer |> get_exn;
+      f x;
+      Sdl.render_present win.renderer;
 
   | Some state ->
-      (* Helper: Fullscreen quad (immediate mode for simplicity; use VAO for perf) *)
-      (* With shader *)
-      let win_w, win_h = Sdl.get_window_size t.window in
-      render_to_texture win ~w:win_w ~h:win_h (fun () ->
-        Sdl.render_clear win.renderer;
-        f win;
+      (* Draw to offscreen, render quad *)
+      render_to_texture win (fun () ->
+        Sdl.render_clear win.renderer |> get_exn;
+        f x;
       );
-      (* GL Post-Pass *)
-      Tgl3.Gl.use_program win.shader_prog;
-      Tgl3.Gl.active_texture Tgl3.Gl.texture0;
-      Tgl3.Gl.bind_texture Tgl3.Gl.texture_2d win.offscreen_gl_id;
-      (* Set uniforms, e.g., Tgl3.uniform1i (get_uniform_loc state "inputTexture") 0;
-         Tgl3.uniform2f (get_uniform_loc state "resolution") (float win_w) (float win_h); *)
-      let draw_fullscreen_quad () =
-        Tgl3.Gl.begin_end `triangles @@ fun () ->
-          (* Quad as two triangles; add tex coords if needed *)
-          Tgl3.Gl.vertex2 (-1.0) (-1.0); Tgl3.vertex2 1.0 (-1.0); Tgl3.vertex2 (-1.0) 1.0;
-          Tgl3.Gl.vertex2 1.0 (-1.0); Tgl3.vertex2 1.0 1.0; Tgl3.vertex2 (-1.0) 1.0;
-      in
-      draw_fullscreen_quad ();
-      Sdl_gl.swap_window t.window
+      Opengl.draw_quad_with_tex state win.offscreen_gl_id win.window
 

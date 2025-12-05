@@ -9,11 +9,11 @@ type 'a t = {
   render: 'a -> unit;
 }
 
-let main ?(zoom=3) ?(adjust_ar=false) init_fn =
+let main ?(zoom=3) ?(adjust_ar=false) ?shader_file init_fn =
   let zoom = float_of_int zoom in
   let zoom_x, zoom_y = zoom, zoom in
   let zoom_y = if adjust_ar then zoom_y *. 1.2 else zoom_y in
-  let win = R.create 320 200 ~zoom_x ~zoom_y in
+  let win = R.create 320 200 ~zoom_x ~zoom_y ?shader_file in
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)
 
@@ -76,8 +76,7 @@ let main ?(zoom=3) ?(adjust_ar=false) init_fn =
       let render_diff = time - !last_render_time in
       if render_diff >= render_wait_time then (
         last_render_time := time;
-        v.render data;
-        R.post_render win;
+        R.render_wrap win v.render data;
       );
       if render_wait_time - render_diff >= sleep_time && tick_wait_time - tick_diff >= sleep_time then (
         (* nap *)
