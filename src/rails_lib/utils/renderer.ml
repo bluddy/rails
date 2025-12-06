@@ -349,5 +349,5 @@ let render_wrap win f x =
         Sdl.render_clear win.renderer |> get_exn;
         f x;
       );
-      Opengl.draw_quad_with_tex state win.offscreen_gl_id win.window
+      Opengl.draw_quad_with_tex state win.offscreen_gl_id win.window ~inner_w:win.inner_w ~inner_h:win.inner_h
 

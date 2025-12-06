@@ -97,15 +97,12 @@ let compile_shader_ src typ =
 let create_program_ vertex_shader fragment_shader =
   let vid = compile_shader_ vertex_shader Gl.vertex_shader |> get_exn in
   print_endline "done compiling vertex shader";
-  print_endline fragment_shader;
   let fid = compile_shader_ fragment_shader Gl.fragment_shader |> get_exn in
   print_endline "done compiling fragment shader";
   let pid = Gl.create_program () in
   let get_program pid e = get_int (Gl.get_programiv pid e) in
   Gl.attach_shader pid vid; Gl.delete_shader vid;
   Gl.attach_shader pid fid; Gl.delete_shader fid;
-  Gl.bind_attrib_location pid 0 "vertex";
-  Gl.bind_attrib_location pid 1 "color";
   Gl.link_program pid;
   if get_program pid Gl.link_status = Gl.true_ then pid
   else (
@@ -144,14 +141,17 @@ let create shader_path =
   let gid = create_geometry_ () in
   let pid =
     let raw_src = IO.with_in shader_path IO.read_all in
-    (* Prepare the source for the Vertex Shader *)
     let vert_src = insert_define_after_version vertex_define raw_src in
-    (* Prepare the source for the Fragment Shader *)
     let frag_src = insert_define_after_version fragment_define raw_src in
-    (* Compile and Link the Program *)
     create_program_ vert_src frag_src
   in
-  {pid; gid}
+  let get_loc name = Gl.get_uniform_location pid name in
+  {
+    pid; gid;
+    loc_rubyTexture = get_loc "rubyTexture";
+    loc_rubyInputSize = get_loc "rubyInputSize";
+    loc_rubyTextureSize = get_loc "rubyTextureSize";
+  }
 
 let gl_id_of_sdl_tex tex =
   (* Convert an SDL texture to the GL id *)
@@ -160,26 +160,32 @@ let gl_id_of_sdl_tex tex =
   Tsdl.Sdl.gl_unbind_texture tex |> get_exn;
   gl_int
 
-let draw_quad_with_tex v tex win =
+let draw_quad_with_tex v tex_id win ~inner_w ~inner_h =
   Gl.bind_framebuffer Gl.framebuffer 0;
   let win_w, win_h = Tsdl.Sdl.get_window_size win in
+
   Gl.viewport 0 0 win_w win_h;
-
-  (* Reset common state SDL might have dirtied *)
-  Gl.disable Gl.blend;
-  Gl.disable Gl.depth_test;
-  Gl.enable Gl.texture_2d;
-  Gl.active_texture Gl.texture0;
-
   Gl.clear_color 0. 0. 0. 1.;
   Gl.clear Gl.color_buffer_bit;
 
-  Gl.use_program v.pid; (* shader *)
+  (* shader *)
+  Gl.use_program v.pid;
+
   (* Texture *)
-  Gl.bind_texture Gl.texture_2d tex;
+  Gl.active_texture Gl.texture0;
+  Gl.bind_texture Gl.texture_2d tex_id;
+  Gl.uniform1i v.loc_rubyTexture 0;
+
+  (* Resolution uniforms *)
+  let input_w = float inner_w in
+  let input_h = float inner_h in
+  let tex_w, tex_h = input_w, input_h in (* since offscreen tex is inner size *)
+
+  Gl.uniform2f v.loc_rubyInputSize input_w input_h;
+  Gl.uniform2f v.loc_rubyTextureSize tex_w tex_h;
+
   Gl.bind_vertex_array v.gid; (* vertices *)
-  Gl.uniformli v.tex_loc 0;
   Gl.draw_elements Gl.triangles 6 Gl.unsigned_byte (`Offset 0);
-  Gl.bind_vertex_array 0; (* unbind *)
+
   Tsdl.Sdl.gl_swap_window win
 

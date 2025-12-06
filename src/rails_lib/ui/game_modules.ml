@@ -212,5 +212,7 @@ let run ?load ~zoom ~adjust_ar () : unit =
       render=render win;
     }
   in
-  Mainloop.main ~zoom ~adjust_ar init_fn
+  let zoom = 1 in
+  let shader_file = "shaders/vga-1080p.glsl" in
+  Mainloop.main ~zoom ~adjust_ar init_fn ~shader_file
 
