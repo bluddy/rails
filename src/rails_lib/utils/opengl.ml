@@ -117,19 +117,19 @@ let create_streaming_texture w h =
 let read_texture_pixels tex w h =
   let pixels = Bigarray.(Array1.create int32 c_layout (w * h)) in
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.get_tex_image Gl.texture_2d 0 Gl.rgba Gl.unsigned_int_8_8_8_8_rev pixels;
+  Gl.get_tex_image Gl.texture_2d 0 Gl.rgba Gl.unsigned_int_8_8_8_8 pixels;
   pixels
 
 (* Upload pixels to any GL texture *)
 let upload_texture tex w h pixels =
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.tex_sub_image2d Gl.texture_2d 0 0 0 w h Gl.rgba Gl.unsigned_int_8_8_8_8_rev (`Data pixels)
+  Gl.tex_sub_image2d Gl.texture_2d 0 0 0 w h Gl.rgba Gl.unsigned_int_8_8_8_8 (`Data pixels)
 
 let white_texture =
   let pixel = Bigarray.Array1.of_array Bigarray.int32 Bigarray.c_layout [| 0xffffffffl |] in
   let tex = get_int (Gl.gen_textures 1) in
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 1 1 0 Gl.rgba Gl.unsigned_int_8_8_8_8_rev (`Data pixel);
+  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 1 1 0 Gl.rgba Gl.unsigned_int_8_8_8_8 (`Data pixel);
   Gl.tex_parameteri Gl.texture_2d Gl.texture_min_filter Gl.nearest;
   Gl.tex_parameteri Gl.texture_2d Gl.texture_mag_filter Gl.nearest;
   tex
