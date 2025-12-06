@@ -101,6 +101,19 @@ let simple_frag_src_colored () =
    FragColor = u_color;\n\
  }"
 
+(* Global scratch buffers — one per type is enough, to make sure memory isn't clobbered *)
+let scratch_verts_2d = Array.init 64 (fun _ -> bigarray_create Bigarray.float32 (4 * 2))
+let scratch_offset = ref 0
+
+let reset_scratch () = scratch_offset := 0
+
+let alloc_scratch_2d () =
+  if !scratch_offset >= Array.length scratch_verts_2d then
+    failwith "Too many quads this frame";
+  let base = !scratch_offset in
+  incr scratch_offset;
+  scratch_verts_2d.(base)
+
 let init () =
   let textured_prog = create_program_ (simple_vert_src_()) (simple_frag_src_textured()) in
   let colored_prog = create_program_ (simple_vert_src_()) (simple_frag_src_colored()) in
@@ -179,7 +192,7 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
   let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
-  let verts = bigarray_create Bigarray.float32 (4 * 2) in
+  let verts = alloc_scratch_2d () in
   set_2d verts 0 x1 y2;   (* top-left     *)
   set_2d verts 1 x2 y2;   (* top-right    *)
   set_2d verts 2 x1 y1;   (* bottom-left  *)
@@ -208,6 +221,7 @@ let vertices =
 let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   let p = get_progs () in
   Gl.use_program p.texture_prog;
+  Printf.printf "draw x:%d y:%d w:%d h:%d\n%!" x y w h;
 
   (* Position: convert from pixel coords to NDC *)
   let x1 = (float x /. float inner_w *. 2.0) -. 1.0 in
@@ -215,7 +229,7 @@ let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
-  let verts = bigarray_create Bigarray.float32 (4 * 2) in
+  let verts = alloc_scratch_2d () in
   set_2d verts 0 x1 y2;
   set_2d verts 1 x2 y2;
   set_2d verts 2 x1 y1;
@@ -237,7 +251,7 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
   let x2 = (float (to_x+to_w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (to_y+to_h) /. float inner_h *. 2.0) in
 
-  let verts = bigarray_create Bigarray.float32 (4 * 2) in
+  let verts = alloc_scratch_2d () in
   set_2d verts 0 x1 y2;   (* top-left     *)
   set_2d verts 1 x2 y2;   (* top-right    *)
   set_2d verts 2 x1 y1;   (* bottom-left  *)

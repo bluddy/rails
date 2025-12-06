@@ -327,6 +327,8 @@ let render_to_texture win f =
 
 (* Modified render: Your main loop entry *)
 let render_wrap win f x =
+  Opengl.reset_scratch ();
+
   match win.shader_prog with
   | None ->
       (* No shader: original flow, but now with opengl to screen *)
