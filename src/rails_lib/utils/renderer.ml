@@ -7,7 +7,6 @@ type window = {
   zoom_y: float;
   inner_w: int;
   inner_h: int;
-  renderer: Sdl.renderer;
   window: Sdl.window;
   rect: Sdl.rect; (* For drawing rectangles *)
   rect2: Sdl.rect;
@@ -31,11 +30,16 @@ let clear_screen win =
 let create ?shader_file w h ~zoom_x ~zoom_y =
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
+
   Sdl.init Sdl.Init.video |> get_exn;
-  let window = Sdl.create_window ~w:out_w ~h:out_h "Open Railroad Tycoon" Sdl.Window.opengl |> get_exn in
-  let renderer = Sdl.create_renderer window ~flags:Sdl.Renderer.(accelerated + presentvsync) |> get_exn in
-  Sdl.set_hint Sdl.Hint.render_driver "opengl" |> ignore;
+  Sdl.gl_set_attribute Sdl.Gl.context_profile_mask Sdl.Gl.context_profile_core |> ignore;
+  Sdl.gl_set_attribute Sdl.Gl.context_major_version 3 |> ignore;
+  Sdl.gl_set_attribute Sdl.Gl.context_minor_version 3 |> ignore;
+
+  let window = Sdl.create_window ~w:out_w ~h:out_h "Open Railroad Tycoon" Sdl.Window.(opengl + shown) |> get_exn in
   let _ctx = Sdl.gl_create_context window |> get_exn in
+  Sdl.gl_set_swap_interval 1 |> ignore;
+
   let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
   print_endline s;
   let shader_prog = Option.map Opengl.create shader_file in
@@ -46,25 +50,23 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
   in
   if do_hide_cursor then hide_cursor ();
   Sdl.set_window_grab window true;
-  Sdl.render_set_scale renderer zoom_x zoom_y |> get_exn;
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
   let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
-  Sdl.set_render_draw_blend_mode renderer Sdl.Blend.mode_blend |> get_exn;
-  let offscreen_tex = Sdl.create_texture renderer format Sdl.Texture.access_target ~w ~h |> get_exn in 
-  let offscreen_gl_id = Opengl.gl_id_of_sdl_tex offscreen_tex in
+
+  let framebuffer_tex = Opengl.create_texture w h in
+  let transition_tex  = Opengl.create_streaming_texture w h in
   {
     inner_w=w;
     inner_h=h;
-    renderer;
     window;
     zoom_x;
     zoom_y;
     rect;
     rect2;
     opt_rect=Some rect;
-    shader_prog;
-    offscreen_tex=Some offscreen_tex;
-    offscreen_gl_id;
+    opengl_state;
+    framebuffer_tex;
+    transition_tex;
   }
 
 let zoom _win x = x
@@ -86,8 +88,7 @@ type t = {
 
 let make win random =
   let w, h = win.inner_w, win.inner_w in
-  let r = win.renderer in
-  let offscreen_tex = Sdl.create_texture r format Sdl.Texture.access_target ~w ~h |> get_exn |> Option.some in 
+  let offscreen_tex  = Tgl3.Gl.create_streaming_texture w h in
   let pixels = Bigarray.Array1.(create Bigarray.int32 Bigarray.c_layout (h*w)) in
   let tex = Sdl.create_texture r format Sdl.Texture.access_streaming ~w ~h |> get_exn in 
   let offsets = Iter.(0 -- (h * w - 1)) |> Iter.to_array in

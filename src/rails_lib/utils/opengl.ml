@@ -37,6 +37,69 @@ let set_3d ba i x y z =
 let set_2d ba i x y =
   let start = i * 2 in
   ba.{start} <- x; ba.{start + 1} <- y
+(* Create a normal RGBA8 texture (for game frame and offscreen) *)
+let create_texture w h =
+  let tex = get_int Gl.gen_textures in
+  Gl.bind_texture Gl.texture_2d tex;
+  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 w h 0 Gl.rgba Gl.unsigned_byte None;
+  Gl.tex_parameteri Gl.texture_2d Gl.texture_min_filter Gl.nearest;
+  Gl.tex_parameteri Gl.texture_2d Gl.texture_mag_filter Gl.nearest;
+  Gl.tex_parameteri Gl.texture_2d Gl.texture_wrap_s Gl.clamp_to_edge;
+  Gl.tex_parameteri Gl.texture_2d Gl.texture_wrap_t Gl.clamp_to_edge;
+  tex
+
+(* Create a streaming texture that you can read/write CPU-side *)
+let create_streaming_texture w h =
+  let tex = create_texture w h in
+  (* No special flags needed — we just use glTexSubImage2D *)
+  tex
+
+(* Read pixels from any GL texture (used by Transition) *)
+let read_texture_pixels tex w h =
+  let pixels = Bigarray.(Array1.create int32 c_layout (w * h)) in
+  Gl.bind_texture Gl.texture_2d tex;
+  Gl.get_tex_image Gl.texture_2d 0 Gl.rgba Gl.unsigned_byte pixels;
+  pixels
+
+(* Upload pixels to any GL texture *)
+let upload_texture tex w h pixels =
+  Gl.bind_texture Gl.texture_2d tex;
+  Gl.tex_sub_image2d Gl.texture_2d 0 0 0 w h Gl.rgba Gl.unsigned_byte (Some pixels)
+
+let white_texture =
+  let pixel = Bigarray.Array1.of_array Bigarray.int8_unsigned Bigarray.c_layout [|255;255;255;255|] in
+  let tex = get_int Gl.gen_textures in
+  Gl.bind_texture Gl.texture_2d tex;
+  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 1 1 0 Gl.rgba Gl.unsigned_byte (Some pixel);
+  Gl.tex_parameteri Gl.texture_2d Gl.texture_min_filter Gl.nearest;
+  Gl.tex_parameteri Gl.texture_2d Gl.texture_mag_filter Gl.nearest;
+  tex
+
+let draw_colored_quad x y w h r g b a win =
+  let x1 = (float x / float win.inner_w  * 2.0)  -. 1.0 in
+  let y1 = 1.0 -. (float y / float win.inner_h  * 2.0) in
+  let x2 = (float (x+w) / float win.inner_w * 2.0) -. 1.0 in
+  let y2 = 1.0 -. (float (y+h) / float win.inner_h * 2.0) in
+
+  let verts = bigarray_create Bigarray.float32 (4 * 2) in
+  set_2d verts 0 x1 y2;   (* top-left     *)
+  set_2d verts 1 x2 y2;   (* top-right    *)
+  set_2d verts 2 x1 y1;   (* bottom-left  *)
+  set_2d verts 3 x2 y1;   (* bottom-right *)
+
+  Gl.active_texture Gl.texture0;
+  Gl.bind_texture Gl.texture_2d white_texture;
+
+  Gl.uniform4f (Gl.get_uniform_location 0 "color") r g b a;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
+  Gl.draw_arrays Gl.triangle_strip 0 4
+
+let draw_rect win ~x ~y ~w ~h ~color:(r,g,b,a) ~fill:_ =
+  let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
+  draw_colored_quad x y w h r g b a win
+
+let draw_point win ~x ~y =
+  draw_rect win ~x ~y ~w:1 ~h:1 ~color:(255,255,255,255) ~fill:true
 
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
