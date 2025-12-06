@@ -71,21 +71,35 @@ let create_program_ vertex_shader fragment_shader =
     failwith log
   )
 
-(* Simple passthrough vertex shader *)
-let simple_vert_src_ () = "#version 330 core\nlayout(location = 0) in vec2 a_position; out vec2 vTexCoord; void main() { gl_Position = vec4(a_position, 0.0, 1.0); vTexCoord = vec2(a_position.x + 1.0, 1.0 - a_position.y) / 2.0;}"
-let simple_frag_src_textured () = "#version 330 core\n\
-  uniform sampler2D tex;\n\
-  uniform vec4 tex_coord_range;\n\
-  uniform vec4 tex_sub_region;\n\
-  in vec2 vTexCoord;\n\
-  out vec4 color;\n\
-  void main() {\n\
-    float u = (vTexCoord.x - tex_coord_range.x) / (tex_coord_range.z - tex_coord_range.x);\n\
-    float v = (vTexCoord.y - tex_coord_range.y) / (tex_coord_range.w - tex_coord_range.y);\n\
-    vec2 real_coord = vec2(tex_sub_region.x + u * tex_sub_region.z, tex_sub_region.y + v * tex_sub_region.w);\n\
-    color = texture(tex, real_coord);\n\
-  }"
-let simple_frag_src_colored () = "#version 330 core\nuniform vec4 u_color; out vec4 color; void main() { color = u_color; }"
+(* FINAL — Simple vertex shader (used by both textured and colored quads) *)
+let simple_vert_src_ () = 
+"#version 330 core\n\
+ layout(location = 0) in vec2 a_position;\n\
+ out vec2 vTexCoord;\n\
+ void main() {\n\
+   gl_Position = vec4(a_position, 0.0, 1.0);\n\
+   // Convert from NDC (-1..1) to texture coords (0..1), Y flipped\n\
+   vTexCoord = a_position * vec2(0.5, 0.5) + vec2(0.5, 0.5);\n\
+ }"
+
+(* FINAL — Textured fragment shader (for sprites, mouse cursor, etc.) *)
+let simple_frag_src_textured () = 
+"#version 330 core\n\
+ uniform sampler2D tex;\n\
+ in vec2 vTexCoord;\n\
+ out vec4 FragColor;\n\
+ void main() {\n\
+   FragColor = texture(tex, vTexCoord);\n\
+ }"
+
+(* FINAL — Colored fragment shader (for rects, lines, points) *)
+let simple_frag_src_colored () = 
+"#version 330 core\n\
+ uniform vec4 u_color;\n\
+ out vec4 FragColor;\n\
+ void main() {\n\
+   FragColor = u_color;\n\
+ }"
 
 let init () =
   let textured_prog = create_program_ (simple_vert_src_()) (simple_frag_src_textured()) in
@@ -191,6 +205,29 @@ let vertices =
   set_2d vs 3 1.0 1.0;
   vs
 
+let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
+  let p = get_progs () in
+  Gl.use_program p.texture_prog;
+
+  (* Position: convert from pixel coords to NDC *)
+  let x1 = (float x /. float inner_w *. 2.0) -. 1.0 in
+  let y1 = 1.0 -. (float y /. float inner_h *. 2.0) in
+  let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
+  let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
+
+  let verts = bigarray_create Bigarray.float32 (4 * 2) in
+  set_2d verts 0 x1 y2;
+  set_2d verts 1 x2 y2;
+  set_2d verts 2 x1 y1;
+  set_2d verts 3 x2 y1;
+
+  Gl.active_texture Gl.texture0;
+  Gl.bind_texture Gl.texture_2d tex_id;
+  Gl.uniform1i (Gl.get_uniform_location p.texture_prog "tex") 0;
+
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
+  Gl.draw_arrays Gl.triangle_strip 0 4
+
 let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~to_w ~to_h ~tex_w ~tex_h ~inner_w ~inner_h =
   let p = get_progs () in
   Gl.use_program p.texture_prog;
@@ -227,10 +264,6 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
 
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
-
-let draw_textured_quad tex_id ~x ~y ~w ~h ~tex_w ~tex_h ~inner_w ~inner_h =
-  draw_textured_quad_sub tex_id ~from_x:0 ~from_y:0 ~from_w:tex_w ~from_h:tex_h
-    ~to_x:x ~to_y:y ~to_w:w ~to_h:h ~tex_w ~tex_h ~inner_w ~inner_h
 
 let create_buffer_ b =
   let id = get_int (Gl.gen_buffers 1) in

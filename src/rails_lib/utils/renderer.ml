@@ -154,7 +154,7 @@ let step num_pixels v =
 
 let render win v =
     clear_screen win;
-    Opengl.draw_textured_quad v.tex_gl ~x:0 ~y:0 ~w:v.w ~h:v.h ~tex_w:v.w ~tex_h:v.h ~inner_w:win.inner_w ~inner_h:win.inner_h
+    Opengl.draw_textured_quad v.tex_gl ~x:0 ~y:0 ~w:v.w ~h:v.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
 end
 
@@ -216,7 +216,7 @@ module Texture = struct
     Sdl.Rect.set_x tex.dst @@ zoom win x;
     Sdl.Rect.set_y tex.dst @@ zoom win y;
     (* TODO: color mod *)
-    Opengl.draw_textured_quad tex.texture ~x ~y ~w:tex.w ~h:tex.h ~tex_w:tex.w ~tex_h:tex.h ~inner_w:win.inner_w ~inner_h:win.inner_h
+    Opengl.draw_textured_quad tex.texture ~x ~y ~w:tex.w ~h:tex.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
     (* Render only a part of the texture *)
     (* Use different rects so we don't disturb the texture's w and h *)
