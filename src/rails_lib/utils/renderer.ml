@@ -31,16 +31,14 @@ let clear_screen win =
 let create ?shader_file w h ~zoom_x ~zoom_y =
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
-  let window, renderer, shader_prog =
-    Sdl.init Sdl.Init.video |> get_exn;
-    let window = Sdl.create_window ~w:out_w ~h:out_h "Open Railroad Tycoon" Sdl.Window.opengl |> get_exn in
-    let _ctx = Sdl.gl_create_context window |> get_exn in
-    let renderer = Sdl.create_renderer window ~flags:Sdl.Renderer.accelerated |> get_exn in
-    let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
-    print_endline s;
-    let shader_prog = Option.map Opengl.create shader_file in
-    window, renderer, shader_prog
-  in
+  Sdl.init Sdl.Init.video |> get_exn;
+  let window = Sdl.create_window ~w:out_w ~h:out_h "Open Railroad Tycoon" Sdl.Window.opengl |> get_exn in
+  let renderer = Sdl.create_renderer window ~flags:Sdl.Renderer.(accelerated + presentvsync) |> get_exn in
+  Sdl.set_hint Sdl.Hint.render_driver "opengl" |> ignore;
+  let _ctx = Sdl.gl_create_context window |> get_exn in
+  let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
+  print_endline s;
+  let shader_prog = Option.map Opengl.create shader_file in
   let hide_cursor () =
     match Sdl.show_cursor false with
     | Ok x -> print_endline @@ Printf.sprintf "set show cursor: %b" x
