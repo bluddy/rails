@@ -41,20 +41,9 @@ let set_2d ba i x y =
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
   set_2d vs 0 (-1.0) (-1.0);
-  set_2d vs 1 (-1.0) 1.0;
-  set_2d vs 2 1.0 (-1.0);
+  set_2d vs 1 1.0 (-1.0);
+  set_2d vs 2 (-1.0) 1.0;
   set_2d vs 3 1.0 1.0;
-  vs
-
-let indices =
-  let vs = bigarray_create Bigarray.int8_unsigned 6 in
-  vs.{0} <- 0;
-  vs.{1} <- 2;
-  vs.{2} <- 1;
-
-  vs.{3} <- 2;
-  vs.{4} <- 3;
-  vs.{5} <- 1;
   vs
 
 let create_buffer_ b =
@@ -67,7 +56,6 @@ let create_buffer_ b =
 let create_geometry_ () =
   (* Create geometry for a simple quad *)
   let gid = get_int (Gl.gen_vertex_arrays 1) in
-  let iid = create_buffer_ indices in
   let vid = create_buffer_ vertices in
   let bind_attrib id loc dim typ =
     Gl.bind_buffer Gl.array_buffer id;
@@ -75,7 +63,6 @@ let create_geometry_ () =
     Gl.vertex_attrib_pointer loc dim typ false 0 (`Offset 0);
   in
   Gl.bind_vertex_array gid;
-  Gl.bind_buffer Gl.element_array_buffer iid;
   bind_attrib vid 0 2 Gl.float;
 
   (* Clean up *)
@@ -185,7 +172,7 @@ let draw_quad_with_tex v tex_id win ~inner_w ~inner_h =
   Gl.uniform2f v.loc_rubyTextureSize tex_w tex_h;
 
   Gl.bind_vertex_array v.gid; (* vertices *)
-  Gl.draw_elements Gl.triangles 6 Gl.unsigned_byte (`Offset 0);
+  Gl.draw_arrays Gl.triangle_strip 0 4;
 
   Tsdl.Sdl.gl_swap_window win
 
