@@ -5,6 +5,9 @@ open Result
 type t = {
   pid: int;
   gid: int;
+  loc_rubyTexture: int;
+  loc_rubyInputSize: int;
+  loc_rubyTextureSize: int;
 }
 
 let get_exn = function
@@ -31,12 +34,16 @@ let set_3d ba i x y z =
   let start = i * 3 in
   ba.{start} <- x; ba.{start + 1} <- y; ba.{start + 2} <- z
 
+let set_2d ba i x y =
+  let start = i * 2 in
+  ba.{start} <- x; ba.{start + 1} <- y
+
 let vertices =
-  let vs = bigarray_create Bigarray.float32 4 in
-  set_3d vs 0 (-1.0) (-1.0) 0.;
-  set_3d vs 0 (-1.0) 1.0 0.;
-  set_3d vs 0 1.0 (-1.0) 0.;
-  set_3d vs 0 1.0 1.0 0.;
+  let vs = bigarray_create Bigarray.float32 (4 * 2) in
+  set_2d vs 0 (-1.0) (-1.0);
+  set_2d vs 1 (-1.0) 1.0;
+  set_2d vs 2 1.0 (-1.0);
+  set_2d vs 3 1.0 1.0;
   vs
 
 let indices =
@@ -69,7 +76,7 @@ let create_geometry_ () =
   in
   Gl.bind_vertex_array gid;
   Gl.bind_buffer Gl.element_array_buffer iid;
-  bind_attrib vid 0 3 Gl.float;
+  bind_attrib vid 0 2 Gl.float;
 
   (* Clean up *)
   Gl.bind_vertex_array 0;
@@ -89,7 +96,10 @@ let compile_shader_ src typ =
 
 let create_program_ vertex_shader fragment_shader =
   let vid = compile_shader_ vertex_shader Gl.vertex_shader |> get_exn in
+  print_endline "done compiling vertex shader";
+  print_endline fragment_shader;
   let fid = compile_shader_ fragment_shader Gl.fragment_shader |> get_exn in
+  print_endline "done compiling fragment shader";
   let pid = Gl.create_program () in
   let get_program pid e = get_int (Gl.get_programiv pid e) in
   Gl.attach_shader pid vid; Gl.delete_shader vid;
@@ -111,11 +121,35 @@ let delete_program pid =
 (* Simple passthrough vertex shader *)
 let simple_vert_src_ () = "#version 330 core\nin vec2 position; out vec2 vTexCoord; void main() { gl_Position = vec4(position, 0.0, 1.0); vTexCoord = (position + 1.0) * 0.5; }"
 
+(* Define the required preprocessor directives *)
+let vertex_define = "#define VERTEX\n"
+let fragment_define = "#define FRAGMENT\n"
+
+let insert_define_after_version define_str raw_src =
+  (* 1. Find the position of the first newline character ('\n'). *)
+  match String.index_opt raw_src '\n' with
+  | Some index ->
+    (* 2. Split the string into the part before the newline (the #version line)
+          and the part after the newline (the rest of the code). *)
+    let version_line = String.sub raw_src 0 (index + 1) in
+    let rest_of_code = String.sub raw_src (index + 1) (String.length raw_src - index - 1) in
+    (* 3. Reconstruct the string: [Version Line] + [Define] + [Rest of Code] *)
+    version_line ^ define_str ^ rest_of_code
+
+  | None ->
+    (* Handle the case where the file is only the version line, though unlikely. *)
+    failwith "Shader source does not contain a newline after #version"
+
 let create shader_path =
   let gid = create_geometry_ () in
   let pid =
-    let frag_src = IO.with_in shader_path IO.read_all in
-    create_program_ (simple_vert_src_ ()) frag_src
+    let raw_src = IO.with_in shader_path IO.read_all in
+    (* Prepare the source for the Vertex Shader *)
+    let vert_src = insert_define_after_version vertex_define raw_src in
+    (* Prepare the source for the Fragment Shader *)
+    let frag_src = insert_define_after_version fragment_define raw_src in
+    (* Compile and Link the Program *)
+    create_program_ vert_src frag_src
   in
   {pid; gid}
 
@@ -127,13 +161,24 @@ let gl_id_of_sdl_tex tex =
   gl_int
 
 let draw_quad_with_tex v tex win =
+  Gl.bind_framebuffer Gl.framebuffer 0;
+  let win_w, win_h = Tsdl.Sdl.get_window_size win in
+  Gl.viewport 0 0 win_w win_h;
+
+  (* Reset common state SDL might have dirtied *)
+  Gl.disable Gl.blend;
+  Gl.disable Gl.depth_test;
+  Gl.enable Gl.texture_2d;
+  Gl.active_texture Gl.texture0;
+
   Gl.clear_color 0. 0. 0. 1.;
   Gl.clear Gl.color_buffer_bit;
+
   Gl.use_program v.pid; (* shader *)
   (* Texture *)
-  Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex;
   Gl.bind_vertex_array v.gid; (* vertices *)
+  Gl.uniformli v.tex_loc 0;
   Gl.draw_elements Gl.triangles 6 Gl.unsigned_byte (`Offset 0);
   Gl.bind_vertex_array 0; (* unbind *)
   Tsdl.Sdl.gl_swap_window win
