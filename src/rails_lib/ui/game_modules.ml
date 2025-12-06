@@ -213,6 +213,6 @@ let run ?load ~zoom ~adjust_ar () : unit =
     }
   in
   let zoom = 1 in
-  let shader_file = "shaders/vga-1080p.glsl" in
+  let shader_file = "shaders/test.glsl" in
   Mainloop.main ~zoom ~adjust_ar init_fn ~shader_file
 
