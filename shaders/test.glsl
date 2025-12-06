@@ -4,7 +4,7 @@ layout(location = 0) in vec2 a_position;
 out vec2 v_texCoord;
 void main() {
     gl_Position = vec4(a_position, 0.0, 1.0);
-    v_texCoord = a_position * 0.5 + 0.5;
+    v_texCoord = vec2(a_position.x, -a_position.y) * 0.5 + 0.5;
 }
 #elif defined(FRAGMENT)
 in vec2 v_texCoord;
