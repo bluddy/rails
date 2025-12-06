@@ -90,7 +90,7 @@ module Transition = struct
 type t = {
   w: int; h: int;
   offscreen_tex_gl: int;  (* Used for transition effects. *)
-  pixels: (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
+  mutable pixels: (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
   tex_gl: int; (* transition texture *)
   rect: Sdl.rect;
   mutable offsets: int list; (* offsets into screen *)
@@ -133,7 +133,7 @@ let render_offscreen win old_render_fn render_fn v =
 
   (* Restore render target to the main screen *)
   Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer 0;
-  Tgl3.Gl.delete_framebuffers 1 (Tgl3.Gl.bigarray_of_array Tgl3.Gl.int (Array.of_list [fbo]))
+  Tgl3.Gl.delete_framebuffers 1 (Bigarray.Array1.of_array Bigarray.int32 Bigarray.c_layout [| Int32.of_int fbo |])
 
 
 let step num_pixels v =
@@ -154,7 +154,7 @@ let step num_pixels v =
 
 let render win v =
     clear_screen win;
-    Opengl.draw_textured_quad v.tex_gl ~x:0 ~y:0 ~w:v.w ~h:v.h ~inner_w:win.inner_w ~inner_h:win.inner_h
+    Opengl.draw_textured_quad v.tex_gl ~x:0 ~y:0 ~w:v.w ~h:v.h ~tex_w:v.w ~tex_h:v.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
 end
 
@@ -195,7 +195,7 @@ module Texture = struct
     { w; h; texture; dst; dirty_rect=true}
 
   let destroy tex =
-    Tgl3.Gl.delete_textures 1 (Tgl3.Gl.bigarray_of_array Tgl3.Gl.int (Array.of_list [tex.texture]))
+    Tgl3.Gl.delete_textures 1 (Bigarray.Array1.of_array Bigarray.int32 Bigarray.c_layout [| Int32.of_int tex.texture |])
 
     (* slowish *)
   let update (tex:t) (ndarray:Pic.ndarray) =
@@ -230,7 +230,7 @@ module Texture = struct
       ~inner_w:win.inner_w ~inner_h:win.inner_h
 end
 
-let _set_color win color =
+let _set_color _win _color =
   () (* Colors are passed to draw_rect now *)
 
 let draw_rect win ~x ~y ~w ~h ~color ~fill =

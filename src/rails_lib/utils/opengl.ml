@@ -92,13 +92,15 @@ let init () =
   let colored_prog = create_program_ (simple_vert_src_()) (simple_frag_src_colored()) in
   progs := Some { texture_prog = textured_prog; color_prog = colored_prog }
 
-let get_progs () = Option.get_exn !progs
+let get_progs () = match !progs with
+  | Some p -> p
+  | None -> failwith "Opengl.init not called"
 
 (* Create a normal RGBA8 texture (for game frame and offscreen) *)
 let create_texture w h =
-  let tex = get_int Gl.gen_textures in
+  let tex = get_int (Gl.gen_textures 1) in
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 w h 0 Gl.rgba Gl.unsigned_byte None;
+  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 w h 0 Gl.rgba Gl.unsigned_byte (`Offset 0);
   Gl.tex_parameteri Gl.texture_2d Gl.texture_min_filter Gl.nearest;
   Gl.tex_parameteri Gl.texture_2d Gl.texture_mag_filter Gl.nearest;
   Gl.tex_parameteri Gl.texture_2d Gl.texture_wrap_s Gl.clamp_to_edge;
@@ -121,33 +123,34 @@ let read_texture_pixels tex w h =
 (* Upload pixels to any GL texture *)
 let upload_texture tex w h pixels =
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.tex_sub_image2d Gl.texture_2d 0 0 0 w h Gl.rgba Gl.unsigned_int_8_8_8_8_rev (Some pixels)
+  Gl.tex_sub_image2d Gl.texture_2d 0 0 0 w h Gl.rgba Gl.unsigned_int_8_8_8_8_rev (`Data pixels)
 
 let white_texture =
   let pixel = Bigarray.Array1.of_array Bigarray.int32 Bigarray.c_layout [| 0xffffffffl |] in
-  let tex = get_int Gl.gen_textures in
+  let tex = get_int (Gl.gen_textures 1) in
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 1 1 0 Gl.rgba Gl.unsigned_int_8_8_8_8_rev (Some pixel);
+  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 1 1 0 Gl.rgba Gl.unsigned_int_8_8_8_8_rev (`Data pixel);
   Gl.tex_parameteri Gl.texture_2d Gl.texture_min_filter Gl.nearest;
   Gl.tex_parameteri Gl.texture_2d Gl.texture_mag_filter Gl.nearest;
   tex
 
 let create_fbo tex =
-  let fbo = get_int Gl.gen_framebuffers in
+  let fbo = get_int (Gl.gen_framebuffers 1) in
   Gl.bind_framebuffer Gl.framebuffer fbo;
   Gl.framebuffer_texture2d Gl.framebuffer Gl.color_attachment0 Gl.texture_2d tex 0;
   let status = Gl.check_framebuffer_status Gl.framebuffer in
   if status <> Gl.framebuffer_complete then (
-    let err = match status with
-    | Gl.framebuffer_undefined -> "framebuffer_undefined"
-    | Gl.framebuffer_incomplete_attachment -> "framebuffer_incomplete_attachment"
-    | Gl.framebuffer_incomplete_missing_attachment -> "framebuffer_incomplete_missing_attachment"
-    | Gl.framebuffer_incomplete_draw_buffer -> "framebuffer_incomplete_draw_buffer"
-    | Gl.framebuffer_incomplete_read_buffer -> "framebuffer_incomplete_read_buffer"
-    | Gl.framebuffer_unsupported -> "framebuffer_unsupported"
-    | Gl.framebuffer_incomplete_multisample -> "framebuffer_incomplete_multisample"
-    | Gl.framebuffer_incomplete_layer_targets -> "framebuffer_incomplete_layer_targets"
-    | _ -> "unknown framebuffer error" in
+    let err =
+      if status = Gl.framebuffer_undefined then "framebuffer_undefined"
+      else if status = Gl.framebuffer_incomplete_attachment then "framebuffer_incomplete_attachment"
+      else if status = Gl.framebuffer_incomplete_missing_attachment then "framebuffer_incomplete_missing_attachment"
+      else if status = Gl.framebuffer_incomplete_draw_buffer then "framebuffer_incomplete_draw_buffer"
+      else if status = Gl.framebuffer_incomplete_read_buffer then "framebuffer_incomplete_read_buffer"
+      else if status = Gl.framebuffer_unsupported then "framebuffer_unsupported"
+      else if status = Gl.framebuffer_incomplete_multisample then "framebuffer_incomplete_multisample"
+      else if status = Gl.framebuffer_incomplete_layer_targets then "framebuffer_incomplete_layer_targets"
+      else "unknown framebuffer error"
+    in
     failwith ("Framebuffer not complete: " ^ err)
   );
   Gl.bind_framebuffer Gl.framebuffer 0;
