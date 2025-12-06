@@ -86,7 +86,7 @@ let main ?(zoom=3) ?(adjust_ar=false) ?shader_file init_fn =
   in
   update_loop data;
 
-  Sdl.destroy_renderer win.renderer;
+  
   Sdl.destroy_window win.window;
   Sdl.quit ();
   exit 0

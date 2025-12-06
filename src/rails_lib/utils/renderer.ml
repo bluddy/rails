@@ -2,6 +2,12 @@ open Containers
 open Tsdl
 module Ndarray = Owl_base_dense_ndarray.Generic
 
+type opengl_state = {
+  fbo: int;
+  framebuffer_tex: int;
+  transition_tex: int;
+}
+
 type window = {
   zoom_x: float;
   zoom_y: float;
@@ -11,8 +17,7 @@ type window = {
   rect: Sdl.rect; (* For drawing rectangles *)
   rect2: Sdl.rect;
   opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
-  offscreen_tex: Sdl.texture option;  (* Used for shader effects. *)
-  offscreen_gl_id: int; (* OpenGL id for offscreen texture *)
+  opengl: opengl_state;
   shader_prog: Opengl.t option; (* program is an int *)
 }
 
@@ -24,8 +29,9 @@ let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
 
-let clear_screen win =
-  Sdl.render_clear win.renderer |> get_exn
+let clear_screen (_win:window) =
+  Tgl3.Gl.clear_color 0. 0. 0. 1.;
+  Tgl3.Gl.clear Tgl3.Gl.color_buffer_bit
 
 let create ?shader_file w h ~zoom_x ~zoom_y =
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
@@ -39,6 +45,8 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
   let window = Sdl.create_window ~w:out_w ~h:out_h "Open Railroad Tycoon" Sdl.Window.(opengl + shown) |> get_exn in
   let _ctx = Sdl.gl_create_context window |> get_exn in
   Sdl.gl_set_swap_interval 1 |> ignore;
+
+  Opengl.init ();
 
   let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
   print_endline s;
@@ -55,6 +63,9 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
 
   let framebuffer_tex = Opengl.create_texture w h in
   let transition_tex  = Opengl.create_streaming_texture w h in
+  let fbo = Opengl.create_fbo framebuffer_tex in
+  let opengl = { fbo; framebuffer_tex; transition_tex } in
+
   {
     inner_w=w;
     inner_h=h;
@@ -64,9 +75,8 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
     rect;
     rect2;
     opt_rect=Some rect;
-    opengl_state;
-    framebuffer_tex;
-    transition_tex;
+    opengl;
+    shader_prog;
   }
 
 let zoom _win x = x
@@ -78,19 +88,19 @@ let width window = window.inner_w
 module Transition = struct
 
 type t = {
-  w: int; h: int; 
-  offscreen_tex: Sdl.texture option;  (* Used for transition effects. option for efficiency *)
+  w: int; h: int;
+  offscreen_tex_gl: int;  (* Used for transition effects. *)
   pixels: (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
-  tex: Sdl.texture; (* transition texture *)
+  tex_gl: int; (* transition texture *)
   rect: Sdl.rect;
   mutable offsets: int list; (* offsets into screen *)
 }
 
 let make win random =
-  let w, h = win.inner_w, win.inner_w in
-  let offscreen_tex  = Tgl3.Gl.create_streaming_texture w h in
+  let w, h = win.inner_w, win.inner_h in
+  let offscreen_tex_gl = Opengl.create_streaming_texture w h in
   let pixels = Bigarray.Array1.(create Bigarray.int32 Bigarray.c_layout (h*w)) in
-  let tex = Sdl.create_texture r format Sdl.Texture.access_streaming ~w ~h |> get_exn in 
+  let tex_gl = Opengl.create_streaming_texture w h in
   let offsets = Iter.(0 -- (h * w - 1)) |> Iter.to_array in
   Array.shuffle_with random offsets;
   let offsets = Array.to_list offsets in
@@ -98,66 +108,53 @@ let make win random =
   let w' = zoom win w in
   let h' = zoom win h in
   let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
-  {w; h; offscreen_tex; pixels; tex; offsets; rect}
-
-let lock_write write_fn v  =
-  let open Result in
-  match Sdl.lock_texture v.tex None Bigarray.int32 with
-  | Error (`Msg str) -> failwith str
-  | Ok (dest_buf, pitch) ->
-    let x = write_fn dest_buf pitch in
-    Sdl.unlock_texture v.tex;
-    x
+  {w; h; offscreen_tex_gl; pixels; tex_gl; offsets; rect}
 
 let copy_pixels_to_tex v =
-  lock_write (fun buf pitch ->
-    for i = 0 to v.h - 1 do
-      for j = 0 to v.w - 1 do
-        let pixel = Bigarray.Array1.get v.pixels (i * v.w + j) in
-        Bigarray.Array1.set buf (i * pitch + j) pixel;
-      done
-    done)
-  v
+  Opengl.upload_texture v.tex_gl v.w v.h v.pixels
 
 let render_offscreen win old_render_fn render_fn v =
   (* Do once with final transition image. Render offscreen the next image to our texture. *)
-  let old_tgt = Sdl.get_render_target win.renderer in
-  Sdl.set_render_target win.renderer v.offscreen_tex |> get_exn;
+  let fbo = Opengl.create_fbo v.offscreen_tex_gl in
+  Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer fbo;
 
   (* Old image *)
   old_render_fn win;
   (* Read from texture target to a buffer we can read from *)
-  Sdl.render_read_pixels win.renderer None (Some format) v.pixels (win.inner_w * 4) |> get_exn;
-  (* Copy all pixels to our streaming texture *)
-  copy_pixels_to_tex v;
-
+  let old_pixels = Opengl.read_texture_pixels v.offscreen_tex_gl v.w v.h in
+  
   (* New image *)
   render_fn win;
   (* Read from texture target to a buffer we can read from *)
-  Sdl.render_read_pixels win.renderer None (Some format) v.pixels (win.inner_w * 4) |> get_exn;
+  v.pixels <- Opengl.read_texture_pixels v.offscreen_tex_gl v.w v.h;
+
+  (* upload old pixels to the transition texture to start *)
+  Opengl.upload_texture v.tex_gl v.w v.h old_pixels;
+
   (* Restore render target to the main screen *)
-  Sdl.set_render_target win.renderer old_tgt |> get_exn
+  Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer 0;
+  Tgl3.Gl.delete_framebuffers 1 (Tgl3.Gl.bigarray_of_array Tgl3.Gl.int (Array.of_list [fbo]))
+
 
 let step num_pixels v =
-  lock_write (fun buf pitch ->
-    let rec loop n =
-      if n = 0 then `NotDone else
-      match v.offsets with
-      | [] -> `Done
-      | i::_is ->
-        v.offsets <- _is;
-        let pixel = Bigarray.Array1.get v.pixels i in
-        let row, col = i / v.w, i mod v.w in
-        let dest_i = row * pitch + col in
-        Bigarray.Array1.set buf dest_i pixel;
-        loop (n - 1)
-    in
-    loop num_pixels)
-  v
+  let current_pixels = Opengl.read_texture_pixels v.tex_gl v.w v.h in
+  let rec loop n =
+    if n = 0 then `NotDone else
+    match v.offsets with
+    | [] -> `Done
+    | i::_is ->
+      v.offsets <- _is;
+      let new_pixel = Bigarray.Array1.get v.pixels i in
+      Bigarray.Array1.set current_pixels i new_pixel;
+      loop (n - 1)
+  in
+  let res = loop num_pixels in
+  Opengl.upload_texture v.tex_gl v.w v.h current_pixels;
+  res
 
 let render win v =
     clear_screen win;
-    Sdl.render_copy win.renderer v.tex ~dst:v.rect |> get_exn
+    Opengl.draw_textured_quad v.tex_gl ~x:0 ~y:0 ~w:v.w ~h:v.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
 end
 
@@ -165,8 +162,7 @@ module Texture = struct
   type t = {
     h: int;
     w: int;
-    texture: Sdl.texture;
-    mutable ndarray: (int, Bigarray.int8_unsigned_elt) Sdl.bigarray;
+    texture: int;
     dst: Sdl.rect;
     mutable dirty_rect: bool;
   }
@@ -176,84 +172,79 @@ module Texture = struct
 
   let make win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
-    let ndarray = Bigarray.reshape_1 arr (w*h*4) in
-    let texture = Sdl.create_texture win.renderer Sdl.Pixel.format_rgba8888 Sdl.Texture.access_static ~w ~h |> get_exn in
-    Sdl.update_texture texture None ndarray (w*4) |> get_exn;
-    Sdl.set_texture_blend_mode texture Sdl.Blend.mode_blend |> get_exn;
+    let ndarray_u8 = Bigarray.reshape_1 arr (w*h*4) in
+    let ndarray_i32 = Bigarray.(Array1.create int32 c_layout (w*h)) in
+    for i = 0 to w*h-1 do
+      let r = Bigarray.Array1.get ndarray_u8 (i*4+0) in
+      let g = Bigarray.Array1.get ndarray_u8 (i*4+1) in
+      let b = Bigarray.Array1.get ndarray_u8 (i*4+2) in
+      let a = Bigarray.Array1.get ndarray_u8 (i*4+3) in
+      let i32 = Int32.of_int ((a lsl 24) lor (b lsl 16) lor (g lsl 8) lor r) in
+      Bigarray.Array1.set ndarray_i32 i i32;
+    done;
+
+    let texture = Opengl.create_streaming_texture w h in
+    Opengl.upload_texture texture w h ndarray_i32;
+    
+    Tgl3.Gl.enable Tgl3.Gl.blend;
+    Tgl3.Gl.blend_func Tgl3.Gl.src_alpha Tgl3.Gl.one_minus_src_alpha;
+
     let w' = zoom win w in
     let h' = zoom win h in
     let dst = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
-    { w; h; ndarray; texture; dst; dirty_rect=true}
+    { w; h; texture; dst; dirty_rect=true}
 
   let destroy tex =
-    Sdl.destroy_texture tex.texture
+    Tgl3.Gl.delete_textures 1 (Tgl3.Gl.bigarray_of_array Tgl3.Gl.int (Array.of_list [tex.texture]))
 
     (* slowish *)
   let update (tex:t) (ndarray:Pic.ndarray) =
     let h, w = Ndarray.nth_dim ndarray 0, Ndarray.nth_dim ndarray 1 in
-    let ndarray = (Bigarray.reshape_1 ndarray (w*h*4)) in
-    Sdl.update_texture tex.texture None ndarray (tex.w * 4)
-      |> get_exn
+    let ndarray_u8 = Bigarray.reshape_1 ndarray (w*h*4) in
+    let ndarray_i32 = Bigarray.(Array1.create int32 c_layout (w*h)) in
+    for i = 0 to w*h-1 do
+      let r = Bigarray.Array1.get ndarray_u8 (i*4+0) in
+      let g = Bigarray.Array1.get ndarray_u8 (i*4+1) in
+      let b = Bigarray.Array1.get ndarray_u8 (i*4+2) in
+      let a = Bigarray.Array1.get ndarray_u8 (i*4+3) in
+      let i32 = Int32.of_int ((a lsl 24) lor (b lsl 16) lor (g lsl 8) lor r) in
+      Bigarray.Array1.set ndarray_i32 i i32;
+    done;
+    Opengl.upload_texture tex.texture tex.w tex.h ndarray_i32
 
   let render ?color ~x ~y win tex =
     Sdl.Rect.set_x tex.dst @@ zoom win x;
     Sdl.Rect.set_y tex.dst @@ zoom win y;
-    let () = match color with
-      | Some (r,g,b,_) ->
-          Sdl.set_texture_color_mod tex.texture r g b |> get_exn
-      | _ -> ()
-    in
-    Sdl.render_copy win.renderer tex.texture ~dst:tex.dst |> get_exn
+    (* TODO: color mod *)
+    Opengl.draw_textured_quad tex.texture ~x ~y ~w:tex.w ~h:tex.h ~tex_w:tex.w ~tex_h:tex.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
     (* Render only a part of the texture *)
     (* Use different rects so we don't disturb the texture's w and h *)
   let render_subtex ?w ?h ?(from_x=0) ?(from_y=0) ~x ~y win tex =
     let w = match w with | None -> get_w tex | Some w -> w in
     let h = match h with | None -> get_h tex | Some h -> h in
-    Sdl.Rect.set_x win.rect @@ zoom win from_x;
-    Sdl.Rect.set_y win.rect @@ zoom win from_y;
-    Sdl.Rect.set_w win.rect @@ zoom win w;
-    Sdl.Rect.set_h win.rect @@ zoom win h;
-
-    Sdl.Rect.set_x win.rect2 @@ zoom win x;
-    Sdl.Rect.set_y win.rect2 @@ zoom win y;
-    (* w and h must be the same *)
-    Sdl.Rect.set_h win.rect2 @@ zoom win h;
-    Sdl.Rect.set_w win.rect2 @@ zoom win w;
-    Sdl.render_copy win.renderer tex.texture ~src:win.rect ~dst:win.rect2 |> get_exn
-
+    Opengl.draw_textured_quad_sub tex.texture
+      ~from_x ~from_y ~from_w:w ~from_h:h
+      ~to_x:x ~to_y:y ~to_w:w ~to_h:h
+      ~tex_w:tex.w ~tex_h:tex.h
+      ~inner_w:win.inner_w ~inner_h:win.inner_h
 end
 
 let _set_color win color =
-  let (r,g,b,a) = color in
-  Sdl.set_render_draw_color win.renderer r g b a |> get_exn
+  () (* Colors are passed to draw_rect now *)
 
 let draw_rect win ~x ~y ~w ~h ~color ~fill =
-  Sdl.Rect.set_x win.rect @@ zoom win x;
-  Sdl.Rect.set_y win.rect @@ zoom win y;
-  Sdl.Rect.set_w win.rect @@ zoom win w;
-  Sdl.Rect.set_h win.rect @@ zoom win h;
-  _set_color win color;
-  if fill then
-    Sdl.render_fill_rect win.renderer win.opt_rect |> get_exn
-  else
-    Sdl.render_draw_rect win.renderer win.opt_rect |> get_exn
+  Opengl.draw_rect ~inner_w:win.inner_w ~inner_h:win.inner_h ~x ~y ~w ~h ~color ~fill
 
 let paint_screen win ~color =
   draw_rect win ~x:0 ~y:0 ~w:(width win) ~h:(height win) ~color ~fill:true
 
 let draw_point ?color win ~x ~y =
-  begin match color with
-  | Some color ->
-      let (r,g,b,a) = color in
-      Sdl.set_render_draw_color win.renderer r g b a |> get_exn;
-  | None -> ()
-  end;
-  Sdl.render_draw_point win.renderer x y |> get_exn
+  let color = Option.value color ~default:(255,255,255,255) in
+  Opengl.draw_rect ~inner_w:win.inner_w ~inner_h:win.inner_h ~x ~y ~w:1 ~h:1 ~color ~fill:true
 
   (* Bresenham's algorithm *)
 let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
-  _set_color win color;
   let plot_line_high ~x1 ~y1 ~x2 ~y2 =
     let dx, dy = x2 - x1, y2 - y1 in
     let xi, dx =
@@ -267,8 +258,8 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
     let rec loop x y d =
       if y > y2 then ()
       else (
-        draw_point win ~x ~y;
-        let x, d = 
+        draw_point ~color win ~x ~y;
+        let x, d =
           if d > 0 then
             x + xi, d + (2 * (dx - dy))
           else
@@ -292,8 +283,8 @@ let draw_line win ~x1 ~y1 ~x2 ~y2 ~color =
     let rec loop x y d =
       if x > x2 then ()
       else (
-        draw_point win ~x ~y;
-        let y, d = 
+        draw_point ~color win ~x ~y;
+        let y, d =
           if d > 0 then
             y + yi, d + (2 * (dy - dx))
           else
@@ -330,25 +321,24 @@ let draw_cursor win texture =
 
 (* New: Render to offscreen texture *)
 let render_to_texture win f =
-  let old_tgt = Sdl.get_render_target win.renderer in
-  Sdl.set_render_target win.renderer win.offscreen_tex |> get_exn;
+  Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer win.opengl.fbo;
   f ();
-  Sdl.set_render_target win.renderer old_tgt |> get_exn
+  Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer 0
 
 (* Modified render: Your main loop entry *)
 let render_wrap win f x =
   match win.shader_prog with
   | None ->
-      (* No shader: original flow *)
-      Sdl.render_clear win.renderer |> get_exn;
+      (* No shader: original flow, but now with opengl to screen *)
+      clear_screen win;
       f x;
-      Sdl.render_present win.renderer;
+      Sdl.gl_swap_window win.window;
 
   | Some state ->
       (* Draw to offscreen, render quad *)
       render_to_texture win (fun () ->
-        Sdl.render_clear win.renderer |> get_exn;
+        clear_screen win;
         f x;
       );
-      Opengl.draw_quad_with_tex state win.offscreen_gl_id win.window ~inner_w:win.inner_w ~inner_h:win.inner_h
+      Opengl.draw_quad_with_tex state win.opengl.framebuffer_tex win.window ~inner_w:win.inner_w ~inner_h:win.inner_h
 

@@ -10,6 +10,13 @@ type t = {
   loc_rubyTextureSize: int;
 }
 
+type simple_progs = {
+  texture_prog: int;
+  color_prog: int;
+}
+
+let progs = ref None
+
 let get_exn = function
   | Ok x -> x
   | Error(`Msg s) -> failwith s
@@ -37,6 +44,56 @@ let set_3d ba i x y z =
 let set_2d ba i x y =
   let start = i * 2 in
   ba.{start} <- x; ba.{start + 1} <- y
+
+let compile_shader_ src typ =
+  let get_shader sid e = get_int (Gl.get_shaderiv sid e) in
+  let sid = Gl.create_shader typ in
+  Gl.shader_source sid src;
+  Gl.compile_shader sid;
+  if get_shader sid Gl.compile_status = Gl.true_ then Ok sid else
+  let len = get_shader sid Gl.info_log_length in
+  let log = get_string len (Gl.get_shader_info_log sid len None) in
+  (Gl.delete_shader sid; Error (`Msg log))
+
+let create_program_ vertex_shader fragment_shader =
+  let vid = compile_shader_ vertex_shader Gl.vertex_shader |> get_exn in
+  let fid = compile_shader_ fragment_shader Gl.fragment_shader |> get_exn in
+  let pid = Gl.create_program () in
+  let get_program pid e = get_int (Gl.get_programiv pid e) in
+  Gl.attach_shader pid vid; Gl.delete_shader vid;
+  Gl.attach_shader pid fid; Gl.delete_shader fid;
+  Gl.link_program pid;
+  if get_program pid Gl.link_status = Gl.true_ then pid
+  else (
+    let len = get_program pid Gl.info_log_length in
+    let log = get_string len @@ Gl.get_program_info_log pid len None in
+    Gl.delete_program pid;
+    failwith log
+  )
+
+(* Simple passthrough vertex shader *)
+let simple_vert_src_ () = "#version 330 core\nlayout(location = 0) in vec2 a_position; out vec2 vTexCoord; void main() { gl_Position = vec4(a_position, 0.0, 1.0); vTexCoord = vec2(a_position.x + 1.0, 1.0 - a_position.y) / 2.0;}"
+let simple_frag_src_textured () = "#version 330 core\n\
+  uniform sampler2D tex;\n\
+  uniform vec4 tex_coord_range;\n\
+  uniform vec4 tex_sub_region;\n\
+  in vec2 vTexCoord;\n\
+  out vec4 color;\n\
+  void main() {\n\
+    float u = (vTexCoord.x - tex_coord_range.x) / (tex_coord_range.z - tex_coord_range.x);\n\
+    float v = (vTexCoord.y - tex_coord_range.y) / (tex_coord_range.w - tex_coord_range.y);\n\
+    vec2 real_coord = vec2(tex_sub_region.x + u * tex_sub_region.z, tex_sub_region.y + v * tex_sub_region.w);\n\
+    color = texture(tex, real_coord);\n\
+  }"
+let simple_frag_src_colored () = "#version 330 core\nuniform vec4 u_color; out vec4 color; void main() { color = u_color; }"
+
+let init () =
+  let textured_prog = create_program_ (simple_vert_src_()) (simple_frag_src_textured()) in
+  let colored_prog = create_program_ (simple_vert_src_()) (simple_frag_src_colored()) in
+  progs := Some { texture_prog = textured_prog; color_prog = colored_prog }
+
+let get_progs () = Option.get_exn !progs
+
 (* Create a normal RGBA8 texture (for game frame and offscreen) *)
 let create_texture w h =
   let tex = get_int Gl.gen_textures in
@@ -58,28 +115,52 @@ let create_streaming_texture w h =
 let read_texture_pixels tex w h =
   let pixels = Bigarray.(Array1.create int32 c_layout (w * h)) in
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.get_tex_image Gl.texture_2d 0 Gl.rgba Gl.unsigned_byte pixels;
+  Gl.get_tex_image Gl.texture_2d 0 Gl.rgba Gl.unsigned_int_8_8_8_8_rev pixels;
   pixels
 
 (* Upload pixels to any GL texture *)
 let upload_texture tex w h pixels =
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.tex_sub_image2d Gl.texture_2d 0 0 0 w h Gl.rgba Gl.unsigned_byte (Some pixels)
+  Gl.tex_sub_image2d Gl.texture_2d 0 0 0 w h Gl.rgba Gl.unsigned_int_8_8_8_8_rev (Some pixels)
 
 let white_texture =
-  let pixel = Bigarray.Array1.of_array Bigarray.int8_unsigned Bigarray.c_layout [|255;255;255;255|] in
+  let pixel = Bigarray.Array1.of_array Bigarray.int32 Bigarray.c_layout [| 0xffffffffl |] in
   let tex = get_int Gl.gen_textures in
   Gl.bind_texture Gl.texture_2d tex;
-  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 1 1 0 Gl.rgba Gl.unsigned_byte (Some pixel);
+  Gl.tex_image2d Gl.texture_2d 0 Gl.rgba8 1 1 0 Gl.rgba Gl.unsigned_int_8_8_8_8_rev (Some pixel);
   Gl.tex_parameteri Gl.texture_2d Gl.texture_min_filter Gl.nearest;
   Gl.tex_parameteri Gl.texture_2d Gl.texture_mag_filter Gl.nearest;
   tex
 
-let draw_colored_quad x y w h r g b a win =
-  let x1 = (float x / float win.inner_w  * 2.0)  -. 1.0 in
-  let y1 = 1.0 -. (float y / float win.inner_h  * 2.0) in
-  let x2 = (float (x+w) / float win.inner_w * 2.0) -. 1.0 in
-  let y2 = 1.0 -. (float (y+h) / float win.inner_h * 2.0) in
+let create_fbo tex =
+  let fbo = get_int Gl.gen_framebuffers in
+  Gl.bind_framebuffer Gl.framebuffer fbo;
+  Gl.framebuffer_texture2d Gl.framebuffer Gl.color_attachment0 Gl.texture_2d tex 0;
+  let status = Gl.check_framebuffer_status Gl.framebuffer in
+  if status <> Gl.framebuffer_complete then (
+    let err = match status with
+    | Gl.framebuffer_undefined -> "framebuffer_undefined"
+    | Gl.framebuffer_incomplete_attachment -> "framebuffer_incomplete_attachment"
+    | Gl.framebuffer_incomplete_missing_attachment -> "framebuffer_incomplete_missing_attachment"
+    | Gl.framebuffer_incomplete_draw_buffer -> "framebuffer_incomplete_draw_buffer"
+    | Gl.framebuffer_incomplete_read_buffer -> "framebuffer_incomplete_read_buffer"
+    | Gl.framebuffer_unsupported -> "framebuffer_unsupported"
+    | Gl.framebuffer_incomplete_multisample -> "framebuffer_incomplete_multisample"
+    | Gl.framebuffer_incomplete_layer_targets -> "framebuffer_incomplete_layer_targets"
+    | _ -> "unknown framebuffer error" in
+    failwith ("Framebuffer not complete: " ^ err)
+  );
+  Gl.bind_framebuffer Gl.framebuffer 0;
+  fbo
+
+let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
+  let p = get_progs () in
+  Gl.use_program p.color_prog;
+
+  let x1 = (float x /. float inner_w  *. 2.0)  -. 1.0 in
+  let y1 = 1.0 -. (float y /. float inner_h  *. 2.0) in
+  let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
+  let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
   let verts = bigarray_create Bigarray.float32 (4 * 2) in
   set_2d verts 0 x1 y2;   (* top-left     *)
@@ -87,19 +168,17 @@ let draw_colored_quad x y w h r g b a win =
   set_2d verts 2 x1 y1;   (* bottom-left  *)
   set_2d verts 3 x2 y1;   (* bottom-right *)
 
-  Gl.active_texture Gl.texture0;
-  Gl.bind_texture Gl.texture_2d white_texture;
-
-  Gl.uniform4f (Gl.get_uniform_location 0 "color") r g b a;
+  let loc = Gl.get_uniform_location p.color_prog "u_color" in
+  Gl.uniform4f loc r g b a;
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
-let draw_rect win ~x ~y ~w ~h ~color:(r,g,b,a) ~fill:_ =
+let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill:_ =
   let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
-  draw_colored_quad x y w h r g b a win
+  draw_colored_quad x y w h r g b a ~inner_w ~inner_h
 
-let draw_point win ~x ~y =
-  draw_rect win ~x ~y ~w:1 ~h:1 ~color:(255,255,255,255) ~fill:true
+let draw_point ~inner_w ~inner_h ~x ~y =
+  draw_rect ~inner_w ~inner_h ~x ~y ~w:1 ~h:1 ~color:(255,255,255,255) ~fill:true
 
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
@@ -108,6 +187,47 @@ let vertices =
   set_2d vs 2 (-1.0) 1.0;
   set_2d vs 3 1.0 1.0;
   vs
+
+let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~to_w ~to_h ~tex_w ~tex_h ~inner_w ~inner_h =
+  let p = get_progs () in
+  Gl.use_program p.texture_prog;
+
+  let x1 = (float to_x /. float inner_w  *. 2.0)  -. 1.0 in
+  let y1 = 1.0 -. (float to_y /. float inner_h  *. 2.0) in
+  let x2 = (float (to_x+to_w) /. float inner_w *. 2.0) -. 1.0 in
+  let y2 = 1.0 -. (float (to_y+to_h) /. float inner_h *. 2.0) in
+
+  let verts = bigarray_create Bigarray.float32 (4 * 2) in
+  set_2d verts 0 x1 y2;   (* top-left     *)
+  set_2d verts 1 x2 y2;   (* top-right    *)
+  set_2d verts 2 x1 y1;   (* bottom-left  *)
+  set_2d verts 3 x2 y1;   (* bottom-right *)
+
+  Gl.active_texture Gl.texture0;
+  Gl.bind_texture Gl.texture_2d tex_id;
+  let loc = Gl.get_uniform_location p.texture_prog "tex" in
+  Gl.uniform1i loc 0;
+
+  let u1 = (x1 +. 1.0) /. 2.0 in
+  let v1 = (1.0 -. y1) /. 2.0 in
+  let u2 = (x2 +. 1.0) /. 2.0 in
+  let v2 = (1.0 -. y2) /. 2.0 in
+  let range_loc = Gl.get_uniform_location p.texture_prog "tex_coord_range" in
+  Gl.uniform4f range_loc u1 v2 u2 v1; (* min_u, min_v, max_u, max_v *)
+
+  let sub_x = float from_x /. float tex_w in
+  let sub_y = float from_y /. float tex_h in
+  let sub_w = float from_w /. float tex_w in
+  let sub_h = float from_h /. float tex_h in
+  let sub_region_loc = Gl.get_uniform_location p.texture_prog "tex_sub_region" in
+  Gl.uniform4f sub_region_loc sub_x sub_y sub_w sub_h;
+
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
+  Gl.draw_arrays Gl.triangle_strip 0 4
+
+let draw_textured_quad tex_id ~x ~y ~w ~h ~tex_w ~tex_h ~inner_w ~inner_h =
+  draw_textured_quad_sub tex_id ~from_x:0 ~from_y:0 ~from_w:tex_w ~from_h:tex_h
+    ~to_x:x ~to_y:y ~to_w:w ~to_h:h ~tex_w ~tex_h ~inner_w ~inner_h
 
 let create_buffer_ b =
   let id = get_int (Gl.gen_buffers 1) in
@@ -134,39 +254,8 @@ let create_geometry_ () =
   Gl.bind_buffer Gl.element_array_buffer 0;
   gid
 
-let compile_shader_ src typ =
-  let get_shader sid e = get_int (Gl.get_shaderiv sid e) in
-  let sid = Gl.create_shader typ in
-  Gl.shader_source sid src;
-  Gl.compile_shader sid;
-  if get_shader sid Gl.compile_status = Gl.true_ then Ok sid else
-  let len = get_shader sid Gl.info_log_length in
-  let log = get_string len (Gl.get_shader_info_log sid len None) in
-  (Gl.delete_shader sid; Error (`Msg log))
-
-let create_program_ vertex_shader fragment_shader =
-  let vid = compile_shader_ vertex_shader Gl.vertex_shader |> get_exn in
-  print_endline "done compiling vertex shader";
-  let fid = compile_shader_ fragment_shader Gl.fragment_shader |> get_exn in
-  print_endline "done compiling fragment shader";
-  let pid = Gl.create_program () in
-  let get_program pid e = get_int (Gl.get_programiv pid e) in
-  Gl.attach_shader pid vid; Gl.delete_shader vid;
-  Gl.attach_shader pid fid; Gl.delete_shader fid;
-  Gl.link_program pid;
-  if get_program pid Gl.link_status = Gl.true_ then pid
-  else (
-    let len = get_program pid Gl.info_log_length in
-    let log = get_string len @@ Gl.get_program_info_log pid len None in
-    Gl.delete_program pid;
-    failwith log
-  )
-
 let delete_program pid =
   Gl.delete_program pid; Ok ()
-
-(* Simple passthrough vertex shader *)
-let simple_vert_src_ () = "#version 330 core\nin vec2 position; out vec2 vTexCoord; void main() { gl_Position = vec4(position, 0.0, 1.0); vTexCoord = (position + 1.0) * 0.5; }"
 
 (* Define the required preprocessor directives *)
 let vertex_define = "#define VERTEX\n"
