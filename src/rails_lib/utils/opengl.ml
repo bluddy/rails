@@ -110,18 +110,8 @@ let simple_frag_src_colored () =
    FragColor = u_color;\n\
  }"
 
-(* Global scratch buffers — one per type is enough, to make sure memory isn't clobbered *)
-let scratch_verts_2d = Array.init 120 (fun _ -> bigarray_create Bigarray.float32 (4 * 2))
-let scratch_offset = ref 0
-
-let reset_scratch () = scratch_offset := 0
-
-let alloc_scratch_2d () =
-  if !scratch_offset >= Array.length scratch_verts_2d then
-    failwith "Too many quads this frame";
-  let base = !scratch_offset in
-  incr scratch_offset;
-  scratch_verts_2d.(base)
+(* Single reusable scratch buffer for quad vertices *)
+let scratch_verts_2d = bigarray_create Bigarray.float32 (4 * 2)
 
 let init () =
   let textured_prog = create_program_ (simple_vert_src_()) (simple_frag_src_textured()) in
@@ -235,18 +225,17 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
   let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
-  let verts = alloc_scratch_2d () in
-  set_2d verts 0 x1 y1;   (* top-left     *)
-  set_2d verts 1 x2 y1;   (* top-right    *)
-  set_2d verts 2 x1 y2;   (* bottom-left  *)
-  set_2d verts 3 x2 y2;   (* bottom-right *)
+  set_2d scratch_verts_2d 0 x1 y1;   (* top-left     *)
+  set_2d scratch_verts_2d 1 x2 y1;   (* top-right    *)
+  set_2d scratch_verts_2d 2 x1 y2;   (* bottom-left  *)
+  set_2d scratch_verts_2d 3 x2 y2;   (* bottom-right *)
 
   let loc = Gl.get_uniform_location p.color_prog "u_color" in
   Gl.uniform4f loc r g b a;
   
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
-  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
 let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill:_ =
@@ -274,15 +263,14 @@ let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
-  let verts = alloc_scratch_2d () in
-  set_2d verts 0 x1 y1;   (* top-left *)
-  set_2d verts 1 x2 y1;   (* top-right *)
-  set_2d verts 2 x1 y2;   (* bottom-left *)
-  set_2d verts 3 x2 y2;   (* bottom-right *)
+  set_2d scratch_verts_2d 0 x1 y1;   (* top-left *)
+  set_2d scratch_verts_2d 1 x2 y1;   (* top-right *)
+  set_2d scratch_verts_2d 2 x1 y2;   (* bottom-left *)
+  set_2d scratch_verts_2d 3 x2 y2;   (* bottom-right *)
 
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
-  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
   
   Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex_id;
@@ -303,11 +291,10 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
   let x2 = (float (to_x+to_w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (to_y+to_h) /. float inner_h *. 2.0) in
 
-  let verts = alloc_scratch_2d () in
-  set_2d verts 0 x1 y1;   (* top-left     *)
-  set_2d verts 1 x2 y1;   (* top-right    *)
-  set_2d verts 2 x1 y2;   (* bottom-left  *)
-  set_2d verts 3 x2 y2;   (* bottom-right *)
+  set_2d scratch_verts_2d 0 x1 y1;   (* top-left     *)
+  set_2d scratch_verts_2d 1 x2 y1;   (* top-right    *)
+  set_2d scratch_verts_2d 2 x1 y2;   (* bottom-left  *)
+  set_2d scratch_verts_2d 3 x2 y2;   (* bottom-right *)
 
   Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex_id;
@@ -330,7 +317,7 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
 
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
-  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
 let create_buffer_ b =
