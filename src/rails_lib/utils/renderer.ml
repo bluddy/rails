@@ -92,7 +92,6 @@ type t = {
   offscreen_tex_gl: int;  (* Used for transition effects. *)
   mutable pixels: (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t; (* Copy from render to do transition *)
   tex_gl: int; (* transition texture *)
-  rect: Sdl.rect;
   mutable offsets: int list; (* offsets into screen *)
 }
 
@@ -104,11 +103,7 @@ let make win random =
   let offsets = Iter.(0 -- (h * w - 1)) |> Iter.to_array in
   Array.shuffle_with random offsets;
   let offsets = Array.to_list offsets in
-  (* Create rect for zooming to screen size *)
-  let w' = zoom win w in
-  let h' = zoom win h in
-  let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
-  {w; h; offscreen_tex_gl; pixels; tex_gl; offsets; rect}
+  {w; h; offscreen_tex_gl; pixels; tex_gl; offsets}
 
 let copy_pixels_to_tex v =
   Opengl.upload_texture v.tex_gl v.w v.h v.pixels
@@ -117,6 +112,7 @@ let render_offscreen win old_render_fn render_fn v =
   (* Do once with final transition image. Render offscreen the next image to our texture. *)
   let fbo = Opengl.create_fbo v.offscreen_tex_gl in
   Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer fbo;
+  Tgl3.Gl.viewport 0 0 v.w v.h;
 
   (* Old image *)
   old_render_fn win;
@@ -153,7 +149,6 @@ let step num_pixels v =
   res
 
 let render win v =
-    clear_screen win;
     Opengl.draw_textured_quad v.tex_gl ~x:0 ~y:0 ~w:v.w ~h:v.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
 end
@@ -163,8 +158,6 @@ module Texture = struct
     h: int;
     w: int;
     texture: int;
-    dst: Sdl.rect;
-    mutable dirty_rect: bool;
   }
 
   let get_w t = t.w
@@ -189,10 +182,7 @@ module Texture = struct
     Tgl3.Gl.enable Tgl3.Gl.blend;
     Tgl3.Gl.blend_func Tgl3.Gl.src_alpha Tgl3.Gl.one_minus_src_alpha;
 
-    let w' = zoom win w in
-    let h' = zoom win h in
-    let dst = Sdl.Rect.create ~x:0 ~y:0 ~w:w' ~h:h' in
-    { w; h; texture; dst; dirty_rect=true}
+    { w; h; texture }
 
   let destroy tex =
     Tgl3.Gl.delete_textures 1 (Bigarray.Array1.of_array Bigarray.int32 Bigarray.c_layout [| Int32.of_int tex.texture |])
@@ -213,8 +203,6 @@ module Texture = struct
     Opengl.upload_texture tex.texture tex.w tex.h ndarray_i32
 
   let render ?color ~x ~y win tex =
-    Sdl.Rect.set_x tex.dst @@ zoom win x;
-    Sdl.Rect.set_y tex.dst @@ zoom win y;
     let color = Option.value color ~default:(255,255,255,255) in
     Opengl.draw_textured_quad ~color tex.texture ~x ~y ~w:tex.w ~h:tex.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
