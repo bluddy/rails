@@ -121,12 +121,12 @@ let render_offscreen win old_render_fn render_fn v =
   (* Old image *)
   old_render_fn win;
   (* Read from texture target to a buffer we can read from *)
-  let old_pixels = Opengl.read_texture_pixels v.offscreen_tex_gl v.w v.h in
+  let old_pixels = Opengl.read_texture_pixels_flipped v.offscreen_tex_gl v.w v.h in
   
   (* New image *)
   render_fn win;
   (* Read from texture target to a buffer we can read from *)
-  v.pixels <- Opengl.read_texture_pixels v.offscreen_tex_gl v.w v.h;
+  v.pixels <- Opengl.read_texture_pixels_flipped v.offscreen_tex_gl v.w v.h;
 
   (* upload old pixels to the transition texture to start *)
   Opengl.upload_texture v.tex_gl v.w v.h old_pixels;

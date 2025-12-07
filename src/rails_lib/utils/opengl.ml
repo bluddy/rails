@@ -166,6 +166,24 @@ let create_streaming_texture w h =
   tex
 
 (* Read pixels from any GL texture (used by Transition) *)
+(* Note: Flips Y axis since glGetTexImage returns bottom-to-top but we need top-to-bottom *)
+let read_texture_pixels_flipped tex w h =
+  let pixels = Bigarray.(Array1.create int32 c_layout (w * h)) in
+  Gl.bind_texture Gl.texture_2d tex;
+  Gl.get_tex_image Gl.texture_2d 0 Gl.rgba Gl.unsigned_int_8_8_8_8 pixels;
+  
+  (* Flip Y axis: glGetTexImage returns bottom-to-top, but our rendering expects top-to-bottom *)
+  let flipped = Bigarray.(Array1.create int32 c_layout (w * h)) in
+  for y = 0 to h - 1 do
+    let src_row_start = y * w in
+    let dst_row_start = (h - 1 - y) * w in
+    for x = 0 to w - 1 do
+      Bigarray.Array1.set flipped (dst_row_start + x) (Bigarray.Array1.get pixels (src_row_start + x))
+    done
+  done;
+  flipped
+
+(* Read pixels without flipping - for textures that were uploaded in correct format *)
 let read_texture_pixels tex w h =
   let pixels = Bigarray.(Array1.create int32 c_layout (w * h)) in
   Gl.bind_texture Gl.texture_2d tex;
