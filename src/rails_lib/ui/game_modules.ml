@@ -183,7 +183,7 @@ let render win (s:State.t) = match s.mode with
 
   | Game -> Main_ui.render win s s.ui
 
-let run ?load ~zoom ~adjust_ar () : unit =
+let run ?load ~zoom ~adjust_ar ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
   Logs.set_level (Some Debug);
 
@@ -212,7 +212,6 @@ let run ?load ~zoom ~adjust_ar () : unit =
       render=render win;
     }
   in
-  let zoom = 1 in
-  let shader_file = "shaders/test.glsl" in
+  let shader_file = Printf.sprintf "shaders/%s.glsl" shader in
   Mainloop.main ~zoom ~adjust_ar init_fn ~shader_file
 

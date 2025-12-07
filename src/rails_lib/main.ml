@@ -9,6 +9,7 @@ let dump = ref false
 let debugger = ref false
 let zoom = ref 3
 let adjust_ar = ref false
+let shader = ref "test"
 
 let set v f =
   file := f;
@@ -29,6 +30,7 @@ let arglist =
     "--load", Int (set_slot `LoadGame), "Load a save file";
     "--zoom", Int (fun x -> zoom := x), "Set zoom (default =3)";
     "--adjust-ar", Set adjust_ar, "Adjust aspect ratio";
+    "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
   ]
 
 let main () =
@@ -47,6 +49,6 @@ let main () =
       let sound_engine = Sound.init () in
       Mainloop.main @@ Pani_render.standalone ~sound_engine ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ()
-  | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ()
+  | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()
+  | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()
 
