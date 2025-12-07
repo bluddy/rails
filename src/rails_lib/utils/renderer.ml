@@ -14,9 +14,6 @@ type window = {
   inner_w: int;
   inner_h: int;
   window: Sdl.window;
-  rect: Sdl.rect; (* For drawing rectangles *)
-  rect2: Sdl.rect;
-  opt_rect: Sdl.rect option; (* reduce allocation. points to rect *)
   opengl: opengl_state;
   shader_prog: Opengl.t option; (* program is an int *)
 }
@@ -58,8 +55,6 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
   in
   if do_hide_cursor then hide_cursor ();
   Sdl.set_window_grab window true;
-  let rect = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
-  let rect2 = Sdl.Rect.create ~x:0 ~y:0 ~w:0 ~h:0 in
 
   let framebuffer_tex = Opengl.create_texture w h in
   let transition_tex  = Opengl.create_streaming_texture w h in
@@ -72,9 +67,6 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
     window;
     zoom_x;
     zoom_y;
-    rect;
-    rect2;
-    opt_rect=Some rect;
     opengl;
     shader_prog;
   }
