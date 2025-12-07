@@ -218,10 +218,10 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
   let verts = alloc_scratch_2d () in
-  set_2d verts 0 x1 y2;   (* top-left     *)
-  set_2d verts 1 x2 y2;   (* top-right    *)
-  set_2d verts 2 x1 y1;   (* bottom-left  *)
-  set_2d verts 3 x2 y1;   (* bottom-right *)
+  set_2d verts 0 x1 y1;   (* top-left     *)
+  set_2d verts 1 x2 y1;   (* top-right    *)
+  set_2d verts 2 x1 y2;   (* bottom-left  *)
+  set_2d verts 3 x2 y2;   (* bottom-right *)
 
   let loc = Gl.get_uniform_location p.color_prog "u_color" in
   Gl.uniform4f loc r g b a;
@@ -250,9 +250,6 @@ let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   let p = get_progs () in
   Gl.use_program p.texture_prog;
 
-  Printf.printf "draw_textured_quad: tex=%d pos=(%d,%d) size=(%dx%d) inner=(%dx%d)\n%!"
-    tex_id x y w h inner_w inner_h;
-
   (* Position: convert from pixel coords to NDC *)
   let x1 = (float x /. float inner_w *. 2.0) -. 1.0 in
   let y1 = 1.0 -. (float y /. float inner_h *. 2.0) in
@@ -260,10 +257,10 @@ let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
   let verts = alloc_scratch_2d () in
-  set_2d verts 0 x1 y2;
-  set_2d verts 1 x2 y2;
-  set_2d verts 2 x1 y1;
-  set_2d verts 3 x2 y1;
+  set_2d verts 0 x1 y1;   (* top-left *)
+  set_2d verts 1 x2 y1;   (* top-right *)
+  set_2d verts 2 x1 y2;   (* bottom-left *)
+  set_2d verts 3 x2 y2;   (* bottom-right *)
 
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
@@ -289,10 +286,10 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
   let y2 = 1.0 -. (float (to_y+to_h) /. float inner_h *. 2.0) in
 
   let verts = alloc_scratch_2d () in
-  set_2d verts 0 x1 y2;   (* top-left     *)
-  set_2d verts 1 x2 y2;   (* top-right    *)
-  set_2d verts 2 x1 y1;   (* bottom-left  *)
-  set_2d verts 3 x2 y1;   (* bottom-right *)
+  set_2d verts 0 x1 y1;   (* top-left     *)
+  set_2d verts 1 x2 y1;   (* top-right    *)
+  set_2d verts 2 x1 y2;   (* bottom-left  *)
+  set_2d verts 3 x2 y2;   (* bottom-right *)
 
   Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex_id;
