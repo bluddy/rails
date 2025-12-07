@@ -322,23 +322,26 @@ let draw_cursor win texture =
 (* New: Render to offscreen texture *)
 let render_to_texture win f =
   Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer win.opengl.fbo;
+  Tgl3.Gl.viewport 0 0 win.inner_w win.inner_h;
   f ();
   Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer 0
 
 (* Modified render: Your main loop entry *)
 let render_wrap win f x =
+  (* Always render to offscreen FBO then display through shader *)
+  render_to_texture win (fun () ->
+    clear_screen win;
+    f x;
+  );
   match win.shader_prog with
-  | None ->
-      (* No shader: original flow, but now with opengl to screen *)
-      clear_screen win;
-      f x;
-      Sdl.gl_swap_window win.window;
-
   | Some state ->
-      (* Draw to offscreen, render quad *)
-      render_to_texture win (fun () ->
-        clear_screen win;
-        f x;
-      );
+      (* Display with custom shader effects *)
       Opengl.draw_quad_with_tex state win.opengl.framebuffer_tex win.window ~inner_w:win.inner_w ~inner_h:win.inner_h
+  | None ->
+      (* Display with simple scaling (no shader effects) *)
+      Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer 0;
+      let win_w, win_h = Tsdl.Sdl.get_window_size win.window in
+      Tgl3.Gl.viewport 0 0 win_w win_h;
+      Opengl.draw_textured_quad win.opengl.framebuffer_tex ~x:0 ~y:0 ~w:win.inner_w ~h:win.inner_h ~inner_w:win.inner_w ~inner_h:win.inner_h;
+      Sdl.gl_swap_window win.window
 
