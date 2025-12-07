@@ -286,7 +286,6 @@ let vertices =
   vs
 
 let draw_textured_quad ?(color=(255,255,255,255)) tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
-  Printf.printf "draw_textured_quad: tex=%d pos=(%d,%d) size=(%dx%d)\n%!" tex_id x y w h;
   let p = get_progs () in
   Gl.use_program p.texture_prog;
 
