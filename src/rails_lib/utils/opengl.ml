@@ -240,10 +240,10 @@ let draw_point ~inner_w ~inner_h ~x ~y =
 
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
-  set_2d vs 0 (-1.0) (-1.0);
-  set_2d vs 1 1.0 (-1.0);
-  set_2d vs 2 (-1.0) 1.0;
-  set_2d vs 3 1.0 1.0;
+  set_2d vs 0 (-1.0) 1.0;    (* top-left *)
+  set_2d vs 1 1.0 1.0;       (* top-right *)
+  set_2d vs 2 (-1.0) (-1.0); (* bottom-left *)
+  set_2d vs 3 1.0 (-1.0);    (* bottom-right *)
   vs
 
 let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
