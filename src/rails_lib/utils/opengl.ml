@@ -13,6 +13,8 @@ type t = {
 type simple_progs = {
   texture_prog: int;
   color_prog: int;
+  vao: int;
+  vbo: int;
 }
 
 let progs = ref None
@@ -78,8 +80,15 @@ let simple_vert_src_ () =
  out vec2 vTexCoord;\n\
  void main() {\n\
    gl_Position = vec4(a_position, 0.0, 1.0);\n\
-   // Convert from NDC (-1..1) to texture coords (0..1), Y flipped\n\
-   vTexCoord = a_position * vec2(0.5, 0.5) + vec2(0.5, 0.5);\n\
+   // Fixed texture coords based on vertex ID (triangle strip order)\n\
+   // 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right\n\
+   vec2 texCoords[4] = vec2[4](\n\
+     vec2(0.0, 0.0),\n\
+     vec2(1.0, 0.0),\n\
+     vec2(0.0, 1.0),\n\
+     vec2(1.0, 1.0)\n\
+   );\n\
+   vTexCoord = texCoords[gl_VertexID];\n\
  }"
 
 (* FINAL — Textured fragment shader (for sprites, mouse cursor, etc.) *)
@@ -102,7 +111,7 @@ let simple_frag_src_colored () =
  }"
 
 (* Global scratch buffers — one per type is enough, to make sure memory isn't clobbered *)
-let scratch_verts_2d = Array.init 64 (fun _ -> bigarray_create Bigarray.float32 (4 * 2))
+let scratch_verts_2d = Array.init 120 (fun _ -> bigarray_create Bigarray.float32 (4 * 2))
 let scratch_offset = ref 0
 
 let reset_scratch () = scratch_offset := 0
@@ -117,7 +126,23 @@ let alloc_scratch_2d () =
 let init () =
   let textured_prog = create_program_ (simple_vert_src_()) (simple_frag_src_textured()) in
   let colored_prog = create_program_ (simple_vert_src_()) (simple_frag_src_colored()) in
-  progs := Some { texture_prog = textured_prog; color_prog = colored_prog }
+  
+  (* Create VAO and VBO for dynamic quad rendering *)
+  let vao = get_int (Gl.gen_vertex_arrays 1) in
+  let vbo = get_int (Gl.gen_buffers 1) in
+  
+  Gl.bind_vertex_array vao;
+  Gl.bind_buffer Gl.array_buffer vbo;
+  
+  (* Set up vertex attribute (location 0 = position, 2 floats) *)
+  Gl.enable_vertex_attrib_array 0;
+  Gl.vertex_attrib_pointer 0 2 Gl.float false 0 (`Offset 0);
+  
+  (* Unbind *)
+  Gl.bind_vertex_array 0;
+  Gl.bind_buffer Gl.array_buffer 0;
+  
+  progs := Some { texture_prog = textured_prog; color_prog = colored_prog; vao; vbo }
 
 let get_progs () = match !progs with
   | Some p -> p
@@ -200,6 +225,9 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
 
   let loc = Gl.get_uniform_location p.color_prog "u_color" in
   Gl.uniform4f loc r g b a;
+  
+  Gl.bind_vertex_array p.vao;
+  Gl.bind_buffer Gl.array_buffer p.vbo;
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
@@ -221,7 +249,9 @@ let vertices =
 let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   let p = get_progs () in
   Gl.use_program p.texture_prog;
-  Printf.printf "draw x:%d y:%d w:%d h:%d\n%!" x y w h;
+
+  Printf.printf "draw_textured_quad: tex=%d pos=(%d,%d) size=(%dx%d) inner=(%dx%d)\n%!"
+    tex_id x y w h inner_w inner_h;
 
   (* Position: convert from pixel coords to NDC *)
   let x1 = (float x /. float inner_w *. 2.0) -. 1.0 in
@@ -235,12 +265,19 @@ let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   set_2d verts 2 x1 y1;
   set_2d verts 3 x2 y1;
 
+  Gl.bind_vertex_array p.vao;
+  Gl.bind_buffer Gl.array_buffer p.vbo;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
+  
   Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex_id;
   Gl.uniform1i (Gl.get_uniform_location p.texture_prog "tex") 0;
 
-  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
-  Gl.draw_arrays Gl.triangle_strip 0 4
+  Gl.draw_arrays Gl.triangle_strip 0 4;
+
+  Gl.bind_texture Gl.texture_2d 0;
+  Gl.use_program 0;
+  Gl.bind_buffer Gl.array_buffer 0
 
 let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~to_w ~to_h ~tex_w ~tex_h ~inner_w ~inner_h =
   let p = get_progs () in
@@ -276,6 +313,8 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
   let sub_region_loc = Gl.get_uniform_location p.texture_prog "tex_sub_region" in
   Gl.uniform4f sub_region_loc sub_x sub_y sub_w sub_h;
 
+  Gl.bind_vertex_array p.vao;
+  Gl.bind_buffer Gl.array_buffer p.vbo;
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size verts) (Some verts) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
