@@ -239,9 +239,43 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
-let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill:_ =
-  let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
-  draw_colored_quad x y w h r g b a ~inner_w ~inner_h
+let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill =
+  if fill then
+    let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
+    draw_colored_quad x y w h r g b a ~inner_w ~inner_h
+  else
+    (* Draw 4 lines forming a rectangle frame *)
+    let p = get_progs () in
+    Gl.use_program p.color_prog;
+    
+    let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
+    let loc = Gl.get_uniform_location p.color_prog "u_color" in
+    Gl.uniform4f loc r g b a;
+    
+    (* Convert to NDC *)
+    let x1 = (float x /. float inner_w *. 2.0) -. 1.0 in
+    let y1 = 1.0 -. (float y /. float inner_h *. 2.0) in
+    let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
+    let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
+    
+    (* Draw 4 lines: top, right, bottom, left *)
+    Gl.bind_vertex_array p.vao;
+    Gl.bind_buffer Gl.array_buffer p.vbo;
+    
+    let draw_line x1 y1 x2 y2 =
+      set_2d scratch_verts_2d 0 x1 y1;
+      set_2d scratch_verts_2d 1 x2 y2;
+      Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
+      Gl.draw_arrays Gl.lines 0 2
+    in
+    (* Top line *)
+    draw_line x1 y1 x2 y1;
+    (* Right line *)
+    draw_line x2 y1 x2 y2;
+    (* Bottom line *)
+    draw_line x2 y2 x1 y2;
+    (* Left line *)
+    draw_line x1 y2 x1 y1
 
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
@@ -252,6 +286,7 @@ let vertices =
   vs
 
 let draw_textured_quad ?(color=(255,255,255,255)) tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
+  Printf.printf "draw_textured_quad: tex=%d pos=(%d,%d) size=(%dx%d)\n%!" tex_id x y w h;
   let p = get_progs () in
   Gl.use_program p.texture_prog;
 
@@ -278,7 +313,8 @@ let draw_textured_quad ?(color=(255,255,255,255)) tex_id ~x ~y ~w ~h ~inner_w ~i
   let (r, g, b, a) = color in
   let r, g, b, a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
   let color_loc = Gl.get_uniform_location p.texture_prog "u_color_mod" in
-  Gl.uniform4f color_loc r g b a;
+  if color_loc >= 0 then
+    Gl.uniform4f color_loc r g b a;
 
   Gl.draw_arrays Gl.triangle_strip 0 4;
 
