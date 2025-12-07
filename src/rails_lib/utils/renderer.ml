@@ -215,8 +215,8 @@ module Texture = struct
   let render ?color ~x ~y win tex =
     Sdl.Rect.set_x tex.dst @@ zoom win x;
     Sdl.Rect.set_y tex.dst @@ zoom win y;
-    (* TODO: color mod *)
-    Opengl.draw_textured_quad tex.texture ~x ~y ~w:tex.w ~h:tex.h ~inner_w:win.inner_w ~inner_h:win.inner_h
+    let color = Option.value color ~default:(255,255,255,255) in
+    Opengl.draw_textured_quad ~color tex.texture ~x ~y ~w:tex.w ~h:tex.h ~inner_w:win.inner_w ~inner_h:win.inner_h
 
     (* Render only a part of the texture *)
     (* Use different rects so we don't disturb the texture's w and h *)

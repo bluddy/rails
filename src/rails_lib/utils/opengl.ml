@@ -95,10 +95,11 @@ let simple_vert_src_ () =
 let simple_frag_src_textured () = 
 "#version 330 core\n\
  uniform sampler2D tex;\n\
+ uniform vec4 u_color_mod;\n\
  in vec2 vTexCoord;\n\
  out vec4 FragColor;\n\
  void main() {\n\
-   FragColor = texture(tex, vTexCoord);\n\
+   FragColor = texture(tex, vTexCoord) * u_color_mod;\n\
  }"
 
 (* FINAL — Colored fragment shader (for rects, lines, points) *)
@@ -232,7 +233,7 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
 
   let loc = Gl.get_uniform_location p.color_prog "u_color" in
   Gl.uniform4f loc r g b a;
-  
+
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
@@ -242,9 +243,6 @@ let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill:_ =
   let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
   draw_colored_quad x y w h r g b a ~inner_w ~inner_h
 
-let draw_point ~inner_w ~inner_h ~x ~y =
-  draw_rect ~inner_w ~inner_h ~x ~y ~w:1 ~h:1 ~color:(255,255,255,255) ~fill:true
-
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
   set_2d vs 0 (-1.0) 1.0;    (* top-left *)
@@ -253,7 +251,7 @@ let vertices =
   set_2d vs 3 1.0 (-1.0);    (* bottom-right *)
   vs
 
-let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
+let draw_textured_quad ?(color=(255,255,255,255)) tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   let p = get_progs () in
   Gl.use_program p.texture_prog;
 
@@ -275,6 +273,12 @@ let draw_textured_quad tex_id ~x ~y ~w ~h ~inner_w ~inner_h =
   Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex_id;
   Gl.uniform1i (Gl.get_uniform_location p.texture_prog "tex") 0;
+
+  (* Set color modulation *)
+  let (r, g, b, a) = color in
+  let r, g, b, a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
+  let color_loc = Gl.get_uniform_location p.texture_prog "u_color_mod" in
+  Gl.uniform4f color_loc r g b a;
 
   Gl.draw_arrays Gl.triangle_strip 0 4;
 
