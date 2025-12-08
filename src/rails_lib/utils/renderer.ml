@@ -155,7 +155,7 @@ module Texture = struct
   let get_w t = t.w
   let get_h t = t.h
 
-  let make win (arr:Pic.ndarray) =
+  let make _win (arr:Pic.ndarray) =
     let h, w = Ndarray.nth_dim arr 0, Ndarray.nth_dim arr 1 in
     let ndarray_u8 = Bigarray.reshape_1 arr (w*h*4) in
     let ndarray_i32 = Bigarray.(Array1.create int32 c_layout (w*h)) in

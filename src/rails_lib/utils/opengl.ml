@@ -2,23 +2,15 @@ open Containers
 open Tgl3
 open Result
 
+module StrMap = Utils.StringMap
+
 type t = {
   pid: int;
   gid: int;
   loc_rubyTexture: int;
   loc_rubyInputSize: int;
   loc_rubyTextureSize: int;
-  (* VGA shader parameters - store locations, -1 if not present *)
-  loc_spot_width: int;
-  loc_spot_height: int;
-  loc_phosphor_layout: int;
-  loc_scanline_strength_min: int;
-  loc_scanline_strength_max: int;
-  loc_color_boost_even: int;
-  loc_color_boost_odd: int;
-  loc_mask_strength: int;
-  loc_gamma_input: int;
-  loc_gamma_output: int;
+  pragma_defs: (int * float) StrMap.t;
 }
 
 type simple_progs = {
@@ -402,7 +394,7 @@ let delete_program pid =
 let vertex_define = "#define VERTEX\n"
 let fragment_define = "#define FRAGMENT\n"
 
-let insert_define_after_version define_str raw_src =
+let insert_define_after_version_ define_str raw_src =
   (* 1. Find the position of the first newline character ('\n'). *)
   match String.index_opt raw_src '\n' with
   | Some index ->
@@ -417,31 +409,43 @@ let insert_define_after_version define_str raw_src =
     (* Handle the case where the file is only the version line, though unlikely. *)
     failwith "Shader source does not contain a newline after #version"
 
+let pragma_re = Re.Pcre.re {|^#pragma\s+parameter\s+([^ \t\n\r]+)\s+"[^"]+"\s+([^ \t\n\r]+)\s+.*$|} |> Re.compile
+let pragma_values src =
+  let l = String.lines src in
+  List.fold_left (fun acc s ->
+    match Re.exec_opt pragma_re s with
+    | Some group ->
+        let name = Re.Group.get group 1 in
+        let default_val = Re.Group.get group 2 in
+        let default_val = float_of_string default_val in
+        StrMap.add name default_val acc
+
+    | None -> acc)
+    StrMap.empty
+    l
+
 let create shader_path =
   let gid = create_geometry_ () in
-  let pid =
+  let pid, pragmas =
     let raw_src = IO.with_in shader_path IO.read_all in
-    let vert_src = insert_define_after_version vertex_define raw_src in
-    let frag_src = insert_define_after_version fragment_define raw_src in
-    create_program_ vert_src frag_src
+    let vert_src = insert_define_after_version_ vertex_define raw_src in
+    let frag_src = insert_define_after_version_ fragment_define raw_src in
+    create_program_ vert_src frag_src, pragma_values raw_src
   in
   let get_loc name = Gl.get_uniform_location pid name in
+  let pragma_defs = StrMap.to_iter pragmas
+    |> Iter.map (fun (name, default) ->
+      let loc = get_loc name in
+      name, (loc, default))
+    |> StrMap.of_iter
+  in
   {
-    pid; gid;
+    pid;
+    gid;
+    pragma_defs;
     loc_rubyTexture = get_loc "rubyTexture";
     loc_rubyInputSize = get_loc "rubyInputSize";
     loc_rubyTextureSize = get_loc "rubyTextureSize";
-    (* VGA shader parameters - will be -1 if not present in shader *)
-    loc_spot_width = get_loc "SPOT_WIDTH";
-    loc_spot_height = get_loc "SPOT_HEIGHT";
-    loc_phosphor_layout = get_loc "PHOSPHOR_LAYOUT";
-    loc_scanline_strength_min = get_loc "SCANLINE_STRENGTH_MIN";
-    loc_scanline_strength_max = get_loc "SCANLINE_STRENGTH_MAX";
-    loc_color_boost_even = get_loc "COLOR_BOOST_EVEN";
-    loc_color_boost_odd = get_loc "COLOR_BOOST_ODD";
-    loc_mask_strength = get_loc "MASK_STRENGTH";
-    loc_gamma_input = get_loc "GAMMA_INPUT";
-    loc_gamma_output = get_loc "GAMMA_OUTPUT";
   }
 
 let gl_id_of_sdl_tex tex =
@@ -480,17 +484,9 @@ let draw_quad_with_tex v tex_id win ~inner_w ~inner_h =
   let set_uniform_if_exists loc value =
     if loc >= 0 then Gl.uniform1f loc value
   in
-  
-  set_uniform_if_exists v.loc_spot_width 0.85;
-  set_uniform_if_exists v.loc_spot_height 0.80;
-  set_uniform_if_exists v.loc_phosphor_layout 2.0;
-  set_uniform_if_exists v.loc_scanline_strength_min 0.80;
-  set_uniform_if_exists v.loc_scanline_strength_max 0.85;
-  set_uniform_if_exists v.loc_color_boost_even 1.20;  (* Fixed: was 4.80 which is way too high *)
-  set_uniform_if_exists v.loc_color_boost_odd 1.40;
-  set_uniform_if_exists v.loc_mask_strength 0.10;
-  set_uniform_if_exists v.loc_gamma_input 2.4;
-  set_uniform_if_exists v.loc_gamma_output 2.62;
+  StrMap.iter (fun _pragma (loc, default_val) ->
+    set_uniform_if_exists loc default_val
+  ) v.pragma_defs;
 
   Gl.bind_vertex_array v.gid; (* vertices *)
   Gl.draw_arrays Gl.triangle_strip 0 4;
