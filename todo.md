@@ -57,6 +57,8 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - AI has a gap when connecting north to south
+  - Small map on side is wonky when moving around map (especialy enemy AI RR)
   - Train report exit button
   - Cannot buy AI stock (nothing happens)
   - Train shows Passenger3 on delivery
