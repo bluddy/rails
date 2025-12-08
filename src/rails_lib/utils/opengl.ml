@@ -10,6 +10,7 @@ type t = {
   loc_rubyTexture: int;
   loc_rubyInputSize: int;
   loc_rubyTextureSize: int;
+  loc_rubyOutputSize: int;
   pragma_defs: (int * float) StrMap.t;
 }
 
@@ -446,6 +447,7 @@ let create shader_path =
     loc_rubyTexture = get_loc "rubyTexture";
     loc_rubyInputSize = get_loc "rubyInputSize";
     loc_rubyTextureSize = get_loc "rubyTextureSize";
+    loc_rubyOutputSize = get_loc "rubyOutputSize";
   }
 
 let gl_id_of_sdl_tex tex =
@@ -455,7 +457,7 @@ let gl_id_of_sdl_tex tex =
   Tsdl.Sdl.gl_unbind_texture tex |> get_exn;
   gl_int
 
-let draw_quad_with_tex v tex_id win ~inner_w ~inner_h =
+let draw_to_screen v tex_id win ~inner_w ~inner_h ~out_w ~out_h =
   Gl.bind_framebuffer Gl.framebuffer 0;
   let win_w, win_h = Tsdl.Sdl.get_window_size win in
 
@@ -474,10 +476,15 @@ let draw_quad_with_tex v tex_id win ~inner_w ~inner_h =
   (* Resolution uniforms *)
   let input_w = float inner_w in
   let input_h = float inner_h in
+  let out_w, out_h = float out_w, float out_h in
   let tex_w, tex_h = input_w, input_h in (* since offscreen tex is inner size *)
 
-  Gl.uniform2f v.loc_rubyInputSize input_w input_h;
-  Gl.uniform2f v.loc_rubyTextureSize tex_w tex_h;
+  let set_uniform_if_exists loc v1 v2 =
+    if loc >= 0 then Gl.uniform2f loc v1 v2
+  in
+  set_uniform_if_exists v.loc_rubyInputSize input_w input_h;
+  set_uniform_if_exists v.loc_rubyTextureSize tex_w tex_h;
+  set_uniform_if_exists v.loc_rubyOutputSize out_w out_h;
 
   (* Set VGA shader parameters with default values from #pragma parameter directives *)
   (* Only set if the uniform location exists (>= 0) *)

@@ -13,6 +13,8 @@ type window = {
   zoom_y: float;
   inner_w: int;
   inner_h: int;
+  out_w: int;
+  out_h: int;
   window: Sdl.window;
   opengl: opengl_state;
   shader_prog: Opengl.t option; (* program is an int *)
@@ -64,6 +66,8 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
   {
     inner_w=w;
     inner_h=h;
+    out_w;
+    out_h;
     window;
     zoom_x;
     zoom_y;
@@ -316,7 +320,7 @@ let render_wrap win f x =
   match win.shader_prog with
   | Some state ->
       (* Display with custom shader effects *)
-      Opengl.draw_quad_with_tex state win.opengl.framebuffer_tex win.window ~inner_w:win.inner_w ~inner_h:win.inner_h
+      Opengl.draw_to_screen state win.opengl.framebuffer_tex win.window ~inner_w:win.inner_w ~inner_h:win.inner_h ~out_w:win.out_w ~out_h:win.out_h
   | None ->
       (* Display with simple scaling (no shader effects) *)
       Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer 0;
