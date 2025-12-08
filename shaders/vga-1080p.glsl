@@ -8,7 +8,7 @@
 #pragma parameter PHOSPHOR_LAYOUT "Phosphor Layout" 2.0 0.0 19.0 1.0
 #pragma parameter SCANLINE_STRENGTH_MIN "Scanline Strength Min" 0.80 0.0 1.0 0.05
 #pragma parameter SCANLINE_STRENGTH_MAX "Scanline Strength Max" 0.85 0.0 1.0 0.05
-#pragma parameter COLOR_BOOST_EVEN "Color Boost Even" 4.80 1.0 2.0 0.05
+#pragma parameter COLOR_BOOST_EVEN "Color Boost Even" 1.20 1.0 2.0 0.05
 #pragma parameter COLOR_BOOST_ODD "Color Boost Odd" 1.40 1.0 2.0 0.05
 #pragma parameter MASK_STRENGTH "Mask Strength" 0.10 0.0 1.0 0.1
 #pragma parameter GAMMA_INPUT "Gamma Input" 2.4 0.0 5.0 0.1
@@ -32,7 +32,7 @@ void main()
 {
 	gl_Position = vec4(a_position, 0.0, 1.0);
 
-	v_texCoord = vec2(a_position.x + 1.0, 1.0 - a_position.y) / 2.0 * rubyInputSize;
+	v_texCoord = vec2(a_position.x + 1.0, a_position.y + 1.0) / 2.0 * rubyInputSize;
 	v_texCoord /= rubyTextureSize;
 
 	sourceSize = vec4(rubyTextureSize, 1.0 / rubyTextureSize);
