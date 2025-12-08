@@ -8,6 +8,17 @@ type t = {
   loc_rubyTexture: int;
   loc_rubyInputSize: int;
   loc_rubyTextureSize: int;
+  (* VGA shader parameters - store locations, -1 if not present *)
+  loc_spot_width: int;
+  loc_spot_height: int;
+  loc_phosphor_layout: int;
+  loc_scanline_strength_min: int;
+  loc_scanline_strength_max: int;
+  loc_color_boost_even: int;
+  loc_color_boost_odd: int;
+  loc_mask_strength: int;
+  loc_gamma_input: int;
+  loc_gamma_output: int;
 }
 
 type simple_progs = {
@@ -420,6 +431,17 @@ let create shader_path =
     loc_rubyTexture = get_loc "rubyTexture";
     loc_rubyInputSize = get_loc "rubyInputSize";
     loc_rubyTextureSize = get_loc "rubyTextureSize";
+    (* VGA shader parameters - will be -1 if not present in shader *)
+    loc_spot_width = get_loc "SPOT_WIDTH";
+    loc_spot_height = get_loc "SPOT_HEIGHT";
+    loc_phosphor_layout = get_loc "PHOSPHOR_LAYOUT";
+    loc_scanline_strength_min = get_loc "SCANLINE_STRENGTH_MIN";
+    loc_scanline_strength_max = get_loc "SCANLINE_STRENGTH_MAX";
+    loc_color_boost_even = get_loc "COLOR_BOOST_EVEN";
+    loc_color_boost_odd = get_loc "COLOR_BOOST_ODD";
+    loc_mask_strength = get_loc "MASK_STRENGTH";
+    loc_gamma_input = get_loc "GAMMA_INPUT";
+    loc_gamma_output = get_loc "GAMMA_OUTPUT";
   }
 
 let gl_id_of_sdl_tex tex =
@@ -452,6 +474,23 @@ let draw_quad_with_tex v tex_id win ~inner_w ~inner_h =
 
   Gl.uniform2f v.loc_rubyInputSize input_w input_h;
   Gl.uniform2f v.loc_rubyTextureSize tex_w tex_h;
+
+  (* Set VGA shader parameters with default values from #pragma parameter directives *)
+  (* Only set if the uniform location exists (>= 0) *)
+  let set_uniform_if_exists loc value =
+    if loc >= 0 then Gl.uniform1f loc value
+  in
+  
+  set_uniform_if_exists v.loc_spot_width 0.85;
+  set_uniform_if_exists v.loc_spot_height 0.80;
+  set_uniform_if_exists v.loc_phosphor_layout 2.0;
+  set_uniform_if_exists v.loc_scanline_strength_min 0.80;
+  set_uniform_if_exists v.loc_scanline_strength_max 0.85;
+  set_uniform_if_exists v.loc_color_boost_even 1.20;  (* Fixed: was 4.80 which is way too high *)
+  set_uniform_if_exists v.loc_color_boost_odd 1.40;
+  set_uniform_if_exists v.loc_mask_strength 0.10;
+  set_uniform_if_exists v.loc_gamma_input 2.4;
+  set_uniform_if_exists v.loc_gamma_output 2.62;
 
   Gl.bind_vertex_array v.gid; (* vertices *)
   Gl.draw_arrays Gl.triangle_strip 0 4;
