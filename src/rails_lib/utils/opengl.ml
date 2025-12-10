@@ -330,7 +330,7 @@ let draw_textured_quad ?(color=(255,255,255,255)) tex_id ~x ~y ~w ~h ~inner_w ~i
   Gl.use_program 0;
   Gl.bind_buffer Gl.array_buffer 0
 
-let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~to_w ~to_h ~tex_w ~tex_h ~inner_w ~inner_h =
+let draw_textured_quad_sub ?(color=(255,255,255,255)) tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~to_w ~to_h ~tex_w ~tex_h ~inner_w ~inner_h =
   let p = get_progs () in
   Gl.use_program p.texture_prog;
 
@@ -354,10 +354,21 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
   let loc = Gl.get_uniform_location p.texture_prog "tex" in
   Gl.uniform1i loc 0;
 
+  (* Set color modulation *)
+  let (r, g, b, a) = color in
+  let r, g, b, a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
+  let color_loc = Gl.get_uniform_location p.texture_prog "u_color_mod" in
+  if color_loc >= 0 then
+    Gl.uniform4f color_loc r g b a;
+
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_quad_vbo_data) (Some scratch_quad_vbo_data) Gl.stream_draw;
-  Gl.draw_arrays Gl.triangle_strip 0 4
+  Gl.draw_arrays Gl.triangle_strip 0 4;
+
+  Gl.bind_texture Gl.texture_2d 0;
+  Gl.use_program 0;
+  Gl.bind_buffer Gl.array_buffer 0
 
 let create_buffer_ b =
   let id = get_int (Gl.gen_buffers 1) in
