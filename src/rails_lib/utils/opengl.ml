@@ -78,22 +78,15 @@ let create_program_ vertex_shader fragment_shader =
   )
 
 (* FINAL — Simple vertex shader (used by both textured and colored quads) *)
-let simple_vert_src_ () = 
-"#version 330 core\n\
- layout(location = 0) in vec2 a_position;\n\
- out vec2 vTexCoord;\n\
- void main() {\n\
-   gl_Position = vec4(a_position, 0.0, 1.0);\n\
-   // Fixed texture coords based on vertex ID (triangle strip order)\n\
-   // 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right\n\
-   vec2 texCoords[4] = vec2[4](\n\
-     vec2(0.0, 0.0),\n\
-     vec2(1.0, 0.0),\n\
-     vec2(0.0, 1.0),\n\
-     vec2(1.0, 1.0)\n\
-   );\n\
-   vTexCoord = texCoords[gl_VertexID];\n\
- }"
+let simple_vert_src_ () =
+  "#version 330 core\n\
+   layout(location = 0) in vec2 a_position;\n\
+   layout(location = 1) in vec2 a_tex_coord;\n\
+   out vec2 vTexCoord;\n\
+   void main() {\n\
+     gl_Position = vec4(a_position, 0.0, 1.0);\n\
+     vTexCoord = a_tex_coord;\n\
+   }"
 
 (* FINAL — Textured fragment shader (for sprites, mouse cursor, etc.) *)
 let simple_frag_src_textured () = 
@@ -115,8 +108,15 @@ let simple_frag_src_colored () =
    FragColor = u_color;\n\
  }"
 
-(* Single reusable scratch buffer for quad vertices *)
-let scratch_verts_2d = bigarray_create Bigarray.float32 (4 * 2)
+(* Single reusable scratch buffer for quad vertices (pos + uv) *)
+let scratch_quad_vbo_data = bigarray_create Bigarray.float32 (4 * 4)
+
+let set_vert buf i x y u v =
+  let start = i * 4 in
+  buf.{start + 0} <- x;
+  buf.{start + 1} <- y;
+  buf.{start + 2} <- u;
+  buf.{start + 3} <- v
 
 let init () =
   let textured_prog = create_program_ (simple_vert_src_()) (simple_frag_src_textured()) in
@@ -129,10 +129,14 @@ let init () =
   Gl.bind_vertex_array vao;
   Gl.bind_buffer Gl.array_buffer vbo;
   
-  (* Set up vertex attribute (location 0 = position, 2 floats) *)
+  let stride = 4 * 4 in (* 4 floats: pos.xy, tex.uv *)
+  (* pos *)
   Gl.enable_vertex_attrib_array 0;
-  Gl.vertex_attrib_pointer 0 2 Gl.float false 0 (`Offset 0);
-  
+  Gl.vertex_attrib_pointer 0 2 Gl.float false stride (`Offset 0);
+  (* tex *)
+  Gl.enable_vertex_attrib_array 1;
+  Gl.vertex_attrib_pointer 1 2 Gl.float false stride (`Offset (2 * 4));
+
   (* Unbind *)
   Gl.bind_vertex_array 0;
   Gl.bind_buffer Gl.array_buffer 0;
@@ -230,17 +234,17 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
   let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
-  set_2d scratch_verts_2d 0 x1 y1;   (* top-left     *)
-  set_2d scratch_verts_2d 1 x2 y1;   (* top-right    *)
-  set_2d scratch_verts_2d 2 x1 y2;   (* bottom-left  *)
-  set_2d scratch_verts_2d 3 x2 y2;   (* bottom-right *)
+  set_vert scratch_quad_vbo_data 0 x1 y1 0. 0.;
+  set_vert scratch_quad_vbo_data 1 x2 y1 0. 0.;
+  set_vert scratch_quad_vbo_data 2 x1 y2 0. 0.;
+  set_vert scratch_quad_vbo_data 3 x2 y2 0. 0.;
 
   let loc = Gl.get_uniform_location p.color_prog "u_color" in
   Gl.uniform4f loc r g b a;
 
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
-  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_quad_vbo_data) (Some scratch_quad_vbo_data) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
 let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill =
@@ -266,10 +270,11 @@ let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill =
     Gl.bind_vertex_array p.vao;
     Gl.bind_buffer Gl.array_buffer p.vbo;
     
+    let scratch_line_vbo_data = bigarray_create Bigarray.float32 (2 * 4) in
     let draw_line x1 y1 x2 y2 =
-      set_2d scratch_verts_2d 0 x1 y1;
-      set_2d scratch_verts_2d 1 x2 y2;
-      Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
+      set_vert scratch_line_vbo_data 0 x1 y1 0. 0.;
+      set_vert scratch_line_vbo_data 1 x2 y2 0. 0.;
+      Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_line_vbo_data) (Some scratch_line_vbo_data) Gl.stream_draw;
       Gl.draw_arrays Gl.lines 0 2
     in
     (* Top line *)
@@ -299,14 +304,14 @@ let draw_textured_quad ?(color=(255,255,255,255)) tex_id ~x ~y ~w ~h ~inner_w ~i
   let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
-  set_2d scratch_verts_2d 0 x1 y1;   (* top-left *)
-  set_2d scratch_verts_2d 1 x2 y1;   (* top-right *)
-  set_2d scratch_verts_2d 2 x1 y2;   (* bottom-left *)
-  set_2d scratch_verts_2d 3 x2 y2;   (* bottom-right *)
+  set_vert scratch_quad_vbo_data 0 x1 y1 0.0 0.0;
+  set_vert scratch_quad_vbo_data 1 x2 y1 1.0 0.0;
+  set_vert scratch_quad_vbo_data 2 x1 y2 0.0 1.0;
+  set_vert scratch_quad_vbo_data 3 x2 y2 1.0 1.0;
 
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
-  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_quad_vbo_data) (Some scratch_quad_vbo_data) Gl.stream_draw;
   
   Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex_id;
@@ -334,33 +339,24 @@ let draw_textured_quad_sub tex_id ~from_x ~from_y ~from_w ~from_h ~to_x ~to_y ~t
   let x2 = (float (to_x+to_w) /. float inner_w *. 2.0) -. 1.0 in
   let y2 = 1.0 -. (float (to_y+to_h) /. float inner_h *. 2.0) in
 
-  set_2d scratch_verts_2d 0 x1 y1;   (* top-left     *)
-  set_2d scratch_verts_2d 1 x2 y1;   (* top-right    *)
-  set_2d scratch_verts_2d 2 x1 y2;   (* bottom-left  *)
-  set_2d scratch_verts_2d 3 x2 y2;   (* bottom-right *)
+  let u1 = float from_x /. float tex_w in
+  let v1 = float from_y /. float tex_h in
+  let u2 = float (from_x + from_w) /. float tex_w in
+  let v2 = float (from_y + from_h) /. float tex_h in
+
+  set_vert scratch_quad_vbo_data 0 x1 y1 u1 v1;
+  set_vert scratch_quad_vbo_data 1 x2 y1 u2 v1;
+  set_vert scratch_quad_vbo_data 2 x1 y2 u1 v2;
+  set_vert scratch_quad_vbo_data 3 x2 y2 u2 v2;
 
   Gl.active_texture Gl.texture0;
   Gl.bind_texture Gl.texture_2d tex_id;
   let loc = Gl.get_uniform_location p.texture_prog "tex" in
   Gl.uniform1i loc 0;
 
-  let u1 = (x1 +. 1.0) /. 2.0 in
-  let v1 = (1.0 -. y1) /. 2.0 in
-  let u2 = (x2 +. 1.0) /. 2.0 in
-  let v2 = (1.0 -. y2) /. 2.0 in
-  let range_loc = Gl.get_uniform_location p.texture_prog "tex_coord_range" in
-  Gl.uniform4f range_loc u1 v2 u2 v1; (* min_u, min_v, max_u, max_v *)
-
-  let sub_x = float from_x /. float tex_w in
-  let sub_y = float from_y /. float tex_h in
-  let sub_w = float from_w /. float tex_w in
-  let sub_h = float from_h /. float tex_h in
-  let sub_region_loc = Gl.get_uniform_location p.texture_prog "tex_sub_region" in
-  Gl.uniform4f sub_region_loc sub_x sub_y sub_w sub_h;
-
   Gl.bind_vertex_array p.vao;
   Gl.bind_buffer Gl.array_buffer p.vbo;
-  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_verts_2d) (Some scratch_verts_2d) Gl.stream_draw;
+  Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_quad_vbo_data) (Some scratch_quad_vbo_data) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
 let create_buffer_ b =
