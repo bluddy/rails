@@ -250,35 +250,25 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
 let scratch_line_vbo_data = bigarray_create Bigarray.float32 (2 * 4)
 
 let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill =
+  let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
   if fill then
-    let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
     draw_colored_quad x y w h r g b a ~inner_w ~inner_h
-  else
-    (* Draw 4 lines forming a rectangle frame *)
-    let p = get_progs () in
-    Gl.use_program p.color_prog;
-
-    let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
-    let loc = Gl.get_uniform_location p.color_prog "u_color" in
-    Gl.uniform4f loc r g b a;
-
-    (* Convert to NDC *)
-    let x1 = (float x /. float inner_w *. 2.0) -. 1.0 in
-    let y1 = 1.0 -. (float y /. float inner_h *. 2.0) in
-    let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
-    let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
-
-    (* Draw a closed loop for the rectangle frame *)
-    Gl.bind_vertex_array p.vao;
-    Gl.bind_buffer Gl.array_buffer p.vbo;
-
-    set_vert scratch_quad_vbo_data 0 x1 y1 0. 0.; (* Top-left *)
-    set_vert scratch_quad_vbo_data 1 x2 y1 0. 0.; (* Top-right *)
-    set_vert scratch_quad_vbo_data 2 x2 y2 0. 0.; (* Bottom-right *)
-    set_vert scratch_quad_vbo_data 3 x1 y2 0. 0.; (* Bottom-left *)
-
-    Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_quad_vbo_data) (Some scratch_quad_vbo_data) Gl.stream_draw;
-    Gl.draw_arrays Gl.line_loop 0 4
+  else (
+    (* Draw 4 quads for the frame to avoid line-drawing issues *)
+    if w > 0 && h > 0 then (
+      (* Top bar *)
+      draw_colored_quad x y w 1 r g b a ~inner_w ~inner_h;
+      (* Bottom bar *)
+      if h > 1 then
+        draw_colored_quad x (y+h-1) w 1 r g b a ~inner_w ~inner_h;
+      (* Left side bar *)
+      if h > 2 then
+        draw_colored_quad x (y+1) 1 (h-2) r g b a ~inner_w ~inner_h;
+      (* Right side bar *)
+      if w > 1 && h > 2 then
+        draw_colored_quad (x+w-1) (y+1) 1 (h-2) r g b a ~inner_w ~inner_h
+    )
+  )
 
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
