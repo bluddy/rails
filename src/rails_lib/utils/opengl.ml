@@ -268,24 +268,17 @@ let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill =
     let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
     let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
 
-    (* Draw 4 lines: top, right, bottom, left *)
+    (* Draw a closed loop for the rectangle frame *)
     Gl.bind_vertex_array p.vao;
     Gl.bind_buffer Gl.array_buffer p.vbo;
 
-    let draw_line x1 y1 x2 y2 =
-      set_vert scratch_line_vbo_data 0 x1 y1 0. 0.;
-      set_vert scratch_line_vbo_data 1 x2 y2 0. 0.;
-      Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_line_vbo_data) (Some scratch_line_vbo_data) Gl.stream_draw;
-      Gl.draw_arrays Gl.lines 0 2
-    in
-    (* Top line *)
-    draw_line x1 y1 x2 y1;
-    (* Right line *)
-    draw_line x2 y1 x2 y2;
-    (* Bottom line *)
-    draw_line x2 y2 x1 y2;
-    (* Left line *)
-    draw_line x1 y2 x1 y1
+    set_vert scratch_quad_vbo_data 0 x1 y1 0. 0.; (* Top-left *)
+    set_vert scratch_quad_vbo_data 1 x2 y1 0. 0.; (* Top-right *)
+    set_vert scratch_quad_vbo_data 2 x2 y2 0. 0.; (* Bottom-right *)
+    set_vert scratch_quad_vbo_data 3 x1 y2 0. 0.; (* Bottom-left *)
+
+    Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_quad_vbo_data) (Some scratch_quad_vbo_data) Gl.stream_draw;
+    Gl.draw_arrays Gl.line_loop 0 4
 
 let vertices =
   let vs = bigarray_create Bigarray.float32 (4 * 2) in
