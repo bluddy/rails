@@ -17,7 +17,7 @@
 #pragma parameter SCANLINES_STRENGTH "Custom [If BP=0.00] SCANLINES STRENGTH" 0.85 0.0 1.0 0.01
 #pragma parameter COLOR_BOOST "Custom [If BP=0.00] COLOR BOOST" 2.50 1.0 2.0 0.05
 #pragma parameter SHARPNESS_HACK "SHARPNESS_HACK" 1.0 1.0 4.0 1.0
-#pragma parameter PHOSPHOR_LAYOUT "PHOSPHOR LAYOUT" 2.0 0.0 19.0 1.0
+#pragma parameter PHOSPHOR_LAYOUT "PHOSPHOR LAYOUT" 1.0 0.0 19.0 1.0 # was 2.0
 #pragma parameter MASK_INTENSITY "MASK INTENSITY" 0.55 0.0 1.0 0.1
 #pragma parameter CRT_ANTI_RINGING "ANTI RINGING" 1.0 0.0 1.0 0.2
 #pragma parameter INPUT_GAMMA "INPUT GAMMA" 2.4 0.0 5.0 0.1
