@@ -77,7 +77,7 @@ let create_program_ vertex_shader fragment_shader =
     failwith log
   )
 
-(* FINAL — Simple vertex shader (used by both textured and colored quads) *)
+(* Simple vertex shader (used by both textured and colored quads) *)
 let simple_vert_src_ () =
   "#version 330 core\n\
    layout(location = 0) in vec2 a_position;\n\
@@ -88,7 +88,7 @@ let simple_vert_src_ () =
      vTexCoord = a_tex_coord;\n\
    }"
 
-(* FINAL — Textured fragment shader (for sprites, mouse cursor, etc.) *)
+(* Textured fragment shader (for sprites, mouse cursor, etc.) *)
 let simple_frag_src_textured () = 
 "#version 330 core\n\
  uniform sampler2D tex;\n\
@@ -99,7 +99,7 @@ let simple_frag_src_textured () =
    FragColor = texture(tex, vTexCoord) * u_color_mod;\n\
  }"
 
-(* FINAL — Colored fragment shader (for rects, lines, points) *)
+(* Colored fragment shader (for rects, lines, points) *)
 let simple_frag_src_colored () = 
 "#version 330 core\n\
  uniform vec4 u_color;\n\
@@ -121,14 +121,14 @@ let set_vert buf i x y u v =
 let init () =
   let textured_prog = create_program_ (simple_vert_src_()) (simple_frag_src_textured()) in
   let colored_prog = create_program_ (simple_vert_src_()) (simple_frag_src_colored()) in
-  
+
   (* Create VAO and VBO for dynamic quad rendering *)
   let vao = get_int (Gl.gen_vertex_arrays 1) in
   let vbo = get_int (Gl.gen_buffers 1) in
-  
+
   Gl.bind_vertex_array vao;
   Gl.bind_buffer Gl.array_buffer vbo;
-  
+
   let stride = 4 * 4 in (* 4 floats: pos.xy, tex.uv *)
   (* pos *)
   Gl.enable_vertex_attrib_array 0;
@@ -140,7 +140,7 @@ let init () =
   (* Unbind *)
   Gl.bind_vertex_array 0;
   Gl.bind_buffer Gl.array_buffer 0;
-  
+
   progs := Some { texture_prog = textured_prog; color_prog = colored_prog; vao; vbo }
 
 let get_progs () = match !progs with
@@ -247,6 +247,8 @@ let draw_colored_quad x y w h r g b a ~inner_w ~inner_h =
   Gl.buffer_data Gl.array_buffer (Gl.bigarray_byte_size scratch_quad_vbo_data) (Some scratch_quad_vbo_data) Gl.stream_draw;
   Gl.draw_arrays Gl.triangle_strip 0 4
 
+let scratch_line_vbo_data = bigarray_create Bigarray.float32 (2 * 4)
+
 let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill =
   if fill then
     let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
@@ -255,22 +257,21 @@ let draw_rect ~inner_w ~inner_h ~x ~y ~w ~h ~color:(r,g,b,a) ~fill =
     (* Draw 4 lines forming a rectangle frame *)
     let p = get_progs () in
     Gl.use_program p.color_prog;
-    
+
     let r,g,b,a = float r /. 255., float g /. 255., float b /. 255., float a /. 255. in
     let loc = Gl.get_uniform_location p.color_prog "u_color" in
     Gl.uniform4f loc r g b a;
-    
+
     (* Convert to NDC *)
     let x1 = (float x /. float inner_w *. 2.0) -. 1.0 in
     let y1 = 1.0 -. (float y /. float inner_h *. 2.0) in
     let x2 = (float (x+w) /. float inner_w *. 2.0) -. 1.0 in
     let y2 = 1.0 -. (float (y+h) /. float inner_h *. 2.0) in
-    
+
     (* Draw 4 lines: top, right, bottom, left *)
     Gl.bind_vertex_array p.vao;
     Gl.bind_buffer Gl.array_buffer p.vbo;
-    
-    let scratch_line_vbo_data = bigarray_create Bigarray.float32 (2 * 4) in
+
     let draw_line x1 y1 x2 y2 =
       set_vert scratch_line_vbo_data 0 x1 y1 0. 0.;
       set_vert scratch_line_vbo_data 1 x2 y2 0. 0.;

@@ -214,9 +214,6 @@ module Texture = struct
       ~inner_w:win.inner_w ~inner_h:win.inner_h
 end
 
-let _set_color _win _color =
-  () (* Colors are passed to draw_rect now *)
-
 let draw_rect win ~x ~y ~w ~h ~color ~fill =
   Opengl.draw_rect ~inner_w:win.inner_w ~inner_h:win.inner_h ~x ~y ~w ~h ~color ~fill
 
