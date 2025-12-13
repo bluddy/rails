@@ -57,9 +57,6 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
-  - Partial texturs are black (e.g. station waiting for pickup)
-  - Rects are slightly off: start one pixel to the right at the bottom (probably opengl)
-  - Causes blue UI to have gaps on the left
   - AI has a gap when connecting north to south
   - Small map on side is wonky when moving around map (especialy enemy AI RR)
   - Train report exit button
