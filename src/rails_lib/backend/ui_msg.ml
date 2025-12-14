@@ -11,6 +11,7 @@ type train_arrival_msg = {
   train_num: Train.Id.t;
   goods_amount: (Goods.t * int) list; (* goods delivered *)
   revenue: Money.t; (* x 1000 *)
+  city_name: string;
 } [@@deriving yojson]
 
 type stock_broker_ui_msg = 

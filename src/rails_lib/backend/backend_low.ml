@@ -306,6 +306,8 @@ module Train_update = struct
           let deliv_msgs, new_goods_delivered =
             _ui_msgs_of_new_goods_delivered goods_delivered_set goods_delivered player cars_delivered_speed money_from_goods train loc in
           let speed_msgs, max_speed = _ui_msgs_of_speed_record cars_delivered_speed loc idx player in
+          let city_name = Station.get_city station |> Option.get_exn_or "no city"
+            |> fun loc -> Cities.name_of_loc loc v.cities in
           let msg =
             UIM.TrainArrival {
               player=train.player;
@@ -316,6 +318,7 @@ module Train_update = struct
               train_name = train.name;
               revenue;
               goods_amount=goods_delivered_amt;
+              city_name;
             }
           in
           let data = {income_stmt; freight_ton_miles; new_goods_delivered; new_goods_picked_up; max_speed} in

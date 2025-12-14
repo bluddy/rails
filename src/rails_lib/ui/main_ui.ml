@@ -1586,23 +1586,23 @@ let render_main win (s:State.t) v =
   end;
 
   let draw_train_arrival_msg (msg:Ui_msg.train_arrival_msg) =
-    let msg_s: string =
+    let msg_s =
       let b = Buffer.create 100 in 
       let buf_add = Buffer.add_string b in
       buf_add " ...";
       buf_add @@ Backend.get_time_of_day msg.time;
       buf_add "...\n";
-      begin match msg.train_name with
-      | Some name ->
-          buf_add name
-      | None ->
-          buf_add @@ Freight.show_complex msg.freight
-      end;
+      let s = match msg.train_name with
+      | Some name -> name
+      | None -> Freight.show_complex msg.freight
+      in
+      buf_add @@ String.take 15 s;
       buf_add "\n";
       buf_add @@ Train.show_train_type msg._type;
       buf_add "  (";
       buf_add @@ string_of_int (Train.Id.to_int msg.train_num + 1);
       buf_add ")\n";
+      buf_add "arrives at\n";
       List.iter (fun (good, amount) ->
          buf_add @@ Goods.short_descr_of good amount)
         msg.goods_amount;
