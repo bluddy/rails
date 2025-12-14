@@ -1604,9 +1604,10 @@ let render_main win (s:State.t) v =
       buf_add ")\n";
       buf_add "arrives at\n";
       List.iter (fun (good, amount) ->
-         buf_add @@ Goods.short_descr_of good amount)
+          buf_add @@ Goods.short_descr_of good amount;
+          buf_add "\n")
         msg.goods_amount;
-      buf_add "\nRev: ";
+      buf_add "Rev: ";
       buf_add @@ M.print msg.revenue;
       Buffer.contents b
     in

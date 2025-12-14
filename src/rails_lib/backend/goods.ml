@@ -69,11 +69,7 @@ let descr_of good amount =
   Printf.sprintf "%d %s %s" (amount / C.goods_div) (group_of good) (show good)
 
 let short_descr_of good amount =
-  let short_group = match good with
-    | Passengers -> ""
-    | _ -> "tn"
-  in
-  Printf.sprintf "%d %s %s" (amount / C.goods_div) short_group (show good)
+  Printf.sprintf "%d %s" (amount / C.goods_div) @@ show good
 
 let us = [
   Mail; Passengers;
