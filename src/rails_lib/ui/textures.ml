@@ -351,20 +351,21 @@ module CarsTop = struct
       List.fold_left (fun x dir ->
         let tex = get_tex x y in
         Hashtbl.replace hash (kind,dir) tex;
-        (x + tile_w) mod width
+        (x + tile_w) mod width (* handle edge of image *)
       )
       x
       Dir.dirlist
       |> ignore
     in
 
-    tex 200 120 @@ Engine(Engine.SteamBig);
-    tex 200 140 @@ Engine(Engine.SteamSmall);
+    (* Note: some of the textures are offset by 1 in the y direction *)
+    tex 200 119 @@ Engine(Engine.SteamBig);
+    tex 200 139 @@ Engine(Engine.SteamSmall);
     tex 40 120 @@ Engine(Engine.Diesel);
     tex 40 140 @@ Car(`Mail);
-    tex 200 160 @@ Car(`Passenger);
+    tex 200 159 @@ Car(`Passenger);
     tex 40 160 @@ Car(`Fast);
-    tex 200 180 @@ Car(`Slow);
+    tex 200 179 @@ Car(`Slow);
     tex 40 180 @@ Car(`Bulk);
     hash
 end

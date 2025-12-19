@@ -591,8 +591,7 @@ let calc_car_loc_in_pixels trackmap total_pixels (v:'a t) =
 let calc_car_loc trackmap car_idx ~car_pixels (v:'a t) =
   (* Same function, with a per-car interface *)
   let total_pixels = car_pixels * (car_idx + 1) in
-  calc_car_loc_in_pixels trackmap total_pixels v 
-
+  calc_car_loc_in_pixels trackmap total_pixels v
 
 let get_car_dir i (v:'a t) = (History.get (i+1) v.history).dir
 
