@@ -57,6 +57,8 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Gaps and sizes of train cars (looks like should be the same for all types)
+  - AI Companies dissolve after one fin period
   - AI has a gap when connecting north to south
   - Small map on side is wonky when moving around map (especialy enemy AI RR)
   - Train report exit button
@@ -70,7 +72,6 @@
   - Bonus from priority delivery doesn't go away after delivery
   - Bonus too high for distance
   - Bonus added to money too high (maybe not decremented)
-  - AI Companies dissolve after one fin period
   - Build station before track: send notification that need track first
   - Speed record set too easily
   - Station resource window doesn't appear when station close to edge of window.
