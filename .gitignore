@@ -4,3 +4,4 @@ _build/
 *.DTA
 *.png
 data/
+game*.sav
