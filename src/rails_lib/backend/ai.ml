@@ -988,12 +988,19 @@ let fiscal_period_end_stock_eval stocks v =
     let stocks = Stock_market.set_share_price player_idx new_share_price stocks in
     let stocks = if split then Stock_market.split_stock player_idx stocks else stocks in
     let stocks = Stock_market.update_history_with_stock_value player_idx stocks in
-    let fired = if M.(new_share_price < of_int 4) || ai_player.track_length  < 2 then `Fired else `Normal in
+    let fired =
+      let new_price_ok = M.(new_share_price > of_int 5) in
+      let small_track = ai_player.track_length < 2 in
+      let low_price = M.(share_price < of_int 4) in
+      if new_price_ok then small_track else low_price in
+    let fired = if fired then `Fired else `Normal in
     let msg = Ui_msg.SharePriceChange{
       player_idx;
-      from_=share_price; to_=new_share_price;
+      from_=share_price;
+      to_=new_share_price;
       share_price_growth=0;
-      split; fired;
+      split;
+      fired;
       } in
     (stocks, msg::ui_msgs))
     v.ais
