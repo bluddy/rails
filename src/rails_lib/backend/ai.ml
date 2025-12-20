@@ -34,7 +34,7 @@ type ai_player = {
   cash: Money.t; (* all x1000 *)
   bonds: Money.t;
   build_order: (U.loc * U.loc) option;  (* order given to subservient company (city_idx, city_idx)*)
-  track_length: int;
+  track_length: int; (* Each piece of track is 5 *)
   yearly_interest: Money.t;
   net_worth: Money.t;
   revenue_ytd: Money.t;

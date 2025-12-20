@@ -57,6 +57,11 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Year end: stock price read incorrectly for ais
+    - My stock is suddenly $58, ais' is $1
+  - Stock broker ticker music missing
+  - No notice of new supply of coal?
+  - Income statement expenses are crazy.
   - AI Companies dissolve after one fin period
   - AI has a gap when connecting north to south
   - Small map on side is wonky when moving around map (especialy enemy AI RR)
