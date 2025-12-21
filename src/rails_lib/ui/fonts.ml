@@ -129,7 +129,7 @@ let get_str_w_h ?(skip_amp=false) font str =
        active_color: color for automatically highlighting chars with &
                      or turned on and off with \\
     *)
-  let write ?tag_color ?active_color ?cursor win font ~color str ~x ~y =
+  let write ?tag_color ?active_color ?cursor ?(tight=false) win font ~color str ~x ~y =
     let x_first = x in (* keep starting column *)
     String.foldi (fun (active, x, y) i c ->
       let write_c = write_char win font ~x ~y in
@@ -142,6 +142,8 @@ let get_str_w_h ?(skip_amp=false) font str =
           `Off, x, y
       | '|', _, None, _, _ -> (* ignore if no active color *)
           active, x, y
+      | '\n', _, _, _, _ when tight ->
+          active, x_first, y + font.height + font.space_y - 1
       | '\n', _, _, _, _ ->
           active, x_first, y + font.height + font.space_y
       | _, _, Some tag_color, _, `On ->

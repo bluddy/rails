@@ -101,7 +101,7 @@ let create_stock_eval stock_data (s:State.t) =
     text 
     msgs
   in
-  let stock_msgbox = Menu.MsgBox.make_basic ~x:2 ~y:2 ~heading ~fonts:s.fonts s text in
+  let stock_msgbox = Menu.MsgBox.make_basic ~tight:true ~x:2 ~y:2 ~heading ~fonts:s.fonts s text in
   { stock_msgbox; msgs }, player_fired
 
 let draw_owner_portraits win (s:State.t) ranked_owners =

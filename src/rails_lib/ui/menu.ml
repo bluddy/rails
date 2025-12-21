@@ -50,6 +50,7 @@ module MsgBox = struct
   and ('msg, 'state) kind =
     | Static of {
       color: int * int * int * int;
+      tight: bool; (* tighter y spacing *)
     }
     | Interactive of {
       fire: ('msg, 'state) fire;
@@ -83,8 +84,8 @@ module MsgBox = struct
   let _get_entry_w_h font v =
     Fonts.Font.get_str_w_h ~skip_amp:true font @@ " "^v.name
 
-  let static_entry name ~color =
-    { y=0; h=0; name; kind=Static {color} }
+  let static_entry ?(tight=false) name ~color =
+    { y=0; h=0; name; kind=Static {color; tight} }
 
   let make_entry ?test_enabled ?select_action name fire =
     (* test_enabled: entry can be disabled under some circumstances *)
@@ -435,13 +436,13 @@ module MsgBox = struct
         | Interactive _ -> " "
         | Static _ -> ""
       in
-      let color, active_color = match v.kind with
-        | Interactive {enabled=true;_} -> Ega.black, Ega.blue
-        | Interactive _ -> Ega.dgray, Ega.dgray
-        | Static {color;_} -> color, color
+      let color, active_color, tight = match v.kind with
+        | Interactive {enabled=true;_} -> Ega.black, Some Ega.blue, false
+        | Interactive _ -> Ega.dgray, Some Ega.dgray, false
+        | Static {color; tight; _} -> color, None, tight
       in
       let name = if use_prefix then prefix^v.name else v.name in
-      Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~active_color ~tag_color:Ega.bred
+      Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~tight ?active_color ~tag_color:Ega.bred
 
     let render_box ?(color=Ega.gray) win x y w h =
       Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
@@ -489,7 +490,7 @@ module MsgBox = struct
           end
       | _ -> ()
 
-    let make_basic ?x ?y ?wh ?heading ~fonts s text =
+    let make_basic ?x ?y ?wh ?heading ?tight ~fonts s text =
       (* Easy to use msgbox with just text *)
       let y = Option.get_or ~default:80 y in
       let x = match x with
@@ -501,7 +502,7 @@ module MsgBox = struct
           150 - 5 * len / 2 
       in
       let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
-      let entry = static_entry ~color:entry_color text in
+      let entry = static_entry ?tight ~color:entry_color text in
       let menu =
         make ~x ~y ?heading ~fonts [entry] ~font_idx:`Standard |> do_open_menu ?wh s
       in
