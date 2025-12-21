@@ -91,10 +91,15 @@ let _update_net_worth stocks ai_player =
   {ai_player with net_worth}
 
 let compute_share_price player stocks v =
-  let total_shares = Stock_market.total_shares player stocks in
+  let total_shares_div_10 = Stock_market.total_shares player stocks / 10 in
   let open M in
-  ((v.revenue_ytd / 3) + v.net_worth) / total_shares
-  |> M.to_int |> Utils.clip ~min:1 ~max:999 |> M.of_int
+  let price =
+    ((v.revenue_ytd / 3) + v.net_worth) / total_shares_div_10
+    |> M.to_int |> Utils.clip ~min:1 ~max:999 |> M.of_int
+  in
+  Log.debug (fun f -> f "update_net_worth total_shares: %d, revenue_ytd: %d, net_worth: %d" total_shares_div_10 (M.to_int v.revenue_ytd) (M.to_int v.net_worth));
+  price
+
 
 let ai_of_city city v = LocMap.get city v.ai_of_city
 
@@ -982,7 +987,7 @@ let end_of_year_maintenance_interest v =
 let fiscal_period_end_stock_eval stocks v =
   let ais = Owner.Map.map (_update_net_worth stocks) v.ais in
   let stocks, ui_msgs = Owner.Map.fold (fun player_idx ai_player (stocks, ui_msgs) ->
-    let share_price = Stock_market.share_price player_idx stocks in
+    let old_share_price = Stock_market.share_price player_idx stocks in
     let new_share_price = compute_share_price player_idx stocks ai_player in
     let split = M.(new_share_price >= of_int 100) in
     let stocks = Stock_market.set_share_price player_idx new_share_price stocks in
@@ -991,12 +996,12 @@ let fiscal_period_end_stock_eval stocks v =
     let fired =
       let new_price_ok = M.(new_share_price > of_int 5) in
       let small_track = ai_player.track_length < 2 in
-      let low_price = M.(share_price < of_int 4) in
+      let low_price = M.(old_share_price < of_int 4) in
       if new_price_ok then small_track else low_price in
     let fired = if fired then `Fired else `Normal in
     let msg = Ui_msg.SharePriceChange{
       player_idx;
-      from_=share_price;
+      from_=old_share_price;
       to_=new_share_price;
       share_price_growth=0;
       split;
