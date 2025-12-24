@@ -122,8 +122,8 @@ let set_share_price player_idx price v =
   {v with prices}
 
 let set_avg_share_price player_idx price v =
-  let prices = Owner.Map.add player_idx price v.avg_prices in
-  {v with prices}
+  let avg_prices = Owner.Map.add player_idx price v.avg_prices in
+  {v with avg_prices}
 
 let num_other_companies_owner_has_shares_in owner v =
   match Owner.Map.get owner v.ownership with
@@ -382,7 +382,7 @@ let show_investor = function
   | Investors_concerned -> "concerned"
   | Investors_very_concerned -> "very concerned"
   | Investors_outraged -> "outraged"
-  
+
 let max_history_price v =
   Owner.Map.fold (fun _ values max ->
     let value = List.fold_left (fun max value ->
@@ -402,4 +402,10 @@ let rank_owners_last_history v =
   in
   List.sort (fun (v1, _) (v2, _) -> M.(v2 - v1 |> to_int)) (* reversed on purpose *)
     val_owners
+
+let show_share_prices v =
+  let b = Buffer.create 10 in
+  Owner.Map.iter (fun owner price -> Printf.bprintf b "[%s] = %s\n" (Owner.show owner) (M.show price))
+  v.prices;
+  Buffer.contents b
 

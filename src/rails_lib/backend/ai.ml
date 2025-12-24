@@ -90,14 +90,17 @@ let _update_net_worth stocks ai_player =
   let net_worth = cash - loans +~ Int.(ai_player.track_length * 2) + stock_value in
   {ai_player with net_worth}
 
-let compute_share_price player stocks v =
+let new_share_price_ player stocks v =
   let total_shares_div_10 = Stock_market.total_shares player stocks / 10 in
   let open M in
   let price =
     ((v.revenue_ytd / 3) + v.net_worth) / total_shares_div_10
     |> M.to_int |> Utils.clip ~min:1 ~max:999 |> M.of_int
   in
-  Log.debug (fun f -> f "update_net_worth total_shares: %d, revenue_ytd: %d, net_worth: %d" total_shares_div_10 (M.to_int v.revenue_ytd) (M.to_int v.net_worth));
+  Log.debug (fun f ->
+    let old_price = Stock_market.share_price player stocks in
+    f "update_net_worth old_price: %d, total_shares: %d, revenue_ytd: %d, net_worth: %d"
+      (M.to_int old_price) total_shares_div_10 (M.to_int v.revenue_ytd) (M.to_int v.net_worth));
   price
 
 
@@ -988,7 +991,7 @@ let fiscal_period_end_stock_eval stocks v =
   let ais = Owner.Map.map (_update_net_worth stocks) v.ais in
   let stocks, ui_msgs = Owner.Map.fold (fun player_idx ai_player (stocks, ui_msgs) ->
     let old_share_price = Stock_market.share_price player_idx stocks in
-    let new_share_price = compute_share_price player_idx stocks ai_player in
+    let new_share_price = new_share_price_ player_idx stocks ai_player in
     let split = M.(new_share_price >= of_int 100) in
     let stocks = Stock_market.set_share_price player_idx new_share_price stocks in
     let stocks = if split then Stock_market.split_stock player_idx stocks else stocks in
