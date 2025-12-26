@@ -25,10 +25,16 @@ let show_expense = function
   | `TrackMaintenance -> "Track Maintenance"
   | `StationMaintenance -> "Station Maintenance"
 
-module ExpenseMap = Utils.Map.Make(struct
+module ExpenseMap = struct
+  include Utils.Map.Make(struct
     type t = expense [@@deriving yojson]
     let compare = compare_expense
   end)
+  (* override total_cash *)
+  let total_cash v =
+    let default = Money.zero in
+    Money.(get_or `InterestFees v ~default + get_or `TrainMaintenance v ~default + get_or `TrackMaintenance v ~default + get_or `StationMaintenance v ~default)
+end
 
 type revenue = [
   | `Mail
