@@ -838,7 +838,7 @@ let _fin_end_remove_players_delay players _ v =
 let _fin_end_proceed player_idx v =
   let net_worth =
     let balance_sheet = create_balance_sheet player_idx v in
-    Balance_sheet.compute_profit balance_sheet in
+    Balance_sheet.net_worth balance_sheet in
   let player = get_player player_idx v in
   let player, total_revenue, ui_msgs1 = Player.fiscal_period_end net_worth v.stations v.params player in
   let player, stocks, ui_msgs2 = Player.fiscal_period_end_stock_eval ~total_revenue ~net_worth v.stocks v.params player in

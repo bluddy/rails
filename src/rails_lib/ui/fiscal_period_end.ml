@@ -25,7 +25,7 @@ let render_bg win (s:State.t) =
   Fonts.Render.write_shadow win s.fonts ~color:Ega.bcyan ~idx:`Large text ~x:80 ~y:72;
   ()
 
-let _stock_price_diff_s ~split ~region from_ to_ player_idx =
+let stock_price_diff_s_ ~split ~region from_ to_ player_idx =
   let print_money x = Money.print ~region ~ks:false ~decimal:true x in
   let is_human = Owner.is_human player_idx in
   let per_share = if not is_human then "/" else " per " in
@@ -34,7 +34,7 @@ let _stock_price_diff_s ~split ~region from_ to_ player_idx =
   else if M.(from_ < to_) then sp "Stock rises from %s to %s%sshare" (print_money from_) (print_money to_) per_share
   else sp "Stock stays at %s%sshare" (print_money from_) per_share
 
-let _share_price_growth_s growth = sp "%d%% Average Share Price Growth." growth
+let share_price_growth_s_ growth = sp "%d%% Average Share Price Growth." growth
 
 let create_stock_eval stock_data (s:State.t) =
   let player_idx = C.player in
@@ -57,9 +57,9 @@ let create_stock_eval stock_data (s:State.t) =
       %s\n\
       Investors are %s.%s"
       (if msg.split then "Your stock splits\ntwo for one!\n" else "")
-      (_stock_price_diff_s ~split:msg.split ~region:b.params.region msg.from_ msg.to_ msg.player_idx)
+      (stock_price_diff_s_ ~split:msg.split ~region:b.params.region msg.from_ msg.to_ msg.player_idx)
       (Stock_market.total_shares player_idx b.stocks)
-      (_share_price_growth_s avg_growth)
+      (share_price_growth_s_ avg_growth)
       (Stock_market.investor_opinion avg_growth |> Stock_market.show_investor)
       text
     in s, player_fired
@@ -85,7 +85,7 @@ let create_stock_eval stock_data (s:State.t) =
         "\n%s\n\
         %s\n"
         (B.get_name player_idx b)
-        (_stock_price_diff_s ~split ~region:b.params.region from_ to_ player_idx)
+        (stock_price_diff_s_ ~split ~region:b.params.region from_ to_ player_idx)
       in
       let text2 = match fired with
         | `Fired -> " --------- DISSOLVED ---------\n"

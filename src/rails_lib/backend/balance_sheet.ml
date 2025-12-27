@@ -65,4 +65,6 @@ let compute_liabilities b =
 let compute_profit b =
   M.(compute_assets b + compute_liabilities b)
 
-    
+let net_worth b =
+  M.(compute_assets b + b.stockholders_equity)
+

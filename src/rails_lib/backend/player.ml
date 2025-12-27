@@ -342,7 +342,9 @@ let fiscal_period_end_stock_eval ~total_revenue ~net_worth stocks params v =
   let player_idx = v.idx in
   let old_share_price = Stock_market.share_price v.idx stocks in
   let total_shares = Stock_market.total_shares v.idx stocks in
-  let share_price = M.div M.((total_revenue / 4 + net_worth + of_int 5)) (total_shares / 10) in
+  Log.debug (fun f -> f "player total_revenue: %s, net_worth: %s, total_shares %d\n" (M.show total_revenue) (M.show net_worth) total_shares);
+  (* Note: in the OG, net_worth arrives as /10 *)
+  let share_price = M.div M.((total_revenue / 4 + net_worth / 10 + of_int 5)) (total_shares / 10) in
   let share_price = M.(max (of_int 1) share_price) in
   let avg_share_price = Stock_market.avg_share_price player_idx stocks in
   let avg_share_price = M.((avg_share_price * 7) / 8 + share_price) in
