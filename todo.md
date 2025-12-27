@@ -57,20 +57,14 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
-  - Net worth should be saved with /10
-  - AI net worth at start is 50,000 instead of 500,000
-  - Year end: stock price read incorrectly for ais
-    - My stock is suddenly $58, ais' is $1
+  - Player Stock change % check (too high)
+  - Player avg speed record check (too low)
+  - Player avg ton-miles record check
   - Stock broker ticker music missing
   - No notice of new supply of coal?
-  - Income statement expenses are crazy.
-  - AI Companies dissolve after one fin period
   - AI has a gap when connecting north to south
   - Small map on side is wonky when moving around map (especialy enemy AI RR)
   - Cannot buy AI stock (nothing happens)
-  - Income statement weird
-   - Expenses are low but get to 600k somehow (what's counting there?)
-   - Leads to negative
   - Train income:
     - Revenue ytd not updating properly
   - Bonus from priority delivery doesn't go away after delivery
