@@ -651,8 +651,11 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
   | Traveling travel_state ->
     let train = Train.update_speed train ~cycle:params.cycle ~cycle_check ~cycle_bit in
 
-    (* Take care of bookkeeping *)
-    if Train.get_speed train > 0 then (
+    (* Take care of bookkeeping time train running (for avg speed).
+       In OG, we use the same decelerate cycle for keeping track of train time.
+       Here we separate it out for clarity.
+     *)
+    if Train.get_speed train > 0 && params.cycle mod 8 = 0 then (
         Train.incr_time_running current_period train;
         Player.incr_time_running current_period player;
     );

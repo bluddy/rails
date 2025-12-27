@@ -297,9 +297,12 @@ let fiscal_period_end net_worth stations params v =
       v.record.earnings, ui_msgs
   in
   let income_statement = Income_statement.default in
+  (* In the OG, we add 10 and divide by 10. This could be for precision though - I can't find the place
+      where we actually update this number in the code *)
   let total_time = (10 + Pair.fold (fun p1 p2 -> p1.time_running + p2.time_running) v.periodic) / 10 in
   let total_dist = 6 * (Pair.fold (fun p1 p2 -> p1.dist_traveled + p2.dist_traveled) v.periodic) in
   let avg_speed = total_dist / total_time in
+  Log.debug (fun f -> f "total_time %d, total_dist %d, avg_speed %d" total_time total_dist avg_speed);
   let avg_speed_record, ui_msgs =
     if avg_speed > v.record.avg_speed then
       avg_speed, Ui_msg.AvgSpeedRecord(avg_speed)::ui_msgs
