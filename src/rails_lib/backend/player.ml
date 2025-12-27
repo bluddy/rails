@@ -289,7 +289,7 @@ let fiscal_period_end net_worth stations params v =
     if Money.(total_revenue / 2 < v.m.yearly_interest_payment && v.m.bonds > Money.of_int 2000) then
       (Ui_msg.ConsiderBankruptcy)::ui_msgs else ui_msgs
   in
-  let earnings = Money.((net_worth - v.m.net_worth) * 10) in (* aka profit *)
+  let earnings = Money.(net_worth - v.m.net_worth) in (* aka profit *)
   let earnings_record, ui_msgs =
     if Money.(earnings > v.record.earnings) then
       earnings, Ui_msg.RecordEarnings(earnings)::ui_msgs
