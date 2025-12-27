@@ -82,19 +82,20 @@ let owned_by_player stocks company =
 let new_ai_idx () = Owner.create_ai ()
 
 (* Update valuation for AI players *)
-let _update_net_worth stocks ai_player =
+let update_net_worth_ stocks ai_player =
   let open M in
   let loans = ai_player.bonds / 10 in
   let cash = ai_player.cash / 10 in
   let stock_value = Stock_market.total_owned_stock_value ai_player.idx stocks in
   let net_worth = cash - loans +~ Int.(ai_player.track_length * 2) + stock_value in
+  let net_worth = net_worth * 10 in (* OG had /10 for net worth *)
   {ai_player with net_worth}
 
 let new_share_price_ player stocks v =
   let total_shares_div_10 = Stock_market.total_shares player stocks / 10 in
   let open M in
   let price =
-    ((v.revenue_ytd / 3) + v.net_worth) / total_shares_div_10
+    (v.revenue_ytd / 3 + v.net_worth / 10) / total_shares_div_10
     |> M.to_int |> Utils.clip ~min:1 ~max:999 |> M.of_int
   in
   Log.debug (fun f ->
@@ -274,7 +275,7 @@ let _try_to_create_ai ?(force=false) ~tilemap ~stations ~first_ai ~(params:Param
     build_order=None;
     track_length=5;
     yearly_interest;
-    net_worth=M.of_int 50;
+    net_worth=M.of_int 500;
     revenue_ytd = (params.time + 2000) / 20 |> M.of_int;
     expand_ctr=20;
   } in
@@ -988,7 +989,7 @@ let end_of_year_maintenance_interest v =
   {v with ais}
 
 let fiscal_period_end_stock_eval stocks v =
-  let ais = Owner.Map.map (_update_net_worth stocks) v.ais in
+  let ais = Owner.Map.map (update_net_worth_ stocks) v.ais in
   let stocks, ui_msgs = Owner.Map.fold (fun player_idx ai_player (stocks, ui_msgs) ->
     let old_share_price = Stock_market.share_price player_idx stocks in
     let new_share_price = new_share_price_ player_idx stocks ai_player in
