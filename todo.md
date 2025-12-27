@@ -57,6 +57,8 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Net worth should be saved with /10
+  - AI net worth at start is 50,000 instead of 500,000
   - Year end: stock price read incorrectly for ais
     - My stock is suddenly $58, ais' is $1
   - Stock broker ticker music missing
