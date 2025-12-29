@@ -606,3 +606,9 @@ let files_of_dir dir =
 
 let upper_first string =
   String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) string
+
+  (* Convert int to string with commas *)
+let show_int i =
+  Printf.sprintf "%#d" i
+  |> String.map (function '_' -> ',' | x -> x)
+

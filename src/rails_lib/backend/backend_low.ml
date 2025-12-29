@@ -33,7 +33,7 @@ module Train_update = struct
     max_speed=0;
   }
 
-  let _update_train_target_speed (v:t) (train:rw Train.t) (track:Track.t) ~(idx:Train.Id.t) ~cycle loc ~dir =
+  let train_update_target_speed_and_advance_ (v:t) (train:rw Train.t) (track:Track.t) ~(idx:Train.Id.t) ~cycle loc ~dir =
     (* Speed factor computation from height delta and turn *)
     let height1 = Tilemap.get_tile_height loc v.map in
     let loc2 = Dir.adjust_loc dir loc in
@@ -67,7 +67,7 @@ module Train_update = struct
       if speed =!= s.speed then s.speed <- speed;
     | _ -> ()
     end;
-    (* Bookkeeping *)
+    (* Bookkeeping for dist traveled only at midpoints *)
     let dist = if Dir.is_diagonal dir then 2 else 3 in
     let current_period = Params.current_period v.params in
     Train.add_dist_traveled dist current_period train;
@@ -402,7 +402,7 @@ module Train_update = struct
           economic_activity=false; (* reset *)
         }
       in
-      let train = _update_train_target_speed v train track ~idx ~cycle loc ~dir in
+      let train = train_update_target_speed_and_advance_ v train track ~idx ~cycle loc ~dir in
       train, stations, active_stations, ui_msgs
     ) else
       {train with state=Train.StoppedAtSignal dir}, stations, [], ui_msgs
@@ -608,7 +608,7 @@ module Train_update = struct
             ~ixn:loc ~cur_dir:train.dir ~dest 
             |> Option.get_exn_or "Cannot find route for train" 
         in
-        let train = _update_train_target_speed v train track ~idx ~cycle loc ~dir in
+        let train = train_update_target_speed_and_advance_ v train track ~idx ~cycle loc ~dir in
         train, stations, None, [], []
 
     | _ ->
@@ -617,7 +617,7 @@ module Train_update = struct
           Dir.Set.find_nearest train.dir track.dirs
           |> Option.get_exn_or "Cannot find track for train"
         in
-        let train = _update_train_target_speed v train track ~idx ~cycle loc ~dir in
+        let train = train_update_target_speed_and_advance_ v train track ~idx ~cycle loc ~dir in
         train, stations, None, [], []
 
 let _update_player_with_data (player:Player.t) data active_stations fiscal_period random =
@@ -669,7 +669,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
           if Dir.is_diagonal train.dir then (speed * 2 + 1) / 3 else speed
         in
         let update_val =
-          if speed > 12 then 
+          if speed > 12 then
             if speed_bound = 0 then 12 else speed - 12
           else speed
         in
@@ -913,10 +913,11 @@ let handle_cycle ~delayed_fn v =
         let msgs = msgs @ map_msgs in
 
         let msgs, pause, delayed_fn =
-          if params.time > C.fin_period_ticks then
+          if params.time > C.fin_period_ticks then (
+            Log.debug (fun f -> f "End fiscal period. cycle = %d, params.time = %d\n" params.cycle params.time);
             (* We announce here and wait for the response from the UI *)
             (UIM.FiscalPeriodEnd player_idx)::msgs, true, Some delayed_fn
-          else msgs, v.pause, v.delayed_fn in
+          ) else msgs, v.pause, v.delayed_fn in
 
         (* Player.fiscal_period_end stations params player in *)
         let player = Player.track_maintenance_random_spot track v.random player in

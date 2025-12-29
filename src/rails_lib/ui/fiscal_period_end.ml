@@ -218,8 +218,8 @@ let get_records backend msgs =
   | TonMileRecord ton_miles ->
     Printf.sprintf
     "New Record:\n\
-    Yearly Ton/Miles: %d!\n"
-    ton_miles
+    Yearly Ton/Miles: %s!\n"
+    (Utils.show_int @@ ton_miles * 100)
 
   | RevenueRecord money ->
     Printf.sprintf
