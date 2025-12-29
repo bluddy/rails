@@ -348,12 +348,14 @@ module CarsTop = struct
       |> R.Texture.make win
     in
     let tex x y kind =
-      List.fold_left (fun x dir ->
+      List.fold_left (fun (x, y) dir ->
         let tex = get_tex x y in
         Hashtbl.replace hash (kind,dir) tex;
-        (x + tile_w) mod width (* handle edge of image *)
+        let x' = (x + tile_w) mod width in (* handle edge of image *)
+        let y = if x' < x then y + 1 else y in
+        x', y
       )
-      x
+      (x, y)
       Dir.dirlist
       |> ignore
     in

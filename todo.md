@@ -58,8 +58,8 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Financier starting % difficulty is off (30 instead of 40)
   - Player Stock change % check (too high)
-  - Player avg speed record check (too low)
   - Player avg ton-miles record check
   - Stock broker ticker music missing
   - No notice of new supply of coal?
