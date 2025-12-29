@@ -655,7 +655,8 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
        In OG, we use the same decelerate cycle for keeping track of train time.
        Here we separate it out for clarity.
      *)
-    if Train.get_speed train > 0 && params.cycle mod 8 = 0 then (
+    if  params.cycle mod 8 = 0 && Train.get_speed train > 0 then (
+        Log.debug (fun f -> f "cycle %d\n" params.cycle);
         Train.incr_time_running current_period train;
         Player.incr_time_running current_period player;
     );
@@ -773,7 +774,7 @@ let _cancel_expired_priority_shipments ?(force=false) players stations params =
     let stations = Station_map.clear_priority_shipment_for_all stations ~players:cancel_players in
     let ui_msgs = List.map (fun i -> UIM.PriorityShipmentCanceled{player_idx=i}) cancel_players in
     players, stations, ui_msgs
-    
+
 let _check_priority_delivery players stations params =
   (* Check if a priority shipment has been delivered *)
   (* Check for priority delivery completion *)
