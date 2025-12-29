@@ -297,11 +297,12 @@ let fiscal_period_end net_worth stations params v =
       v.record.earnings, ui_msgs
   in
   let income_statement = Income_statement.default in
-  (* In the OG, we add 10 and divide by 10. This could be for precision though - I can't find the place
-      where we actually update this number in the code. It's possible it does something else
+  (* In the OG, we add 10 and divide by 10 for time.
+      I can't find the place where we actually update this number in the code.
+      It's possible it does something else
       before we actually see this computation, so we'll just have to tune it. *)
   let total_time = (Pair.fold (fun p1 p2 -> p1.time_running + p2.time_running) v.periodic) in
-  let time_adjusted = (total_time + 100) / 100 in
+  let time_adjusted = (total_time + 10) / 10 in
   let total_dist = (Pair.fold (fun p1 p2 -> p1.dist_traveled + p2.dist_traveled) v.periodic) in
   let dist_adjusted = total_dist * 6 in
   let avg_speed = dist_adjusted / time_adjusted in
