@@ -85,7 +85,7 @@ let complex_economy v = RealityLevels.mem v.reality_levels `ComplexEconomy
 let simple_economy v = not @@ complex_economy v
 
 let compute_difficulty_pct difficulty reality_levels =
-  let x = difficulty_to_enum difficulty + 1 in
+  let x = difficulty_to_enum difficulty + 2 in
   let x = if RealityLevels.mem reality_levels `DispatcherOps then x + 1 else x in
   let x = if RealityLevels.mem reality_levels `ComplexEconomy then x + 1 else x in
   let x = if RealityLevels.mem reality_levels `CutthroatCompetition then x + 1 else x in
