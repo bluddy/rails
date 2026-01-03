@@ -32,10 +32,11 @@ let player_starting_share_price difficulty =
 let add_human_player player_idx params v =
   let difficulty, num_fiscal_periods = params.Params.options.difficulty, params.num_fiscal_periods in
   let totals = Owner.Map.add player_idx C.Stock.starting_num v.totals in
-  let prices = Owner.Map.add player_idx (M.of_int @@ B_options.difficulty_to_enum difficulty + 7) v.prices in
+  let prices = Owner.Map.add player_idx (M.of_int @@ player_starting_share_price difficulty) v.prices in
+  let avg_prices = Owner.Map.add player_idx (M.of_int 40) v.avg_prices in
   let history = List.replicate num_fiscal_periods M.zero in
   let value_histories = Owner.Map.add player_idx history v.value_histories in
-  {v with totals; prices; value_histories}
+  {v with totals; prices; avg_prices; value_histories}
 
 let add_ai_player player_idx ~num_fin_periods v =
   (* AI players come in late, so we need to complete their history *)
