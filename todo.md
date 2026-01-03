@@ -58,10 +58,9 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
-  - Speed record wrong
+  - Speed record wrong (13 when should be 20+)
   - Check 2 year income, one cargo, two cities
     - Do we give too much money?
-  - Starting menu % difficulty is working badly
   - Player avg ton-miles record check
   - Stock broker ticker music missing
   - No notice of new supply of coal?
