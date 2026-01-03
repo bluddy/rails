@@ -58,13 +58,14 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
-  - Financier starting % difficulty is off (30 instead of 40)
-  - Player Stock change % check (too high)
+  - Speed record wrong
+  - Check 2 year income, one cargo, two cities
+    - Do we give too much money?
+  - Starting menu % difficulty is working badly
   - Player avg ton-miles record check
   - Stock broker ticker music missing
   - No notice of new supply of coal?
   - AI has a gap when connecting north to south
-  - Small map on side is wonky when moving around map (especialy enemy AI RR)
   - Cannot buy AI stock (nothing happens)
   - Train income:
     - Revenue ytd not updating properly
@@ -72,7 +73,6 @@
   - Bonus too high for distance
   - Bonus added to money too high (maybe not decremented)
   - Build station before track: send notification that need track first
-  - Speed record set too easily
   - Station resource window doesn't appear when station close to edge of window.
   - Year doesn't switch at end of December.
     - May be in original game too
@@ -86,8 +86,6 @@
   - Delivery + priority pickup: no delivery message
   - Can't change station light from f2/f3
   - Create a train with no station: msgbox to build a station first
-  - Where does smoke originate? Check in code.
-  - Smoke seems to go in different direction from game
   - joining a track from another track either refuses or crashes
   - Going into negative should be red money
     I think fixed
