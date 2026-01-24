@@ -50,7 +50,7 @@ let render win (s:State.t) v =
      at %d miles per hour."
     (station_name v.src s)
     (station_name v.dst s)
-    (Utils.show_speed v.speed)
+    (C.display_speed v.speed)
   in
   Fonts.Render.write win s.fonts ~idx:`Standard ~color:Ega.black ~x:24 ~y:40 text;
   Fonts.Render.write win s.fonts ~idx:`Standard ~color:Ega.black ~x:80 ~y:100 "Train Name?";

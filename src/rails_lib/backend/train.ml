@@ -191,7 +191,7 @@ let set_type typ v = {v with typ}
 let get_type v = v.typ
 let replace_engine engine v = {v with engine; maintenance_cost=Money.zero}
 
-let display_speed v = C.speed_mult * get_speed v
+let display_speed v = C.display_speed @@ get_speed v
 
 let display_maintenance v =
   Money.(v.maintenance_cost / 2 +~ List.length v.cars + C.min_maintenance_cost)

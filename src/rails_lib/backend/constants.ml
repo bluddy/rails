@@ -34,6 +34,7 @@ let car_full_demand = 64
 let goods_div = 4
 
 let speed_mult = 5 (* multiply speed by this *)
+let display_speed speed = speed_mult * speed
 let min_maintenance_cost = moi 2
 
 let track_length = 2 (* basic length of unit of track *)
