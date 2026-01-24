@@ -76,7 +76,7 @@ module Record = struct
     total_revenue: Money.t;
     avg_speed: int;
     ton_miles: int;
-    train_speed: int;
+    train_speed: int; (* Speed divided by 5 *)
     job: Jobs.t option;
   } [@@deriving yojson]
 

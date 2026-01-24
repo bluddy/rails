@@ -612,3 +612,5 @@ let show_int i =
   Printf.sprintf "%#d" i
   |> String.map (function '_' -> ',' | x -> x)
 
+let show_speed speed = speed * 5
+

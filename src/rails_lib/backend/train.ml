@@ -109,7 +109,7 @@ module Car = struct
 end
 
 type state =
-  | Traveling of { mutable speed: int; (* x5 to get real speed *)
+  | Traveling of { mutable speed: int; (* *5 to get real speed *)
                    mutable target_speed: int;
                    (* To prevent double processing, we turn on this flag while at a station location *)
                    mutable traveling_past_station: bool;
@@ -474,7 +474,8 @@ let car_delivery_ton_miles ~loc ~car ~region =
 let car_delivery_money_and_speed ~loc ~train ~car ~rates ~(params:Params.t) =
   let calc_dist = Utils.dist params.region loc (Car.get_source car) in
   let car_age = Car.get_age car params.cycle in
-  let speed = calc_dist * 16 / (car_age / 24) in
+  (* speed divided by 5 *)
+  let speed = (calc_dist * 16) / (car_age / 24) in
   let calc_dist =
     (* For west US, we override the car distance here for bonus purposes. *)
     if Region.is_west_us params.region && not params.west_us_route_done then
