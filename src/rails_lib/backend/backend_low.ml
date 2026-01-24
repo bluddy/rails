@@ -97,10 +97,10 @@ module Train_update = struct
 
   let _ui_msgs_of_speed_record cars_delivered_speed loc train_idx player =
     match cars_delivered_speed with
-    | [] -> [], 0 
+    | [] -> [], 0
     | x::xs ->
       let (car, _), max_speed =
-        List.fold_left (fun ((_, max_speed) as acc) ((_, speed) as curr) -> 
+        List.fold_left (fun ((_, max_speed) as acc) ((_, speed) as curr) ->
           if speed > max_speed then curr else acc)
         x xs
       in
@@ -211,7 +211,7 @@ module Train_update = struct
       let station_supply = Station.get_supply_exn station in
       let add_converted_goods_to_station cars_delivered =
         let conversion_goods =
-          List.map (fun (car, delivered) -> 
+          List.map (fun (car, delivered) ->
             if delivered then 
               let conv_good = Station.convert (Train.Car.get_good car) v.params.region station in
               match conv_good with

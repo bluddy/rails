@@ -46,7 +46,7 @@ let dump_unused_cars_to_station cars (stop:T.stop) station_supply =
       let expense = Money.mult C.car_cost (added_cars - removed_cars) in
       let work_done = removed_cars + added_cars in
       work_done, expense, train_cars
-                           
+
 
 let train_pickup_and_empty_station cars loc cycle station =
   (* Go over the train and find goods to fill it up with.
