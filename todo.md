@@ -58,6 +58,10 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - City seems to grow too fast
+  - When creating station on rails, lights start all green
+    - Quickly chnages when trains change block status
+  - Train report: speed 0
   - Speed record wrong (13 when should be 20+)
   - Check 2 year income, one cargo, two cities
     - Do we give too much money?
