@@ -382,14 +382,16 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random =
       idx_vars
     in
     let costs = search_for_min_cost_dir () in
-    let get_river i = List.nth costs i |> snd |> fst |> snd in
-    let min_idx = match get_river 0, get_river 1 with
+    (* Decide which end to move from based on rules and cost *)
+    let min_idx =
+      let get_river i = List.nth costs i |> snd |> fst |> snd in
+      match get_river 0, get_river 1 with
       (* Highest priority -> crossing river *)
       | `IsRiver, _ -> `Tgt
       | _, `IsRiver -> `Src
       (* Then, close *)
       | _ when real_dist < 2 -> `Tgt
-      (* Then, go by minimum *)
+      (* Then, go by minimum cost *)
       | _ -> List.min_f (fun x -> x |> snd |> snd) costs |> snd |> fst
     in
     let dir_adjust = List.assoc ~eq:equal_tgt_src min_idx costs |> fst |> fst in
@@ -399,6 +401,7 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random =
     let dir = shift dir_adjust @@ dir1 in
     let real_dist = Utils.classic_dist src_loc tgt_loc in
 
+    (* loc1 and loc2 here refer to rotations of src and tgt locs *)
     let rec build_one_track ~tracks ~ai_track loc1 loc2 at_station =
       let t = Trackmap.get loc1 tracks in
       let track_modify = match t, at_station with
@@ -437,8 +440,8 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random =
       let track = Trackmap.get loc1 tracks in
       let build_track_of_kind kind =
         (* Add track facing opposite way *)
-        let track = Track.empty company kind
-         |> Track.add_dir ~dir:(Dir.opposite dir) in
+        let track = Option.get_or track ~default:(Track.empty company kind) in
+        let track = Track.add_dir ~dir:(Dir.opposite dir) track in
         let tracks = Trackmap.set loc1 track tracks in
         tracks, loc1::ai_track, at_station, `Ok
       in
@@ -452,14 +455,14 @@ let _build_track_btw_stations tgt_loc src_loc ~company ~tracks ~tilemap random =
        | _ -> build_track_of_kind @@ Track.Track `Single
       in
       match tile, min_idx, ok with
-      (* Make sure we finish bridge in same direction *)
       | _, _, `Fail -> None
+      (* Make sure we finish bridge in same direction *)
       | (River _ | Landing _), _, _ -> build_one_track ~tracks ~ai_track loc1 loc2 at_station 
       (* Unflip src/tgt *)
       | _, `Tgt, _ -> connect_stations ~ai_track ~tracks loc1 loc2 at_station src_at_station
       | _, `Src, _ -> connect_stations ~ai_track ~tracks loc2 loc1 tgt_at_station at_station
     in
-    build_one_track ~tracks ~ai_track loc1 loc2 at_station 
+    build_one_track ~tracks ~ai_track loc1 loc2 at_station
   in
   connect_stations ~ai_track ~tracks src_loc tgt_loc `AtStation `AtStation
 

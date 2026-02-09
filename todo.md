@@ -62,16 +62,15 @@
   - When creating station on rails, lights start all green
     - Quickly chnages when trains change block status
   - Train report: speed 0
-  - Speed record wrong (13 when should be 20+)
   - Check 2 year income, one cargo, two cities
     - Do we give too much money?
   - Player avg ton-miles record check
   - Stock broker ticker music missing
   - No notice of new supply of coal?
-  - AI has a gap when connecting north to south
   - Cannot buy AI stock (nothing happens)
   - Train income:
     - Revenue ytd not updating properly
+  - End of year stock shows 2 rects with 3 players
   - Bonus from priority delivery doesn't go away after delivery
   - Bonus too high for distance
   - Bonus added to money too high (maybe not decremented)
