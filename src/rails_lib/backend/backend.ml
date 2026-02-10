@@ -190,7 +190,7 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
   let blocks = Block_map.handle_build_station player_idx graph v.blocks track trains loc after in
   let station = match station_type with
   | `SignalTower ->
-    Station.make_signaltower x y ~year:v.params.year player_idx
+      Station.make_signaltower x y ~year:v.params.year player_idx
   | _ ->
     let city_xy = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
     let first = not @@ Station_map.have_engine_shop v.stations in
@@ -215,7 +215,6 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
     in
     Station.make x y ~year:v.params.year ~city_xy ~suffix ~city_name ~kind:station_type player_idx ~first
   in
-  let loc = (x, y) in
   let stations = Station_map.add loc station v.stations in
   (* Initialize supply and demand *)
   ignore @@ Station.update_supply_demand v.map v.params station;
@@ -225,7 +224,8 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
       |> Player.pay `StructuresEquipment (Station.price_of ~union_station station_type)
     in
     match build_new_track_dir with
-    | Some dir -> Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map player
+    | Some dir ->
+        Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map player
     | _ -> player)
   in
   if Station.is_big_station station_type then
