@@ -150,11 +150,6 @@ type signals = {
   upper: signal * override;
 } [@@deriving yojson]
 
-let default_signals = {
-  lower=(Go, NoOverride);
-  upper=(Go, NoOverride);
-}
-
 type t = {
   loc: Utils.loc;
   year: int;
@@ -254,10 +249,10 @@ let can_train_go dir (v:t) =
   | Go, _ -> true, `None
   | Stop, _ -> false, `None
 
-let make_signaltower x y ~year player_idx =
-  { loc=(x, y); year; info=None; player=player_idx; signals=default_signals}
+let make_signaltower x y ~year ~signals player_idx =
+  { loc=(x, y); year; info=None; player=player_idx; signals}
 
-let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
+let make x y ~year ~city_xy ~city_name ~suffix ~kind ~signals player_idx ~first =
   let name = match suffix with
     | Some suffix -> city_name^" "^show_suffix suffix
     | None -> city_name
@@ -290,7 +285,6 @@ let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
         holds_priority_shipment=false;
       } |> Option.some
   in
-  let signals = default_signals in
   { loc=(x, y); year; info; player=player_idx; signals}
 
 let has_suffix v = match v.info with Some {suffix=Some _; _} -> true | _ -> false

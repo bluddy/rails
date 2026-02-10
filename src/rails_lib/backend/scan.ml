@@ -159,9 +159,8 @@ let scan_station_block tracks trains loc dir player_idx =
         | None -> count, double
         end
 
-    | _ ->
       (* Don't cancel double once we run out of track *)
-      0, true
+    | _ -> 0, true
   in
   let count, double =
     match Trackmap.get loc tracks with

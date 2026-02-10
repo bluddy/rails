@@ -112,6 +112,20 @@ let decr_train_stations_to_update id v =
   in
   notify_stations, Station.Go
 
+  (* Get for both directions *)
+let get_station_signals loc v =
+  let light_of_dir dir =
+    let id = get_station_block (loc, dir) v in
+    let info = Hashtbl.find v.info id in
+    match info.double with
+    | `Single when info.count < 1 -> Station.Go
+    | `Double when info.count < 2 -> Station.Go
+    | _ -> Station.Stop
+  in
+  let upper = light_of_dir `Upper in
+  let lower = light_of_dir `Lower in
+  {Station.lower=lower, NoOverride; upper=upper, NoOverride}
+
 let _remap_station_block_ids ~from_id to_id v =
   (* Remap all stations of a certain id to another one *)
   let stations_to_change = Hashtbl.find v.id_stations from_id in
@@ -173,7 +187,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
       _add_station (loc, `Lower) id2 v;
       v
     (* Found only one id. Add one new one and add to both ends *)
-  | [dir, loc_dirs] -> 
+  | [dir, loc_dirs] ->
       (* Add to existing id, update double info *)
       let loc_dir = LocuHSet.choose_exn loc_dirs in
       let block_id = get_station_block loc_dir v in

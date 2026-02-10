@@ -188,9 +188,10 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
   let graph = G.Track.handle_build_station x y v.graph before after in
   let trains = get_trains player_idx v in
   let blocks = Block_map.handle_build_station player_idx graph v.blocks track trains loc after in
+  let signals = Block_map.get_station_signals loc blocks in
   let station = match station_type with
   | `SignalTower ->
-      Station.make_signaltower x y ~year:v.params.year player_idx
+      Station.make_signaltower x y ~year:v.params.year ~signals player_idx
   | _ ->
     let city_xy = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
     let first = not @@ Station_map.have_engine_shop v.stations in
@@ -213,7 +214,7 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
         let suffix_n = (offset + count) mod Station.num_suffix in
         name, Station.suffix_of_enum suffix_n
     in
-    Station.make x y ~year:v.params.year ~city_xy ~suffix ~city_name ~kind:station_type player_idx ~first
+    Station.make x y ~year:v.params.year ~city_xy ~suffix ~city_name ~kind:station_type player_idx ~first ~signals
   in
   let stations = Station_map.add loc station v.stations in
   (* Initialize supply and demand *)
