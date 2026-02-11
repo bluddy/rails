@@ -1,5 +1,6 @@
 # Tasks
 
+(* handle blocks when traveling past station *)
 - Use dosbox debugger to locate where we actually read the total time for running trains.
 - Check priority delivery price vs game
 - Handle > 32 trains with some visual display
@@ -59,8 +60,7 @@
 
 - Bug:
   - City seems to grow too fast
-  - When creating station on rails, lights start all green
-    - Quickly chnages when trains change block status
+  - Train going through station, creates wrong station state (all red)
   - Train report: speed 0
   - Check 2 year income, one cargo, two cities
     - Do we give too much money?

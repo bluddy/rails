@@ -112,19 +112,22 @@ let decr_train_stations_to_update id v =
   in
   notify_stations, Station.Go
 
-  (* Get for both directions *)
-let get_station_signals loc v =
-  let light_of_dir dir =
+  (* Refresh signals for all stations affected by this new station *)
+let new_station_get_stations_to_update loc v =
+  let stations_signal_of_dir dir =
     let id = get_station_block (loc, dir) v in
     let info = Hashtbl.find v.info id in
-    match info.double with
-    | `Single when info.count < 1 -> Station.Go
-    | `Double when info.count < 2 -> Station.Go
-    | _ -> Station.Stop
+    let signal = match info.double with
+      | `Single when info.count < 1 -> Station.Go
+      | `Double when info.count < 2 -> Station.Go
+      | _ -> Station.Stop
+    in
+    let notify_stations = stations_of_block id v in
+    notify_stations, signal
   in
-  let upper = light_of_dir `Upper in
-  let lower = light_of_dir `Lower in
-  {Station.lower=lower, NoOverride; upper=upper, NoOverride}
+  let upper = stations_signal_of_dir `Upper in
+  let lower = stations_signal_of_dir `Lower in
+  upper, lower
 
 let _remap_station_block_ids ~from_id to_id v =
   (* Remap all stations of a certain id to another one *)
