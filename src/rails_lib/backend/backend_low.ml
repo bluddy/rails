@@ -509,10 +509,9 @@ module Train_update = struct
     match track.kind with
     | Station _ ->
         let train, stations, data, active_stations, ui_msgs = match train.state with
-            (* This is only when we've already processed the train *)
-          | Traveling s when s.traveling_past_station ->
-              (* TODO: handle blocks when traveling past station *)
-              default_ret
+            (* This is only when we've already processed the train and just
+               haven't moved enough yet *)
+          | Traveling s when s.traveling_past_station -> default_ret
 
             (* This is before possibly entering the station *)
           | Traveling s ->
