@@ -97,9 +97,9 @@ let incr_train_stations_to_update locu v =
   | 2, `Double -> stations_of_block id v
   | _ -> []
   in
-  id, notify_stations, Station.Stop
+  notify_stations, Station.Stop
 
-let decr_train_stations_to_update id v =
+let decr_train_stations_to_update_by_block id v =
   Log.debug (fun f -> f "Block: decr_train for id %s" (Id.show id));
   let info = Hashtbl.find v.info id in
   if info.count > 0 then (
@@ -111,6 +111,10 @@ let decr_train_stations_to_update id v =
   | _ -> []
   in
   notify_stations, Station.Go
+
+let decr_train_stations_to_update locu v =
+  let id = get_station_block locu v in
+  decr_train_stations_to_update_by_block id v
 
   (* Refresh signals for all stations affected by this new station *)
 let new_station_get_stations_to_update loc v =
@@ -207,7 +211,7 @@ let handle_build_station player_idx graph v trackmap trains loc after =
   | [dir1, loc_dirs1; dir2, loc_dirs2 ] ->
       assert Dir.(equal (opposite dir1) dir2);
 
-      (* Deal with the case of both sides connected to each other only.
+      (* Deal with the edge case of both sides connected to each other only.
          In this case, we haven't even put them in the block map yet *)
       if LocuHSet.cardinal loc_dirs1 = 1 && LocuHSet.cardinal loc_dirs2 = 1 &&
           LocuHSet.mem loc_dirs1 (loc, Dir.to_upper dir2) &&
@@ -232,13 +236,13 @@ let handle_build_station player_idx graph v trackmap trains loc after =
         (* Check if it's the same block. They should have nothing in common *)
         let intersect = LocuHSet.inter loc_dirs1 loc_dirs2 in
         if LocuHSet.cardinal intersect > 0 then (
-          (* Same block on both sides *)
+          (* Edge case: same block on both sides *)
           _add_station (loc, Dir.to_upper dir1) block_id1 v;
           _add_station (loc, Dir.to_upper dir2) block_id1 v;
           (* Double status and count stays the same *)
           v
         ) else (
-          (* Different blocks. Split blocks with new station. On one end, connect *)
+          (* Normal case. Different blocks. Split blocks with new station. On one end, connect *)
           _add_station (loc, Dir.to_upper dir1) block_id1 v;
           let count, double = Scan.scan_station_block trackmap trains loc dir1 player_idx in
           _set_block_double block_id1 double v;

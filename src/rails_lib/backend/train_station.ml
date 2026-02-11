@@ -117,15 +117,32 @@ let train_stops_at (station:Station.t) train =
   | Some _ when Utils.equal_loc (Train.get_dest train) @@ Station.get_loc station -> true
   | _ -> false
 
-let remove_train train_idx blocks trainmap stations =
+  (* Return the block at the location, if any *)
+let find_block_at loc tracks blocks graph player_idx =
+  let station_locu = match Scan.scan tracks loc player_idx with
+    | NoResult
+    | Station _ (* We're in a station, not in a block *)
+    | Ixn [] | Track [] -> None
+    | Ixn (ixn::_)
+    | Track (ixn::_) ->
+        let loc = ixn.x, ixn.y in
+        if ixn.station then Some (loc, Dir.to_upper ixn.dir)
+        else
+          let stations = Track_graph.connected_stations_dirs graph tracks [loc] in
+          Utils.LocuHSet.choose stations
+  in
+  Option.map (fun locu -> Block_map.get_station_block locu blocks) station_locu
+
+let remove_train train_idx tracks blocks graph trainmap stations player_idx =
   (* Same function called by Backend *)
   let train = Trainmap.get train_idx trainmap in
-  let stations = match train.state with
-    | Traveling {block; _} ->
-        let locus, signal = Block_map.decr_train_stations_to_update block blocks in
+  let stations =
+    let block = find_block_at (train.x/C.tile_w, train.y/C.tile_h) tracks blocks graph player_idx in
+    match block with
+    | Some block ->
+        let locus, signal = Block_map.decr_train_stations_to_update_by_block block blocks in
         Station_map.update_signals locus signal stations
-
-    | _ -> stations
+    | None -> stations
   in
   Trainmap.delete train_idx trainmap, stations
 

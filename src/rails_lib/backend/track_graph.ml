@@ -218,7 +218,7 @@ let _connected_stations_dirs ~start_ixns ~seen_ixns graph trackmap =
     (* Iterate over ixns we built up *)
     LocHSet.iter (fun ixn ->
       if LocHSet.mem seen_ixns ixn then ()
-      else ( 
+      else (
         (* loop over attached ixn/dirs *)
         iter_succ_ixn_dirs (fun ixn dir ->
           if Trackmap.has_station ixn trackmap then 

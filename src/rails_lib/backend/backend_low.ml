@@ -395,10 +395,10 @@ module Train_update = struct
       (* enter block *)
       let locd = (loc, dir) in
       let locu = Utils.locu_of_locd locd in
-      let block, station_locus, signal = Block_map.incr_train_stations_to_update locu v.blocks in
+      let station_locus, signal = Block_map.incr_train_stations_to_update locu v.blocks in
       let stations = Station_map.update_signals station_locus signal stations in
       let train = { train with
-          state=Train.start_traveling ~past_station:true block;
+          state=Train.start_traveling ~past_station:true;
           economic_activity=false; (* reset *)
         }
       in
@@ -425,7 +425,7 @@ module Train_update = struct
     in
     bridge_crashes @ crashes
 
-  let _handle_train_crash crash_info player_idx blocks trainmap stations params =
+  let _handle_train_crash crash_info player_idx trainmap stations v params =
     (* Get train set and remove doubles *)
     let crash_info, bridge_crash_info, train_id_set =
       List.fold_left (fun ((acc_crash, acc_bridge, id_set) as a) -> function
@@ -457,7 +457,7 @@ module Train_update = struct
       let train_ids = Train.IdSet.to_list trains_to_remove |> List.rev in
       let trainmap, stations =
         List.fold_left (fun (trains, stations) train_id ->
-          Train_station.remove_train train_id blocks trains stations)
+          Train_station.remove_train train_id v.track v.blocks v.graph trains stations player_idx)
           (trainmap, stations)
           train_ids
       in
@@ -485,7 +485,7 @@ module Train_update = struct
             let train_id = Utils.read_pair train_ids choice in
             Trainmap.update train_id trainmap (fun train ->
               match train.state with
-              | Traveling {block; _} -> {train with state=WaitingToBePassed{wait_time; block}}
+              | Traveling _ -> {train with state=WaitingToBePassed{wait_time}}
               (* If we caught the train in a different state, do nothing *)
               | _ -> train))
             trainmap
@@ -514,8 +514,9 @@ module Train_update = struct
           | Traveling s when s.traveling_past_station -> default_ret
 
             (* This is before possibly entering the station *)
-          | Traveling s ->
-              let station_locus, signal = Block_map.decr_train_stations_to_update s.block v.blocks in
+          | Traveling _ ->
+              let dir = train.dir |> Dir.opposite |> Dir.to_upper in
+              let station_locus, signal = Block_map.decr_train_stations_to_update (loc, dir) v.blocks in
               let stations = Station_map.update_signals station_locus signal stations in
               let train, stations, data, ui_msgs =
                 if train.hold_at_next_station then
@@ -592,8 +593,8 @@ module Train_update = struct
               s.wait_time <- s.wait_time - 1;
               default_ret
 
-          | WaitingToBePassed s ->
-              let train = {train with state = Train.start_traveling ~past_station:false s.block} in
+          | WaitingToBePassed _ ->
+              let train = {train with state = Train.start_traveling ~past_station:false} in
               train, stations, None, [], []
         in
         (* Log.debug (fun f -> f "Train at station: %s" (Train.show_state train.state)); *)
@@ -884,7 +885,7 @@ let handle_cycle ~delayed_fn v =
 
     let trains, stations, player, tr_msgs, crash_info = Train_update._update_all_trains v player in
     let stations, trains, crash_msgs =
-      Train_update._handle_train_crash crash_info player_idx v.blocks trains stations params in
+      Train_update._handle_train_crash crash_info player_idx trains stations v params in
 
     let player =
       if cycle mod C.Cycles.periodic_maintenance = 0 then

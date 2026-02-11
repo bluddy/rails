@@ -549,7 +549,7 @@ let _remove_train train_idx player_idx v =
   (* Same function called by Backend *)
   let players, stations = Player.update' v.players player_idx @@ fun player ->
     let trains, stations =
-      Train_station.remove_train train_idx v.blocks player.trains v.stations in
+      Train_station.remove_train train_idx v.track v.blocks v.graph player.trains v.stations player_idx in
     [%up {player with trains}], stations
   in
   [%up {v with players; stations}]

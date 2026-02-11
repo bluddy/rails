@@ -113,20 +113,18 @@ type state =
                    mutable target_speed: int;
                    (* To prevent double processing, we turn on this flag while at a station location *)
                    mutable traveling_past_station: bool;
-                   block: Block_map_d.Id.t; 
                 }
   | LoadingAtStation of {mutable wait_time: int} (* We always go through this state *)
   | WaitingToBePassed of {  (* When a train passes us in no-dispatcher-ops *)
       mutable wait_time: int;
-      block: Block_map_d.Id.t;
   } 
   | WaitingForFullLoad (* In a station with Wait *)
   | HoldingAtStation (* Held and waiting for unhold by player. Before entering station *)
   | StoppedAtSignal of Dir.t (* Waiting at a hold signal. After exiting station *)
   [@@deriving yojson, show]
 
-let start_traveling ~past_station block = 
-    Traveling {speed=0; target_speed=4; traveling_past_station=past_station; block}
+let start_traveling ~past_station =
+    Traveling {speed=0; target_speed=4; traveling_past_station=past_station}
 
 type periodic = {
   mutable dist_traveled: int;

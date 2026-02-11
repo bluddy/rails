@@ -90,7 +90,7 @@ type t =
   | Station of ixn list  (* 0/1/2 ixns *)
   | Track of ixn list (* 0/1/2 ixns *)
   [@@deriving eq, show]
-        
+
 (* Return a query about the block from a particular tile
    Get back a list of scan results
  *)

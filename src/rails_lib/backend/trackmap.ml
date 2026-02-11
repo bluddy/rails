@@ -105,7 +105,7 @@ let check_build_station ((x, y) as loc) player_idx station_type v =
        let station_test = Utils.scan x y ~range ~width:v.width ~height:v.height ~f:match_fn in
        if Option.is_some station_test then `TooClose else `Ok
   | _ -> `Illegal
-   
+
 let build_station v loc station_type =
   match get loc v with
   | Some ({kind=Track _; _} as t) ->
@@ -191,7 +191,7 @@ let build_bridge loc ~dir player_idx ~kind v =
 
 let build_tunnel loc ~dir player_idx ~length v =
   build_stretch loc ~dir player_idx ~n:length ~kind:Track.Tunnel v
-   
+
   (* Can work for all kinds of constructs *)
 let check_remove_track loc ~dir player_idx v =
   match out_of_bounds loc v, move_dir_bounds loc ~dir v with
