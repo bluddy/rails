@@ -5,13 +5,13 @@ An OCaml remake of [Railroad Tycoon](https://en.wikipedia.org/wiki/Railroad_Tyco
 [![OCaml](https://img.shields.io/badge/OCaml-5.x-blue.svg)](https://ocaml.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-See [FEATURES.md](docs/FEATURES.md) for a full list of features.
+See [FEATURES.md](docs/FEATURES.md) for a full list of implemented features.
 
 ## Prerequisites
 
 - OCaml 5.x with opam
 - Original Railroad Tycoon files.
-  Unfortunately Railroad Tycoon is not available for sale digitally, so you'll need to buy it off of ebay and such.
+  (Unfortunately Railroad Tycoon is not available for sale digitally, so you'll need to buy it off of ebay and such.)
 
 ## Data Files
 
@@ -43,8 +43,8 @@ dune exec rails -- --zoom 3 --shader crt-hyllian2 --adjust-ar
 |--------|-------------|
 | `--load N` | Load save slot 0–9 |
 | `--zoom N` | Display zoom, multiply the original 320x200 resolution (default: 3) |
-| `--shader NAME` | Shader from `shaders/*.glsl` (test, crt-hyllian, crt-hyllian2, vga-1080p, etc.) |
-| `--adjust-ar` | Adjust aspect ratio |
+| `--shader NAME` | Shader from `shaders/*.glsl` (test, crt-hyllian, vga-1080p, etc.) |
+| `--adjust-ar` | Adjust aspect ratio (rectangular pixels like DOS)|
 
 ## Project structure
 
@@ -66,4 +66,7 @@ dune build @doc
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Future
+Unlike the original, the game is built with fronted-backend separation, so in theory it could be made to support >1 player.
 
