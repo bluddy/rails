@@ -1,9 +1,3 @@
-
-# Open Railroad Tycoon
-
-An implementation of Railroad Tycoon, written in OCaml.
-Requires the original files to play (Railroad Tycoon is sadly not sold digitally yet and can only be obtained on ebay).
-
 ## Feature List for 1.0
 
 - [x] PANI Animation system
@@ -61,4 +55,5 @@ Requires the original files to play (Railroad Tycoon is sadly not sold digitally
 - [ ] Duplicate all graphics.
 - [ ] Raise resolution.
 - [ ] Multiplayer? (lots of work, but basics are there)
+
 
