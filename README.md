@@ -5,7 +5,7 @@ An OCaml remake of [Railroad Tycoon](https://en.wikipedia.org/wiki/Railroad_Tyco
 [![OCaml](https://img.shields.io/badge/OCaml-5.x-blue.svg)](https://ocaml.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-See [FEATURES.md](FEATURES.md) for a full list of features.
+See [FEATURES.md](docs/FEATURES.md) for a full list of features.
 
 ## Prerequisites
 
@@ -54,7 +54,7 @@ dune exec rails -- --zoom 3 --shader crt-hyllian2 --adjust-ar
   - `anim/` — PANI animation format
   - `utils/` — Rendering, image loading, sound
 - `shaders/` — GLSL shaders for display
-- [technical_documentation.md](technical_documentation.md) — Architecture and design details
+- [technical_documentation.md](docs/technical_documentation.md) — Architecture and design details
 
 ## Development
 
