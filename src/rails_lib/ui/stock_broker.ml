@@ -138,6 +138,7 @@ let render win (s:State.t) v =
         true, color
       )
     in
+    let stocks = backend.stocks in
     let cash_s = M.print ~region ~spaces:7 @@ B.get_cash player_idx backend in
     write ~color ~x:x_right ~y @@ sp "Cash:%s" cash_s;
     let y = y + line in
@@ -146,14 +147,18 @@ let render win (s:State.t) v =
     write ~color ~x:x_left ~y @@ sp "Net Worth:%s" @@ M.print ~region ~spaces:8 @@ B.get_net_worth player_idx backend;
     let per_s = if is_ai then "/" else " per " in
     write ~color ~x:x_right ~y @@ sp "Stock at %s.00%sshare"
-      (M.print ~ks:false ~region @@ Stock_market.share_price player_idx s.backend.stocks) per_s;
+      (M.print ~ks:false ~region @@ Stock_market.share_price player_idx stocks) per_s;
     let y = y + line in
-    let treasury, non = Stock_market.treasury_shares player_idx s.backend.stocks, Stock_market.non_treasury_shares player_idx s.backend.stocks in
+    let treasury, non = Stock_market.treasury_shares player_idx s.backend.stocks, Stock_market.public_shares player_idx s.backend.stocks in
     write ~color ~x:x_left ~y @@ sp "Public: %d,000 Treasury %d,000" non treasury;
+    if is_ai then (
+      let owned_stock = Stock_market.owned_shares C.player ~owned:player_idx stocks in
+      if owned_stock > 0 then (
+        write ~color ~x:172 ~y @@ sp "%s: %d,000" (B.get_handle C.player backend) @@ owned_stock));
     y + line + line
   in
-  let y = Iter.fold (fun y player_idx -> render_player_info player_idx s.backend y) y @@ B.players_and_ai s.backend in
-  write ~x:65 ~y @@ sp "Interest Rates: (%s) %d%%"
+  let _ = Iter.fold (fun y player_idx -> render_player_info player_idx s.backend y) y @@ B.players_and_ai s.backend in
+  write ~x:65 ~y:184 @@ sp "Interest Rates: (%s) %d%%"
     (Climate.show @@ B.get_climate s.backend)
     (Backend.get_interest_rate s.backend player_idx);
 
