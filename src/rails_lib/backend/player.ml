@@ -522,7 +522,7 @@ let has_broker_timer player = Option.is_some player.broker_timer
 let incr_broker_timer player =
   let broker_timer, msg = match player.broker_timer with
     | None -> Some 0, false
-    | Some i when i = 3 -> None, true
+    | Some i when i > 3 -> None, true
     | Some i -> Some (i + 1), false
   in
   {player with broker_timer}, msg

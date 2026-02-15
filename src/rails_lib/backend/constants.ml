@@ -77,6 +77,8 @@ module Cycles = struct
   let ai_track = 16
   let ai_financial = 16
   let ai_financial_choice = 4 (* 0-2 AIs or 3=nothing *)
+
+  let broker_timer = 16 (* Wait so ai can respond to buying stocks *)
 end
 
 let priority_min_dist = 6
