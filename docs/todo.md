@@ -1,6 +1,8 @@
 # Tasks
 
-(* handle blocks when traveling past station *)
+- No track -> no time movement
+- Town choosing to buy your stock - makes more public stock out of thin air
+  - Look at station building code
 - Use dosbox debugger to locate where we actually read the total time for running trains.
 - Check priority delivery price vs game
 - Handle > 32 trains with some visual display
@@ -59,6 +61,7 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Can't buy more than 30,000 shares in ai
   - Operate rr is broken
     - Doesn't announce takeover
     - Menu is weird
