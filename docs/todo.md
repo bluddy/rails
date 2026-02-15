@@ -59,6 +59,10 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Operate rr is broken
+    - Doesn't announce takeover
+    - Menu is weird
+    - Opening menu crashes
   - City seems to grow too fast
   - Train report: speed 0
   - Check 2 year income, one cargo, two cities
