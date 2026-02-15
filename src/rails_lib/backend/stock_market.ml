@@ -243,8 +243,7 @@ let ai_sell_own_stock ~ai_idx v =
 
 let buy_stock player_idx ~target params ~cash v =
   match can_buy_stock player_idx ~target ~cash params v with
-  | `Ok when Owner.(player_idx = target) ->
-    (* TODO: add_stock: code adds 10 for ai *)
+  | `Ok ->
     let cost, v = _sell_buy_stock player_idx ~target ~buy:true v in
     `Bought cost, v
 
