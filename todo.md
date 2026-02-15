@@ -60,7 +60,6 @@
 
 - Bug:
   - City seems to grow too fast
-  - Train going through station, creates wrong station state (all red)
   - Train report: speed 0
   - Check 2 year income, one cargo, two cities
     - Do we give too much money?
