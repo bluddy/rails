@@ -5,3 +5,4 @@ _build/
 *.png
 data/
 game*.sav
+hof.dat
