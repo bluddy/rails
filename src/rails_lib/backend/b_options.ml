@@ -90,4 +90,4 @@ let compute_difficulty_pct difficulty reality_levels =
   let x = if RealityLevels.mem reality_levels `ComplexEconomy then x + 1 else x in
   let x = if RealityLevels.mem reality_levels `CutthroatCompetition then x + 1 else x in
   x * 10
-  
+

@@ -468,7 +468,7 @@ let get_interest_rate params v =
 let check_sell_bond params v =
   let interest_rate = get_interest_rate params v in
   interest_rate < C.max_interest_rate && not v.m.in_receivership
-    
+
 let sell_bond params (v:t) =
   if check_sell_bond params v then (
     let open Money in

@@ -235,9 +235,26 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
         Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map player
     | _ -> player)
   in
+  let params, players =
+    if Station.is_big_station station_type &&
+       not @@ Params.is_west_us_route_done v.params then
+      let min_x, max_x = Station_map.fold (fun station (min_x, max_x) ->
+        let x = Station.get_loc station |> fst in
+        min x min_x, max x max_x)
+        v.stations
+        ~init:(0, 0)
+      in
+      if min_x <= 52 && max_x >= 220 then
+        send_ui_msg v @@ WestUSRouteDone player_idx;
+        let params = Params.set_west_us_route_done v.params in
+        let players = Player.update players player_idx (Player.add_cash @@ M.of_int 1000) in
+        params, players
+      else
+        v.params, players
+    in
   if Station.is_big_station station_type then
     send_ui_msg v @@ StationBuilt{player_idx; loc};
-  [%up {v with players; stations; graph; track; blocks}]
+  [%up {v with players; stations; graph; track; blocks; params}]
 
 let check_build_tunnel loc ~dir player_idx v =
   let check length = Trackmap.check_build_stretch loc ~dir player_idx ~length v.track in

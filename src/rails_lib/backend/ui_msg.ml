@@ -116,5 +116,6 @@ type t =
   | SpeedRecord of {player_idx: Owner.t; speed: int; src: loc; dst: loc; train_idx: Train.Id.t }
   | FiscalPeriodEnd of Owner.t
   | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
+  | WestUSRouteDone of Owner.t
   [@@deriving yojson]
 

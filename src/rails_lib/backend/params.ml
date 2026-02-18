@@ -38,3 +38,7 @@ let next_period = last_period
 
 let age v = v.year - v.year_start
 
+let is_west_us_route_done v = v.west_us_route_done
+
+let set_west_us_route_done v = {v with west_us_route_done=true}
+

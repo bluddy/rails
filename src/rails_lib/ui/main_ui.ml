@@ -1129,6 +1129,12 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode = StationReport(x, y) in
         {v with mode})
 
+      | WestUSRouteDone player_idx ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let str = "$1,000,000 bonus for\nTRANSCONTINENTAL\nRAILROAD!" in
+        let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews str None in
+        {v with mode}
+
       | PriorityShipmentCanceled{player_idx} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None in
