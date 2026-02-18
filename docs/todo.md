@@ -61,8 +61,8 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
-  - Can't buy more than 30,000 shares in ai
   - Operate rr is broken
+    - Don't show that we control the company (the shares)
     - Doesn't announce takeover
     - Menu is weird
     - Opening menu crashes

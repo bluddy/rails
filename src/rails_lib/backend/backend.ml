@@ -197,6 +197,7 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
     (* Get suffix if needed *)
     let city_name, suffix =
       let (x,y) = city_xy in
+      (* OG used city offset to generate random suffix offset. We just randomize *)
       let name, offset = Cities.find_exn x y v.cities in
       let count =
         Station_map.fold (fun station count ->
@@ -208,6 +209,9 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
         v.stations
         ~init:0
       in
+      (* OG used a bitset to find an unused suffix (that was then mixed with offset)
+         The only advantage is that it also tried to make sure that a depot won't be named
+         the main station. But this is silly. You can upgrade stations later. Not worth the effort.*)
       if count = 0 then name, None
       else
         let suffix_n = (offset + count) mod Station.num_suffix in

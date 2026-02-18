@@ -5,6 +5,7 @@ open Containers
    (* int: random offset for suffix.
       To make station names interesting, we have a list of suffixes,
       and we distribute random offsets with our cities into that list.
+      OG used the city index to get random offsets
     *)
     map: (int, string * int) Utils.Hashtbl.t;
     arr: (int * int) array; (* locations *)
