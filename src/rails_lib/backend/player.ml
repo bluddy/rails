@@ -172,6 +172,7 @@ type t = {
   history: History.t;
   record: Record.t;
   achievements: Achievement.t;
+  town_stock_buy_offer: bool; (* We have an offer from a town to buy our stock *)
 } [@@deriving yojson]
 
 
@@ -194,6 +195,7 @@ let default idx = {
   history = History.default;
   record = Record.default;
   achievements = Achievement.default;
+  town_stock_buy_offer = false;
 }
 
 let get_cash v = v.m.cash
@@ -786,4 +788,8 @@ let update_retirement_bonus_and_job ~fired stocks params v =
 let get_achievements v = v.achievements
 
 let get_track_pieces_history v = v.history.track_pieces
+
+let set_town_stock_buy_offer v = {v with town_stock_buy_offer=true}
+
+let has_town_stock_buy_offer v = v.town_stock_buy_offer
 

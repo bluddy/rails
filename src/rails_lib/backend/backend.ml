@@ -188,14 +188,14 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
   let graph = G.Track.handle_build_station x y v.graph before after in
   let trains = get_trains player_idx v in
   let blocks = Block_map.handle_build_station player_idx graph v.blocks track trains loc after in
-  let station = match station_type with
+  let station, players = match station_type with
   | `SignalTower ->
-      Station.make_signaltower x y ~year:v.params.year player_idx
+      Station.make_signaltower x y ~year:v.params.year player_idx, players
   | _ ->
     let city_xy = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
     let first = not @@ Station_map.have_engine_shop v.stations in
     (* Get suffix if needed *)
-    let city_name, suffix =
+    let city_name, suffix, count =
       let (x,y) = city_xy in
       (* OG used city offset to generate random suffix offset. We just randomize *)
       let name, offset = Cities.find_exn x y v.cities in
@@ -212,10 +212,21 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
       (* OG used a bitset to find an unused suffix (that was then mixed with offset)
          The only advantage is that it also tried to make sure that a depot won't be named
          the main station. But this is silly. You can upgrade stations later. Not worth the effort.*)
-      if count = 0 then name, None
+      if count = 0 then name, None, count
       else
         let suffix_n = (offset + count) mod Station.num_suffix in
-        name, Station.suffix_of_enum suffix_n
+        name, Station.suffix_of_enum suffix_n, count
+    in
+    if not first && count = 0 then begin
+      let player = get_player player_idx v in
+      let share_price = Stock_market.share_price player_idx v.stocks in
+      if Player.bonds player > Player.get_cash player &&
+        M.(Station.stock_value_of_station station_type > share_price) then (
+          send_ui_msg v @@ TownOffersToBuyStock{x; y; share_price; player_idx};
+          update_player v player_idx (Player.set_town_stock_buy_offer)
+      )
+      else players
+    end else players
     in
     Station.make x y ~year:v.params.year ~city_xy ~suffix ~city_name ~kind:station_type player_idx ~first
   in

@@ -49,10 +49,16 @@ let maintenance_of_kind = function
   | `Station -> moi 3
   | `Terminal -> moi 4
 
-
-let is_big_station (x:kind) = match x with
+let is_big_station = function
   | `SignalTower -> false
   | _ -> true
+
+(* Used when town considers buying your stock *)
+let stock_value_of_station = function
+  | `SignalTower -> 0
+  | `Depot -> 15
+  | `Station -> 30
+  | `Terminal -> 45
 
 type upgrade =
   | MaintenanceShop
@@ -497,7 +503,7 @@ let total_picked_up_goods v = with_info v 0
   (fun info ->
     let goods = info.picked_up_goods in
     Hashtbl.sum (fun _ num -> num) goods)
-  
+
 let total_lost_supply v = with_info v 0
   (fun info ->
     let supply = info.lost_supply in
