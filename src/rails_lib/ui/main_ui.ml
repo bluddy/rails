@@ -1168,14 +1168,6 @@ let handle_msgs (s:State.t) v ui_msgs =
         let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews str None in
         {v with mode}
 
-      | CityOffersToBuyStock {x; y; share_price; player_idx} ->
-        if Owner.(player_idx <> main_player_idx) then v else
-        let station_str = B.get_station (x,y) b |> Option.get_exn_or "missing station " |> Station.get_name in
-        let menu = city_buy_stock_menu s.fonts (B.get_region b) ~station_str ~price:share_price in
-        let modal = make_modal menu player_idx in
-        let mode = CityOffersToBuyStockMode modal in
-        {v with mode}
-
       | PriorityShipmentCanceled{player_idx} ->
         if Owner.(player_idx <> main_player_idx) then v else
         let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews Priority_shipment.cancel_text None in
