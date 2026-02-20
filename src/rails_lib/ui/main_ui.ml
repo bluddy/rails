@@ -339,7 +339,7 @@ let build_industry_menu fonts region =
     (make_entry "NONE" @@ `Action(None)) ::
     entries
 
-let build_signal_menu fonts x y =
+let signal_menu fonts x y =
   let open Menu in
   let open MsgBox in
   make ~fonts ~x ~y
@@ -401,6 +401,21 @@ let confirm_build_site_menu fonts =
   make ~fonts ~heading:"Site selected..." ~x:144 ~y:24 [
     make_entry "Build" @@ `Action(Some ());
     make_entry "Cancel" @@ `Action None;
+  ]
+
+let city_buy_stock_menu fonts region ~city_str ~price =
+  let open Menu in
+  let open MsgBox in
+  let heading = sp
+    "%s offers to\n\
+    purchase 10,000 shares of\n\
+    your stock at %s per share."
+    city_str
+    (M.print ~ks:false ~region ~decimal:true price)
+  in
+  make ~fonts ~heading ~x:80 ~y:64 [
+    make_entry "Sell Stock" @@ `Action(Some true);
+    make_entry "No Deal" @@ `Action None;
   ]
 
 module Train_roster = struct
@@ -705,8 +720,8 @@ let handle_event (s:State.t) v (event:Event.t) time =
 
         | `SignalMenu(x, y, dir, screen_x, screen_y) ->
             let menu =
-              build_signal_menu s.fonts screen_x screen_y
-              (* build_signal_menu s.fonts 10 10 (*((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y) *) *)
+              signal_menu s.fonts screen_x screen_y
+              (* signal_menu s.fonts 10 10 (*((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y) *) *)
               |> Menu.MsgBox.do_open_menu s
             in
             let modal = make_modal menu (x, y, dir) in
@@ -764,13 +779,31 @@ let handle_event (s:State.t) v (event:Event.t) time =
         (fun _ station_kind ->
             let exit_mode () = next_mode s v, nobaction in
             let x, y = Mapview.get_cursor_pos v.view in
-            match Backend.check_build_station x y player_idx station_kind s.backend with
+            let b = s.backend in
+            match Backend.check_build_station x y player_idx station_kind b with
             | `Ok ->
-                let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
-                next_mode s v, backend_action
-                (* TODO: handle other cases *)
+                match B.check_city_buy_stock_offer x y player_idx station_kind b with
+                | Some city_loc ->
+                  let city_str = Cities.name_of_loc city_loc b.cities in
+                  let price = Stock_market.share_price player_idx b.stocks in
+                  let menu = city_buy_stock_menu s.fonts s.params.region ~city_str ~price in
+                  let mode = CityOffersToBuyStockMode menu in
+                  {v with mode}, nobaction
+                | None ->
+                  let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
+                  next_mode s v, backend_action
+
             | _ -> exit_mode ()
             )
+
+    | CityOffersToBuyStockMode menu ->
+        handle_modal_menu_events menu
+        (fun x -> CityOffersToBuyStockMode x)
+        (fun modal answer ->
+            let player_idx = modal.data in
+            let baction = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
+            if answer then next_mode s v, baction
+            else next_mode s v, baction)
 
     | BuildBridge build_menu ->
         handle_modal_menu_events build_menu
@@ -1133,6 +1166,14 @@ let handle_msgs (s:State.t) v ui_msgs =
         if Owner.(player_idx <> main_player_idx) then v else
         let str = "$1,000,000 bonus for\nTRANSCONTINENTAL\nRAILROAD!" in
         let mode = make_news @@ Newspaper.make_simple s Newspaper.LocalNews str None in
+        {v with mode}
+
+      | CityOffersToBuyStock {x; y; share_price; player_idx} ->
+        if Owner.(player_idx <> main_player_idx) then v else
+        let station_str = B.get_station (x,y) b |> Option.get_exn_or "missing station " |> Station.get_name in
+        let menu = city_buy_stock_menu s.fonts (B.get_region b) ~station_str ~price:share_price in
+        let modal = make_modal menu player_idx in
+        let mode = CityOffersToBuyStockMode modal in
         {v with mode}
 
       | PriorityShipmentCanceled{player_idx} ->
@@ -1703,6 +1744,9 @@ let render (win:R.window) (s:State.t) v =
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | SignalMenu modal ->
+        render_main win s v;
+        Menu.MsgBox.render win s modal.menu
+    | CityOffersToBuyStockMode modal ->
         render_main win s v;
         Menu.MsgBox.render win s modal.menu
     | StationReport(x, y) ->

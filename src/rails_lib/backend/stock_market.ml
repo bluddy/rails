@@ -114,6 +114,10 @@ let set_total_shares player_idx total_shares v =
   let totals = Owner.Map.add player_idx total_shares v.totals in
   {v with totals}
 
+let mod_total_shares player_idx diff v =
+  let totals = Owner.Map.update player_idx (function Some x -> Some (x + diff) | None -> Some diff) v.totals in
+  {v with totals}
+
 let add_to_share_price player_idx change v =
   let prices = Owner.Map.incr_cash player_idx change v.prices in
   {v with prices}
@@ -361,7 +365,7 @@ let get_history owner v = Owner.Map.find owner v.value_histories
 let update_history_with_stock_value player_idx v =
   let value = stock_value player_idx v in
   update_history player_idx value v
-  
+
 let investor_opinion growth_pct =
   if growth_pct >= 25 then Ui_msg.Investors_ecstatic else
   if growth_pct >= 10 then Investors_pleased else

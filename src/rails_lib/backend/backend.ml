@@ -179,7 +179,25 @@ let check_build_station ?(union_station=false) ?(rate_war=false) x y player_idx 
   | `Ok -> Tilemap.check_build_station ~rate_war ~union_station loc v.map
   | x -> x
 
-let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) station_type player_idx v =
+let check_city_buy_stock_offer_inner_ player_idx station_type ~city_loc ~num_stations_at_city v =
+  let first_station = Station_map.is_empty v.stations in
+  if Station.is_big_station station_type &&
+    not first_station &&
+    num_stations_at_city = 0 then
+    let player = get_player player_idx v in
+    let share_price = Stock_market.share_price player_idx v.stocks in
+    if M.(Player.bonds player > Player.get_cash player) &&
+      M.(Station.stock_value_of_station station_type > share_price) then
+        Some city_loc
+    else None
+  else None
+
+let check_city_buy_stock_offer x y player_idx station_type v =
+  let city_loc = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
+  let num_stations_at_city = Station_map.num_stations_of_city city_loc v.stations in
+  check_city_buy_stock_offer_inner_ player_idx station_type ~city_loc ~num_stations_at_city v
+
+let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) ?(sell_stock=false) station_type player_idx v =
   let is_ok = match check_build_station ~rate_war x y player_idx station_type v with `Ok -> true | _ -> false in
   if not is_ok then v else
   let before = Scan.scan v.track loc player_idx in
@@ -188,47 +206,31 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
   let graph = G.Track.handle_build_station x y v.graph before after in
   let trains = get_trains player_idx v in
   let blocks = Block_map.handle_build_station player_idx graph v.blocks track trains loc after in
-  let station, players = match station_type with
+  let station, sell_stock = match station_type with
   | `SignalTower ->
-      Station.make_signaltower x y ~year:v.params.year player_idx, players
+      Station.make_signaltower x y ~year:v.params.year player_idx, false
   | _ ->
-    let city_xy = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
-    let first = not @@ Station_map.have_engine_shop v.stations in
+    let city_loc = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
+    let first_station = not @@ Station_map.have_engine_shop v.stations in
+    let num_stations_at_city = Station_map.num_stations_of_city city_loc v.stations in
+    let sell_stock = sell_stock && (check_city_buy_stock_offer_inner_ player_idx station_type
+      ~city_loc ~num_stations_at_city v |> Option.is_some)
+    in
     (* Get suffix if needed *)
-    let city_name, suffix, count =
-      let (x,y) = city_xy in
+    let city_name, suffix =
+      let (x,y) = city_loc in
       (* OG used city offset to generate random suffix offset. We just randomize *)
       let name, offset = Cities.find_exn x y v.cities in
-      let count =
-        Station_map.fold (fun station count ->
-          match Station.get_city station with
-          | Some (city_x, city_y) ->
-            if city_x = x && city_y = y then count + 1
-            else count
-          | _ -> count)
-        v.stations
-        ~init:0
-      in
       (* OG used a bitset to find an unused suffix (that was then mixed with offset)
          The only advantage is that it also tried to make sure that a depot won't be named
          the main station. But this is silly. You can upgrade stations later. Not worth the effort.*)
-      if count = 0 then name, None, count
+      if num_stations_at_city = 0 then name, None
       else
-        let suffix_n = (offset + count) mod Station.num_suffix in
-        name, Station.suffix_of_enum suffix_n, count
+        let suffix_n = (offset + num_stations_at_city) mod Station.num_suffix in
+        name, Station.suffix_of_enum suffix_n
     in
-    if not first && count = 0 then begin
-      let player = get_player player_idx v in
-      let share_price = Stock_market.share_price player_idx v.stocks in
-      if Player.bonds player > Player.get_cash player &&
-        M.(Station.stock_value_of_station station_type > share_price) then (
-          send_ui_msg v @@ TownOffersToBuyStock{x; y; share_price; player_idx};
-          update_player v player_idx (Player.set_town_stock_buy_offer)
-      )
-      else players
-    end else players
-    in
-    Station.make x y ~year:v.params.year ~city_xy ~suffix ~city_name ~kind:station_type player_idx ~first
+    Station.make x y ~year:v.params.year ~city_loc ~suffix ~city_name
+        ~kind:station_type player_idx ~first:first_station, sell_stock
   in
   (* Find updates to signals for new stations *)
   let (notify_stations1, signal1), (notify_stations2, signal2) =
@@ -240,7 +242,8 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
   in
   (* Initialize supply and demand *)
   ignore @@ Station.update_supply_demand v.map v.params station;
-  let players = Player.update v.players player_idx (fun player ->
+  let players = v.players in
+  let players = Player.update players player_idx (fun player ->
     let player = player
       |> Player.add_station loc
       |> Player.pay `StructuresEquipment (Station.price_of ~union_station station_type)
@@ -250,26 +253,41 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) stati
         Player.update_and_pay_for_track x y ~dir ~len:1 ~climate:v.params.climate v.map player
     | _ -> player)
   in
-  let params, players =
-    if Station.is_big_station station_type &&
-       not @@ Params.is_west_us_route_done v.params then
-      let min_x, max_x = Station_map.fold (fun station (min_x, max_x) ->
-        let x = Station.get_loc station |> fst in
-        min x min_x, max x max_x)
-        v.stations
-        ~init:(0, 0)
+  let params, players, stocks =
+    if Station.is_big_station station_type then begin
+      let params, players =
+        if Region.is_west_us v.params.region &&
+          not @@ Params.is_west_us_route_done v.params then begin
+          let min_x, max_x = Station_map.fold (fun station (min_x, max_x) ->
+            let x = Station.get_loc station |> fst in
+            min x min_x, max x max_x)
+            v.stations
+            ~init:(0, 0)
+          in
+          if min_x <= 52 && max_x >= 220 then (
+            send_ui_msg v @@ WestUSRouteDone player_idx;
+            let params = Params.set_west_us_route_done v.params in
+            let players = Player.update players player_idx (Player.add_cash @@ M.of_int 1000) in
+            params, players
+          ) else
+            v.params, players
+        end else
+          v.params, players
       in
-      if min_x <= 52 && max_x >= 220 then
-        send_ui_msg v @@ WestUSRouteDone player_idx;
-        let params = Params.set_west_us_route_done v.params in
-        let players = Player.update players player_idx (Player.add_cash @@ M.of_int 1000) in
-        params, players
-      else
-        v.params, players
-    in
-  if Station.is_big_station station_type then
-    send_ui_msg v @@ StationBuilt{player_idx; loc};
-  [%up {v with players; stations; graph; track; blocks; params}]
+      let players, stocks = if sell_stock then
+          let share_price = Stock_market.share_price player_idx v.stocks in
+          let stocks = Stock_market.mod_total_shares player_idx 10 v.stocks in
+          let players = Player.update players player_idx @@ Player.add_cash @@ M.(share_price * 10) in
+          players, stocks
+        else
+          players, v.stocks
+      in
+      send_ui_msg v @@ StationBuilt{player_idx; loc};
+      params, players, stocks
+    end else
+      v.params, players, v.stocks
+  in
+  [%up {v with players; stations; graph; track; blocks; stocks; params}]
 
 let check_build_tunnel loc ~dir player_idx v =
   let check length = Trackmap.check_build_stretch loc ~dir player_idx ~length v.track in
@@ -994,7 +1012,7 @@ module Action = struct
     | Unpause
     | BuildTrack of msg
     | BuildFerry of msg
-    | BuildStation of {x: int; y: int; kind: Station.kind; player_idx: Owner.t}
+    | BuildStation of {x: int; y: int; kind: Station.kind; player_idx: Owner.t; sell_stock: bool}
     | BuildBridge of msg * Bridge.t
     | BuildTunnel of msg * int (* length: 3 or 2 * length *)
     | RemoveTrack of msg
@@ -1039,8 +1057,8 @@ module Action = struct
           _build_track (x,y) ~dir player_idx backend 
       | BuildFerry {x; y; dir; player_idx} ->
           _build_ferry (x,y) ~dir player_idx backend
-      | BuildStation {x; y; kind; player_idx} ->
-          _build_station (x,y) kind player_idx backend
+      | BuildStation {x; y; kind; player_idx; sell_stock} ->
+          _build_station (x,y) kind player_idx ~sell_stock backend
       | BuildBridge({x; y; dir; player_idx}, kind) ->
           _build_bridge (x,y) ~dir ~kind player_idx backend
       | BuildTunnel({x; y; dir; player_idx}, _length) ->

@@ -8,6 +8,8 @@ type 'a t = 'a LocMap.t [@@deriving yojson]
 
 let empty = LocMap.empty
 
+let is_empty = LocMap.is_empty
+
 let length v = LocMap.cardinal v
 
 let iter f v = LocMap.iter (fun _ station -> f station) v

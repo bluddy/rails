@@ -55,10 +55,10 @@ let is_big_station = function
 
 (* Used when town considers buying your stock *)
 let stock_value_of_station = function
-  | `SignalTower -> 0
-  | `Depot -> 15
-  | `Station -> 30
-  | `Terminal -> 45
+  | `SignalTower -> moi 0
+  | `Depot -> moi 15
+  | `Station -> moi 30
+  | `Terminal -> moi 45
 
 type upgrade =
   | MaintenanceShop
@@ -263,7 +263,7 @@ let can_train_go dir (v:t) =
 let make_signaltower x y ~year player_idx =
   { loc=(x, y); year; info=None; player=player_idx; signals=default_signals}
 
-let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
+let make x y ~year ~city_loc ~city_name ~suffix ~kind player_idx ~first =
   let name = match suffix with
     | Some suffix -> city_name^" "^show_suffix suffix
     | None -> city_name
@@ -288,7 +288,7 @@ let make x y ~year ~city_xy ~city_name ~suffix ~kind player_idx ~first =
         kind=k;
         name;
         short_name;
-        city=city_xy;
+        city=city_loc;
         suffix;
         upgrades=if first then Upgrades.singleton EngineShop else Upgrades.empty;
         rates=`Normal;

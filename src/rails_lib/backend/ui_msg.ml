@@ -117,5 +117,6 @@ type t =
   | FiscalPeriodEnd of Owner.t
   | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list
   | WestUSRouteDone of Owner.t
+  | CityOffersToBuyStock of {x: int; y: int; share_price: Money.t; player_idx: Owner.t}
   [@@deriving yojson]
 

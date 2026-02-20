@@ -111,6 +111,7 @@ and 'state mode =
     | `ChooseIndustry of ('state, Tile.t, unit) modalmenu
     | `ConfirmBuild of ('state, unit, Tile.t * int * int) modalmenu
   ]
+  | CityOffersToBuyStockMode of ('state, bool, Owner.t) modalmenu
   | TrainReport of 'state Train_report_d.t
   | Stock_broker of 'state Stock_broker_d.t
   | Balance_sheet of {state: Balance_sheet_d.t; end_of_year: bool}

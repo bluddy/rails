@@ -63,3 +63,13 @@ let update_signals locus signal v =
   v
   locus
 
+let num_stations_of_city (x, y) v =
+  fold (fun station count ->
+    match Station.get_city station with
+    | Some (city_x, city_y) ->
+      if city_x = x && city_y = y then count + 1
+      else count
+    | _ -> count)
+  v
+  ~init:0
+
