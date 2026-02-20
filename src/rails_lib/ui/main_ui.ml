@@ -415,7 +415,7 @@ let city_buy_stock_menu fonts region ~city_str ~price =
   in
   make ~fonts ~heading ~x:80 ~y:64 [
     make_entry "Sell Stock" @@ `Action(Some true);
-    make_entry "No Deal" @@ `Action None;
+    make_entry "No Deal" @@ `Action(Some false);
   ]
 
 module Train_roster = struct
@@ -782,16 +782,19 @@ let handle_event (s:State.t) v (event:Event.t) time =
             let b = s.backend in
             match Backend.check_build_station x y player_idx station_kind b with
             | `Ok ->
-                match B.check_city_buy_stock_offer x y player_idx station_kind b with
+                begin match B.check_city_buy_stock_offer x y player_idx station_kind b with
                 | Some city_loc ->
                   let city_str = Cities.name_of_loc city_loc b.cities in
                   let price = Stock_market.share_price player_idx b.stocks in
-                  let menu = city_buy_stock_menu s.fonts s.params.region ~city_str ~price in
-                  let mode = CityOffersToBuyStockMode menu in
+                  let menu = city_buy_stock_menu s.fonts b.params.region ~city_str ~price in
+                  let modal = make_modal menu (x, y, station_kind, player_idx) in
+                  let mode = CityOffersToBuyStockMode modal in
                   {v with mode}, nobaction
+
                 | None ->
-                  let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
+                  let backend_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx; sell_stock=false} in
                   next_mode s v, backend_action
+                end
 
             | _ -> exit_mode ()
             )
@@ -799,11 +802,10 @@ let handle_event (s:State.t) v (event:Event.t) time =
     | CityOffersToBuyStockMode menu ->
         handle_modal_menu_events menu
         (fun x -> CityOffersToBuyStockMode x)
-        (fun modal answer ->
-            let player_idx = modal.data in
-            let baction = B.Action.BuildStation{x; y; kind=station_kind; player_idx} in
-            if answer then next_mode s v, baction
-            else next_mode s v, baction)
+        (fun modal sell_stock ->
+            let x, y, station_kind, player_idx = modal.data in
+            let b_action = B.Action.BuildStation{x; y; kind=station_kind; player_idx; sell_stock} in
+            next_mode s v, b_action)
 
     | BuildBridge build_menu ->
         handle_modal_menu_events build_menu
