@@ -1,8 +1,6 @@
 # Tasks
 
 - No track -> no time movement
-- Town choosing to buy your stock - makes more public stock out of thin air
-  - Look at station building code
 - Use dosbox debugger to locate where we actually read the total time for running trains.
 - Check priority delivery price vs game
 - Handle > 32 trains with some visual display
