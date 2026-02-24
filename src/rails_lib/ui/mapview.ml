@@ -333,6 +333,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
             | `Bridge -> v, `BuildBridge(msg ()) 
             | `Tunnel g -> v, `HighGradeTrack(msg (), g, true)
             | `Illegal -> v, `NoAction
+            | `OutOfFunds -> v, `OutOfFunds
           else
             (* Remove Track *)
             match B.check_remove_track (v.const_box_x, v.const_box_y) ~dir player_idx s.backend with

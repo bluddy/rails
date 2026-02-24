@@ -653,6 +653,8 @@ let handle_event (s:State.t) v (event:Event.t) time =
             in
             let modal = make_modal menu msg in
             {v with mode=BuildHighGrade modal}, nobaction
+        | `OutOfFunds ->
+            make_msgbox s v "Out Of Funds!"
         | `ShowTileInfo (x, y, tile) ->
             let info = Tile.Info.get (B.get_region s.backend) tile in
             let open Menu.MsgBox in

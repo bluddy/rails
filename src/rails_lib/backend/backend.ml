@@ -317,7 +317,7 @@ let check_build_track loc ~dir player_idx v =
   | (`Ok | `RateWar _ | `Ferry | `Tunnel _ | `HighGrade _) when not @@ Trackmap.check_build_track loc ~dir player_idx v.track -> `Illegal
   | `Ok ->
       let cash = Player.get player_idx v.players |> Player.get_cash in
-      if M.(cash > zero) then `OutOfFunds else `Ok
+      if M.(cash < zero) then `OutOfFunds else `Ok
   | (`RateWar _ | `Bridge | `Ferry | `Tunnel _ | `HighGrade _ | `Illegal) as x -> x
 
 let check_build_bridge loc ~dir player_idx v =
