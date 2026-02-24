@@ -314,8 +314,11 @@ let check_build_track loc ~dir player_idx v =
   (* First check the tilemap, then the trackmap *)
   match Tilemap.check_build_track loc ~dir v.params v.map with
   | `Bridge when Trackmap.check_build_stretch loc ~dir player_idx ~length:2 v.track -> `Bridge
-  | (`Ok | `RateWar _ | `Ferry | `Tunnel _ | `HighGrade _) as x when Trackmap.check_build_track loc ~dir player_idx v.track -> x
-  | `Ok | `RateWar _ | `Bridge | `Ferry | `Tunnel _ | `HighGrade _ | `Illegal -> `Illegal
+  | (`Ok | `RateWar _ | `Ferry | `Tunnel _ | `HighGrade _) when not @@ Trackmap.check_build_track loc ~dir player_idx v.track -> `Illegal
+  | `Ok ->
+      let cash = Player.get player_idx v.players |> Player.get_cash in
+      if M.(cash > zero) then `OutOfFunds else `Ok
+  | (`RateWar _ | `Bridge | `Ferry | `Tunnel _ | `HighGrade _ | `Illegal) as x -> x
 
 let check_build_bridge loc ~dir player_idx v =
   match check_build_track loc ~dir player_idx v with
