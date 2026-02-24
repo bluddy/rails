@@ -569,13 +569,6 @@ let set_active_station active_station v =
   Log.debug (fun f -> f "Active station set to %s" @@ Utils.show_loc active_station);
   {v with active_station=Some active_station}
 
-let _calc_base_length_track_land_expense x y ~len ~dir ~climate map =
-  let base_length = if Dir.is_diagonal dir then 3 else 2 in
-  (* includes climate, for one piece of track *)
-  let track_expense = (base_length * 2 * ((Climate.to_enum climate) + 4)) / 4 |> Money.of_int in
-  let land_expense = Tilemap.track_land_expense map ~track_expense ~x ~y ~dir ~len in
-  base_length, track_expense, land_expense
-
 let _add_track x y ~len ~dir v =
   Iter.fold (fun ((x, y) as loc) _ ->
     Vector.push v.track loc;
@@ -585,7 +578,7 @@ let _add_track x y ~len ~dir v =
   |> ignore
 
 let update_and_pay_for_track x y ~len ~dir ~climate map v =
-  let base_length, track_expense, land_expense = _calc_base_length_track_land_expense x y ~len ~dir ~climate map in
+  let base_length, track_expense, land_expense = Tilemap.calc_base_length_track_land_expense x y ~len ~dir ~climate map in
   (* TODO: check Europe scale here *)
   let track_length = v.track_length + len * base_length in
   let () = _add_track x y ~len ~dir v in
@@ -607,7 +600,7 @@ let _remove_track x y ~len ~dir v =
 
 let update_and_remove_track x y ~len ~dir ~climate map v =
   (* This is the proper way to remove track. Effectively sells land *)
-  let base_length, _, land_revenue = _calc_base_length_track_land_expense x y ~len ~dir ~climate map in
+  let base_length, _, land_revenue = Tilemap.calc_base_length_track_land_expense x y ~len ~dir ~climate map in
   let track_length = v.track_length - len * base_length in
   _remove_track x y ~len ~dir v;
   (* TODO: deal with messing up history and achievements for track *)

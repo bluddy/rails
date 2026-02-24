@@ -484,3 +484,11 @@ let search_for_industry_site x y wanted_tile ~region v =
   Utils.scan x y ~range:3 ~width:(get_width v) ~height:(get_height v)
     ~f:(fun x y -> check_build_industry_at x y wanted_tile ~region v)
 
+let calc_base_length_track_land_expense x y ~len ~dir ~climate v =
+  let base_length = if Dir.is_diagonal dir then 3 else 2 in
+  (* includes climate, for one piece of track *)
+  let track_expense = (base_length * 2 * ((Climate.to_enum climate) + 4)) / 4 |> Money.of_int in
+  let track_expense = Money.(track_expense * len) in
+  let land_expense = track_land_expense v ~track_expense ~x ~y ~dir ~len in
+  base_length, track_expense, land_expense
+
