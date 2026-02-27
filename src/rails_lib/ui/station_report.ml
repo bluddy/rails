@@ -204,8 +204,9 @@ let render_foreground ?(show_name=true) win (s:State.t) ?station loc ~show_deman
   );
 
   if show_name then (
+    let x, y = if show_demand then 8, 104 else 96, 16 in
     (* name with shadow *)
-    write_name ~shadow:true ~x:8 ~y:104 ~color:Ega.white
+    write_name ~shadow:true ~x ~y ~color:Ega.white
   )
 
 let render ?(show_name=true) win (s:State.t) ?station loc ~show_demand =

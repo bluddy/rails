@@ -59,7 +59,8 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
-  - Fix bug with city buying stock and bad dialog
+  - Save 2, station still staying red when it shouldn't
+  - Fix bug with city buying stock
   - Operate rr is broken
     - Don't show that we control the company (the shares)
     - Doesn't announce takeover
@@ -86,7 +87,6 @@
   - Fiscal end stock eval: msgbox weird size thing
   - 2 stations: 1 station not being delivered to?
   - B and P in priority shipment are off left by one
-  - Station screen has name in wrong place
   - Can't upgrade station to new station
   - Animation: minor bugs remain
     - e.g. missing left train in title
