@@ -788,7 +788,8 @@ let handle_event (s:State.t) v (event:Event.t) time =
                 | Some city_loc ->
                   let city_str = Cities.name_of_loc city_loc b.cities in
                   let price = Stock_market.share_price player_idx b.stocks in
-                  let menu = city_buy_stock_menu s.fonts b.params.region ~city_str ~price in
+                  let menu = city_buy_stock_menu s.fonts b.params.region ~city_str ~price
+                  |> Menu.MsgBox.do_open_menu s in
                   let modal = make_modal menu (x, y, station_kind, player_idx) in
                   let mode = CityOffersToBuyStockMode modal in
                   {v with mode}, nobaction
