@@ -59,6 +59,7 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - Fix bug with city buying stock and bad dialog
   - Operate rr is broken
     - Don't show that we control the company (the shares)
     - Doesn't announce takeover
