@@ -658,8 +658,8 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
        Here we separate it out for clarity.
      *)
     if params.cycle mod 8 = 0 && Train.get_speed train > 0 then (
-        Train.incr_time_running current_period train;
-        Player.incr_time_running current_period player;
+      Train.incr_time_running current_period train;
+      Player.incr_time_running current_period player;
     );
 
     let rec train_update_loop train speed_bound stations player ui_msg_acc =

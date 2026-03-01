@@ -80,8 +80,14 @@ let render win state (s:State.t) =
     let y = y + 8 in
     Train_report.draw_train win train ~x:61 ~y s;
 
-    let avg_speed = Train.calc_avg_speed b.params.region train in
-    write_g ~x:185 ~y @@ sp "(%d mph)" avg_speed;
+    let x = 180 in
+    begin match Train.get_name train with
+    | Some name ->
+        write_g ~x ~y name
+    | None ->
+      let avg_speed = Train.calc_avg_speed b.params.region train in
+      write_g ~x ~y @@ sp "(%d mph)" avg_speed
+    end;
 
     let maintenance = Train.displayed_maintenance_cost train in
     write_g ~x:256 ~y @@ money_s maintenance;

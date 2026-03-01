@@ -644,6 +644,8 @@ let get_goods v =
 
 let set_name name v = {v with name=Some name}
 
+let get_name v = v.name
+
 let clear_periodic params v =
   (* Call after new perioid *)
   let periodic = update_periodic params.Params.current_period v.periodic (fun _ -> make_periodic ()) in
