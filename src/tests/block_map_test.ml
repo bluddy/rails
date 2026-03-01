@@ -172,7 +172,7 @@ let%expect_test "build 2 stations and then one in the middle" =
       ((10, 10), `Upper) -> 1;
       id_stations = 2 -> [((15, 10), `Lower)], 3
       -> [((15, 10), `Upper); ((10, 10), `Lower)], 0 -> [((5, 10), `Upper)], 1
-      -> [((10, 10), `Upper); ((15, 10), `Upper); ((5, 10), `Lower)] }
+      -> [((10, 10), `Upper); ((5, 10), `Lower)] }
     |}]
 
 (* build 2 stations separated by ixn *)
