@@ -657,7 +657,7 @@ let _update_train v (idx:Train.Id.t) (train:rw Train.t) stations (player:Player.
        In OG, we use the same decelerate cycle for keeping track of train time.
        Here we separate it out for clarity.
      *)
-    if  params.cycle mod 8 = 0 && Train.get_speed train > 0 then (
+    if params.cycle mod 8 = 0 && Train.get_speed train > 0 then (
         Train.incr_time_running current_period train;
         Player.incr_time_running current_period player;
     );

@@ -48,7 +48,7 @@ let render win state (s:State.t) =
     let y = heading_h in
     R.draw_line win ~color:Ega.black ~x1:0 ~x2:319 ~y1:y ~y2:y
   in
-  
+
   let player = B.get_player player_idx b in
   let draw_train y i =
     let train = Trainmap.get (Train.Id.of_int i) player.trains in

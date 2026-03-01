@@ -432,7 +432,7 @@ let add_dist_traveled add period (v: rw t) =
 
 let incr_time_running period (v: rw t) =
   let period = get_period period v in
-  period.dist_traveled <- period.time_running + 1
+  period.time_running <- period.time_running + 1
 
 let is_full (v: 'a t) = List.for_all Car.is_full v.cars
 
