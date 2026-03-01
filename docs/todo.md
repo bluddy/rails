@@ -60,6 +60,7 @@
 
 - Bug:
   - Save 2, station still staying red when it shouldn't
+   - Looks like we don't split blocks properly
   - Fix bug with city buying stock
   - Operate rr is broken
     - Don't show that we control the company (the shares)
