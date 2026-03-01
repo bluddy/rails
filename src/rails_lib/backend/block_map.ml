@@ -230,11 +230,10 @@ let handle_build_station player_idx graph v trackmap trains loc after =
         LocuHSet.remove loc_dirs1 (loc, Dir.to_upper dir2);
         LocuHSet.remove loc_dirs2 (loc, Dir.to_upper dir1);
         let loc_dir1 = LocuHSet.choose_exn loc_dirs1 in
-        let loc_dir2 = LocuHSet.choose_exn loc_dirs2 in
         let block_id1 = get_station_block loc_dir1 v in
-        let block_id2 = get_station_block loc_dir2 v in
         (* Check if it's the same block. They should have nothing in common *)
         let intersect = LocuHSet.inter loc_dirs1 loc_dirs2 in
+
         if LocuHSet.cardinal intersect > 0 then (
           (* Edge case: same block on both sides *)
           _add_station (loc, Dir.to_upper dir1) block_id1 v;
@@ -249,12 +248,14 @@ let handle_build_station player_idx graph v trackmap trains loc after =
           _set_block_train_count block_id1 ~count v;
 
           (* On second end, create a new id and apply it to all stations *)
-          let block_id = _new_block v in
-          _add_station (loc, Dir.to_upper dir2) block_id v;
-          LocuHSet.iter (fun loc_dir -> _add_station loc_dir block_id v) loc_dirs2;
+          let block_id2 = _new_block v in
+          _add_station (loc, Dir.to_upper dir2) block_id2 v;
+          LocuHSet.iter (fun loc_dir ->
+            _remove_station loc_dir v; (* Remove old association *)
+            _add_station loc_dir block_id2 v) loc_dirs2;
           let count, double = Scan.scan_station_block trackmap trains loc dir2 player_idx in
-          _set_block_double block_id double v;
-          _set_block_train_count block_id ~count v;
+          _set_block_double block_id2 double v;
+          _set_block_train_count block_id2 ~count v;
 
           (* GC old id if needed *)
           if _get_block_station_count block_id2 v = 0 then _remove_block block_id2 v;

@@ -324,8 +324,8 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       -> { Block_map_d.count = 0; double = `Single };
       stations = ((14, 5), `Lower) -> 1, ((14, 5), `Upper) -> 0, ((6, 5), `Lower)
       -> 0, ((6, 5), `Upper) -> 1;
-      id_stations = 0 -> [((14, 5), `Upper); ((6, 5), `Upper); ((6, 5), `Lower)],
-      1 -> [((6, 5), `Upper); ((14, 5), `Lower)] }
+      id_stations = 0 -> [((14, 5), `Upper); ((6, 5), `Lower)], 1
+      -> [((6, 5), `Upper); ((14, 5), `Lower)] }
     |}];
 
   let tgs = build_station (14, 15) ~dirs:[Left; Right] tgs in
@@ -338,8 +338,8 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0, ((6, 5), `Lower) -> 0,
       ((6, 5), `Upper) -> 1;
       id_stations = 2 -> [((14, 5), `Lower); ((14, 15), `Lower)], 0
-      -> [((14, 5), `Upper); ((6, 5), `Upper); ((6, 5), `Lower)], 1
-      -> [((14, 15), `Upper); ((6, 5), `Upper); ((14, 5), `Lower)] }
+      -> [((14, 5), `Upper); ((6, 5), `Lower)], 1
+      -> [((14, 15), `Upper); ((6, 5), `Upper)] }
     |}];
 
   let tgs = build_station (6, 15) ~dirs:[Left; Right] tgs in
@@ -354,10 +354,8 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1, ((6, 15), `Upper) -> 1;
       id_stations = 2 -> [((14, 5), `Lower); ((14, 15), `Lower)], 3
       -> [((14, 15), `Upper); ((6, 15), `Lower)], 0
-      -> [((14, 5), `Upper); ((6, 5), `Upper); ((6, 5), `Lower)], 1
-      -> [((6, 15), `Upper); ((14, 15), `Upper); ((6, 5), `Upper);
-           ((14, 5), `Lower)]
-      }
+      -> [((14, 5), `Upper); ((6, 5), `Lower)], 1
+      -> [((6, 15), `Upper); ((6, 5), `Upper)] }
     |}];
 
   let tgs = remove_station (14, 15) tgs in
@@ -371,10 +369,8 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       ((14, 5), `Upper) -> 0, ((6, 5), `Lower) -> 0, ((6, 5), `Upper) -> 1,
       ((6, 15), `Upper) -> 1;
       id_stations = 2 -> [((14, 5), `Lower)], 3 -> [((6, 15), `Lower)], 0
-      -> [((14, 5), `Upper); ((6, 5), `Upper); ((6, 5), `Lower)], 1
-      -> [((6, 15), `Upper); ((14, 15), `Upper); ((6, 5), `Upper);
-           ((14, 5), `Lower)]
-      }
+      -> [((14, 5), `Upper); ((6, 5), `Lower)], 1
+      -> [((6, 15), `Upper); ((6, 5), `Upper)] }
     |}];
 
   let tgs = remove_station (6, 15) tgs in
@@ -386,8 +382,7 @@ let%expect_test "4 connected stations in a square, disconnect one" =
       stations = ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0, ((6, 5), `Lower)
       -> 0, ((6, 5), `Upper) -> 1;
       id_stations = 2 -> [((14, 5), `Lower)], 0
-      -> [((14, 5), `Upper); ((6, 5), `Upper); ((6, 5), `Lower)], 1
-      -> [((14, 15), `Upper); ((6, 5), `Upper); ((14, 5), `Lower)] }
+      -> [((14, 5), `Upper); ((6, 5), `Lower)], 1 -> [((6, 5), `Upper)] }
     |}];
 
   let tgs = remove_station (6, 5) tgs in
@@ -396,18 +391,12 @@ let%expect_test "4 connected stations in a square, disconnect one" =
     { Block_map_d.info = 2 -> { Block_map_d.count = 0; double = `Single }, 0
       -> { Block_map_d.count = 0; double = `Single };
       stations = ((14, 5), `Lower) -> 2, ((14, 5), `Upper) -> 0;
-      id_stations = 2 -> [((14, 5), `Lower)], 0
-      -> [((14, 5), `Upper); ((6, 5), `Upper)], 1
-      -> [((14, 15), `Upper); ((14, 5), `Lower)] }
+      id_stations = 2 -> [((14, 5), `Lower)], 0 -> [((14, 5), `Upper)] }
     |}];
 
   let tgs = remove_station (14, 5) tgs in
   print @@ Utils.thd3 tgs;
-  [%expect {|
-    { Block_map_d.info = ; stations = ;
-      id_stations = 0 -> [((6, 5), `Upper)], 1
-      -> [((14, 15), `Upper); ((14, 5), `Lower)] }
-    |}];
+  [%expect {| { Block_map_d.info = ; stations = ; id_stations =  } |}];
   ()
 
 
@@ -481,6 +470,6 @@ let%expect_test "2 connected stations in a line, trains, add station" =
       ((10, 10), `Upper) -> 1;
       id_stations = 2 -> [((15, 10), `Lower)], 3
       -> [((15, 10), `Upper); ((10, 10), `Lower)], 0 -> [((5, 10), `Upper)], 1
-      -> [((10, 10), `Upper); ((15, 10), `Upper); ((5, 10), `Lower)] }
+      -> [((10, 10), `Upper); ((5, 10), `Lower)] }
     |}]
 
