@@ -138,7 +138,7 @@ let const_box_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
       end
   | _ -> false
 
-let cursor_on_station_signal backend tile_x tile_y ~dx ~dy =
+let mouse_on_station_signal backend tile_x tile_y ~dx ~dy =
   (* interpret the direction of signal click *)
   (* assumes we are on a station *)
   (* offsets: delta relative to tile *)
@@ -243,7 +243,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         (* second click, after focusing the cursor on that tile *)
         if const_box_on_station s.backend v then
           let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
-          match cursor_on_station_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
+          match mouse_on_station_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
           | Some dir -> (* signal click *)
             v, `SignalMenu (cursor_x_tile, cursor_y_tile, dir, x, y)
           | None -> (* station click *)
@@ -262,7 +262,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
       (* Zoom_station is open *)
     | (Zoom3 {zoom_station=Some _} | Zoom2 {zoom_station=Some _}), `Left ->
         let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
-        begin match cursor_on_station_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
+        begin match mouse_on_station_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
         | Some dir -> (* signal click *)
           v, `SignalMenu (cursor_x_tile, cursor_y_tile, dir, x, y)
         | None -> (* station click *)
@@ -577,6 +577,7 @@ let render win (s:State.t) (v:t) ~minimap ~build_station =
           ) track.dirs
         in
         let draw_zoom4_station () =
+          (* Zoom4 of station lights only *)
           match zoom_station with
           | Some (tile_x2, tile_y2) when tile_x = tile_x2 && tile_y = tile_y2 ->
               draw_tile ~tile_x ~tile_y ~screen_x:(x-8) ~screen_y:(y-8) ~zoom:Zoom4;
