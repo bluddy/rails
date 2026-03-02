@@ -66,7 +66,6 @@
     - Menu is weird
     - Opening menu crashes
   - City seems to grow too fast
-  - Train report: speed 0
   - Check 2 year income, one cargo, two cities
     - Do we give too much money?
   - Player avg ton-miles record check
@@ -93,8 +92,6 @@
   - Can't change station light from f2/f3
   - Create a train with no station: msgbox to build a station first
   - joining a track from another track either refuses or crashes
-  - Going into negative should be red money
-    I think fixed
   - Consider not painting tilebuffer every render of zoom3/2
  
 - Post 1.0
