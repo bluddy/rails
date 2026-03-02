@@ -1449,10 +1449,15 @@ let handle_tick (s:State.t) v time is_cycle =
       | On `Build_train ->
           begin match B.check_build_train C.player b with
           | `Ok -> {v with mode=BuildTrain(`ChooseEngine)}, nobaction
-          | `NoStation -> make_msgbox_list s v "Build a station first!"
+          | `NoStation -> make_msgbox_list s v "Build a station first."
           end
       | On `Build_station ->
-          _build_station_mode s v, nobaction
+          let loc = Mapview.get_cursor_pos v.view in
+          if Trackmap.has_track ~player_idx loc b.track then
+            _build_station_mode s v, nobaction
+          else
+            make_msgbox_list s v "Build track first."
+
       | On `Build_industry ->
           let menu =
             build_industry_menu s.fonts (B.get_region s.backend)

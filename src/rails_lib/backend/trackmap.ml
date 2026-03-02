@@ -245,7 +245,11 @@ let has_station loc v =
   | Some t -> Track.is_station t
   | None -> false
 
-let has_track loc v = Option.is_some @@ get loc v 
+let has_track ?player_idx loc v =
+  match player_idx, get loc v with
+  | Some player, Some track -> Track.owned_by player track
+  | None, Some _ -> true
+  | _, None -> false
 
 let calc_total_dist v ~player =
   IntMap.sum (fun _ track ->
