@@ -60,6 +60,7 @@
 
 - Bug:
   - F3: train signal not visible
+  - Menu for signal should flash
   - Fix bug with city buying stock
   - Operate rr is broken
     - Don't show that we control the company (the shares)
@@ -89,7 +90,6 @@
   - Animation: minor bugs remain
     - e.g. missing left train in title
   - Delivery + priority pickup: no delivery message
-  - Can't change station light from f2/f3
   - joining a track from another track either refuses or crashes
   - Consider not painting tilebuffer every render of zoom3/2
  
