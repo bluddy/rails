@@ -260,11 +260,11 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         {v with center_x; center_y; const_box_x=cursor_x_tile; const_box_y=cursor_y_tile}, `NoAction
 
       (* Zoom_station is open *)
-    | (Zoom3 {zoom_station=Some _} | Zoom2 {zoom_station=Some _}), `Left ->
-        let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
-        begin match mouse_on_station_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
+    | (Zoom3 {zoom_station=Some (x_tile, y_tile)} | Zoom2 {zoom_station=Some (x_tile, y_tile)}), `Left ->
+        let screen_x, screen_y = to_screen_pxls (x_tile * C.tile_w) (y_tile * C.tile_h) in
+        begin match mouse_on_station_signal x_tile y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
         | Some dir -> (* signal click *)
-          v, `SignalMenu (cursor_x_tile, cursor_y_tile, dir, x, y)
+          v, `SignalMenu (x_tile, y_tile, dir, x, y)
         | None -> (* station click *)
           with_zoom_23 v (fun _ -> {zoom_station=None}), `NoAction
         end
