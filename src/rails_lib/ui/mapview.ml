@@ -269,6 +269,9 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
           with_zoom_23 v (fun _ -> {zoom_station=None}), `NoAction
         end
 
+    | (Zoom3 {zoom_station=Some _} | Zoom2 {zoom_station=Some _}), `Right ->
+        with_zoom_23 v (fun _ -> {zoom_station=None}), `NoAction
+
     | (Zoom4 | Zoom3 _ | Zoom2 _), `Right ->
         (* recenter *)
         flush_draw_buffer v;
