@@ -1449,7 +1449,7 @@ let handle_tick (s:State.t) v time is_cycle =
       | On `Build_train ->
           begin match B.check_build_train C.player b with
           | `Ok -> {v with mode=BuildTrain(`ChooseEngine)}, nobaction
-          | `NoStation -> make_msgbox_list s v "Build a station with\n an engine shop first!"
+          | `NoStation -> make_msgbox_list s v "Build a station first!"
           end
       | On `Build_station ->
           _build_station_mode s v, nobaction

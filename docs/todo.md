@@ -90,7 +90,6 @@
     - e.g. missing left train in title
   - Delivery + priority pickup: no delivery message
   - Can't change station light from f2/f3
-  - Create a train with no station: msgbox to build a station first
   - joining a track from another track either refuses or crashes
   - Consider not painting tilebuffer every render of zoom3/2
  
