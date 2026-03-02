@@ -138,22 +138,24 @@ let const_box_on_station ?cursor_x_tile ?cursor_y_tile ?(all=false) backend v =
       end
   | _ -> false
 
-let const_box_on_signal backend tile_x tile_y ~dx ~dy =
+let cursor_on_station_signal backend tile_x tile_y ~dx ~dy =
+  (* interpret the direction of signal click *)
   (* assumes we are on a station *)
   (* offsets: delta relative to tile *)
   let midpoint_x, midpoint_y = C.tile_dim/2, C.tile_dim/2 in
   let delta_x, delta_y = dx - midpoint_x, dy - midpoint_y in
+  let a_delta_x, a_delta_y = abs delta_x, abs delta_y in
   match B.get_track backend tile_x tile_y with
   | Some {kind=Station _; player; dirs; _} when Owner.(player = C.player) ->
     Dir.Set.find_opt dirs (function
       | Up when delta_x > 0 && delta_y < 0 -> true
-      | UpRight when delta_x > 0 && delta_y >= -2 && delta_y <= 2 -> true
+      | UpRight when delta_x > 0 && a_delta_y <= 2 -> true
       | Right when delta_x > 0 && delta_y > 0 -> true
-      | DownRight when delta_y > 0 && delta_x >= -2 && delta_x <= 2 -> true
+      | DownRight when delta_y > 0 && a_delta_x <= 2 -> true
       | Down when delta_y > 0 && delta_x < 0 -> true
-      | DownLeft when delta_x < 0 && delta_y >= -2 && delta_y <= 2 -> true
+      | DownLeft when delta_x < 0 && a_delta_y <= 2 -> true
       | Left when delta_y < 0 && delta_x < 0 -> true
-      | UpLeft when delta_y < 0 && delta_x >= -2 && delta_x <= 2 -> true
+      | UpLeft when delta_y < 0 && a_delta_x <= 2 -> true
       | _ -> false)
   | _ -> None
 
@@ -241,7 +243,7 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         (* second click, after focusing the cursor on that tile *)
         if const_box_on_station s.backend v then
           let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
-          match const_box_on_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
+          match cursor_on_station_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
           | Some dir -> (* signal click *)
             v, `SignalMenu (cursor_x_tile, cursor_y_tile, dir, x, y)
           | None -> (* station click *)
@@ -258,8 +260,14 @@ let handle_event (s:State.t) (v:t) (event:Event.t) ~(minimap:Utils.rect) =
         {v with center_x; center_y; const_box_x=cursor_x_tile; const_box_y=cursor_y_tile}, `NoAction
 
       (* Zoom_station is open *)
-    | (Zoom3 {zoom_station=Some _} | Zoom2 {zoom_station=Some _}), (`Right | `Left) ->
-        with_zoom_23 v (fun _ -> {zoom_station=None}), `NoAction
+    | (Zoom3 {zoom_station=Some _} | Zoom2 {zoom_station=Some _}), `Left ->
+        let screen_x, screen_y = to_screen_pxls (cursor_x_tile * C.tile_w) (cursor_y_tile * C.tile_h) in
+        begin match cursor_on_station_signal cursor_x_tile cursor_y_tile s.backend ~dx:(x - screen_x) ~dy:(y - screen_y) with
+        | Some dir -> (* signal click *)
+          v, `SignalMenu (cursor_x_tile, cursor_y_tile, dir, x, y)
+        | None -> (* station click *)
+          with_zoom_23 v (fun _ -> {zoom_station=None}), `NoAction
+        end
 
     | (Zoom4 | Zoom3 _ | Zoom2 _), `Right ->
         (* recenter *)

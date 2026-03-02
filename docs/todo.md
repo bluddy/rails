@@ -59,6 +59,7 @@
 - Trackmap remove_track: do we need to handle ixn in Track _ | Ferry _ ?
 
 - Bug:
+  - F3: train signal not visible
   - Fix bug with city buying stock
   - Operate rr is broken
     - Don't show that we control the company (the shares)
