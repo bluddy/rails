@@ -452,7 +452,7 @@ module Train_update = struct
           Goods.Set.empty
       in
       let trainmap = Trainmap.remove_goods_in_all_trains destroyed_goods trainmap in
-      let stations = Station_map.remove_goods destroyed_goods stations in
+      let stations = Station_map.remove_goods destroyed_goods player_idx stations in
       (* Have to sort train ids to make sure indices are valid *)
       let train_ids = Train.IdSet.to_list trains_to_remove |> List.rev in
       let trainmap, stations =
@@ -740,7 +740,7 @@ let _try_to_create_priority_shipment ?(force=false) (player:Player.t) stations p
      TODO: for all players? check if AI *)
   match player.priority with
   | None ->
-      begin match Priority_shipment.try_to_create random stations params.Params.cycle ~force with
+      begin match Priority_shipment.try_to_create random stations params.Params.cycle ~force player.idx with
       | Some (stations, priority) ->
           let player = Player.set_priority (Some priority) player in
           let msgs = [UIM.PriorityShipmentCreated{player_idx=C.player; shipment=priority}] in

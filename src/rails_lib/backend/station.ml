@@ -485,6 +485,8 @@ let set_priority_shipment x v =
 
 let get_player_idx v = v.player
 
+let owned_by player_idx v = Owner.(v.player = player_idx)
+
 let has_rate_war v = with_info v false (fun info -> match info.rates with `Half -> true | _ -> false)
 
 let has_double_rates v = with_info v false (fun info -> match info.rates with `Double -> true | _ -> false)

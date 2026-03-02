@@ -44,9 +44,9 @@ let _create random stations cycle =
         let stations = Station_map.add src_loc src_station stations in
         Some (stations, shipment)
 
-let try_to_create ?(force=false) random stations cycle =
+let try_to_create ?(force=false) random stations cycle player_idx =
   (* The delay seems to be a result of just random tries *)
-  let num_proper_stations = Station_map.get_num_proper_stations stations in
+  let num_proper_stations = Station_map.get_num_proper_stations player_idx stations in
   (* This factor emulates the original function, which is dependent on the number of stations *)
   let factor =
     if num_proper_stations > 32 then (1. /. 9.)

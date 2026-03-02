@@ -8,7 +8,7 @@ type t = Station.t Loc_map.t
 let find_nearest ~player_idx ?(only_proper=false) loc v =
   (* NOTE: could be made more efficient with quadmap or array *)
   fold (fun (station:Station.t) acc ->
-    if Owner.(Station.get_player_idx station <> player_idx) then acc else
+    if not @@ Station.owned_by player_idx station then acc else
     if only_proper && not @@ Station.is_proper_station station then acc else
     let dist = Utils.classic_dist loc @@ Station.get_loc station in
     match acc with
@@ -19,10 +19,11 @@ let find_nearest ~player_idx ?(only_proper=false) loc v =
   ~init:None
   |> Option.map fst
 
-let get_two_proper_stations v =
+let get_two_proper_stations player_idx v =
   let exception Found of (Utils.loc * Utils.loc) in
   match
     Loc_map.fold_loc (fun loc station acc ->
+      if not @@ Station.owned_by player_idx station then acc else
       match acc with
       | x::y::_ -> raise @@ Found(x, y)
       | xs when Station.is_proper_station station -> loc::xs
@@ -33,9 +34,9 @@ let get_two_proper_stations v =
   | exception Found(x, y) -> Some(x, y)
   | _ -> None
 
-let get_num_proper_stations v =
+let get_num_proper_stations player_idx v =
   Loc_map.fold (fun station acc ->
-    if Station.is_proper_station station then acc + 1 else acc)
+    if Station.owned_by player_idx station && Station.is_proper_station station then acc + 1 else acc)
     v
     ~init:0
 
@@ -47,12 +48,14 @@ let clear_priority_shipment_for_all ~players v =
     | station -> station)
     v
 
-let have_engine_shop v =
-  find (fun v -> Station.has_upgrade v Station.EngineShop) v
+let have_engine_shop player_idx v =
+  find (fun v -> Station.owned_by player_idx v && Station.has_upgrade v Station.EngineShop) v
   |> Option.is_some
 
-let remove_goods goods v =
-  iter (Station.remove_goods goods) v;
+let remove_goods goods player_idx v =
+  iter (fun station ->
+    if Station.owned_by player_idx station then
+      Station.remove_goods goods station) v;
   v
 
 let update_signals locus signal v =
@@ -63,8 +66,9 @@ let update_signals locus signal v =
   v
   locus
 
-let num_stations_of_city (x, y) v =
+let num_stations_of_city (x, y) player_idx v =
   fold (fun station count ->
+    if not @@ Station.owned_by player_idx station then count else
     match Station.get_city station with
     | Some (city_x, city_y) ->
       if city_x = x && city_y = y then count + 1

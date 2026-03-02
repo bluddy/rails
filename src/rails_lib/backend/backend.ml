@@ -194,7 +194,7 @@ let check_city_buy_stock_offer_inner_ player_idx station_type ~city_loc ~num_sta
 
 let check_city_buy_stock_offer x y player_idx station_type v =
   let city_loc = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
-  let num_stations_at_city = Station_map.num_stations_of_city city_loc v.stations in
+  let num_stations_at_city = Station_map.num_stations_of_city city_loc player_idx v.stations in
   check_city_buy_stock_offer_inner_ player_idx station_type ~city_loc ~num_stations_at_city v
 
 let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) ?(sell_stock=false) station_type player_idx v =
@@ -211,8 +211,8 @@ let _build_station ?(union_station=false) ?(rate_war=false) ((x,y) as loc) ?(sel
       Station.make_signaltower x y ~year:v.params.year player_idx, false
   | _ ->
     let city_loc = find_close_city ~range:100 x y v |> Option.get_exn_or "error" in
-    let first_station = not @@ Station_map.have_engine_shop v.stations in
-    let num_stations_at_city = Station_map.num_stations_of_city city_loc v.stations in
+    let first_station = not @@ Station_map.have_engine_shop player_idx v.stations in
+    let num_stations_at_city = Station_map.num_stations_of_city city_loc player_idx v.stations in
     let sell_stock = sell_stock && (check_city_buy_stock_offer_inner_ player_idx station_type
       ~city_loc ~num_stations_at_city v |> Option.is_some)
     in
@@ -480,6 +480,10 @@ let _improve_station loc player_idx ~upgrade v =
     Player.(pay `StructuresEquipment @@ Station.price_of_upgrade upgrade)
   in
   [%up {v with stations; players}]
+
+let check_build_train player_idx v =
+  if Station_map.have_engine_shop player_idx v.stations then `Ok
+  else `NoStation
 
 let _build_train station engine cars player_idx v =
   let loc = station in 
