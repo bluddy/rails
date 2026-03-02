@@ -569,6 +569,10 @@ let make_msgbox ?x ?y s v text =
   let mode = make_msgbox_mode ?x ?y s text in
   {v with mode}, nobaction
 
+let make_msgbox_list ?x ?y s v text =
+  let mode = make_msgbox_mode ?x ?y s text in
+  {v with mode}, []
+
 let check_add_pause_msg old_mode old_menu v =
   let check_pause old new_ = match old,new_ with
     | true, false -> `Pause
@@ -1443,7 +1447,10 @@ let handle_tick (s:State.t) v time is_cycle =
 
       begin match menu_action with
       | On `Build_train ->
-          {v with mode=BuildTrain(`ChooseEngine)}, nobaction
+          begin match B.check_build_train C.player b with
+          | `Ok -> {v with mode=BuildTrain(`ChooseEngine)}, nobaction
+          | `NoStation -> make_msgbox_list s v "Build a station with\n an engine shop first!"
+          end
       | On `Build_station ->
           _build_station_mode s v, nobaction
       | On `Build_industry ->
