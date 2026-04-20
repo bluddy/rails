@@ -87,8 +87,6 @@
   - 2 stations: 1 station not being delivered to?
   - B and P in priority shipment are off left by one
   - Can't upgrade station to new station
-  - Animation: minor bugs remain
-    - e.g. missing left train in title
   - Delivery + priority pickup: no delivery message
   - joining a track from another track either refuses or crashes
   - Consider not painting tilebuffer every render of zoom3/2
