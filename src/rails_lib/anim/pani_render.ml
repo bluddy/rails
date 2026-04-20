@@ -19,7 +19,7 @@ type t = {
 }
 
 let create ?(dump=false) ?debug ?input ?sound sound_engine filename =
-  let stream = Pani.stream_of_file @@ "data/" ^ filename in
+  let stream = Pani.stream_of_file filename in
   let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
   let status = `Init in
@@ -87,13 +87,13 @@ let handle_event event v =
     {v with status=`Done}, `Exit
   ) else
     v, `Stay
- 
+
 let standalone win ~sound_engine ~filename =
   let handle_event v _event _time = v, `Stay in
   let v = create sound_engine filename in
   let funcs = Mainloop.{
     handle_tick=(fun v time -> handle_tick time v);
-    render=render win;
+    render=Renderer.render_wrap win (render win);
     handle_event;
   }
   in
