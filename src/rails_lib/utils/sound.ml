@@ -147,3 +147,16 @@ let handle_tick v =
   | _ -> ()
   )
 
+let pani_create ?dump ?debug ?input ?sound sound_engine filename =
+  let sound = match sound with
+    | None -> None
+    | Some sound ->
+      Engine.Pani_render.
+      {
+        play_music=(fun () -> play_music sound sound_engine);
+        stop_music=stop_music;
+      }
+      |> Option.some
+  in
+  Engine.Pani_render.create ?dump ?debug ?input ?sound filename
+
