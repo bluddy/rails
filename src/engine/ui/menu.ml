@@ -13,7 +13,7 @@ let src = Logs.Src.create "menu" ~doc:"Menu"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 let exit_time = 300 (* ms *)
-let menu_font = `Caps
+let menu_font = 1
 let max_width = 320
 
 type 'a action =
@@ -67,7 +67,7 @@ module MsgBox = struct
   }
 
   and ('msg, 'state) t =
-    { 
+    {
       x: int; y: int;
       w: int; h: int;
       border_x: int; border_y: int;
@@ -490,7 +490,7 @@ module MsgBox = struct
           end
       | _ -> ()
 
-    let make_basic ?x ?y ?wh ?heading ?tight ~fonts s text =
+    let make_basic ?x ?y ?wh ?heading ?tight ?(font_idx=4) ~fonts s text =
       (* Easy to use msgbox with just text *)
       let y = Option.get_or ~default:80 y in
       let x = match x with
@@ -504,7 +504,7 @@ module MsgBox = struct
       let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
       let entry = static_entry ?tight ~color:entry_color text in
       let menu =
-        make ~x ~y ?heading ~fonts [entry] ~font_idx:`Standard |> do_open_menu ?wh s
+        make ~x ~y ?heading ~fonts [entry] ~font_idx |> do_open_menu ?wh s
       in
       menu
 end

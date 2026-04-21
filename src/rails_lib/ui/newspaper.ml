@@ -4,7 +4,6 @@ open! Containers
 module R = Engine.Renderer
 module C = Constants
 module Random = Utils.Random
-module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 
 include Newspaper_d

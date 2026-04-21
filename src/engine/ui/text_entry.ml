@@ -8,18 +8,19 @@ type t = {
   x: int;
   y: int;
   num_chars: int;
+  font_idx: int;
 }
 
 let char_width = 8
 let char_height = 8
 
-let make ?(editable=true) text ~x ~y ~chars =
+let make ?(editable=true) ?(font_idx=4) text ~x ~y ~chars =
   let cursor = if editable then Some 0 else None in
   let len = String.length text in
   let num_spaces = max 0 (chars - len) in
   let text = text ^ String.make num_spaces ' ' in
   {
-    cursor; text; x; y; num_chars=chars;
+    cursor; text; x; y; num_chars=chars; font_idx;
   }
 
 let get_text v = String.rdrop_while (function ' ' -> true | _ -> false) v.text
@@ -35,9 +36,9 @@ let render win fonts v =
   let x = v.x + 2 in
   match v.cursor with
   | None ->
-    Fonts.Render.write win fonts v.text ~color:Ega.black ~idx:`Standard ~x ~y
+    Fonts.Render.write win fonts v.text ~color:Ega.black ~idx:v.font_idx ~x ~y
   | Some cursor ->
-    Fonts.Render.write win fonts v.text ~cursor:(cursor, Ega.bcyan) ~color:Ega.black ~idx:`Standard ~x ~y
+    Fonts.Render.write win fonts v.text ~cursor:(cursor, Ega.bcyan) ~color:Ega.black ~idx:v.font_idx ~x ~y
 
 let handle_event v event =
   match v.cursor with

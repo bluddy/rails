@@ -21,7 +21,7 @@ and t = {
   map_silhouette_tex: R.Texture.t;
   textures: Textures.t;
   resources: Resources.t;
-  fonts: Engine.Fonts.t;
+  fonts: Fonts.t;
   win: R.window;
   random: Utils.Random.State.t; (* separate random state for UI stuff *)
   sound: Sound.t;

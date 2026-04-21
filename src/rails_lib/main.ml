@@ -40,7 +40,7 @@ let arglist =
 let main () =
   parse arglist (fun _ -> ()) "Usage";
   match !mode with
-  | `Font -> Engine.Fonts.main !file
+  | `Font -> Fonts.main !file
   | `Pic  -> Engine.Pic.png_of_file !file
   | `Pani when !debugger && !dump ->
       Mainloop.main @@ Pani_render.debugger ~dump:true ~filename:!file

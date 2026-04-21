@@ -3,7 +3,6 @@ module R = Engine.Renderer
 module B = Backend
 module C = Constants
 module CS = Constants.Save
-module Menu = Engine.Menu
 module Event = Engine.Event
 
 let src = Logs.Src.create "savegame" ~doc:"Save_game"

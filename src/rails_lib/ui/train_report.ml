@@ -6,8 +6,6 @@ open Utils.Infix
 module Vector = Utils.Vector
 module C = Constants
 module T = Train
-module Menu = Engine.Menu
-module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 
 open Train_route_orders

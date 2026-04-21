@@ -1,4 +1,3 @@
-module Menu = Engine.Menu
 
 type msg =
   [   `ShowMap

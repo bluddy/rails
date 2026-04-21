@@ -5,7 +5,6 @@ open Containers
 module R = Engine.Renderer
 module B = Backend
 module C = Constants
-module Fonts = Engine.Fonts
 module Event = Engine.Event
 
 include New_delivery_pickup_d

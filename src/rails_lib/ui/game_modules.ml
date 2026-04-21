@@ -4,8 +4,6 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 module R = Engine.Renderer
 module B = Backend
 module Random = Utils.Random
-module Menu = Engine.Menu
-module Fonts = Engine.Fonts
 module Event = Engine.Event
 module Mainloop = Engine.Mainloop
 open Utils.Infix

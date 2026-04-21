@@ -3,7 +3,6 @@ module C = Constants
 module R = Engine.Renderer
 module B = Backend
 module Text_entry = Engine.Text_entry
-module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 
 include Speed_record_d

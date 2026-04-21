@@ -4,7 +4,6 @@ open Utils.Infix
 module R = Engine.Renderer
 module B = Backend
 module C = Constants
-module Menu = Engine.Menu
 module Event = Engine.Event
 
 module AddCars = struct

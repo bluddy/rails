@@ -1,7 +1,6 @@
 open Containers
 module Hashtbl = Utils.Hashtbl
 module R = Engine.Renderer
-module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 module Event = Engine.Event
 

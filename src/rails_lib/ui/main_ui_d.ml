@@ -1,6 +1,5 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-module Menu = Engine.Menu
 module Bitset = Engine.Bitset
 module R = Engine.Renderer
 module Transition = Engine.Transition

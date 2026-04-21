@@ -2,7 +2,6 @@ open Containers
 module R = Engine.Renderer
 module C = Constants
 module B = Backend
-module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 
 (* Station view screen *)

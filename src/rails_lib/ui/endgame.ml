@@ -6,7 +6,7 @@ open Utils.Infix
 (* Deals with all possible end game situations *)
 
 let retire_menu fonts =
-  let open Engine.Menu in
+  let open Menu in
   let open MsgBox in
   let heading = "Are you sure you want\nto end the game?" in
   make ~heading ~fonts ~font_idx:`Standard ~x:100 ~y:60

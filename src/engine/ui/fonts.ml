@@ -6,168 +6,160 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let debug = false
 
-type face = [
-  | `Old
-  | `Caps
-  | `Large
-  | `Tiny
-  | `Standard
-] [@@deriving enum]
-
 module Font = struct
 
-type t =
-  {
-    char_byte_length: int;
-    space_x: int;
-    space_y: int;
-    char_widths: (char, int) Hashtbl.t;
-    characters: (char, string) Hashtbl.t;
-    height: int;
-    textures: (char, Renderer.Texture.t) Hashtbl.t; [@opaque]
-  } [@@ deriving show]
+  type t =
+    {
+      char_byte_length: int;
+      space_x: int;
+      space_y: int;
+      char_widths: (char, int) Hashtbl.t;
+      characters: (char, string) Hashtbl.t;
+      height: int;
+      textures: (char, Renderer.Texture.t) Hashtbl.t; [@opaque]
+    } [@@ deriving show]
 
-let get_str font c =
-  Hashtbl.find font.characters c
+  let get_str font c =
+    Hashtbl.find font.characters c
 
-let get_width font c =
-  Hashtbl.find font.char_widths c
+  let get_width font c =
+    Hashtbl.find font.char_widths c
 
-module Ndarray = Owl_base_dense_ndarray.Generic
+  module Ndarray = Owl_base_dense_ndarray.Generic
 
-let write_letter ?(x=0) ?(y=0) font ~pixels c =
-  (* create an ARGB array with the letter *)
-  let x_off, y_off = x, y in
-  let width = Hashtbl.find font.char_widths c in
-  let char_str = Hashtbl.find font.characters c in
-  let byte, bit = ref 0, ref 0 in
-  for y=0 to font.height - 1 do
-    if !bit > 0 then begin
-      bit := 0;
-      incr byte;
-    end;
-    for x=0 to font.char_byte_length * 8 - 1 do
-      if x < width then begin
-        let color =
-          if ((Char.to_int char_str.[!byte]) land (0x80 lsr !bit)) > 0 then 0xFF else 0
-        in
-        for i=0 to 3 do
-          (* Printf.printf "y_off:%d, y:%d, x_off:%d, x:%d, i:%d" y_off y x_off x i; *)
-          Ndarray.set pixels [|y_off + y;x_off + x; i|] color
-        done
-      end;
-      incr bit;
-      if !bit = 8 then begin
+  let write_letter ?(x=0) ?(y=0) font ~pixels c =
+    (* create an ARGB array with the letter *)
+    let x_off, y_off = x, y in
+    let width = Hashtbl.find font.char_widths c in
+    let char_str = Hashtbl.find font.characters c in
+    let byte, bit = ref 0, ref 0 in
+    for y=0 to font.height - 1 do
+      if !bit > 0 then begin
         bit := 0;
         incr byte;
-      end
-    done;
-  done
-
-let get_letter font c =
-  let width = get_width font c in
-  (* Printf.printf "char[%c] width[%d]\n" c width; *)
-  let pixels = Ndarray.empty Int8_unsigned [|font.height; width; 4|] in
-  ignore @@ write_letter font ~pixels c;
-  pixels
-
-let get_letter_width font c =
-  try
-    Hashtbl.find font.char_widths c
-  with Not_found ->
-    Log.debug (fun f -> f "Character \"%c\" not found in font" c);
-    7
-
-let get_str_w_h ?(skip_amp=false) font str =
-  let _, w, h =
-    String.fold (fun ((x, max_x, y) as acc) c ->
-      match c with
-      | '&' when skip_amp -> acc
-      | '\n' -> 0, max_x, y + font.space_y + font.height
-      | _ ->
-        let w = get_letter_width font c in
-        let x = x + w + font.space_x in
-        x, max max_x x, y
-    )
-    (0, 0, font.height + font.space_y)
-    str
-  in 
-  w, h
-
-  module R = Renderer
-
-  let create_textures win v =
-    Hashtbl.keys v.characters (fun c ->
-      let width = get_width v c in
-      if width > 0 then (
-        let ndarray = get_letter v c in
-        let tex = R.Texture.make win ndarray in
-        Hashtbl.replace v.textures c tex
-      )
-    )
-
-  let write_char win font ?cursor_color ?(color=Ega.white) c ~x ~y =
-    try
-      let char_tex = Hashtbl.find font.textures c in
-      let w = get_letter_width font c in
-      begin match cursor_color with
-      | Some color ->
-          let y = y - 1 in
-          let h = font.height + font.space_y + 2 in
-          let w = w + font.space_x in
-          R.draw_rect win ~x ~y ~w ~h ~color ~fill:true;
-      | None -> ()
       end;
-      R.Texture.render ~x ~y ~color win char_tex;
-      (x + w + font.space_x, y)
-    with
-    | Not_found ->
-        Log.err (fun f -> f "char '%c' not found in font." c); 
-        x, y
+      for x=0 to font.char_byte_length * 8 - 1 do
+        if x < width then begin
+          let color =
+            if ((Char.to_int char_str.[!byte]) land (0x80 lsr !bit)) > 0 then 0xFF else 0
+          in
+          for i=0 to 3 do
+            (* Printf.printf "y_off:%d, y:%d, x_off:%d, x:%d, i:%d" y_off y x_off x i; *)
+            Ndarray.set pixels [|y_off + y;x_off + x; i|] color
+          done
+        end;
+        incr bit;
+        if !bit = 8 then begin
+          bit := 0;
+          incr byte;
+        end
+      done;
+    done
 
-    (* Write a string.
-       active_color: color for automatically highlighting chars with &
-                     or turned on and off with \\
-    *)
-  let write ?tag_color ?active_color ?cursor ?(tight=false) win font ~color str ~x ~y =
-    let x_first = x in (* keep starting column *)
-    String.foldi (fun (active, x, y) i c ->
-      let write_c = write_char win font ~x ~y in
-      match c, active_color, tag_color, cursor, active with
-      | '&', Some _, _, _, _ ->
-          `OneChar, x, y
-      | '|', _, Some _, _, `Off ->
-          `On, x, y
-      | '|', _, Some _, _, `On ->
-          `Off, x, y
-      | '|', _, None, _, _ -> (* ignore if no active color *)
-          active, x, y
-      | '\n', _, _, _, _ when tight ->
-          active, x_first, y + font.height + font.space_y - 1
-      | '\n', _, _, _, _ ->
-          active, x_first, y + font.height + font.space_y
-      | _, _, Some tag_color, _, `On ->
-          let x, y = write_c ~color:tag_color c in
-          `On, x, y
-      | _, Some active_color, _, _, `OneChar ->
-          let x, y = write_c ~color:active_color c in
-          `Off, x, y
-      | _, _, _, Some (j, cursor_color), _ when j = i ->
-          let x, y = write_c ~cursor_color ~color c in
-          `Off, x, y
-      | _, _, _, _, _ ->
-          let x, y = write_c ~color c in
-          `Off, x, y
-    )
-    (`Off, x, y)
-    str
-    |> ignore
+  let get_letter font c =
+    let width = get_width font c in
+    (* Printf.printf "char[%c] width[%d]\n" c width; *)
+    let pixels = Ndarray.empty Int8_unsigned [|font.height; width; 4|] in
+    ignore @@ write_letter font ~pixels c;
+    pixels
+
+  let get_letter_width font c =
+    try
+      Hashtbl.find font.char_widths c
+    with Not_found ->
+      Log.debug (fun f -> f "Character \"%c\" not found in font" c);
+      7
+
+  let get_str_w_h ?(skip_amp=false) font str =
+    let _, w, h =
+      String.fold (fun ((x, max_x, y) as acc) c ->
+        match c with
+        | '&' when skip_amp -> acc
+        | '\n' -> 0, max_x, y + font.space_y + font.height
+        | _ ->
+          let w = get_letter_width font c in
+          let x = x + w + font.space_x in
+          x, max max_x x, y
+      )
+      (0, 0, font.height + font.space_y)
+      str
+    in 
+    w, h
+
+    module R = Renderer
+
+    let create_textures win v =
+      Hashtbl.keys v.characters (fun c ->
+        let width = get_width v c in
+        if width > 0 then (
+          let ndarray = get_letter v c in
+          let tex = R.Texture.make win ndarray in
+          Hashtbl.replace v.textures c tex
+        )
+      )
+
+    let write_char win font ?cursor_color ?(color=Ega.white) c ~x ~y =
+      try
+        let char_tex = Hashtbl.find font.textures c in
+        let w = get_letter_width font c in
+        begin match cursor_color with
+        | Some color ->
+            let y = y - 1 in
+            let h = font.height + font.space_y + 2 in
+            let w = w + font.space_x in
+            R.draw_rect win ~x ~y ~w ~h ~color ~fill:true;
+        | None -> ()
+        end;
+        R.Texture.render ~x ~y ~color win char_tex;
+        (x + w + font.space_x, y)
+      with
+      | Not_found ->
+          Log.err (fun f -> f "char '%c' not found in font." c); 
+          x, y
+
+      (* Write a string.
+        active_color: color for automatically highlighting chars with &
+                      or turned on and off with \\
+      *)
+    let write ?tag_color ?active_color ?cursor ?(tight=false) win font ~color str ~x ~y =
+      let x_first = x in (* keep starting column *)
+      String.foldi (fun (active, x, y) i c ->
+        let write_c = write_char win font ~x ~y in
+        match c, active_color, tag_color, cursor, active with
+        | '&', Some _, _, _, _ ->
+            `OneChar, x, y
+        | '|', _, Some _, _, `Off ->
+            `On, x, y
+        | '|', _, Some _, _, `On ->
+            `Off, x, y
+        | '|', _, None, _, _ -> (* ignore if no active color *)
+            active, x, y
+        | '\n', _, _, _, _ when tight ->
+            active, x_first, y + font.height + font.space_y - 1
+        | '\n', _, _, _, _ ->
+            active, x_first, y + font.height + font.space_y
+        | _, _, Some tag_color, _, `On ->
+            let x, y = write_c ~color:tag_color c in
+            `On, x, y
+        | _, Some active_color, _, _, `OneChar ->
+            let x, y = write_c ~color:active_color c in
+            `Off, x, y
+        | _, _, _, Some (j, cursor_color), _ when j = i ->
+            let x, y = write_c ~cursor_color ~color c in
+            `Off, x, y
+        | _, _, _, _, _ ->
+            let x, y = write_c ~color c in
+            `Off, x, y
+      )
+      (`Off, x, y)
+      str
+      |> ignore
 
 end
 
 type t = Font.t array
 
-let get_font idx v = v.(face_to_enum idx)
+let get_font idx v = v.(idx)
 
 let of_file filename : t =
   let bytes =
@@ -274,7 +266,7 @@ module Render = struct
 
   type t = 
     {
-      font_idx: face;
+      font_idx: int;
       chars: render_char list;
     }
 
@@ -298,17 +290,17 @@ module Render = struct
       chars
     )
     ()
-    to_render 
+    to_render
 
-let write_char win fonts ~color ~idx c ~x ~y =
-  Font.write_char win ~color (get_font idx fonts) c ~x ~y
+  let write_char win fonts ~color ~idx c ~x ~y =
+    Font.write_char win ~color (get_font idx fonts) c ~x ~y
 
-let write win fonts ?active_color ?tag_color ?cursor ~color ~idx str ~x ~y =
-  Font.write ?active_color ?tag_color ?cursor win (get_font idx fonts) ~color str ~x ~y
+  let write win fonts ?active_color ?tag_color ?cursor ~color ~idx str ~x ~y =
+    Font.write ?active_color ?tag_color ?cursor win (get_font idx fonts) ~color str ~x ~y
 
-let write_shadow win fonts ~color ~idx str ~x ~y =
-  write win fonts ~color:Ega.black ~idx str ~x:(x+1) ~y:(y+1);
-  write win fonts ~color ~idx str ~x ~y
+  let write_shadow win fonts ~color ~idx str ~x ~y =
+    write win fonts ~color:Ega.black ~idx str ~x:(x+1) ~y:(y+1);
+    write win fonts ~color ~idx str ~x ~y
 
 end
 

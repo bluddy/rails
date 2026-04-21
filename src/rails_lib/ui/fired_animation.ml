@@ -1,8 +1,6 @@
 open! Containers
 module B = Backend
 module R = Engine.Renderer
-module Menu = Engine.Menu
-module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 module Event = Engine.Event
 

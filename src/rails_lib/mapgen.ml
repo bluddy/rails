@@ -3,7 +3,6 @@ open Tilemap
 
 module C = Constants
 module Random = Utils.Random
-module Fonts = Engine.Fonts
 module Dir = Engine.Dir
 module My_gen = Engine.My_gen
 

@@ -6,7 +6,6 @@ module R = Engine.Renderer
 module B = Backend
 module C = Constants
 module Text_entry = Engine.Text_entry
-module Fonts = Engine.Fonts
 
 include Name_rr_d
 

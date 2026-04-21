@@ -3,7 +3,6 @@ module C = Constants
 module R = Engine.Renderer
 module B = Backend
 module M = Money
-module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 
 open Income_statement_d

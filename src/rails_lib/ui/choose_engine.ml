@@ -2,7 +2,6 @@ open Containers
 module R = Engine.Renderer
 module M = Money
 module B = Backend
-module Fonts = Engine.Fonts
 module Event = Engine.Event
 module Ega = Engine.Ega
 

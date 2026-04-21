@@ -1,7 +1,5 @@
 open! Containers
 
-module Menu = Engine.Menu
-
 type msg = [
   | `SellBond
   | `RepayBond

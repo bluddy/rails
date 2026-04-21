@@ -1,4 +1,3 @@
-module Menu = Engine.Menu
 module R = Engine.Renderer
 
 type 'state mode =
