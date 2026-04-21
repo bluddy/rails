@@ -4,7 +4,7 @@ open Containers
 (* Notes: pay attention to signed vs unsigned comparisons *)
 
 module Ndarray = Owl_base_dense_ndarray.Generic
-module C = Constants.Pani
+module C = Pani_const
 
 let sp = Printf.sprintf
 let pp = Printf.printf

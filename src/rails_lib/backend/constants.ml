@@ -123,24 +123,13 @@ let stone_bridge_fail_odds = 8  (* The extra odds of a stone bridge failing *)
 
 let newspaper_cost_ref_year = 1775
 
-module Menu = struct
-  let exit_time = 300 (* ms *)
-end
-
 module Pani = struct
-  let update_delta = 10
-  let max_num_sprites = 50
   let wood_bridge = "WOOD2.PAN"
   let iron_bridge = "IRONM.PAN"
   let flood_us = "FLOODM.PAN"
   let flood_eu = "ENGFLDM.PAN"
   let wreck = "WRECKM.PAN"
   let title = "TITLEM.PAN"
-end
-
-module Transition = struct
-  let tick_delta = 10
-  let step_pixels = 2500
 end
 
 module Intro = struct

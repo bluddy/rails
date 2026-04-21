@@ -1,7 +1,7 @@
 open Containers
 
 module R = Renderer
-module C = Constants
+module C = Pani_const
 module List = Utils.List
 
 type status = [`Pause | `Done | `Init ]
@@ -61,7 +61,7 @@ let render win v =
       | _ -> ()
     )
   )
-  Iter.(0 -- C.Pani.max_num_sprites)
+  Iter.(0 -- Pani_const.max_num_sprites)
 
 let handle_tick time v =
   let v = match v.status with
@@ -69,7 +69,7 @@ let handle_tick time v =
         Option.iter (fun sound -> Sound.play_music sound v.sound_engine) v.sound;
         {v with status=`Pause}
     | `Pause ->
-        if time - v.last_time > C.Pani.update_delta
+        if time - v.last_time > Pani_const.update_delta
         then (
           v.last_time <- time;
           v.status <- Pani_interp.step v.interp;

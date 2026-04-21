@@ -1,9 +1,11 @@
 open Containers
 module R = Renderer
-module C = Constants.Transition
 
 let src = Logs.Src.create "transition" ~doc:"Transition"
 module Log = (val Logs.src_log src: Logs.LOG)
+
+let tick_delta = 10
+let step_pixels = 2500
 
 type state =
   | Static of {until: int option}
@@ -43,10 +45,10 @@ let handle_tick time v =
   | Static {until=Some end_time} when end_time <= time -> `Stay, {v with state=Animating{last_tick=0}}
   | Static {until=Some _} -> `Stay, v
   | Animating ({last_tick} as a) ->
-    let new_time = last_tick + C.tick_delta in
+    let new_time = last_tick + tick_delta in
     if time >= new_time then (
       a.last_tick <- time;
-      let status = R.Transition.step C.step_pixels v.transition in
+      let status = R.Transition.step step_pixels v.transition in
       match status with
       | `Done -> `Stay, {v with state=Done}
       | _ -> `Stay, v

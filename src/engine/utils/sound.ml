@@ -49,7 +49,6 @@ module Music = struct
 
   let of_string str = Utils.upper_first str |> of_string
 
-
   module Map = Map.Make(struct type nonrec t = t let compare = compare end)
 end
 

@@ -5,7 +5,6 @@ open Containers
   2. The type of the data it reads into its checkbox and visibility lambdas
 *)
 
-module C = Constants
 module L = Utils.List
 module CharMap = Utils.CharMap
 open Utils.Infix
@@ -13,6 +12,7 @@ open Utils.Infix
 let src = Logs.Src.create "menu" ~doc:"Menu"
 module Log = (val Logs.src_log src: Logs.LOG)
 
+let exit_time = 300 (* ms *)
 let menu_font = `Caps
 let max_width = 320
 
@@ -803,7 +803,7 @@ module Animated = struct
         (* Can let events through *)
         let g', action, event = Global.handle_event ~do_close:false s g event time in
         let menu = if g' === g then v.menu else Global g' in
-        let last_msg, event = if _is_action action then Some (action, time + C.Menu.exit_time), Event.NoEvent
+        let last_msg, event = if _is_action action then Some (action, time + exit_time), Event.NoEvent
           else v.last_msg, event
         in
         ([%up {v with menu; last_msg}], event) [@warning "-23"]
@@ -811,7 +811,7 @@ module Animated = struct
         (* Always swallows up events *)
         let m', action = MsgBox.handle_event ~do_close:false s m event time in
         let menu = if m' === m then v.menu else MsgBox m' in
-        let last_msg = if _is_action action then Some (action, time + C.Menu.exit_time) else v.last_msg in
+        let last_msg = if _is_action action then Some (action, time + exit_time) else v.last_msg in
         ([%up {v with menu; last_msg}], Event.NoEvent) [@warning "-23"]
 
   let handle_tick _s v time = match v.last_msg with
