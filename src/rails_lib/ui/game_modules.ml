@@ -8,6 +8,7 @@ module Menu = Engine.Menu
 module Fonts = Engine.Fonts
 module Event = Engine.Event
 module Sound = Engine.Sound
+module Mainloop = Engine.Mainloop
 open Utils.Infix
 
 let update_map _win v map =

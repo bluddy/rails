@@ -4,7 +4,6 @@ module R = Engine.Renderer
 module B = Backend
 module C = Constants
 module M = Money
-module Menu = Engine.Menu
 module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 module Event = Engine.Event

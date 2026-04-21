@@ -1,7 +1,9 @@
 open Arg
 
 module Pani_render = Engine.Pani_render
+module Pani = Engine.Pani
 module Sound = Engine.Sound
+module Mainloop = Engine.Mainloop
 
 type actions = [ `Font | `Pic | `Pani | `City | `Game | `LoadGame]
 

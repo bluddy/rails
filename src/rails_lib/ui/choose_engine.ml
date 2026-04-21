@@ -4,6 +4,7 @@ module M = Money
 module B = Backend
 module Fonts = Engine.Fonts
 module Event = Engine.Event
+module Ega = Engine.Ega
 
 (* Choose engine screen: select with mouse only *)
 let engine_start_y = 24

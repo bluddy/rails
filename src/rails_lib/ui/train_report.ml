@@ -22,8 +22,8 @@ let make_menu (dims:Main_ui_d.dims) fonts train_idx ~engine_make ~engines ~year 
     let open MsgBox in
     let engine_info_menu =
       let engine_options =
-        Engine.available_at_year engines ~year
-        |> List.map (fun (engine:Engine.t) -> make_entry engine.name @@ `Action (`EngineInfo engine.make))
+        Train_engine.available_at_year engines ~year
+        |> List.map (fun (engine:Train_engine.t) -> make_entry engine.name @@ `Action (`EngineInfo engine.make))
       in
       make ~fonts ~x:25 ~y:12 @@
       (make_entry "This Engine" @@ `Action(`EngineInfo engine_make))
@@ -452,7 +452,7 @@ let handle_tick (s:State.t) v time =
           `Stay, v.screen, None, [B.Action.TrainSetType{train=v.train; typ; player_idx}]
 
       | Menu.On(`EngineInfo engine_make) ->
-          let engine = Engine.t_of_make s.backend.engines engine_make in
+          let engine = Train_engine.t_of_make s.backend.engines engine_make in
           let screen = EngineInfo (Engine_info.make engine) in
           `Stay, screen, None, []
 
