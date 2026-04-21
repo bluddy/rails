@@ -24,6 +24,6 @@ and t = {
   fonts: Engine.Fonts.t;
   win: R.window;
   random: Utils.Random.State.t; (* separate random state for UI stuff *)
-  sound: Engine.Sound.t;
+  sound: Sound.t;
 }
 

@@ -7,7 +7,6 @@ module M = Money
 module Event = Engine.Event
 module Transition = Engine.Transition
 module Pani_render = Engine.Pani_render
-module Sound = Engine.Sound
 
 open Utils.Infix
 
@@ -41,7 +40,7 @@ let make (s:State.t) =
   let modes =
     let file = "TITLEM.PAN" in
     let sound = Sound.Music.Main_theme in
-    Animation(Pani_render.create s.sound ~sound file)::modes in
+    Animation(Sound.pani_create s.sound ~sound file)::modes in
   match List.rev modes with
   | x::xs -> {mode=x; next_modes=xs}
   | _ -> assert false

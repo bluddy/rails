@@ -8,23 +8,27 @@ type status = [`Pause | `Done | `Init ]
 
 let sp = Printf.sprintf
 
+type sound_player = {
+  play_music: unit -> unit;
+  stop_music: unit -> unit;
+}
+
 type t = {
   mutable status: status;
   interp: Pani_interp.t;
   mutable last_time: int;
   mutable textures: R.Texture.t option array;
   mutable bg_tex: R.Texture.t option;
-  sound: Sound.Music.t option;
-  sound_engine: Sound.t;
+  sound: sound_player option;
 }
 
-let create ?(dump=false) ?debug ?input ?sound sound_engine filename =
+let create ?(dump=false) ?debug ?input ?sound filename =
   let stream = Pani.stream_of_file filename in
   let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
   let status = `Init in
   let last_time = 0 in
-  {status; interp; last_time; textures; bg_tex=None; sound; sound_engine}
+  {status; interp; last_time; textures; bg_tex=None; sound}
 
 let render win v =
   let no_textures = Array.length v.textures = 0 in
@@ -66,7 +70,7 @@ let render win v =
 let handle_tick time v =
   let v = match v.status with
     | `Init ->
-        Option.iter (fun sound -> Sound.play_music sound v.sound_engine) v.sound;
+        Option.iter (fun sound -> sound.play_music ()) v.sound;
         {v with status=`Pause}
     | `Pause ->
         if time - v.last_time > Pani_const.update_delta
@@ -76,21 +80,21 @@ let handle_tick time v =
         );
         v
     | `Done ->
-        Sound.stop_music ();
+        Option.iter (fun sound -> sound.stop_music ()) v.sound;
         v
   in
   v, `Stay
 
 let handle_event event v =
   if Event.modal_dismiss event then (
-    Sound.stop_music ();
+    Option.iter (fun sound -> sound.stop_music ()) v.sound;
     {v with status=`Done}, `Exit
   ) else
     v, `Stay
 
-let standalone win ~sound_engine ~filename =
+let standalone win ~filename =
   let handle_event v _event _time = v, `Stay in
-  let v = create sound_engine filename in
+  let v = create filename in
   let funcs = Mainloop.{
     handle_tick=(fun v time -> handle_tick time v);
     render=Renderer.render_wrap win (render win);
@@ -99,7 +103,7 @@ let standalone win ~sound_engine ~filename =
   in
   v, funcs
 
-let debugger ?(dump=false) win ~sound_engine ~filename =
+let debugger ?(dump=false) win ~filename =
   Pani_interp.set_debug true;
   Pani_sprite.set_debug true;
   let handle_event v event _time = match event with
@@ -114,7 +118,7 @@ let debugger ?(dump=false) win ~sound_engine ~filename =
     | _ ->
         v, `Stay
   in
-  let v = create ~dump ~debug:true sound_engine filename in
+  let v = create ~dump ~debug:true filename in
   (* Do one step to set up all the animations *)
   let _ = Pani_interp.step v.interp in
   let funcs = Mainloop.{

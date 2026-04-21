@@ -2,7 +2,6 @@ open Containers
 open Train_animate_side_d
 
 module R = Engine.Renderer
-module Sound = Engine.Sound
 
 let fps = 20
 let wait_time = 1000/fps

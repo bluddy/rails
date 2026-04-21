@@ -2,7 +2,6 @@ open Arg
 
 module Pani_render = Engine.Pani_render
 module Pani = Engine.Pani
-module Sound = Engine.Sound
 module Mainloop = Engine.Mainloop
 
 type actions = [ `Font | `Pic | `Pani | `City | `Game | `LoadGame]
@@ -44,15 +43,12 @@ let main () =
   | `Font -> Engine.Fonts.main !file
   | `Pic  -> Engine.Pic.png_of_file !file
   | `Pani when !debugger && !dump ->
-      let sound_engine = Sound.init () in
-      Mainloop.main @@ Pani_render.debugger ~sound_engine ~dump:true ~filename:!file
+      Mainloop.main @@ Pani_render.debugger ~dump:true ~filename:!file
   | `Pani when !dump -> Pani.dump_file !file
   | `Pani when !debugger ->
-      let sound_engine = Sound.init () in
-      Mainloop.main @@ Pani_render.debugger ~sound_engine ~filename:!file
+      Mainloop.main @@ Pani_render.debugger ~filename:!file
   | `Pani ->
-      let sound_engine = Sound.init () in
-      Mainloop.main @@ Pani_render.standalone ~sound_engine ~filename:!file
+      Mainloop.main @@ Pani_render.standalone ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()
   | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()

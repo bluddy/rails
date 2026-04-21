@@ -15,7 +15,6 @@ module Fonts = Engine.Fonts
 module Ega = Engine.Ega
 module Event = Engine.Event
 module Transition = Engine.Transition
-module Sound = Engine.Sound
 
 let sp = Printf.sprintf
 
@@ -1282,7 +1281,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state = 
           let value = if Region.is_us b.params.region then 0 else 1 in
           let input = [0, value; 1, value] in
-          Pani_render.create ~input s.sound C.Pani.wreck
+          Sound.pani_create ~input s.sound C.Pani.wreck
         in
         let next_modes = [accident player_idx] in
         {v with mode=Animation state; next_modes}
@@ -1291,7 +1290,7 @@ let handle_msgs (s:State.t) v ui_msgs =
         let state = 
           let filename = if Region.is_us b.params.region then C.Pani.flood_us else C.Pani.flood_eu in
           let input = [10, 1; 0, engine.bridge_val] in
-          Pani_render.create ~input s.sound filename in
+          Sound.pani_create ~input s.sound filename in
         let next_modes = [accident player_idx] in
         {v with mode=Animation state; next_modes}
 
@@ -1368,7 +1367,7 @@ let handle_msgs (s:State.t) v ui_msgs =
           | Iron -> Some C.Pani.iron_bridge
           | _ -> None in
         begin match file with
-        | Some file -> {v with mode= Animation(Pani_render.create s.sound file)}
+        | Some file -> {v with mode= Animation(Sound.pani_create s.sound file)}
         | None -> v
         end
 
