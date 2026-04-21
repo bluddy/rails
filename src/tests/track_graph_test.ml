@@ -1,9 +1,10 @@
 open Containers
 module R = Rails_lib
+module E = Engine
 open Test_common
 module TG = R.Track_graph
 module C = R.Constants
-module Dir = R.Dir
+module Dir = E.Dir
 module Utils = R.Utils
 module T = R.Track
 module Trackmap = R.Trackmap

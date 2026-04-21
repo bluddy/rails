@@ -2,7 +2,7 @@ open! Containers
 open Cheat_d
 
 let make_menu fonts =
-  let open Menu in
+  let open Engine.Menu in
   let open MsgBox in
   let money_menu =
     make ~fonts

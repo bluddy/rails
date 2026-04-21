@@ -12,6 +12,7 @@ module IS = Income_statement
 module UIM = Ui_msg
 module M = Money
 module U = Utils
+module Dir = Engine.Dir
 
 (* Low-level backend module. Deals with multiple modules at a time *)
 
@@ -863,7 +864,7 @@ let _year_end_checks player ai engines params =
     |> Ai.update_track_history
   in
   let ui_msgs =
-    Engine.discovered_at_year engines ~year:params.Params.year
+    Train_engine.discovered_at_year engines ~year:params.Params.year
     |> List.map (fun engine -> Ui_msg.EngineDiscovered engine)
   in
   player, ai, ui_msgs

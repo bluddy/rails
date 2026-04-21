@@ -1,9 +1,13 @@
 open! Containers
 open Stock_broker_d
 module C = Constants
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module M = Money
+module Menu = Engine.Menu
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Event = Engine.Event
 
 open Utils.Infix
 

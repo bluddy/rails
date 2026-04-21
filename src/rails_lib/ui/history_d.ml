@@ -8,7 +8,7 @@ type phase =
 
 type t = {
   last_tick: int;
-  map_tex: Renderer.Texture.t;
+  map_tex: Engine.Renderer.Texture.t;
   year: int;
   phase: phase;
   player_track_history: int array;

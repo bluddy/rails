@@ -1,5 +1,7 @@
 open Containers
 
+module Pic = Engine.Pic
+
 let dir = "./data/"
 
 let map_names =
@@ -62,6 +64,7 @@ let load_all () =
   let res_pics = load_pics () in
   {res_maps; res_pics; res_cities}
 
+module Dir = Engine.Dir
 open Dir
 let track_dirs =
   [[Up]; [UpRight]; [Right]; [DownRight]; [Down]; [DownLeft]; [Left]; [UpLeft];

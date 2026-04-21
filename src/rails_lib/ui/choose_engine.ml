@@ -1,7 +1,9 @@
 open Containers
-module R = Renderer
+module R = Engine.Renderer
 module M = Money
 module B = Backend
+module Fonts = Engine.Fonts
+module Event = Engine.Event
 
 (* Choose engine screen: select with mouse only *)
 let engine_start_y = 24
@@ -9,14 +11,14 @@ let engine_each_y = 25
 
 let get_relevant_engines engines year =
   List.filter (fun engine ->
-      engine.Engine.year <= year && year - engine.year <= 50)
+      engine.Train_engine.year <= year && year - engine.year <= 50)
     engines
 
 let render win (s:State.t) ~engines ~year =
-  let engines = Engine.available_at_year engines ~year in
+  let engines = Train_engine.available_at_year engines ~year in
   let engine_anims =
     List.map (fun engine ->
-      Hashtbl.find s.textures.Textures.engine_anim engine.Engine.make)
+      Hashtbl.find s.textures.Textures.engine_anim engine.Train_engine.make)
       engines
   in
   let track_tex = Hashtbl.find s.textures.Textures.misc `SideTrack in
@@ -41,8 +43,8 @@ let render win (s:State.t) ~engines ~year =
     let region = B.get_region s.backend in
     List.fold_left (fun y engine ->
       let str = Printf.sprintf "%s\n%d mph %dhp %s"
-        engine.Engine.name (engine.max_speed * 5) (engine.horsepower * 500) @@
-        M.print ~region engine.Engine.price
+        engine.Train_engine.name (engine.max_speed * 5) (engine.horsepower * 500) @@
+        M.print ~region engine.Train_engine.price
       in
       Fonts.Font.write win font ~color:Ega.cyan str ~x:164 ~y;
       y + engine_each_y)

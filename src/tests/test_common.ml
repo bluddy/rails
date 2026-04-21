@@ -1,12 +1,13 @@
 open! Containers
 module R = Rails_lib
+module E = Engine
 module T = R.Track
 module TM = R.Trackmap
 module TG = R.Track_graph
 module TS = R.Scan
 module C = R.Constants
-module Dir = R.Dir
-module Engine = R.Engine
+module Dir = E.Dir
+module Train_engine = R.Train_engine
 module Train = R.Train
 module Region = R.Region
 
@@ -40,7 +41,7 @@ let square_track () =
 
   (* Dummy train for test purposes *)
 let dummy_train tile_loc dir =
-  let engine = List.hd @@ Engine.of_region Region.WestUS in
+  let engine = List.hd @@ Train_engine.of_region Region.WestUS in
   Train.make tile_loc engine [] None ~dir C.player
 
 let print_graph g = TG.yojson_of_t g |> Yojson.Safe.to_string |> print_string

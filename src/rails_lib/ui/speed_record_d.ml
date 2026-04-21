@@ -6,5 +6,5 @@ type t = {
   src: loc;
   dst: loc;
   train_idx: Train.Id.t;
-  entry: Text_entry.t;
+  entry: Engine.Text_entry.t;
 }

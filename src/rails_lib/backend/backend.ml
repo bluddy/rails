@@ -12,6 +12,7 @@ module Bool = Utils.Bool
 module IntMap = Utils.IntMap
 module M = Money
 module Random = Utils.Random
+module Dir = Engine.Dir
 
 (* This is the backend. All game-modifying functions go through here *)
 
@@ -64,7 +65,7 @@ let make region resources ~reality_levels ~difficulty ~random ~seed =
   let players = Owner.Map.singleton C.player @@ Player.default C.player in
   let year_start = Region.start_year region in
   let graph = Track_graph.make () in
-  let engines = Engine.of_region region |> Engine.randomize_year random in
+  let engines = Train_engine.of_region region |> Train_engine.randomize_year random in
   let params = Params.make ~year_start ~reality_levels ~difficulty ~region () in
   let stocks = Stock_market.default
     |> Stock_market.add_human_player C.player params in
@@ -488,7 +489,7 @@ let check_build_train player_idx v =
 let _build_train station engine cars player_idx v =
   let loc = station in 
   let players, stations, msg =
-    let engine_t = Engine.t_of_make v.engines engine in
+    let engine_t = Train_engine.t_of_make v.engines engine in
     let train =
       (* Find any other station to face dir-wise *)
       let other_station_upper_dir =
@@ -570,7 +571,7 @@ let _train_set_type ~train ~typ player_idx v =
 
 let _train_replace_engine ~train ~engine player_idx v =
   let players = Player.update v.players player_idx (fun player ->
-    let engine = Engine.t_of_make v.engines engine in
+    let engine = Train_engine.t_of_make v.engines engine in
     let player = Player.pay `Train engine.price player in
     let trains = Trainmap.update train player.trains (Train.replace_engine engine) in
     [%up {player with trains}])
@@ -1026,7 +1027,7 @@ module Action = struct
     | DoubleTrack of {x: int; y: int; double: bool; player_idx: Owner.t}
     | ImproveStation of {x:int; y:int; player_idx: Owner.t; upgrade: Station.upgrade}
     | SetSpeed of B_options.speed
-    | BuildTrain of {engine: Engine.make; cars: Goods.t list;
+    | BuildTrain of {engine: Train_engine.make; cars: Goods.t list;
                      station: int * int; player_idx: Owner.t}
     | SetStopStation of {train: Trainmap.Id.t; stop: stop; station: int * int; player_idx: Owner.t}
     | RemoveStop of {train: Trainmap.Id.t; stop: stop; player_idx: Owner.t}
@@ -1035,7 +1036,7 @@ module Action = struct
     | RemoveAllStopCars of {train: Trainmap.Id.t; stop: stop; player_idx: Owner.t}
     | TrainSetType of {train: Trainmap.Id.t; typ: Train.train_type; player_idx: Owner.t}
     | RemoveTrain of {idx: Trainmap.Id.t; player_idx: Owner.t}
-    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Engine.make; player_idx: Owner.t}
+    | TrainReplaceEngine of {train: Trainmap.Id.t; engine: Train_engine.make; player_idx: Owner.t}
     | TrainToggleStopWait of {train: Trainmap.Id.t; stop: int; player_idx: Owner.t}
     | TrainToggleHold of {player_idx: Owner.t; train_idx: Trainmap.Id.t}
     | BuildIndustry of {player_idx: Owner.t; x: int; y: int; tile: Tile.t}

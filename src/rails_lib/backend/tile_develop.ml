@@ -10,6 +10,7 @@ module C = Constants
 module Map = Utils.Map
 module IntMap = Utils.IntMap
 module Random = Utils.Random
+module Dir = Engine.Dir
 
 module PixelMap = Map.Make(struct
   type t = Tilemap.pixel [@@deriving yojson]

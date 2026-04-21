@@ -126,7 +126,7 @@ let find_block_at loc tracks blocks graph player_idx =
     | Ixn (ixn::_)
     | Track (ixn::_) ->
         let loc = ixn.x, ixn.y in
-        if ixn.station then Some (loc, Dir.to_upper ixn.dir)
+        if ixn.station then Some (loc, Engine.Dir.to_upper ixn.dir)
         else
           let stations = Track_graph.connected_stations_dirs graph tracks [loc] in
           Utils.LocuHSet.choose stations

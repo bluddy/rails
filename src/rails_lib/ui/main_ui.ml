@@ -5,10 +5,17 @@ open Main_ui_d
 let src = Logs.Src.create "main_ui" ~doc:"Main_ui"
 module Log = (val Logs.src_log src: Logs.LOG)
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module C = Constants
 module M = Money
+module Pani_render = Engine.Pani_render
+module Menu = Engine.Menu
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Event = Engine.Event
+module Transition = Engine.Transition
+module Sound = Engine.Sound
 
 let sp = Printf.sprintf
 

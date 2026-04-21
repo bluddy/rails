@@ -1,8 +1,9 @@
 open Containers
 module R = Rails_lib
+module E = Engine
 open R.Tilemap
 module Tile = R.Tile
-module Dir = R.Dir
+module Dir = E.Dir
 module Params = R.Params
 
 let map (width,height) = 

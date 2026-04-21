@@ -3,6 +3,8 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module LocuHSet = Utils.LocuHSet
 open Block_map_d
 
+module Dir = Engine.Dir
+
 let src = Logs.Src.create "blocks" ~doc:"Blocks"
 module Log = (val Logs.src_log src: Logs.LOG)
 

@@ -1,8 +1,11 @@
 open! Containers
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module C = Constants
 module CS = Constants.Save
+module Menu = Engine.Menu
+module Fonts = Engine.Fonts
+module Event = Engine.Event
 
 let src = Logs.Src.create "loadgame" ~doc:"Load_game"
 module Log = (val Logs.src_log src: Logs.LOG)

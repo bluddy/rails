@@ -2,9 +2,11 @@ open Containers
 
 (* UI for 1st delivery/pickup of a good notice *)
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module C = Constants
+module Text_entry = Engine.Text_entry
+module Fonts = Engine.Fonts
 
 include Name_rr_d
 
@@ -43,7 +45,7 @@ let handle_event v event =
 
 let render win (s:State.t) v =
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
-  let write = Fonts.Render.write win s.fonts ~color:Ega.black ~idx:`Standard in
+  let write = Fonts.Render.write win s.fonts ~color:Engine.Ega.black ~idx:`Standard in
   write "Type Railroad Name..." ~x:24 ~y:64;
   Text_entry.render win s.fonts v.name;
   match v.active with

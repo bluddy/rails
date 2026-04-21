@@ -1,3 +1,4 @@
+include Engine.Utils
 
 let dist region loc1 loc2 =
   Region.dist_mult region * classic_dist loc1 loc2

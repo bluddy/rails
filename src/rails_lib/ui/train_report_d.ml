@@ -1,10 +1,11 @@
+module Menu = Engine.Menu
 
 type msg =
   [   `ShowMap
     | `Type of Train.train_type
     | `RetireTrain
     | `ReplaceEngine 
-    | `EngineInfo of Engine.make
+    | `EngineInfo of Train_engine.make
   ]
 
 (* Place this here to avoid circular dependency or an extra file *)

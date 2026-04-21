@@ -1,5 +1,7 @@
 open! Containers
 
+module R = Engine.Renderer
+
 (* Main modules of game. They don't carry much state between them *)
 type module_t =
   | Intro of Intro_d.t
@@ -15,13 +17,13 @@ and t = {
 
   (* non-saveable *)
   mode: module_t;
-  mutable map_tex: Renderer.Texture.t;
-  map_silhouette_tex: Renderer.Texture.t;
+  mutable map_tex: R.Texture.t;
+  map_silhouette_tex: R.Texture.t;
   textures: Textures.t;
   resources: Resources.t;
-  fonts: Fonts.t;
-  win: Renderer.window;
+  fonts: Engine.Fonts.t;
+  win: R.window;
   random: Utils.Random.State.t; (* separate random state for UI stuff *)
-  sound: Sound.t;
+  sound: Engine.Sound.t;
 }
 

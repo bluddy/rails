@@ -1,9 +1,12 @@
 open Containers
 module Hashtbl = Utils.Hashtbl
-module R = Renderer
+module R = Engine.Renderer
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Event = Engine.Event
 
 type t = {
-  engine: Engine.t;
+  engine: Train_engine.t;
 }
 
 let make engine = 

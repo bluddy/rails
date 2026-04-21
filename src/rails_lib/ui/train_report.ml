@@ -1,11 +1,14 @@
 open Containers
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 open Train_report_d
 open Utils.Infix
 module Vector = Utils.Vector
 module C = Constants
 module T = Train
+module Menu = Engine.Menu
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
 
 open Train_route_orders
 
@@ -228,7 +231,7 @@ let render win (s:State.t) (v:State.t t) : unit =
     in
 
     (* Priority *)
-    Renderer.draw_rect win ~x:2 ~y:127 ~w:315 ~h:10 ~color:Ega.yellow ~fill:true;
+    R.draw_rect win ~x:2 ~y:127 ~w:315 ~h:10 ~color:Ega.yellow ~fill:true;
     write Ega.black ~x:8 ~y:128 "Priority Orders:";
     write Ega.black ~x:160 ~y:128 "Priority Consist:";
     write Ega.gray ~x:3 ~y:138 "P";

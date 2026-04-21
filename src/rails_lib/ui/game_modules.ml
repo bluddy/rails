@@ -1,9 +1,13 @@
 open Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module Random = Utils.Random
+module Menu = Engine.Menu
+module Fonts = Engine.Fonts
+module Event = Engine.Event
+module Sound = Engine.Sound
 open Utils.Infix
 
 let update_map _win v map =

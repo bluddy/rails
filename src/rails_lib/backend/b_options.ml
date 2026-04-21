@@ -29,7 +29,7 @@ let show_reality_level ?(pos=true) v = match v, pos with
 
 let reality_levels = [`DispatcherOps; `ComplexEconomy; `CutthroatCompetition]
 
-module RealityLevels = Bitset.Make(struct
+module RealityLevels = Engine.Bitset.Make(struct
   type t = reality_level [@@deriving yojson]
   let to_enum = reality_level_to_enum
   let of_enum = reality_level_of_enum

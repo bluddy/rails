@@ -1,8 +1,8 @@
 open Containers
 
-module R = Renderer
 module C = Pani_const
 module List = Utils.List
+module R = Renderer
 
 type status = [`Pause | `Done | `Init ]
 

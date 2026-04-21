@@ -1,9 +1,11 @@
 open Containers
 open Utils.Infix
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module C = Constants
+module Menu = Engine.Menu
+module Event = Engine.Event
 
 module AddCars = struct
   open Build_train_d
@@ -30,7 +32,7 @@ module AddCars = struct
       with Invalid_argument _ -> invalid_arg "No station with engine found"
     in
     let anim =
-      let engine = engine.Engine.make in
+      let engine = engine.Train_engine.make in
       Train_animate_side.init s ~engine ~cars:[] ~paused:false ~station:station.loc ~rail:`Back
     in
     let menu = create_menu ~fonts:s.fonts (B.get_region s.backend) in

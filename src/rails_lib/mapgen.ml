@@ -3,6 +3,9 @@ open Tilemap
 
 module C = Constants
 module Random = Utils.Random
+module Fonts = Engine.Fonts
+module Dir = Engine.Dir
+module My_gen = Engine.My_gen
 
 let debug = false
 
@@ -375,11 +378,11 @@ let update_map_step r v ~map ~fonts ~done_fn =
 
 module View = struct
 
-module R = Renderer
+module R = Engine.Renderer
 
 let render_new_pixels win v pixel_tex =
   let render (x, y) pixel _acc =
-    let color = Tilemap.pixel_to_enum pixel |> Ega.get_rgba in
+    let color = Tilemap.pixel_to_enum pixel |> Engine.Ega.get_rgba in
     R.Texture.render win ~x ~y ~color pixel_tex
   in
   IntIntMap.fold render v.new_pixels ();

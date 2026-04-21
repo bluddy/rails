@@ -1,9 +1,10 @@
 open! Containers
 module R = Rails_lib
-open R.Dir
+module E = Engine
+open E.Dir
 module TM = R.Trackmap
 module S = R.Scan
-module Dir = R.Dir
+module Dir = E.Dir
 module T = R.Track
 module Bridge = R.Bridge
 module Trainmap = R.Trainmap

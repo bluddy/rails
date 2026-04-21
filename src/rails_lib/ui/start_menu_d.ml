@@ -1,3 +1,4 @@
+module Menu = Engine.Menu
 
 type 'state mode =
   | Action of ([`NewGame | `LoadGame], 'state) Menu.MsgBox.t

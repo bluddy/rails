@@ -1,7 +1,10 @@
 open Containers
 
-module R = Renderer
+module R = Engine.Renderer
 module C = Constants
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Event = Engine.Event
 
 open Train_report_d
 

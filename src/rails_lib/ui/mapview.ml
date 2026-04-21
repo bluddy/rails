@@ -3,8 +3,12 @@ open Mapview_d
 module Hashtbl = Utils.Hashtbl
 module B = Backend
 module C = Constants
-module R = Renderer
+module R = Engine.Renderer
 module M = Money
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Dir = Engine.Dir
+module Event = Engine.Event
 open! Utils.Infix
 
 let src = Logs.Src.create "mapview" ~doc:"Mapview"
@@ -959,7 +963,7 @@ let handle_tick (s:State.t) (v:t) _time is_cycle =
       (* Create plumes of smoke *)
       let smoke_plumes =
         Trainmap.foldi (fun i acc train ->
-          if Engine.has_steam train.engine &&
+          if Train_engine.has_steam train.engine &&
              Train.get_speed train > 0 &&
              (Train.Id.to_int i * 3 + s.backend.params.cycle) mod 16 = 0 &&
              train.x >= start_x_map - C.draw_margin &&

@@ -1,9 +1,11 @@
 open! Containers
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module M = Money
 module C = Constants
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
 
 module Hashtbl = Utils.Hashtbl
 
@@ -14,7 +16,7 @@ let render win (s:State.t) =
   let fonts = s.fonts in
   let player_idx = C.player in
   Ui_common.render_full_screen_frame win s.textures s.ui.dims;
-  let write = Fonts.Render.write ~idx:`Standard win ~color:Ega.black fonts in
+  let write = Fonts.Render.write ~idx:`Standard win ~color:Engine.Ega.black fonts in
 
   write ~x:100 ~y:4 "Efficiency Report";
 

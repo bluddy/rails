@@ -1,7 +1,8 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-module Id = Int_id.Make(struct end)
+module Dir = Engine.Dir
+module Id = Engine.Int_id.Make(struct end)
 
 type info = {
   mutable count: int;

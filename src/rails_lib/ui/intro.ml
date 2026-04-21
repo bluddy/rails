@@ -1,9 +1,13 @@
 open! Containers
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module C = Constants.Intro
 module M = Money
+module Event = Engine.Event
+module Transition = Engine.Transition
+module Pani_render = Engine.Pani_render
+module Sound = Engine.Sound
 
 open Utils.Infix
 

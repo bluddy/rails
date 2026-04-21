@@ -2,6 +2,8 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Utils
 
+module Dir = Engine.Dir
+
 let src = Logs.Src.create "track_graph" ~doc:"The track graph"
 module Log = (val Logs.src_log src: Logs.LOG)
 

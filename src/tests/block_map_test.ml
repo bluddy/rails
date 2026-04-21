@@ -1,5 +1,6 @@
 open! Containers
 module R = Rails_lib
+module E = Engine
 open R.Track
 module TM = R.Trackmap
 module SM = R.Block_map
@@ -7,6 +8,7 @@ module TG = R.Track_graph
 module TS = R.Scan
 module TRM = R.Trainmap
 module C = R.Constants
+module Dir = E.Dir
 module Utils = R.Utils
 module Trainmap = R.Trainmap
 module Block_map = R.Block_map

@@ -1,7 +1,7 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type mode =
-  | EnterName of Text_entry.t
+  | EnterName of Engine.Text_entry.t
   | Display
 
 type entry = {

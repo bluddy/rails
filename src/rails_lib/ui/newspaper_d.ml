@@ -1,4 +1,5 @@
 open! Containers
+module Menu = Engine.Menu
 
 type kind =
   | FinancialNews

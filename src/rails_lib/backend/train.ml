@@ -9,6 +9,7 @@ module Hashtbl = Utils.Hashtbl
 module Map = Utils.Map
 module C = Constants
 module M = Money
+module Dir = Engine.Dir
 
 let max_stops = 4
 
@@ -141,7 +142,7 @@ type wait = [`Wait | `NoWait]
 
 let is_wait = function `Wait -> true | `NoWait -> false
 
-module Id = Int_id.Make(struct end)
+module Id = Engine.Int_id.Make(struct end)
 module IdSet = Set.Make(Id)
 module IdMap = Map.Make(Id)
 
@@ -158,7 +159,7 @@ type 'mut t = {
   name: string option;
   last_station: Station.id; (* Could be far away due to express *)
   hold_at_next_station: bool;
-  engine: Engine.t;
+  engine: Train_engine.t;
   cars: Car.t list;
   holds_priority_shipment: bool;
   freight: Freight.t; (* freight class. Based on majority of cars *)
@@ -408,7 +409,7 @@ let compute_target_speed ~idx ~cycle v =
   let weight = get_weight v in
   let max_speed_factor = get_max_speed_factor v in
   let b = (max_speed_factor + 2) * (weight/160 + 1) in
-  let engine_speed = (v.engine.Engine.horsepower * 200) / b in
+  let engine_speed = (v.engine.Train_engine.horsepower * 200) / b in
   let random = (13 * (Id.to_int idx) + cycle) mod 64 in
   Log.debug (fun f -> f "max_sf(%d) weight(%d) random(%d) engine_speed(%d)" max_speed_factor weight random engine_speed);
   ((engine_speed * 8) + random + 80) / 80

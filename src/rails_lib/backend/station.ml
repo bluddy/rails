@@ -3,6 +3,8 @@ open Utils.Infix
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module Hashtbl = Utils.Hashtbl
 module C = Constants
+module Ega = Engine.Ega
+module Dir = Engine.Dir
 
 let src = Logs.Src.create "station" ~doc:"Station"
 module Log = (val Logs.src_log src: Logs.LOG)
@@ -85,7 +87,7 @@ let price_of_upgrade = function
   | LivestockPens | GrapeStorage -> moi 25
   | Hotel -> moi 100
 
-module Upgrades = Bitset.Make(struct
+module Upgrades = Engine.Bitset.Make(struct
   type t = upgrade [@@deriving yojson]
   let to_enum = upgrade_to_enum
   let of_enum = upgrade_of_enum

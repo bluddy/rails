@@ -2,6 +2,7 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Utils.Infix
 
+module Dir = Engine.Dir
 module C = Constants
 module Vector = Utils.Vector
 module Hashtbl = Utils.Hashtbl

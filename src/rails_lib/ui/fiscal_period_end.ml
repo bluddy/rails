@@ -1,9 +1,12 @@
 module List = Utils.List
 
-module R = Renderer
+module R = Engine.Renderer
 module C = Constants
 module B = Backend
 module M = Money
+module Menu = Engine.Menu
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
 
 include Fiscal_period_end_d
 

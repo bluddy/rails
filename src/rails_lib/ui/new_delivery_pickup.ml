@@ -2,9 +2,11 @@ open Containers
 
 (* UI for 1st delivery/pickup of a good notice *)
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module C = Constants
+module Fonts = Engine.Fonts
+module Event = Engine.Event
 
 include New_delivery_pickup_d
 
@@ -56,7 +58,7 @@ let station_name loc s = (B.get_station loc s.State.backend |> Option.get_exn_or
 let render win (s:State.t) v =
   Train_animate_side.render ~show_name:false win s v.anim;
   let fonts = s.fonts in
-  let color = Ega.white in
+  let color = Engine.Ega.white in
   let write_lg = Fonts.Render.write_shadow win fonts ~color ~idx:`Large in
   let write_sm = Fonts.Render.write_shadow win fonts ~color ~idx:`Standard in
   let station_s = B.get_station v.loc s.backend |> Option.get_exn_or "oops "|> Station.get_name in

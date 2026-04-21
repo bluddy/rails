@@ -1,6 +1,6 @@
 
 type t = {
   active: [`First | `Second];
-  name: Text_entry.t;
-  handle: Text_entry.t;
+  name: Engine.Text_entry.t;
+  handle: Engine.Text_entry.t;
 }

@@ -7,6 +7,8 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 module C = Constants
 module Hashtbl = Utils.Hashtbl
+module Dir = Engine.Dir
+module Pic = Engine.Pic
 
 let map_height_default = 192
 let map_width_default = 256

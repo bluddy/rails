@@ -1,6 +1,10 @@
 open! Containers
 module B = Backend
-module R = Renderer
+module R = Engine.Renderer
+module Menu = Engine.Menu
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Event = Engine.Event
 
 include Fired_animation_d
 

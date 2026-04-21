@@ -2,8 +2,10 @@ open !Containers
 
 module B = Backend
 module C = Constants
-module R = Renderer
+module R = Engine.Renderer
 module M = Money
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
 
 let sp = Printf.sprintf
 

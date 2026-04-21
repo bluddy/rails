@@ -9,7 +9,7 @@ type slot = {
 }
 
 type 'state t = {
-  menu: (slot, 'state) Menu.MsgBox.t;
+  menu: (slot, 'state) Engine.Menu.MsgBox.t;
   action: [`Save | `Load];
 }
 

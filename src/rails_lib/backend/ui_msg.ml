@@ -100,10 +100,10 @@ type t =
   | AiBuysPlayerStock of {player_idx: Owner.t; ai_idx: Owner.t; takeover: bool; opponent: Opponent.name}
   | BridgeWashout of {player_idx: Owner.t; loc: loc; fixed: bool}
   | ClimateChange of {climate: Climate.t; reason: Climate.reason}
-  | EngineDiscovered of Engine.t
+  | EngineDiscovered of Train_engine.t
   | ImpossibleRoute of {player_idx: Owner.t; train_idx: Train.Id.t; src: loc; dst: loc}
   | TrainAccident of {player_idx: Owner.t}
-  | TrainBridgeAccident of {player_idx: Owner.t; engine: Engine.t}
+  | TrainBridgeAccident of {player_idx: Owner.t; engine: Train_engine.t}
   | FirstTrainArrives of {player_idx: Owner.t; station: loc}
   | RateWarDeclared of {player_idx: Owner.t; other_player_idx: Owner.t; station: loc}
   | UnionStation of {player_idx: Owner.t; station: loc}
@@ -111,8 +111,9 @@ type t =
   | OwnerFired of {player_idx: Owner.t; by:[`Stockholders | `Management]}
   | BridgeCreated of {player_idx: Owner.t; kind: Bridge.t}
   | StationBuilt of {player_idx: Owner.t; loc: Utils.loc}
-  | NewGoodPickedUp of {player_idx: Owner.t; good: Goods.t; station: loc; engine: Engine.make; cars: Goods.t list; buying: loc list}
-  | NewGoodDelivery of {player_idx: Owner.t; good: Goods.t; src: loc; dst: loc; amount: int; revenue: Money.t; engine: Engine.make; cars: Goods.t list; speed: int}
+  | NewGoodPickedUp of {player_idx: Owner.t; good: Goods.t; station: loc; engine: Train_engine.make; cars: Goods.t list; buying: loc list}
+  | NewGoodDelivery of {player_idx: Owner.t; good: Goods.t; src: loc; dst: loc; amount: int;
+      revenue: Money.t; engine: Train_engine.make; cars: Goods.t list; speed: int}
   | SpeedRecord of {player_idx: Owner.t; speed: int; src: loc; dst: loc; train_idx: Train.Id.t }
   | FiscalPeriodEnd of Owner.t
   | FiscalPeriodEndMsgs of Owner.t * fiscal_period_end_msg list

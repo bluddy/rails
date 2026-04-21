@@ -1,7 +1,8 @@
 open! Containers
 
-module R = Renderer
+module R = Engine.Renderer
 module C = Constants
+module Ega = Engine.Ega
 
 let draw_ui_car win ~x ~y ~full good =
   let freight = Freight.of_good good in

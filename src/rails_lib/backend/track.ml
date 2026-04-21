@@ -1,6 +1,8 @@
 open Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
+module Dir = Engine.Dir
+
 type double = [ `Double | `Single ]
   [@@deriving eq, yojson, hash, show]
 

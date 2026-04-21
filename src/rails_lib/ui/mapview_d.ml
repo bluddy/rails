@@ -2,6 +2,8 @@ open! Containers
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open Utils
 
+module Dir = Engine.Dir
+
 type zoom23 =
   {
     (* View of station for changing lights *)
@@ -25,7 +27,7 @@ type options =
   [ `StationBoxes | `Resources]
   [@@ deriving enum, eq, show, yojson]
 
-module Options = Bitset.Make(struct
+module Options = Engine.Bitset.Make(struct
     type t = options [@@deriving yojson]
     let to_enum = options_to_enum
     let of_enum = options_of_enum
@@ -42,7 +44,7 @@ type smoke_plume = {
 
 let max_smoke_frame = 16
 
-type train_history = (int * int * Ega.color) list
+type train_history = (int * int * Engine.Ega.color) list
   [@@deriving eq, yojson]
 
 type t =

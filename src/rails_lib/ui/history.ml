@@ -1,9 +1,12 @@
 open! Containers
 
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
 module M = Money
 module C = Constants
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Event = Engine.Event
 
 include History_d
 

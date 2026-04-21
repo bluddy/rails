@@ -11,7 +11,7 @@ type t = {
   mutable track: Trackmap.t;
   mutable graph: Track_graph.t;
   cities: Cities.t;
-  engines: Engine.t list;
+  engines: Train_engine.t list;
   mutable stations: Station_map.t;
   mutable blocks: Block_map.t; (* map blocks btw stations *)
   mutable dev_state: Tile_develop.t; (* State for gradual map developmnt *)

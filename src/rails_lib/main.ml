@@ -1,5 +1,8 @@
 open Arg
 
+module Pani_render = Engine.Pani_render
+module Sound = Engine.Sound
+
 type actions = [ `Font | `Pic | `Pani | `City | `Game | `LoadGame]
 
 let file = ref ""
@@ -36,8 +39,8 @@ let arglist =
 let main () =
   parse arglist (fun _ -> ()) "Usage";
   match !mode with
-  | `Font -> Fonts.main !file
-  | `Pic  -> Pic.png_of_file !file
+  | `Font -> Engine.Fonts.main !file
+  | `Pic  -> Engine.Pic.png_of_file !file
   | `Pani when !debugger && !dump ->
       let sound_engine = Sound.init () in
       Mainloop.main @@ Pani_render.debugger ~sound_engine ~dump:true ~filename:!file

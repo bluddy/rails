@@ -2,8 +2,12 @@ open Containers
 module C = Constants.HallOfFame
 module List = Utils.List
 module M = Money
-module R = Renderer
+module R = Engine.Renderer
 module B = Backend
+module Text_entry = Engine.Text_entry
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
+module Event = Engine.Event
 
 open Utils.Infix
 

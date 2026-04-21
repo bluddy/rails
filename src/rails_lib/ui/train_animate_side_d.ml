@@ -4,7 +4,7 @@ type t = {
   mutable x: int;
   mutable ctr: int;
   rail: [`Back | `Front];
-  engine: Engine.make;
+  engine: Train_engine.make;
   cars: Goods.t list;
   station: int * int;
   paused: bool;

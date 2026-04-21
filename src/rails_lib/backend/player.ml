@@ -17,6 +17,7 @@ module Vector = Utils.Vector
 module U = Utils
 module M = Money
 module Random = U.Random
+module Dir = Engine.Dir
 
 type monetary = {
   cash: Money.t; (* all x1000 *)
@@ -257,7 +258,7 @@ let fiscal_period_end net_worth stations params v =
       let acc = if not train.had_maintenance then Ui_msg.TrainNoMaintenance(idx)::acc else acc in
       let acc = if Train.get_route_length train = 0 then Ui_msg.TrainNoSchedule(idx)::acc else acc in
       let maintenance_cost =
-        let added_maint = if Train.get_engine train |> Engine.has_steam then 2 else 1 in
+        let added_maint = if Train.get_engine train |> Train_engine.has_steam then 2 else 1 in
         let no_maint_penalty = if train.had_maintenance then 0 else 2 in
         Money.(train.maintenance_cost +~ added_maint +~ no_maint_penalty) in
       let acc = if Money.(maintenance_cost >= Train.get_engine_cost train) then Ui_msg.TrainOldEngine(idx)::acc else acc in

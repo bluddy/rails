@@ -1,5 +1,11 @@
 open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
+module Menu = Engine.Menu
+module Bitset = Engine.Bitset
+module R = Engine.Renderer
+module Transition = Engine.Transition
+module Pani_render = Engine.Pani_render
+
 type dims = {
   screen: Utils.rect;
   menu: Utils.rect;
@@ -100,7 +106,7 @@ and 'state mode =
   | BuildBridge of ('state, Bridge.t, Backend.Action.msg) modalmenu
   | BuildHighGrade of ('state, [`BuildTunnel | `BuildTrack], Backend.Action.msg) modalmenu
   | BuildTunnel of ('state, bool, Backend.Action.msg * int) modalmenu
-  | SignalMenu of ('state, [`Normal|`Hold|`Proceed], int * int * Dir.t) modalmenu (* x,y,dir *)
+  | SignalMenu of ('state, [`Normal|`Hold|`Proceed], int * int * Engine.Dir.t) modalmenu (* x,y,dir *)
   | StationReport of int * int (* x, y *)
   | StationUpgrade of {transition: Transition.t option; old_station: Station.t; loc: Utils.loc}
   | BuildTrain of [
@@ -124,7 +130,7 @@ and 'state mode =
   | FindCity of Find_city.t
   (* A screen with only rendering and no interaction *)
   | GenericScreen of {
-      render_fn: Renderer.window -> 'state -> unit;
+      render_fn: R.window -> 'state -> unit;
       send_delayed_fn: bool;
       start_fn: 'state -> unit;
     }

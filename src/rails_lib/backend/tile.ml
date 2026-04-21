@@ -1,6 +1,8 @@
 open Containers
 module C = Constants
 
+module Dir = Engine.Dir
+
 type t =
   | Clear (* 0 *)
   | Woods

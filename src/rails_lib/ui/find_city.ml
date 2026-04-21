@@ -1,6 +1,9 @@
 open Containers
 
-module R = Renderer
+module Text_entry = Engine.Text_entry
+module R = Engine.Renderer
+module Ega = Engine.Ega
+module Fonts = Engine.Fonts
 
 type t = Text_entry.t
 

@@ -1,6 +1,9 @@
 open Containers
 
-module R = Renderer
+module R = Engine.Renderer
+module Text_entry = Engine.Text_entry
+module Fonts = Engine.Fonts
+module Ega = Engine.Ega
 
 (* Called by Stock_broker *)
 

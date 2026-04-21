@@ -1,5 +1,6 @@
 open! Containers
 module C = Constants
+module Ega = Engine.Ega
 
 type t = [
   | `Mail
@@ -82,7 +83,7 @@ let idx_of_good = function
   | Coal
   | Armaments -> 2
 
-module Set = Bitset.Make(struct
+module Set = Engine.Bitset.Make(struct
   type nonrec t = t
   let t_of_yojson = t_of_yojson
   let yojson_of_t = yojson_of_t

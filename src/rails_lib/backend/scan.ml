@@ -2,6 +2,7 @@ open! Containers
 open! Utils
 module C = Constants
 module LocdSet = Utils.LocdSet
+module Dir = Engine.Dir
 
 (* Module for searching the trackmap for stations and ixns, and the trainmap for trains
    For updating the graph and the station block connectivity
