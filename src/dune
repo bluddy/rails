@@ -1,11 +1,19 @@
 
 (executable
   (public_name rails)
-  (modules main_run)
-  (name main_run)
+  (modules rails_run)
+  (name rails_run)
   (libraries rails_lib)
   (modes exe)
   )
+
+;(executable
+;  (public_name covert)
+;  (modules covert_run)
+;  (name main_run)
+;  (libraries covert)
+;  (modes exe)
+;  )
 
 
 (env
