@@ -255,9 +255,8 @@ let main filename =
   )
   fonts
 
-
-let load win =
-  let fonts = of_file "./data/FONTS.RR" in
+let load file win =
+  let fonts = of_file file in
   Array.iter (Font.create_textures win) fonts;
   fonts
 

@@ -43,7 +43,7 @@ let _load_state backend ui_options ui_view win sound =
   let textures = Textures.of_resources win resources in
   let map_tex = R.Texture.make win @@ Tilemap.to_img backend.map in
   let map_silhouette_tex = R.Texture.make win @@ Tilemap.to_silhouette backend.map in
-  let fonts = Fonts.load win in
+  let fonts = Fonts.load "./data/FONTS.RR" win in
   let ui = Main_ui.default ~options:ui_options ~view:ui_view win fonts region in
   {
     State.map_tex;
