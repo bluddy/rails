@@ -97,7 +97,7 @@ uniform PRECISION vec2 rubyInputSize;
 void main()
 {
     gl_Position = a_position;
-    v_texCoord = vec2(a_position.x + 1.0, 1.0 - a_position.y) / 2.0 * rubyInputSize / rubyTextureSize;
+    v_texCoord = vec2(a_position.x + 1.0, 1.0 + a_position.y) / 2.0 * rubyInputSize / rubyTextureSize;
 }
 
 
