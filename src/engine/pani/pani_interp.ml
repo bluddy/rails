@@ -161,7 +161,7 @@ let interpret v =
   let byte = read_byte v in
   let op = op_of_byte byte in
   if !debug then
-    Printf.printf "0x%x: %s(0x%x) " v.read_ptr (show_op op) byte;
+    Printf.printf "0x%x: %s(0x%x) " (v.read_ptr-1) (show_op op) byte;
 
   let ret =
     match op with
@@ -186,7 +186,7 @@ let interpret v =
           | x::y::z ->
               let result = f y x in
               if !debug then
-                Printf.printf "%d %d = %d " y x result;
+                Printf.printf "(%d, %d) = %d" y x result;
               result::z
           | _ -> failwith "Cannot add. Stack has < 2 elements"
         in
@@ -198,7 +198,7 @@ let interpret v =
           let anim_idx =
             if anim_idx = -1 then (
               if !debug then
-                Printf.printf "-1: find unused anim. ";
+                Printf.printf "-1: find unused sprite.";
               begin match Array.find_idx (fun anim -> not anim.Pani_sprite.active) v.sprites with
               | Some(i,_) -> i
               | None -> 50 
@@ -230,7 +230,7 @@ let interpret v =
         | anim_idx::rest ->
             if anim_idx >= 0 && anim_idx <= 50 then begin
               if !debug then
-                Printf.printf "%d " anim_idx;
+                Printf.printf "%d" anim_idx;
               v.sprites.(anim_idx).active <- false
             end;
             save_sprite anim_idx v;
@@ -243,7 +243,7 @@ let interpret v =
         begin match v.stack with
         | delay :: rest ->
             if !debug then
-              Printf.printf "%d " delay;
+              Printf.printf "%d" delay;
             v.delay <- true;
             v.delay_time <- delay;
             v.stack <- rest
@@ -254,7 +254,7 @@ let interpret v =
         begin match v.stack with
         | x::rest ->
             if !debug then
-              Printf.printf "audio: %d\n" x;
+              Printf.printf "audio: 0x%x" x;
             v.stack <- rest
         | _ -> failwith "AudioOutput: missing value argument"
         end;
@@ -278,11 +278,11 @@ let interpret v =
         let value = read_word v in
         if is_true test then begin
           if !debug then
-            Printf.printf "%d from memory [%d] " v.memory.(value) value;
+            Printf.printf "reg := 0x%x from memory[0x%x]" v.memory.(value) value;
           v.delay_time <- v.memory.(value)
         end else begin
           if !debug then
-            Printf.printf "%d " value;
+            Printf.printf "reg := 0x%x" value;
           v.delay_time <- value
         end;
         v.stack <- v.delay_time::v.stack;
@@ -292,11 +292,11 @@ let interpret v =
         | newval::rest ->
           let value = read_word v in
           if !debug then
-            Printf.printf "reg = %d " value;
+            Printf.printf "reg := 0x%x" value;
           v.delay_time <- value;
           if value >= 0 && value <= 50 then begin
             if !debug then
-              Printf.printf ", %d in animation_reg[%d] " newval value;
+              Printf.printf ", memory[0x%x] := 0x%x" value newval;
             v.memory.(value) <- newval
           end;
           v.stack <- rest
@@ -307,7 +307,7 @@ let interpret v =
         begin match v.stack with
         | x::rest ->
           if !debug then
-            Printf.printf "%d " x;
+            Printf.printf "duplicate 0x%x" x;
           v.stack <- x::x::rest
         | _ -> failwith "Copy: missing argument"
         end;
@@ -318,11 +318,11 @@ let interpret v =
             let addr = read_word v in
             if is_true do_jump then (
               if !debug then
-                Printf.printf "true, jump to 0x%x " addr;
+                Printf.printf "true on stack, jump to 0x%x" addr;
               v.read_ptr <- addr
             ) else (
               if !debug then
-                Printf.printf "no jump to 0x%x " addr;
+                Printf.printf "no jump to 0x%x" addr;
             );
             v.stack <- rest
         | _ -> failwith "JumpIfTrue: missing argument"
@@ -331,7 +331,7 @@ let interpret v =
     | Jump ->
         let addr = read_word v in
         if !debug then
-          Printf.printf "to 0x%x " addr;
+          Printf.printf "jump to 0x%x" addr;
         v.read_ptr <- addr;
         `Stay
     | SetDone ->
@@ -344,7 +344,7 @@ let interpret v =
         v.stack <- v.read_ptr :: v.stack;
         v.read_ptr <- jump_addr;
         if !debug then
-          Printf.printf "addr 0x%x " jump_addr;
+          Printf.printf "call addr 0x%x" jump_addr;
         `Stay
     | Return ->
         begin match v.stack with
@@ -352,7 +352,7 @@ let interpret v =
           v.read_ptr <- ret_addr;
           v.stack <- rest;
           if !debug then
-            Printf.printf "to 0x%x "ret_addr;
+            Printf.printf "ret to 0x%x " ret_addr;
         | _ -> failwith "Return: missing return address"
         end;
         `Stay
