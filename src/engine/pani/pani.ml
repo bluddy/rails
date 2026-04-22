@@ -30,6 +30,10 @@ let of_stream ?debug ?input ?(dump=false) s =
 
   let pani_pics = Array.make 251 None in
 
+  let _ega_params = if pani_type = 2 then (
+    My_gen.get_wordi s
+  ) else 0 in
+
   let pic_bgnd = match pani_type with
     | 0 -> None
     | 1 ->
