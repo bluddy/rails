@@ -416,10 +416,33 @@ let pragma_values src =
     StrMap.empty
     l
 
-let create shader_path =
+let identity_shader_src = 
+"#version 330 core\n\
+ #if defined(VERTEX)\n\
+ layout(location = 0) in vec2 a_position;\n\
+ out vec2 v_texCoord;\n\
+ uniform vec2 rubyInputSize;\n\
+ uniform vec2 rubyTextureSize;\n\
+ void main() {\n\
+     gl_Position = vec4(a_position, 0.0, 1.0);\n\
+     v_texCoord = (a_position + 1.0) / 2.0 * rubyInputSize / rubyTextureSize;\n\
+ }\n\
+ #elif defined(FRAGMENT)\n\
+ in vec2 v_texCoord;\n\
+ out vec4 FragColor;\n\
+ uniform sampler2D rubyTexture;\n\
+ void main() {\n\
+     FragColor = texture(rubyTexture, v_texCoord);\n\
+ }\n\
+ #endif"
+
+let create shader_path_opt =
   let gid = create_geometry_ () in
   let pid, pragmas =
-    let raw_src = IO.with_in shader_path IO.read_all in
+    let raw_src = match shader_path_opt with
+      | Some path -> IO.with_in path IO.read_all
+      | None -> identity_shader_src
+    in
     let vert_src = insert_define_after_version_ vertex_define raw_src in
     let frag_src = insert_define_after_version_ fragment_define raw_src in
     create_program_ vert_src frag_src, pragma_values raw_src

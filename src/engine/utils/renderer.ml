@@ -49,7 +49,7 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
 
   let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
   print_endline s;
-  let shader_prog = Option.map Opengl.create shader_file in
+  let shader_prog = Opengl.create shader_file in
   let hide_cursor () =
     match Sdl.show_cursor false with
     | Ok x -> print_endline @@ Printf.sprintf "set show cursor: %b" x
@@ -72,7 +72,7 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
     zoom_x;
     zoom_y;
     opengl;
-    shader_prog;
+    shader_prog = Some shader_prog;
   }
 
 let zoom _win x = x
@@ -314,15 +314,7 @@ let render_wrap win f x =
     clear_screen win;
     f x;
   );
-  match win.shader_prog with
-  | Some state ->
-      (* Display with custom shader effects *)
-      Opengl.draw_to_screen state win.opengl.framebuffer_tex win.window ~inner_w:win.inner_w ~inner_h:win.inner_h ~out_w:win.out_w ~out_h:win.out_h
-  | None ->
-      (* Display with simple scaling (no shader effects) *)
-      Tgl3.Gl.bind_framebuffer Tgl3.Gl.framebuffer 0;
-      let win_w, win_h = Tsdl.Sdl.get_window_size win.window in
-      Tgl3.Gl.viewport 0 0 win_w win_h;
-      Opengl.draw_textured_quad win.opengl.framebuffer_tex ~x:0 ~y:0 ~w:win.inner_w ~h:win.inner_h ~inner_w:win.inner_w ~inner_h:win.inner_h;
-      Sdl.gl_swap_window win.window
+  let state = Option.get_exn_or "No shader state" win.shader_prog in
+  (* Display with custom shader effects *)
+  Opengl.draw_to_screen state win.opengl.framebuffer_tex win.window ~inner_w:win.inner_w ~inner_h:win.inner_h ~out_w:win.out_w ~out_h:win.out_h
 
