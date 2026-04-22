@@ -38,7 +38,7 @@ let make (s:State.t) =
   let modes = (add_transition (Some `LogoMPS) `Credits)::modes in
   let modes = (GenericScreen {render_fn=make_render_fn `Credits; timeout=Some 0})::modes in
   let modes =
-    let file = "TITLEM.PAN" in
+    let file = "data/TITLEM.PAN" in
     let sound = Sound.Music.Main_theme in
     Animation(Sound.pani_create s.sound ~sound file)::modes in
   match List.rev modes with

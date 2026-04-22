@@ -124,12 +124,12 @@ let stone_bridge_fail_odds = 8  (* The extra odds of a stone bridge failing *)
 let newspaper_cost_ref_year = 1775
 
 module Pani = struct
-  let wood_bridge = "WOOD2.PAN"
-  let iron_bridge = "IRONM.PAN"
-  let flood_us = "FLOODM.PAN"
-  let flood_eu = "ENGFLDM.PAN"
-  let wreck = "WRECKM.PAN"
-  let title = "TITLEM.PAN"
+  let wood_bridge = "data/WOOD2.PAN"
+  let iron_bridge = "data/IRONM.PAN"
+  let flood_us = "data/FLOODM.PAN"
+  let flood_eu = "data/ENGFLDM.PAN"
+  let wreck = "data/WRECKM.PAN"
+  let title = "data/TITLEM.PAN"
 end
 
 module Intro = struct
