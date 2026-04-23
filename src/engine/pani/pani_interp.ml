@@ -150,6 +150,9 @@ let read_byte v =
   v.read_ptr <- v.read_ptr + 1;
   Bytes.get_int8 v.buffer ptr
 
+let undo_byte v =
+  v.read_ptr <- v.read_ptr - 1
+
 let read_word v =
   let ptr = v.read_ptr in
   v.read_ptr <- v.read_ptr + 2;
@@ -342,8 +345,10 @@ let interpret v =
         `Stay
     | SetDone ->
         v.is_done <- true;
+        undo_byte v;
         `Stay
     | Pause ->
+        undo_byte v;
         `Pause
     | CallFunc ->
         let jump_addr = read_word v in
