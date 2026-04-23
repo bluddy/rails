@@ -158,6 +158,9 @@ let read_word v =
 let is_true x = x <> 0
 
 let interpret v =
+  let reg_stack_s () =
+    Printf.sprintf "reg: %d stack: %s\n" (v.delay_time) (str_of_stack v);
+  in
   let byte = read_byte v in
   let op = op_of_byte byte in
   if !debug then
@@ -188,7 +191,8 @@ let interpret v =
               if !debug then
                 Printf.printf "(%d, %d) = %d" y x result;
               result::z
-          | _ -> failwith "Cannot add. Stack has < 2 elements"
+          | _ -> failwith @@
+            Printf.sprintf "Cannot %s. Stack has < 2 elements: %s" (show_op op) (reg_stack_s ())
         in
         v.stack <- stack';
         `Stay
@@ -221,7 +225,8 @@ let interpret v =
           );
           v.stack <- rest
 
-        | _ -> print_endline "Invalid stack for animation creation"
+        | _ -> failwith @@
+          Printf.sprintf "Invalid stack for animation creation: %s" (reg_stack_s ())
         end;
         `Stay
 
@@ -235,7 +240,8 @@ let interpret v =
             end;
             save_sprite anim_idx v;
             v.stack <- rest
-        | _ -> print_endline "DeleteAnimation: missing anim_idx on stack"
+        | _ -> failwith @@
+            Printf.sprintf "DeleteAnimation: missing anim_idx on stack: %s" (reg_stack_s ())
         end;
         `Stay
 
@@ -357,8 +363,7 @@ let interpret v =
         end;
         `Stay
   in
-  if !debug then
-    Printf.printf "\t\treg: %d stack: %s\n" (v.delay_time) (str_of_stack v);
+  if !debug then Printf.printf "\t\t%s\n" (reg_stack_s ());
   ret
 
 let step_all_sprites v =
