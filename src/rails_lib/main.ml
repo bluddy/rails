@@ -4,7 +4,7 @@ module Pani_render = Engine.Pani_render
 module Pani = Engine.Pani
 module Mainloop = Engine.Mainloop
 
-type actions = [ `Font | `Pic | `Pani | `City | `Game | `LoadGame]
+type actions = [ `Font | `Pic | `Cat | `Pani | `City | `Game | `LoadGame]
 
 let file = ref ""
 let file_slot = ref 0
@@ -27,6 +27,7 @@ let arglist =
   [
     "--font", String (set `Font), "Run the specified font";
     "--pic", String (set `Pic), "Convert .PIC to png";
+    "--cat", String (set `Cat), "Write files in .CAT file";
     "--pani", String (set `Pani), "Run the PANI file";
     "--city", String (set `City), "Dump city info file";
     "--dump", Set dump, "Dump the file";
@@ -42,6 +43,7 @@ let main () =
   match !mode with
   | `Font -> Fonts.main !file
   | `Pic  -> Engine.Pic.png_of_file !file
+  | `Cat -> Utils.stream_of_file !file |> Engine.Cat_file.of_stream ~dump:true |> ignore
   | `Pani when !debugger && !dump ->
       Mainloop.main @@ Pani_render.debugger ~dump:true ~filename:!file
   | `Pani when !dump -> Pani.dump_file !file

@@ -603,3 +603,12 @@ let stream_of_file filename =
   let stream = My_gen.of_stringi str in
   stream
 
+let stream_of_file_seek offset filename =
+  let str = IO.with_in ~flags:[Open_binary] filename IO.read_all in
+  let str = String.sub str offset (String.length str) in
+  let stream = My_gen.of_stringi str in
+  stream
+
+let remove_nulls s =
+  String.filter (fun c -> Char.(<>) c '\000') s
+

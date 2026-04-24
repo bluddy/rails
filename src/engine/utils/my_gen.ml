@@ -32,9 +32,11 @@ let get_wordi s : int =
   let word = get_bytei s in
   word lor ((get_bytei s) lsl 8)
 
-let junki s =
-  let i, _ = Option.get_exn_or "error" @@ Gen.get s in
-  last_i := i;
+let junki ?(num=1) s =
+  for _n=0 to num-1 do
+    let i, _ = Option.get_exn_or "error" @@ Gen.get s in
+    last_i := i;
+  done;
   ()
 
 let pos () = !last_i
@@ -52,7 +54,7 @@ let take n gen =
   fun () ->
     if !count = n || !count = ~-1
     then None
-    else match gen() with
+    else match gen () with
       | None -> count := ~-1; None   (* indicate stop *)
       | (Some _) as x ->
           incr count;
