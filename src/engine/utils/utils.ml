@@ -605,7 +605,7 @@ let stream_of_file filename =
 
 let stream_of_file_seek offset filename =
   let str = IO.with_in ~flags:[Open_binary] filename IO.read_all in
-  let str = String.sub str offset (String.length str) in
+  let str = String.sub str offset (String.length str - offset) in
   let stream = My_gen.of_stringi str in
   stream
 

@@ -43,7 +43,7 @@ let main () =
   match !mode with
   | `Font -> Fonts.main !file
   | `Pic  -> Engine.Pic.png_of_file !file
-  | `Cat -> Utils.stream_of_file !file |> Engine.Cat_file.of_stream ~dump:true |> ignore
+  | `Cat -> Engine.Cat_file.of_file ~dump:true !file |> ignore
   | `Pani when !debugger && !dump ->
       Mainloop.main @@ Pani_render.debugger ~dump:true ~filename:!file
   | `Pani when !dump -> Pani.dump_file !file
