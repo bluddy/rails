@@ -42,7 +42,7 @@ let of_stream ?debug ?input ?(dump=false) s =
 
         Printf.printf "Loading background image\n";
 
-        let ndarray = Pic.ndarray_of_stream s in
+        let ndarray = Pic.interpret_stream s in
         (* Doesn't needs to be transparent, but still stored that way *)
         let pic_bgnd = Some(Pic.img_of_ndarray ~transparent:true ndarray) in
 
@@ -85,9 +85,9 @@ let of_stream ?debug ?input ?(dump=false) s =
         (* We can only start at word boundaries *)
         align_pos ();
         Printf.printf "Load pic. Idx: %d. Pos: 0x%x.\n" i (My_gen.pos () + 1);
-        let ndarray = Pic.ndarray_of_stream s in
+        let ndarray = Pic.interpret_stream s in
         pani_pics.(i) <- Some(Pic.img_of_ndarray ~transparent:true ndarray);
-        
+
         if dump then Pic.png_of_ndarray ndarray ~filename:(Printf.sprintf "%d_0x%x.png" i pos);
   )
   pani_pic_ptrs;
@@ -117,17 +117,9 @@ let of_stream ?debug ?input ?(dump=false) s =
   let pani_v = Pani_interp.make ?debug ?input pani_code_s pic_bgnd pani_pics in
   pani_v
 
-let stream_of_file filename =
-  let str =
-    IO.with_in ~flags:[Open_binary] filename @@
-      fun in_channel -> IO.read_all in_channel
-  in
-  let stream = My_gen.of_stringi str in
-  stream
-
 let dump_file filename =
   (* For dumping *)
-  let stream = stream_of_file filename in
+  let stream = Utils.stream_of_file filename in
   let pani_v = of_stream stream ~dump:true in
   Pani_interp.dump_run_to_end pani_v
 

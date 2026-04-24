@@ -598,3 +598,8 @@ let show_int i =
   Printf.sprintf "%#d" i
   |> String.map (function '_' -> ',' | x -> x)
 
+let stream_of_file filename =
+  let str = IO.with_in ~flags:[Open_binary] filename IO.read_all in
+  let stream = My_gen.of_stringi str in
+  stream
+

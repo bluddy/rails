@@ -23,7 +23,7 @@ type t = {
 }
 
 let create ?(dump=false) ?debug ?input ?sound filename =
-  let stream = Pani.stream_of_file filename in
+  let stream = Utils.stream_of_file filename in
   let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
   let status = `Init in

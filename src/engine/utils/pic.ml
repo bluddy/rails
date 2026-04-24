@@ -33,7 +33,7 @@ module Ndarray = Owl_base_dense_ndarray.Generic
 
 type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
 
-let ndarray_of_stream (stream: (int * char) Gen.t) : ndarray =
+let interpret_stream (stream: (int * char) Gen.t) : ndarray =
   let format_flag = My_gen.get_wordi stream in
   let bytes_not_word_flag = format_flag land 0x1 in
   let discard_bytes =
@@ -84,9 +84,8 @@ let ndarray_of_stream (stream: (int * char) Gen.t) : ndarray =
   arr
 
 let ndarray_of_file filename : ndarray =
-  let str = IO.with_in ~flags:[Open_binary] filename IO.read_all in
-  let stream = My_gen.of_stringi str in
-  ndarray_of_stream stream
+  let stream = Utils.stream_of_file filename in
+  interpret_stream stream
 
 let translate_ega ~transparent arr ~f ~w ~h =
   for y=0 to h-1 do
@@ -164,7 +163,7 @@ let png_of_ndarray (arr:ndarray) ~filename =
   ImagePNG.write och img
 
 let png_of_stream stream ~filename =
-  let arr = ndarray_of_stream stream in
+  let arr = interpret_stream stream in
   png_of_ndarray arr ~filename
 
 let png_of_file in_file =
