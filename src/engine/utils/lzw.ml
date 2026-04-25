@@ -164,12 +164,13 @@ let decompress (compressed:(int*char) Gen.t) ~max_bit_size : char Gen.t =
 
 (*
 The image data is stored as LZW compressed RLE stream. The LZW resets when the dictionary gets full (i.e, there's no separate reset signal).
-Under the LZW the data is compressed with RLE, so that if a pixel byte is 0x90, the previous pixel is repeated as many times as the next byte says; if the repeat value is 0, the pixel value is 0x90.
+Under the LZW the data is compressed with RLE, so that if a pixel byte is 0x90, the previous pixel is repeated as many times
+as the next byte says (minus one); if the repeat value is 0, the pixel value is 0x90.
 
 To reiterate, the RLE works this way:
 aa 90 bb
 if bb = 0, output is "aa 90"
-if bb != 0, output is "aa" * (bb+1)
+if bb != 0, output is "aa" * bb
 
 And yes, if you want a stream of 90's, you do 90 00 90 xx.
 
@@ -184,13 +185,20 @@ let decode_rle (stream: char Gen.t) : char Gen.t =
     Gen.flatten @@
     Gen.unfold (fun (rle, last_val) ->
       match get_byte stream with
-      | 0x90 -> Some (Gen.empty, (true, last_val))
-      | 0 when rle -> Some (add_byte 0x90, (false, 0x90))
+      | 0x90 when not rle ->
+          (* print_endline "0x90"; *)
+          Some (Gen.empty, (true, last_val))
+      | 0 when rle ->
+          (* print_endline "0: write 0x90"; *)
+          Some (add_byte 0x90, (false, 0x90))
       | x when rle ->
           (* repeat x-1 times *)
+          (* Printf.printf "0x%x: repeat 0x%x %d times\n" x last_val (x-1); *)
           let g = Gen.init ~limit:(x-1) (fun _ -> Char.chr last_val) in
           Some (g, (false, last_val))
-      | x -> Some (add_byte x, (rle, x))
+      | x ->
+          (* Printf.printf "0x%x\n" x; *)
+          Some (add_byte x, (false, x))
     )
     (false, 0)
   in
