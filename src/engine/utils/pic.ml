@@ -72,25 +72,13 @@ let interpret_stream (stream: (int * char) Gen.t) : ndarray =
   (* We read a line at a time and discard a nibble if it works out that way *)
 
   let arr = Ndarray.empty Int8_unsigned [|height; width|] in
-  let nibble_buffer = ref None in
-
-  let get_next_nibble () =
-    match !nibble_buffer with
-    | Some n -> 
-        nibble_buffer := None; 
-        n
-    | None ->
-        let byte = match Gen.next lre_stream with
-          | Some b -> Char.code b
-          | None -> 0 (* Or handle unexpected end of stream *)
-        in
-        nibble_buffer := Some (byte lsr 4); (* Store the high nibble *)
-        byte land 0x0F                     (* Return the low nibble *)
-  in
-
-  for i = 0 to height - 1 do
-    for j = 0 to width - 1 do
-      Ndarray.set arr [|i; j|] (get_next_nibble ())
+  for i=0 to height-1 do
+    let num_bytes = int_of_float @@ ceil @@ (float_of_int width) /. 2. in
+    let str = Gen.take num_bytes lre_stream |> Gen.to_string in
+    for j=0 to width-1 do
+      let c = Char.code str.[j/2] in
+      let nibble = if j land 1 = 0 then c land 0xf else (c lsr 4) land 0xf in
+      Ndarray.set arr [|i; j|] nibble;
     done
   done;
   arr
