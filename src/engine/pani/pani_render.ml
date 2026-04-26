@@ -30,7 +30,8 @@ let create ?(dump=false) ?debug ?input ?sound filename =
   let last_time = 0 in
   {status; interp; last_time; textures; bg_tex=None; sound}
 
-let render win v =
+let render ?(clear_screen=true) win v =
+  (* Get around not having access to win elsewhere *)
   let no_textures = Array.length v.textures = 0 in
   if no_textures then (
     let textures = Array.map (Option.map (R.Texture.make win)) v.interp.pics in
@@ -38,7 +39,7 @@ let render win v =
     Option.iter (fun bg -> v.bg_tex <- R.Texture.make win bg |> Option.some) v.interp.background
   );
 
-  R.clear_screen win;
+  if clear_screen then R.clear_screen win;
 
   Option.iter (fun bg_tex -> R.Texture.render win ~x:0 ~y:0 bg_tex) v.bg_tex;
 

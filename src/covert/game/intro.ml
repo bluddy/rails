@@ -5,6 +5,7 @@ module Transition = Engine.Transition
 module Pani_render = Engine.Pani_render
 module Event = Engine.Event
 module Sound = Engine.Sound
+module Ega = Engine.Ega
 module C = Constants.Intro
 
 open Utils.Infix
@@ -60,7 +61,11 @@ let set_next_mode v = match v.next_modes with
 
 let render win v = match v.mode with
   | TransitionScreen t -> Transition.render win t
-  | Animation state -> Pani_render.render win state
+  | Animation state ->
+      (* Hack for blue background *)
+      R.clear_screen win;
+      R.draw_rect win ~x:0 ~y:0 ~w:320 ~h:200 ~color:Ega.blue ~fill:true;
+      Pani_render.render ~clear_screen:false win state
   | GenericScreen {render_fn; _} -> render_fn win
 
 let handle_event event v = match v.mode with
