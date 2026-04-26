@@ -1,7 +1,7 @@
 # Tasks
 
 - Add back england flood pani
-- No track -> no time movement
+- No track -> no time movement, no ai
 - Use dosbox debugger to locate where we actually read the total time for running trains.
 - Check priority delivery price vs game
 - Handle > 32 trains with some visual display
