@@ -15,6 +15,13 @@
  (modes exe)
  )
 
+(alias
+  (name rails)
+  (deps rails_run.exe))
+
+(alias
+  (name covert)
+  (deps covert_run.exe))
 
 (env
   (dev
