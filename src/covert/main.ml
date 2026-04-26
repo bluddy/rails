@@ -50,7 +50,6 @@ let main () =
       Mainloop.main @@ Pani_render.debugger ~filename:!file
   | `Pani ->
       Mainloop.main @@ Pani_render.standalone ~filename:!file
-  | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()
   | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()
 
