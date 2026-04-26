@@ -69,8 +69,6 @@ let play_music music v =
   let music = StringMap.find music v.music in
   Mixer.play_music music 1 |> ignore
 
-let num_end_year_music = 4
-
 let stop_music () = Mixer.halt_music () |> ignore
 
 (* Call this to enable handling of queueing properly.

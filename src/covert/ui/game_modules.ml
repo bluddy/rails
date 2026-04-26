@@ -1,14 +1,15 @@
-open Containers
+open! Containers
 module Ndarray = Owl_base_dense_ndarray.Generic
 
 module R = Engine.Renderer
 module Random = Utils.Random
 module Event = Engine.Event
 module Mainloop = Engine.Mainloop
+module Sound = Engine.Sound
 open Utils.Infix
 
 type module_t =
-  | Intro
+  | Intro of Intro.t
   | StartMenu
   | Investigate
   | Driving
@@ -29,51 +30,50 @@ let default_state win sound =
   let resources = Resources.load_all () in
   let textures = Textures.of_resources win resources in
   let fonts = Fonts.load "./data/covert/FONTS.CV" win in
-  {
-    srv=Services.{
+  let srv = Services.{
       resources;
       textures;
       fonts;
       win;
       sound;
       random = Random.get_state ();
-    };
-    mode=Intro;
+    }
+  in
+  let mode = Intro (Intro.make srv) in
+  {
+    srv; mode
   }
 
-let handle_tick win (s:State.t) time =
-  let state =
-    match s.mode with
+let handle_tick _win v time =
+  let v = match v.mode with
     | Intro state ->
         let state2, status = Intro.handle_tick time state in
-        let s =
-          match status with
-          | `Stay when state2 === state -> s
-          | `Stay -> {s with mode = Intro state2}
-          | `Exit -> {s with mode=Menu(Start_menu.default s)}
+        let s = match status with
+          | `Stay when state2 === state -> v
+          | `Stay -> {v with mode=Intro state2}
+          | `Exit -> {v with mode=Intro state2}
         in
         s, `Stay
-
   in
-  state
+  v
 
-let handle_event win (s:State.t) (event:Event.t) time =
+let handle_event _win v (event:Event.t) _time =
   (* Handle an input event, starting with the UI.
      (Store the win in closure so we can create the full game state when needed 
    *)
   let state, quit =
-    match s.mode with
+    match v.mode with
     | Intro state ->
         begin match Intro.handle_event event state with
-        | state2, `Stay when state2 === state -> s, `Stay
-        | state2, `Stay -> {s with mode=Intro state2}, `Stay
-        | _, `Exit -> {s with mode=Menu(Start_menu.default s)}, `Stay
+        | state2, `Stay when state2 === state -> v, `Stay
+        | state2, `Stay -> {v with mode=Intro state2}, `Stay
+        | state2, `Exit -> {v with mode=Intro state2}, `Stay
         end
   in
   state, quit
 
-let render win (s:State.t) = match s.mode with
-  | Intro state -> Intro.render win state 
+let render win v = match v.mode with
+  | Intro state -> Intro.render win state
 
 
 let run ?load ~zoom ~adjust_ar ~shader () : unit =
@@ -89,13 +89,14 @@ let run ?load ~zoom ~adjust_ar ~shader () : unit =
     let state = match load with
       | Some slot ->
           Printf.printf "Loading from slot %d...\n" slot;
-          Load_game.load_game slot win sound
+          (* Load_game.load_game slot win sound *)
+          let s = default_state win sound in
+          s
 
       | None ->
-        (* New game. Use a basic default state *)
-        let s = default_state win sound in
-        let state = Intro.make s in
-        {s with mode=Intro state}
+          (* New game. Use a basic default state *)
+          let s = default_state win sound in
+          s
     in
     Printf.printf " done.\n";
 

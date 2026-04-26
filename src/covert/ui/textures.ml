@@ -17,7 +17,7 @@ module Cities = struct
     h
 end
 
-module DrivingFrames = struct
+module Car_frames = struct
   let add win res =
     let h = Hashtbl.create 10 in
     let img = Hashtbl.find res.Resources.pics "STREET" in
@@ -76,15 +76,20 @@ end
 
 type t = {
   pixel: R.Texture.t; (* white pixel *)
+  cities: (City.t, R.Texture.t) Hashtbl.t;
+  car_frames: (int, R.Texture.t) Hashtbl.t;
   images: (Images.t, R.Texture.t) Hashtbl.t;
 }
 
 let of_resources win res =
   let pixel = R.Texture.make win Engine.Pic.white_pixel in
+  let cities = Cities.add win res in
+  let car_frames = Car_frames.add win res in
   let images = Images.add win res in
   {
     pixel;
+    cities;
+    car_frames;
     images;
   }
-
 

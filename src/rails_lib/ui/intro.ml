@@ -16,9 +16,6 @@ let render_screen tex win =
   R.clear_screen win;
   R.Texture.render win ~x:0 ~y:0 tex
 
-let clear_screen win =
-  R.clear_screen win
-
 let make (s:State.t) =
   let make_render_fn tex_name =
       let tex = Hashtbl.find s.textures.misc tex_name in
@@ -27,7 +24,7 @@ let make (s:State.t) =
   let add_transition tex1 tex2 =
     let old_render_fn = match tex1 with
     | Some tex1 -> make_render_fn tex1
-    | None -> clear_screen
+    | None -> R.clear_screen
     in
     let wait_time = if Option.is_some tex1 then C.wait_time else 0 in
     let render_fn = make_render_fn tex2 in

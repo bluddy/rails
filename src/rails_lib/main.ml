@@ -42,8 +42,7 @@ let main () =
   parse arglist (fun _ -> ()) "Usage";
   match !mode with
   | `Font -> Fonts.main !file
-  | `Pic  -> Engine.Pic.png_of_file !file
-  | `Cat -> Engine.Cat_file.of_file ~dump:true !file |> ignore
+  | `Pic  -> Engine.Pic.png_of_file !file | `Cat -> Engine.Cat_file.of_file ~dump:true !file |> ignore
   | `Pani when !debugger && !dump ->
       Mainloop.main @@ Pani_render.debugger ~dump:true ~filename:!file
   | `Pani when !dump -> Pani.dump_file !file
