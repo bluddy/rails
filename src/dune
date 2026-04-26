@@ -7,13 +7,13 @@
   (modes exe)
   )
 
-;(executable
-;  (public_name covert)
-;  (modules covert_run)
-;  (name main_run)
-;  (libraries covert)
-;  (modes exe)
-;  )
+(executable
+ (public_name covert)
+ (modules covert_run)
+ (name covert_run)
+ (libraries covert)
+ (modes exe)
+ )
 
 
 (env
