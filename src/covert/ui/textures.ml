@@ -5,13 +5,26 @@ module R = Engine.Renderer
 module C = Constants
 module Dir = Engine.Dir
 
+module Cities = struct
+
+  let add win res =
+    let h = Hashtbl.create 10 in
+    City.iter_all (fun city ->
+      let city_s = City.show city |> String.uppercase_ascii |> String.take 8 in
+      let img = Hashtbl.find res.Resources.pics city_s in
+      let tex = R.Texture.make win img in
+      Hashtbl.replace h city tex
+    );
+    h
+
+end
+
 module TileTex = struct
   module HT = Tile.DirHashtbl
 
   type t =
     | Single of R.Texture.t
     | Pair of R.Texture.t * R.Texture.t
-    | Localized of {us: t; england: t; europe: t}
 
   (* Load and separate sprites *)
   let slice_tiles win res =
