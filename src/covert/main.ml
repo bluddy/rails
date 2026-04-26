@@ -4,7 +4,7 @@ module Pani_render = Engine.Pani_render
 module Pani = Engine.Pani
 module Mainloop = Engine.Mainloop
 
-type actions = [ `Font | `Pic | `Cat | `Pani | `City | `Game | `LoadGame]
+type actions = [ `Font | `Pic | `Cat | `Pani | `Game | `LoadGame]
 
 let file = ref ""
 let file_slot = ref 0
@@ -29,7 +29,6 @@ let arglist =
     "--pic", String (set `Pic), "Convert .PIC to png";
     "--cat", String (set `Cat), "Write files in .CAT file";
     "--pani", String (set `Pani), "Run the PANI file";
-    "--city", String (set `City), "Dump city info file";
     "--dump", Set dump, "Dump the file";
     "--debug", Set debugger, "Run the debugger";
     "--load", Int (set_slot `LoadGame), "Load a save file";
