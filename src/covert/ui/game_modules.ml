@@ -8,9 +8,6 @@ module Event = Engine.Event
 module Mainloop = Engine.Mainloop
 open Utils.Infix
 
-let update_map _win v map =
-  R.Texture.update v.State.map_tex @@ Tilemap.to_img map
-
 let default_state win sound : State.t =
   let resources = Resources.load_all () in
   let textures = Textures.of_resources win resources in
@@ -19,17 +16,15 @@ let default_state win sound : State.t =
   let map_tex = Hashtbl.find textures.misc `Advert in
   let ui = Main_ui.default win fonts Region.WestUS in
   {
-    map_tex;
-    map_silhouette_tex=map_tex;
-    resources;
-    textures;
-    fonts;
-    backend;
-    mode=State.Game;
-    ui;
-    win;
-    sound;
-    random = Random.get_state ();
+    srv=Services.{
+      resources;
+      textures;
+      fonts;
+      win;
+      sound;
+      random = Random.get_state ();
+    };
+    mode=Intro;
   }
 
 (* Createa a new state out of the default state for starting the program. *)
@@ -171,19 +166,6 @@ let handle_event win (s:State.t) (event:Event.t) time =
 let render win (s:State.t) = match s.mode with
   | Intro state -> Intro.render win state 
 
-  | Menu state -> Start_menu.render win state s
-
-  | MapGen Some data ->
-    let bg_tex = Hashtbl.find s.textures.pics "BRITAIN" in (* generic background *)
-    R.clear_screen win;
-    R.Texture.render win ~x:0 ~y:0 bg_tex;
-    R.Texture.render win ~x:0 ~y:0 s.map_tex;
-    Fonts.Render.render s.fonts ~win ~to_render:data.text;
-    Mapgen.View.render_new_pixels win data s.textures.pixel
-
-  | MapGen None -> ()
-
-  | Game -> Main_ui.render win s s.ui
 
 let run ?load ~zoom ~adjust_ar ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
