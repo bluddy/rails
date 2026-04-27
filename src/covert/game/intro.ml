@@ -40,9 +40,8 @@ let make (s:Services.t) =
     TransitionScreen trans in
   let modes = [] in
   let modes = (GenericScreen {render_fn=make_render_fn `MPS_labs; timeout=Some 0})::modes in
-  let modes =
-    let file = "data/covert/TITLE2.PAN" in
-    Animation(Sound.pani_create s.sound file)::modes in
+  let modes = Animation(Sound.pani_create s.sound "data/covert/TITLE2.PAN")::modes in
+  let modes = Animation(Sound.pani_create s.sound "data/covert/CREDITS.PAN")::modes in
   match List.rev modes with
   | x::xs -> {mode=x; next_modes=xs}
   | _ -> assert false
