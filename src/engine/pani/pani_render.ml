@@ -52,7 +52,7 @@ let render ?(clear_screen=true) win v =
 
   Iter.iter (fun i ->
     let sprite = Pani_interp.anim_get_pic v.interp i in
-    if sprite.active && sprite.pic_idx <> -1 then (
+    if sprite.active && not sprite.background && sprite.pic_idx <> -1 then (
       let tex = v.textures.(sprite.pic_idx) |> Option.get_exn_or @@ sp "missing texture %d" sprite.pic_idx in
       let x, y = Pani_interp.calc_anim_xy v.interp i in
       R.Texture.render win ~x ~y tex;

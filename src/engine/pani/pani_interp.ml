@@ -131,19 +131,31 @@ let calc_anim_xy v anim_idx =
   let open Pani_sprite in
   match anim.other_sprite with
   | -2 -> anim.x, anim.y
-  | other -> 
+  | other ->
       (* Assume other_sprite is valid or we can't use it *)
       let anim2 = v.sprites.(other + 1) in
       (anim2.x + anim.x + anim.reset_x, anim2.y + anim.y + anim.reset_y)
 
-let save_sprite i v =
+let print_sprite_status v =
+  Array.iteri (fun i sprite ->
+    let open Pani_sprite in
+    Printf.printf "[%d%s%s], " i (if sprite.active then "a" else "") (if sprite.background then "b" else "");
+  )
+  v.sprites
+
+let save_background_sprites v =
     (* We only save if there's a background flag.
        Also, we only save on deletion since that's when the sprite disappears *)
-    let anim = v.sprites.(i) in
-    if anim.background then (
-      let x, y = calc_anim_xy v i in
-      let pic = {x; y; pic_idx=anim.pic_idx} in
-      v.static_pics <- pic::v.static_pics)
+    if !debug then Printf.printf "\nSave background sprites:";
+    Array.iteri (fun i sprite ->
+      if sprite.Pani_sprite.active && sprite.background then (
+        if !debug then Printf.printf "%d (pic %d)," i sprite.pic_idx;
+        let x, y = calc_anim_xy v i in
+        let pic = {x; y; pic_idx=sprite.pic_idx} in
+        v.static_pics <- pic::v.static_pics
+      )
+    ) v.sprites;
+    if !debug then Printf.printf "\n\n"
 
 let read_byte v =
   let ptr = v.read_ptr in
@@ -221,7 +233,7 @@ let interpret v =
             if !debug then
               Printf.printf "sprite[%d]\n%s\n" anim_idx (Pani_sprite.show anim);
             (* If we're replacing a live sprite, see if we should save it to background first *)
-            if v.sprites.(anim_idx).active then save_sprite anim_idx v;
+            (* if v.sprites.(anim_idx).active then save_sprite anim_idx v; *)
             v.sprites.(anim_idx) <- anim
           ) else (
             Printf.printf "Error: CreateSprite encountered bad anim idx %d on stack" anim_idx
@@ -241,7 +253,7 @@ let interpret v =
                 Printf.printf "%d" anim_idx;
               v.sprites.(anim_idx).active <- false
             end;
-            save_sprite anim_idx v;
+            (* save_sprite anim_idx v; *)
             v.stack <- rest
         | _ -> failwith @@
             Printf.sprintf "DeleteAnimation: missing anim_idx on stack: %s" (reg_stack_s ())
@@ -273,10 +285,9 @@ let interpret v =
         | anim_idx::rest ->
             if anim_idx >= 0 && anim_idx <= 50 then (
               if !debug then
-                Printf.printf "%d " anim_idx;
-              let anim = v.sprites.(anim_idx) in
-              anim.background <- true;
-
+                Printf.printf "sprite %d " anim_idx;
+              let sprite = v.sprites.(anim_idx) in
+              sprite.background <- true;
               v.stack <- rest;
             )
         | _ -> failwith "MakeBackground: missing argument"
@@ -376,7 +387,7 @@ let step_all_sprites v =
     print_endline "\n--- Step through all animations ---\n";
   Array.iteri (fun i sprite ->
     match Pani_sprite.interpret_step sprite i with
-    | `Destroy -> save_sprite i v
+    | `Destroy -> ()
     | `None -> ()
   )
   v.sprites
@@ -396,17 +407,20 @@ let step v =
       if delay_time = 0 then (
         v.delay <- false;
         loop ()
-      ) else `Delay) 
-    else
+      ) else
+        `Delay)
+    else (
       (* Do all processing steps *)
       match interpret v with
       | `Pause -> `Pause
       | `Stay -> loop ()
+    )
   in
-  (* clear_sprite_background_flags v; *)
+  clear_sprite_background_flags v;
   match loop () with
   | `Delay | `Pause ->
       step_all_sprites v;
+      save_background_sprites v;
       `Pause
   | `Done -> `Done
 
@@ -436,7 +450,7 @@ let debugger_step_sprite v =
   | `Some cur_sprite ->
       let sprite = v.sprites.(cur_sprite) in
       begin match Pani_sprite.interpret_step sprite cur_sprite with
-      | `Destroy -> save_sprite cur_sprite v
+      | `Destroy -> ()
       | `None -> ()
       end;
       `Some cur_sprite
