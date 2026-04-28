@@ -65,19 +65,15 @@ let render win v = match v.mode with
 
 let handle_event event v =
   let handle_state state fn =
-    begin match Pani_render.handle_event event state with
+    match Pani_render.handle_event event state with
     | state', `Stay when state =!= state' -> {v with mode=fn state'}, `Stay
-    | _, `Stay -> v, `Stay
-    | _, `Exit -> set_next_mode v
-    end
+    | _, exit -> v, exit
   in
   match v.mode with
   | Picture _ when Event.modal_dismiss event -> set_next_mode v
   | Picture _ -> v, `Stay
-  | SingleAnimation state ->
-      handle_state state @@ fun state -> SingleAnimation state
-  | DoubleAnimation(s1, s2) ->
-      handle_state s2 @@ fun state -> DoubleAnimation(s1, state)
+  | SingleAnimation state -> handle_state state @@ fun state -> SingleAnimation state
+  | DoubleAnimation(s1, s2) -> handle_state s2 @@ fun state -> DoubleAnimation(s1, state)
 
 let handle_tick time v =
   let state_change state fn =
