@@ -82,7 +82,7 @@ let handle_tick v =
   | _ -> ()
   )
 
-let pani_create ?dump ?debug ?input ?sound sound_engine filename =
+let pani_create ?dump ?debug ?input ?sound ?exit_on_done sound_engine filename =
   let sound = match sound with
     | None -> None
     | Some sound ->
@@ -93,5 +93,5 @@ let pani_create ?dump ?debug ?input ?sound sound_engine filename =
       }
       |> Option.some
   in
-  Pani_render.create ?dump ?debug ?input ?sound filename
+  Pani_render.create ?dump ?debug ?input ?sound ?exit_on_done filename
 

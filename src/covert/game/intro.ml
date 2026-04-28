@@ -31,7 +31,7 @@ let make (s:Services.t) =
   in
   let modes = [] in
   let modes = (Picture {render_fn=make_render_fn `MPS_labs; timeout=Some 0})::modes in
-  let title_pani = Sound.pani_create s.sound "data/covert/TITLE2.PAN" in
+  let title_pani = Sound.pani_create s.sound ~exit_on_done:true "data/covert/TITLE2.PAN" in
   let modes = SingleAnimation(title_pani)::modes in
   let modes = DoubleAnimation(title_pani, Sound.pani_create s.sound "data/covert/CREDITS.PAN")::modes in
   match List.rev modes with
@@ -82,7 +82,10 @@ let handle_event event v =
 let handle_tick time v =
   let state_change state fn =
     let state2, quit = Pani_render.handle_tick time state in
-    if state2 === state then v, quit else {v with mode=fn state2}, quit
+    match quit with 
+    | `Exit -> set_next_mode v
+    | `Stay when state2 === state -> v, `Stay
+    | `Stay -> {v with mode=fn state2}, `Stay
   in
   match v.mode with
   | SingleAnimation state -> state_change state @@ fun state -> SingleAnimation state

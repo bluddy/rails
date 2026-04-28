@@ -20,15 +20,16 @@ type t = {
   mutable textures: R.Texture.t option array;
   mutable bg_tex: R.Texture.t option;
   sound: sound_player option;
+  exit_on_done: bool;
 }
 
-let create ?(dump=false) ?debug ?input ?sound filename =
+let create ?(dump=false) ?debug ?input ?sound ?(exit_on_done=false) filename =
   let stream = Utils.stream_of_file filename in
   let interp = Pani.of_stream ~dump ?debug ?input stream in
   let textures = [||] in
   let status = `Init in
   let last_time = 0 in
-  {status; interp; last_time; textures; bg_tex=None; sound}
+  {status; interp; last_time; textures; bg_tex=None; sound; exit_on_done}
 
 let render ?(clear_screen=true) win v =
   (* Get around not having access to win elsewhere *)
@@ -69,22 +70,22 @@ let render ?(clear_screen=true) win v =
   Iter.(0 -- Pani_const.max_num_sprites)
 
 let handle_tick time v =
-  let v = match v.status with
+  let v, status = match v.status with
     | `Init ->
         Option.iter (fun sound -> sound.play_music ()) v.sound;
-        {v with status=`Pause}
+        {v with status=`Pause}, `Stay
     | `Pause ->
         if time - v.last_time > Pani_const.update_delta
         then (
           v.last_time <- time;
           v.status <- Pani_interp.step v.interp;
         );
-        v
+        v, `Stay
     | `Done ->
         Option.iter (fun sound -> sound.stop_music ()) v.sound;
-        v
+        v, if v.exit_on_done then `Exit else `Stay
   in
-  v, `Stay
+  v, status
 
 let handle_event event v =
   if Event.modal_dismiss event then (
