@@ -17,9 +17,12 @@ depends: [
   "containers-data"
   "gen"
   "imagelib"
+  "tgls"
   "tsdl"
+  "tsdl-mixer"
   "owl-base"
   "ocamlgraph"
+  "fmt"
   "logs"
   "re"
   "ppx_import"
@@ -29,6 +32,7 @@ depends: [
   "ppx_expect"
   "ppx_inline_test"
   "ppx_update"
+  "ppx_deriving_variant_string"
   "odoc" {with-doc}
 ]
 build: [
