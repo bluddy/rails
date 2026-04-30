@@ -428,7 +428,7 @@ module MsgBox = struct
   let _render_entry win s font v ~select_color ~use_prefix ~selected ~x ~border_x ~y ~w =
     if selected && not @@ _is_entry_static v then (
       let x = if use_prefix then x + 3 else x in
-      Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:select_color
+      Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:v.h ~fill:true ~color:select_color
     );
 
     let prefix = match v.kind with
