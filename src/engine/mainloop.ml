@@ -43,7 +43,7 @@ let main ?(zoom=3) ?(adjust_ar=false) ?shader_file init_fn =
       | EventNotRelevant ->
           (* Get rid of events we don't care about *)
           event_loop data
-      | _ -> 
+      | _ ->
         let time = Sdl.get_ticks () |> Int32.to_int in
         let data, quit =
           if time - !last_tick_time > tick_wait_time then (

@@ -14,13 +14,16 @@ module Animated = struct
 
   let handle_tick v time : 'msg t * 'msg action = handle_tick () v time
 
+  let do_open_menu ?x ?y ?wh ?selected (v:'msg t) : 'msg t=
+    do_open_menu ?x ?y ?wh ?selected () v
+
+  let modal_handle_event ?is_msgbox v event time =
+    modal_handle_event ?is_msgbox () v event time
+
+  let modal_handle_tick v time =
+    modal_handle_tick () v time
 end
 
 include Animated
 
-let static_entry = MsgBox.static_entry
-
-let make_entry = MsgBox.make_entry
-
-let do_open_menu = MsgBox.do_open_menu
 

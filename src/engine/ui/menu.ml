@@ -411,102 +411,114 @@ module MsgBox = struct
       in
       {v with entries; selected}, action
 
-    let handle_event ?(do_close=true) s v (event:Event.t) _time =
-      (* Returns new v and action *)
-      let v, action = match event with
-        | MouseMotion {x; y; _} -> _handle_hover v ~x ~y, NoAction
-        | MouseButton {down=true; x; y; _} -> _handle_click s v ~x ~y
-        | Key {down=true; key; _ } -> _handle_key s v ~key
-        | _ -> v, NoAction
-      in
-      let v = match action with
-        | (On _ | Off _) when do_close -> close v
-        | _ -> v
-      in
-      v, action
+  let handle_event ?(do_close=true) s v (event:Event.t) _time =
+    (* Returns new v and action *)
+    let v, action = match event with
+      | MouseMotion {x; y; _} -> _handle_hover v ~x ~y, NoAction
+      | MouseButton {down=true; x; y; _} -> _handle_click s v ~x ~y
+      | Key {down=true; key; _ } -> _handle_key s v ~key
+      | _ -> v, NoAction
+    in
+    let v = match action with
+      | (On _ | Off _) when do_close -> close v
+      | _ -> v
+    in
+    v, action
 
-    let _render_entry win s font v ~select_color ~use_prefix ~selected ~x ~border_x ~y ~w =
-      if selected && not @@ _is_entry_static v then (
-        let x = if use_prefix then x + 3 else x in
-        Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:select_color
-      );
+  let _render_entry win s font v ~select_color ~use_prefix ~selected ~x ~border_x ~y ~w =
+    if selected && not @@ _is_entry_static v then (
+      let x = if use_prefix then x + 3 else x in
+      Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:(v.h-1) ~fill:true ~color:select_color
+    );
 
-      let prefix = match v.kind with
-        | Interactive {fire=Checkbox(_, fn);_} when fn s -> "^"
-        | Interactive _ -> " "
-        | Static _ -> ""
-      in
-      let color, active_color, tight = match v.kind with
-        | Interactive {enabled=true;_} -> Ega.black, Some Ega.blue, false
-        | Interactive _ -> Ega.dgray, Some Ega.dgray, false
-        | Static {color; tight; _} -> color, None, tight
-      in
-      let name = if use_prefix then prefix^v.name else v.name in
-      Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~tight ?active_color ~tag_color:Ega.bred
+    let prefix = match v.kind with
+      | Interactive {fire=Checkbox(_, fn);_} when fn s -> "^"
+      | Interactive _ -> " "
+      | Static _ -> ""
+    in
+    let color, active_color, tight = match v.kind with
+      | Interactive {enabled=true;_} -> Ega.black, Some Ega.blue, false
+      | Interactive _ -> Ega.dgray, Some Ega.dgray, false
+      | Static {color; tight; _} -> color, None, tight
+    in
+    let name = if use_prefix then prefix^v.name else v.name in
+    Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~tight ?active_color ~tag_color:Ega.bred
 
-    let render_box ?(color=Ega.gray) win x y w h =
-      Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
-      Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
-      Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
+  let render_box ?(color=Ega.gray) win x y w h =
+    Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
+    Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
+    Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
 
-    let rec render ?final_select_color win s v =
-      (* draw background *)
-      if v.draw_bg then (
-        render_box win v.x v.y v.w v.h
-      );
+  let rec render ?final_select_color win s v =
+    (* draw background *)
+    if v.draw_bg then (
+      render_box win v.x v.y v.w v.h
+    );
 
-      (* draw heading *)
-      begin match v.heading with
-      | Some str ->
-          Fonts.Font.write win v.font ~color:Ega.white str ~x:(v.x + v.border_x) ~y:(v.y + v.border_y)
-      | None -> ()
-      end;
+    (* draw heading *)
+    begin match v.heading with
+    | Some str ->
+        Fonts.Font.write win v.font ~color:Ega.white str ~x:(v.x + v.border_x) ~y:(v.y + v.border_y)
+    | None -> ()
+    end;
 
-      (* draw entries and selection *)
-      let selected = Option.get_or v.selected ~default:(-1) in
-      (* Get selected entry *)
-      let selected_entry = match v.selected with
-        | Some selected ->
-            let entry = List.nth v.entries selected in
-            Some entry
-        | _ -> None
-      in
-      (* Determine color by nature of selected entry *)
-      let select_color = match final_select_color, selected_entry with
-        | Some color, Some entry when not @@ is_entry_open_msgbox entry -> color
-        | _ -> v.select_color
-      in
-      List.iteri (fun i entry ->
-        _render_entry win s v.font ~select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
-          ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
-        v.entries;
+    (* draw entries and selection *)
+    let selected = Option.get_or v.selected ~default:(-1) in
+    (* Get selected entry *)
+    let selected_entry = match v.selected with
+      | Some selected ->
+          let entry = List.nth v.entries selected in
+          Some entry
+      | _ -> None
+    in
+    (* Determine color by nature of selected entry *)
+    let select_color = match final_select_color, selected_entry with
+      | Some color, Some entry when not @@ is_entry_open_msgbox entry -> color
+      | _ -> v.select_color
+    in
+    List.iteri (fun i entry ->
+      _render_entry win s v.font ~select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
+        ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
+      v.entries;
 
-      (* recurse to sub-msgbox *)
-      match selected_entry with
-      | Some entry ->
-          begin match entry.kind with
-          | Interactive {fire=MsgBox(true, box);_} -> render ?final_select_color win s box
-          | _ -> ()
-          end
-      | _ -> ()
+    (* recurse to sub-msgbox *)
+    match selected_entry with
+    | Some entry ->
+        begin match entry.kind with
+        | Interactive {fire=MsgBox(true, box);_} -> render ?final_select_color win s box
+        | _ -> ()
+        end
+    | _ -> ()
 
-    let make_basic ?x ?y ?wh ?heading ?tight ?(font_idx=4) ~fonts s text =
-      (* Easy to use msgbox with just text *)
-      let y = Option.get_or ~default:80 y in
-      let x = match x with
-        | Some x -> x
-        | None ->
-          let len = String.index_opt text '\n'
-            |> Option.get_or ~default:(String.length text)
-          in
-          150 - 5 * len / 2 
-      in
-      let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
-      let entry = static_entry ?tight ~color:entry_color text in
-      let menu =
-        make ~x ~y ?heading ~fonts [entry] ~font_idx |> do_open_menu ?wh s
-      in
-      menu
+  let make_basic ?x ?y ?wh ?heading ?tight ?(font_idx=4) ~fonts s text =
+    (* Easy to use msgbox with just text *)
+    let y = Option.get_or ~default:80 y in
+    let x = match x with
+      | Some x -> x
+      | None ->
+        let len = String.index_opt text '\n'
+          |> Option.get_or ~default:(String.length text)
+        in
+        150 - 5 * len / 2 
+    in
+    let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
+    let entry = static_entry ?tight ~color:entry_color text in
+    let menu =
+      make ~x ~y ?heading ~fonts [entry] ~font_idx |> do_open_menu ?wh s
+    in
+    menu
+
+  let modal_handle_event ?(is_msgbox=false) s v event time =
+    (* Handle all events for modal msgboxes/menus *)
+    let menu, action = handle_event s v event time in
+    match action with
+    | NoAction when Event.pressed_esc event -> `Exit
+    | NoAction when is_msgbox && Event.modal_dismiss event -> `Exit
+    | HandledEvent when is_msgbox -> `Exit
+    | On(choice) -> `Activate choice
+    | NoAction -> `Stay menu
+    | _ -> `Stay menu
+
 end
 
 module Title = struct
@@ -756,8 +768,8 @@ module Animated = struct
    *)
 
   type ('msg, 'state) menu =
-    | Global of ('msg, 'state) Global.t
-    | MsgBox of ('msg, 'state) MsgBox.t
+    | Global of ('msg, 'state) Global.t (* top level menu, works for inner menus *)
+    | MsgBox of ('msg, 'state) MsgBox.t (* separate msgbox *)
 
   type ('msg, 'state) t = {
     menu: ('msg, 'state) menu;
@@ -820,16 +832,28 @@ module Animated = struct
         {v with last_msg=None}, msg
     | _ -> v, NoAction
 
-end
+  let do_open_menu ?x ?y ?wh ?selected s v = match v.menu with
+    | Global _ -> v (* not relevant *)
+    | MsgBox msgbox ->
+        let msgbox2 = MsgBox.do_open_menu ?x ?y ?wh ?selected s msgbox in
+        if msgbox2 =!= msgbox then {v with menu=MsgBox msgbox2} else v
 
-let modal_handle_event = fun (type a) ?(is_msgbox=false) s (menu: (a, 'state) MsgBox.t) event time ->
-  (* Handle all events for modal msgboxes/menus *)
-  let menu, action = MsgBox.handle_event s menu event time in
-  match action with
-  | NoAction when Event.pressed_esc event -> `Exit
-  | NoAction when is_msgbox && Event.modal_dismiss event -> `Exit
-  | HandledEvent when is_msgbox -> `Exit
-  | On(choice) -> `Activate choice
-  | NoAction -> `Stay menu
-  | _ -> `Stay menu
+  let make_entry = MsgBox.make_entry
+
+  let static_entry = MsgBox.static_entry
+
+  let modal_handle_event ?(is_msgbox=false) s v event time =
+    (* Handle all events for modal msgboxes/menus *)
+    let menu, event = handle_event s v event time in
+    if Event.pressed_esc event || is_msgbox && Event.modal_dismiss event then menu,`Exit
+    else menu, `Stay
+
+  let modal_handle_tick s v time =
+    let menu, action = handle_tick s v time in
+    match action with
+    | On(choice) -> menu, `Activate choice
+    | NoAction -> menu, `Stay
+    | _ -> menu, `Stay
+
+end
 

@@ -189,7 +189,7 @@ let handle_modal_event (s:State.t) modal (event:Event.t) time =
   match modal with
   | Normal -> `Exit, Normal, nobaction
   | MsgBox msgbox -> 
-     begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event time with
+     begin match Menu.MsgBox.modal_handle_event ~is_msgbox:true s msgbox event time with
      | `Stay _ -> `Stay, modal, nobaction
      | _ -> `Exit, Normal, nobaction
      end
@@ -199,7 +199,7 @@ let handle_modal_event (s:State.t) modal (event:Event.t) time =
      | `Exit -> `Exit, Normal, nobaction
      end
   | Confirm_menu menu ->
-     begin match Menu.modal_handle_event ~is_msgbox:false s menu event time with
+     begin match Menu.MsgBox.modal_handle_event ~is_msgbox:false s menu event time with
      | `Stay modal -> `Stay, Confirm_menu modal, nobaction
      | `Activate(`BuyStock stock) -> `Stay, Normal, B.Action.BuyStock{player_idx; stock}
      | `Activate(`Declare_bankruptcy) -> `Stay, Normal, B.Action.Declare_bankruptcy{player_idx}

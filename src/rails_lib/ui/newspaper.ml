@@ -105,7 +105,7 @@ let render win (s:State.t) v =
 
 let handle_event s v event time =
   let msgbox = match v with Fancy x -> x.msgbox | Simple x -> x.msgbox in
-  begin match Menu.modal_handle_event ~is_msgbox:true s msgbox event time with
+  begin match Menu.MsgBox.modal_handle_event ~is_msgbox:true s msgbox event time with
   | `Exit -> `Exit
   | _ -> `Stay
   end
