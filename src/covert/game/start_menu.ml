@@ -18,14 +18,14 @@ type t =
 let create_start_menu (srv:Services.t) =
   let open Menu in
   let open MsgBox in
-  make_msgbox ~fonts:srv.fonts ~select_color:Ega.yellow ~heading:"Do you want to..." 
+  make_msgbox ~x:80 ~y:80 ~fonts:srv.fonts ~select_color:Ega.yellow ~heading:"Do you want to..." 
   [
-    make_entry " Create a New Character" @@ `Action(`New_character);
-    make_entry " Load a Saved Game" @@ `Action(`Load_game);
-    make_entry " Practice a skill" @@ `Action(`Practice_skill);
-    make_entry " Review Hall of Fame" @@ `Action(`Hall_of_fame);
+    make_entry "Create a New Character" @@ `Action(`New_character);
+    make_entry "Load a Saved Game" @@ `Action(`Load_game);
+    make_entry "Practice a skill" @@ `Action(`Practice_skill);
+    make_entry "Review Hall of Fame" @@ `Action(`Hall_of_fame);
   ]
-  |> Menu.do_open_menu ~x:80 ~y:80 ~selected:(Some 0)
+  |> Menu.do_open_menu ~selected:(Some 0)
 
 let create srv = StartMenu(create_start_menu srv)
 
