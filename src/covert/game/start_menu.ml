@@ -3,6 +3,7 @@ open! Containers
 open Utils.Infix
 
 module Ega = Engine.Ega
+module R = Engine.Renderer
 
 type menu_action =
   [
@@ -44,5 +45,7 @@ let handle_tick _srv time v =
     else StartMenu menu2, msg
 
 let render win v = match v with
-  | StartMenu menu -> Menu.render win menu
+  | StartMenu menu ->
+      R.draw_rect win ~x:0 ~y:0 ~w:320 ~h:200 ~color:Ega.blue ~fill:true;
+      Menu.render win menu
 

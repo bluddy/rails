@@ -461,7 +461,7 @@ module MsgBox = struct
       | Static _ -> ""
     in
     let color, active_color, tight = match v.kind with
-      | Interactive {enabled=true;_} -> Ega.black, Some Ega.blue, false
+      | Interactive {enabled=true;_} -> m.colors.entry, Some Ega.blue, false
       | Interactive _ -> Ega.dgray, Some Ega.dgray, false
       | Static {color; tight; _} -> color, None, tight
     in
