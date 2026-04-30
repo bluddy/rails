@@ -453,7 +453,7 @@ module MsgBox = struct
   let _render_entry win s m ~select_color ~selected v =
     if selected && not @@ _is_entry_static v then (
       let x = m.x + select_padding in
-      Renderer.draw_rect win ~x ~y:(v.y + m.y - 1) ~w:(m.w - select_padding) ~h:v.h ~fill:true ~color:select_color
+      Renderer.draw_rect win ~x ~y:(v.y + m.y - 1) ~w:(m.w - 2*select_padding) ~h:v.h ~fill:true ~color:select_color
     );
     let prefix = match v.kind with
       | Interactive {fire=Checkbox(_, fn);_} when fn s -> "^"
