@@ -362,14 +362,14 @@ module CarsTop = struct
     in
 
     (* Note: some of the textures are offset by 1 in the y direction *)
-    tex 200 119 @@ Engine(Train_engine.SteamBig);
-    tex 200 139 @@ Engine(Train_engine.SteamSmall);
-    tex 40 120 @@ Engine(Train_engine.Diesel);
-    tex 40 140 @@ Car(`Mail);
-    tex 200 159 @@ Car(`Passenger);
-    tex 40 160 @@ Car(`Fast);
-    tex 200 179 @@ Car(`Slow);
-    tex 40 180 @@ Car(`Bulk);
+    tex 0 120 @@ Engine(Train_engine.SteamBig);
+    tex 0 140 @@ Engine(Train_engine.SteamSmall);
+    tex 160 120 @@ Engine(Train_engine.Diesel);
+    tex 160 140 @@ Car(`Mail);
+    tex 0 160 @@ Car(`Passenger);
+    tex 160 160 @@ Car(`Fast);
+    tex 0 180 @@ Car(`Slow);
+    tex 160 180 @@ Car(`Bulk);
     hash
 end
 
@@ -954,11 +954,11 @@ module Misc = struct
       |> R.Texture.make win) l |> Array.of_list
     in
 
-    tex `Cursor 300 100;
-    tex `PaperTear1 40 100;
-    tex `PaperTear2 60 100;
-    tex `WaterOnBridge 200 100;
-    slice [220, 100; 240, 100; 260, 100; 280, 100] |> Hashtbl.replace smoke_hash `SmokeTop;
+    tex `Cursor 100 100;
+    tex `PaperTear1 180 100;
+    tex `PaperTear2 200 100;
+    tex `WaterOnBridge 0 100;
+    slice [20, 100; 40, 100; 60, 100; 80, 100] |> Hashtbl.replace smoke_hash `SmokeTop;
 
     let ndarray = Hashtbl.find res.Resources.res_pics "SPRITES" in
     let tex key x y x2 y2 =
