@@ -125,7 +125,7 @@ module MsgBox = struct
     (* Compute menu size dynamically. Must be called. *)
   let do_open_menu ?(x=0) ?(y=0) ?wh ?(selected=Some 0) s v =
     (* start calculating internal y *)
-    let max_h = v.pad_top in
+    let max_h = v.pad.top in
     (* entry coordinates are internal to the msgbox *)
     let max_w, max_h = match v.heading with
       | Some str ->
@@ -147,13 +147,13 @@ module MsgBox = struct
           | Static _ as k -> k
         in
         let entry = {entry with y=max_h; h; kind} in
-        let max_w, max_h = max max_w w, max_h + h in
+        let max_w, max_h = max max_w w, max_h + h + v.pad.entry_spacing in
         (max_w, max_h), entry)
       (max_w, max_h)
       v.entries
     in
     (* w never included the border_x *)
-    let w, h = w + v.border_x, h in
+    let w, h = w + v.pad.left + v.pad.right, h + v.pad.bottom in
     let x, y =
       (* check for offset from previous menu *)
       if x <> 0 || y <> 0 then
