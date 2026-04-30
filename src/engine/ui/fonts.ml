@@ -83,7 +83,7 @@ module Font = struct
       )
       (0, 0, font.height + font.space_y)
       str
-    in 
+    in
     w, h
 
     module R = Renderer

@@ -8,7 +8,7 @@ let padding = {
   bottom=3;
   left=5;
   right=5;
-  entry_spacing=2;
+  entry_spacing=(-1);
 }
 
 let colors = {
