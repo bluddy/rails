@@ -16,6 +16,8 @@ let exit_time = 300 (* ms *)
 let menu_font = 1
 let max_width = 320
 
+let select_padding = 3
+
 type 'a action =
   | On of 'a
   | Off of 'a
@@ -77,7 +79,7 @@ module MsgBox = struct
     }
 
   and ('msg, 'state) entry = {
-    y: int;
+    y: int; (* entry coordinates are internal to the msgbox *)
     h: int;
     name: string;
     kind: ('msg, 'state) kind;
@@ -97,7 +99,7 @@ module MsgBox = struct
       font: Fonts.Font.t;
       index: int CharMap.t; (* for keyboard shortcuts *)
       draw_bg: bool;
-      use_prefix: bool; (* entry prefix for checked v space *)
+      indent_entries: bool; (* entry prefix for checked v space *)
     }
 
   let _get_entry_w_h font v =
@@ -171,7 +173,8 @@ module MsgBox = struct
     let w, h = Option.get_or ~default:(w, h) wh in
     {v with entries; w; h; x; y; selected}
 
-  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(draw_bg=true) ?(use_prefix=true)
+    (* indent_entries: indent the entries *)
+  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(draw_bg=true) ?(indent_entries=true)
       ~padding ~colors ~fonts entries =
     let font=Fonts.get_font font_idx fonts in
     let index =
@@ -195,7 +198,7 @@ module MsgBox = struct
       heading;
       index;
       draw_bg;
-      use_prefix;
+      indent_entries;
     }
 
   let _get_entry_selection_action v = match v.kind with
@@ -449,10 +452,9 @@ module MsgBox = struct
 
   let _render_entry win s m ~select_color ~selected v =
     if selected && not @@ _is_entry_static v then (
-      let x = if m.use_prefix then m.x + 3 else m.x in
-      Renderer.draw_rect win ~x ~y:(v.y + m.y - 1) ~w:(w-4) ~h:v.h ~fill:true ~color:select_color
+      let x = m.x + select_padding in
+      Renderer.draw_rect win ~x ~y:(v.y + m.y - 1) ~w:(m.w - select_padding) ~h:v.h ~fill:true ~color:select_color
     );
-
     let prefix = match v.kind with
       | Interactive {fire=Checkbox(_, fn);_} when fn s -> "^"
       | Interactive _ -> " "
@@ -463,8 +465,10 @@ module MsgBox = struct
       | Interactive _ -> Ega.dgray, Some Ega.dgray, false
       | Static {color; tight; _} -> color, None, tight
     in
-    let name = if use_prefix then prefix^v.name else v.name in
-    Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~tight ?active_color ~tag_color:Ega.bred
+    let name = if m.indent_entries then prefix^v.name else v.name in
+    let x = m.x + m.pad.left in
+    let y = m.y + v.y in
+    Fonts.Font.write win m.font ~color name ~x ~y ~tight ?active_color ~tag_color:Ega.bred
 
   let render_box ~colors win x y w h =
     Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w:(w-2) ~h:(h-2) ~color:colors.bg ~fill:true;
@@ -473,18 +477,17 @@ module MsgBox = struct
     ) colors.inner_border;
     Renderer.draw_rect win ~x:x ~y ~w ~h ~color:colors.outer_border ~fill:false
 
-  let rec render ?final_select_color win s v =
+    (* select_stage: for animation. either white or colored *)
+  let rec render ?select_stage win s v =
     (* draw background *)
     if v.draw_bg then (
       render_box ~colors:v.colors win v.x v.y v.w v.h
     );
 
     (* draw heading *)
-    begin match v.heading with
-    | Some str ->
-        Fonts.Font.write win v.font ~color:v.colors.heading str ~x:(v.x + v.pad.left) ~y:(v.y + v.pad.top)
-    | None -> ()
-    end;
+    Option.iter (fun str ->
+      Fonts.Font.write win v.font ~color:v.colors.heading str ~x:(v.x + v.pad.left) ~y:(v.y + v.pad.top)
+    ) v.heading;
 
     (* draw entries and selection *)
     let selected = Option.get_or v.selected ~default:(-1) in
@@ -495,9 +498,9 @@ module MsgBox = struct
           Some entry
       | _ -> None
     in
-    (* Determine color by nature of selected entry *)
-    let select_color = match final_select_color, selected_entry with
-      | Some color, Some entry when not @@ is_entry_open_msgbox entry -> color
+    (* Determine color by animation stage *)
+    let select_color = match select_stage, selected_entry with
+      | Some `Partial, Some entry when not @@ is_entry_open_msgbox entry -> Ega.white
       | _ -> v.colors.select
     in
     List.iteri (fun i entry -> _render_entry win s v ~select_color ~selected:(i=selected) entry) v.entries;
@@ -506,12 +509,12 @@ module MsgBox = struct
     match selected_entry with
     | Some entry ->
         begin match entry.kind with
-        | Interactive {fire=MsgBox(true, box);_} -> render ?final_select_color win s box
+        | Interactive {fire=MsgBox(true, box);_} -> render ?select_stage win s box
         | _ -> ()
         end
     | _ -> ()
 
-  let make_basic ?x ?y ?wh ?heading ?tight ?(font_idx=4) ~fonts s text =
+  let make_basic ?x ?y ?wh ?heading ?tight ?(font_idx=4) ~padding ~colors ~fonts s text =
     (* Easy to use msgbox with just text *)
     let y = Option.get_or ~default:80 y in
     let x = match x with
@@ -525,7 +528,8 @@ module MsgBox = struct
     let entry_color = if Option.is_some heading then Ega.black else Ega.white in 
     let entry = static_entry ?tight ~color:entry_color text in
     let menu =
-      make ~x ~y ?heading ~fonts [entry] ~font_idx |> do_open_menu ?wh s
+      make ~x ~y ?heading ~padding ~colors ~fonts [entry] ~font_idx
+      |> do_open_menu ?wh s
     in
     menu
 
@@ -592,8 +596,8 @@ module Title = struct
     let msgbox = MsgBox.close v.msgbox in
     [%up {v with msgbox}]
 
-  let render_msgbox ?final_select_color win s v =
-    MsgBox.render ?final_select_color win s v.msgbox
+  let render_msgbox ?select_stage win s v =
+    MsgBox.render ?select_stage win s v.msgbox
 
   let do_open_menu s v =
     if _is_enabled s v then
@@ -773,13 +777,13 @@ module Global = struct
     in
     v, action, event
 
-  let render ?final_select_color win s v =
+  let render ?select_stage win s v =
     Renderer.draw_rect win ~x:0 ~y:0 ~w:v.w ~h:v.h ~color:Ega.cyan ~fill:true;
     (* Render menu titles *)
     List.iter (Title.render win s ~font:v.font) v.menus;
     match v.open_menu with
     | None -> ()
-    | Some i -> Title.render_msgbox ?final_select_color win s (List.nth v.menus i)
+    | Some i -> Title.render_msgbox ?select_stage win s (List.nth v.menus i)
 
 end
 
@@ -801,8 +805,8 @@ module Animated = struct
     let menu = Global.make fonts ?font_idx menus ~w ~h in
     {menu=Global menu; last_msg=None}
 
-  let make_msgbox ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries =
-    let menu = MsgBox.make ?heading ?x ?y ?font_idx ?select_color ?draw_bg ?use_prefix ?border_x ?border_y ~fonts entries in
+  let make_msgbox ?heading ?x ?y ?font_idx ?draw_bg ?indent_entries ~padding ~colors ~fonts entries =
+    let menu = MsgBox.make ?heading ?x ?y ?font_idx ?draw_bg ?indent_entries ~padding ~colors ~fonts entries in
     {menu=MsgBox menu; last_msg=None}
 
   let _close v =
@@ -825,10 +829,10 @@ module Animated = struct
   let is_closed v = not @@ is_open v
 
   let render win s v =
-    let final_select_color = if Option.is_some v.last_msg then Ega.white else Ega.bcyan in
+    let select_stage = if Option.is_some v.last_msg then `Partial else `Final in
     match v.menu with
-    | Global g -> Global.render ~final_select_color win s g
-    | MsgBox m -> MsgBox.render ~final_select_color win s m
+    | Global g -> Global.render ~select_stage win s g
+    | MsgBox m -> MsgBox.render ~select_stage win s m
 
   let handle_event s v (event:Event.t) time = match v.menu with
     (* Intercept actions and save for later *)

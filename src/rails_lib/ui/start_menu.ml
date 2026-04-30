@@ -16,7 +16,8 @@ let sp = Printf.sprintf
 let action_menu fonts s =
   let x, y = 54, 39 in
   let open Menu.MsgBox in
-  make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts
+  make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent
+    ~draw_bg:false ~pad_left:0 ~indent_entries:false ~fonts
   [
     make_entry "Start new RR" @@ `Action(`NewGame);
     make_entry "Load Saved RR" @@ `Action(`LoadGame);
@@ -32,7 +33,8 @@ let region_menu fonts s =
       make_entry ~select_action:region region_s @@ `Action region)
       Region.regions
   in
-  make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts entries
+  make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent
+    ~draw_bg:false ~pad_left:0 ~indent_entries:false ~fonts entries
   |> do_open_menu s
 
 let difficulty_menu fonts s =
@@ -43,7 +45,8 @@ let difficulty_menu fonts s =
       make_entry ~select_action:difficulty str @@ `Action difficulty)
     B_options.difficulties
   in
-  make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent ~draw_bg:false ~border_x:0 ~use_prefix:false ~fonts entries
+  make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent
+    ~draw_bg:false ~pad_left:0 ~indent_entries:false ~fonts entries
   |> do_open_menu s
 
 let reality_menu fonts reality_set s =

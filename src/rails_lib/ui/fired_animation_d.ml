@@ -4,4 +4,5 @@ type 'state t = {
   mutable ctr: int;
   station_loc: Utils.loc option;
   newspaper: 'state Newspaper_d.t;
+  colors: Menu.colors;
 }

@@ -26,11 +26,13 @@ let make (s:State.t) ~fired_by player_idx =
       @@ match fired_by with `Management -> "new managements" | `Stockholders -> "stockholders"
   in
   let newspaper = Newspaper.make_fancy s text b.params in 
+  let colors = {Menu.colors with bg=Ega.blue} in
   {
     last_time=0;
     ctr=0;
     station_loc;
     newspaper;
+    colors;
   }
 
 let render win (s:State.t) v =
@@ -40,7 +42,7 @@ let render win (s:State.t) v =
     let frame = match frame with 0 -> `Escape1 | 1 -> `Escape2 | _ -> assert false in
     let tex = Hashtbl.find s.textures.misc (frame :> Textures.Misc.t) in
     let _draw_sign =
-      Menu.MsgBox.render_box ~color:Ega.blue win 138 150 44 14;
+      Menu.MsgBox.render_box ~colors:v.colors win 138 150 44 14;
       let text = "under new\nmanagement" in
       Fonts.Render.write win s.fonts ~color:Ega.white ~idx:`Tiny text ~x:141 ~y:153;
     in
