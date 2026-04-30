@@ -1,5 +1,22 @@
 include Engine.Menu
 
+let padding = {
+  top=5;
+  bottom=5;
+  left=5;
+  right=7;
+  entry_spacing=3;
+}
+
+let colors = {
+  select=Ega.bcyan;
+  bg=Ega.gray;
+  entry=Ega.black;
+  heading=Ega.white;
+  outer_border=Ega.black;
+  inner_border=Some(Ega.white)
+}
+
 module MsgBox = struct
   include Engine.Menu.MsgBox
 

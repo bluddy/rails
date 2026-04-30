@@ -40,6 +40,23 @@ let _get_active_char str =
   str
   |> snd
 
+type padding = {
+  top: int;
+  right: int;
+  bottom: int;
+  left: int;
+  entry_spacing: int;
+}
+
+type colors = {
+  select: Ega.color;
+  bg: Ega.color;
+  entry: Ega.color;
+  heading: Ega.color;
+  outer_border: Ega.color;
+  inner_border: Ega.color option;
+}
+
 module MsgBox = struct
 
   type ('msg, 'state) fire =
@@ -68,16 +85,18 @@ module MsgBox = struct
 
   and ('msg, 'state) t =
     {
-      x: int; y: int;
-      w: int; h: int;
-      border_x: int; border_y: int;
+      x: int;
+      y: int;
+      w: int;
+      h: int;
+      pad: padding;
+      colors: colors;
       heading: string option;
       entries: ('msg, 'state) entry list;
       selected: int option;
       font: Fonts.Font.t;
       index: int CharMap.t; (* for keyboard shortcuts *)
       draw_bg: bool;
-      select_color: Ega.color;
       use_prefix: bool; (* entry prefix for checked v space *)
     }
 
@@ -106,7 +125,7 @@ module MsgBox = struct
     (* Compute menu size dynamically. Must be called. *)
   let do_open_menu ?(x=0) ?(y=0) ?wh ?(selected=Some 0) s v =
     (* start calculating internal y *)
-    let max_h = v.border_y in
+    let max_h = v.pad_top in
     (* entry coordinates are internal to the msgbox *)
     let max_w, max_h = match v.heading with
       | Some str ->
@@ -152,8 +171,8 @@ module MsgBox = struct
     let w, h = Option.get_or ~default:(w, h) wh in
     {v with entries; w; h; x; y; selected}
 
-  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(select_color=Ega.bcyan) ?(draw_bg=true) ?(use_prefix=true)
-      ?(border_x=8) ?(border_y=6) ~fonts entries =
+  let make ?heading ?(x=0) ?(y=0) ?(font_idx=menu_font) ?(draw_bg=true) ?(use_prefix=true)
+      ~padding ~colors ~fonts entries =
     let font=Fonts.get_font font_idx fonts in
     let index =
       List.foldi (fun acc i entry ->
@@ -164,8 +183,12 @@ module MsgBox = struct
       entries
     in
     {
-      border_x; border_y;
-      x; y; w=0; h=0;
+      x;
+      y;
+      w=0;
+      h=0;
+      pad=padding;
+      colors;
       entries;
       selected=None;
       font;
@@ -173,7 +196,6 @@ module MsgBox = struct
       index;
       draw_bg;
       use_prefix;
-      select_color;
     }
 
   let _get_entry_selection_action v = match v.kind with
@@ -425,10 +447,10 @@ module MsgBox = struct
     in
     v, action
 
-  let _render_entry win s font v ~select_color ~use_prefix ~selected ~x ~border_x ~y ~w =
+  let _render_entry win s m ~select_color ~selected v =
     if selected && not @@ _is_entry_static v then (
-      let x = if use_prefix then x + 3 else x in
-      Renderer.draw_rect win ~x ~y:(v.y + y - 1) ~w:(w-4) ~h:v.h ~fill:true ~color:select_color
+      let x = if m.use_prefix then m.x + 3 else m.x in
+      Renderer.draw_rect win ~x ~y:(v.y + m.y - 1) ~w:(w-4) ~h:v.h ~fill:true ~color:select_color
     );
 
     let prefix = match v.kind with
@@ -444,21 +466,23 @@ module MsgBox = struct
     let name = if use_prefix then prefix^v.name else v.name in
     Fonts.Font.write win font ~color name ~x:(x+border_x) ~y:(y + v.y) ~tight ?active_color ~tag_color:Ega.bred
 
-  let render_box ?(color=Ega.gray) win x y w h =
-    Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color ~fill:true;
-    Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w ~h ~color:Ega.white ~fill:false;
-    Renderer.draw_rect win ~x:x ~y ~w:(w+2) ~h:(h+2) ~color:Ega.black ~fill:false
+  let render_box ~colors win x y w h =
+    Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w:(w-2) ~h:(h-2) ~color:colors.bg ~fill:true;
+    Option.iter (fun inner_border ->
+      Renderer.draw_rect win ~x:(x+1) ~y:(y+1) ~w:(w-2) ~h:(h-2) ~color:inner_border ~fill:false;
+    ) colors.inner_border;
+    Renderer.draw_rect win ~x:x ~y ~w ~h ~color:colors.outer_border ~fill:false
 
   let rec render ?final_select_color win s v =
     (* draw background *)
     if v.draw_bg then (
-      render_box win v.x v.y v.w v.h
+      render_box ~colors:v.colors win v.x v.y v.w v.h
     );
 
     (* draw heading *)
     begin match v.heading with
     | Some str ->
-        Fonts.Font.write win v.font ~color:Ega.white str ~x:(v.x + v.border_x) ~y:(v.y + v.border_y)
+        Fonts.Font.write win v.font ~color:v.colors.heading str ~x:(v.x + v.pad.left) ~y:(v.y + v.pad.top)
     | None -> ()
     end;
 
@@ -474,12 +498,9 @@ module MsgBox = struct
     (* Determine color by nature of selected entry *)
     let select_color = match final_select_color, selected_entry with
       | Some color, Some entry when not @@ is_entry_open_msgbox entry -> color
-      | _ -> v.select_color
+      | _ -> v.colors.select
     in
-    List.iteri (fun i entry ->
-      _render_entry win s v.font ~select_color ~use_prefix:v.use_prefix ~selected:(i=selected)
-        ~x:v.x ~border_x:v.border_x ~y:(v.y) ~w:v.w entry)
-      v.entries;
+    List.iteri (fun i entry -> _render_entry win s v ~select_color ~selected:(i=selected) entry) v.entries;
 
     (* recurse to sub-msgbox *)
     match selected_entry with
