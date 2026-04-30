@@ -1,4 +1,24 @@
 include Engine.Menu
+module Ega = Engine.Ega
+
+(* All msgboxes are animated. No global menu *)
+
+let padding = {
+  top=5;
+  bottom=3;
+  left=5;
+  right=5;
+  entry_spacing=2;
+}
+
+let colors = {
+  select=Ega.yellow;
+  bg=Ega.black;
+  entry=Ega.gray;
+  heading=Ega.white;
+  outer_border=Ega.gray;
+  inner_border=None;
+}
 
 module Animated = struct
   include Engine.Menu.Animated
