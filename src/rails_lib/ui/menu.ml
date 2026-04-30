@@ -21,15 +21,17 @@ let colors = {
 module MsgBox = struct
   include Engine.Menu.MsgBox
 
-  let make ?heading ?x ?y ?(font_idx=`Caps) ?draw_bg ?indent_entries ?select_color ?pad_left ~fonts entries =
+  let g_padding = padding
+
+  let make ?heading ?x ?y ?(font_idx=`Caps) ?draw_bg ?indent_entries ?padding ?select_color ~fonts entries =
     let font_idx = Fonts.face_to_enum font_idx in
     let colors = match select_color with
     | Some color -> {colors with select=color}
     | _ -> colors
     in
-    let padding = match pad_left with
-    | Some x -> {padding with left=x}
-    | _ -> padding
+    let padding = match padding with
+    | Some padding -> padding
+    | _ -> g_padding
     in
     make ?heading ?x ?y ~font_idx ?draw_bg ~padding ~colors ~fonts ?indent_entries entries
 

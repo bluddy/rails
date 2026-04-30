@@ -13,11 +13,18 @@ open Utils.Infix
 
 let sp = Printf.sprintf
 
+let padding = {
+  Menu.padding with
+  left=4;
+  right=(-2);
+}
+
+let x, y = 50, 39
+
 let action_menu fonts s =
-  let x, y = 54, 39 in
   let open Menu.MsgBox in
   make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent
-    ~draw_bg:false ~pad_left:0 ~indent_entries:false ~fonts
+    ~draw_bg:false ~padding ~indent_entries:false ~fonts
   [
     make_entry "Start new RR" @@ `Action(`NewGame);
     make_entry "Load Saved RR" @@ `Action(`LoadGame);
@@ -25,28 +32,27 @@ let action_menu fonts s =
   |> do_open_menu s
 
 let region_menu fonts s =
-  let x, y = 54, 39 in
   let open Menu.MsgBox in
   let entries =
-    List.map (fun region -> 
+    List.map (fun region ->
       let region_s = Region.show region in
       make_entry ~select_action:region region_s @@ `Action region)
       Region.regions
   in
   make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent
-    ~draw_bg:false ~pad_left:0 ~indent_entries:false ~fonts entries
+    ~draw_bg:false ~padding ~indent_entries:false ~fonts entries
   |> do_open_menu s
 
 let difficulty_menu fonts s =
-  let x, y = 54, 39 in
   let open Menu.MsgBox in
   let entries = List.map (fun difficulty ->
-      let str = B_options.show_difficulty difficulty in
+    (* Add spaces to get the highlight to go to the right spot *)
+      let str = B_options.show_difficulty difficulty ^ "     " in
       make_entry ~select_action:difficulty str @@ `Action difficulty)
     B_options.difficulties
   in
   make ~x ~y ~font_idx:`Standard ~select_color:Ega.bcyan_transparent
-    ~draw_bg:false ~pad_left:0 ~indent_entries:false ~fonts entries
+    ~draw_bg:false ~padding ~indent_entries:false ~fonts entries
   |> do_open_menu s
 
 let reality_menu fonts reality_set s =
