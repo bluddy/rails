@@ -104,7 +104,7 @@ let handle_event _win v (event:Event.t) time =
 
 let render win v = match v.mode with
   | Intro state -> Intro.render win state
-  | Start_menu state -> Start_menu.render win state
+  | Start_menu state -> Start_menu.render v.srv state
 
 
 let run ?load ~zoom ~adjust_ar ~shader () : unit =

@@ -13,6 +13,7 @@ let load_pics () =
     "EQUIP2.PIC";
     "FACES.PIC";
     "FACESF.PIC";
+    "GENDER.PIC";
     "SPRITES.PIC";
     "SPRITESF.PIC";
   ]
@@ -26,7 +27,6 @@ let load_pics () =
     "EQUIP1.PIC";
     "EQUIP1M.PIC";
     "EUROPE.PIC";
-    "GENDER.PIC";
     "GUYS2.PIC";
     "GUYS3.PIC";
     "HOTEL.PIC";
