@@ -4,6 +4,7 @@ open Utils.Infix
 
 module Ega = Engine.Ega
 module R = Engine.Renderer
+module Text_entry = Engine.Text_entry
 
 type menu_action =
   [
@@ -17,7 +18,10 @@ type gender = [ `Male | `Female ]
 
 type t =
   | Start_menu of menu_action Menu.t
-  | Gender_menu of gender Menu.t
+  | Gender_menu of {
+      menu: gender Menu.t;
+      codename: Text_entry.t option
+    }
 
 let create_start_menu (srv:Services.t) =
   let open Menu in
@@ -41,6 +45,16 @@ let create_gender_menu (srv:Services.t) =
   ]
   |> Menu.do_open_menu ~selected:(Some 0)
 
+let render_codename_box win =
+  R.draw_rect win ~x:99 ~y:85 ~w:221 ~h:114 ~color:Ega.dgray ~fill:false;
+  R.draw_rect win ~x:100 ~y:87 ~w:220 ~h:113 ~color:Ega.black ~fill:false;
+  R.draw_rect win ~x:101 ~y:88 ~w:219 ~h:112 ~color:Ega.dgray ~fill:false;
+  R.draw_rect win ~x:105 ~y:101 ~w:215 ~h:110 ~color:Ega.black ~fill:true;
+  R.draw_line win ~x1:101 ~y1:86 ~x2:219 ~y2:86 ~color:Ega.gray;
+  R.draw_line win ~x1:103 ~y1:99 ~x2:217 ~y2:99 ~color:Ega.black;
+  R.draw_line win ~x1:102 ~y1:112 ~x2:218 ~y2:112 ~color:Ega.black;
+  R.draw_line win ~x1:104 ~y1:101 ~x2:104 ~y2:110 ~color:Ega.gray;
+  R.draw_line win ~x1:216 ~y1:101 ~x2:216 ~y2:110 ~color:Ega.gray
 
 let create srv = Start_menu(create_start_menu srv)
 
@@ -50,11 +64,11 @@ let handle_event srv event time v =
     let menu2, _status = Menu.modal_handle_event menu event time in
     if menu2 === menu then v, `Stay
     else Start_menu menu2, `Stay
-  | Gender_menu menu ->
-    let menu2, status = Menu.modal_handle_event menu event time in
+  | Gender_menu s ->
+    let menu2, status = Menu.modal_handle_event s.menu event time in
     begin match status with
-    | `Stay when menu2 === menu -> v, `Stay
-    | `Stay -> Gender_menu menu2, `Stay
+    | `Stay when menu2 === s.menu -> v, `Stay
+    | `Stay -> Gender_menu {s with menu=menu2}, `Stay
     | `Exit -> Start_menu(create_start_menu srv), `Stay
     end
 
@@ -65,14 +79,14 @@ let handle_tick srv time v =
     begin match status with
     | `Stay when menu2 === menu -> v, `Stay
     | `Stay -> Start_menu menu2, `Stay
-    | `Activate `New_character -> Gender_menu(create_gender_menu srv), `Stay
+    | `Activate `New_character -> Gender_menu({menu=create_gender_menu srv; codename=None}), `Stay
     | _ -> v, `Stay
     end
-  | Gender_menu menu ->
-    let menu2, status = Menu.modal_handle_tick menu time in
+  | Gender_menu s ->
+    let menu2, status = Menu.modal_handle_tick s.menu time in
     begin match status with
-    | `Stay when menu2 === menu -> v, `Stay
-    | `Stay -> Gender_menu menu2, `Stay
+    | `Stay when menu2 === s.menu -> v, `Stay
+    | `Stay -> Gender_menu {s with menu=menu2}, `Stay
     | _ -> v, `Stay
     end
 
@@ -80,10 +94,10 @@ let render (srv:Services.t) v = match v with
   | Start_menu menu ->
       R.draw_rect srv.win ~x:0 ~y:0 ~w:320 ~h:200 ~color:Ega.blue ~fill:true;
       Menu.render srv.win menu
-  | Gender_menu menu ->
+  | Gender_menu s ->
       R.clear_screen srv.win;
       let tex = Hashtbl.find srv.textures.images `Gender in
       R.Texture.render ~x:0 ~y:0 srv.win tex;
-      Menu.render srv.win menu
+      Menu.render srv.win s.menu
 
 
