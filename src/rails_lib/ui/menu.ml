@@ -36,7 +36,7 @@ module MsgBox = struct
     make ?heading ?x ?y ~font_idx ?draw_bg ~padding ~colors ~fonts ?indent_entries entries
 
 
-  let make_basic ?x ?y ?wh ?heading ?tight ?(font_idx=`Caps) ~fonts s text =
+  let make_basic ?x ?y ?wh ?heading ?tight ?(font_idx=`Standard) ~fonts s text =
     let font_idx = Fonts.face_to_enum font_idx in
     make_basic ?x ?y ?wh ?heading ?tight ~font_idx ~padding ~colors ~fonts s text
 end
