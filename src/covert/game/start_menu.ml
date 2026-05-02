@@ -45,11 +45,14 @@ let create_gender_menu (srv:Services.t) =
   ]
   |> Menu.do_open_menu ~selected:(Some 0)
 
+let make_codename_entry () =
+    Text_entry.make ~font_idx:2 "" ~x:106 ~y:100 ~chars:15
+
 let render_codename_box win =
-  R.draw_rect win ~x:99 ~y:85 ~w:221 ~h:114 ~color:Ega.dgray ~fill:false;
-  R.draw_rect win ~x:100 ~y:87 ~w:220 ~h:113 ~color:Ega.black ~fill:false;
-  R.draw_rect win ~x:101 ~y:88 ~w:219 ~h:112 ~color:Ega.dgray ~fill:false;
-  R.draw_rect win ~x:105 ~y:101 ~w:215 ~h:110 ~color:Ega.black ~fill:true;
+  R.draw_rect2 win ~x:99 ~y:85 ~x2:221 ~y2:114 ~color:Ega.dgray ~fill:true;
+  R.draw_rect2 win ~x:100 ~y:87 ~x2:220 ~y2:113 ~color:Ega.black ~fill:true;
+  R.draw_rect2 win ~x:101 ~y:88 ~x2:219 ~y2:112 ~color:Ega.dgray ~fill:true;
+  R.draw_rect2 win ~x:105 ~y:101 ~x2:215 ~y2:110 ~color:Ega.black ~fill:true;
   R.draw_line win ~x1:101 ~y1:86 ~x2:219 ~y2:86 ~color:Ega.gray;
   R.draw_line win ~x1:103 ~y1:99 ~x2:217 ~y2:99 ~color:Ega.black;
   R.draw_line win ~x1:102 ~y1:112 ~x2:218 ~y2:112 ~color:Ega.black;
@@ -64,12 +67,20 @@ let handle_event srv event time v =
     let menu2, _status = Menu.modal_handle_event menu event time in
     if menu2 === menu then v, `Stay
     else Start_menu menu2, `Stay
-  | Gender_menu s ->
+  | Gender_menu ({codename=None;_} as s) ->
     let menu2, status = Menu.modal_handle_event s.menu event time in
     begin match status with
     | `Stay when menu2 === s.menu -> v, `Stay
     | `Stay -> Gender_menu {s with menu=menu2}, `Stay
     | `Exit -> Start_menu(create_start_menu srv), `Stay
+    end
+  | Gender_menu ({codename=Some entry;_} as s) ->
+    let entry2, status = Text_entry.handle_event entry event in
+    begin match status with
+    | `Stay when entry2 === entry -> v, `Stay
+    | `Stay -> Gender_menu{s with codename=Some entry2}, `Stay
+    | `Exit -> Gender_menu{s with codename=None}, `Stay
+    | `Return _text -> v, `Stay
     end
 
 let handle_tick srv time v =
@@ -82,13 +93,14 @@ let handle_tick srv time v =
     | `Activate `New_character -> Gender_menu({menu=create_gender_menu srv; codename=None}), `Stay
     | _ -> v, `Stay
     end
-  | Gender_menu s ->
+  | Gender_menu ({codename=None;_} as s) ->
     let menu2, status = Menu.modal_handle_tick s.menu time in
     begin match status with
     | `Stay when menu2 === s.menu -> v, `Stay
     | `Stay -> Gender_menu {s with menu=menu2}, `Stay
-    | _ -> v, `Stay
+    | `Activate _ -> Gender_menu {s with codename=make_codename_entry () |> Option.some}, `Stay
     end
+  | Gender_menu ({codename=Some _entry;_} as _s) -> v, `Stay
 
 let render (srv:Services.t) v = match v with
   | Start_menu menu ->
@@ -98,6 +110,11 @@ let render (srv:Services.t) v = match v with
       R.clear_screen srv.win;
       let tex = Hashtbl.find srv.textures.images `Gender in
       R.Texture.render ~x:0 ~y:0 srv.win tex;
-      Menu.render srv.win s.menu
+      Menu.render srv.win s.menu;
+      Option.iter (fun entry ->
+        render_codename_box srv.win;
+        Fonts.Render.write srv.win srv.fonts ~color:Ega.green ~idx:`Large "Max's code name is:" ~x:104 ~y:90;
+        Text_entry.render srv.win srv.fonts entry)
+        s.codename
 
 

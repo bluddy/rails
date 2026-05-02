@@ -217,6 +217,11 @@ end
 let draw_rect win ~x ~y ~w ~h ~color ~fill =
   Opengl.draw_rect ~inner_w:win.inner_w ~inner_h:win.inner_h ~x ~y ~w ~h ~color ~fill
 
+let draw_rect2 win ~x ~y ~x2 ~y2 ~color ~fill =
+  let w = x2 - x in
+  let h = y2 - y in
+  Opengl.draw_rect ~inner_w:win.inner_w ~inner_h:win.inner_h ~x ~y ~w ~h ~color ~fill
+
 let paint_screen win ~color =
   draw_rect win ~x:0 ~y:0 ~w:(width win) ~h:(height win) ~color ~fill:true
 
