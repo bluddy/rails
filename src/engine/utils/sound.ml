@@ -11,12 +11,21 @@ type sound_queue = {
 }
 
 type t = {
+  enabled: bool;
   sounds: Mixer.chunk StringMap.t;
   mutable to_play: sound_queue list;
   music: Mixer.music StringMap.t;
 }
 
+let default = {
+  enabled=false;
+  sounds=StringMap.empty;
+  to_play=[];
+  music=StringMap.empty;
+}
+
 let play_sound ?(loop=0) ?time sound v =
+  if not v.enabled then () else
   let sound = StringMap.find sound v.sounds in
   let time = Option.get_or ~default:(-1) time in
   let channel = -1 in
@@ -54,6 +63,7 @@ let init () =
     music_files
   in
   let v = {
+      enabled=true;
       sounds;
       to_play=[];
       music;
@@ -63,13 +73,17 @@ let init () =
 
   (* queue for when the current sound finishes *)
 let queue_sound ?(loop=0) ?time sound v =
+  if not v.enabled then () else
   v.to_play <- v.to_play @ [{sound; time; loop}]
 
 let play_music music v =
+  if not v.enabled then () else
   let music = StringMap.find music v.music in
   Mixer.play_music music 1 |> ignore
 
-let stop_music () = Mixer.halt_music () |> ignore
+let stop_music v =
+  if not v.enabled then () else
+  Mixer.halt_music () |> ignore
 
 (* Call this to enable handling of queueing properly.
    Not required for most situations *)
@@ -89,7 +103,7 @@ let pani_create ?dump ?debug ?input ?sound ?exit_on_done sound_engine filename =
       Pani_render.
       {
         play_music=(fun () -> play_music sound sound_engine);
-        stop_music=stop_music;
+        stop_music=(fun () -> stop_music sound_engine);
       }
       |> Option.some
   in

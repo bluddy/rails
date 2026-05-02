@@ -185,7 +185,7 @@ let render win (s:State.t) = match s.mode with
 
   | Game -> Main_ui.render win s s.ui
 
-let run ?load ~zoom ~adjust_ar ~shader () : unit =
+let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
   Logs.set_level (Some Debug);
 
@@ -194,7 +194,7 @@ let run ?load ~zoom ~adjust_ar ~shader () : unit =
 
   let init_fn win =
 
-    let sound = Sound.init () in
+    let sound = if audio then Sound.init () else Sound.default in
     let state = match load with
       | Some slot ->
           Printf.printf "Loading from slot %d...\n" slot;

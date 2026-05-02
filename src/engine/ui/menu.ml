@@ -26,8 +26,12 @@ type 'a action =
   | NoAction
   [@@deriving show]
 
-let _is_action = function
+let is_action_ = function
   | NoAction | HandledEvent -> false
+  | _ -> true
+
+let is_handled_ = function
+  | NoAction -> false
   | _ -> true
 
     (* Get the active char for the menu item *)
@@ -840,7 +844,7 @@ module Animated = struct
         (* Can let events through *)
         let g', action, event = Global.handle_event ~do_close:false s g event time in
         let menu = if g' === g then v.menu else Global g' in
-        let last_msg, event = if _is_action action then Some (action, time + exit_time), Event.NoEvent
+        let last_msg, event = if is_action_ action then Some (action, time + exit_time), Event.NoEvent
           else v.last_msg, event
         in
         ([%up {v with menu; last_msg}], event) [@warning "-23"]
@@ -848,8 +852,9 @@ module Animated = struct
         (* Always swallows up events *)
         let m', action = MsgBox.handle_event ~do_close:false s m event time in
         let menu = if m' === m then v.menu else MsgBox m' in
-        let last_msg = if _is_action action then Some (action, time + exit_time) else v.last_msg in
-        ([%up {v with menu; last_msg}], Event.NoEvent) [@warning "-23"]
+        let last_msg = if is_action_ action then Some (action, time + exit_time) else v.last_msg in
+        let event = if is_handled_ action then Event.NoEvent else event in
+        ([%up {v with menu; last_msg}], event) [@warning "-23"]
 
   let handle_tick _s v time = match v.last_msg with
     | Some (msg, t) when time > t ->

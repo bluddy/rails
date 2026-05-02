@@ -14,6 +14,7 @@ let debugger = ref false
 let zoom = ref 3
 let adjust_ar = ref false
 let shader = ref "test"
+let audio = ref true
 
 let set v f =
   file := f;
@@ -36,6 +37,7 @@ let arglist =
     "--zoom", Int (fun x -> zoom := x), "Set zoom (default =3)";
     "--adjust-ar", Set adjust_ar, "Adjust aspect ratio";
     "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
+    "--no-audio", Clear audio, "Disable audio";
   ]
 
 let main () =
@@ -51,6 +53,6 @@ let main () =
   | `Pani ->
       Mainloop.main @@ Pani_render.standalone ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()
-  | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~shader:!shader ()
+  | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
+  | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
 

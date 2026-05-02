@@ -302,7 +302,7 @@ let set_modes l v = match l with
   | x::xs -> {v with mode=x; next_modes=xs}
   | [] -> v
 
-let next_mode s v = match v.next_modes with
+let next_mode (s:State.t) v = match v.next_modes with
   | (GenericScreen{start_fn; _} as x)::xs ->
       start_fn s;
       {v with mode=x; next_modes=xs}
@@ -312,7 +312,7 @@ let next_mode s v = match v.next_modes with
   | x::xs ->
       {v with mode=x; next_modes=xs}
   | [] ->
-      Sound.stop_music ();
+      Sound.stop_music s.sound;
       [%up {v with mode=Normal}]
 
 let build_station_menu fonts region =
@@ -917,7 +917,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
        let exit_state, state2, action = Stock_broker.handle_event s state event time in
         let v =
           if Utils.is_exit exit_state then (
-            Sound.stop_music ();
+            Sound.stop_music s.sound;
             {v with mode=Normal})
           else if state =!= state2 then {v with mode=Stock_broker state2}
           else v
@@ -936,7 +936,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
       let v = if state2 === state then v else {v with mode = Speed_record state2} in
       begin match retval with
       | `Exit ->
-          Sound.stop_music ();
+          Sound.stop_music s.sound;
           {v with mode=Normal}, b_action
       | `Stay -> v, b_action
       end
@@ -1597,7 +1597,7 @@ let handle_tick (s:State.t) v time is_cycle =
     let status, state2, actions = Stock_broker.handle_tick s state time in
     let v =
       if Utils.is_exit status then (
-        Sound.stop_music ();
+        Sound.stop_music s.sound;
         next_mode s v
       ) else if state2 =!= state then {v with mode=Stock_broker state2}
       else v
