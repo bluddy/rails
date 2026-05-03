@@ -11,20 +11,23 @@ type t = {
   font_idx: int;
   text_color: Ega.color;
   cursor_color: Ega.color;
+  cursor_height: int;
   frame_color: Ega.color option;
 }
 
 let char_width = 8
 let char_height = 8
 
+(* cursor_height: pixels below chars *)
 let make ?(editable=true) ?(font_idx=4) ?(text_color=Ega.black) ?(cursor_color=Ega.bcyan) ?(frame_color=Some Ega.black)
+  ?(cursor_height=2)
   text ~x ~y ~chars =
   let cursor = if editable then Some 0 else None in
   let len = String.length text in
   let num_spaces = max 0 (chars - len) in
   let text = text ^ String.make num_spaces ' ' in
   {
-    cursor; text; x; y; num_chars=chars; font_idx; text_color; cursor_color; frame_color;
+    cursor; text; x; y; num_chars=chars; font_idx; text_color; cursor_color; cursor_height; frame_color;
   }
 
 let get_text v = String.rdrop_while (function ' ' -> true | _ -> false) v.text
@@ -44,7 +47,7 @@ let render win fonts v =
   | None ->
     Fonts.Render.write win fonts v.text ~color:v.text_color ~idx:v.font_idx ~x ~y
   | Some cursor ->
-    Fonts.Render.write win fonts v.text ~cursor:(cursor, v.cursor_color) ~color:v.text_color ~idx:v.font_idx ~x ~y
+    Fonts.Render.write win fonts v.text ~cursor:(cursor, v.cursor_color, v.cursor_height) ~color:v.text_color ~idx:v.font_idx ~x ~y
 
 let handle_event v event =
   match v.cursor with

@@ -98,14 +98,14 @@ module Font = struct
         )
       )
 
-    let write_char win font ?cursor_color ?(color=Ega.white) c ~x ~y =
+    let write_char win font ?cursor_color ?(cursor_h=2) ?(color=Ega.white) c ~x ~y =
       try
         let char_tex = Hashtbl.find font.textures c in
         let w = get_letter_width font c in
         begin match cursor_color with
         | Some color ->
             let y = y - 1 in
-            let h = font.height + font.space_y + 2 in
+            let h = font.height + font.space_y + cursor_h in
             let w = w + font.space_x in
             R.draw_rect win ~x ~y ~w ~h ~color ~fill:true;
         | None -> ()
@@ -144,8 +144,8 @@ module Font = struct
         | _, Some active_color, _, _, `OneChar ->
             let x, y = write_c ~color:active_color c in
             `Off, x, y
-        | _, _, _, Some (j, cursor_color), _ when j = i ->
-            let x, y = write_c ~cursor_color ~color c in
+        | _, _, _, Some (j, cursor_color, cursor_h), _ when j = i ->
+            let x, y = write_c ~cursor_color ~cursor_h ~color c in
             `Off, x, y
         | _, _, _, _, _ ->
             let x, y = write_c ~color c in
