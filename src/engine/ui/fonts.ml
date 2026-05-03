@@ -6,6 +6,13 @@ module Log = (val Logs.src_log src: Logs.LOG)
 
 let debug = false
 
+type cursor =
+{
+  index: int; (* letter index *)
+  color: Ega.color;
+  cur_height: int; (* height below line *)
+}
+
 module Font = struct
 
   type t =
@@ -144,8 +151,8 @@ module Font = struct
         | _, Some active_color, _, _, `OneChar ->
             let x, y = write_c ~color:active_color c in
             `Off, x, y
-        | _, _, _, Some (j, cursor_color, cursor_h), _ when j = i ->
-            let x, y = write_c ~cursor_color ~cursor_h ~color c in
+        | _, _, _, Some {index; color; cur_height}, _ when index = i ->
+            let x, y = write_c ~cursor_color:color ~cursor_h:cur_height ~color c in
             `Off, x, y
         | _, _, _, _, _ ->
             let x, y = write_c ~color c in

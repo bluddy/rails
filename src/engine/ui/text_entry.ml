@@ -46,8 +46,9 @@ let render win fonts v =
   match v.cursor with
   | None ->
     Fonts.Render.write win fonts v.text ~color:v.text_color ~idx:v.font_idx ~x ~y
-  | Some cursor ->
-    Fonts.Render.write win fonts v.text ~cursor:(cursor, v.cursor_color, v.cursor_height) ~color:v.text_color ~idx:v.font_idx ~x ~y
+  | Some index ->
+    let cursor = Fonts.{index; color=v.cursor_color; cur_height= v.cursor_height} in
+    Fonts.Render.write win fonts v.text ~cursor ~color:v.text_color ~idx:v.font_idx ~x ~y
 
 let handle_event v event =
   match v.cursor with
