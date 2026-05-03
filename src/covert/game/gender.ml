@@ -1,0 +1,2 @@
+
+type t = [ `Male | `Female ]
