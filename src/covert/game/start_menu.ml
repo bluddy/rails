@@ -51,8 +51,8 @@ let make_codename_entry () =
 
 let render_codename_box win =
   R.draw_rect2 win ~x:99 ~y:85 ~x2:221 ~y2:114 ~color:Ega.dgray ~fill:true;
-  R.draw_rect2 win ~x:100 ~y:87 ~x2:220 ~y2:113 ~color:Ega.black ~fill:true;
-  R.draw_rect2 win ~x:101 ~y:88 ~x2:219 ~y2:112 ~color:Ega.dgray ~fill:true;
+  R.draw_rect2 win ~x:100 ~y:87 ~x2:220 ~y2:113 ~color:Ega.black ~fill:false;
+  (* R.draw_rect2 win ~x:101 ~y:88 ~x2:219 ~y2:112 ~color:Ega.dgray ~fill:true; *)
   R.draw_rect2 win ~x:105 ~y:101 ~x2:215 ~y2:110 ~color:Ega.black ~fill:true;
   R.draw_line win ~x1:101 ~y1:86 ~x2:219 ~y2:86 ~color:Ega.gray;
   R.draw_line win ~x1:103 ~y1:99 ~x2:217 ~y2:99 ~color:Ega.black;
