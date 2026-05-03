@@ -46,7 +46,7 @@ let create_gender_menu (srv:Services.t) =
   |> Menu.do_open_menu ~selected:(Some 0)
 
 let make_codename_entry () =
-    Text_entry.make ~font_idx:2 "" ~x:106 ~y:100 ~chars:15
+  Text_entry.make ~font_idx:2 "" ~x:106 ~y:100 ~chars:15 ~text_color:Ega.bgreen ~cursor_color:Ega.bgreen ~frame_color:None
 
 let render_codename_box win =
   R.draw_rect2 win ~x:99 ~y:85 ~x2:221 ~y2:114 ~color:Ega.dgray ~fill:true;
