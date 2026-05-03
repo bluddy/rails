@@ -77,7 +77,7 @@ let training_menu (srv:Services.t) =
   let open Menu in
   let open MsgBox in
   let entries = List.map (fun field ->
-    make_entry (Training.show_field field) @@ `Action field)
+    make_entry (Training.show_field field ^ " training") @@ `Action field)
     Training.field_list
   in
   entries

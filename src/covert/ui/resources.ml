@@ -16,6 +16,7 @@ let load_pics () =
     "GENDER.PIC";
     "SPRITES.PIC";
     "SPRITESF.PIC";
+    "TRAINING.PIC";
   ]
   in
   let nontransparent = [
@@ -34,7 +35,6 @@ let load_pics () =
     "LABS.PIC";
     "SNEAKIN.PIC";
     "STREET.PIC";
-    "TRAINING.PIC";
     "WIRETAP.PIC";
   ] in
   let images = Hashtbl.create 20 in
