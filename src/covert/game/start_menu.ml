@@ -14,12 +14,30 @@ type menu_action =
     | `Hall_of_fame
   ]
 
+type info = {
+  gender: Gender.t;
+  name: string;
+  difficulty: Difficulty.t;
+  training: Training.map;
+}
+
+let default_info gender name difficulty = {
+  gender;
+  name;
+  difficulty;
+  training=Training.Map.default;
+}
+
 type t =
   | Start_menu of menu_action Menu.t
   | Char_menu of {
       gender_menu: Gender.t Menu.t;
       codename: (Text_entry.t * Gender.t) option;
       diff_menu: (Difficulty.t Menu.t * string) option;
+    }
+  | Training of {
+      info: info;
+      menu: Training.field Menu.t;
     }
 
 let create_start_menu (srv:Services.t) =
@@ -55,6 +73,16 @@ let difficulty_menu (srv:Services.t) =
   |> make_msgbox ~draw_bg:false ~x:96 ~y:129 ~fonts:srv.fonts ~heading:"Which difficulty level?"
   |> Menu.do_open_menu ~selected:(Some 0)
 
+let training_menu (srv:Services.t) =
+  let open Menu in
+  let open MsgBox in
+  let entries = List.map (fun field ->
+    make_entry (Training.show_field field) @@ `Action field)
+    Training.field_list
+  in
+  entries
+  |> make_msgbox ~draw_bg:false ~x:94 ~y:28 ~fonts:srv.fonts
+  |> Menu.do_open_menu ~selected:(Some 0)
 
 let make_codename_entry () =
   Text_entry.make ~font_idx:2 "" ~x:106 ~y:100 ~chars:15 ~text_color:Ega.bgreen
@@ -101,6 +129,14 @@ let handle_event srv event time v =
     | `Stay -> Char_menu {s with gender_menu=menu2}, `Stay
     | `Exit -> Start_menu(create_start_menu srv), `Stay
     end
+  | Training s ->
+    let menu2, status = Menu.modal_handle_event s.menu event time in
+    begin match status with
+    | `Stay when menu2 === s.menu -> v, `Stay
+    | `Stay -> Training {s with menu=menu2}, `Stay
+    (* Early exit *)
+    | `Exit -> v, `Stay
+    end
 
 let handle_tick srv time v =
   match v with
@@ -116,12 +152,14 @@ let handle_tick srv time v =
           diff_menu=None}), `Stay
     | _ -> v, `Stay
     end
-  | Char_menu ({diff_menu=Some (menu, codename);_} as s) ->
+  | Char_menu ({diff_menu=Some (menu, name); codename=Some(_,gender);_} as s) ->
     let menu2, status = Menu.modal_handle_tick menu time in
     begin match status with
     | `Stay when menu2 === menu -> v, `Stay
-    | `Stay -> Char_menu {s with diff_menu=Some (menu2, codename)}, `Stay
-    | `Activate _ -> v, `Stay
+    | `Stay -> Char_menu {s with diff_menu=Some (menu2, name)}, `Stay
+    | `Activate difficulty ->
+        let info = default_info gender name difficulty in
+        Training{info; menu=training_menu srv}, `Stay
     end
   | Char_menu ({codename=Some (entry, gender);_} as s) ->
     let entry2, status = Text_entry.handle_tick time entry in
@@ -135,6 +173,15 @@ let handle_tick srv time v =
     | `Stay when menu2 === s.gender_menu -> v, `Stay
     | `Stay -> Char_menu {s with gender_menu=menu2}, `Stay
     | `Activate gender -> Char_menu {s with codename=(make_codename_entry (), gender) |> Option.some}, `Stay
+    end
+  | Training s ->
+    let menu2, status = Menu.modal_handle_tick s.menu time in
+    begin match status with
+    | `Stay when menu2 === s.menu -> v, `Stay
+    | `Stay -> Training {s with menu=menu2}, `Stay
+    | `Activate field ->
+        let info = {s.info with training=Training.Map.incr field s.info.training} in
+        Training {s with info}, `Stay
     end
 
 
@@ -155,6 +202,19 @@ let render (srv:Services.t) v = match v with
       Option.iter (fun (menu, _) ->
         Menu.render srv.win menu
       ) s.diff_menu
-
+  | Training s ->
+      R.clear_screen srv.win;
+      let tex = Hashtbl.find srv.textures.images `Training in
+      R.Texture.render ~x:0 ~y:0 srv.win tex;
+      Menu.render srv.win s.menu;
+      let y, x = 188, 19 in
+      List.fold_left (fun x field ->
+        let level = Training.Map.find field s.info.training
+          |> Training.Level.show
+        in
+        Fonts.Render.write srv.win srv.fonts ~x ~y ~color:Ega.white ~idx:`Large level;
+        x + 80
+      ) x Training.field_list
+      |> ignore
 
 
