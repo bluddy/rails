@@ -20,7 +20,8 @@ type t =
   | Start_menu of menu_action Menu.t
   | Gender_menu of {
       menu: gender Menu.t;
-      codename: Text_entry.t option
+      codename: Text_entry.t option;
+      diff_menu: Difficulty.t Menu.t option;
     }
 
 let create_start_menu (srv:Services.t) =
@@ -45,6 +46,18 @@ let create_gender_menu (srv:Services.t) =
   ]
   |> Menu.do_open_menu ~selected:(Some 0)
 
+let difficulty_menu (srv:Services.t) =
+  let open Menu in
+  let open MsgBox in
+  let entries = List.map (fun diff ->
+    make_entry (Difficulty.show diff) @@ `Action diff)
+    Difficulty.list
+  in
+  entries
+  |> make_msgbox ~draw_bg:false ~x:96 ~y:129 ~fonts:srv.fonts ~heading:"Which difficulty level?"
+  |> Menu.do_open_menu ~selected:(Some 0)
+
+
 let make_codename_entry () =
   Text_entry.make ~font_idx:2 "" ~x:106 ~y:100 ~chars:15 ~text_color:Ega.bgreen
     ~cursor_flash:100 ~cursor_color:Ega.green ~cursor_height:0 ~frame_color:None
@@ -68,12 +81,12 @@ let handle_event srv event time v =
     let menu2, _status = Menu.modal_handle_event menu event time in
     if menu2 === menu then v, `Stay
     else Start_menu menu2, `Stay
-  | Gender_menu ({codename=None;_} as s) ->
-    let menu2, status = Menu.modal_handle_event s.menu event time in
+  | Gender_menu ({diff_menu=Some menu; _} as s) ->
+    let menu2, status = Menu.modal_handle_event menu event time in
     begin match status with
-    | `Stay when menu2 === s.menu -> v, `Stay
-    | `Stay -> Gender_menu {s with menu=menu2}, `Stay
-    | `Exit -> Start_menu(create_start_menu srv), `Stay
+    | `Stay when menu2 === menu -> v, `Stay
+    | `Stay -> Gender_menu {s with diff_menu=Some menu2}, `Stay
+    | `Exit -> Gender_menu {s with diff_menu=None}, `Stay
     end
   | Gender_menu ({codename=Some entry;_} as s) ->
     let entry2, status = Text_entry.handle_event entry event in
@@ -81,7 +94,14 @@ let handle_event srv event time v =
     | `Stay when entry2 === entry -> v, `Stay
     | `Stay -> Gender_menu{s with codename=Some entry2}, `Stay
     | `Exit -> Gender_menu{s with codename=None}, `Stay
-    | `Return _text -> v, `Stay
+    | `Return text -> Gender_menu{s with diff_menu=difficulty_menu srv |> Option.some}, `Stay
+    end
+  | Gender_menu s ->
+    let menu2, status = Menu.modal_handle_event s.menu event time in
+    begin match status with
+    | `Stay when menu2 === s.menu -> v, `Stay
+    | `Stay -> Gender_menu {s with menu=menu2}, `Stay
+    | `Exit -> Start_menu(create_start_menu srv), `Stay
     end
 
 let handle_tick srv time v =
@@ -91,21 +111,32 @@ let handle_tick srv time v =
     begin match status with
     | `Stay when menu2 === menu -> v, `Stay
     | `Stay -> Start_menu menu2, `Stay
-    | `Activate `New_character -> Gender_menu({menu=create_gender_menu srv; codename=None}), `Stay
+    | `Activate `New_character ->
+        Gender_menu({
+          menu=create_gender_menu srv;
+          codename=None;
+          diff_menu=None}), `Stay
     | _ -> v, `Stay
     end
-  | Gender_menu ({codename=None;_} as s) ->
-    let menu2, status = Menu.modal_handle_tick s.menu time in
+  | Gender_menu ({diff_menu=Some menu;_} as s) ->
+    let menu2, status = Menu.modal_handle_tick menu time in
     begin match status with
-    | `Stay when menu2 === s.menu -> v, `Stay
-    | `Stay -> Gender_menu {s with menu=menu2}, `Stay
-    | `Activate _ -> Gender_menu {s with codename=make_codename_entry () |> Option.some}, `Stay
+    | `Stay when menu2 === menu -> v, `Stay
+    | `Stay -> Gender_menu {s with diff_menu=Some menu2}, `Stay
+    | `Activate _ -> v, `Stay
     end
   | Gender_menu ({codename=Some entry;_} as s) ->
     let entry2, status = Text_entry.handle_tick time entry in
     begin match status with
     | `Stay when entry2 === entry -> v, `Stay
     | `Stay -> Gender_menu {s with codename=Some entry2}, `Stay
+    end
+  | Gender_menu s ->
+    let menu2, status = Menu.modal_handle_tick s.menu time in
+    begin match status with
+    | `Stay when menu2 === s.menu -> v, `Stay
+    | `Stay -> Gender_menu {s with menu=menu2}, `Stay
+    | `Activate _ -> Gender_menu {s with codename=make_codename_entry () |> Option.some}, `Stay
     end
 
 
@@ -122,6 +153,10 @@ let render (srv:Services.t) v = match v with
         render_codename_box srv.win;
         Fonts.Render.write srv.win srv.fonts ~color:Ega.green ~idx:`Large "Max's code name is:" ~x:104 ~y:90;
         Text_entry.render srv.win srv.fonts entry)
-        s.codename
+        s.codename;
+      Option.iter (fun menu ->
+        Menu.render srv.win menu
+      ) s.diff_menu
+
 
 
