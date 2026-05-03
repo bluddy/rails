@@ -5,23 +5,13 @@
 let scr_width = 320
 let scr_height = 200
 
-let tile_dim = 16
-let tile_hdim = tile_dim / 2
-let tile_w = tile_dim
-let tile_h = tile_dim
-let train_max_size = 8
+let cursor_flash_time = 500 (* ms *)
 
 module Cycles = struct
   (* Cycle counts to perform some tasks *)
 end
 
 module Pani = struct
-  let wood_bridge = "data/WOOD2.PAN"
-  let iron_bridge = "data/IRONM.PAN"
-  let flood_us = "FLOODM.PAN"
-  let flood_eu = "ENGFLDM.PAN"
-  let wreck = "WRECKM.PAN"
-  let title = "TITLEM.PAN"
 end
 
 module Intro = struct

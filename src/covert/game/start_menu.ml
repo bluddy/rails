@@ -46,7 +46,8 @@ let create_gender_menu (srv:Services.t) =
   |> Menu.do_open_menu ~selected:(Some 0)
 
 let make_codename_entry () =
-  Text_entry.make ~font_idx:2 "" ~x:106 ~y:100 ~chars:15 ~text_color:Ega.bgreen ~cursor_color:Ega.green ~cursor_height:0 ~frame_color:None
+  Text_entry.make ~font_idx:2 "" ~x:106 ~y:100 ~chars:15 ~text_color:Ega.bgreen
+    ~cursor_flash:100 ~cursor_color:Ega.green ~cursor_height:0 ~frame_color:None
 
 let render_codename_box win =
   R.draw_rect2 win ~x:99 ~y:85 ~x2:221 ~y2:114 ~color:Ega.dgray ~fill:true;
@@ -100,7 +101,13 @@ let handle_tick srv time v =
     | `Stay -> Gender_menu {s with menu=menu2}, `Stay
     | `Activate _ -> Gender_menu {s with codename=make_codename_entry () |> Option.some}, `Stay
     end
-  | Gender_menu ({codename=Some _entry;_} as _s) -> v, `Stay
+  | Gender_menu ({codename=Some entry;_} as s) ->
+    let entry2, status = Text_entry.handle_tick time entry in
+    begin match status with
+    | `Stay when entry2 === entry -> v, `Stay
+    | `Stay -> Gender_menu {s with codename=Some entry2}, `Stay
+    end
+
 
 let render (srv:Services.t) v = match v with
   | Start_menu menu ->
