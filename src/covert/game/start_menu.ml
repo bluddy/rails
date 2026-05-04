@@ -186,7 +186,7 @@ let handle_tick srv time v =
     | `Activate field when s.points > 0 ->
         let info = {s.info with training=Training.Map.incr field s.info.training} in
         let points = s.points - 1 in
-        Training {s with info; points}, `Stay
+        Training {info; points; menu=menu2}, `Stay
     | _ -> v, `Stay
     end
 
