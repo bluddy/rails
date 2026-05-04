@@ -97,7 +97,12 @@ type t =
   | Quit
   | EventNotRelevant
   | NoEvent
+  | Tick
   [@@deriving show]
+
+let is_tick = function
+  | Tick -> true
+  | _ -> false
 
 let handle_key event (event_typ:Sdl.Event.enum) =
   let open Sdl.Event in

@@ -862,6 +862,15 @@ module Animated = struct
         {v with last_msg=None}, msg
     | _ -> v, NoAction
 
+    (* combine event and tick handling *)
+  let handle_event2 s v event time = match event with
+    | Event.Tick ->
+        let v, action = handle_tick s v time in
+        v, action, Event.NoEvent
+    | _ ->
+        let v, event = handle_event s v event time in
+        v, NoAction, event
+
   let do_open_menu ?x ?y ?wh ?selected s v = match v.menu with
     | Global _ -> v (* not relevant *)
     | MsgBox msgbox ->
@@ -883,6 +892,14 @@ module Animated = struct
     match action with
     | On(choice) -> menu, `Activate choice
     | NoAction -> menu, `Stay
+    | _ -> menu, `Stay
+
+    (* combined msg handling for messageboxes and listboxes *)
+  let modal_handle_event2 ?(is_msgbox=false) s v event time =
+    let menu, action, event = handle_event2 s v event time in
+    match action with
+    | On(choice) -> menu, `Activate choice
+    | _ when Event.pressed_esc event || is_msgbox && Event.modal_dismiss event -> menu,`Exit
     | _ -> menu, `Stay
 
 end
