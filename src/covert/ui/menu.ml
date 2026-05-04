@@ -1,4 +1,4 @@
-include Engine.Menu
+open Engine.Menu
 module Ega = Engine.Ega
 
 (* All msgboxes are animated. No global menu *)
@@ -31,18 +31,18 @@ module Animated = struct
 
   let render win v = render win () v
 
+  (*
   let handle_event v event time : 'msg t = handle_event () v event time |> fst
 
   let handle_tick v time : 'msg t * 'msg action = handle_tick () v time
+  *)
 
   let do_open_menu ?x ?y ?wh ?selected (v:'msg t) : 'msg t=
     do_open_menu ?x ?y ?wh ?selected () v
 
   let modal_handle_event ?is_msgbox v event time =
-    modal_handle_event ?is_msgbox () v event time
+    modal_handle_event2 ?is_msgbox () v event time
 
-  let modal_handle_tick v time =
-    modal_handle_tick () v time
 end
 
 include Animated

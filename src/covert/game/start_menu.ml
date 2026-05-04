@@ -42,7 +42,6 @@ type t =
 
 let create_start_menu (srv:Services.t) =
   let open Menu in
-  let open MsgBox in
   make_msgbox ~x:80 ~y:80 ~fonts:srv.fonts ~heading:"Do you want to..." 
   [
     make_entry "Create a New Character" @@ `Action(`New_character);
@@ -54,7 +53,6 @@ let create_start_menu (srv:Services.t) =
 
 let create_gender_menu (srv:Services.t) =
   let open Menu in
-  let open MsgBox in
   make_msgbox ~draw_bg:false ~x:96 ~y:33 ~fonts:srv.fonts ~heading:"Select one..."
   [
     make_entry "Maximillian Remington" @@ `Action(`Male);
@@ -64,7 +62,6 @@ let create_gender_menu (srv:Services.t) =
 
 let difficulty_menu (srv:Services.t) =
   let open Menu in
-  let open MsgBox in
   let entries = List.map (fun diff ->
     make_entry (Difficulty.show diff) @@ `Action diff)
     Difficulty.list
@@ -75,7 +72,6 @@ let difficulty_menu (srv:Services.t) =
 
 let training_menu (srv:Services.t) =
   let open Menu in
-  let open MsgBox in
   let entries = List.map (fun field ->
     make_entry (Training.show_field field ^ " training") @@ `Action field)
     Training.field_list
@@ -104,15 +100,25 @@ let create srv = Start_menu(create_start_menu srv)
 let handle_event srv event time v =
   match v with
   | Start_menu menu ->
-    let menu2, _status = Menu.modal_handle_event menu event time in
-    let v = if menu2 =!= menu then Start_menu menu2 else v in
-    v, `Stay
-  | Char_menu ({diff_menu=Some (menu, codename); _} as s) ->
     let menu2, status = Menu.modal_handle_event menu event time in
-    let v = if menu2 =!= menu then Char_menu {s with diff_menu=Some (menu2, codename)} else v in
+    let v = if menu2 =!= menu then Start_menu menu2 else v in
+    begin match status with
+    | `Activate `New_character ->
+        Char_menu({
+          gender_menu=create_gender_menu srv;
+          codename=None;
+          diff_menu=None}), `Stay
+    | _ -> v, `Stay
+    end
+  | Char_menu ({diff_menu=Some (menu, name); codename=Some(_,gender);_} as s) ->
+    let menu2, status = Menu.modal_handle_event menu event time in
+    let v = if menu2 =!= menu then Char_menu {s with diff_menu=Some (menu2, name)} else v in
     begin match status with
     | `Stay -> v, `Stay
     | `Exit -> Char_menu {s with diff_menu=None}, `Stay
+    | `Activate difficulty ->
+        let info = default_info gender name difficulty in
+        Training{info; menu=training_menu srv}, `Stay
     end
   | Char_menu ({codename=Some (entry, gender);_} as s) ->
     let entry2, status = Text_entry.handle_event entry event in
@@ -128,59 +134,19 @@ let handle_event srv event time v =
     begin match status with
     | `Stay -> v, `Stay
     | `Exit -> Start_menu(create_start_menu srv), `Stay
+    | `Activate gender -> Char_menu {s with codename=(make_codename_entry (), gender) |> Option.some}, `Stay
     end
   | Training s ->
     let menu2, status = Menu.modal_handle_event s.menu event time in
-    begin match status with
-    | `Stay when menu2 === s.menu -> v, `Stay
-    | `Stay -> Training {s with menu=menu2}, `Stay
-    (* Early exit *)
-    | `Exit -> v, `Stay
-    end
-
-let handle_tick srv time v =
-  match v with
-  | Start_menu menu ->
-    let menu2, status = Menu.modal_handle_tick menu time in
-    let v = if menu2 =!= menu then Start_menu menu2 else v in
-    begin match status with
-    | `Activate `New_character ->
-        Char_menu({
-          gender_menu=create_gender_menu srv;
-          codename=None;
-          diff_menu=None}), `Stay
-    | _ -> v, `Stay
-    end
-  | Char_menu ({diff_menu=Some (menu, name); codename=Some(_,gender);_} as s) ->
-    let menu2, status = Menu.modal_handle_tick menu time in
-    let v = if menu2 =!= menu then Char_menu {s with diff_menu=Some (menu2, name)} else v in
-    begin match status with
-    | `Stay -> v, `Stay
-    | `Activate difficulty ->
-        let info = default_info gender name difficulty in
-        Training{info; menu=training_menu srv}, `Stay
-    end
-  | Char_menu ({codename=Some (entry, gender);_} as s) ->
-    let entry2, _ = Text_entry.handle_tick time entry in
-    let v = if entry2 =!= entry then Char_menu {s with codename=Some(entry2, gender)} else v in
-    v, `Stay
-  | Char_menu s ->
-    let menu2, status = Menu.modal_handle_tick s.gender_menu time in
-    let v = if menu2 =!= s.gender_menu then Char_menu {s with gender_menu=menu2} else v in
-    begin match status with
-    | `Activate gender -> Char_menu {s with codename=(make_codename_entry (), gender) |> Option.some}, `Stay
-    | `Stay -> v, `Stay
-    end
-  | Training s ->
-    let menu2, status = Menu.modal_handle_tick s.menu time in
     let v = if menu2 =!= s.menu then Training {s with menu=menu2} else v in
     begin match status with
+    | `Stay -> v, `Stay
+    (* Early exit *)
+    | `Exit -> v, `Stay
     | `Activate field ->
         let info = {s.info with training=Training.Map.incr field s.info.training} in
-        Training {s with info}, `Stay
-    | `Stay -> v, `Stay
+        Training {info; menu=menu2}, `Stay
     end
-
 
 let render (srv:Services.t) v = match v with
   | Start_menu menu ->
