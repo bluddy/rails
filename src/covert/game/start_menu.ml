@@ -119,7 +119,7 @@ let handle_event srv event time v =
     | `Exit -> Char_menu {s with diff_menu=None}, `Stay
     | `Activate difficulty ->
         let info = default_info gender name difficulty in
-        Training{info; menu=training_menu srv}, `Stay
+        Training{info; menu=training_menu srv; points=4}, `Stay
     end
   | Char_menu ({codename=Some (entry, gender);_} as s) ->
     let entry2, status = Text_entry.handle_event entry event in
@@ -142,51 +142,11 @@ let handle_event srv event time v =
     begin match status with
     | `Stay when menu2 === s.menu -> v, `Stay
     | `Stay -> Training {s with menu=menu2}, `Stay
-    (* Early exit *)
-    | `Exit -> v, `Stay
-    end
-
-let handle_tick srv time v =
-  match v with
-  | Start_menu menu ->
-    let menu2, status = Menu.modal_handle_tick menu time in
-    let v = if menu2 =!= menu then Start_menu menu2 else v in
-    begin match status with
-    | `Activate `New_character ->
-        Char_menu({
-          gender_menu=create_gender_menu srv;
-          codename=None;
-          diff_menu=None}), `Stay
-    | _ -> v, `Stay
-    end
-  | Char_menu ({diff_menu=Some (menu, name); codename=Some(_,gender);_} as s) ->
-    let menu2, status = Menu.modal_handle_tick menu time in
-    let v = if menu2 =!= menu then Char_menu {s with diff_menu=Some (menu2, name)} else v in
-    begin match status with
-    | `Stay -> v, `Stay
-    | `Activate difficulty ->
-        let info = default_info gender name difficulty in
-        Training{info; menu=training_menu srv}, `Stay
-    end
-  | Char_menu ({codename=Some (entry, gender);_} as s) ->
-    let entry2, _ = Text_entry.handle_tick time entry in
-    let v = if entry2 =!= entry then Char_menu {s with codename=Some(entry2, gender)} else v in
-    v, `Stay
-  | Char_menu s ->
-    let menu2, status = Menu.modal_handle_tick s.gender_menu time in
-    let v = if menu2 =!= s.gender_menu then Char_menu {s with gender_menu=menu2} else v in
-    begin match status with
-    | `Activate gender -> Char_menu {s with codename=(make_codename_entry (), gender) |> Option.some}, `Stay
-    | `Stay -> v, `Stay
-    end
-  | Training s ->
-    let menu2, status = Menu.modal_handle_tick s.menu time in
-    let v = if menu2 =!= s.menu then Training {s with menu=menu2} else v in
-    begin match status with
     | `Activate field when s.points > 0 ->
         let info = {s.info with training=Training.Map.incr field s.info.training} in
         let points = s.points - 1 in
         Training {info; points; menu=menu2}, `Stay
+    (* Early exit *)
     | _ -> v, `Stay
     end
 
