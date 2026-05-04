@@ -144,15 +144,22 @@ let handle_event srv event time v =
     end
   | Training s ->
     let menu2, status = Menu.modal_handle_event s.menu event time in
+    let assign_point field =
+      let info = {s.info with training=Training.Map.incr field s.info.training} in
+      let points = s.points - 1 in
+      info, points
+    in
     begin match status with
     | `Stay when menu2 === s.menu -> v, `Stay
     | `Stay -> Training {s with menu=menu2}, `Stay
-    | `Activate field when s.points > 0 ->
-        let info = {s.info with training=Training.Map.incr field s.info.training} in
-        let points = s.points - 1 in
+    | `Activate field when s.points > 1 ->
+        let info, points = assign_point field in
         Training {info; points; menu=menu2}, `Stay
     (* Early exit *)
-    | _ -> v, `Stay
+    | `Activate field when s.points > 0 ->
+        let info, points = assign_point field in
+        Training {info; points; menu=menu2}, `Activate info
+    | _ -> v, `Activate s.info
     end
 
 let render (srv:Services.t) v = match v with
