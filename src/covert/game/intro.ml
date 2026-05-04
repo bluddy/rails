@@ -63,7 +63,7 @@ let render win v = match v.mode with
       Pani_render.render ~clear_screen:false win s2;
   | Picture {render_fn; _} -> render_fn win
 
-let handle_event _ event v =
+let handle_event event v =
   let handle_state state fn =
     match Pani_render.handle_event event state with
     | state', `Stay when state =!= state' -> {v with mode=fn state'}, `Stay
@@ -75,7 +75,7 @@ let handle_event _ event v =
   | SingleAnimation state -> handle_state state @@ fun state -> SingleAnimation state
   | DoubleAnimation(s1, s2) -> handle_state s2 @@ fun state -> DoubleAnimation(s1, state)
 
-let handle_tick _ time v =
+let handle_tick time v =
   let state_change state fn =
     let state2, quit = Pani_render.handle_tick time state in
     match quit with 

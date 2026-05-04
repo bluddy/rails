@@ -56,27 +56,6 @@ let default_state win sound =
     srv; mode; next_modes;
   }
 
-let handle_tick _win v time =
-  let v = match v.mode with
-    | Intro state ->
-        let state2, status = Intro.handle_tick v.srv time state in
-        let s = match status with
-          | `Stay when state2 === state -> v
-          | `Stay -> {v with mode=Intro state2}
-          | `Exit -> next_mode v
-        in
-        s, `Stay
-    | Start_menu state ->
-        let state2, status = Start_menu.handle_tick v.srv time state in
-        let s = match status with
-          | `Stay when state2 === state -> v
-          | `Stay -> {v with mode=Start_menu state2}
-          | _ -> next_mode v
-        in
-        s, `Stay
-  in
-  v
-
 let handle_event _win v (event:Event.t) time =
   (* Handle an input event, starting with the UI.
      (Store the win in closure so we can create the full game state when needed 
@@ -84,14 +63,17 @@ let handle_event _win v (event:Event.t) time =
   let state, quit =
     match v.mode with
     | Intro state ->
-        begin match Intro.handle_event v.srv event state with
-        | state2, `Stay when state2 === state -> v, `Stay
-        | state2, `Stay ->
-            {v with mode=Intro state2}, `Stay
-        | _, `Exit ->
-            let state = Start_menu.create v.srv in
-            {v with mode=Start_menu state}, `Stay
-        end
+        let state2, status = if Event.is_tick event then
+          Intro.handle_tick time state
+        else
+          Intro.handle_event event state
+        in
+        let s = match status with
+          | `Stay when state2 === state -> v
+          | `Stay -> {v with mode=Intro state2}
+          | `Exit -> next_mode v
+        in
+        s, `Stay
     | Start_menu state ->
         begin match Start_menu.handle_event v.srv event time state with
         | state2, `Stay when state2 === state -> v, `Stay
@@ -133,7 +115,7 @@ let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
 
     state, Mainloop.{
       handle_event=handle_event win;
-      handle_tick=handle_tick win;
+      handle_tick=(fun v time -> handle_event win v Event.Tick time);
       render=render win;
     }
   in
