@@ -79,7 +79,9 @@ let handle_event _win v (event:Event.t) time =
         let state2, status = Start_menu.handle_event v.srv event time state in
         let v = if state2 =!= state then {v with mode=Start_menu state2} else v in
         begin match status with
-        | `Activate info -> Create_case(Case.create info)
+        | `Activate info ->
+            let s = World.create ~last_case_choice:(-1) v.srv info in
+            {v with mode=Create}, `Stay
         | `Stay -> v, `Stay
         | `Exit -> v, `Stay
         end
@@ -90,7 +92,7 @@ let handle_event _win v (event:Event.t) time =
 let render win v = match v.mode with
   | Intro state -> Intro.render win state
   | Start_menu state -> Start_menu.render v.srv state
-
+  | Create -> ()
 
 let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
