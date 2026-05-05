@@ -11,6 +11,7 @@ open Utils.Infix
 type module_t =
   | Intro of Intro.t
   | Start_menu of Start_menu.t
+  | Create
   (*
   | Investigate
   | Driving
@@ -75,10 +76,12 @@ let handle_event _win v (event:Event.t) time =
         in
         s, `Stay
     | Start_menu state ->
-        begin match Start_menu.handle_event v.srv event time state with
-        | state2, `Stay when state2 === state -> v, `Stay
-        | state2, `Stay -> {v with mode=Start_menu state2}, `Stay
-        | _, `Exit -> v, `Stay
+        let state2, status = Start_menu.handle_event v.srv event time state in
+        let v = if state2 =!= state then {v with mode=Start_menu state2} else v in
+        begin match status with
+        | `Activate info -> Create_case(Case.create info)
+        | `Stay -> v, `Stay
+        | `Exit -> v, `Stay
         end
 
   in

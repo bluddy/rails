@@ -16,4 +16,5 @@ let show = function
 let list = Iter.map (fun i -> of_enum i |> Option.get_exn_or "oops") Iter.(0 -- 3)
   |> List.of_iter
 
+let lowest = function Local_disturbance -> true | _ -> false
 

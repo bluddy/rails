@@ -7,6 +7,9 @@ let scr_height = 200
 
 let cursor_flash_time = 500 (* ms *)
 
+let num_cases = 16
+let num_regions = 3
+
 module Cycles = struct
   (* Cycle counts to perform some tasks *)
 end
