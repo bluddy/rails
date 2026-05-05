@@ -1,5 +1,7 @@
 open Containers
 
+include Gen
+
 let of_stringi ?(start=0) ?len s =
   let len = match len with
     | None -> String.length s - start
