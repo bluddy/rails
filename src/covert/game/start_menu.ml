@@ -99,28 +99,33 @@ let render_codename_box win =
 let create srv = Start_menu(create_start_menu srv)
 
 let handle_event srv event time v =
+  let modal_handle_event ?exit menu build_fn act_fn =
+    let menu2, status = Menu.modal_handle_event menu event time in
+    let v = if menu2 =!= menu then build_fn menu2 else v in
+    match status, exit with
+    | `Activate x, _ -> act_fn x
+    | `Exit, Some exit_fn -> exit_fn ()
+    | _, _ -> v, `Stay
+  in
   match v with
   | Start_menu menu ->
-    let menu2, status = Menu.modal_handle_event menu event time in
-    let v = if menu2 =!= menu then Start_menu menu2 else v in
-    begin match status with
-    | `Activate `New_character ->
-        Char_menu({
-          gender_menu=create_gender_menu srv;
-          codename=None;
-          diff_menu=None}), `Stay
-    | _ -> v, `Stay
-    end
+      modal_handle_event menu
+        (fun menu -> Start_menu menu)
+        (function
+          | `New_character ->
+              Char_menu({
+                gender_menu=create_gender_menu srv;
+                codename=None; diff_menu=None}), `Stay
+          | _ -> v, `Stay)
+
   | Char_menu ({diff_menu=Some (menu, name); codename=Some(_,gender);_} as s) ->
-    let menu2, status = Menu.modal_handle_event menu event time in
-    let v = if menu2 =!= menu then Char_menu {s with diff_menu=Some (menu2, name)} else v in
-    begin match status with
-    | `Stay -> v, `Stay
-    | `Exit -> Char_menu {s with diff_menu=None}, `Stay
-    | `Activate difficulty ->
-        let info = default_info gender name difficulty in
-        Training{info; menu=training_menu srv; points=4}, `Stay
-    end
+      modal_handle_event menu
+        (fun menu -> Char_menu {s with diff_menu=Some(menu, name)})
+        (fun difficulty ->
+          let info = default_info gender name difficulty in
+          Training{info; menu=training_menu srv; points=4}, `Stay)
+        ~exit:(fun () -> Char_menu {s with diff_menu=None}, `Stay)
+
   | Char_menu ({codename=Some (entry, gender);_} as s) ->
     let entry2, status = Text_entry.handle_event entry event in
     let v = if entry2 =!= entry then Char_menu{s with codename=Some (entry2, gender)} else v in
