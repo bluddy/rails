@@ -101,17 +101,19 @@ let create srv = Start_menu(create_start_menu srv)
 let handle_event srv event time v =
   let modal_handle_event ?exit menu build_fn act_fn =
     let menu2, status = Menu.modal_handle_event menu event time in
-    let v = if menu2 =!= menu then build_fn menu2 else v in
     match status, exit with
-    | `Activate x, _ -> act_fn x
-    | `Exit, Some exit_fn -> exit_fn ()
-    | _, _ -> v, `Stay
+    | `Activate x, _ -> act_fn menu2 x
+    | `Exit, Some exit_fn -> exit_fn menu2
+    | `Stay, _ ->
+        let v = if menu2 =!= menu then build_fn menu2 else v in
+        v, `Stay
+    | `Exit, _ -> v, `Stay
   in
   match v with
   | Start_menu menu ->
       modal_handle_event menu
         (fun menu -> Start_menu menu)
-        (function
+        (fun _ -> function
           | `New_character ->
               Char_menu({
                 gender_menu=create_gender_menu srv;
@@ -121,10 +123,10 @@ let handle_event srv event time v =
   | Char_menu ({diff_menu=Some (menu, name); codename=Some(_,gender);_} as s) ->
       modal_handle_event menu
         (fun menu -> Char_menu {s with diff_menu=Some(menu, name)})
-        (fun difficulty ->
+        (fun _ difficulty ->
           let info = default_info gender name difficulty in
           Training{info; menu=training_menu srv; points=4}, `Stay)
-        ~exit:(fun () -> Char_menu {s with diff_menu=None}, `Stay)
+        ~exit:(fun _ -> Char_menu {s with diff_menu=None}, `Stay)
 
   | Char_menu ({codename=Some (entry, gender);_} as s) ->
     let entry2, status = Text_entry.handle_event entry event in
@@ -135,32 +137,28 @@ let handle_event srv event time v =
     | `Return text -> Char_menu{s with diff_menu=(difficulty_menu srv, text) |> Option.some}, `Stay
     end
   | Char_menu s ->
-    let menu2, status = Menu.modal_handle_event s.gender_menu event time in
-    let v = if menu2 =!= s.gender_menu then Char_menu {s with gender_menu=menu2} else v in
-    begin match status with
-    | `Stay -> v, `Stay
-    | `Exit -> Start_menu(create_start_menu srv), `Stay
-    | `Activate gender -> Char_menu {s with codename=(make_codename_entry (), gender) |> Option.some}, `Stay
-    end
+      modal_handle_event s.gender_menu
+        (fun menu -> Char_menu {s with gender_menu=menu})
+        (fun _ gender ->
+          Char_menu {s with codename=(make_codename_entry (), gender) |> Option.some}, `Stay)
+        ~exit:(fun _ -> Start_menu(create_start_menu srv), `Stay)
   | Training s ->
-    let menu2, status = Menu.modal_handle_event s.menu event time in
-    let assign_point field =
-      let info = {s.info with training=Training.Map.incr field s.info.training} in
-      let points = s.points - 1 in
-      info, points
-    in
-    begin match status with
-    | `Stay when menu2 === s.menu -> v, `Stay
-    | `Stay -> Training {s with menu=menu2}, `Stay
-    | `Activate field when s.points > 1 ->
-        let info, points = assign_point field in
-        Training {info; points; menu=menu2}, `Stay
-    (* Early exit *)
-    | `Activate field when s.points > 0 ->
-        let info, points = assign_point field in
-        Training {info; points; menu=menu2}, `Activate info
-    | _ -> v, `Activate s.info
-    end
+      let assign_point field =
+        let info = {s.info with training=Training.Map.incr field s.info.training} in
+        let points = s.points - 1 in
+        info, points
+      in
+      modal_handle_event s.menu
+      (fun menu -> Training {s with menu})
+      (fun menu -> function
+        | field when s.points > 1 ->
+            let info, points = assign_point field in
+            Training {info; points; menu}, `Stay
+        (* Early exit *)
+        | field when s.points > 0 ->
+            let info, points = assign_point field in
+            Training {info; points; menu}, `Activate info
+        | _ -> v, `Activate s.info)
 
 let render (srv:Services.t) v = match v with
   | Start_menu menu ->
