@@ -20,7 +20,6 @@ let create (srv:Services.t) ~last_case_choice (info:Start_menu.info) =
       in
       loop ()
   in
-  let new_region () =
-    Region.random srv.random
-  in
+  let region = Region.random srv.random in
+  let locs, orgs = Region.load_from_file () in
   ()
