@@ -603,6 +603,135 @@ let _build_station_mode (s:State.t) v =
   let modal = make_modal menu () in
   {v with mode=BuildStation modal}
 
+let handle_view_action_ player_idx (s:State.t) view_action v =
+  match view_action with
+  | `BuildTrack msg  ->
+      Sound.play_sound Sound.Sound.Track_build s.sound;
+      v, B.Action.BuildTrack msg
+  | `RemoveTrack msg ->
+      Sound.play_sound Sound.Sound.Track_remove s.sound;
+      v, B.Action.RemoveTrack msg
+  | `BuildFerry msg  ->
+      Sound.play_sound Sound.Sound.Track_build s.sound;
+      v, B.Action.BuildFerry msg
+  | `BuildBridge msg ->
+      let menu = build_bridge_menu s.fonts (B.get_region s.backend)
+        |> Menu.MsgBox.do_open_menu s in
+      let modal = make_modal menu msg in
+      {v with mode=BuildBridge modal}, nobaction
+  | `HighGradeTrack(msg, grade, tunnel) ->
+      let menu = build_high_grade_menu ~grade ~tunnel s.fonts
+        |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
+      in
+      let modal = make_modal menu msg in
+      {v with mode=BuildHighGrade modal}, nobaction
+  | `OutOfFunds ->
+      make_msgbox s v "Out Of Funds!"
+  | `ShowTileInfo (x, y, tile) ->
+      let info = Tile.Info.get (B.get_region s.backend) tile in
+      let open Menu.MsgBox in
+      let entries =
+        let tilename = match tile with
+        | City | Village ->
+            begin match B.find_close_city x y ~range:4 s.backend with
+            | Some (x,y) ->
+                let city, _ = Cities.find_exn x y s.backend.cities in
+                sp "%s (%s)" (Tile.show tile) city
+            | None -> Tile.show tile
+            end
+        | _ -> Tile.show tile
+        in
+        let entries =
+        [
+          static_entry ~color:Ega.white tilename;
+          static_entry ~color:Ega.white "Right-of-Way costs";
+          static_entry ~color:Ega.white @@
+            sp "%s per mile" (M.print ~region:(B.get_region s.backend) info.cost);
+        ]
+        in
+        let demand = match info.demand with
+          | [] -> []
+          | demand ->
+              static_entry ~color:Ega.bcyan " Demands" ::
+              List.map (fun (good, amount) ->
+                let prefix = match amount with
+                  | 8  -> " 1/8 "
+                  | 16 -> " 1/4 "
+                  | 32 -> " 1/2 "
+                  | _ -> " "
+                in
+                static_entry ~color:Ega.black @@ prefix ^ Goods.show good
+              )
+              demand
+        in
+        let supply = match info.supply with
+          | [] -> []
+          | supply ->
+              static_entry ~color:Ega.bcyan " Supplies" ::
+              List.map (fun (good, _) ->
+                static_entry ~color:Ega.black @@ " "^Goods.show good)
+                supply
+        in
+        let convert =
+          List.filter_map (fun (good, _) ->
+            match Goods.convert (B.get_region s.backend) good with
+            | None -> None
+            | Some good ->
+              static_entry ~color:Ega.black @@ " ("^Goods.show good^")"
+              |> Option.some
+          )
+          info.demand
+        in
+        entries @ demand @ supply @ convert
+      in
+      let menu =
+        Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:`Standard
+        |> Menu.MsgBox.do_open_menu s
+      in
+      let modal = make_modal menu () in
+      let mode = ModalMsgbox modal in
+      {v with mode}, nobaction
+
+  | `SignalMenu(x, y, dir, screen_x, screen_y) ->
+      let menu =
+        signal_menu s.fonts screen_x screen_y
+        (* signal_menu s.fonts 10 10 (*((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y) *) *)
+        |> Menu.MsgBox.do_open_menu s
+      in
+      let modal = make_modal menu (x, y, dir) in
+      {v with mode=SignalMenu modal}, nobaction
+
+  | `StationView(x, y) ->
+      {v with mode=StationReport(x, y)}, nobaction
+
+  | `DoubleTrack(double, x, y, player_idx) ->
+      v, B.Action.DoubleTrack{x; y; double; player_idx}
+
+  | `EditTrain train_idx ->
+      {v with mode=TrainReport(Train_report.make s train_idx)}, nobaction
+
+  | `HoldTrainToggle train_idx ->
+      v, B.Action.TrainToggleHold {player_idx; train_idx}
+
+  | `IncomeStatement ->
+      let state = B.create_balance_sheet player_idx s.backend in
+      {v with mode=Income_statement {state; start_fn=fun _ -> ()}}, nobaction
+
+  | `TrainIncome ->
+      let state = Train_income_report.create s in
+      {v with mode=TrainIncome state}, nobaction
+
+  | `BuildTrain ->
+      {v with mode=BuildTrain(`ChooseEngine)}, nobaction
+
+  | `BuildStation ->
+      _build_station_mode s v, nobaction
+
+  | `CallBroker ->
+      v, B.Action.CallBroker{player_idx}
+
+  | `NoAction -> v, nobaction
+
 let handle_event (s:State.t) v (event:Event.t) time =
   (* Handle most stuff for regular menus and msgboxes
      process_fn: main processing on choice
@@ -640,136 +769,7 @@ let handle_event (s:State.t) v (event:Event.t) time =
       in
       if v.view =!= view then v.view <- view;
 
-      let v, backend_action = match view_action with
-        | `BuildTrack msg  ->
-            Sound.play_sound Sound.Sound.Track_build s.sound;
-            v, B.Action.BuildTrack msg
-        | `RemoveTrack msg ->
-            Sound.play_sound Sound.Sound.Track_remove s.sound;
-            v, B.Action.RemoveTrack msg
-        | `BuildFerry msg  ->
-            Sound.play_sound Sound.Sound.Track_build s.sound;
-            v, B.Action.BuildFerry msg
-        | `BuildBridge msg ->
-            let menu = build_bridge_menu s.fonts (B.get_region s.backend)
-              |> Menu.MsgBox.do_open_menu s in
-            let modal = make_modal menu msg in
-            {v with mode=BuildBridge modal}, nobaction
-        | `HighGradeTrack(msg, grade, tunnel) ->
-            let menu = build_high_grade_menu ~grade ~tunnel s.fonts
-              |> Menu.MsgBox.do_open_menu ~selected:(Some 0) s
-            in
-            let modal = make_modal menu msg in
-            {v with mode=BuildHighGrade modal}, nobaction
-        | `OutOfFunds ->
-            make_msgbox s v "Out Of Funds!"
-        | `ShowTileInfo (x, y, tile) ->
-            let info = Tile.Info.get (B.get_region s.backend) tile in
-            let open Menu.MsgBox in
-            let entries =
-              let tilename = match tile with
-              | City | Village ->
-                  begin match B.find_close_city x y ~range:4 s.backend with
-                  | Some (x,y) ->
-                      let city, _ = Cities.find_exn x y s.backend.cities in
-                      sp "%s (%s)" (Tile.show tile) city
-                  | None -> Tile.show tile
-                  end
-              | _ -> Tile.show tile
-              in
-              let entries =
-              [
-                static_entry ~color:Ega.white tilename;
-                static_entry ~color:Ega.white "Right-of-Way costs";
-                static_entry ~color:Ega.white @@
-                  sp "%s per mile" (M.print ~region:(B.get_region s.backend) info.cost);
-              ]
-              in
-              let demand = match info.demand with
-                | [] -> []
-                | demand ->
-                    static_entry ~color:Ega.bcyan " Demands" ::
-                    List.map (fun (good, amount) ->
-                      let prefix = match amount with
-                        | 8  -> " 1/8 "
-                        | 16 -> " 1/4 "
-                        | 32 -> " 1/2 "
-                        | _ -> " "
-                      in
-                      static_entry ~color:Ega.black @@ prefix ^ Goods.show good
-                    )
-                    demand
-              in
-              let supply = match info.supply with
-                | [] -> []
-                | supply ->
-                    static_entry ~color:Ega.bcyan " Supplies" ::
-                    List.map (fun (good, _) ->
-                      static_entry ~color:Ega.black @@ " "^Goods.show good)
-                      supply
-              in
-              let convert =
-                List.filter_map (fun (good, _) ->
-                  match Goods.convert (B.get_region s.backend) good with
-                  | None -> None
-                  | Some good ->
-                    static_entry ~color:Ega.black @@ " ("^Goods.show good^")"
-                    |> Option.some
-                )
-                info.demand
-              in
-              entries @ demand @ supply @ convert
-            in
-            let menu =
-              Menu.MsgBox.make ~x:100 ~y:50 ~fonts:s.fonts entries ~font_idx:`Standard
-              |> Menu.MsgBox.do_open_menu s
-            in
-            let modal = make_modal menu () in
-            let mode = ModalMsgbox modal in
-            {v with mode}, nobaction
-
-        | `SignalMenu(x, y, dir, screen_x, screen_y) ->
-            let menu =
-              signal_menu s.fonts screen_x screen_y
-              (* signal_menu s.fonts 10 10 (*((x + 1) * C.tile_w) (y * C.tile_h + v.dims.menu.y) *) *)
-              |> Menu.MsgBox.do_open_menu s
-            in
-            let modal = make_modal menu (x, y, dir) in
-            {v with mode=SignalMenu modal}, nobaction
-
-        | `StationView(x, y) ->
-            {v with mode=StationReport(x, y)}, nobaction
-
-        | `DoubleTrack(double, x, y, player_idx) ->
-            v, B.Action.DoubleTrack{x; y; double; player_idx}
-
-        | `EditTrain train_idx ->
-            {v with mode=TrainReport(Train_report.make s train_idx)}, nobaction
-
-        | `HoldTrainToggle train_idx ->
-            v, B.Action.TrainToggleHold {player_idx; train_idx}
-
-        | `IncomeStatement ->
-            let state = B.create_balance_sheet player_idx s.backend in
-            {v with mode=Income_statement {state; start_fn=fun _ -> ()}}, nobaction
-
-        | `TrainIncome ->
-            let state = Train_income_report.create s in
-            {v with mode=TrainIncome state}, nobaction
-
-        | `BuildTrain ->
-            {v with mode=BuildTrain(`ChooseEngine)}, nobaction
-
-        | `BuildStation ->
-            _build_station_mode s v, nobaction
-
-        | `CallBroker ->
-            v, B.Action.CallBroker{player_idx}
-
-        | `NoAction -> v, nobaction
-
-      in
-      v, backend_action
+      handle_view_action_ player_idx s view_action v
 
     | ModalMsgbox menu ->
         handle_modal_menu_events ~is_msgbox:true menu
