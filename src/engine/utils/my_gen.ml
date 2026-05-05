@@ -60,7 +60,6 @@ let take n gen =
       | None -> count := ~-1; None   (* indicate stop *)
       | (Some _) as x ->
           incr count;
-          Printf.printf "take: %d\n" !count;
           x
 
 let rec iteri f (gen:(int*char) Gen.t) =

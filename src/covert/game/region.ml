@@ -13,7 +13,7 @@ let random r =
   |> of_enum |> Option.get_exn_or "oops"
 
 let load_from_file region =
-  let filename = "WORLD" ^ (to_enum region |> Int.to_string) ^ ".DTA" in
+  let filename = "./data/covert/WORLD" ^ (to_enum region |> Int.to_string) ^ ".DTA" in
   let s = Utils.stream_of_file filename in
   let num_locs = Gen.get_wordi s in
   let num_orgs = Gen.get_wordi s in
@@ -37,11 +37,38 @@ let load_from_file region =
         some_buildings;
         loc=(x,y)}
       in
+      print_endline @@ Location.show loc;
       loc::acc
     )
     []
-    Iter.(0 -- (num_locs - 1))
-    |> List.rev
+    Iter.(0 -- (num_locs - 1)) |> List.rev
   in
-  locs
+  let orgs =
+    Iter.fold (fun acc _ ->
+      let short_name = Gen.take 6 s |> Gen.to_stringi in
+      let name = Gen.take 20 s |> Gen.to_stringi in
+      let connect = Gen.get_wordi s in
+      let connect = connect land 0xF, connect land 0xF0 in
+      let strength = Gen.get_wordi s in
+      let hq_build_cost = Gen.get_wordi s in
+      let bits = Gen.get_wordi s in
+      let related_agent = Gen.get_bytei s in
+      let _ = Gen.get_bytei s in
+      let org = Org.{
+        short_name;
+        name;
+        connect;
+        strength;
+        hq_build_cost;
+        bits;
+        related_agent;
+      }
+      in
+      print_endline @@ Org.show org;
+      org::acc
+    )
+    []
+    Iter.(0 -- (num_orgs - 1)) |> List.rev
+  in
+  locs, orgs
 
