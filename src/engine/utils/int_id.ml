@@ -10,7 +10,7 @@ module type S = sig
   val of_int: int -> t
 end
 
-module Make(M: sig end) : S = struct
+module Make() : S = struct
   type t = int
     [@@ deriving yojson, show, eq, ord]
   let to_int x : int = x

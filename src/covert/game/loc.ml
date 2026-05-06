@@ -8,3 +8,5 @@ type t = {
   some_buildings: int;
   loc: int * int;
 } [@@deriving show]
+
+module Idx = Engine.Int_id.Make()

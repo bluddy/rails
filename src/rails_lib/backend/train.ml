@@ -142,7 +142,7 @@ type wait = [`Wait | `NoWait]
 
 let is_wait = function `Wait -> true | `NoWait -> false
 
-module Id = Engine.Int_id.Make(struct end)
+module Id = Engine.Int_id.Make()
 module IdSet = Set.Make(Id)
 module IdMap = Map.Make(Id)
 

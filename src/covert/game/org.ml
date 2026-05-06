@@ -8,3 +8,6 @@ type t = {
   bits: int;
   related_agent: int;
 } [@@deriving show]
+
+module Idx = Engine.Int_id.Make()
+

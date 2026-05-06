@@ -28,7 +28,7 @@ let load_from_file region =
       let some_buildings = Gen.get_wordi s in
       let x = Gen.get_bytei s in
       let y = Gen.get_bytei s in
-      let loc = Location.{
+      let loc = Loc.{
         city;
         country;
         connect;
@@ -37,7 +37,7 @@ let load_from_file region =
         some_buildings;
         loc=(x,y)}
       in
-      print_endline @@ Location.show loc;
+      print_endline @@ Loc.show loc;
       loc::acc
     )
     []
