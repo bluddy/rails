@@ -23,6 +23,7 @@ type 'a action =
   | Off of 'a
   | Selected of 'a (* special action that happens when we select e.g. for main menu *)
   | HandledEvent (* handled event somewhere, but no action results *)
+  | Exit
   | NoAction
   [@@deriving show]
 
@@ -69,6 +70,7 @@ module MsgBox = struct
     | Action of 'msg
     | Checkbox of 'msg * ('state -> bool) (* function to check checkbox status *)
     | MsgBox of bool * ('msg, 'state) t (* whether a further msgbox/menu is open open *)
+    | Exit (* exit signal *)
 
   and ('msg, 'state) kind =
     | Static of {
@@ -118,6 +120,7 @@ module MsgBox = struct
       | `MsgBox m -> MsgBox(false, m)
       | `Action a -> Action a
       | `Checkbox (b, fn) -> Checkbox(b, fn)
+      | `Exit -> Exit
     in
     { y=0; h=0; name;
       kind=Interactive {
@@ -293,6 +296,8 @@ module MsgBox = struct
               e_in, Off(action)
           | Checkbox(action, _) ->
               e_in, On(action)
+          | Exit ->
+              e_in, Exit
         in
         [%up {v with kind=e}], action
     | Static _ -> v, HandledEvent
@@ -892,6 +897,7 @@ module Animated = struct
     match action with
     | On(choice) -> menu, `Activate choice
     | NoAction -> menu, `Stay
+    | Exit -> menu, `Exit
     | _ -> menu, `Stay
 
     (* combined msg handling for messageboxes and listboxes *)
@@ -899,8 +905,19 @@ module Animated = struct
     let menu, action, event = handle_event2 s v event time in
     match action with
     | On(choice) -> menu, `Activate choice
+    | Exit -> menu, `Exit
     | _ when Event.pressed_esc event || is_msgbox && Event.modal_dismiss event -> menu,`Exit
     | _ -> menu, `Stay
+
+    (* function-based interface *)
+  let modal_handle_fns ?is_msgbox s v event time ~ret ?exit build_fn act_fn =
+    let v2, status = modal_handle_event2 ?is_msgbox s v event time in
+    match status, exit with
+    | `Activate x, _ -> act_fn v2 x
+    | `Exit, Some exit_fn -> exit_fn v2
+    | _, _ ->
+        let ret = if v2 =!= v then build_fn v2 else ret in
+        ret, `Stay
 
 end
 
