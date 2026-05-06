@@ -917,7 +917,7 @@ module Animated = struct
     | `Exit, Some exit_fn -> exit_fn v2
     | _, _ ->
         let ret = if v2 =!= v then build_fn v2 else ret in
-        ret, `Stay
+        ret
 
 end
 

@@ -99,11 +99,11 @@ let render_codename_box win =
 let create srv = Start_menu(create_start_menu srv)
 
 let handle_event srv event time v =
-  let modal_handle_event menu = Menu.modal_handle_fns menu event time ~ret:v in
+  let modal_handle_event menu = Menu.modal_handle_fns menu event time ~ret:(v, `Stay) in
   match v with
   | Start_menu menu ->
       modal_handle_event menu
-        (fun menu -> Start_menu menu)
+        (fun menu -> Start_menu menu, `Stay)
         (fun _ -> function
           | `New_character ->
               Char_menu({
@@ -113,7 +113,7 @@ let handle_event srv event time v =
 
   | Char_menu ({diff_menu=Some (menu, name); codename=Some(_,gender);_} as s) ->
       modal_handle_event menu
-        (fun menu -> Char_menu {s with diff_menu=Some(menu, name)})
+        (fun menu -> Char_menu {s with diff_menu=Some(menu, name)}, `Stay)
         (fun _ difficulty ->
           let info = default_info gender name difficulty in
           Training{info; menu=training_menu srv; points=4}, `Stay)
@@ -129,7 +129,7 @@ let handle_event srv event time v =
     end
   | Char_menu s ->
       modal_handle_event s.gender_menu
-        (fun menu -> Char_menu {s with gender_menu=menu})
+        (fun menu -> Char_menu {s with gender_menu=menu}, `Stay)
         (fun _ gender ->
           Char_menu {s with codename=(make_codename_entry (), gender) |> Option.some}, `Stay)
         ~exit:(fun _ -> Start_menu(create_start_menu srv), `Stay)
@@ -140,7 +140,7 @@ let handle_event srv event time v =
         info, points
       in
       modal_handle_event s.menu
-      (fun menu -> Training {s with menu})
+      (fun menu -> Training {s with menu}, `Stay)
       (fun menu -> function
         | field when s.points > 1 ->
             let info, points = assign_point field in
