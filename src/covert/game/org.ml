@@ -9,5 +9,5 @@ type t = {
   related_agent: int;
 } [@@deriving show]
 
-module Idx = Engine.Int_id.Make()
+module Id = Engine.Int_id.Make()
 

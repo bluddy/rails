@@ -9,4 +9,4 @@ type t = {
   loc: int * int;
 } [@@deriving show]
 
-module Idx = Engine.Int_id.Make()
+module Id = Engine.Int_id.Make()
