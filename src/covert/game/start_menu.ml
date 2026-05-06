@@ -99,16 +99,7 @@ let render_codename_box win =
 let create srv = Start_menu(create_start_menu srv)
 
 let handle_event srv event time v =
-  let modal_handle_event ?exit menu build_fn act_fn =
-    let menu2, status = Menu.modal_handle_event menu event time in
-    match status, exit with
-    | `Activate x, _ -> act_fn menu2 x
-    | `Exit, Some exit_fn -> exit_fn menu2
-    | `Stay, _ ->
-        let v = if menu2 =!= menu then build_fn menu2 else v in
-        v, `Stay
-    | `Exit, _ -> v, `Stay
-  in
+  let modal_handle_event menu = Menu.modal_handle_fns menu event time ~ret:v in
   match v with
   | Start_menu menu ->
       modal_handle_event menu

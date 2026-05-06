@@ -43,8 +43,8 @@ module Animated = struct
   let modal_handle_event ?is_msgbox v event time =
     modal_handle_event2 ?is_msgbox () v event time
 
-  let modal_handle_fns ?is_msgbox s v event_time ~ret ?exit build_fn act_fn =
-    modal_handle_fns ?is_msgbox s v event_time ~ret ?exit build_fn act_fn
+  let modal_handle_fns ?is_msgbox v event time ~ret ?exit build_fn act_fn =
+    modal_handle_fns ?is_msgbox () v event time ~ret ?exit build_fn act_fn
 
 end
 
