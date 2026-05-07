@@ -66,7 +66,7 @@ module Names = struct
     "Agnes";
     "Celeste";
     "Phyllis";
-  ]
+  ] |> Array.of_list
 
   let male_names = [
     "Georgi";
@@ -133,7 +133,7 @@ module Names = struct
     "Hector";
     "Franco";
     "Jaime";
-  ]
+  ] |> Array.of_list
 
   let last_names = [
     "Katkov";
@@ -200,7 +200,7 @@ module Names = struct
     "Enriquez";
     "Sanchez";
     "Delarosa";
-  ]
+  ] |> Array.of_list
 
 end
 
@@ -242,11 +242,14 @@ let default sex org ~first ~last loc id_code = {
   anxiety=0;
 }
 
-let name_rank_of_code region x =
+let sex_name_of_code ~name_offset x =
   let sex = x land 1 in
   let name_idx = (x lsr 1) land 0xF in
   let last_name_idx = (x lsr 5) land 0xF in
-  ()
-
-
+  let name_arr = if sex = 0 then Names.female_names else Names.male_names in
+  let name, last_name =
+      name_arr.(name_offset + name_idx),
+      Names.last_names.(name_offset + last_name_idx)
+  in
+  sex, name, last_name
 
