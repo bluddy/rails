@@ -1,29 +1,5 @@
 open! Containers
 
-type status =
-  | Arrested
-  | In_hiding
-  | Double_agent
-  | Escaped
-  | Exchanged
-  | Out_of_hiding
-  | At_large
-  | In_custody
-
-type t = {
-  sex: Gender.t;
-  org: Org.Id.t;
-  first_name: string;
-  last_name: string;
-  id_code: int;
-  rank: string;
-  loc: Loc.Id.t;
-  known: Known_data.t;
-  role: int;
-  status: status;
-  anxiety: int;
-}
-
 module Names = struct
   let female_names = [
     "Georgina";
@@ -228,10 +204,49 @@ module Names = struct
 
 end
 
+type status =
+  | Arrested
+  | In_hiding
+  | Double_agent
+  | Escaped
+  | Exchanged
+  | Out_of_hiding
+  | At_large
+  | In_custody
+
+type t = {
+  sex: Gender.t;
+  org: Org.Id.t;
+  first_name: string;
+  last_name: string;
+  id_code: int;
+  rank: string;
+  loc: Loc.Id.t;
+  known: Known_data.Set.t;
+  role: int;
+  status: status;
+  anxiety: int;
+}
+
+let default sex org ~first ~last loc id_code = {
+  sex;
+  org;
+  first_name=first;
+  last_name=last;
+  id_code;
+  rank="";
+  loc;
+  known=Known_data.Set.empty;
+  role=0;
+  status=At_large;
+  anxiety=0;
+}
+
 let name_rank_of_code region x =
   let sex = x land 1 in
   let name_idx = (x lsr 1) land 0xF in
   let last_name_idx = (x lsr 5) land 0xF in
   ()
+
 
 

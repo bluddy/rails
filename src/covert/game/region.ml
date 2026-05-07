@@ -52,7 +52,7 @@ let load_from_file region =
       let strength = Gen.get_wordi s in
       let hq_build_cost = Gen.get_wordi s in
       let bits = Gen.get_wordi s in
-      let related_agent = Gen.get_bytei s in
+      let agent_name_offset = Gen.get_bytei s in
       let _ = Gen.get_bytei s in
       let org = Org.{
         short_name;
@@ -61,7 +61,7 @@ let load_from_file region =
         strength;
         hq_build_cost;
         bits;
-        related_agent;
+        agent_name_offset;
       }
       in
       print_endline @@ Org.show org;

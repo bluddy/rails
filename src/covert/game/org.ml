@@ -6,7 +6,7 @@ type t = {
   strength: int;
   hq_build_cost: int;
   bits: int;
-  agent_name_offset: int;
+  agent_name_offset: int; (* offset into the name list *)
 } [@@deriving show]
 
 module Id = Engine.Int_id.Make()

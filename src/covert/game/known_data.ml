@@ -18,4 +18,3 @@ module Set = Set.Make(struct
   let compare = compare_data
 end)
 
-type t = Set.t
