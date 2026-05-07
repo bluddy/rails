@@ -5,6 +5,10 @@ module R = Engine.Renderer
 module C = Constants
 module Dir = Engine.Dir
 
+let slice win img x y w h =
+  let x2, y2 = x + w, y + h in
+  Ndarray.get_slice [[y; y2]; [x; x2]] img |> R.Texture.make win
+
 module Cities = struct
   let add win res =
     let h = Hashtbl.create 10 in
@@ -22,12 +26,9 @@ module Car_frames = struct
     let h = Hashtbl.create 10 in
     let img = Hashtbl.find res.Resources.pics "STREET" in
     let handle img_num =
-      let x1 = (img_num / 4) * 125 in
-      let y1 = (img_num mod 4) * 47 in
-      let x2, y2 = x1 + 117, y1 + 25 in
-      let p = Ndarray.get_slice [[y1; y2]; [x1; x2]] img
-        |> R.Texture.make win
-      in
+      let x = (img_num / 4) * 125 in
+      let y = (img_num mod 4) * 47 in
+      let p = slice win img x y 117 25 in
       Hashtbl.replace h img_num p
     in
     Iter.(iter handle (0 -- 7));
@@ -43,10 +44,9 @@ module Face_parts = struct
 
     let add_faces img const =
       let handle i =
-        let x1 = (i mod 8) * 32 + 1 in
-        let y1 = i/8 * 35 + 1 in
-        let x2, y2 = x1 + 30, y1 + 33 in
-        let tex = Ndarray.get_slice [[y1; y2]; [x1; x2]] img |> R.Texture.make win in
+        let x = (i mod 8) * 32 + 1 in
+        let y = i/8 * 35 + 1 in
+        let tex = slice win img x y 30 33 in
         Hashtbl.replace hash (const i) tex
       in
       Iter.iter handle Iter.(0 -- 39)
@@ -56,11 +56,7 @@ module Face_parts = struct
 
     let add_neck img const =
       let handle i =
-        let x1 = 257 in
-        let y1 = i * 20 in
-        let w, h = 44, 18 in
-        let x2, y2 = x1 + w, y1 + h in
-        let tex = Ndarray.get_slice [[y1; y2]; [x1; x2]] img |> R.Texture.make win in
+        let tex = slice win img 257 (i * 20) 44 18 in
         Hashtbl.replace hash (const i) tex
       in
       Iter.iter handle Iter.(0 -- 3)
@@ -68,6 +64,18 @@ module Face_parts = struct
     add_neck face_img (fun x -> `Male_neck x);
     add_neck face_img (fun x -> `Female_neck x);
     hash
+end
+
+module Clue_icons = struct
+  let add_all win res =
+    let hash = Hashtbl.create 10 in
+    let face_img = Hashtbl.find res.Resources.pics "FACES" in
+
+    List.mapi (fun i means ->
+      let x, y = i*32 + 96, 174 in
+      let tex = slice win face_img x y 32 26 in
+      Hashtbl.replace hash (`Icon means) tex)
+    Clue.means_list
 end
 
 module Images = struct
@@ -107,6 +115,8 @@ module Images = struct
       let tex = Hashtbl.find res.Resources.pics str |> R.Texture.make win in
       Hashtbl.replace h id tex)
       names;
+
+    let face_img = Hashtbl.find res.Resources.pics "FACES" in
     h
 end
 
