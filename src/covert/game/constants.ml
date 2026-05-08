@@ -7,7 +7,7 @@ let scr_height = 200
 
 let cursor_flash_time = 500 (* ms *)
 
-let num_cases = 16
+let num_crimes = 16
 let num_regions = 3
 let num_orgs = 16 (* per game, not total *)
 let num_mms = 26

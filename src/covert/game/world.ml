@@ -2,8 +2,8 @@ open Containers
 
 module C = Constants
 
-type case = {
-  case_choice: int;
+type crime = {
+  crime_choice: int;
   locs: Loc.map;
   orgs: Org.map;
   mm: Agent.t;
@@ -24,13 +24,13 @@ let default (info: Start_menu.info) = {
   difficulty=info.difficulty;
 }
 
-let create_case (srv:Services.t) ~last_case_choice v =
-  let case_choice =
-    if Difficulty.lowest v.difficulty then 0
+let create_crime (srv:Services.t) ~last_crime_choice v =
+  let crime_choice =
+    if Difficulty.lowest v.difficulty then Crime.tutorial
     else
       let rec loop () =
-        let case_num = Random.int C.num_cases srv.random in
-        if case_num = last_case_choice then loop () else case_num
+        let crime_num = Crime.random srv.random in
+        if Crime.Id.equal crime_num last_crime_choice then loop () else crime_num
       in
       loop ()
   in
@@ -49,12 +49,18 @@ let create_case (srv:Services.t) ~last_case_choice v =
     let mm_org = Org.random srv.random ~start:4 in
     let mm_loc = Loc.random srv.random in
 
+    let data = Some (region, locs, orgs) in
+
     match Org.global_id_of_id orgs mm_org with
     | Some g_id when not @@ Org.Global_set.mem g_id v.caught_mms ->
-        region, locs, orgs, mm_org, mm_loc
-    | _ -> loop (Some (region, locs, orgs)) (n+1)
+        let mm_agent = Mastermind.agent_of_org mm_org mm_loc orgs in
+        if not @@ Crime.check_org_support crime_choice mm_org orgs
+          then loop data (n+1)
+        else
+          region, locs, orgs, mm_agent
+
+    | _ -> loop data (n+1)
   in
-  let region, locs, orgs, mm_org, mm_loc = loop None 0 in
-  let mm_agent = Mastermind.agent_of_org mm_org mm_loc orgs in
+  let region, locs, orgs, mm_agent = loop None 0 in
   ()
 

@@ -116,7 +116,15 @@ let crimes = [|
 
 module Id = Engine.Int_id.Make()
 
-let check_org_support crime_id org =
+let none = Id.of_int (-1)
+
+let tutorial = Id.of_int 0
+
+let random r = Random.int_range 1 (Array.length crimes - 1) r
+  |> Id.of_int
+
+let check_org_support crime_id org_id orgs =
+  let org = Org.Map.find org_id orgs in
   let bits = Org.get_bits org in
   let crime = crimes.(Id.to_int crime_id) in
   bits land crime.org_bits > 0
