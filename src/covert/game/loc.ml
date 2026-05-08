@@ -1,3 +1,5 @@
+open Containers
+module C = Constants
 
 type t = {
   city: string;
@@ -10,3 +12,10 @@ type t = {
 } [@@deriving show]
 
 module Id = Engine.Int_id.Make()
+
+let random r = Random.int C.num_locs r |> Id.of_int
+
+module Map = Utils.Map.Make(struct
+  type t = Id.t [@@deriving yojson]
+  let compare = Id.compare
+end)

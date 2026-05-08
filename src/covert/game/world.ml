@@ -20,6 +20,11 @@ let create (srv:Services.t) ~last_case_choice (info:Start_menu.info) =
       in
       loop ()
   in
+  (* should only reload region on try 8 *)
   let region = Region.random srv.random in
   let locs, orgs = Region.load_from_file region in
+
+  let mm_org = Org.random srv.random ~start:4 in
+  let mm_loc = Loc.random srv.random in
+
   ()

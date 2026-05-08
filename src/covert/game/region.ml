@@ -53,6 +53,9 @@ let load_from_file region =
       let strength = Gen.get_wordi s in
       let hq_build_cost = Gen.get_wordi s in
       let bits = Gen.get_wordi s in
+      let global_id = bits land 0xFF in 
+      let global_id = if global_id = 255 then None else Org.Global_id.of_int global_id |> Option.some in
+
       let agent_name_offset = Gen.get_bytei s in
       let _ = Gen.get_bytei s in
       let org = Org.{
@@ -63,6 +66,7 @@ let load_from_file region =
         hq_build_cost;
         bits;
         agent_name_offset;
+        global_id;
       }
       in
       print_endline @@ Org.show org;
