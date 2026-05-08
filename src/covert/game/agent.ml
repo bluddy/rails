@@ -215,12 +215,11 @@ type status =
   | In_custody
 
 type t = {
-  sex: Gender.t;
+  gender: Gender.t;
   org: Org.Id.t;
-  first_name: string;
+  name: string;
   last_name: string;
-  id_code: int;
-  rank: string;
+  id_code: int; (* Used to generate the name, sex and picture *)
   loc: Loc.Id.t;
   known: Known_data.Set.t;
   role: int;
@@ -228,28 +227,31 @@ type t = {
   anxiety: int;
 }
 
-let default sex org ~first ~last loc id_code = {
-  sex;
-  org;
-  first_name=first;
-  last_name=last;
-  id_code;
-  rank="";
-  loc;
-  known=Known_data.Set.empty;
-  role=0;
-  status=At_large;
-  anxiety=0;
-}
-
-let sex_name_of_code ~name_offset x =
-  let sex = x land 1 in
+let gender_name_of_code ~name_offset x =
+  let gender = x land 1 in
   let name_idx = (x lsr 1) land 0xF in
   let last_name_idx = (x lsr 5) land 0xF in
-  let name_arr = if sex = 0 then Names.female_names else Names.male_names in
+  let name_arr = if gender = 0 then Names.female_names else Names.male_names in
   let name, last_name =
       name_arr.(name_offset + name_idx),
       Names.last_names.(name_offset + last_name_idx)
   in
-  sex, name, last_name
+  let gender = if gender = 0 then `Female else `Male in
+  gender, name, last_name
+
+  (* name_offset comes from org *)
+let make ~name_offset id_code org loc =
+  let gender, name, last_name = gender_name_of_code ~name_offset id_code in
+  {
+    gender;
+    org;
+    name;
+    last_name;
+    id_code;
+    loc;
+    known=Known_data.Set.empty;
+    role=0;
+    status=At_large;
+    anxiety=0;
+  }
 
