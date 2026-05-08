@@ -49,6 +49,6 @@ let agent_of_org org_id loc_id orgs =
   let name_offset = Org.get_name_offset org in
   let global_id = Org.get_global_id org |> Option.get_exn_or "oops" |> Org.Global_id.to_int in
   let id_code = mm_codes.(global_id) in
-  Agent.make ~name_offset id_code org_id loc_id
+  Agent.create ~name_offset id_code org_id loc_id
 
 

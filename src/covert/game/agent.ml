@@ -240,7 +240,7 @@ let gender_name_of_code ~name_offset x =
   gender, name, last_name
 
   (* name_offset comes from org *)
-let make ~name_offset id_code org loc =
+let create ~name_offset id_code org loc =
   let gender, name, last_name = gender_name_of_code ~name_offset id_code in
   {
     gender;

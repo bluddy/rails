@@ -6,6 +6,7 @@ type case = {
   case_choice: int;
   locs: Loc.map;
   orgs: Org.map;
+  mm: Agent.t;
 }
 
 type t = {
@@ -54,4 +55,6 @@ let create_case (srv:Services.t) ~last_case_choice v =
     | _ -> loop (Some (region, locs, orgs)) (n+1)
   in
   let region, locs, orgs, mm_org, mm_loc = loop None 0 in
+  let mm_agent = Mastermind.agent_of_org mm_org mm_loc orgs in
   ()
+
