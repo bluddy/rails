@@ -2,7 +2,7 @@ open Containers
 
 module C = Constants
 
-type crime = {
+type case = {
   crime_choice: Crime.Id.t;
   region: Region.t;
   locs: Loc.map;
