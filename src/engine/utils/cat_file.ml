@@ -5,7 +5,7 @@ let of_file ?(debug=false) ?(dump=false) file =
 
   let rec parse_header s n l =
     if n <= 0 then l else
-    let filename = Gen.take 12 s |> My_gen.to_stringi |> Utils.remove_nulls in
+    let filename = Gen.take 12 s |> My_gen.to_stringi |> String.remove_nulls in
     let data1 = My_gen.get_wordi s in 
     let data2 = My_gen.get_wordi s in 
     let data3 = My_gen.get_wordi s in (* Compressed Size *)

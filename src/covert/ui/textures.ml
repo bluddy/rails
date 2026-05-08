@@ -71,12 +71,26 @@ module Clue_icons = struct
     let hash = Hashtbl.create 10 in
     let face_img = Hashtbl.find res.Resources.pics "FACES" in
 
-    List.mapi (fun i means ->
+    List.iteri (fun i means ->
       let x, y = i*32 + 96, 174 in
       let tex = slice win face_img x y 32 26 in
       Hashtbl.replace hash (`Icon means) tex)
-    Clue.means_list
+    Clue.means_list;
 end
+
+module Plane_imgs = struct
+  let add_all win res =
+    let hash = Hashtbl.create 10 in
+    let face_img = Hashtbl.find res.Resources.pics "FACES" in
+
+    Iter.iter (fun i ->
+      let x, y = i mod 8 * 9, i/8 * 9 + 175 in
+      let tex = slice win face_img x y 8 8 in
+      Hashtbl.replace hash i tex)
+    Iter.(0 -- 15);
+    hash
+end
+
 
 module Images = struct
   type t = [
@@ -93,6 +107,10 @@ module Images = struct
     | `MPS_labs
     | `Sneak_in
     | `Training
+    | `Paper_clip
+    | `Left_file 
+    | `Right_file
+    | `Some_box
   ]
   let names = [
     `Ad, "AD";
@@ -116,7 +134,11 @@ module Images = struct
       Hashtbl.replace h id tex)
       names;
 
-    let face_img = Hashtbl.find res.Resources.pics "FACES" in
+    let img = Hashtbl.find res.Resources.pics "FACES" in
+    Hashtbl.replace h `Paper_clip @@ slice win img 73 175 21 22;
+    Hashtbl.replace h `Left_file @@ slice win img 307 0 11 8;
+    Hashtbl.replace h `Right_file @@ slice win img 307 9 12 8;
+    Hashtbl.replace h `Some_box @@ slice win img 257 160 26 14;
     h
 end
 

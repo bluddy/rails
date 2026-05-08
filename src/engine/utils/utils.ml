@@ -609,6 +609,3 @@ let stream_of_file_seek offset filename =
   let stream = My_gen.of_stringi str in
   stream
 
-let remove_nulls s =
-  String.filter (fun c -> Char.(<>) c '\000') s
-

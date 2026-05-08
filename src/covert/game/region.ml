@@ -1,6 +1,7 @@
 open Containers
 module C = Constants
 module Gen = Engine.My_gen
+module String = Engine.String
 
 type t =
   | Europe
@@ -19,8 +20,8 @@ let load_from_file region =
   let num_orgs = Gen.get_wordi s in
   let locs =
     Iter.fold (fun acc _ ->
-      let city = s |> Gen.take 12 |> Gen.to_stringi in
-      let country = s |> Gen.take 12 |> Gen.to_stringi in
+      let city = s |> Gen.take 12 |> Gen.to_stringi |> String.remove_nulls in
+      let country = s |> Gen.take 12 |> Gen.to_stringi |> String.remove_nulls in
       let connect = Gen.get_wordi s in
       let connect = connect land 0xF, connect land 0xF0 in
       let lawless = Gen.get_wordi s in 
@@ -45,8 +46,8 @@ let load_from_file region =
   in
   let orgs =
     Iter.fold (fun acc _ ->
-      let short_name = Gen.take 6 s |> Gen.to_stringi in
-      let name = Gen.take 20 s |> Gen.to_stringi in
+      let short_name = Gen.take 6 s |> Gen.to_stringi |> String.remove_nulls in
+      let name = Gen.take 20 s |> Gen.to_stringi |> String.remove_nulls in
       let connect = Gen.get_wordi s in
       let connect = connect land 0xF, connect land 0xF0 in
       let strength = Gen.get_wordi s in
