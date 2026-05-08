@@ -6,7 +6,7 @@ module String = Engine.String
 type t =
   | Europe
   | Africa
-  | CentralAmerica
+  | Central_america
   [@@deriving enum, yojson]
 
 let random r =

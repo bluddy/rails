@@ -3,13 +3,15 @@ open Containers
 module C = Constants
 
 type crime = {
-  crime_choice: int;
+  crime_choice: Crime.Id.t;
+  region: Region.t;
   locs: Loc.map;
   orgs: Org.map;
   mm: Agent.t;
 }
 
 type t = {
+  time_months: int;
   caught_mms: Org.Global_set.t;
   gender: Gender.t;
   codename: string;
@@ -18,6 +20,7 @@ type t = {
 
 (* First time *)
 let default (info: Start_menu.info) = {
+  time_months=0;
   caught_mms=Org.Global_set.empty;
   gender=info.gender;
   codename=info.name;
@@ -26,7 +29,7 @@ let default (info: Start_menu.info) = {
 
 let create_crime (srv:Services.t) ~last_crime_choice v =
   let crime_choice =
-    if Difficulty.lowest v.difficulty then Crime.tutorial
+    if Difficulty.lowest v.difficulty && v.time_months = 0 then Crime.tutorial
     else
       let rec loop () =
         let crime_num = Crime.random srv.random in
@@ -61,6 +64,12 @@ let create_crime (srv:Services.t) ~last_crime_choice v =
 
     | _ -> loop data (n+1)
   in
-  let region, locs, orgs, mm_agent = loop None 0 in
-  ()
+  let region, locs, orgs, mm = loop None 0 in
+  {
+    crime_choice;
+    region;
+    locs;
+    orgs;
+    mm;
+  }
 
