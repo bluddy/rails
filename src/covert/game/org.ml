@@ -19,8 +19,14 @@ type t = {
 
 let random ?(start=0) r = Random.int_range start (C.num_orgs - 1) r |> Id.of_int
 
-module Map = Utils.Map.Make(struct
+module Map = struct
+  include Utils.Map.Make(struct
   type t = Id.t [@@deriving yojson]
   let compare = Id.compare
 end)
+
+  let of_simple_list l =
+    List.mapi (fun i x -> Id.of_int i, x) l |> of_list
+
+end
 
