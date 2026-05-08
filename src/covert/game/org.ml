@@ -44,4 +44,5 @@ let global_id_of_id orgs id =
 
 let get_name_offset v = v.agent_name_offset
 let get_global_id v = v.global_id
+let get_bits v = v.bits
 

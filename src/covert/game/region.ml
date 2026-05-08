@@ -55,6 +55,7 @@ let load_from_file region =
       let bits = Gen.get_wordi s in
       let global_id = bits land 0xFF in 
       let global_id = if global_id = 255 then None else Org.Global_id.of_int global_id |> Option.some in
+      let bits = bits lsr 8 in (* upper bits *)
       let agent_name_offset = Gen.get_bytei s in
       let _ = Gen.get_bytei s in
       let org = Org.{
