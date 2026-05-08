@@ -7,6 +7,9 @@ type t = {
   codename: string;
   difficulty: Difficulty.t;
   case_choice: int;
+  locs: Loc.map;
+  orgs: Org.map;
+  caught_mms: Org.Global_set.t;
 }
 
 let create (srv:Services.t) ~last_case_choice (info:Start_menu.info) =
@@ -27,5 +30,7 @@ let create (srv:Services.t) ~last_case_choice (info:Start_menu.info) =
 
   let mm_org = Org.random srv.random ~start:4 in
   let mm_loc = Loc.random srv.random in
+
+
 
   ()

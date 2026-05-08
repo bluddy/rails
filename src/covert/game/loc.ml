@@ -25,3 +25,5 @@ end)
     List.mapi (fun i x -> Id.of_int i, x) l |> of_list
 end
 
+type map = t Map.t
+

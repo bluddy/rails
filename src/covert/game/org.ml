@@ -27,6 +27,14 @@ end)
 
   let of_simple_list l =
     List.mapi (fun i x -> Id.of_int i, x) l |> of_list
+end
 
+type map = t Map.t
+
+module Global_set = struct
+  include Utils.Set.Make(struct
+  type t = Global_id.t [@@deriving yojson]
+  let compare = Global_id.compare
+end)
 end
 
