@@ -80,7 +80,8 @@ let handle_event _win v (event:Event.t) time =
         let v = if state2 =!= state then {v with mode=Start_menu state2} else v in
         begin match status with
         | `Activate info ->
-            let s = World.create_case ~last_case_choice:(-1) v.srv info in
+            let world = World.default info in
+            let s = World.create_case ~last_case_choice:(-1) v.srv world in
             {v with mode=Create}, `Stay
         | `Stay -> v, `Stay
         | `Exit -> v, `Stay
