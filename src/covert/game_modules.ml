@@ -81,7 +81,7 @@ let handle_event _win v (event:Event.t) time =
         begin match status with
         | `Activate info ->
             let world = World.default info in
-            let s = World.create_crime ~last_crime_choice:Crime.none v.srv world in
+            let s = Case.create ~last_crime_choice:Crime.none v.srv world in
             {v with mode=Create}, `Stay
         | `Stay -> v, `Stay
         | `Exit -> v, `Stay
