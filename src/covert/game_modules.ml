@@ -11,7 +11,7 @@ open Utils.Infix
 type module_t =
   | Intro of Intro.t
   | Start_menu of Start_menu.t
-  | Create
+  | Briefing of Briefing.t
   (*
   | Investigate
   | Driving
@@ -81,8 +81,9 @@ let handle_event _win v (event:Event.t) time =
         begin match status with
         | `Activate info ->
             let world = World.default info in
-            let s = Case.create ~last_crime_choice:Crime.none v.srv world in
-            {v with mode=Create}, `Stay
+            let case = Case.create ~last_crime_choice:Crime.none v.srv world in
+            let s = Briefing.create v.srv case world in
+            {v with mode=Briefing s}, `Stay
         | `Stay -> v, `Stay
         | `Exit -> v, `Stay
         end
@@ -93,7 +94,7 @@ let handle_event _win v (event:Event.t) time =
 let render win v = match v.mode with
   | Intro state -> Intro.render win state
   | Start_menu state -> Start_menu.render v.srv state
-  | Create -> ()
+  | Briefing state -> Briefing.render win state
 
 let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
