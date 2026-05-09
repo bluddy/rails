@@ -48,10 +48,11 @@ type t = {
 }
 
 let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
+  Printf.printf "XXXX input length = %d\n" @@ List.length input;
   assert (Array.length pics = 251);
   let memory = Array.make 52 0 in
   List.iter (fun (loc, v) ->
-    Printf.printf "set %d to %d\n" loc v;
+    Printf.printf "XXXX set %d to %d\n" loc v;
     memory.(loc) <- v) input;
   pp "Buffer length is %d\n" (Bytes.length buf_str);
   {
@@ -61,7 +62,7 @@ let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
     read_ptr=0;
     buffer=buf_str;
     stack=[];
-    memory=Array.make 52 0;
+    memory;
     sprites=Array.init 51 (fun _ -> Pani_sprite.empty ());
     pics; (* size 251 *)
     background;
