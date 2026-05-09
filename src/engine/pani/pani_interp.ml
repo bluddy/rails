@@ -50,7 +50,9 @@ type t = {
 let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
   assert (Array.length pics = 251);
   let memory = Array.make 52 0 in
-  List.iter (fun (loc, v) -> memory.(loc) <- v) input;
+  List.iter (fun (loc, v) ->
+    Printf.printf "set %d to %d\n" loc v;
+    memory.(loc) <- v) input;
   pp "Buffer length is %d\n" (Bytes.length buf_str);
   {
     is_done=false;
