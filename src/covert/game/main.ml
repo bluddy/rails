@@ -15,6 +15,8 @@ let zoom = ref 3
 let adjust_ar = ref false
 let shader = ref "test"
 let audio = ref true
+let in1 = ref 0
+let in2 = ref 0
 
 let set v f =
   file := f;
@@ -37,6 +39,7 @@ let arglist =
     "--adjust-ar", Set adjust_ar, "Adjust aspect ratio";
     "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
     "--no-audio", Clear audio, "Disable audio";
+    "--input", Tuple [Set_int in1; Set_int in2], "Address and value";
   ]
 
 let main () =
@@ -50,7 +53,7 @@ let main () =
   | `Pani when !debugger ->
       Mainloop.main @@ Pani_render.debugger ~filename:!file
   | `Pani ->
-      Mainloop.main @@ Pani_render.standalone ~filename:!file
+      Mainloop.main @@ Pani_render.standalone ~filename:!file ~input:[!in1, !in2]
   | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
   | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
 

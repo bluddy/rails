@@ -94,9 +94,9 @@ let handle_event event v =
   ) else
     v, `Stay
 
-let standalone win ~filename =
+let standalone ?input win ~filename =
   let handle_event v _event _time = v, `Stay in
-  let v = create filename in
+  let v = create ?input filename in
   let funcs = Mainloop.{
     handle_tick=(fun v time -> handle_tick time v);
     render=Renderer.render_wrap win (render win);
