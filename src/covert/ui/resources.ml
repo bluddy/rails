@@ -63,12 +63,32 @@ let load_pics () =
 module Ndarray = Owl_base_dense_ndarray.Generic
 type ndarray = (int, Bigarray.int8_unsigned_elt) Ndarray.t
 
+type texts = [
+  | `Plot
+  | `Text
+  | `Clues
+  ]
+
 (* All game resources *)
 type t = {
   pics: (string, Pic.ndarray) Hashtbl.t;
+  text: (texts, string) Hashtbl.t;
 }
+
+let load_texts () =
+  let h = Hashtbl.create 10 in
+  let prefix = "data/covert/" in
+  let read symbol file =
+    let txt = IO.with_in ~flags:[Open_text] (prefix^file) IO.read_all in
+    Hashtbl.replace h symbol txt
+  in
+  read `Plot "PLOT.TXT";
+  read `Text "TEXT.DTA";
+  read `Clues "CLUES.TXT";
+  h
 
 let load_all () =
   let pics = load_pics () in
-  {pics }
+  let text = load_texts () in
+  {pics; text}
 
