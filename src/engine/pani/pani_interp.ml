@@ -3,11 +3,11 @@ open Containers
 (* Pani Interpreter: interprets the language of the PANI file *)
 (* Notes: pay attention to signed vs unsigned comparisons *)
 
+let src = Logs.Src.create "pani_interp" ~doc:"Pani_interp"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 module Ndarray = Owl_base_dense_ndarray.Generic
 module C = Pani_const
-
-let sp = Printf.sprintf
-let pp = Printf.printf
 
 let debug = ref false
 
@@ -48,13 +48,11 @@ type t = {
 }
 
 let make ?(debug=false) ?(input=[]) buf_str (background: ndarray option) pics =
-  Printf.printf "XXXX input length = %d\n" @@ List.length input;
   assert (Array.length pics = 251);
   let memory = Array.make 52 0 in
   List.iter (fun (loc, v) ->
-    Printf.printf "XXXX set %d to %d\n" loc v;
     memory.(loc) <- v) input;
-  pp "Buffer length is %d\n" (Bytes.length buf_str);
+  Log.debug (fun f -> f "Buffer length is %d\n" (Bytes.length buf_str));
   {
     is_done=false;
     delay=false;
