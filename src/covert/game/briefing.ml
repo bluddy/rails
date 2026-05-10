@@ -16,18 +16,24 @@ type t = {
   case: Case.t;
   world: World.t;
   srv: Services.t;
+  page: int; (* page of text *)
 }
 
-let create (s:Services.t) case world mode =
+let get_text (srv:Services.t) res ~num ~crime ~page =
+  let plot_txt = Hashtbl.find srv.resources.text res in
+  let pat = Printf.sprintf "*PL%02d%d%d"
+    (Crime.Id.to_int crime)
+    num
+    page
+  in
+  Subst_engine.get_lines ~pat plot_txt
+  |> Utils.add_newlines 40
+
+let create (s:Services.t) (case:Case.t) world mode =
   match mode with
   | Case_start ->
       let pani = Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input:[0,4] in
-    let plot_txt = Hashtbl.find s.resources.text `Plot in
-    let pat = Printf.sprintf "*PL%02d90" (Crime.Id.to_int case.Case.crime_choice) in
-    Printf.printf "Looking for pattern %s\n%!" pat;
-    let text = Subst_engine.get_lines ~pat plot_txt in
-    let text = Utils.add_newlines 40 text
-    in
+      let text = get_text s `Plot ~num:9 ~crime:case.crime_choice ~page:0 in
     {
       case;
       pani;
@@ -35,16 +41,18 @@ let create (s:Services.t) case world mode =
       srv=s;
       mode;
       text;
+      page=0;
     }
 
 let render win v =
   Pani_render.render win v.pani;
-  Fonts.Render.write win v.srv.fonts ~tight:true ~color:Ega.white ~idx:`Large ~x:8 ~y:149 v.text
+  Fonts.Render.write win v.srv.fonts ~tight:true ~color:Ega.white ~idx:`Large ~x:12 ~y:152 v.text
 
 let handle_event event time v =
-  let state, status = match event with
-  | Event.Tick -> Pani_render.handle_tick time v.pani
-  | _ -> Pani_render.handle_event event v.pani
-  in
-  [%up {v with pani=state}], status
+  match event with
+  | Event.Tick ->
+      let pani, _ = Pani_render.handle_tick time v.pani in
+      [%up {v with pani}], `Stay
+  | _ when Event.modal_dismiss event -> v, `Stay
+  | _ -> v, `Stay
 
