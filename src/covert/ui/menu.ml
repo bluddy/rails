@@ -46,6 +46,10 @@ module Animated = struct
   let modal_handle_fns ?is_msgbox v event time ~ret ?exit build_fn act_fn =
     modal_handle_fns ?is_msgbox () v event time ~ret ?exit build_fn act_fn
 
+  let make_basic ?heading ?x ?y ?(font_idx=`Large) ?draw_bg ~fonts ~color text =
+    let font_idx = Fonts.face_to_enum font_idx in
+    make_basic ?heading ?x ?y ~font_idx ?draw_bg ~padding ~colors ~fonts ~color text
+
 end
 
 include Animated

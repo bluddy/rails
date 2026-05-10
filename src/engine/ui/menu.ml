@@ -818,6 +818,10 @@ module Animated = struct
     let menu = MsgBox.make ?heading ?x ?y ?font_idx ?draw_bg ?indent_entries ~padding ~colors ~fonts entries in
     {menu=MsgBox menu; last_msg=None}
 
+  let make_basic ?heading ?x ?y ?font_idx ?draw_bg ~padding ~colors ~fonts ~color text =
+    let entry = MsgBox.static_entry text ~color in
+    make_msgbox ?heading ?x ?y ?font_idx ?draw_bg ~indent_entries:false ~padding ~colors ~fonts [entry]
+
   let _close v =
     let menu = match v.menu with
       | Global g ->
