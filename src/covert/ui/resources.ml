@@ -79,7 +79,11 @@ let load_texts () =
   let h = Hashtbl.create 10 in
   let prefix = "data/covert/" in
   let read symbol file =
-    let txt = IO.with_in ~flags:[Open_text] (prefix^file) IO.read_all in
+    let txt = IO.with_in ~flags:[Open_text] (prefix^file) IO.read_all
+     |> String.map (function '\n' -> ' ' | x -> x)
+     |> String.filter (function '\r' -> false | _ -> true)
+     |> fun s -> s^"*"
+    in
     Hashtbl.replace h symbol txt
   in
   read `Plot "PLOT.TXT";
