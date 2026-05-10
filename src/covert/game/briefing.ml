@@ -4,6 +4,7 @@ module R = Engine.Renderer
 module Sound = Engine.Sound
 module Event = Engine.Event
 module Pani_render = Engine.Pani_render
+module Ega = Engine.Ega
 
 type mode =
   | Case_start
@@ -22,8 +23,10 @@ let create (s:Services.t) case world mode =
   | Case_start ->
       let pani = Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input:[0,4] in
     let plot_txt = Hashtbl.find s.resources.text `Plot in
-    let pat = Printf.sprintf "*PL%d90" (Crime.Id.to_int case.Case.crime_choice) in
-    let text = Subst_engine.get_lines ~pat plot_txt |> Option.get_exn_or "oops" in
+    let pat = Printf.sprintf "*PL%02d90" (Crime.Id.to_int case.Case.crime_choice) in
+    Printf.printf "Looking for pattern %s\n%!" pat;
+    let text = Subst_engine.get_lines ~pat plot_txt in
+    Printf.printf "printing:\n%s\n%!" text;
     {
       case;
       pani;
@@ -35,6 +38,8 @@ let create (s:Services.t) case world mode =
 
 let render win v =
   Pani_render.render win v.pani
+  (* Fonts.Render.write win v.srv.fonts ~color:Ega.white ~idx:`Large ~x:8 ~y:149 v.text *)
+
 
 let handle_event event time v =
   let state, status = match event with
