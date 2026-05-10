@@ -3,7 +3,7 @@ open Containers
 (* Pani Interpreter: interprets the language of the PANI file *)
 (* Notes: pay attention to signed vs unsigned comparisons *)
 
-let src = Logs.Src.create "pani_interp" ~doc:"Pani_interp"
+let src = Logs.Src.create "engine.pani.interp" ~doc:"Pani interpreter"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 module Ndarray = Owl_base_dense_ndarray.Generic

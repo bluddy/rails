@@ -105,7 +105,7 @@ let render win v = match v.mode with
 
 let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
-  Logs.set_level (Some Debug);
+  Logs.set_level (Some Logs.Info);
 
   Printf.printf "Loading resources...";
   print_newline ();

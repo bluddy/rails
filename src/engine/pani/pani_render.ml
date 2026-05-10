@@ -4,6 +4,9 @@ module C = Pani_const
 module List = Utils.List
 module R = Renderer
 
+let src = Logs.Src.create "engine.pani.render" ~doc:"Pani renderer"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 type status = [`Pause | `Done | `Init ]
 
 let sp = Printf.sprintf

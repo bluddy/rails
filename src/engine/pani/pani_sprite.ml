@@ -4,6 +4,9 @@ open Containers
 
 let debug = ref false
 
+let src = Logs.Src.create "engine.pani.sprite" ~doc:"Pani sprite"
+module Log = (val Logs.src_log src: Logs.LOG)
+
 let set_debug x = debug := x
 
 let pp = Printf.printf

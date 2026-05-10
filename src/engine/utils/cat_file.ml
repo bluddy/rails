@@ -1,5 +1,7 @@
+let src = Logs.Src.create "engine.cat_file" ~doc:"Cat file"
+module Log = (val Logs.src_log src: Logs.LOG)
 
-let of_file ?(debug=false) ?(dump=false) file =
+let of_file ?(dump=false) file =
   let s = Utils.stream_of_file file in
   let num_pics = My_gen.get_wordi s in
 
@@ -14,8 +16,7 @@ let of_file ?(debug=false) ?(dump=false) file =
     let offset = My_gen.get_wordi s in
     My_gen.junki ~num:2 s;
 
-    if debug then
-      Printf.printf "Header found - %s: Offset: 0x%x, Size: 0x%x\n" filename offset data3;
+    Log.debug (fun f -> f "Header found - %s: Offset: 0x%x, Size: 0x%x\n" filename offset data3);
 
     parse_header s (n-1) @@ (filename, data, offset)::l
   in

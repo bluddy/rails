@@ -1,6 +1,6 @@
 open Containers
 
-let src = Logs.Src.create "pani" ~doc:"Pani"
+let src = Logs.Src.create "engine.pani" ~doc:"Pani"
 module Log = (val Logs.src_log src: Logs.LOG)
 
 let of_stream ?debug ?input ?(dump=false) s =
@@ -68,7 +68,7 @@ let of_stream ?debug ?input ?(dump=false) s =
   let pani_pic_ptrs = Array.make 250 0 in
   Log.debug (fun f -> f "Post-Background pos: 0x%x\n" (My_gen.pos () + 1));
 
-  print_endline "--- PANI pics ---";
+  Log.debug (fun f -> f "--- PANI pics ---");
   for i=0 to 249 do
     let word = My_gen.get_wordi s in
     Log.debug (fun f -> f "%d: 0x%x\n" i word);
