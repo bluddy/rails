@@ -1,4 +1,5 @@
 open Containers
+module C = Constants
 
 type t = {
   title: string;
@@ -128,4 +129,15 @@ let check_org_support crime_id org_id orgs =
   let bits = Org.get_bits org in
   let crime = crimes.(Id.to_int crime_id) in
   bits land crime.org_bits > 0
+
+module Step = struct
+  (* Crime steps in a crime *)
+  module Id = Engine.Int_id.Make()
+  module Set = Utils.Set.Make(struct
+    type t = Id.t [@@deriving yojson]
+    let compare = Id.compare
+  end)
+
+  let random r = Random.int C.max_crime_steps r
+end
 

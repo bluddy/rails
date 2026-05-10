@@ -12,6 +12,7 @@ let num_regions = 3
 let num_orgs = 16 (* per game, not total *)
 let num_mms = 26
 let num_locs = 16
+let max_crime_steps = 6
 
 module Cycles = struct
   (* Cycle counts to perform some tasks *)
