@@ -42,7 +42,7 @@ let of_file ?(dump=false) file =
     );
 
     (* 2. PROCEED TO DECOMPRESSION *)
-    Printf.printf "Processing %s...\n" filename;
+    Log.debug (fun f -> f "Processing %s...\n" filename);
     let s = Utils.stream_of_file_seek offset file in
     let limited_s = Gen.take compressed_size s in
     let ndarray = Pic.interpret_stream limited_s in
