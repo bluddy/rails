@@ -3,7 +3,8 @@ open Re
 
 let get_lines ~pat =
   let pat_r = compile (seq [
-    str (pat);
+    seq [bol; str pat; eol];
+    rep (seq [bol; char '*'; rep any; eol]);
     group (rep (compl [set "*"]))
   ]) in
   fun text ->
