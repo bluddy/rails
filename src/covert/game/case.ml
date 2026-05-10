@@ -7,6 +7,7 @@ type t = {
   locs: Loc.map;
   orgs: Org.map;
   mm: Agent.t;
+  steps_done: Crime.Step.Set.t;
 }
 
 let create (srv:Services.t) ~last_crime_choice (w:World.t) =
@@ -53,5 +54,6 @@ let create (srv:Services.t) ~last_crime_choice (w:World.t) =
     locs;
     orgs;
     mm;
+    steps_done=Crime.Step.Set.empty;
   }
 
