@@ -302,8 +302,8 @@ module Render = struct
   let write_char win fonts ~color ~idx c ~x ~y =
     Font.write_char win ~color (get_font idx fonts) c ~x ~y
 
-  let write win fonts ?active_color ?tag_color ?cursor ~color ~idx str ~x ~y =
-    Font.write ?active_color ?tag_color ?cursor win (get_font idx fonts) ~color str ~x ~y
+  let write win fonts ?active_color ?tag_color ?cursor ?tight ~color ~idx str ~x ~y =
+    Font.write ?active_color ?tag_color ?cursor ?tight win (get_font idx fonts) ~color str ~x ~y
 
   let write_shadow win fonts ~color ~idx str ~x ~y =
     write win fonts ~color:Ega.black ~idx str ~x:(x+1) ~y:(y+1);

@@ -10,6 +10,7 @@ let get_lines ~pat =
   try
     let subs = exec pat_r text in
     Group.get subs 1
+    |> String.drop 1
   with Not_found ->
     failwith @@ Printf.sprintf "Couldn't find pattern %s in text" pat
 

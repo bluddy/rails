@@ -25,10 +25,9 @@ let create (s:Services.t) case world mode =
     let plot_txt = Hashtbl.find s.resources.text `Plot in
     let pat = Printf.sprintf "*PL%02d90" (Crime.Id.to_int case.Case.crime_choice) in
     Printf.printf "Looking for pattern %s\n%!" pat;
-    let text = Subst_engine.get_lines ~pat plot_txt
-      |> Utils.add_newlines 40
+    let text = Subst_engine.get_lines ~pat plot_txt in
+    let text = Utils.add_newlines 40 text
     in
-    Printf.printf "printing:\n%s\n%!" text;
     {
       case;
       pani;
@@ -40,8 +39,7 @@ let create (s:Services.t) case world mode =
 
 let render win v =
   Pani_render.render win v.pani;
-  Fonts.Render.write win v.srv.fonts ~color:Ega.white ~idx:`Large ~x:8 ~y:149 v.text
-
+  Fonts.Render.write win v.srv.fonts ~tight:true ~color:Ega.white ~idx:`Large ~x:8 ~y:149 v.text
 
 let handle_event event time v =
   let state, status = match event with
