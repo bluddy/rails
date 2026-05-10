@@ -11,6 +11,7 @@ let get_lines ~pat =
   try
     let subs = exec pat_r text in
     Group.get subs 1
+    |> String.map (function '\n' -> ' ' | x -> x)
     |> String.drop 1 |> Option.some
   with Not_found ->
     None

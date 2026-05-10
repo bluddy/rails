@@ -80,9 +80,8 @@ let load_texts () =
   let prefix = "data/covert/" in
   let read symbol file =
     let txt = IO.with_in ~flags:[Open_text] (prefix^file) IO.read_all
-     (* |> String.map (function '\n' -> ' ' | x -> x) *)
      |> String.filter (function '\r' -> false | _ -> true)
-     |> fun s -> s^"*"
+     |> fun s -> s^"*" (* Add * for easier filtering *)
     in
     Hashtbl.replace h symbol txt
   in
