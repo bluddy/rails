@@ -141,3 +141,16 @@ module Step = struct
   let random r = Random.int C.max_crime_steps r
 end
 
+let has_step crime step =
+  let crime = Id.to_int crime in
+  let step = Step.Id.to_int step in
+  let crime = crimes.(crime) in
+  Array.length crime.step_types > step
+
+let is_last_step crime step =
+  let crime = Id.to_int crime in
+  let step = Step.Id.to_int step in
+  let crime = crimes.(crime) in
+  Array.length crime.step_types = step + 1
+
+
