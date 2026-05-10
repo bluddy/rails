@@ -16,6 +16,7 @@ type t = {
   case: Case.t;
   world: World.t;
   srv: Services.t;
+  plot_num: int;
   page: int; (* page of text *)
 }
 
@@ -27,13 +28,22 @@ let get_text (srv:Services.t) res ~num ~crime ~page =
     page
   in
   Subst_engine.get_lines ~pat plot_txt
-  |> Utils.add_newlines 40
+  |> Option.map (Utils.add_newlines 40)
+
+let next_page v =
+  let page = v.page + 1 in
+  match get_text v.srv `Plot ~num:v.plot_num ~crime:v.case.crime_choice ~page with
+  | Some text -> {v with page; text}, `Stay
+  | None -> v, `Exit
 
 let create (s:Services.t) (case:Case.t) world mode =
   match mode with
   | Case_start ->
       let pani = Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input:[0,4] in
-      let text = get_text s `Plot ~num:9 ~crime:case.crime_choice ~page:0 in
+      let page, plot_num = 0, 9 in
+      let text = get_text s `Plot ~num:plot_num ~crime:case.crime_choice ~page:0
+        |> Option.get_exn_or "missing text"
+      in
     {
       case;
       pani;
@@ -41,7 +51,8 @@ let create (s:Services.t) (case:Case.t) world mode =
       srv=s;
       mode;
       text;
-      page=0;
+      page;
+      plot_num;
     }
 
 let render win v =
@@ -53,6 +64,6 @@ let handle_event event time v =
   | Event.Tick ->
       let pani, _ = Pani_render.handle_tick time v.pani in
       [%up {v with pani}], `Stay
-  | _ when Event.modal_dismiss event -> v, `Stay
+  | _ when Event.modal_dismiss event -> next_page v
   | _ -> v, `Stay
 
