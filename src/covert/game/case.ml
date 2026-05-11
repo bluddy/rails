@@ -57,12 +57,13 @@ let create (srv:Services.t) ~last_crime_choice (w:World.t) =
     steps_done=Crime.Step.Set.empty;
   }
 
+  (*
 let choose_next_step (srv:Services.t) (v:t) =
   let rec loop n =
     let step = Crime.Step.random srv.random in
     if Crime.Step.Set.mem step v.steps_done then loop (n+1) else
     if Crime.has_step v.crime_chosen step
-
-
+  in
+  *)
 
 
