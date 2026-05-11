@@ -865,16 +865,16 @@ module Animated = struct
         let event = if is_handled_ action then Event.NoEvent else event in
         ([%up {v with menu; last_msg}], event) [@warning "-23"]
 
-  let handle_tick _s v time = match v.last_msg with
+  let handle_tick ?(do_close=true) _s v time = match v.last_msg with
     | Some (msg, t) when time > t ->
-        let v =  _close v in
+        let v =  if do_close then _close v else v in
         {v with last_msg=None}, msg
     | _ -> v, NoAction
 
     (* combine event and tick handling *)
-  let handle_event2 s v event time = match event with
+  let handle_event2 ?do_close s v event time = match event with
     | Event.Tick ->
-        let v, action = handle_tick s v time in
+        let v, action = handle_tick ?do_close s v time in
         v, action, Event.NoEvent
     | _ ->
         let v, event = handle_event s v event time in
@@ -906,7 +906,9 @@ module Animated = struct
 
     (* combined msg handling for messageboxes and listboxes *)
   let modal_handle_event2 ?(is_msgbox=false) s v event time =
-    let menu, action, event = handle_event2 s v event time in
+    (* Don't auto-close for the event - msgboxes don't need it and we might want
+       to preserve info *)
+    let menu, action, event = handle_event2 ~do_close:false s v event time in
     match action with
     | On(choice) -> menu, `Activate choice
     | Exit -> menu, `Exit
