@@ -4,12 +4,11 @@ module C = Constants
 type t = {
   title: string;
   org_bits: int; (* bitmask right now. there are 4 bit values *)
-  step_types: int array; (* steps in crime *)
+  step_types: int list; (* steps in crime *)
   objects: string list;
 }
 
 let make title org_bits step_types objects =
-  let step_types = Array.of_list step_types in
   {org_bits; step_types; objects; title}
 
 let crimes = [|
@@ -141,16 +140,27 @@ module Step = struct
   let random r = Random.int C.max_crime_steps r
 end
 
-let has_step crime step =
+let get_steps crime =
   let crime = Id.to_int crime in
-  let step = Step.Id.to_int step in
   let crime = crimes.(crime) in
-  Array.length crime.step_types > step
+  List.mapi (fun i _ -> Step.Id.of_int i) crime.step_types
+
+let random_step crime r = 
+  let steps = get_steps crime in
+  try
+    Random.choose_return steps r |> Option.some
+  with
+    Invalid_argument _ -> None
 
 let is_last_step crime step =
-  let crime = Id.to_int crime in
-  let step = Step.Id.to_int step in
-  let crime = crimes.(crime) in
-  Array.length crime.step_types = step + 1
+  let crime = crimes.(Id.to_int crime) in
+  let len = List.length crime.step_types in
+  Step.Id.to_int step = len - 1
 
+let can_run_last_step step steps =
+  let step = Step.Id.to_int step in
+  if step = 0 then true else
+  Iter.fold (fun ok step ->
+    ok && Step.Set.mem (Step.Id.of_int step) steps)
+  Iter.(0 -- (step - 1))
 
