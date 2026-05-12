@@ -131,36 +131,37 @@ let check_org_support crime_id org_id orgs =
 
 module Step = struct
   (* Crime steps in a crime *)
+  module G_Id = Id
   module Id = Engine.Int_id.Make()
   module Set = Utils.Set.Make(struct
     type t = Id.t [@@deriving yojson]
     let compare = Id.compare
   end)
 
-  let random r = Random.int C.max_crime_steps r
+  let get_all crime =
+    let crime = G_Id.to_int crime in
+    let crime = crimes.(crime) in
+    List.mapi (fun i _ -> Id.of_int i) crime.step_types
+
+  let random crime r = 
+    let steps = get_all crime in
+    try
+      Random.choose_return steps r |> Option.some
+    with
+      Invalid_argument _ -> None
+
+  let is_last crime step =
+    let crime = crimes.(G_Id.to_int crime) in
+    let len = List.length crime.step_types in
+    Id.to_int step = len - 1
+
+  let can_run_last step steps =
+    let step = Id.to_int step in
+    if step = 0 then true else
+    Iter.fold (fun ok step ->
+      ok && Set.mem (Id.of_int step) steps)
+      true
+      Iter.(0 -- (step - 1))
+
 end
-
-let get_steps crime =
-  let crime = Id.to_int crime in
-  let crime = crimes.(crime) in
-  List.mapi (fun i _ -> Step.Id.of_int i) crime.step_types
-
-let random_step crime r = 
-  let steps = get_steps crime in
-  try
-    Random.choose_return steps r |> Option.some
-  with
-    Invalid_argument _ -> None
-
-let is_last_step crime step =
-  let crime = crimes.(Id.to_int crime) in
-  let len = List.length crime.step_types in
-  Step.Id.to_int step = len - 1
-
-let can_run_last_step step steps =
-  let step = Step.Id.to_int step in
-  if step = 0 then true else
-  Iter.fold (fun ok step ->
-    ok && Step.Set.mem (Step.Id.of_int step) steps)
-  Iter.(0 -- (step - 1))
 
