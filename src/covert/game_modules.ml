@@ -81,7 +81,9 @@ let handle_event _win v (event:Event.t) time =
         begin match status with
         | `Activate info ->
             let world = World.default info in
-            let case = Case.create ~last_crime_choice:Crime.none v.srv world in
+            let case = Case.create v.srv world
+              |> Case.step_and_recreate_if_needed v.srv world
+            in
             let s = Briefing.create v.srv case world Briefing.Case_start in
             {v with mode=Briefing s}, `Stay
         | `Stay -> v, `Stay

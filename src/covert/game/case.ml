@@ -11,13 +11,15 @@ type t = {
   step: Crime.Step.t option;
 }
 
-let create (srv:Services.t) ~last_crime_choice (w:World.t) =
+let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   let crime_choice =
     if Difficulty.lowest w.difficulty && w.time_months = 0 then Crime.tutorial
     else
       let rec loop () =
         let crime_num = Crime.random srv.random in
-        if Crime.Id.equal crime_num last_crime_choice then loop () else crime_num
+        match last_crime_choice with
+        | Some crime when Crime.Id.equal crime_num crime -> loop ()
+        | _ -> crime_num
       in
       loop ()
   in
@@ -59,7 +61,7 @@ let create (srv:Services.t) ~last_crime_choice (w:World.t) =
     step=None;
   }
 
-let choose_next_step (srv:Services.t) (v:t) =
+let choose_next_step_ (srv:Services.t) (v:t) =
   let rec loop n =
     if n > 999 then None else
     let step = Random.int 6 srv.random |> Crime.Step.of_int in
@@ -71,7 +73,18 @@ let choose_next_step (srv:Services.t) (v:t) =
       num_steps_less_failed_steps > 1) then loop (n+1) else
     match v.step with
     | Some s when Crime.Step.equal step s && n >= 98 -> loop (n+2)
-    | _ -> Some step
-  in
+    | _ -> Some step in
   loop 0
+
+  (* When we just want to pick the next step, but might need to regen if we fail *)
+let step_and_recreate_if_needed (srv:Services.t) w v =
+  let last_crime_choice = v.crime in
+  let rec loop v =
+    match choose_next_step_ srv v with
+    | Some _ as step -> {v with step}
+    | None ->
+        let v = create ~last_crime_choice srv w in
+        loop v
+  in
+  loop v
 

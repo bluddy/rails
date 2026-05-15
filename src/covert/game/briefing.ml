@@ -32,7 +32,7 @@ let get_text (srv:Services.t) res ~num ~crime ~page =
 
 let next_page v =
   let page = v.page + 1 in
-  match get_text v.srv `Plot ~num:v.plot_num ~crime:v.case.crime_choice ~page with
+  match get_text v.srv `Plot ~num:v.plot_num ~crime:v.case.crime ~page with
   | Some text -> {v with page; text}, `Stay
   | None -> v, `Exit
 
@@ -41,7 +41,7 @@ let create (s:Services.t) (case:Case.t) world mode =
   | Case_start ->
       let pani = Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input:[0,4] in
       let page, plot_num = 0, 9 in
-      let text = get_text s `Plot ~num:plot_num ~crime:case.crime_choice ~page:0
+      let text = get_text s `Plot ~num:plot_num ~crime:case.crime ~page:0
         |> Option.get_exn_or "missing text"
       in
     {
