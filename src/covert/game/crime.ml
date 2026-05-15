@@ -4,11 +4,13 @@ module C = Constants
 type t = {
   title: string;
   org_bits: int; (* bitmask right now. there are 4 bit values *)
-  step_types: int list; (* steps in crime *)
-  objects: string list;
+  step_types: int array; (* steps in crime *)
+  objects: string array;
 }
 
 let make title org_bits step_types objects =
+  let step_types = Array.of_list step_types in
+  let objects = Array.of_list objects in
   {org_bits; step_types; objects; title}
 
 let crimes = [|
@@ -28,25 +30,29 @@ let crimes = [|
     "";
     "an Israeli security expert";
     "";
-    "the Israeli athletic dormitory"];
+    "the Israeli athletic dormitory";
+    ""];
   make "SuperDrug" 0x6 [0; 4; 3]
     ["the noted chemist Dr Pasture";
     "";
     "a large industrial warehouse";
     "chemicals";
-    "a new super drug"];
+    "a new super drug";
+    ""];
   make "Liberian Election" 9 [0xB; 6; 8]
     ["Geraldo Corazon";
     "";
     "the Election Commission HQ";
     "";
-    "the Social Democrat campaign rally"];
+    "the Social Democrat campaign rally";
+    ""];
   make "Summit Conference" 0xC [0xA; 9; 2]
     ["Carlos the Hyena";
     "";
     "summit ID documents";
     "";
-    "a leading Head of State"];
+    "a leading Head of State";
+    ""];
   make "Rampant Inflation" 0xA [0xA; 4; 0xC]
     ["Willie the Pen";
     "";
@@ -80,7 +86,8 @@ let crimes = [|
     "";
     "the Veteran's Day parade";
     "";
-    "a Supreme Court Justice"];
+    "a Supreme Court Justice";
+    ""];
   make "Virus X" 0xC [0; 4; 0xC]
     ["bacteriologist Edgar Coli";
     "";
@@ -91,19 +98,23 @@ let crimes = [|
   make "Drug Shortage" 0xA [6; 2; 3]
     ["Interpol Headquarters";
     "";
-    "chief drug investigator"];
+    "chief drug investigator";
+    "";
+    ""];
   make "Train Wreck" 0xC [7; 5; 6]
     ["VIP travel itinerary";
     "";
     "the locomotive plant";
     "train schematics";
-    "the train station"];
+    "the train station";
+    ""];
   make "Prison Break" 7 [9; 0xB; 0xA]
     ["prison visitor pass";
     "";
     "the prison warden";
     "";
-    "Manny Noriega"];
+    "Manny Noriega";
+    ""];
   make "Stealth Fighter" 3 [0xB; 7; 4]
     ["fighter pilot";
     "";
@@ -133,35 +144,46 @@ module Step = struct
   (* Crime steps in a crime *)
   module G_Id = Id
   module Id = Engine.Int_id.Make()
-  module Set = Utils.Set.Make(struct
-    type t = Id.t [@@deriving yojson]
-    let compare = Id.compare
-  end)
+  module Set = struct
+      include Utils.Set.Make(struct
+      type t = Id.t [@@deriving yojson]
+      let compare = Id.compare
+    end)
+
+    let random r v =
+      let l = to_list v in
+      Random.choose_return l r
+
+  end
+
+  include Id
 
   let get_all crime =
     let crime = G_Id.to_int crime in
     let crime = crimes.(crime) in
-    List.mapi (fun i _ -> Id.of_int i) crime.step_types
-
-  let random crime r = 
-    let steps = get_all crime in
-    try
-      Random.choose_return steps r |> Option.some
-    with
-      Invalid_argument _ -> None
+    crime.step_types |> Array.to_list
+    |> List.mapi (fun i _ -> Id.of_int i)
 
   let is_last crime step =
     let crime = crimes.(G_Id.to_int crime) in
-    let len = List.length crime.step_types in
+    let len = Array.length crime.step_types in
     Id.to_int step = len - 1
 
-  let can_run_last step steps =
-    let step = Id.to_int step in
-    if step = 0 then true else
-    Iter.fold (fun ok step ->
-      ok && Set.mem (Id.of_int step) steps)
-      true
-      Iter.(0 -- (step - 1))
+  let is_valid crime step =
+    let crime, step_num = crimes.(G_Id.to_int crime), Id.to_int step in
+    let len = Array.length crime.step_types in
+    step_num < len
+
+  let get_type crime step =
+    let crime, step = G_Id.to_int crime, Id.to_int step in
+    crimes.(crime).step_types.(step)
+
+  let get_objs crime step =
+    let crime, step = G_Id.to_int crime, Id.to_int step in
+    let idx1 = step * 2 in
+    let idx2 = idx1 + 1 in
+    let objs = crimes.(crime).objects in
+    objs.(idx1), objs.(idx2)
 
 end
 

@@ -2,12 +2,13 @@ open! Containers
 module C = Constants
 
 type t = {
-  crime_choice: Crime.Id.t;
+  crime: Crime.Id.t;
   region: Region.t;
   locs: Loc.map;
   orgs: Org.map;
   mm: Agent.t;
-  steps_done: Crime.Step.Set.t;
+  failed_steps: Crime.Step.Set.t;
+  step: Crime.Step.t option;
 }
 
 let create (srv:Services.t) ~last_crime_choice (w:World.t) =
@@ -49,22 +50,28 @@ let create (srv:Services.t) ~last_crime_choice (w:World.t) =
   in
   let region, locs, orgs, mm = loop None 0 in
   {
-    crime_choice;
+    crime=crime_choice;
     region;
     locs;
     orgs;
     mm;
-    steps_done=Crime.Step.Set.empty;
+    failed_steps=Crime.Step.Set.empty;
+    step=None;
   }
 
 let choose_next_step (srv:Services.t) (v:t) =
-  let steps = Crime.get_steps v.crime_chosen in
-  if List.is_empty steps then None
-  else
-    let rec loop n =
-      let step = Crime.random_step v.crime_chosen srv.random in
-      if Crime.Step.Set.mem step v.steps_done then loop (n+1) else
-    in
-    ()
-
+  let rec loop n =
+    if n > 999 then None else
+    let step = Random.int 6 srv.random |> Crime.Step.of_int in
+    if not @@ Crime.Step.is_valid v.crime step then loop (n+1) else
+    if Crime.Step.is_last v.crime step && (
+      let all_steps = Crime.Step.get_all v.crime |> Crime.Step.Set.of_list in
+      let all_steps_less_failed_steps = Crime.Step.Set.diff all_steps v.failed_steps in
+      let num_steps_less_failed_steps = Crime.Step.Set.cardinal all_steps_less_failed_steps in
+      num_steps_less_failed_steps > 1) then loop (n+1) else
+    match v.step with
+    | Some s when Crime.Step.equal step s && n >= 98 -> loop (n+2)
+    | _ -> Some step
+  in
+  loop 0
 
