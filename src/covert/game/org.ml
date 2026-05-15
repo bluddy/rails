@@ -29,7 +29,7 @@ end)
     List.mapi (fun i x -> Id.of_int i, x) l |> of_list
 end
 
-type map = t Map.t
+type map = t Map.t [@@deriving yojson]
 
 module Global_set = struct
   include Utils.Set.Make(struct

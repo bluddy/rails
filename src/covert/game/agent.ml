@@ -1,3 +1,4 @@
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
 module Names = struct
@@ -213,6 +214,7 @@ type status =
   | Out_of_hiding
   | At_large
   | In_custody
+  [@@deriving yojson]
 
 type t = {
   gender: Gender.t;
@@ -225,7 +227,7 @@ type t = {
   role: int;
   status: status;
   anxiety: int;
-}
+} [@@deriving yojson]
 
 let gender_name_of_code ~name_offset x =
   let gender = x land 1 in

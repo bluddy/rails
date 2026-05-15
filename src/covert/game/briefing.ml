@@ -7,7 +7,9 @@ module Pani_render = Engine.Pani_render
 module Ega = Engine.Ega
 
 type mode =
-  | Case_start
+  | Crime_start
+  | Crime_step_start
+  [@@deriving yojson]
 
 type t = {
   mode: mode;
@@ -38,7 +40,7 @@ let next_page v =
 
 let create (s:Services.t) (case:Case.t) world mode =
   match mode with
-  | Case_start ->
+  | Crime_start ->
       let pani = Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input:[0,4] in
       let page, plot_num = 0, 9 in
       let text = get_text s `Plot ~num:plot_num ~crime:case.crime ~page:0

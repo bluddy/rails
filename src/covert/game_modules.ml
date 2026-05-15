@@ -84,8 +84,11 @@ let handle_event _win v (event:Event.t) time =
             let case = Case.create v.srv world
               |> Case.step_and_recreate_if_needed v.srv world
             in
-            let s = Briefing.create v.srv case world Briefing.Case_start in
-            {v with mode=Briefing s}, `Stay
+            let modes = [
+              Briefing(Briefing.create v.srv case world Briefing.Crime_start);
+              Briefing(Briefing.create v.srv case world Briefing.Crime_step_start)
+            ] in
+            set_modes v modes, `Stay
         | `Stay -> v, `Stay
         | `Exit -> v, `Stay
         end

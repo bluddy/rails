@@ -1,4 +1,4 @@
-open Containers
+open! Containers
 
 type data = [
   | `Known_recruit_loc
@@ -13,8 +13,8 @@ type data = [
   | `Known_jailbreak
 ][@@deriving eq,ord, yojson, show]
 
-module Set = Set.Make(struct
-  type t = data
+module Set = Utils.Set.Make(struct
+  type t = data [@@deriving yojson]
   let compare = compare_data
 end)
 

@@ -1,3 +1,4 @@
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open Containers
 module C = Constants
 
@@ -9,7 +10,7 @@ type t = {
   known_buildings: int;
   some_buildings: int;
   loc: int * int;
-} [@@deriving show]
+} [@@deriving show, yojson]
 
 module Id = Engine.Int_id.Make()
 
@@ -25,5 +26,5 @@ end)
     List.mapi (fun i x -> Id.of_int i, x) l |> of_list
 end
 
-type map = t Map.t
+type map = t Map.t [@@deriving yojson]
 

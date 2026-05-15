@@ -1,3 +1,4 @@
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 module C = Constants
 
@@ -9,7 +10,7 @@ type t = {
   mm: Agent.t;
   failed_steps: Crime.Step.Set.t;
   step: Crime.Step.t option;
-}
+} [@@deriving yojson]
 
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   let crime_choice =
