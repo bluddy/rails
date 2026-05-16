@@ -1,7 +1,7 @@
 open Containers
 include Engine.Utils
 
-let add_newlines width str =
+let add_newlines ~width str =
   let buf = Buffer.create 10 in
   let _ =
     String.fold_left (fun x c ->

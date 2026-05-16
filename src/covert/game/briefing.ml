@@ -18,44 +18,42 @@ type t = {
   case: Case.t;
   world: World.t;
   srv: Services.t;
-  plot_num: int;
-  page: int; (* page of text *)
+  pattern: string;
 }
 
-let get_text (srv:Services.t) res ~num ~crime ~page =
+let get_text (srv:Services.t) res pat =
   let plot_txt = Hashtbl.find srv.resources.text res in
-  let pat = Printf.sprintf "*PL%02d%d%d"
-    (Crime.Id.to_int crime)
-    num
-    page
-  in
   Subst_engine.get_lines ~pat plot_txt
-  |> Option.map (Utils.add_newlines 40)
+  |> Option.map (Utils.add_newlines ~width:40)
+
+let briefing_create ?(input=[0,4]) (s:Services.t) =
+  Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input
 
 let next_page v =
-  let page = v.page + 1 in
-  match get_text v.srv `Plot ~num:v.plot_num ~crime:v.case.crime ~page with
-  | Some text -> {v with page; text}, `Stay
+  let len = String.length v.pattern in
+  let pattern = String.mapi (fun i c ->
+    if i=len-1 then int_of_char c + 1 |> char_of_int 
+    else c)
+    v.pattern in
+  match get_text v.srv `Plot pattern with
+  | Some text -> {v with pattern; text}, `Stay
   | None -> v, `Exit
 
 let create (s:Services.t) (case:Case.t) world mode =
   match mode with
   | Crime_start ->
-      let pani = Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input:[0,4] in
+      let pani = briefing_create s in
       let page, plot_num = 0, 9 in
-      let text = get_text s `Plot ~num:plot_num ~crime:case.crime ~page:0
-        |> Option.get_exn_or "missing text"
-      in
-    {
-      case;
-      pani;
-      world;
-      srv=s;
-      mode;
-      text;
-      page;
-      plot_num;
-    }
+      let pattern = Printf.sprintf "*PL%02d%d%d" (Crime.Id.to_int case.crime) plot_num page in
+      let text = get_text s `Plot pattern |> Option.get_exn_or "missing text" in
+    { case; pani; world; srv=s; mode; text; pattern; }
+  | Crime_step_start ->
+      let pani = briefing_create s in
+      let letter = if Case.failed_other_steps case then 'A' else 'a' in
+      let pattern = Printf.sprintf "*PL%02d%d%c" (Crime.Id.to_int case.crime) (Crime.Step.Id.to_int case.step) letter in
+      let text = get_text s `Plot pattern |> Option.get_exn_or "missing text" in
+    { case; pani; world; srv=s; mode; text; pattern; }
+
 
 let render win v =
   Pani_render.render win v.pani;

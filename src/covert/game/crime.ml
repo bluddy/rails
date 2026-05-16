@@ -156,6 +156,8 @@ module Step = struct
 
   end
 
+  let none = Id.of_int (-1)
+
   include Id
 
   let get_all crime =

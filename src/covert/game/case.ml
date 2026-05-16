@@ -9,7 +9,7 @@ type t = {
   orgs: Org.map;
   mm: Agent.t;
   failed_steps: Crime.Step.Set.t;
-  step: Crime.Step.t option;
+  step: Crime.Step.t;
 } [@@deriving yojson]
 
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
@@ -59,7 +59,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
     orgs;
     mm;
     failed_steps=Crime.Step.Set.empty;
-    step=None;
+    step=Crime.Step.none;
   }
 
 let choose_next_step_ (srv:Services.t) (v:t) =
@@ -73,7 +73,7 @@ let choose_next_step_ (srv:Services.t) (v:t) =
       let num_steps_less_failed_steps = Crime.Step.Set.cardinal all_steps_less_failed_steps in
       num_steps_less_failed_steps > 1) then loop (n+1) else
     match v.step with
-    | Some s when Crime.Step.equal step s && n >= 98 -> loop (n+2)
+    | s when Crime.Step.equal step s && n >= 98 -> loop (n+2)
     | _ -> Some step in
   loop 0
 
@@ -82,10 +82,21 @@ let step_and_recreate_if_needed (srv:Services.t) w v =
   let last_crime_choice = v.crime in
   let rec loop v =
     match choose_next_step_ srv v with
-    | Some _ as step -> {v with step}
+    | Some step ->
+        assert (not @@ Crime.Step.equal step Crime.Step.none);
+        {v with step}
     | None ->
         let v = create ~last_crime_choice srv w in
         loop v
   in
   loop v
+
+  (* Check if we failed all the other steps other than the one we're doing *)
+let failed_other_steps (v:t) =
+  assert (not @@ Crime.Step.equal v.step Crime.Step.none);
+  let all = Crime.Step.get_all v.crime |> Crime.Step.Set.of_list in
+  let remove_failed = Crime.Step.Set.diff all v.failed_steps in
+  let remove_cur = Crime.Step.Set.remove v.step remove_failed in
+  Crime.Step.Set.is_empty remove_cur
+
 
