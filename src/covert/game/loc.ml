@@ -16,6 +16,8 @@ module Id = Engine.Int_id.Make()
 
 let random r = Random.int C.num_locs r |> Id.of_int
 
+let washington = Id.of_int 0
+
 module Map = struct
   include Utils.Map.Make(struct
   type t = Id.t [@@deriving yojson]

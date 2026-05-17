@@ -3,13 +3,19 @@ open! Containers
 module C = Constants
 
 type t = {
+  (* constant in the case *)
   crime: Crime.Id.t;
-  region: Region.t;
-  locs: Loc.map;
-  orgs: Org.map;
-  mm: Agent.t;
   failed_steps: Crime.Step.Set.t;
   step: Crime.Step.t;
+  region: Region.t;
+  mm: Agent.t;
+
+  (* dynamic in the case *)
+  cur_loc: Loc.Id.t;
+  cur_org: Org.Id.t;
+  locs: Loc.map;
+  orgs: Org.map;
+  enemy_anxiety: int;
 } [@@deriving yojson]
 
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
@@ -54,12 +60,16 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   let region, locs, orgs, mm = loop None 0 in
   {
     crime=crime_choice;
-    region;
-    locs;
-    orgs;
-    mm;
     failed_steps=Crime.Step.Set.empty;
     step=Crime.Step.none;
+    region;
+    mm;
+
+    cur_loc=Loc.washington;
+    cur_org=Org.cia;
+    locs;
+    orgs;
+    enemy_anxiety=0;
   }
 
 let choose_next_step_ (srv:Services.t) (v:t) =
@@ -99,4 +109,5 @@ let failed_other_steps (v:t) =
   let remove_cur = Crime.Step.Set.remove v.step remove_failed in
   Crime.Step.Set.is_empty remove_cur
 
+let create_data (v:t) = ()
 
