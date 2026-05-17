@@ -45,13 +45,15 @@ let create (s:Services.t) (case:Case.t) world mode =
       let pani = briefing_create s in
       let page, plot_num = 0, 9 in
       let pattern = Printf.sprintf "*PL%02d%d%d" (Crime.Id.to_int case.crime) plot_num page in
-      let text = get_text s `Plot pattern |> Option.get_exn_or "missing text" in
+      let text = get_text s `Plot pattern
+      |> Option.get_exn_or @@ Printf.sprintf "missing text %s" pattern in
     { case; pani; world; srv=s; mode; text; pattern; }
   | Crime_step_start ->
       let pani = briefing_create s in
       let letter = if Case.failed_other_steps case then 'A' else 'a' in
       let pattern = Printf.sprintf "*PL%02d%d%c" (Crime.Id.to_int case.crime) (Crime.Step.Id.to_int case.step) letter in
-      let text = get_text s `Plot pattern |> Option.get_exn_or "missing text" in
+      let text = get_text s `Plot pattern
+      |> Option.get_exn_or @@ Printf.sprintf "missing text %s" pattern in
     { case; pani; world; srv=s; mode; text; pattern; }
 
 
