@@ -10,4 +10,7 @@ type t = {
   known: Known_data.Set.t;
   clue_rand: int;
   rank: Rank.t;
+  some_num: int;
 } [@@deriving yojson]
+
+module Id = Engine.Int_id.Make()

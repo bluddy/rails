@@ -9,7 +9,7 @@ type t =
   | Special_agent
   | Group_leader
   | Mastermind
-  [@@deriving yojson, enum]
+  [@@deriving yojson, enum, show]
 
 let show = function
   | Recruit -> "Recruit"

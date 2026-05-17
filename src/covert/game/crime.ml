@@ -1,4 +1,6 @@
 open Containers
+module String = Engine.String
+module Gen = Engine.My_gen
 module C = Constants
 
 type t = {
@@ -189,8 +191,6 @@ module Step = struct
 
 end
 
-module Gen = Engine.My_gen
-
 let load_from_file crime_type_num =
   let filename = Printf.sprintf "./data/covert/CRIME%d.DTA" crime_type_num in
   let s = Utils.stream_of_file filename in
@@ -198,7 +198,26 @@ let load_from_file crime_type_num =
   let num_events = Gen.get_wordi s in
   let roles =
     Iter.fold (fun acc _ ->
-      acc
+      let agent = Gen.get_wordi s |> Agent.Id.of_int in
+      let discover_val = Gen.get_wordi s in
+      let name = Gen.take 32 s |> Gen.to_stringi |> String.remove_nulls in
+      let clue_seed = Gen.get_wordi s in
+      let role_bits = Gen.get_wordi s in
+      let _known_data = Gen.get_wordi s in
+      let clue_rand = Gen.get_wordi s in
+      let rank = Gen.get_wordi s |> Rank.of_enum |> Option.get_exn_or "invalid rank" in
+      let some_num = Gen.get_wordi s in
+      Role.{
+        agent;
+        discover_val;
+        name;
+        clue_seed;
+        role_bits;
+        known=Known_data.Set.empty;
+        clue_rand;
+        rank;
+        some_num;
+      }::acc
     )
     []
     Iter.(0 -- (num_roles - 1)) |> List.rev
