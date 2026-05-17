@@ -14,7 +14,7 @@ let random r =
   |> of_enum |> Option.get_exn_or "oops"
 
 let load_from_file region =
-  let filename = "./data/covert/WORLD" ^ (to_enum region |> Int.to_string) ^ ".DTA" in
+  let filename = Printf.sprintf "./data/covert/WORLD%d.DTA" (to_enum region) in
   let s = Utils.stream_of_file filename in
   let num_locs = Gen.get_wordi s in
   let num_orgs = Gen.get_wordi s in

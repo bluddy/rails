@@ -189,3 +189,27 @@ module Step = struct
 
 end
 
+module Gen = Engine.My_gen
+
+let load_from_file crime_type_num =
+  let filename = Printf.sprintf "./data/covert/CRIME%d.DTA" crime_type_num in
+  let s = Utils.stream_of_file filename in
+  let num_roles = Gen.get_wordi s in
+  let num_events = Gen.get_wordi s in
+  let roles =
+    Iter.fold (fun acc _ ->
+      acc
+    )
+    []
+    Iter.(0 -- (num_roles - 1)) |> List.rev
+  in
+  let events =
+    Iter.fold (fun acc _ ->
+      acc
+    )
+    []
+    Iter.(0 -- (num_events - 1)) |> List.rev
+  in
+  roles, events
+
+
