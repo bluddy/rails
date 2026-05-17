@@ -109,5 +109,8 @@ let failed_other_steps (v:t) =
   let remove_cur = Crime.Step.Set.remove v.step remove_failed in
   Crime.Step.Set.is_empty remove_cur
 
-let create_data (v:t) = ()
+let create_data (v:t) =
+  let typ = Crime.Step.get_type v.crime v.step in
+  let roles, events = Crime.load_from_file typ in
+  ()
 

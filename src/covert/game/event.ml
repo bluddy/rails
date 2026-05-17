@@ -9,7 +9,7 @@ type t = {
   bits: int;
   item_bits: int;
   efficiency: int;
-} [@@deriving yojson]
+} [@@deriving yojson, show]
 
 module Id = Engine.Int_id.Make()
 

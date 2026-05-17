@@ -7,10 +7,10 @@ type t = {
   name: string;
   clue_seed: int;
   role_bits: int;
-  known: Known_data.Set.t;
+  known: Known_data.Set.t; [@opaque]
   clue_rand: int;
   rank: Rank.t;
   some_num: int;
-} [@@deriving yojson]
+} [@@deriving yojson, show]
 
 module Id = Engine.Int_id.Make()

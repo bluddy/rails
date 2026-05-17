@@ -207,7 +207,7 @@ let load_from_file crime_type_num =
       let clue_rand = Gen.get_wordi s in
       let rank = Gen.get_wordi s |> Rank.of_enum |> Option.get_exn_or "invalid rank" in
       let some_num = Gen.get_wordi s in
-      Role.{
+      let role = Role.{
         agent;
         discover_val;
         name;
@@ -217,7 +217,10 @@ let load_from_file crime_type_num =
         clue_rand;
         rank;
         some_num;
-      }::acc
+      }
+      in
+      print_endline @@ Role.show role;
+      role::acc
     )
     []
     Iter.(0 -- (num_roles - 1)) |> List.rev
@@ -232,6 +235,7 @@ let load_from_file crime_type_num =
       let bits = Gen.get_wordi s in
       let item_bits = Gen.get_wordi s in
       let efficiency = Gen.get_wordi s in
+      let event = 
       Event.{
         role;
         tick_or_status;
@@ -240,7 +244,9 @@ let load_from_file crime_type_num =
         bits;
         item_bits;
         efficiency;
-      }::acc
+      } in
+      print_endline @@ Event.show event;
+      event::acc
     )
     []
     Iter.(0 -- (num_events - 1)) |> List.rev
