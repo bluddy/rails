@@ -1,0 +1,790 @@
+Loading resources...
+Using shader file shaders/test.glsl
+Processing VIENNA.PIC...
+Processing GENEVA.PIC...
+Processing LONDON.PIC...
+Processing PARIS.PIC...
+Processing ATHENS.PIC...
+Processing MOSCOW.PIC...
+Processing WASHINGT.PIC...
+Processing TELAVIV.PIC...
+Processing ROME.PIC...
+Processing MADRID.PIC...
+Processing BERLIN.PIC...
+Processing AMSTERDA.PIC...
+Processing HELSINKI.PIC...
+Processing BELGRADE.PIC...
+Processing BUDAPEST.PIC...
+Processing PRAGUE.PIC...
+Processing BAGHDAD.PIC...
+Processing CAIRO.PIC...
+Processing AMMAN.PIC...
+Processing RIYADH.PIC...
+Processing ISTANBUL.PIC...
+Processing BEIRUT.PIC...
+Processing TRIPOLI.PIC...
+Processing DAMASCUS.PIC...
+Processing TEHRAN.PIC...
+Processing KHARTOUM.PIC...
+Processing SANJUAN.PIC...
+Processing BOGOTA.PIC...
+Processing MEDELLIN.PIC...
+Processing LOSANGEL.PIC...
+Processing NASSAU.PIC...
+Processing KINGSTON.PIC...
+Processing MIAMI.PIC...
+Processing PANAMA.PIC...
+Processing MANAGUA.PIC...
+Processing MEXICOCI.PIC...
+Processing CARACAS.PIC...
+Processing HAVANA.PIC...
+Processing RIO.PIC...
+Processing BCHBACK.PIC...
+Processing BCHHANDF.PIC...
+Processing BCHHANDM.PIC...
+Processing BCHBABE1.PIC...
+Processing BCHBABE2.PIC...
+Processing BCHBABE3.PIC...
+Processing BCHBABE4.PIC...
+Processing BCHDUDE1.PIC...
+Processing BCHDUDE2.PIC...
+Processing BCHDUDE3.PIC...
+Processing BCHDUDE4.PIC...
+Processing CASBACK.PIC...
+Processing CASBABE1.PIC...
+Processing CASDUDE1.PIC...
+Processing CASDUDE2.PIC...
+Processing CASDUDE3.PIC...
+Processing CASBABE4.PIC...
+Processing CASDUDE4.PIC...
+Processing CASBABE3.PIC...
+Processing CASBABE2.PIC...
+Processing CASHANDM.PIC...
+Processing CASHANDF.PIC...
+Processing LAUBACK.PIC...
+Processing LAUBABE1.PIC...
+Processing LAUBABE2.PIC...
+Processing LAUDUDE2.PIC...
+Processing LAUDUDE1.PIC...
+Processing LAUHANDM.PIC...
+Processing LAUHANDF.PIC...
+Processing OFFBABE1.PIC...
+Processing OFFBABE2.PIC...
+Processing OFFBABE3.PIC...
+Processing OFFBABE4.PIC...
+Processing OFFBACK.PIC...
+Processing OFFHANDM.PIC...
+Processing OFFDUDE4.PIC...
+Processing OFFDUDE3.PIC...
+Processing OFFDUDE2.PIC...
+Processing OFFDUDE1.PIC...
+Processing OFFHANDF.PIC...
+lzw_encoded: 0x1
+byte3: 0x1
+header_type: 0x0
+pani_type: 0x2
+Post-Background pos: 0x26
+--- PANI pics ---
+0: 0x779b
+1: 0x7807
+2: 0x783e
+3: 0x7869
+4: 0x7897
+5: 0x78c2
+6: 0x78f4
+7: 0x0
+8: 0x78f8
+9: 0x79fb
+10: 0x7b01
+11: 0x7b4d
+12: 0x7b78
+13: 0x7ba8
+14: 0x0
+15: 0x0
+16: 0x0
+17: 0x0
+18: 0x0
+19: 0x0
+20: 0x7be8
+21: 0x7beb
+22: 0x0
+23: 0x7c16
+24: 0x0
+25: 0x0
+26: 0x0
+27: 0x0
+28: 0x7ccc
+29: 0x0
+30: 0x7d23
+31: 0x7d8f
+32: 0x7dc6
+33: 0x7df1
+34: 0x7e1f
+35: 0x7e4a
+36: 0x0
+37: 0x0
+38: 0x0
+39: 0x0
+40: 0x7e7c
+41: 0x7ec8
+42: 0x7ef3
+43: 0x7f23
+44: 0x0
+45: 0x0
+46: 0x0
+47: 0x0
+48: 0x0
+49: 0x0
+50: 0x7f63
+51: 0x7fcf
+52: 0x8006
+53: 0x8031
+54: 0x805f
+55: 0x808a
+56: 0x0
+57: 0x0
+58: 0x0
+59: 0x0
+60: 0x80bc
+61: 0x8108
+62: 0x8133
+63: 0x8163
+64: 0x0
+65: 0x0
+66: 0x0
+67: 0x0
+68: 0x0
+69: 0x0
+70: 0x0
+71: 0x0
+72: 0x0
+73: 0x0
+74: 0x0
+75: 0x0
+76: 0x0
+77: 0x0
+78: 0x0
+79: 0x0
+80: 0x0
+81: 0x0
+82: 0x0
+83: 0x0
+84: 0x0
+85: 0x0
+86: 0x0
+87: 0x0
+88: 0x0
+89: 0x0
+90: 0x0
+91: 0x0
+92: 0x0
+93: 0x0
+94: 0x0
+95: 0x0
+96: 0x0
+97: 0x0
+98: 0x0
+99: 0x0
+100: 0x0
+101: 0x0
+102: 0x0
+103: 0x0
+104: 0x0
+105: 0x0
+106: 0x0
+107: 0x0
+108: 0x0
+109: 0x0
+110: 0x0
+111: 0x0
+112: 0x0
+113: 0x0
+114: 0x0
+115: 0x0
+116: 0x0
+117: 0x0
+118: 0x0
+119: 0x0
+120: 0x0
+121: 0x0
+122: 0x0
+123: 0x0
+124: 0x0
+125: 0x0
+126: 0x0
+127: 0x0
+128: 0x0
+129: 0x0
+130: 0x0
+131: 0x0
+132: 0x0
+133: 0x0
+134: 0x0
+135: 0x0
+136: 0x0
+137: 0x0
+138: 0x0
+139: 0x0
+140: 0x0
+141: 0x0
+142: 0x0
+143: 0x0
+144: 0x0
+145: 0x0
+146: 0x0
+147: 0x0
+148: 0x0
+149: 0x0
+150: 0x0
+151: 0x0
+152: 0x0
+153: 0x0
+154: 0x0
+155: 0x0
+156: 0x0
+157: 0x0
+158: 0x0
+159: 0x0
+160: 0x0
+161: 0x0
+162: 0x0
+163: 0x0
+164: 0x0
+165: 0x0
+166: 0x0
+167: 0x0
+168: 0x0
+169: 0x0
+170: 0x0
+171: 0x0
+172: 0x0
+173: 0x0
+174: 0x0
+175: 0x0
+176: 0x0
+177: 0x0
+178: 0x0
+179: 0x0
+180: 0x0
+181: 0x0
+182: 0x0
+183: 0x0
+184: 0x0
+185: 0x0
+186: 0x0
+187: 0x0
+188: 0x0
+189: 0x0
+190: 0x0
+191: 0x0
+192: 0x0
+193: 0x0
+194: 0x0
+195: 0x0
+196: 0x0
+197: 0x0
+198: 0x0
+199: 0x0
+200: 0x0
+201: 0x0
+202: 0x0
+203: 0x0
+204: 0x0
+205: 0x0
+206: 0x0
+207: 0x0
+208: 0x0
+209: 0x0
+210: 0x0
+211: 0x0
+212: 0x0
+213: 0x0
+214: 0x0
+215: 0x0
+216: 0x0
+217: 0x0
+218: 0x0
+219: 0x0
+220: 0x0
+221: 0x0
+222: 0x0
+223: 0x0
+224: 0x0
+225: 0x0
+226: 0x0
+227: 0x0
+228: 0x0
+229: 0x0
+230: 0x0
+231: 0x0
+232: 0x0
+233: 0x0
+234: 0x0
+235: 0x0
+236: 0x0
+237: 0x0
+238: 0x0
+239: 0x0
+240: 0x0
+241: 0x0
+242: 0x0
+243: 0x0
+244: 0x0
+245: 0x0
+246: 0x0
+247: 0x0
+248: 0x0
+249: 0x0
+37 pictures expected
+pos: 0x21a
+Load pic. Idx: 0. Pos: 0x21a.
+pos: 0x30f
+junking odd position
+Load pic. Idx: 1. Pos: 0x310.
+pos: 0x3c7
+junking odd position
+Load pic. Idx: 2. Pos: 0x3c8.
+pos: 0x47c
+Load pic. Idx: 3. Pos: 0x47c.
+pos: 0x521
+junking odd position
+Load pic. Idx: 4. Pos: 0x522.
+pos: 0x5a7
+junking odd position
+Load pic. Idx: 5. Pos: 0x5a8.
+pos: 0x63e
+Load pic. Idx: 6. Pos: 0x63e.
+pos: 0x653
+junking odd position
+Load pic. Idx: 8. Pos: 0x654.
+pos: 0x8a6
+Load pic. Idx: 9. Pos: 0x8a6.
+pos: 0xac2
+Load pic. Idx: 10. Pos: 0xac2.
+pos: 0xbca
+Load pic. Idx: 11. Pos: 0xbca.
+pos: 0xc76
+Load pic. Idx: 12. Pos: 0xc76.
+pos: 0xcf0
+Load pic. Idx: 13. Pos: 0xcf0.
+pos: 0xd98
+Load pic. Idx: 20. Pos: 0xd98.
+pos: 0xda3
+junking odd position
+Load pic. Idx: 21. Pos: 0xda4.
+pos: 0xe83
+junking odd position
+Load pic. Idx: 23. Pos: 0xe84.
+pos: 0xe98
+Load pic. Idx: 28. Pos: 0xe98.
+pos: 0x10b9
+junking odd position
+Load pic. Idx: 30. Pos: 0x10ba.
+pos: 0x11af
+junking odd position
+Load pic. Idx: 31. Pos: 0x11b0.
+pos: 0x1264
+Load pic. Idx: 32. Pos: 0x1264.
+pos: 0x1315
+junking odd position
+Load pic. Idx: 33. Pos: 0x1316.
+pos: 0x13b9
+junking odd position
+Load pic. Idx: 34. Pos: 0x13ba.
+pos: 0x143e
+Load pic. Idx: 35. Pos: 0x143e.
+pos: 0x14d4
+Load pic. Idx: 40. Pos: 0x14d4.
+pos: 0x15d6
+Load pic. Idx: 41. Pos: 0x15d6.
+pos: 0x1681
+junking odd position
+Load pic. Idx: 42. Pos: 0x1682.
+pos: 0x16fa
+Load pic. Idx: 43. Pos: 0x16fa.
+pos: 0x17a2
+Load pic. Idx: 50. Pos: 0x17a2.
+pos: 0x1897
+junking odd position
+Load pic. Idx: 51. Pos: 0x1898.
+pos: 0x194e
+Load pic. Idx: 52. Pos: 0x194e.
+pos: 0x1a02
+Load pic. Idx: 53. Pos: 0x1a02.
+pos: 0x1aa4
+Load pic. Idx: 54. Pos: 0x1aa4.
+pos: 0x1b29
+junking odd position
+Load pic. Idx: 55. Pos: 0x1b2a.
+pos: 0x1bc0
+Load pic. Idx: 60. Pos: 0x1bc0.
+pos: 0x1cc6
+Load pic. Idx: 61. Pos: 0x1cc6.
+pos: 0x1d72
+Load pic. Idx: 62. Pos: 0x1d72.
+pos: 0x1dec
+Load pic. Idx: 63. Pos: 0x1dec.
+0x1e94: 126 16-byte entries
+Buffer length is 2016
+lzw_encoded: 0x1
+byte3: 0x1
+header_type: 0x0
+pani_type: 0x0
+Post-Background pos: 0x24
+--- PANI pics ---
+0: 0x0
+1: 0x0
+2: 0x0
+3: 0x0
+4: 0x0
+5: 0x0
+6: 0x0
+7: 0x0
+8: 0x0
+9: 0x0
+10: 0x0
+11: 0x0
+12: 0x0
+13: 0x0
+14: 0x0
+15: 0x0
+16: 0x0
+17: 0x0
+18: 0x0
+19: 0x0
+20: 0x0
+21: 0x0
+22: 0x0
+23: 0x0
+24: 0x0
+25: 0x52d2
+26: 0x52de
+27: 0x0
+28: 0x0
+29: 0x0
+30: 0x0
+31: 0x0
+32: 0x0
+33: 0x0
+34: 0x0
+35: 0x0
+36: 0x0
+37: 0x0
+38: 0x0
+39: 0x0
+40: 0x0
+41: 0x0
+42: 0x0
+43: 0x0
+44: 0x0
+45: 0x0
+46: 0x0
+47: 0x0
+48: 0x0
+49: 0x0
+50: 0x0
+51: 0x0
+52: 0x0
+53: 0x0
+54: 0x0
+55: 0x0
+56: 0x0
+57: 0x0
+58: 0x0
+59: 0x0
+60: 0x0
+61: 0x0
+62: 0x0
+63: 0x0
+64: 0x0
+65: 0x0
+66: 0x0
+67: 0x0
+68: 0x0
+69: 0x0
+70: 0x52ea
+71: 0x54dc
+72: 0x56b1
+73: 0x58f4
+74: 0x5b07
+75: 0x5d2f
+76: 0x615d
+77: 0x0
+78: 0x0
+79: 0x0
+80: 0x0
+81: 0x0
+82: 0x0
+83: 0x0
+84: 0x0
+85: 0x0
+86: 0x0
+87: 0x0
+88: 0x0
+89: 0x0
+90: 0x0
+91: 0x0
+92: 0x0
+93: 0x0
+94: 0x0
+95: 0x0
+96: 0x0
+97: 0x0
+98: 0x0
+99: 0x0
+100: 0x0
+101: 0x0
+102: 0x0
+103: 0x0
+104: 0x0
+105: 0x0
+106: 0x0
+107: 0x0
+108: 0x0
+109: 0x0
+110: 0x0
+111: 0x0
+112: 0x0
+113: 0x0
+114: 0x0
+115: 0x0
+116: 0x0
+117: 0x0
+118: 0x0
+119: 0x0
+120: 0x0
+121: 0x0
+122: 0x0
+123: 0x0
+124: 0x0
+125: 0x0
+126: 0x0
+127: 0x0
+128: 0x0
+129: 0x0
+130: 0x0
+131: 0x0
+132: 0x0
+133: 0x0
+134: 0x0
+135: 0x0
+136: 0x0
+137: 0x0
+138: 0x0
+139: 0x0
+140: 0x0
+141: 0x0
+142: 0x0
+143: 0x0
+144: 0x0
+145: 0x0
+146: 0x0
+147: 0x0
+148: 0x0
+149: 0x0
+150: 0x0
+151: 0x0
+152: 0x0
+153: 0x0
+154: 0x0
+155: 0x0
+156: 0x0
+157: 0x0
+158: 0x0
+159: 0x0
+160: 0x0
+161: 0x0
+162: 0x0
+163: 0x0
+164: 0x0
+165: 0x0
+166: 0x0
+167: 0x0
+168: 0x0
+169: 0x0
+170: 0x0
+171: 0x0
+172: 0x0
+173: 0x0
+174: 0x0
+175: 0x0
+176: 0x0
+177: 0x0
+178: 0x0
+179: 0x0
+180: 0x0
+181: 0x0
+182: 0x0
+183: 0x0
+184: 0x0
+185: 0x0
+186: 0x0
+187: 0x0
+188: 0x0
+189: 0x0
+190: 0x0
+191: 0x0
+192: 0x0
+193: 0x0
+194: 0x0
+195: 0x0
+196: 0x0
+197: 0x0
+198: 0x0
+199: 0x0
+200: 0x0
+201: 0x0
+202: 0x0
+203: 0x0
+204: 0x0
+205: 0x0
+206: 0x0
+207: 0x0
+208: 0x0
+209: 0x0
+210: 0x0
+211: 0x0
+212: 0x0
+213: 0x0
+214: 0x0
+215: 0x0
+216: 0x0
+217: 0x0
+218: 0x0
+219: 0x0
+220: 0x0
+221: 0x0
+222: 0x0
+223: 0x0
+224: 0x0
+225: 0x0
+226: 0x0
+227: 0x0
+228: 0x0
+229: 0x0
+230: 0x0
+231: 0x0
+232: 0x0
+233: 0x0
+234: 0x0
+235: 0x0
+236: 0x0
+237: 0x0
+238: 0x0
+239: 0x0
+240: 0x0
+241: 0x0
+242: 0x0
+243: 0x0
+244: 0x0
+245: 0x0
+246: 0x0
+247: 0x0
+248: 0x0
+249: 0x0
+9 pictures expected
+pos: 0x218
+Load pic. Idx: 25. Pos: 0x218.
+pos: 0x223
+junking odd position
+Load pic. Idx: 26. Pos: 0x224.
+pos: 0x22f
+junking odd position
+Load pic. Idx: 70. Pos: 0x230.
+pos: 0xa1b
+junking odd position
+Load pic. Idx: 71. Pos: 0xa1c.
+pos: 0x114e
+Load pic. Idx: 72. Pos: 0x114e.
+pos: 0x1b01
+junking odd position
+Load pic. Idx: 73. Pos: 0x1b02.
+pos: 0x23bd
+junking odd position
+Load pic. Idx: 74. Pos: 0x23be.
+pos: 0x2dd7
+junking odd position
+Load pic. Idx: 75. Pos: 0x2dd8.
+pos: 0x3625
+junking odd position
+Load pic. Idx: 76. Pos: 0x3626.
+0x4000: 36 16-byte entries
+Buffer length is 576
+ done.
+{ Loc.city = "Amsterdam"; country = "Holland"; connect = (8, 96);
+  lawless = 8; known_buildings = 0; some_buildings = 0; loc = (57, 90) }
+{ Loc.city = "Washington"; country = "D.C."; connect = (3, 32); lawless = 4;
+  known_buildings = 0; some_buildings = 0; loc = (2, 106) }
+{ Loc.city = "Athens"; country = "Greece"; connect = (6, 96); lawless = 8;
+  known_buildings = 0; some_buildings = 0; loc = (122, 147) }
+{ Loc.city = "Belgrade"; country = "Yugoslavia"; connect = (2, 160);
+  lawless = 5; known_buildings = 0; some_buildings = 0; loc = (114, 122) }
+{ Loc.city = "Berlin"; country = "Germany"; connect = (6, 64); lawless = 6;
+  known_buildings = 0; some_buildings = 0; loc = (82, 84) }
+{ Loc.city = "Budapest"; country = "Hungary"; connect = (8, 176);
+  lawless = 4; known_buildings = 0; some_buildings = 0; loc = (105, 100) }
+{ Loc.city = "Geneva"; country = "Switzerland"; connect = (3, 128);
+  lawless = 6; known_buildings = 0; some_buildings = 0; loc = (67, 114) }
+{ Loc.city = "Helsinki"; country = "Finland"; connect = (3, 144);
+  lawless = 3; known_buildings = 0; some_buildings = 0; loc = (120, 55) }
+{ Loc.city = "London"; country = "England"; connect = (1, 48); lawless = 3;
+  known_buildings = 0; some_buildings = 0; loc = (44, 89) }
+{ Loc.city = "Madrid"; country = "Spain"; connect = (4, 64); lawless = 3;
+  known_buildings = 0; some_buildings = 0; loc = (25, 134) }
+{ Loc.city = "Moscow"; country = "USSR"; connect = (4, 224); lawless = 2;
+  known_buildings = 0; some_buildings = 0; loc = (146, 76) }
+{ Loc.city = "Paris"; country = "France"; connect = (5, 80); lawless = 6;
+  known_buildings = 0; some_buildings = 0; loc = (49, 99) }
+{ Loc.city = "Prague"; country = "Czech."; connect = (3, 208); lawless = 5;
+  known_buildings = 0; some_buildings = 0; loc = (93, 94) }
+{ Loc.city = "Rome"; country = "Italy"; connect = (5, 96); lawless = 6;
+  known_buildings = 0; some_buildings = 0; loc = (85, 128) }
+{ Loc.city = "Tel Aviv"; country = "Israel"; connect = (2, 96); lawless = 2;
+  known_buildings = 0; some_buildings = 0; loc = (165, 162) }
+{ Loc.city = "Vienna"; country = "Austria"; connect = (6, 112); lawless = 3;
+  known_buildings = 0; some_buildings = 0; loc = (91, 108) }
+{ Org.global_id = None; short_name = "cops"; name = "Local Contact";
+  connect = (8, 128); strength = 15; hq_build_cost = 1; bits = 65535;
+  agent_name_offset = 8 }
+{ Org.global_id = None; short_name = "CIA"; name = "CIA"; connect = (3, 32);
+  strength = 10; hq_build_cost = 3; bits = 65535; agent_name_offset = 8 }
+{ Org.global_id = None; short_name = "MI6"; name = "MI6"; connect = (1, 48);
+  strength = 8; hq_build_cost = 4; bits = 65535; agent_name_offset = 8 }
+{ Org.global_id = None; short_name = "Mossd"; name = "Mossad";
+  connect = (2, 96); strength = 6; hq_build_cost = 8; bits = 65535;
+  agent_name_offset = 10 }
+{ Org.global_id = None; short_name = "KGB"; name = "KGB"; connect = (5, 224);
+  strength = 14; hq_build_cost = 8; bits = 65535; agent_name_offset = 0 }
+{ Org.global_id = (Some 0); short_name = "PFO"; name = "PFO";
+  connect = (9, 128); strength = 6; hq_build_cost = 8; bits = 2048;
+  agent_name_offset = 16 }
+{ Org.global_id = (Some 19); short_name = "RArmy"; name = "Red Army";
+  connect = (15, 160); strength = 2; hq_build_cost = 14; bits = 1043;
+  agent_name_offset = 14 }
+{ Org.global_id = (Some 17); short_name = "Union"; name = "UnionCorsique";
+  connect = (12, 64); strength = 4; hq_build_cost = 10; bits = 529;
+  agent_name_offset = 8 }
+{ Org.global_id = (Some 22); short_name = "Stasi"; name = "Stassi";
+  connect = (10, 192); strength = 6; hq_build_cost = 8; bits = 278;
+  agent_name_offset = 8 }
+{ Org.global_id = (Some 5); short_name = "IrqSP"; name = "Iraqi SP";
+  connect = (8, 224); strength = 8; hq_build_cost = 8; bits = 261;
+  agent_name_offset = 16 }
+{ Org.global_id = (Some 18); short_name = "PIFA"; name = "PIFA";
+  connect = (10, 64); strength = 4; hq_build_cost = 8; bits = 1042;
+  agent_name_offset = 6 }
+{ Org.global_id = (Some 20); short_name = "RedBt"; name = "Red Battalion";
+  connect = (14, 112); strength = 3; hq_build_cost = 12; bits = 1044;
+  agent_name_offset = 8 }
+{ Org.global_id = (Some 10); short_name = "Mafia"; name = "Mafia";
+  connect = (10, 0); strength = 6; hq_build_cost = 8; bits = 522;
+  agent_name_offset = 7 }
+{ Org.global_id = (Some 11); short_name = "LibEb"; name = "Libyan Emb.";
+  connect = (10, 192); strength = 5; hq_build_cost = 8; bits = 523;
+  agent_name_offset = 14 }
+{ Org.global_id = (Some 21); short_name = "DActn"; name = "Direct Action";
+  connect = (12, 96); strength = 3; hq_build_cost = 10; bits = 1045;
+  agent_name_offset = 10 }
+{ Org.global_id = (Some 24); short_name = "Mrxst"; name = "Marxists";
+  connect = (7, 192); strength = 10; hq_build_cost = 6; bits = 2072;
+  agent_name_offset = 4 }

@@ -257,3 +257,5 @@ let create ~name_offset id_code org loc =
     anxiety=0;
   }
 
+module Id = Engine.Int_id.Make()
+
