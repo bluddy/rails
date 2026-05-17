@@ -224,7 +224,23 @@ let load_from_file crime_type_num =
   in
   let events =
     Iter.fold (fun acc _ ->
-      acc
+      let role = Gen.get_bytei s |> Role.Id.of_int in
+      let _junk = Gen.get_bytei s in
+      let tick_or_status = Gen.get_wordi s in
+      let num_id = Gen.get_wordi s in
+      let text = Gen.take 32 s |> Gen.to_stringi |> String.remove_nulls in
+      let bits = Gen.get_wordi s in
+      let item_bits = Gen.get_wordi s in
+      let efficiency = Gen.get_wordi s in
+      Event.{
+        role;
+        tick_or_status;
+        num_id;
+        text;
+        bits;
+        item_bits;
+        efficiency;
+      }::acc
     )
     []
     Iter.(0 -- (num_events - 1)) |> List.rev
