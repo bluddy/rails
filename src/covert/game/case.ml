@@ -112,5 +112,7 @@ let failed_other_steps (v:t) =
 let create_data (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in
   let roles, events = Crime.load_from_file typ in
+  let roles = Role.Map.of_ordered_list roles in
+  let events = Role.Map.of_ordered_list events in
   ()
 
