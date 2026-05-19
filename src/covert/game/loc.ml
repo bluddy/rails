@@ -10,6 +10,7 @@ type t = {
   known_buildings: int;
   some_buildings: int;
   loc: int * int;
+  activity: int;
 } [@@deriving show, yojson]
 
 module Id = Engine.Int_id.Make()

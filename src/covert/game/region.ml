@@ -36,7 +36,9 @@ let load_from_file region =
         lawless;
         known_buildings;
         some_buildings;
-        loc=(x,y)}
+        loc=(x,y);
+        activity=0;
+      }
       in
       print_endline @@ Loc.show loc;
       loc::acc
@@ -67,6 +69,7 @@ let load_from_file region =
         bits;
         agent_name_offset;
         global_id;
+        activity=0;
       }
       in
       print_endline @@ Org.show org;

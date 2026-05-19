@@ -15,6 +15,7 @@ type t = {
   hq_build_cost: int;
   bits: int;
   agent_name_offset: int; (* offset into the name list *)
+  activity: int;
 } [@@deriving show, ord, yojson]
 
 let random ?(start=0) r = Random.int_range start (C.num_orgs - 1) r |> Id.of_int
