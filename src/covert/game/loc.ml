@@ -31,3 +31,9 @@ end
 
 type map = t Map.t [@@deriving yojson]
 
+module Set = Utils.Set.Make(struct
+  type t = Id.t [@@deriving yojson]
+  let compare = Id.compare
+end)
+
+

@@ -16,6 +16,7 @@ type t = {
   locs: Loc.map;
   orgs: Org.map;
   enemy_anxiety: int;
+  double_agents: Loc.Set.t;
 } [@@deriving yojson]
 
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
@@ -64,6 +65,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
     step=Crime.Step.none;
     region;
     mm;
+    double_agents=Loc.Set.empty;
 
     cur_loc=Loc.washington;
     cur_org=Org.cia;
