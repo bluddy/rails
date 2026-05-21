@@ -126,5 +126,26 @@ let create_data (s:Services.t) world (v:t) =
     |> Loc.Set.remove Loc.washington
   in
   let agents = Agent.Map.empty in
+  let connection_to_cia org = Org.get_connection v.orgs org Org.cia in
+  let ally_org =
+    let rec loop n =
+      let org = Org.random ~start:2 s.random in
+      if connection_to_cia org > 10 && n < 999 then loop (n + 1)
+      else org
+    in
+    loop 0
+  in
+  let enemy_org =
+    let rec loop n =
+      let org = Org.random ~start:2 s.random in
+      if connection_to_cia org < 8 && n < 999 then loop (n + 1) else
+      if Org.get_connection v.orgs org v.mm.org > 8 then loop (n + 1) else
+      let org_d = Org.Map.find org v.orgs in
+      if fst org_d.connect <= 4 then loop (n + 1) else
+      org
+    in
+    loop 0
+  in
+
   ()
 
