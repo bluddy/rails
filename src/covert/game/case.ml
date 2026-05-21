@@ -111,10 +111,20 @@ let failed_other_steps (v:t) =
   let remove_cur = Crime.Step.Set.remove v.step remove_failed in
   Crime.Step.Set.is_empty remove_cur
 
-let create_data (v:t) =
+let create_data (s:Services.t) world (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in
   let roles, events = Crime.load_from_file typ in
   let roles = Role.Map.of_ordered_list roles in
   let events = Role.Map.of_ordered_list events in
+  let diff_num = Difficulty.to_enum world.World.difficulty in
+  let double_agents =
+    Iter.fold (fun acc i ->
+      let loc = Loc.random s.random in
+      Loc.Set.add loc acc)
+    Loc.Set.empty
+    Iter.(0 -- (diff_num-1))
+    |> Loc.Set.remove Loc.washington
+  in
+  let agents = Agent.Map.empty in
   ()
 
