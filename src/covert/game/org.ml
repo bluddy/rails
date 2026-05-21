@@ -18,7 +18,8 @@ type t = {
   activity: int;
 } [@@deriving show, ord, yojson]
 
-let random ?(start=0) r = Random.int_range start (C.num_orgs - 1) r |> Id.of_int
+(* skip cops=0 by default *)
+let random ?(start=1) r = Random.int_range start (C.num_orgs - 1) r |> Id.of_int
 
 let cia = Id.of_int 1
 
@@ -53,4 +54,9 @@ let get_connection orgs org1 org2 =
   let org1_d = Map.find org1 orgs in
   let org2_d = Map.find org2 orgs in
   Utils.classic_dist org1_d.connect org2_d.connect
+
+let loc_connection orgs locs org loc =
+  let org_d = Map.find org orgs in
+  let loc_d = Loc.Map.find loc locs in
+  Utils.classic_dist org_d.connect loc_d.Loc.connect
 
