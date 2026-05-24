@@ -5,7 +5,7 @@ type t =
   | National_threat
   | Regional_conflict
   | Global_crisis
-  [@@deriving enum]
+  [@@deriving enum, yojson]
 
 let show = function
   | Local_disturbance -> "Local Disturbance"

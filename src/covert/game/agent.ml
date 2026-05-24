@@ -259,11 +259,11 @@ let create ~name_offset id_code org loc =
 
 module Id = Engine.Int_id.Make()
 
-module Map = Map.Make(struct
+module Map = Utils.Map.Make(struct
   type t = Id.t [@@deriving yojson]
   let compare = Id.compare
 end)
 
-type map = t Map.t
+type map = t Map.t [@@deriving yojson]
 
 

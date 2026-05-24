@@ -8,6 +8,8 @@ module type S = sig
     [@@deriving yojson, show, eq, ord]
   val to_int: t -> int
   val of_int: int -> t
+  val (=) : t -> t -> bool
+  val (<>) : t -> t -> bool
 end
 
 module Make() : S = struct
@@ -15,5 +17,7 @@ module Make() : S = struct
     [@@ deriving yojson, show, eq, ord]
   let to_int x : int = x
   let of_int x : t = x
+  let (=) = equal
+  let (<>) x y = not @@ equal x y
 end
 

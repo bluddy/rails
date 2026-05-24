@@ -9,6 +9,7 @@ type t = {
   step: Crime.Step.t;
   region: Region.t;
   mm: Agent.t;
+  world: World.t;
 
   (* dynamic in the case *)
   cur_loc: Loc.Id.t;
@@ -17,7 +18,34 @@ type t = {
   orgs: Org.map;
   enemy_anxiety: int;
   double_agents: Loc.Set.t;
+  roles: Role.map;
+  agents: Agent.map;
 } [@@deriving yojson]
+
+let agent_of_role v role_id =
+  let role = Role.Map.find role_id v.roles in
+  let agent_id = role.agent in
+  let agent = Agent.Map.find agent_id v.agents in
+  agent
+
+let calc_hq_type v org_id loc_id =
+  let dist = Org.loc_connection v.orgs v.locs org_id loc_id in
+  let loc = Loc.Map.find loc_id v.locs in
+  let org = Org.Map.find org_id v.orgs in
+  let hq_type = loc.lawless + 4 * org.strength / (dist + 1) in
+  let hq_type = if hq_type > 0 then (6 * hq_type) / org.hq_build_cost + 1 else hq_type in
+  let hq_type = Hq.of_enum hq_type in
+  let hq_type =
+    if Loc.Id.equal loc_id v.mm.loc && Org.Id.equal org_id v.mm.org then Some Hq.Hideout
+    else hq_type
+  in
+  let hq_type = match hq_type, v.world.difficulty with
+  | None, Difficulty.Local_disturbance when
+      Loc.Id.(loc_id = Loc.washington) &&
+      Org.Id.((agent_of_role v Role.first).org = org_id) -> Some Hq.Hideout
+  | x, _ -> x
+  in
+  hq_type
 
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   let crime_choice =
@@ -66,12 +94,15 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
     region;
     mm;
     double_agents=Loc.Set.empty;
+    world=w;
 
     cur_loc=Loc.washington;
     cur_org=Org.cia;
     locs;
     orgs;
     enemy_anxiety=0;
+    roles=Role.Map.empty;
+    agents=Agent.Map.empty;
   }
 
 let choose_next_step_ (srv:Services.t) (v:t) =

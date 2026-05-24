@@ -1,3 +1,4 @@
+open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
 module C = Constants
@@ -8,7 +9,7 @@ type t = {
   gender: Gender.t;
   codename: string;
   difficulty: Difficulty.t;
-}
+} [@@deriving yojson]
 
 (* First time *)
 let default (info: Start_menu.info) = {

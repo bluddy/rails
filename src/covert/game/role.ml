@@ -23,5 +23,7 @@ module Map = struct
   let of_ordered_list l = List.mapi (fun i x -> Id.of_int i, x) l |> of_list
 end
 
-type map = t Map.t
+type map = t Map.t [@@deriving yojson]
+
+let first = Id.of_int 1
 

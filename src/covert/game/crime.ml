@@ -171,7 +171,7 @@ module Step = struct
   let is_last crime step =
     let crime = crimes.(G_Id.to_int crime) in
     let len = Array.length crime.step_types in
-    Id.to_int step = len - 1
+    Int.(Id.to_int step = len - 1)
 
   let is_valid crime step =
     let crime, step_num = crimes.(G_Id.to_int crime), Id.to_int step in
