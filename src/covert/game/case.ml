@@ -205,5 +205,6 @@ let create_data (s:Services.t) world (v:t) =
     (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
     (calc_hq_type v ally_org loc |> Option.is_none)
   in
+  let orgs = Org.Map.map (Org.randomize_connection s.random) v.orgs in
   ()
 

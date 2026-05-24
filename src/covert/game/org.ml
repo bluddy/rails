@@ -60,3 +60,11 @@ let loc_connection orgs locs org loc =
   let loc_d = Loc.Map.find loc locs in
   Utils.classic_dist org_d.connect loc_d.Loc.connect
 
+let randomize_connection r org =
+  let x, y = org.connect in
+  let dx = Random.int_range (-2) 2 r in
+  let dy = Random.int_range (-2) 2 r in
+  let x, y = x + dx, y + dy in
+  {org with connect=(x, y)}
+
+
