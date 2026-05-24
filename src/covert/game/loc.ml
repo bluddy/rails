@@ -36,4 +36,8 @@ module Set = Utils.Set.Make(struct
   let compare = Id.compare
 end)
 
+let connection locs loc1 loc2 =
+  let loc1_d = Map.find loc1 locs in
+  let loc2_d = Map.find loc2 locs in
+  Utils.classic_dist loc1_d.connect loc2_d.connect
 

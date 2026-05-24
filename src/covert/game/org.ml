@@ -50,7 +50,7 @@ let get_name_offset v = v.agent_name_offset
 let get_global_id v = v.global_id
 let get_bits v = v.bits
 
-let get_connection orgs org1 org2 =
+let connection orgs org1 org2 =
   let org1_d = Map.find org1 orgs in
   let org2_d = Map.find org2 orgs in
   Utils.classic_dist org1_d.connect org2_d.connect
