@@ -158,74 +158,52 @@ let create_data (s:Services.t) world (v:t) =
   in
   let agents = Agent.Map.empty in
   let connection_to_cia org = Org.connection v.orgs org Org.cia in
-  let ally_org =
+
+  let gen_org ?start test =
     let rec loop n =
-      let org = Org.random ~start:2 s.random in
+      let org = Org.random ?start s.random in
       if n >= 999 then org else
-      if connection_to_cia org > 10 then loop (n + 1)
+      if test org then loop (n+1)
       else org
     in
     loop 0
+  in
+  let gen_loc test =
+    let rec loop n =
+      let loc = Loc.random s.random in
+      if n >= 999 then loc else
+      if test loc then loop (n+1)
+      else loc
+    in
+    loop 0
+  in
+  let ally_org =
+    gen_org ~start:2 @@ fun org -> connection_to_cia org > 10
   in
   let enemy_org =
-    let rec loop n =
-      let org = Org.random s.random in
-      if n >= 999 then org else
-      if (connection_to_cia org < 8) ||
-         (Org.connection v.orgs org v.mm.org > 8) ||
-         (let org_d = Org.Map.find org v.orgs in
-          fst org_d.connect <= 4)
-      then loop (n + 1)
-      else org
-    in
-    loop 0
+    gen_org @@ fun org ->
+      (connection_to_cia org < 8) ||
+      (Org.connection v.orgs org v.mm.org > 8) ||
+      (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
   in
   let enemy_org2 =
-    let rec loop n =
-      let org = Org.random s.random in
-      if n >= 999 then org else
-      if (Org.connection v.orgs org enemy_org > 8) ||
-         (let org_d = Org.Map.find org v.orgs in
-          fst org_d.connect <= 4)
-      then loop (n + 1)
-      else org
-    in
-    loop 0
+    gen_org @@ fun org ->
+      (Org.connection v.orgs org enemy_org > 8) ||
+      (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
   in
-  let enemy_loc =
-    let rec loop n =
-      let loc = Loc.random s.random in
-      if n >= 999 then loc else
-      if (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
-         (calc_hq_type v enemy_org loc |> Option.is_none) ||
-         (Loc.Id.(loc = v.mm.loc))
-      then loop (n+1)
-      else loc
-    in
-    loop 0
+  let enemy_loc = gen_loc @@ fun loc ->
+    (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
+    (calc_hq_type v enemy_org loc |> Option.is_none) ||
+    (Loc.Id.(loc = v.mm.loc))
   in
-  let enemy_loc2 =
-    let rec loop n =
-      let loc = Loc.random s.random in
-      if n >= 999 then loc else
-      if (Loc.connection v.locs enemy_loc loc > 12) ||
-         (calc_hq_type v enemy_org2 loc |> Option.is_none) ||
-         (Loc.Id.(loc = v.mm.loc))
-      then loop (n+1)
-      else loc
-    in
-    loop 0
+  let enemy_loc2 = gen_loc @@ fun loc ->
+    (Loc.connection v.locs enemy_loc loc > 12) ||
+    (calc_hq_type v enemy_org2 loc |> Option.is_none) ||
+    (Loc.Id.(loc = v.mm.loc))
   in
-  let ally_loc =
-    let rec loop n =
-      let loc = Loc.random s.random in
-      if n >= 999 then loc else
-      if (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
-         (calc_hq_type v ally_org loc |> Option.is_none)
-      then loop (n+1)
-      else loc
-    in
-    loop 0
+  let ally_loc = gen_loc @@ fun loc ->
+    (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
+    (calc_hq_type v ally_org loc |> Option.is_none)
   in
   ()
 
