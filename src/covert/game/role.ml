@@ -1,16 +1,22 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
+type ctr = {
+  tick: int;
+  discovery_val: int;
+} [@@deriving yojson, show]
+
 type t = {
   agent: Agent.Id.t;
   discover_val: int;
   name: string;
   clue_seed: int;
-  role_bits: int;
+  bits: int;
   known: Known_data.Set.t; [@opaque]
   clue_rand: int;
   rank: Rank.t;
   some_num: int;
+  ctr: ctr;
 } [@@deriving yojson, show]
 
 module Id = Engine.Int_id.Make()
@@ -26,4 +32,18 @@ end
 type map = t Map.t [@@deriving yojson]
 
 let first = Id.of_int 1
+
+let loc_bit v =
+  let bits = v.bits in
+  if bits land 0x10 > 0 then `Loc_enemy2 else
+  if bits land 0x20 > 0 then `Loc_enemy else
+  if bits land 0x2 > 0 then `Loc_ally else
+  `Loc_any
+
+let org_bit v = 
+  let bits = v.bits in
+  if bits land 0x40 > 0 then `Org_enemy2 else
+  if bits land 0x80 > 0 then `Org_enemy else
+  if bits land 0x1 > 0 then `Org_ally else
+  `Org_any
 

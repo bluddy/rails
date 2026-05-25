@@ -142,6 +142,24 @@ let failed_other_steps (v:t) =
   let remove_cur = Crime.Step.Set.remove v.step remove_failed in
   Crime.Step.Set.is_empty remove_cur
 
+  (* Used only for creation *)
+type chosen = {
+  enemy_org1: Org.Id.t;
+  enemy_org2: Org.Id.t;
+  ally_org: Org.Id.t;
+  enemy_loc1: Loc.Id.t;
+  enemy_loc2: Loc.Id.t;
+  ally_loc: Loc.Id.t;
+}
+
+  (* Given a role, fill it in *)
+let generate (s:Services.t) role chosen (v:t) =
+  let clue_seed = Random.int 32767 s.random in
+  let tick = -1 in
+  let discovery_val = 0 in
+  let org = match Role.org_bit role with
+    `Org_enemy2 -> v.
+
 let create_data (s:Services.t) world (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in
   let roles, events = Crime.load_from_file typ in
