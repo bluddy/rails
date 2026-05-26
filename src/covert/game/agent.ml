@@ -266,4 +266,13 @@ end)
 
 type map = t Map.t [@@deriving yojson]
 
+let agent_get_or_gen org_id loc_id agents =
+  let agent = Map.find_pred (fun _ agent ->
+    Org.(agent.org = org_id) && Loc.(agent.loc = loc_id))
+    agents
+  in
+  match agent with
+  | Some agent -> agent
+  | None -> ()
+
 

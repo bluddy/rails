@@ -170,6 +170,15 @@ module Map = struct
           acc)
       empty
       iter
+
+    let find_pred p v =
+      let exception Found of key in
+      try
+        iter (fun k value -> if p k value then raise (Found k)) v;
+        None
+      with
+      | Found x -> Some x
+
   end
 end
 
