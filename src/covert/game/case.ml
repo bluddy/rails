@@ -28,7 +28,7 @@ let agent_of_role v role_id =
   let agent = Agent.Map.find agent_id v.agents in
   agent
 
-let calc_hq_type v org_id loc_id =
+let hq_type v org_id loc_id =
   let dist = Org.loc_connection v.orgs v.locs org_id loc_id in
   let loc = Loc.Map.find loc_id v.locs in
   let org = Org.Map.find org_id v.orgs in
@@ -155,21 +155,47 @@ type chosen_ = {
   (* Given a role, fill it in *)
 let generate (s:Services.t) role chosen (v:t) =
   let clue_seed = Random.int 32767 s.random in
-  let tick = -1 in
-  let discovery_val = 0 in
-  let org = match Role.org_bit role with
-    | `Org_enemy2 -> chosen.enemy_org2
-    | `Org_enemy -> chosen.enemy_org1
-    | `Org_ally -> chosen.ally_org
-    | `Org_any ->
-        Utils.try_do
-          ~init:(fun () -> Org.random s.random) @@
-          fun org_id ->
-            Org.connection v.orgs org_id chosen.enemy_org1 > 12 ||
-           (Org.Map.find org_id v.orgs).connect |> fst <= 4 ||
-           Org.Id.(org_id = Org.cia)
+  let rec loop n =
+    let not_expired = n <= 999 in
+    let gen_random_loc org_id =
+      Utils.try_do
+        ~init:(fun () -> Loc.random s.random) @@
+        fun loc_id ->
+          Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 ||
+          hq_type v org_id loc_id |> Option.is_none
+    in
+    let org_id = match Role.org_bit role with
+      | `Org_enemy2 -> chosen.enemy_org2
+      | `Org_enemy -> chosen.enemy_org1
+      | `Org_ally -> chosen.ally_org
+      | `Org_any ->
+          let org_id = Org.random s.random in
+          if not_expired && (Org.connection v.orgs org_id chosen.enemy_org1 > 12 ||
+            (Org.Map.find org_id v.orgs).connect |> fst <= 4 ||
+            Org.Id.(org_id = Org.cia))
+          then loop (n+1)
+          else org_id
+    in
+    let loc_id = match Role.loc_bit role with
+      | `Loc_enemy2 -> chosen.enemy_loc2
+      | `Loc_enemy -> chosen.enemy_loc1
+      | `Loc_ally -> chosen.ally_loc
+      | `Loc_any ->
+          let loc_id = Loc.random s.random in
+          if not_expired && (Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 ||
+            hq_type v org_id loc_id |> Option.is_none)
+          then loop (n+1)
+          else loc_id
+    in
+    if not_expired && hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
+    if Role.mastermind_bit role then v.mm.org, v.mm.loc
+    else
+      if not_expired && Loc.(v.mm.loc = loc_id) && Org.(v.mm.org = org_id) then loop (n+1)
+      else
+        org_id, loc_id
   in
   ()
+
 
 let create_data (s:Services.t) world (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in
@@ -209,17 +235,17 @@ let create_data (s:Services.t) world (v:t) =
   in
   let enemy_loc = gen_loc @@ fun loc ->
     (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
-    (calc_hq_type v enemy_org loc |> Option.is_none) ||
+    (hq_type v enemy_org loc |> Option.is_none) ||
     (Loc.Id.(loc = v.mm.loc))
   in
   let enemy_loc2 = gen_loc @@ fun loc ->
     (Loc.connection v.locs enemy_loc loc > 12) ||
-    (calc_hq_type v enemy_org2 loc |> Option.is_none) ||
+    (hq_type v enemy_org2 loc |> Option.is_none) ||
     (Loc.Id.(loc = v.mm.loc))
   in
   let ally_loc = gen_loc @@ fun loc ->
     (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
-    (calc_hq_type v ally_org loc |> Option.is_none)
+    (hq_type v ally_org loc |> Option.is_none)
   in
   let orgs = Org.Map.map (Org.randomize_connection s.random) v.orgs in
   ()

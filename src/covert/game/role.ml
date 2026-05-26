@@ -57,10 +57,11 @@ let loc_bit v =
   if bits land 0x2 > 0 then `Loc_ally else
   `Loc_any
 
-let org_bit v = 
+let org_bit v =
   let bits = v.bits in
   if bits land 0x40 > 0 then `Org_enemy2 else
   if bits land 0x80 > 0 then `Org_enemy else
   if bits land 0x1 > 0 then `Org_ally else
   `Org_any
 
+let mastermind_bit v = v.bits land 0x100
