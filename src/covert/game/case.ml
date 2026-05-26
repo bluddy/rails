@@ -143,7 +143,7 @@ let failed_other_steps (v:t) =
   Crime.Step.Set.is_empty remove_cur
 
   (* Used only for creation *)
-type chosen = {
+type chosen_ = {
   enemy_org1: Org.Id.t;
   enemy_org2: Org.Id.t;
   ally_org: Org.Id.t;
@@ -158,7 +158,18 @@ let generate (s:Services.t) role chosen (v:t) =
   let tick = -1 in
   let discovery_val = 0 in
   let org = match Role.org_bit role with
-    `Org_enemy2 -> v.
+    | `Org_enemy2 -> chosen.enemy_org2
+    | `Org_enemy -> chosen.enemy_org1
+    | `Org_ally -> chosen.ally_org
+    | `Org_any ->
+        Utils.try_do
+          ~init:(fun () -> Org.random s.random) @@
+          fun org_id ->
+            Org.connection v.orgs org_id chosen.enemy_org1 > 12 ||
+           (Org.Map.find org_id v.orgs).connect |> fst <= 4 ||
+           Org.Id.(org_id = Org.cia)
+  in
+  ()
 
 let create_data (s:Services.t) world (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in
@@ -178,22 +189,9 @@ let create_data (s:Services.t) world (v:t) =
   let connection_to_cia org = Org.connection v.orgs org Org.cia in
 
   let gen_org ?start test =
-    let rec loop n =
-      let org = Org.random ?start s.random in
-      if n >= 999 then org else
-      if test org then loop (n+1)
-      else org
-    in
-    loop 0
+    Utils.try_do ~init:(fun () -> Org.random ?start s.random) test
   in
-  let gen_loc test =
-    let rec loop n =
-      let loc = Loc.random s.random in
-      if n >= 999 then loc else
-      if test loc then loop (n+1)
-      else loc
-    in
-    loop 0
+  let gen_loc test = Utils.try_do ~init:(fun () -> Loc.random s.random) test
   in
   let ally_org =
     gen_org ~start:2 @@ fun org -> connection_to_cia org > 10

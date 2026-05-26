@@ -19,6 +19,23 @@ type t = {
   ctr: ctr;
 } [@@deriving yojson, show]
 
+let make agent discover_val name bits clue_rand rank some_num =
+  {
+    agent;
+    discover_val;
+    name;
+    clue_seed=0;
+    bits;
+    known=Known_data.Set.empty;
+    clue_rand;
+    rank;
+    some_num;
+    ctr= {
+      tick= -1;
+      discovery_val=0;
+    };
+}
+
 module Id = Engine.Int_id.Make()
 
 module Map = struct

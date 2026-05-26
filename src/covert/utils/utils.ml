@@ -18,4 +18,11 @@ let add_newlines ~width str =
   in
   Buffer.contents buf
 
-
+let try_do ~init check_fail =
+  let rec loop n =
+    let x = init () in
+    if n >= 999 then x else
+    if check_fail x then loop (n + 1)
+    else x
+  in
+  loop 0
