@@ -45,10 +45,8 @@ let init_mm_code (l1, l2) =
 let mm_codes = List.map init_mm_code init_matrix |> Array.of_list
 
 let agent_of_org org_id loc_id orgs =
-  let org = Org.Map.find org_id orgs in
-  let name_offset = Org.get_name_offset org in
-  let global_id = Org.get_global_id org |> Option.get_exn_or "oops" |> Org.Global_id.to_int in
-  let id_code = mm_codes.(global_id) in
-  Agent.create ~name_offset id_code org_id loc_id
+  let global_id = Org.global_id_of_id org_id orgs in
+  let id_code = mm_codes.(global_id |> Option.get_exn_or "oops" |> Org.Global_id.to_int) in
+  Agent.create id_code org_id loc_id orgs
 
 

@@ -7,7 +7,7 @@ module Id = Engine.Int_id.Make() (* Id in current session *)
 module Global_id = Engine.Int_id.Make() (* Global id among all orgs in game *)
 
 type t = {
-  global_id: Global_id.t option;
+  global_id: Global_id.t option; (* only present for criminal orgs *)
   short_name: string;
   name: string;
   connect: int * int;
@@ -42,9 +42,7 @@ module Global_set = struct
 end)
 end
 
-let global_id_of_id orgs id =
-  Map.find id orgs
-  |> fun org -> org.global_id
+let global_id_of_id id orgs = (Map.find id orgs).global_id
 
 let get_name_offset v = v.agent_name_offset
 let get_global_id v = v.global_id

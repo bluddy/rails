@@ -76,7 +76,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
 
     let data = Some (region, locs, orgs) in
 
-    match Org.global_id_of_id orgs mm_org with
+    match Org.global_id_of_id mm_org orgs with
     | Some g_id when not @@ Org.Global_set.mem g_id w.caught_mms ->
         let mm_agent = Mastermind.agent_of_org mm_org mm_loc orgs in
         if not @@ Crime.check_org_support crime_choice mm_org orgs
@@ -152,6 +152,7 @@ type chosen_ = {
   ally_loc: Loc.Id.t;
 }
 
+(*
   (* Given a role, fill it in *)
 let generate (s:Services.t) role chosen (v:t) =
   let clue_seed = Random.int 32767 s.random in
@@ -250,3 +251,4 @@ let create_data (s:Services.t) world (v:t) =
   let orgs = Org.Map.map (Org.randomize_connection s.random) v.orgs in
   ()
 
+  *)
