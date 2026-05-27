@@ -22,8 +22,8 @@ type t = {
   id_code: int; (* Used to generate the name, sex and picture *)
   loc: Loc.Id.t;
   known: Known_data.Set.t;
-  role: Role.Set.t;
-  role_known: Role.Set.t;
+  roles: Role.Set.t;
+  roles_known: Role.Set.t;
   status: status;
   anxiety: int;
 } [@@deriving yojson]
@@ -43,7 +43,7 @@ let gender_name_of_code org_id x orgs =
   gender, name, last_name
 
   (* name_offset comes from org *)
-let create id_code org_id loc_id orgs =
+let create ?(known=Known_data.Set.empty) id_code org_id loc_id orgs =
   let gender, name, last_name = gender_name_of_code org_id id_code orgs in
   {
     gender;
@@ -52,14 +52,16 @@ let create id_code org_id loc_id orgs =
     last_name;
     id_code;
     loc=loc_id;
-    known=Known_data.Set.empty;
-    role=Role.Set.empty;
-    role_known=Role.Set.empty;
+    known;
+    roles=Role.Set.empty;
+    roles_known=Role.Set.empty;
     status=At_large;
     anxiety=0;
   }
 
 module Id = Agent_id
+
+let mastermind = Id.of_int 0
 
 module Map = Utils.Map.Make(struct
   type t = Id.t [@@deriving yojson]
@@ -68,16 +70,21 @@ end)
 
 type map = t Map.t [@@deriving yojson]
 
-let mastermind = Id.of_int 0
+module One = struct
+  let add_role role_id v =
+    {v with roles=Role.Set.add role_id v.roles}
 
-let agent_get org_id loc_id agents =
+  let add_role_known role_id v =
+    {v with roles_known=Role.Set.add role_id v.roles_known}
+end
+
+let get org_id loc_id agents =
   Map.find_pred (fun _ agent ->
     Org.Id.(agent.org = org_id) && Loc.Id.(agent.loc = loc_id))
     agents
 
-    (*
-let agent_get_or_gen (s:Services.t) org_id loc_id mm_agent agents =
-  match agent_get org_id loc_id agents with
+let get_or_gen (s:Services.t) org_id loc_id ~mm_agent agents orgs =
+  match get org_id loc_id agents with
   | Some agent -> agent, agents
   | None ->
       let is_mm =
@@ -92,16 +99,16 @@ let agent_get_or_gen (s:Services.t) org_id loc_id mm_agent agents =
         if is_mm then mm_agent.id_code
         else
           let id_code = Random.int 32766 s.random in
-          let is_man = Random.int 3 s.random > 0 in
-          if is_man then id_code lor 1 else id_code
+          let male = Random.int 3 s.random > 0 in
+          if male then id_code lor 1 else id_code
       in
-      *)
+      let agent = create id_code ~known org_id loc_id orgs in
+      let agents = Map.add agent_id agent agents in
+      agent_id, agents
 
+let add_role agent_id role_id agents =
+  Map.update agent_id (Option.map (One.add_role role_id)) agents
 
-
-
-
-
-
-
+let add_role_known agent_id role_id agents =
+  Map.update agent_id (Option.map (One.add_role_known role_id)) agents
 
