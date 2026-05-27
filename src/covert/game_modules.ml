@@ -84,7 +84,7 @@ let handle_event _win v (event:Event.t) time =
             let case = Case.create v.srv world
               |> Case.step_and_recreate_if_needed v.srv world
             in
-            (* let data = Case.create_data v.srv world case in *)
+            let data = Case.create_data v.srv world case in
             let modes = [
               Briefing(Briefing.create v.srv case world Briefing.Crime_start);
               (* Briefing(Briefing.create v.srv case world Briefing.Crime_step_start) Not done on crime start *)

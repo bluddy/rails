@@ -196,6 +196,7 @@ let generate (s:Services.t) role chosen (v:t) =
         org_id, loc_id
   in
   ()
+  *)
 
 
 let create_data (s:Services.t) world (v:t) =
@@ -250,5 +251,3 @@ let create_data (s:Services.t) world (v:t) =
   in
   let orgs = Org.Map.map (Org.randomize_connection s.random) v.orgs in
   ()
-
-  *)
