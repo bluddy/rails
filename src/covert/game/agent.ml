@@ -22,7 +22,8 @@ type t = {
   id_code: int; (* Used to generate the name, sex and picture *)
   loc: Loc.Id.t;
   known: Known_data.Set.t;
-  role: int;
+  role: Role.Set.t;
+  role_known: Role.Set.t;
   status: status;
   anxiety: int;
 } [@@deriving yojson]
@@ -52,12 +53,13 @@ let create id_code org_id loc_id orgs =
     id_code;
     loc=loc_id;
     known=Known_data.Set.empty;
-    role=0;
+    role=Role.Set.empty;
+    role_known=Role.Set.empty;
     status=At_large;
     anxiety=0;
   }
 
-module Id = Engine.Int_id.Make()
+module Id = Agent_id
 
 module Map = Utils.Map.Make(struct
   type t = Id.t [@@deriving yojson]

@@ -7,7 +7,7 @@ type ctr = {
 } [@@deriving yojson, show]
 
 type t = {
-  agent: Agent.Id.t;
+  agent: Agent_id.t;
   discover_val: int;
   name: string;
   clue_seed: int;
@@ -46,6 +46,11 @@ module Map = struct
   let of_ordered_list l = List.mapi (fun i x -> Id.of_int i, x) l |> of_list
 end
 
+module Set = Utils.Set.Make(struct
+  type t = Id.t [@@deriving yojson]
+  let compare = Id.compare
+end)
+
 type map = t Map.t [@@deriving yojson]
 
 let first = Id.of_int 1
@@ -65,3 +70,4 @@ let org_bit v =
   `Org_any
 
 let mastermind_bit v = v.bits land 0x100
+
