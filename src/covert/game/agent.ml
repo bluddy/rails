@@ -92,7 +92,9 @@ let get_or_gen (s:Services.t) org_id loc_id ~mm_agent agents orgs =
       in
       let agent_id =
         if is_mm then mastermind
-        else Map.cardinal agents |> Id.of_int
+        else
+          (* Increase by 1 because 0 is mastermind *)
+          Map.cardinal agents + 1 |> Id.of_int
       in
       let known = if is_mm then mm_agent.known else Known_data.Set.empty in
       let id_code =
