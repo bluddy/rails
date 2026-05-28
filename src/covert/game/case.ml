@@ -152,9 +152,9 @@ type chosen_ = {
   ally_loc: Loc.Id.t;
 }
 
-(*
   (* Given a role, fill it in *)
-let generate (s:Services.t) role chosen (v:t) =
+let fill_role (s:Services.t) role_id chosen (v:t) =
+  let role = Role.Map.find role_id v.roles in
   let clue_seed = Random.int 32767 s.random in
   let rec loop n =
     let not_expired = n <= 999 in
@@ -189,14 +189,30 @@ let generate (s:Services.t) role chosen (v:t) =
           else loc_id
     in
     if not_expired && hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
-    if Role.mastermind_bit role then v.mm.org, v.mm.loc
-    else
-      if not_expired && Loc.(v.mm.loc = loc_id) && Org.(v.mm.org = org_id) then loop (n+1)
-      else
-        org_id, loc_id
+    let org_id, loc_id =
+      if Role.mastermind_bit role then v.mm.org, v.mm.loc else org_id, loc_id
+    in
+    if not_expired && Loc.Id.(v.mm.loc = loc_id) && Org.Id.(v.mm.org = org_id) then loop (n+1) else
+    let loc_id =
+      if Difficulty.lowest v.world.dificulty && Role.Id.(role_id = Role.first)
+      then Loc.washington else loc_id
+    in
+    let agent_id, agents = match Agent.get org_id loc_id v.agents with
+    | Some agent_id ->
+        let agent = Agent.Map.find agent_id v.agents in
+        agent_id, v.agents
+
+    | None ->
+        let agent_id, agents = Agent.get_or_gen s org_id loc_id ~mm_agent:v.mm v.agents v.orgs in
+        agent_id, agents
+    in
+    (* check no role *)
+    let agent = Agent.Map.find agent_id v.agents in
+    if not_expired && not @@ Role.Set.is_empty agent.roles then loop (n+1) else
+    let agents = Agent.add_role agent_id role_id v.agents in
+    org_id, loc_id
   in
   ()
-  *)
 
 
 let create_data (s:Services.t) world (v:t) =

@@ -53,7 +53,7 @@ end)
 
 type map = t Map.t [@@deriving yojson]
 
-let first = Id.of_int 1
+let first = Id.of_int 0
 
 let loc_bit v =
   let bits = v.bits in
