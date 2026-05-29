@@ -66,6 +66,8 @@ module Set = struct
   module Make(O:OrderedType) = struct
     include CCSet.Make(O)
 
+    let not_empty v = not (is_empty v)
+
     let t_of_yojson (json:Yojson.Safe.t) =
       list_of_yojson O.t_of_yojson json |> of_list
 
@@ -100,6 +102,8 @@ module Map = struct
   end
   module Make(O:OrderedType) = struct
     include CCMap.Make(O)
+
+    let not_empty v = not (is_empty v)
 
     let to_hashtbl v =
       let h = Hashtbl.create 10 in

@@ -69,5 +69,8 @@ let org_bit v =
   if bits land 0x1 > 0 then `Org_ally else
   `Org_any
 
-let mastermind_bit v = v.bits land 0x100
+let mastermind_bit v = v.bits land 0x100 > 0
+
+(* Special hard-coded action *)
+let hardcoded_action_bit1 v = v.bits land 0x200 > 0
 

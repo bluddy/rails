@@ -153,25 +153,17 @@ type chosen_ = {
 }
 
   (* Given a role, fill it in *)
-let fill_role (s:Services.t) role_id chosen (v:t) =
+let make_agent_for_role (s:Services.t) role_id chosen (v:t) =
   let role = Role.Map.find role_id v.roles in
-  let clue_seed = Random.int 32767 s.random in
   let rec loop n =
-    let not_expired = n <= 999 in
-    let gen_random_loc org_id =
-      Utils.try_do
-        ~init:(fun () -> Loc.random s.random) @@
-        fun loc_id ->
-          Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 ||
-          hq_type v org_id loc_id |> Option.is_none
-    in
+    if n > 999 then None else
     let org_id = match Role.org_bit role with
       | `Org_enemy2 -> chosen.enemy_org2
       | `Org_enemy -> chosen.enemy_org1
       | `Org_ally -> chosen.ally_org
       | `Org_any ->
           let org_id = Org.random s.random in
-          if not_expired && (Org.connection v.orgs org_id chosen.enemy_org1 > 12 ||
+          if (Org.connection v.orgs org_id chosen.enemy_org1 > 12 ||
             (Org.Map.find org_id v.orgs).connect |> fst <= 4 ||
             Org.Id.(org_id = Org.cia))
           then loop (n+1)
@@ -183,37 +175,54 @@ let fill_role (s:Services.t) role_id chosen (v:t) =
       | `Loc_ally -> chosen.ally_loc
       | `Loc_any ->
           let loc_id = Loc.random s.random in
-          if not_expired && (Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 ||
+          if (Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 ||
             hq_type v org_id loc_id |> Option.is_none)
           then loop (n+1)
           else loc_id
     in
-    if not_expired && hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
+    if hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
+    let is_mm = Role.mastermind_bit role in
     let org_id, loc_id =
-      if Role.mastermind_bit role then v.mm.org, v.mm.loc else org_id, loc_id
+      if is_mm then v.mm.org, v.mm.loc else org_id, loc_id
     in
-    if not_expired && Loc.Id.(v.mm.loc = loc_id) && Org.Id.(v.mm.org = org_id) then loop (n+1) else
+    if Loc.Id.(v.mm.loc = loc_id) && Org.Id.(v.mm.org = org_id) then loop (n+1) else
     let loc_id =
-      if Difficulty.lowest v.world.dificulty && Role.Id.(role_id = Role.first)
-      then Loc.washington else loc_id
+      if Difficulty.lowest v.world.difficulty && Role.Id.(role_id = Role.first)
+      then Loc.washington
+      else loc_id
     in
     let agent_id, agents = match Agent.get org_id loc_id v.agents with
-    | Some agent_id ->
-        let agent = Agent.Map.find agent_id v.agents in
-        agent_id, v.agents
-
+    | Some agent_id -> agent_id, v.agents
     | None ->
         let agent_id, agents = Agent.get_or_gen s org_id loc_id ~mm_agent:v.mm v.agents v.orgs in
         agent_id, agents
     in
     (* check no role *)
-    let agent = Agent.Map.find agent_id v.agents in
-    if not_expired && not @@ Role.Set.is_empty agent.roles then loop (n+1) else
+    let agent = Agent.Map.find agent_id agents in
+    if not @@ Role.Set.is_empty agent.roles then loop (n+1) else
     let agents = Agent.add_role agent_id role_id v.agents in
-    org_id, loc_id
+    (* If we know anything about the MM, we know the role of the agent *)
+    let agents = if is_mm && Known_data.Set.not_empty agent.known
+      then Agent.add_role_known agent_id role_id agents
+      else agents
+    in
+    (* Some hardcoded stuff *)
+    let agents = if Role.hardcoded_action_bit1 role then
+        Agent.remove_known_data (Agent.Id.of_int 16) `Known_photo agents
+      else
+        agents
+    in
+    Some (agent_id, agents)
   in
-  ()
-
+  match loop 0 with
+  | None -> None
+  | Some (agent_id, agents) ->
+      let clue_seed = Random.int 32767 s.random in
+      let roles = Role.Map.update role_id
+        (Option.map (fun role -> Role.{role with clue_seed; agent=agent_id}))
+        v.roles
+      in
+      Some (roles, agents)
 
 let create_data (s:Services.t) world (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in

@@ -76,6 +76,13 @@ module One = struct
 
   let add_role_known role_id v =
     {v with roles_known=Role.Set.add role_id v.roles_known}
+
+  let add_known_data known v =
+    {v with known=Known_data.Set.add known v.known}
+
+  (* Should be rarely used *)
+  let remove_known_data known v =
+    {v with known=Known_data.Set.remove known v.known}
 end
 
 let get org_id loc_id agents =
@@ -113,4 +120,10 @@ let add_role agent_id role_id agents =
 
 let add_role_known agent_id role_id agents =
   Map.update agent_id (Option.map (One.add_role_known role_id)) agents
+
+let add_known_data agent_id known agents =
+  Map.update agent_id (Option.map (One.add_known_data known)) agents
+
+let remove_known_data agent_id known agents =
+  Map.update agent_id (Option.map (One.remove_known_data known)) agents
 
