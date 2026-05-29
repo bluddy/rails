@@ -29,7 +29,7 @@ module Map = struct
   let of_ordered_list l = List.mapi (fun i x -> Id.of_int i, x) l |> of_list
 end
 
-type map = t Map.t
+type map = t Map.t [@@deriving yojson]
 
 let from_stream ~num_events s =
   Iter.fold (fun acc _ ->

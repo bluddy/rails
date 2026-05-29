@@ -20,6 +20,7 @@ type t = {
   double_agents: Loc.Set.t;
   roles: Role.map;
   agents: Agent.map;
+  events: Event.map;
 } [@@deriving yojson]
 
 let agent_of_role v role_id =
@@ -103,6 +104,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
     enemy_anxiety=0;
     roles=Role.Map.empty;
     agents=Agent.Map.empty;
+    events=Event.Map.empty;
   }
 
 let choose_next_step_ (srv:Services.t) (v:t) =
@@ -153,8 +155,8 @@ type chosen_ = {
 }
 
   (* Given a role, fill it in *)
-let make_agent_for_role (s:Services.t) role_id chosen roles agents (v:t) =
-  let role = Role.Map.find role_id v.roles in
+let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
+  let role = Role.Map.find role_id roles in
   let rec loop n =
     if n > 999 then None else
     let org_id = match Role.org_bit role with
@@ -190,16 +192,16 @@ let make_agent_for_role (s:Services.t) role_id chosen roles agents (v:t) =
       then Loc.washington
       else loc_id
     in
-    let agent_id, agents = match Agent.get org_id loc_id v.agents with
-    | Some agent_id -> agent_id, v.agents
+    let agent_id, agents = match Agent.get org_id loc_id agents with
+    | Some agent_id -> agent_id, agents
     | None ->
-        let agent_id, agents = Agent.get_or_gen s org_id loc_id ~mm_agent:v.mm v.agents v.orgs in
+        let agent_id, agents = Agent.get_or_gen s org_id loc_id ~mm_agent:v.mm agents v.orgs in
         agent_id, agents
     in
     (* check no role *)
     let agent = Agent.Map.find agent_id agents in
     if not @@ Role.Set.is_empty agent.roles then loop (n+1) else
-    let agents = Agent.add_role agent_id role_id v.agents in
+    let agents = Agent.add_role agent_id role_id agents in
     (* If we know anything about the MM, we know the role of the agent *)
     let agents = if is_mm && Known_data.Set.not_empty agent.known
       then Agent.add_role_known agent_id role_id agents
@@ -219,7 +221,7 @@ let make_agent_for_role (s:Services.t) role_id chosen roles agents (v:t) =
       let clue_seed = Random.int 32767 s.random in
       let roles = Role.Map.update role_id
         (Option.map (fun role -> Role.{role with clue_seed; agent=agent_id}))
-        v.roles
+        roles
       in
       Some (roles, agents)
 
@@ -227,53 +229,54 @@ let create_data (s:Services.t) world (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in
   let roles, events = Crime.load_from_file typ in
   let roles = Role.Map.of_ordered_list roles in
-  let events = Role.Map.of_ordered_list events in
+  let events = Event.Map.of_ordered_list events in
   let diff_num = Difficulty.to_enum world.World.difficulty in
   let double_agents =
-    Iter.fold (fun acc i ->
+    Iter.fold (fun acc _ ->
       let loc = Loc.random s.random in
       Loc.Set.add loc acc)
     Loc.Set.empty
     Iter.(0 -- (diff_num-1))
     |> Loc.Set.remove Loc.washington
   in
-  let agents = Agent.Map.empty in
   let connection_to_cia org = Org.connection v.orgs org Org.cia in
 
-  let gen_org ?start test =
-    Utils.try_do ~init:(fun () -> Org.random ?start s.random) test
+  let chosen =
+    let gen_org ?start test =
+      Utils.try_do ~init:(fun () -> Org.random ?start s.random) test
+    in
+    let gen_loc test = Utils.try_do ~init:(fun () -> Loc.random s.random) test
+    in
+    let ally_org =
+      gen_org ~start:2 @@ fun org -> connection_to_cia org > 10
+    in
+    let enemy_org1 =
+      gen_org @@ fun org ->
+        (connection_to_cia org < 8) ||
+        (Org.connection v.orgs org v.mm.org > 8) ||
+        (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
+    in
+    let enemy_org2 =
+      gen_org @@ fun org ->
+        (Org.connection v.orgs org enemy_org1 > 8) ||
+        (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
+    in
+    let enemy_loc1 = gen_loc @@ fun loc ->
+      (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
+      (hq_type v enemy_org1 loc |> Option.is_none) ||
+      (Loc.Id.(loc = v.mm.loc))
+    in
+    let enemy_loc2 = gen_loc @@ fun loc ->
+      (Loc.connection v.locs enemy_loc1 loc > 12) ||
+      (hq_type v enemy_org2 loc |> Option.is_none) ||
+      (Loc.Id.(loc = v.mm.loc))
+    in
+    let ally_loc = gen_loc @@ fun loc ->
+      (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
+      (hq_type v ally_org loc |> Option.is_none)
+    in
+    { enemy_org1; enemy_org2; ally_org; enemy_loc1; enemy_loc2; ally_loc }
   in
-  let gen_loc test = Utils.try_do ~init:(fun () -> Loc.random s.random) test
-  in
-  let ally_org =
-    gen_org ~start:2 @@ fun org -> connection_to_cia org > 10
-  in
-  let enemy_org1 =
-    gen_org @@ fun org ->
-      (connection_to_cia org < 8) ||
-      (Org.connection v.orgs org v.mm.org > 8) ||
-      (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
-  in
-  let enemy_org2 =
-    gen_org @@ fun org ->
-      (Org.connection v.orgs org enemy_org1 > 8) ||
-      (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
-  in
-  let enemy_loc1 = gen_loc @@ fun loc ->
-    (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
-    (hq_type v enemy_org1 loc |> Option.is_none) ||
-    (Loc.Id.(loc = v.mm.loc))
-  in
-  let enemy_loc2 = gen_loc @@ fun loc ->
-    (Loc.connection v.locs enemy_loc1 loc > 12) ||
-    (hq_type v enemy_org2 loc |> Option.is_none) ||
-    (Loc.Id.(loc = v.mm.loc))
-  in
-  let ally_loc = gen_loc @@ fun loc ->
-    (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
-    (hq_type v ally_org loc |> Option.is_none)
-  in
-  let chosen = { enemy_org1; enemy_org2; ally_org; enemy_loc1; enemy_loc2; ally_loc } in
   let orgs = Org.Map.map (Org.randomize_connection s.random) v.orgs in
   let roles, agents =
     let role_calc_fn () =
@@ -281,11 +284,12 @@ let create_data (s:Services.t) world (v:t) =
         (fun role_id _ acc ->
           Option.bind acc
             (fun (roles, agents) ->
-              make_agent_for_role s role_id chosen roles agents v))
+              make_agent_for_role_ s role_id chosen roles agents v))
         roles
         (Some (roles, Agent.Map.empty))
     in
     Utils.try_do ~init:role_calc_fn Option.is_none
     |> Option.get_exn_or "failed to create agents"
   in
-  ()
+  {v with orgs; roles; agents; events; double_agents}
+
