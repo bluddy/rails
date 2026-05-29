@@ -153,7 +153,7 @@ type chosen_ = {
 }
 
   (* Given a role, fill it in *)
-let make_agent_for_role (s:Services.t) role_id chosen (v:t) =
+let make_agent_for_role (s:Services.t) role_id chosen roles agents (v:t) =
   let role = Role.Map.find role_id v.roles in
   let rec loop n =
     if n > 999 then None else
@@ -248,7 +248,7 @@ let create_data (s:Services.t) world (v:t) =
   let ally_org =
     gen_org ~start:2 @@ fun org -> connection_to_cia org > 10
   in
-  let enemy_org =
+  let enemy_org1 =
     gen_org @@ fun org ->
       (connection_to_cia org < 8) ||
       (Org.connection v.orgs org v.mm.org > 8) ||
@@ -256,16 +256,16 @@ let create_data (s:Services.t) world (v:t) =
   in
   let enemy_org2 =
     gen_org @@ fun org ->
-      (Org.connection v.orgs org enemy_org > 8) ||
+      (Org.connection v.orgs org enemy_org1 > 8) ||
       (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
   in
-  let enemy_loc = gen_loc @@ fun loc ->
+  let enemy_loc1 = gen_loc @@ fun loc ->
     (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
-    (hq_type v enemy_org loc |> Option.is_none) ||
+    (hq_type v enemy_org1 loc |> Option.is_none) ||
     (Loc.Id.(loc = v.mm.loc))
   in
   let enemy_loc2 = gen_loc @@ fun loc ->
-    (Loc.connection v.locs enemy_loc loc > 12) ||
+    (Loc.connection v.locs enemy_loc1 loc > 12) ||
     (hq_type v enemy_org2 loc |> Option.is_none) ||
     (Loc.Id.(loc = v.mm.loc))
   in
@@ -273,5 +273,19 @@ let create_data (s:Services.t) world (v:t) =
     (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
     (hq_type v ally_org loc |> Option.is_none)
   in
+  let chosen = { enemy_org1; enemy_org2; ally_org; enemy_loc1; enemy_loc2; ally_loc } in
   let orgs = Org.Map.map (Org.randomize_connection s.random) v.orgs in
+  let roles, agents =
+    let role_calc_fn () =
+      Role.Map.fold
+        (fun role_id _ acc ->
+          Option.bind acc
+            (fun (roles, agents) ->
+              make_agent_for_role s role_id chosen roles agents v))
+        roles
+        (Some (roles, Agent.Map.empty))
+    in
+    Utils.try_do ~init:role_calc_fn Option.is_none
+    |> Option.get_exn_or "failed to create agents"
+  in
   ()
