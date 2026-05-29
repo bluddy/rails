@@ -2,6 +2,8 @@ open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 open Containers
 module C = Constants
+module Gen = Engine.My_gen
+module String = Engine.String
 
 module Id = Engine.Int_id.Make() (* Id in current session *)
 module Global_id = Engine.Int_id.Make() (* Global id among all orgs in game *)
@@ -65,4 +67,35 @@ let randomize_connection r org =
   let x, y = x + dx, y + dy in
   {org with connect=(x, y)}
 
+let from_stream num_orgs s =
+  Iter.fold (fun acc _ ->
+    let short_name = Gen.take 6 s |> Gen.to_stringi |> String.remove_nulls in
+    let name = Gen.take 20 s |> Gen.to_stringi |> String.remove_nulls in
+    let connect = Gen.get_wordi s in
+    let connect = connect land 0xF, connect land 0xF0 in
+    let strength = Gen.get_wordi s in
+    let hq_build_cost = Gen.get_wordi s in
+    let bits = Gen.get_wordi s in
+    let global_id = bits land 0xFF in 
+    let global_id = if global_id = 255 then None else Global_id.of_int global_id |> Option.some in
+    let bits = bits lsr 8 in (* upper bits *)
+    let agent_name_offset = Gen.get_bytei s in
+    let _ = Gen.get_bytei s in
+    let org = {
+      short_name;
+      name;
+      connect;
+      strength;
+      hq_build_cost;
+      bits;
+      agent_name_offset;
+      global_id;
+      activity=0;
+    }
+    in
+    print_endline @@ show org;
+    org::acc
+  )
+  []
+  Iter.(0 -- (num_orgs - 1)) |> List.rev
 
