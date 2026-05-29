@@ -86,7 +86,7 @@ let handle_event _win v (event:Event.t) time =
             in
             let data = Case.create_data v.srv world case in
             let modes = [
-              Briefing(Briefing.create v.srv case world Briefing.Crime_start);
+              Briefing(Briefing.create v.srv case Briefing.Crime_start);
               (* Briefing(Briefing.create v.srv case world Briefing.Crime_step_start) Not done on crime start *)
             ] in
             set_modes v modes, `Stay
