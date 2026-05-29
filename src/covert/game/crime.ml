@@ -196,26 +196,8 @@ let load_from_file crime_type_num =
   let s = Utils.stream_of_file filename in
   let num_roles = Gen.get_wordi s in
   let num_events = Gen.get_wordi s in
-  let roles =
-    Iter.fold (fun acc _ ->
-      let agent = Gen.get_wordi s |> Agent.Id.of_int in
-      let discover_val = Gen.get_wordi s in
-      let name = Gen.take 32 s |> Gen.to_stringi |> String.remove_nulls in
-      let _clue_seed = Gen.get_wordi s in
-      let bits = Gen.get_wordi s in
-      let _known_data = Gen.get_wordi s in
-      let clue_rand = Gen.get_wordi s in
-      let rank = Gen.get_wordi s |> Rank.of_enum |> Option.get_exn_or "invalid rank" in
-      let some_num = Gen.get_wordi s in
-      let role = Role.make agent discover_val name bits clue_rand rank some_num in
-      print_endline @@ Role.show role;
-      role::acc
-    )
-    []
-    Iter.(0 -- (num_roles - 1)) |> List.rev
-  in
-  let events = Event.from_stream ~num_events s
-  in
+  let roles = Role.from_stream ~num_roles s in
+  let events = Event.from_stream ~num_events s in
   roles, events
 
 

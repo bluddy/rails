@@ -1,5 +1,7 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
+module Gen = Engine.My_gen
+module String = Engine.String
 
 type ctr = {
   tick: int;
@@ -74,3 +76,20 @@ let mastermind_bit v = v.bits land 0x100 > 0
 (* Special hard-coded action *)
 let hardcoded_action_bit1 v = v.bits land 0x200 > 0
 
+let from_stream ~num_roles s =
+  Iter.fold (fun acc _ ->
+    let agent = Gen.get_wordi s |> Agent_id.of_int in
+    let discover_val = Gen.get_wordi s in
+    let name = Gen.take 32 s |> Gen.to_stringi |> String.remove_nulls in
+    let _clue_seed = Gen.get_wordi s in
+    let bits = Gen.get_wordi s in
+    let _known_data = Gen.get_wordi s in
+    let clue_rand = Gen.get_wordi s in
+    let rank = Gen.get_wordi s |> Rank.of_enum |> Option.get_exn_or "invalid rank" in
+    let some_num = Gen.get_wordi s in
+    let role = make agent discover_val name bits clue_rand rank some_num in
+    print_endline @@ show role;
+    role::acc
+  )
+  []
+  Iter.(0 -- (num_roles - 1)) |> List.rev
