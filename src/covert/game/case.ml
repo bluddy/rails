@@ -158,28 +158,27 @@ let make_agent_for_role (s:Services.t) role_id chosen (v:t) =
   let rec loop n =
     if n > 999 then None else
     let org_id = match Role.org_bit role with
-      | `Org_enemy2 -> chosen.enemy_org2
-      | `Org_enemy -> chosen.enemy_org1
-      | `Org_ally -> chosen.ally_org
+      | `Org_enemy2 -> Some chosen.enemy_org2
+      | `Org_enemy -> Some chosen.enemy_org1
+      | `Org_ally -> Some chosen.ally_org
       | `Org_any ->
           let org_id = Org.random s.random in
           if (Org.connection v.orgs org_id chosen.enemy_org1 > 12 ||
             (Org.Map.find org_id v.orgs).connect |> fst <= 4 ||
             Org.Id.(org_id = Org.cia))
-          then loop (n+1)
-          else org_id
+          then None
+          else Some org_id
     in
     let loc_id = match Role.loc_bit role with
-      | `Loc_enemy2 -> chosen.enemy_loc2
-      | `Loc_enemy -> chosen.enemy_loc1
-      | `Loc_ally -> chosen.ally_loc
+      | `Loc_enemy2 -> Some chosen.enemy_loc2
+      | `Loc_enemy -> Some chosen.enemy_loc1
+      | `Loc_ally -> Some chosen.ally_loc
       | `Loc_any ->
           let loc_id = Loc.random s.random in
-          if (Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 ||
-            hq_type v org_id loc_id |> Option.is_none)
-          then loop (n+1)
-          else loc_id
+          if Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 then None else Some loc_id
     in
+    if Option.is_none org_id || Option.is_none loc_id then loop (n+1) else
+    let org_id, loc_id = Option.get_exn_or "oops" org_id, Option.get_exn_or "oops" loc_id in
     if hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
     let is_mm = Role.mastermind_bit role in
     let org_id, loc_id =
