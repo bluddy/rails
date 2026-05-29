@@ -18,6 +18,7 @@ type t = {
   bits: int;
   agent_name_offset: int; (* offset into the name list *)
   activity: int;
+  known_involved: bool;
 } [@@deriving show, ord, yojson]
 
 (* skip cops=0 by default *)
@@ -91,6 +92,7 @@ let from_stream num_orgs s =
       agent_name_offset;
       global_id;
       activity=0;
+      known_involved=false;
     }
     in
     print_endline @@ show org;
@@ -99,3 +101,13 @@ let from_stream num_orgs s =
   []
   Iter.(0 -- (num_orgs - 1)) |> List.rev
 
+let add_known v = {v with known_involved=true}
+
+module S = struct
+
+  let do_ org_id orgs fn =
+    Map.update org_id (Option.map fn) orgs
+
+  let add_known org_id orgs = do_ org_id orgs add_known
+
+end

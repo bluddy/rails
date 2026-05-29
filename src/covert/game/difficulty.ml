@@ -18,3 +18,12 @@ let list = Iter.map (fun i -> of_enum i |> Option.get_exn_or "oops") Iter.(0 -- 
 
 let lowest = function Local_disturbance -> true | _ -> false
 
+let comp fn x y =
+  let x, y = to_enum x, to_enum y in
+  fn x y
+
+let (>=) x y = comp (>=) x y
+let (>) x y = comp (>) x y
+let (<) x y = comp (<) x y
+let (<=) x y = comp (<=) x y
+

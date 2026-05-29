@@ -9,6 +9,7 @@ module Ega = Engine.Ega
 type mode =
   | Crime_start
   | Crime_step_start
+  | Crime_region_info
   [@@deriving yojson]
 
 type text_src =
@@ -61,7 +62,14 @@ let create (s:Services.t) (case:Case.t) mode =
       let text = get_text_ s `Plot pattern
         |> Option.get_exn_or @@ Printf.sprintf "missing text %s" pattern in
       { case; pani; srv=s; mode; text=Pattern{text; pattern}; }
-
+  | Crime_region_info ->
+      let pani = briefing_create s in
+      let text = Printf.sprintf
+        "We have indications that\n\
+        an operation is in preparation somehwere in %s"
+          (Region.show case.region)
+      in
+      {case; pani; srv=s; mode; text=Pages [text]}
 
 let render win v =
   Pani_render.render win v.pani;

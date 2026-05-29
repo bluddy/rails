@@ -291,5 +291,16 @@ let create_data (s:Services.t) world (v:t) =
     Utils.try_do ~init:role_calc_fn Option.is_none
     |> Option.get_exn_or "failed to create agents"
   in
+  let orgs =
+    if Difficulty.(v.world.difficulty < Regional_conflict) then
+      (* Reveal an involved org *)
+      let role_id = Role.random s.random roles in
+      let role = Role.Map.find role_id roles in
+      let agent_id = role.agent in
+      let agent = Agent.Map.find agent_id agents in
+      Org.S.add_known agent.org orgs
+    else
+      orgs
+  in
   {v with orgs; roles; agents; events; double_agents}
 

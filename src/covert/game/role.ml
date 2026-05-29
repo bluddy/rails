@@ -93,3 +93,8 @@ let from_stream ~num_roles s =
   )
   []
   Iter.(0 -- (num_roles - 1)) |> List.rev
+
+let random r v =
+  let length = Map.cardinal v in
+  Random.int length r |> Id.of_int
+

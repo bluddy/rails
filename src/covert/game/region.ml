@@ -9,6 +9,11 @@ type t =
   | Central_america
   [@@deriving enum, yojson]
 
+let show = function
+  | Europe -> "Europe"
+  | Africa -> "Africa/Middle East"
+  | Central_america -> "Centerl America"
+
 let random r =
   Utils.Random.int C.num_regions r
   |> of_enum |> Option.get_exn_or "oops"

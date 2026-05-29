@@ -115,15 +115,18 @@ let get_or_gen (s:Services.t) org_id loc_id ~mm_agent agents orgs =
       let agents = Map.add agent_id agent agents in
       agent_id, agents
 
+let do_agent_ agent_id agents fn =
+  Map.update agent_id (Option.map fn) agents
+
 let add_role agent_id role_id agents =
-  Map.update agent_id (Option.map (One.add_role role_id)) agents
+  do_agent_ agent_id agents @@ One.add_role role_id
 
 let add_role_known agent_id role_id agents =
-  Map.update agent_id (Option.map (One.add_role_known role_id)) agents
+  do_agent_ agent_id agents @@ One.add_role_known role_id
 
 let add_known_data agent_id known agents =
-  Map.update agent_id (Option.map (One.add_known_data known)) agents
+  do_agent_ agent_id agents @@ One.add_known_data known
 
 let remove_known_data agent_id known agents =
-  Map.update agent_id (Option.map (One.remove_known_data known)) agents
+  do_agent_ agent_id agents @@ One.remove_known_data known
 
