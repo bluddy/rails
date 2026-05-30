@@ -10,6 +10,7 @@ type mode =
   | Crime_start
   | Crime_step_start
   | Crime_region_info
+  | Crime_first_clues
   [@@deriving yojson]
 
 type text_src =
@@ -64,12 +65,36 @@ let create (s:Services.t) (case:Case.t) mode =
       { case; pani; srv=s; mode; text=Pattern{text; pattern}; }
   | Crime_region_info ->
       let pani = briefing_create s in
+      let org_name = Org.Map.find_pred (fun _ org -> org.Org.known_involved) case.orgs
+          |> Option.map (fun org_id -> (Org.Map.find org_id case.orgs).name)
+      in
       let text = Printf.sprintf
         "We have indications that\n\
         an operation is in preparation somehwere in %s"
           (Region.show case.region)
       in
-      {case; pani; srv=s; mode; text=Pages [text]}
+      let text = match org_name with
+      | Some org_s -> Printf.sprintf "%s\nThe %s is known to be involved." text org_s
+      | None -> text
+      in
+      let has_double_agents = Loc.Set.not_empty case.double_agents in
+      let text2 = "Your mission is to prevent this operation from succeeding\n\
+                  and to capture as many of the participants as possible."
+      in
+      let text2 = if has_double_agents then
+                    text2 ^ "\n\
+                    Caution, one or more Double Agents are believed to be active\n\
+                    within the CIA."
+                  else
+                    text2
+      in
+      {case; pani; srv=s; mode; text=Pages [text; text2]}
+  | Crime_first_clues ->
+    let pani = briefing_create ~input:[0,1] s in
+    let text = "Here is some info we've picked up over the last few days.\n\
+                We think it's linked to this operation..."
+    in
+    {case; pani; srv=s; mode; text=Pages [text]}
 
 let render win v =
   Pani_render.render win v.pani;
