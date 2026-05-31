@@ -73,7 +73,7 @@ let from_stream num_orgs s =
     let short_name = Gen.take 6 s |> Gen.to_stringi |> String.remove_nulls in
     let name = Gen.take 20 s |> Gen.to_stringi |> String.remove_nulls in
     let connect = Gen.get_wordi s in
-    let connect = connect land 0xF, connect land 0xF0 in
+    let connect = connect land 0x0F, (connect land 0xF0) lsr 4 in
     let strength = Gen.get_wordi s in
     let hq_build_cost = Gen.get_wordi s in
     let bits = Gen.get_wordi s in
@@ -114,5 +114,12 @@ module S = struct
     Map.find_pred (fun _ org -> org.known_involved) orgs
 
   let get_name orgs org_id = (Map.find org_id orgs).name
+
+  let show_connect orgs =
+    let buf = Buffer.create 10 in
+    Map.iter (fun i org ->
+      Buffer.add_string buf @@ Printf.sprintf "%s %s: (%d, %d)\n" (Id.show i) (org.name) (fst org.connect) (snd org.connect))
+    orgs;
+    Buffer.contents buf
 
 end
