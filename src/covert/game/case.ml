@@ -207,15 +207,15 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
     (* check no role *)
     let agent = Agent.Map.find agent_id agents in
     if Role.Set.not_empty agent.roles then loop (n+1) else begin
-    let agents = Agent.add_role agent_id role_id agents in
+    let agents = Agent.S.add_role agent_id role_id agents in
     (* If we know anything about the MM then we know the role of the mm *)
     let agents = if is_mm && Known_data.Set.not_empty agent.known
-      then Agent.add_role_known agent_id role_id agents
+      then Agent.S.add_role_known agent_id role_id agents
       else agents
     in
     (* Some hardcoded stuff *)
     let agents = if Role.hardcoded_action_bit1 role then
-        Agent.remove_known_data (Agent.Id.of_int 16) `Known_photo agents
+        Agent.S.remove_known_data (Agent.Id.of_int 16) `Known_photo agents
       else
         agents
     in
