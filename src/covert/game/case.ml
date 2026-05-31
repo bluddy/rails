@@ -182,15 +182,14 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
     if Option.is_none org_id || Option.is_none loc_id then loop (n+1) else
     let org_id, loc_id = Option.get_exn_or "oops" org_id, Option.get_exn_or "oops" loc_id in
     if hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
+    (* Check mastermind *)
     let is_mm = Role.mastermind_bit role in
-    let org_id, loc_id =
-      if is_mm then v.mm.org, v.mm.loc else org_id, loc_id
-    in
-    if Loc.Id.(v.mm.loc = loc_id) && Org.Id.(v.mm.org = org_id) then loop (n+1) else
+    let org_id, loc_id = if is_mm then v.mm.org, v.mm.loc else org_id, loc_id in
+    if not is_mm && Loc.Id.(v.mm.loc = loc_id) && Org.Id.(v.mm.org = org_id) then loop (n+1) else
     let loc_id =
+      (* hardcoded *)
       if Difficulty.lowest v.world.difficulty && Role.Id.(role_id = Role.first)
-      then Loc.washington
-      else loc_id
+      then Loc.washington else loc_id
     in
     let agent_id, agents = match Agent.get org_id loc_id agents with
     | Some agent_id -> agent_id, agents
@@ -200,7 +199,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
     in
     (* check no role *)
     let agent = Agent.Map.find agent_id agents in
-    if not @@ Role.Set.is_empty agent.roles then loop (n+1) else
+    if Role.Set.not_empty agent.roles then loop (n+1) else begin
     let agents = Agent.add_role agent_id role_id agents in
     (* If we know anything about the MM, we know the role of the agent *)
     let agents = if is_mm && Known_data.Set.not_empty agent.known
@@ -214,6 +213,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
         agents
     in
     Some (agent_id, agents)
+    end
   in
   match loop 0 with
   | None -> None
