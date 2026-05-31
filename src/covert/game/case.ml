@@ -289,6 +289,7 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
       if n > 1000 then failwith "Failed to assign roles to agents" else
       let chosen = choose_orgs_locs () in
       let orgs = Org.Map.map (Org.randomize_connection s.random) orgs in
+      print_endline @@ Org.S.show_connect orgs;
       let roles_agents =
         Role.Map.fold
           (fun role_id _ acc ->

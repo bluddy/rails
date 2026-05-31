@@ -102,7 +102,7 @@ let handle_event _win v (event:Event.t) time =
         let v = if state2 =!= state then {v with mode=Briefing state2} else v in
         begin match status with
         | `Stay -> v, `Stay
-        | `Exit -> v, `Stay
+        | `Exit -> next_mode v, `Stay
         end
 
   in
