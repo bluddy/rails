@@ -191,17 +191,12 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
       if Difficulty.lowest v.world.difficulty && Role.Id.(role_id = Role.first)
       then Loc.washington else loc_id
     in
-    let agent_id, agents = match Agent.get org_id loc_id agents with
-    | Some agent_id -> agent_id, agents
-    | None ->
-        let agent_id, agents = Agent.get_or_gen s org_id loc_id ~mm_agent:v.mm agents v.orgs in
-        agent_id, agents
-    in
+    let agent_id, agents = Agent.get_or_gen s org_id loc_id ~mm_agent:v.mm agents v.orgs in
     (* check no role *)
     let agent = Agent.Map.find agent_id agents in
     if Role.Set.not_empty agent.roles then loop (n+1) else begin
     let agents = Agent.add_role agent_id role_id agents in
-    (* If we know anything about the MM, we know the role of the agent *)
+    (* If we know anything about the MM, we know the role of the mm *)
     let agents = if is_mm && Known_data.Set.not_empty agent.known
       then Agent.add_role_known agent_id role_id agents
       else agents
