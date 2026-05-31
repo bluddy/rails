@@ -110,4 +110,9 @@ module S = struct
 
   let add_known org_id orgs = do_ org_id orgs add_known
 
+  let find_one_known orgs =
+    Map.find_pred (fun _ org -> org.known_involved) orgs
+
+  let get_name orgs org_id = (Map.find org_id orgs).name
+
 end

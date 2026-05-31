@@ -1,4 +1,5 @@
 open! Containers
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 module R = Engine.Renderer
 module Sound = Engine.Sound
@@ -9,7 +10,7 @@ module Ega = Engine.Ega
 type mode =
   | Crime_start
   | Crime_step_start
-  | Crime_region_info
+  | Crime_region_info of string option
   | Crime_first_clues
   [@@deriving yojson]
 
@@ -63,11 +64,8 @@ let create (s:Services.t) (case:Case.t) mode =
       let text = get_text_ s `Plot pattern
         |> Option.get_exn_or @@ Printf.sprintf "missing text %s" pattern in
       { case; pani; srv=s; mode; text=Pattern{text; pattern}; }
-  | Crime_region_info ->
+  | Crime_region_info org_name ->
       let pani = briefing_create s in
-      let org_name = Org.Map.find_pred (fun _ org -> org.Org.known_involved) case.orgs
-          |> Option.map (fun org_id -> (Org.Map.find org_id case.orgs).name)
-      in
       let text = Printf.sprintf
         "We have indications that\n\
         an operation is in preparation somehwere in %s"

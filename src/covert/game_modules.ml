@@ -83,12 +83,16 @@ let handle_event _win v (event:Event.t) time =
             let world = World.default info in
             let case = Case.create v.srv world
               |> Case.step_and_recreate_if_needed v.srv world
+              |> Case.update_events_roles_agents v.srv world
             in
-            let data = Case.create_data v.srv world case in
-            let modes = [
-              Briefing(Briefing.create v.srv case Briefing.Crime_start);
-              (* Briefing(Briefing.create v.srv case world Briefing.Crime_step_start) Not done on crime start *)
-            ] in
+            let known_org = Org.S.find_one_known case.orgs |> Option.map (Org.S.get_name case.orgs) in
+            let modes =
+              let open Briefing in
+              [
+                Briefing(create v.srv case Crime_start);
+                Briefing(create v.srv case @@ Crime_region_info(known_org));
+                (* Briefing(Briefing.create v.srv case world Briefing.Crime_step_start) Not done on crime start *)
+              ] in
             set_modes v modes, `Stay
         | `Stay -> v, `Stay
         | `Exit -> v, `Stay

@@ -225,7 +225,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
       in
       Some (roles, agents)
 
-let create_data (s:Services.t) world (v:t) =
+let update_events_roles_agents (s:Services.t) world (v:t) =
   let typ = Crime.Step.get_type v.crime v.step in
   let roles, events = Crime.load_from_file typ in
   let roles = Role.Map.of_ordered_list roles in
