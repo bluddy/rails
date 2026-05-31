@@ -26,10 +26,12 @@ type t = {
   srv: Services.t;
 }
 
+let format_text = Utils.add_newlines ~width:40
+
 let get_text_ (srv:Services.t) res pat =
   let plot_txt = Hashtbl.find srv.resources.text res in
   Subst_engine.get_lines ~pat plot_txt
-  |> Option.map (Utils.add_newlines ~width:40)
+  |> Option.map format_text
 
 let briefing_create ?(input=[0,4]) (s:Services.t) =
   Sound.pani_create s.sound "data/covert/BRIEFING.PAN" ~input
@@ -67,32 +69,31 @@ let create (s:Services.t) (case:Case.t) mode =
   | Crime_region_info org_name ->
       let pani = briefing_create s in
       let text = Printf.sprintf
-        "We have indications that\n\
-        an operation is in preparation somehwere in %s"
+        "We have indications that an operation is in preparation somehwere in %s."
           (Region.show case.region)
       in
       let text = match org_name with
-      | Some org_s -> Printf.sprintf "%s\nThe %s is known to be involved." text org_s
+      | Some org_s -> Printf.sprintf "%s The %s is known to be involved." text org_s
       | None -> text
       in
       let has_double_agents = Loc.Set.not_empty case.double_agents in
-      let text2 = "Your mission is to prevent this operation from succeeding\n\
+      let text2 = "Your mission is to prevent this operation from succeeding\
                   and to capture as many of the participants as possible."
       in
       let text2 = if has_double_agents then
-                    text2 ^ "\n\
-                    Caution, one or more Double Agents are believed to be active\n\
+                    text2 ^ "\
+                    Caution, one or more Double Agents are believed to be active\
                     within the CIA."
                   else
                     text2
       in
-      {case; pani; srv=s; mode; text=Pages [text; text2]}
+      {case; pani; srv=s; mode; text=Pages [format_text text; format_text text2]}
   | Crime_first_clues ->
     let pani = briefing_create ~input:[0,1] s in
-    let text = "Here is some info we've picked up over the last few days.\n\
+    let text = "Here is some info we've picked up over the last few days.\
                 We think it's linked to this operation..."
     in
-    {case; pani; srv=s; mode; text=Pages [text]}
+    {case; pani; srv=s; mode; text=Pages [format_text text]}
 
 let render win v =
   Pani_render.render win v.pani;
