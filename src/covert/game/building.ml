@@ -1,10 +1,19 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
+type known = [
+  `Known_org
+] [@@deriving yojson, ord]
+
+module KSet= Utils.Set.Make(struct
+  type t = known [@@deriving yojson]
+  let compare = compare_known
+end)
+
 type t = {
   org: Org.Id.t;
   loc: Loc.Id.t;
-  known: Known_data.Set.t;
+  known: KSet.t;
   num_wiretaps: int;
   rooms: int; (* Needs fleshing out *)
 } [@@deriving yojson]
@@ -13,7 +22,7 @@ let create org_id loc_id =
   {
     org=org_id;
     loc=loc_id;
-    known=Known_data.Set.empty;
+    known=KSet.empty;
     num_wiretaps=0;
     rooms=0;
   }
@@ -26,6 +35,9 @@ module Map = Utils.Map.Make(struct
 end)
 
 type map = t Map.t [@@deriving yojson]
+
+let add_known known v =
+  {v with known=KSet.add known v.known}
 
 module S = struct
   let get org_id loc_id bldgs =
@@ -40,6 +52,12 @@ module S = struct
         let bldg = create org_id loc_id in
         let id = Map.cardinal bldgs |> Id.of_int in
         id, Map.add id bldg bldgs
+
+  let do_update_ bldg_id bldgs fn =
+    Map.update bldg_id (Option.map fn) bldgs
+
+  let add_known bldg_id known bldgs =
+    do_update_ bldg_id bldgs @@ add_known known
 
 end
 
