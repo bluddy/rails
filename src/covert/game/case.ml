@@ -24,10 +24,13 @@ type t = {
 } [@@deriving yojson]
 
 let agent_of_role v role_id =
-  let role = Role.Map.find role_id v.roles in
-  let agent_id = role.agent in
-  let agent = Agent.Map.find agent_id v.agents in
-  agent
+  try
+    let role = Role.Map.find role_id v.roles in
+    let agent_id = role.agent in
+    let agent = Agent.Map.find agent_id v.agents in
+    Some agent
+  with
+  Not_found -> None
 
 let hq_type v org_id loc_id =
   let dist = Org.loc_connection v.orgs v.locs org_id loc_id in
@@ -40,10 +43,14 @@ let hq_type v org_id loc_id =
     if Loc.Id.equal loc_id v.mm.loc && Org.Id.equal org_id v.mm.org then Some Hq.Hideout
     else hq_type
   in
+  (* Hardcoded *)
   let hq_type = match hq_type, v.world.difficulty with
-  | None, Difficulty.Local_disturbance when
-      Loc.Id.(loc_id = Loc.washington) &&
-      Org.Id.((agent_of_role v Role.first).org = org_id) -> Some Hq.Hideout
+  | None, Difficulty.Local_disturbance when Loc.Id.(loc_id = Loc.washington) ->
+      begin match agent_of_role v Role.first
+        |> Option.map (fun a -> a.Agent.org) with
+      | Some org when Org.Id.(org = org_id) -> Some Hq.Hideout
+      | _ -> None
+      end
   | x, _ -> x
   in
   hq_type
