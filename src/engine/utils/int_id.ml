@@ -10,6 +10,7 @@ module type S = sig
   val of_int: int -> t
   val (=) : t -> t -> bool
   val (<>) : t -> t -> bool
+  val show: t -> string
 end
 
 module Make() : S = struct

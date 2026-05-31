@@ -152,11 +152,12 @@ type chosen_ = {
   enemy_loc1: Loc.Id.t;
   enemy_loc2: Loc.Id.t;
   ally_loc: Loc.Id.t;
-}
+} [@@deriving show]
 
   (* Given a role, fill it in *)
 let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
   let role = Role.Map.find role_id roles in
+  Printf.printf "make_agent_for_role_ %s\nchosen: %s\n" (Role.Id.show role_id) (show_chosen_ chosen);
   let rec loop n =
     if n > 999 then None else
     let org_id = match Role.org_bit role with
@@ -180,7 +181,11 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
           if Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 then None else Some loc_id
     in
     if Option.is_none org_id || Option.is_none loc_id then loop (n+1) else
-    let org_id, loc_id = Option.get_exn_or "oops" org_id, Option.get_exn_or "oops" loc_id in
+    let org_id, loc_id =
+      let o, l = Option.get_exn_or "oops" org_id, Option.get_exn_or "oops" loc_id in
+      (* Printf.printf "org_id %s, loc_id %s\n" (Org.Id.show o) (Loc.Id.show l); *)
+      o, l
+    in
     if hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
     (* Check mastermind *)
     let is_mm = Role.mastermind_bit role in
@@ -196,7 +201,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
     let agent = Agent.Map.find agent_id agents in
     if Role.Set.not_empty agent.roles then loop (n+1) else begin
     let agents = Agent.add_role agent_id role_id agents in
-    (* If we know anything about the MM, we know the role of the mm *)
+    (* If we know anything about the MM then we know the role of the mm *)
     let agents = if is_mm && Known_data.Set.not_empty agent.known
       then Agent.add_role_known agent_id role_id agents
       else agents
@@ -236,7 +241,7 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
   in
   let connection_to_cia org = Org.connection v.orgs org Org.cia in
 
-  let chosen =
+  let choose_orgs_locs () =
     let gen_org ?start test =
       Utils.try_do ~init:(fun () -> Org.random ?start s.random) test
     in
@@ -272,19 +277,25 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
     in
     { enemy_org1; enemy_org2; ally_org; enemy_loc1; enemy_loc2; ally_loc }
   in
-  let orgs = Org.Map.map (Org.randomize_connection s.random) v.orgs in
-  let roles, agents =
-    let role_calc_fn () =
-      Role.Map.fold
-        (fun role_id _ acc ->
-          Option.bind acc
-            (fun (roles, agents) ->
-              make_agent_for_role_ s role_id chosen roles agents v))
-        roles
-        (Some (roles, Agent.Map.empty))
+  let roles, agents, orgs =
+    let rec loop orgs n =
+      if n > 1000 then failwith "Failed to assign roles to agents" else
+      let chosen = choose_orgs_locs () in
+      let orgs = Org.Map.map (Org.randomize_connection s.random) orgs in
+      let roles_agents =
+        Role.Map.fold
+          (fun role_id _ acc ->
+            Option.bind acc
+              (fun (roles, agents) ->
+                make_agent_for_role_ s role_id chosen roles agents v))
+          roles
+          (Some (roles, Agent.Map.empty))
+      in
+      match roles_agents with
+      | Some (roles, agents) -> roles, agents, orgs
+      | None -> loop orgs (n+1)
     in
-    Utils.try_do ~init:role_calc_fn Option.is_none
-    |> Option.get_exn_or "failed to create agents"
+    loop v.orgs 0
   in
   let orgs =
     if Difficulty.(v.world.difficulty < Regional_conflict) then

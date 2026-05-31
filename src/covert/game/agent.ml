@@ -113,6 +113,7 @@ let get_or_gen (s:Services.t) org_id loc_id ~mm_agent agents orgs =
       in
       let agent = create id_code ~known org_id loc_id orgs in
       let agents = Map.add agent_id agent agents in
+      Printf.printf "New agent %s: %s\n" (Id.show agent_id) (yojson_of_t agent |> Yojson.Safe.to_string);
       agent_id, agents
 
 let do_agent_ agent_id agents fn =
