@@ -3,7 +3,7 @@ open! Containers
 module C = Constants
 
 type t = {
-  (* constant in the case *)
+  (* mostly constant in the case *)
   crime: Crime.Id.t;
   failed_steps: Crime.Step.Set.t;
   step: Crime.Step.t;
@@ -23,44 +23,11 @@ type t = {
   events: Event.map;
 } [@@deriving yojson]
 
-let agent_of_role v role_id =
-  try
-    let role = Role.Map.find role_id v.roles in
-    let agent_id = role.agent in
-    let agent = Agent.Map.find agent_id v.agents in
-    Some agent
-  with
-  Not_found -> None
-
-let hq_type v org_id loc_id =
-  let dist = Org.loc_connection v.orgs v.locs org_id loc_id in
-  let loc = Loc.Map.find loc_id v.locs in
-  let org = Org.Map.find org_id v.orgs in
-  let hq_type = loc.lawless + 4 * org.strength / (dist + 1) in
-  let hq_type = if hq_type > 0 then (6 * hq_type) / org.hq_build_cost + 1 else hq_type in
-  let hq_type = Hq.kind_of_enum hq_type in
-  let hq_type =
-    if Loc.Id.equal loc_id v.mm.loc && Org.Id.equal org_id v.mm.org then Some Hq.Hideout
-    else hq_type
-  in
-  (* Hardcoded *)
-  let hq_type = match hq_type, v.world.difficulty with
-  | None, Difficulty.Local_disturbance when Loc.Id.(loc_id = Loc.washington) ->
-      begin match agent_of_role v Role.first
-        |> Option.map (fun a -> a.Agent.org) with
-      | Some org when Org.Id.(org = org_id) -> Some Hq.Hideout
-      | _ -> None
-      end
-  | x, _ -> x
-  in
-  hq_type
+let hq_kind v org_id loc_id =
+  Hq.get_kind org_id loc_id v.locs v.orgs v.roles v.agents v.mm v.world
 
 let hq_known_to_org org1_id org2_id loc_id v =
-  let org_loc_dist = Org.loc_connection v.orgs v.locs org1_id loc_id in
-  let org_dist = Org.connection v.orgs org1_id org2_id in
-  let dist = (org_dist * 3) / 2 + org_loc_dist in
-  let hq_type = hq_type v org2_id loc_id |> Hq.enum_of_kind in
-  hq_type * 4 + 16 > dist
+  Hq.known_to_org org1_id org2_id loc_id v.locs v.orgs v.roles v.agents v.mm v.world
 
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   let crime_choice =
@@ -200,7 +167,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
       (* Printf.printf "org_id %s, loc_id %s\n" (Org.Id.show o) (Loc.Id.show l); *)
       o, l
     in
-    if hq_type v org_id loc_id |> Option.is_none then loop (n+1) else
+    if hq_kind v org_id loc_id |> Option.is_none then loop (n+1) else
     (* Check mastermind *)
     let is_mm = Role.mastermind_bit role in
     let org_id, loc_id = if is_mm then v.mm.org, v.mm.loc else org_id, loc_id in
@@ -277,17 +244,17 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
     in
     let enemy_loc1 = gen_loc @@ fun loc ->
       (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
-      (hq_type v enemy_org1 loc |> Option.is_none) ||
+      (hq_kind v enemy_org1 loc |> Option.is_none) ||
       (Loc.Id.(loc = v.mm.loc))
     in
     let enemy_loc2 = gen_loc @@ fun loc ->
       (Loc.connection v.locs enemy_loc1 loc > 12) ||
-      (hq_type v enemy_org2 loc |> Option.is_none) ||
+      (hq_kind v enemy_org2 loc |> Option.is_none) ||
       (Loc.Id.(loc = v.mm.loc))
     in
     let ally_loc = gen_loc @@ fun loc ->
       (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
-      (hq_type v ally_org loc |> Option.is_none)
+      (hq_kind v ally_org loc |> Option.is_none)
     in
     { enemy_org1; enemy_org2; ally_org; enemy_loc1; enemy_loc2; ally_loc }
   in

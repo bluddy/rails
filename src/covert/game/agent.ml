@@ -114,6 +114,7 @@ let get_or_gen (s:Services.t) org_id loc_id ~mm_agent agents orgs =
       Printf.printf "New agent %s: %s\n" (Id.show agent_id) (yojson_of_t agent |> Yojson.Safe.to_string);
       agent_id, agents
 
+
 module S = struct
 
   let do_agent_ agent_id agents fn =
@@ -130,5 +131,14 @@ module S = struct
 
   let remove_known_data agent_id known agents =
     do_agent_ agent_id agents @@ remove_known_data known
+
+  let of_role role_id roles agents =
+    try
+      let role = Role.Map.find role_id roles in
+      let agent_id = role.Role.agent in
+      let agent = Map.find agent_id agents in
+      Some agent
+    with
+    Not_found -> None
 
 end

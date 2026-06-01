@@ -63,6 +63,38 @@ type map = t Map.t [@@deriving yojson]
 let add_known known v =
   {v with known=KSet.add known v.known}
 
+let get_kind org_id loc_id locs orgs roles agents mm world =
+  let dist = Org.loc_connection orgs locs org_id loc_id in
+  let loc = Loc.Map.find loc_id locs in
+  let org = Org.Map.find org_id orgs in
+  let hq_type = loc.lawless + 4 * org.strength / (dist + 1) in
+  let hq_type = if hq_type > 0 then (6 * hq_type) / org.hq_build_cost + 1 else hq_type in
+  let hq_type = kind_of_enum hq_type in
+  let hq_type =
+    if Loc.Id.equal loc_id mm.Agent.loc && Org.Id.equal org_id mm.org then Some Hideout
+    else hq_type
+  in
+  (* Hardcoded *)
+  let hq_type = match hq_type, world.World.difficulty with
+  | None, Difficulty.Local_disturbance when Loc.Id.(loc_id = Loc.washington) ->
+      begin match Agent.S.of_role Role.first roles agents
+        |> Option.map (fun a -> a.Agent.org) with
+      | Some org when Org.Id.(org = org_id) -> Some Hideout
+      | _ -> None
+      end
+  | x, _ -> x
+  in
+  hq_type
+
+let known_to_org org1_id org2_id loc_id locs orgs roles agents mm world =
+  let org_loc_dist = Org.loc_connection orgs locs org1_id loc_id in
+  let org_dist = Org.connection orgs org1_id org2_id in
+  let dist = (org_dist * 3) / 2 + org_loc_dist in
+  let hq_type = get_kind org2_id loc_id locs orgs roles agents mm world
+  |> enum_of_kind in
+  hq_type * 4 + 16 > dist
+
+
 module S = struct
   let get org_id loc_id hqs =
     Map.find_pred (fun _ hq ->
