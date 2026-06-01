@@ -17,6 +17,14 @@ let kind_of_enum = function
   | 5 -> Some Office
   | _ -> None
 
+let enum_of_kind = function
+  | None -> 0
+  | Some Hideout -> 1
+  | Some Agent -> 2
+  | Some Safehouse -> 3
+  | Some Active_cel -> 4
+  | Some Office -> 5
+
 type known = [
   `Known_org
 ] [@@deriving yojson, ord]

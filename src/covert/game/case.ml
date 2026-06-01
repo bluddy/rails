@@ -55,6 +55,13 @@ let hq_type v org_id loc_id =
   in
   hq_type
 
+let hq_known_to_org org1_id org2_id loc_id v =
+  let org_loc_dist = Org.loc_connection v.orgs v.locs org1_id loc_id in
+  let org_dist = Org.connection v.orgs org1_id org2_id in
+  let dist = (org_dist * 3) / 2 + org_loc_dist in
+  let hq_type = hq_type v org2_id loc_id |> Hq.enum_of_kind in
+  hq_type * 4 + 16 > dist
+
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   let crime_choice =
     if Difficulty.lowest w.difficulty && w.time_months = 0 then Crime.tutorial
