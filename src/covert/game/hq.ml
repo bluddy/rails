@@ -51,11 +51,12 @@ let create org_id loc_id =
     rooms=0;
   }
 
-module Id = Engine.Int_id.Make()
+(* Unlike the OG, we use an (org, loc) map.
+   There are no building IDs.
+ *)
 
 module Map = Utils.Map.Make(struct
-  type t = Id.t [@@deriving yojson]
-  let compare = Id.compare
+  type t = Org.Id.t * Loc.Id.t [@@deriving yojson, ord]
 end)
 
 type map = t Map.t [@@deriving yojson]
@@ -97,17 +98,14 @@ let known_to_org org1_id org2_id loc_id locs orgs roles agents mm world =
 
 module S = struct
   let get org_id loc_id hqs =
-    Map.find_pred (fun _ hq ->
-      Loc.Id.(hq.loc = loc_id) && Org.Id.(hq.org = org_id))
-    hqs
+    Map.get (org_id, loc_id) hqs
 
   let get_or_gen org_id loc_id hqs =
     match get org_id loc_id hqs with
-    | Some hq_id -> hq_id, hqs
+    | Some hq -> hq, hqs
     | None ->
         let hq = create org_id loc_id in
-        let id = Map.cardinal hqs |> Id.of_int in
-        id, Map.add id hq hqs
+        hq, Map.add (org_id, loc_id) hq hqs
 
   let do_update_ hq_id hqs fn =
     Map.update hq_id (Option.map fn) hqs

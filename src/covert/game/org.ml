@@ -24,6 +24,7 @@ type t = {
 (* skip cops=0 by default *)
 let random ?(start=1) r = Random.int_range start (C.num_orgs - 1) r |> Id.of_int
 
+let local_contact = Id.of_int 0
 let cia = Id.of_int 1
 
 module Map = struct
@@ -121,5 +122,14 @@ module S = struct
       Buffer.add_string buf @@ Printf.sprintf "%s %s: (%d, %d)\n" (Id.show i) (org.name) (fst org.connect) (snd org.connect))
     orgs;
     Buffer.contents buf
+
+  let loc_fold f (orgs:map) (locs:Loc.map) acc =
+    Map.fold (fun org_id org acc ->
+      Loc.Map.fold (fun loc_id loc acc ->
+        f org_id loc_id org loc acc)
+      locs
+      acc)
+    orgs
+    acc
 
 end
