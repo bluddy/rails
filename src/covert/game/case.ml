@@ -38,7 +38,7 @@ let hq_type v org_id loc_id =
   let org = Org.Map.find org_id v.orgs in
   let hq_type = loc.lawless + 4 * org.strength / (dist + 1) in
   let hq_type = if hq_type > 0 then (6 * hq_type) / org.hq_build_cost + 1 else hq_type in
-  let hq_type = Hq.of_enum hq_type in
+  let hq_type = Hq.kind_of_enum hq_type in
   let hq_type =
     if Loc.Id.equal loc_id v.mm.loc && Org.Id.equal org_id v.mm.org then Some Hq.Hideout
     else hq_type
@@ -317,4 +317,14 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
       orgs
   in
   {v with orgs; roles; agents; events; double_agents}
+
+  (*
+let create_known_buildings (s:Services.t) (v:t) =
+  Org.Map.fold (fun org_id org acc ->
+
+  )
+  v.orgs
+  acc
+  *)
+
 
