@@ -9,7 +9,7 @@ type t = {
   country: string;
   connect: int * int;
   lawless: int;
-  known_buildings: int;
+  known_buildings: Org.Set.t;
   some_buildings: int;
   loc: int * int;
   activity: int;

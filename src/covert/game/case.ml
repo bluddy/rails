@@ -293,15 +293,22 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
   {v with orgs; roles; agents; events; double_agents}
 
 let create_known_buildings (s:Services.t) (v:t) =
-  Org.loc_fold (fun org_id loc_id org loc acc ->
+  Org.loc_fold (fun org_id loc_id org loc hqs ->
     let known = hq_known_to_org Org.cia org_id loc_id v in
     let hq_kind = hq_kind v org_id loc_id in
-    if known || Org.Id.(org_id == Org.local_contact) then
+    if known || Org.Id.(org_id = Org.local_contact) then
+      let hq = Hq.create org_id loc_id
+        |> Hq.add_known `Known_org
+      in
+      let hqs = Hq.Map.add (org_id, loc_id) hq hqs in
+      let orgs = Org.S.add_known org_id orgs in
+
+
 
 
   )
   v.orgs
   v.locs
-  acc
+  (Hq.Map.e)
 
 

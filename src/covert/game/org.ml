@@ -29,8 +29,7 @@ let cia = Id.of_int 1
 
 module Map = struct
   include Utils.Map.Make(struct
-  type t = Id.t [@@deriving yojson]
-  let compare = Id.compare
+  type t = Id.t [@@deriving yojson, ord]
 end)
 
   let of_simple_list l =
@@ -39,10 +38,13 @@ end
 
 type map = t Map.t [@@deriving yojson]
 
+module Set = Utils.Set.Make(struct
+  type t = Id.t [@@deriving yojson, ord]
+end)
+
 module Global_set = struct
   include Utils.Set.Make(struct
-  type t = Global_id.t [@@deriving yojson]
-  let compare = Global_id.compare
+  type t = Global_id.t [@@deriving yojson, ord]
 end)
 end
 
