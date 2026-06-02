@@ -292,22 +292,82 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
   in
   {v with orgs; roles; agents; events; double_agents}
 
-let create_known_buildings (s:Services.t) (v:t) =
-  Org.S.loc_fold (fun org_id loc_id org loc ((hqs,orgs,locs) as acc) ->
-    let known = hq_known_to_org Org.cia org_id loc_id v in
-    let hq_kind = hq_kind v org_id loc_id in
-    if known || Org.Id.(org_id = Org.local_contact) then
-      let hq = Hq.create org_id loc_id
-        |> Hq.add_known `Known_org
-      in
-      let hqs = Hq.Map.add (org_id, loc_id) hq hqs in
-      let orgs = Org.S.add_known org_id orgs in
-      let locs = Loc.S.add_known_hq loc_id org_id locs in
-      hqs,orgs,locs
-    else
-      acc)
-  v.orgs
-  v.locs
-  (Hq.Map.empty,v.orgs,v.locs)
+let create_known_hqs (s:Services.t) (v:t) =
+  let orgs, locs = v.orgs, v.locs in
+  (* All hqs known to cia *)
+  let hqs, orgs, locs =
+    Org.S.loc_fold (fun org_id loc_id _ _ ((hqs, orgs, locs) as acc) ->
+      let known = hq_known_to_org Org.cia org_id loc_id v in
+      if known || Org.Id.(org_id = Org.local_contact) then
+        let hq = Hq.create org_id loc_id |> Hq.add_known `Known_org in
+        let hqs = Hq.Map.add (org_id, loc_id) hq hqs in
+        let orgs = Org.S.add_known org_id orgs in
+        let locs = Loc.S.add_known_hq loc_id org_id locs in
+        hqs, orgs, locs
+      else
+        acc)
+    orgs
+    locs
+    (Hq.Map.empty, orgs, locs)
+  in
+
+  let add_building org_id loc_id (hqs, locs) =
+    match loc_id with
+    | Some loc_id ->
+        if Hq.Map.mem (org_id, loc_id) hqs then hqs, locs
+        else
+          let hq = Hq.create org_id loc_id |> Hq.add_known `Known_org in
+          let hqs = Hq.Map.add (org_id, loc_id) hq hqs in
+          let locs = Loc.S.add_known_hq loc_id org_id locs in
+          hqs, locs
+    | None -> hqs, locs
+  in
+  let min_dist_locs org_id =
+    let _, min_loc, min_loc2 =
+      Loc.Map.fold (fun loc_id _ ((min_dist, min_loc, _) as acc) ->
+        match hq_kind v org_id loc_id with
+        | None -> acc
+        | Some _ ->
+            let dist = Org.loc_connection v.orgs v.locs org_id loc_id in
+            if dist < min_dist then (dist, Some loc_id, min_loc)
+            else acc)
+      locs
+      (999, None, None)
+    in
+    min_loc, min_loc2
+  in
+  let count_known_to_cia org_id =
+    Loc.Map.fold (fun loc_id _ ctr ->
+      let known = hq_known_to_org Org.cia org_id loc_id v in
+      if known then ctr + 1 else ctr)
+    locs 0
+  in
+  (* Add closest buildings *)
+  let hqs, locs =
+    Org.Map.fold (fun org_id _ (hqs, locs) ->
+      let min_loc, min_loc2 = min_dist_locs org_id in
+      (hqs, locs)
+      |> add_building org_id min_loc
+      |> add_building org_id min_loc2)
+    orgs
+    (hqs, locs)
+  in
+  (* Check for too few buildings *)
+  (* NOTE: looks like this doesn't do anything. We already did the min locs in prev iters
+     and we're not changing anything - we're not going any 'deeper' in min dist
+   *)
+  let hqs, locs =
+    Org.Map.fold (fun org_id _ ((hqs, locs) as acc) ->
+      (* start from org = 4 for some reason *)
+      if Org.Id.to_int org_id < 4 then acc else
+      let min_loc, min_loc2 = min_dist_locs org_id in
+      let count = count_known_to_cia org_id in
+      (hqs, locs)
+      |> (fun a -> if count < 2 then add_building org_id min_loc a else a)
+      |> (fun a -> if count < 3 then add_building org_id min_loc2 a else a))
+    orgs
+    (hqs, locs)
+  in
+  hqs, locs
 
 
