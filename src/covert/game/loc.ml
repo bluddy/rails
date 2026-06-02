@@ -9,11 +9,11 @@ type t = {
   country: string;
   connect: int * int;
   lawless: int;
-  known_buildings: Org.Set.t;
+  known_buildings: Org_id.Set.t;
   some_buildings: int;
   loc: int * int;
   activity: int;
-} [@@deriving show, yojson]
+} [@@deriving yojson]
 
 module Id = Engine.Int_id.Make()
 
@@ -50,7 +50,7 @@ let from_stream num_locs s =
     let connect = Gen.get_wordi s in
     let connect = connect land 0xF, connect land 0xF0 lsr 4 in
     let lawless = Gen.get_wordi s in 
-    let known_buildings = Gen.get_wordi s in
+    let _known_buildings = Gen.get_wordi s in
     let some_buildings = Gen.get_wordi s in
     let x = Gen.get_bytei s in
     let y = Gen.get_bytei s in
@@ -59,13 +59,13 @@ let from_stream num_locs s =
       country;
       connect;
       lawless;
-      known_buildings;
+      known_buildings=Org_id.Set.empty;
       some_buildings;
       loc=(x,y);
       activity=0;
     }
     in
-    print_endline @@ show loc;
+    print_endline @@ (yojson_of_t loc |> Yojson.Safe.to_string);
     loc::acc
   )
   []

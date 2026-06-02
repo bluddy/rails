@@ -5,7 +5,7 @@ module C = Constants
 module Gen = Engine.My_gen
 module String = Engine.String
 
-module Id = Engine.Int_id.Make() (* Id in current session *)
+module Id = Org_id
 module Global_id = Engine.Int_id.Make() (* Global id among all orgs in game *)
 
 type t = {
@@ -38,9 +38,7 @@ end
 
 type map = t Map.t [@@deriving yojson]
 
-module Set = Utils.Set.Make(struct
-  type t = Id.t [@@deriving yojson, ord]
-end)
+module Set = Org_id.Set
 
 module Global_set = struct
   include Utils.Set.Make(struct
