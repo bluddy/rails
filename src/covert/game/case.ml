@@ -375,5 +375,9 @@ let create_red_herrings (s:Services.t) (v:t) =
     (fun () -> Org.random s.random)
     (fun org_id -> Org.Id.(v.mm.org = org_id))
   in
+  let loc_id = Utils.do_while
+    (fun () -> Loc.random s.random)
+    (fun loc_id -> hq_kind v org_id loc_id |> Option.is_none)
+  in
   org_id
 
