@@ -26,3 +26,15 @@ let try_do ~init check_fail =
     else x
   in
   loop 0
+
+let do_while do_fn while_fn =
+  let rec loop () =
+    let x = do_fn () in
+    if while_fn x then loop ()
+    else x
+  in
+  loop ()
+
+let do_until do_fn until_fn =
+  do_while do_fn (fun x -> not @@ until_fn x)
+
