@@ -83,38 +83,6 @@ let add_known_data known v =
 let remove_known_data known v =
   {v with known=Known_data.Set.remove known v.known}
 
-let get org_id loc_id agents =
-  Map.find_pred (fun _ agent ->
-    Org.Id.(agent.org = org_id) && Loc.Id.(agent.loc = loc_id))
-    agents
-
-let get_or_gen (s:Services.t) org_id loc_id ~mm_agent agents orgs =
-  match get org_id loc_id agents with
-  | Some agent -> agent, agents
-  | None ->
-      let is_mm =
-        Loc.Id.(mm_agent.loc = loc_id) && Org.Id.(mm_agent.org = org_id)
-      in
-      let agent_id =
-        if is_mm then mastermind
-        else
-          (* Increase by 1 because 0 is mastermind *)
-          Map.cardinal agents + 1 |> Id.of_int
-      in
-      let known = if is_mm then mm_agent.known else Known_data.Set.empty in
-      let id_code =
-        if is_mm then mm_agent.id_code
-        else
-          let id_code = Random.int 32766 s.random in
-          let male = Random.int 3 s.random > 0 in
-          if male then id_code lor 1 else id_code
-      in
-      let agent = create id_code ~known org_id loc_id orgs in
-      let agents = Map.add agent_id agent agents in
-      Printf.printf "New agent %s: %s\n" (Id.show agent_id) (yojson_of_t agent |> Yojson.Safe.to_string);
-      agent_id, agents
-
-
 module S = struct
 
   let do_agent_ agent_id agents fn =
@@ -140,5 +108,36 @@ module S = struct
       Some agent
     with
     Not_found -> None
+
+  let get org_id loc_id agents =
+    Map.find_pred (fun _ agent ->
+      Org.Id.(agent.org = org_id) && Loc.Id.(agent.loc = loc_id))
+      agents
+
+  let get_or_gen (s:Services.t) org_id loc_id ~mm_agent agents orgs =
+    match get org_id loc_id agents with
+    | Some agent -> agent, agents
+    | None ->
+        let is_mm =
+          Loc.Id.(mm_agent.loc = loc_id) && Org.Id.(mm_agent.org = org_id)
+        in
+        let agent_id =
+          if is_mm then mastermind
+          else
+            (* Increase by 1 because 0 is mastermind *)
+            Map.cardinal agents + 1 |> Id.of_int
+        in
+        let known = if is_mm then mm_agent.known else Known_data.Set.empty in
+        let id_code =
+          if is_mm then mm_agent.id_code
+          else
+            let id_code = Random.int 32766 s.random in
+            let male = Random.int 3 s.random > 0 in
+            if male then id_code lor 1 else id_code
+        in
+        let agent = create id_code ~known org_id loc_id orgs in
+        let agents = Map.add agent_id agent agents in
+        Printf.printf "New agent %s: %s\n" (Id.show agent_id) (yojson_of_t agent |> Yojson.Safe.to_string);
+        agent_id, agents
 
 end

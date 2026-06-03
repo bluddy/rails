@@ -177,7 +177,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
       if Difficulty.lowest v.world.difficulty && Role.Id.(role_id = Role.first)
       then Loc.washington else loc_id
     in
-    let agent_id, agents = Agent.get_or_gen s org_id loc_id ~mm_agent:v.mm agents v.orgs in
+    let agent_id, agents = Agent.S.get_or_gen s org_id loc_id ~mm_agent:v.mm agents v.orgs in
     (* check no role *)
     let agent = Agent.Map.find agent_id agents in
     if Role.Set.not_empty agent.roles then loop (n+1) else begin
@@ -382,8 +382,8 @@ let create_red_herrings (s:Services.t) (v:t) =
         (fun loc_id -> hq_kind v org_id loc_id |> Option.is_none)
       in
       org_id, loc_id) @@
-    fun (org_id, loc_id) ->
-      Agent.get org_id loc_id v.agents |> Option.is_some
+    fun (org_id, loc_id) -> Agent.S.get org_id loc_id v.agents |> Option.is_some
   in
+  let agent_id, agents = Agent.S.get_or_gen s org_id loc_id v.agents v.orgs ~mm_agent:v.mm in
   ()
 
