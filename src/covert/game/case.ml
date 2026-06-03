@@ -371,13 +371,19 @@ let create_known_hqs (v:t) =
 
 let create_red_herrings (s:Services.t) (v:t) =
   let num_to_add = Difficulty.to_enum v.world.difficulty * 4 in
-  let org_id = Utils.do_while
-    (fun () -> Org.random s.random)
-    (fun org_id -> Org.Id.(v.mm.org = org_id))
+  let org_id, loc_id = Utils.do_while
+    (fun () ->
+      let org_id = Utils.do_while
+        (fun () -> Org.random s.random)
+        (fun org_id -> Org.Id.(v.mm.org = org_id))
+      in
+      let loc_id = Utils.do_while
+        (fun () -> Loc.random s.random)
+        (fun loc_id -> hq_kind v org_id loc_id |> Option.is_none)
+      in
+      org_id, loc_id) @@
+    fun (org_id, loc_id) ->
+      Agent.get org_id loc_id v.agents |> Option.is_some
   in
-  let loc_id = Utils.do_while
-    (fun () -> Loc.random s.random)
-    (fun loc_id -> hq_kind v org_id loc_id |> Option.is_none)
-  in
-  org_id
+  ()
 
