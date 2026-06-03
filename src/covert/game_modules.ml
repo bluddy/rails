@@ -86,6 +86,10 @@ let handle_event _win v (event:Event.t) time =
               |> Case.update_events_roles_agents v.srv world
             in
             let known_org = Org.S.find_one_known case.orgs |> Option.map (Org.S.get_name case.orgs) in
+            let case = case
+              |> Case.create_known_hqs
+              |> Case.create_red_herrings v.srv
+            in
             let modes =
               let open Briefing in
               [

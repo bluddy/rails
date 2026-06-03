@@ -21,6 +21,7 @@ type t = {
   roles: Role.map;
   agents: Agent.map;
   events: Event.map;
+  hqs: Hq.map;
 } [@@deriving yojson]
 
 let hq_kind v org_id loc_id =
@@ -86,6 +87,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
     roles=Role.Map.empty;
     agents=Agent.Map.empty;
     events=Event.Map.empty;
+    hqs=Hq.Map.empty;
   }
 
 let choose_next_step_ (srv:Services.t) (v:t) =
@@ -221,7 +223,6 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
     |> Loc.Set.remove Loc.washington
   in
   let connection_to_cia org = Org.connection v.orgs org Org.cia in
-
   let choose_orgs_locs () =
     let gen_org ?start test =
       Utils.try_do ~init:(fun () -> Org.random ?start s.random) test
@@ -367,7 +368,7 @@ let create_known_hqs (v:t) =
     orgs
     (hqs, locs)
   in
-  hqs, locs
+  {v with hqs; locs}
 
 let create_red_herrings (s:Services.t) (v:t) =
   let add_herring (agents, roles) _ =
@@ -393,7 +394,11 @@ let create_red_herrings (s:Services.t) (v:t) =
   in
   let num_to_add = Difficulty.to_enum v.world.difficulty * 4
   in
-  Iter.fold add_herring
-    (v.agents, v.roles)
-    Iter.(0 -- (num_to_add - 1))
+  let agents, roles =
+    Iter.fold add_herring
+      (v.agents, v.roles)
+      Iter.(0 -- (num_to_add - 1))
+  in
+  {v with agents; roles}
+
 
