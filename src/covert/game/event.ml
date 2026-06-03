@@ -18,16 +18,9 @@ type t = {
   efficiency: int;
 } [@@deriving yojson, show]
 
-module Id = Engine.Int_id.Make()
+module Id = Event_id
 
-module Map = struct
-  include Utils.Map.Make(struct 
-    type t = Id.t [@@deriving yojson]
-    let compare = Id.compare
-  end)
-
-  let of_ordered_list l = List.mapi (fun i x -> Id.of_int i, x) l |> of_list
-end
+module Map = Event_id.Map
 
 type map = t Map.t [@@deriving yojson]
 

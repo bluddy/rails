@@ -117,7 +117,7 @@ let make_red_herring r agent events v =
     (fun (_, clue_seed) ->
       find_clue_rand clue_seed v |> Option.is_some)
   in
-  let num_events = Event.Map.cardinal events in
+  let num_events = Event_id.Map.cardinal events in
   let tick = Random.int (num_events/2) r + 4 in
   let clue_rand = Random.int 7 r in
   let rank = Rank.random r in
@@ -135,7 +135,5 @@ let make_red_herring r agent events v =
   }
   in
   add role v
-
-
 
 end
