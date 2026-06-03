@@ -370,20 +370,30 @@ let create_known_hqs (v:t) =
   hqs, locs
 
 let create_red_herrings (s:Services.t) (v:t) =
-  let num_to_add = Difficulty.to_enum v.world.difficulty * 4 in
-  let org_id, loc_id = Utils.do_while
-    (fun () ->
-      let org_id = Utils.do_while
-        (fun () -> Org.random s.random)
-        (fun org_id -> Org.Id.(v.mm.org = org_id))
-      in
-      let loc_id = Utils.do_while
-        (fun () -> Loc.random s.random)
-        (fun loc_id -> hq_kind v org_id loc_id |> Option.is_none)
-      in
-      org_id, loc_id) @@
-    fun (org_id, loc_id) -> Agent.S.get org_id loc_id v.agents |> Option.is_some
+  let add_herring (agents, roles) _ =
+    let org_id, loc_id = Utils.do_while
+      (fun () ->
+        let org_id = Utils.do_while
+          (fun () -> Org.random s.random)
+          (fun org_id -> Org.Id.(v.mm.org = org_id))
+        in
+        let loc_id = Utils.do_while
+          (fun () -> Loc.random s.random)
+          (fun loc_id -> hq_kind v org_id loc_id |> Option.is_none)
+        in
+        org_id, loc_id)
+      (fun (org_id, loc_id) -> Agent.S.get org_id loc_id agents
+        |> Option.is_some)
+    in
+    let agent_id, agents =
+      Agent.S.get_or_gen s org_id loc_id agents v.orgs ~mm_agent:v.mm
+    in
+    let roles = Role.S.make_red_herring s.random agent_id v.events roles in
+    agents, roles
   in
-  let agent_id, agents = Agent.S.get_or_gen s org_id loc_id v.agents v.orgs ~mm_agent:v.mm in
-  ()
+  let num_to_add = Difficulty.to_enum v.world.difficulty * 4
+  in
+  Iter.fold add_herring
+    (v.agents, v.roles)
+    Iter.(0 -- (num_to_add - 1))
 
