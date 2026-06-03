@@ -292,7 +292,7 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
   in
   {v with orgs; roles; agents; events; double_agents}
 
-let create_known_hqs (s:Services.t) (v:t) =
+let create_known_hqs (v:t) =
   let orgs, locs = v.orgs, v.locs in
   (* All hqs known to cia *)
   let hqs, orgs, locs =
@@ -310,7 +310,6 @@ let create_known_hqs (s:Services.t) (v:t) =
     locs
     (Hq.Map.empty, orgs, locs)
   in
-
   let add_building org_id loc_id (hqs, locs) =
     match loc_id with
     | Some loc_id ->
@@ -370,4 +369,11 @@ let create_known_hqs (s:Services.t) (v:t) =
   in
   hqs, locs
 
+let create_red_herrings (s:Services.t) (v:t) =
+  let num_to_add = Difficulty.to_enum v.world.difficulty * 4 in
+  let org_id = Utils.do_while
+    (fun () -> Org.random s.random)
+    (fun org_id -> Org.Id.(v.mm.org = org_id))
+  in
+  org_id
 
