@@ -41,3 +41,11 @@ type t = {
   loc_rcv: Loc.Id.t;
 } [@@deriving yojson]
 
+module Id = Engine.Int_id.Make()
+
+module Map = Utils.Map.Make(struct
+  type t = Id.t [@@deriving yojson, ord]
+end)
+
+type map = t Map.t [@@deriving yojson]
+

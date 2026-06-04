@@ -21,5 +21,6 @@ type t = {
   agents: Agent.map;
   events: Event.map;
   hqs: Hq.map;
+  actions: Action.Map.t;
 } [@@deriving yojson]
 

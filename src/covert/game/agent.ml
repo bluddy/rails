@@ -64,8 +64,7 @@ module Id = Agent_id
 let mastermind = Id.of_int 0
 
 module Map = Utils.Map.Make(struct
-  type t = Id.t [@@deriving yojson]
-  let compare = Id.compare
+  type t = Id.t [@@deriving yojson, ord]
 end)
 
 type map = t Map.t [@@deriving yojson]
