@@ -1,26 +1,44 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
-type t = {
-  (* mostly constant in the case *)
+type setup = {
   crime: Crime.Id.t;
   failed_steps: Crime.Step.Set.t;
   step: Crime.Step.t;
   region: Region.t;
   mm: Agent.t;
-  world: World.t;
+} [@@deriving yojson]
 
-  (* dynamic in the case *)
-  cur_loc: Loc.Id.t;
-  cur_org: Org.Id.t;
+type data = {
   locs: Loc.map;
   orgs: Org.map;
-  enemy_anxiety: int;
   double_agents: Loc.Set.t;
-  roles: Role.map;
   agents: Agent.map;
-  events: Event.map;
+  roles: Role.map;
   hqs: Hq.map;
+  events: Event.map;
   actions: Action.map;
 } [@@deriving yojson]
+
+type t = {
+  s: setup;
+  world: World.t;
+  d: data;
+
+  time_minutes: int;
+  cur_loc: Loc.Id.t;
+  cur_org: Org.Id.t;
+  enemy_anxiety: int;
+} [@@deriving yojson]
+
+let step v = v.s.step
+let region v = v.s.region
+let crime v = v.s.crime
+let orgs v = v.d.orgs
+let locs v = v.d.locs
+let double_agents v = v.d.double_agents
+let roles v = v.d.roles
+let hqs v = v.d.hqs
+let events v = v.d.events
+let actions v = v.d.actions
 

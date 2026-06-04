@@ -5,10 +5,10 @@ module C = Constants
 include Case_d
 
 let hq_kind v org_id loc_id =
-  Hq.get_kind org_id loc_id v.locs v.orgs v.roles v.agents v.mm v.world
+  Hq.get_kind org_id loc_id v.d.locs v.d.orgs v.d.roles v.d.agents v.s.mm v.world
 
 let hq_known_to_org org1_id org2_id loc_id v =
-  Hq.known_to_org org1_id org2_id loc_id v.locs v.orgs v.roles v.agents v.mm v.world
+  Hq.known_to_org org1_id org2_id loc_id v.d.locs v.d.orgs v.d.roles v.d.agents v.s.mm v.world
 
 let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   let crime_choice =
@@ -51,48 +51,54 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
   in
   let region, locs, orgs, mm = loop None 0 in
   {
-    crime=crime_choice;
-    failed_steps=Crime.Step.Set.empty;
-    step=Crime.Step.none;
-    region;
-    mm;
-    double_agents=Loc.Set.empty;
+    s={
+      crime=crime_choice;
+      failed_steps=Crime.Step.Set.empty;
+      step=Crime.Step.none;
+      region;
+      mm;
+    };
     world=w;
 
+    time_minutes=0;
     cur_loc=Loc.washington;
     cur_org=Org.cia;
-    locs;
-    orgs;
     enemy_anxiety=0;
-    roles=Role.Map.empty;
-    agents=Agent.Map.empty;
-    events=Event.Map.empty;
-    hqs=Hq.Map.empty;
+    d={
+      double_agents=Loc.Set.empty;
+      roles=Role.Map.empty;
+      agents=Agent.Map.empty;
+      events=Event.Map.empty;
+      hqs=Hq.Map.empty;
+      locs;
+      orgs;
+      actions=Action.Map.empty;
+    };
   }
 
 let choose_next_step_ (srv:Services.t) (v:t) =
   let rec loop n =
     if n > 999 then None else
     let step = Random.int 6 srv.random |> Crime.Step.of_int in
-    if not @@ Crime.Step.is_valid v.crime step then loop (n+1) else
-    if Crime.Step.is_last v.crime step && (
-      let all_steps = Crime.Step.get_all v.crime |> Crime.Step.Set.of_list in
-      let all_steps_less_failed_steps = Crime.Step.Set.diff all_steps v.failed_steps in
+    if not @@ Crime.Step.is_valid v.s.crime step then loop (n+1) else
+    if Crime.Step.is_last v.s.crime step && (
+      let all_steps = Crime.Step.get_all v.s.crime |> Crime.Step.Set.of_list in
+      let all_steps_less_failed_steps = Crime.Step.Set.diff all_steps v.s.failed_steps in
       let num_steps_less_failed_steps = Crime.Step.Set.cardinal all_steps_less_failed_steps in
       num_steps_less_failed_steps > 1) then loop (n+1) else
-    match v.step with
+    match v.s.step with
     | s when Crime.Step.equal step s && n >= 98 -> loop (n+2)
     | _ -> Some step in
   loop 0
 
   (* When we just want to pick the next step, but might need to regen if we fail *)
 let step_and_recreate_if_needed (srv:Services.t) w v =
-  let last_crime_choice = v.crime in
+  let last_crime_choice = v.s.crime in
   let rec loop v =
     match choose_next_step_ srv v with
     | Some step ->
         assert (not @@ Crime.Step.equal step Crime.Step.none);
-        {v with step}
+        {v with s={v.s with step}}
     | None ->
         let v = create ~last_crime_choice srv w in
         loop v
@@ -101,10 +107,10 @@ let step_and_recreate_if_needed (srv:Services.t) w v =
 
   (* Check if we failed all the other steps other than the one we're doing *)
 let failed_other_steps (v:t) =
-  assert (not @@ Crime.Step.equal v.step Crime.Step.none);
-  let all = Crime.Step.get_all v.crime |> Crime.Step.Set.of_list in
-  let remove_failed = Crime.Step.Set.diff all v.failed_steps in
-  let remove_cur = Crime.Step.Set.remove v.step remove_failed in
+  assert (not @@ Crime.Step.equal v.s.step Crime.Step.none);
+  let all = Crime.Step.get_all v.s.crime |> Crime.Step.Set.of_list in
+  let remove_failed = Crime.Step.Set.diff all v.s.failed_steps in
+  let remove_cur = Crime.Step.Set.remove v.s.step remove_failed in
   Crime.Step.Set.is_empty remove_cur
 
   (* Used only for creation *)
@@ -129,8 +135,8 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
       | `Org_ally -> Some chosen.ally_org
       | `Org_any ->
           let org_id = Org.random s.random in
-          if (Org.connection v.orgs org_id chosen.enemy_org1 > 12 ||
-            (Org.Map.find org_id v.orgs).connect |> fst <= 4 ||
+          if (Org.connection v.d.orgs org_id chosen.enemy_org1 > 12 ||
+            (Org.Map.find org_id v.d.orgs).connect |> fst <= 4 ||
             Org.Id.(org_id = Org.cia))
           then None
           else Some org_id
@@ -141,7 +147,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
       | `Loc_ally -> Some chosen.ally_loc
       | `Loc_any ->
           let loc_id = Loc.random s.random in
-          if Loc.connection v.locs loc_id chosen.enemy_loc1 < 8 then None else Some loc_id
+          if Loc.connection v.d.locs loc_id chosen.enemy_loc1 < 8 then None else Some loc_id
     in
     if Option.is_none org_id || Option.is_none loc_id then loop (n+1) else
     let org_id, loc_id =
@@ -152,14 +158,14 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
     if hq_kind v org_id loc_id |> Option.is_none then loop (n+1) else
     (* Check mastermind *)
     let is_mm = Role.mastermind_bit role in
-    let org_id, loc_id = if is_mm then v.mm.org, v.mm.loc else org_id, loc_id in
-    if not is_mm && Loc.Id.(v.mm.loc = loc_id) && Org.Id.(v.mm.org = org_id) then loop (n+1) else
+    let org_id, loc_id = if is_mm then v.s.mm.org, v.s.mm.loc else org_id, loc_id in
+    if not is_mm && Loc.Id.(v.s.mm.loc = loc_id) && Org.Id.(v.s.mm.org = org_id) then loop (n+1) else
     let loc_id =
       (* hardcoded *)
       if Difficulty.lowest v.world.difficulty && Role.Id.(role_id = Role.first)
       then Loc.washington else loc_id
     in
-    let agent_id, agents = Agent.S.get_or_gen s org_id loc_id ~mm_agent:v.mm agents v.orgs in
+    let agent_id, agents = Agent.S.get_or_gen s org_id loc_id ~mm_agent:v.s.mm agents v.d.orgs in
     (* check no role *)
     let agent = Agent.Map.find agent_id agents in
     if Role.Set.not_empty agent.roles then loop (n+1) else begin
@@ -189,7 +195,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
       Some (roles, agents)
 
 let update_events_roles_agents (s:Services.t) world (v:t) =
-  let typ = Crime.Step.get_type v.crime v.step in
+  let typ = Crime.Step.get_type v.s.crime v.s.step in
   let roles, events = Crime.load_from_file typ in
   let roles = Role.Map.of_ordered_list roles in
   let events = Event.Map.of_ordered_list events in
@@ -202,7 +208,7 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
     Iter.(0 -- (diff_num-1))
     |> Loc.Set.remove Loc.washington
   in
-  let connection_to_cia org = Org.connection v.orgs org Org.cia in
+  let connection_to_cia org = Org.connection v.d.orgs org Org.cia in
   let choose_orgs_locs () =
     let gen_org ?start test =
       Utils.try_do ~init:(fun () -> Org.random ?start s.random) test
@@ -215,26 +221,26 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
     let enemy_org1 =
       gen_org @@ fun org ->
         (connection_to_cia org < 8) ||
-        (Org.connection v.orgs org v.mm.org > 8) ||
-        (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
+        (Org.connection v.d.orgs org v.s.mm.org > 8) ||
+        (let org_d = Org.Map.find org v.d.orgs in fst org_d.connect <= 4)
     in
     let enemy_org2 =
       gen_org @@ fun org ->
-        (Org.connection v.orgs org enemy_org1 > 8) ||
-        (let org_d = Org.Map.find org v.orgs in fst org_d.connect <= 4)
+        (Org.connection v.d.orgs org enemy_org1 > 8) ||
+        (let org_d = Org.Map.find org v.d.orgs in fst org_d.connect <= 4)
     in
     let enemy_loc1 = gen_loc @@ fun loc ->
-      (Org.loc_connection v.orgs v.locs Org.cia loc < 8) ||
+      (Org.loc_connection v.d.orgs v.d.locs Org.cia loc < 8) ||
       (hq_kind v enemy_org1 loc |> Option.is_none) ||
-      (Loc.Id.(loc = v.mm.loc))
+      (Loc.Id.(loc = v.s.mm.loc))
     in
     let enemy_loc2 = gen_loc @@ fun loc ->
-      (Loc.connection v.locs enemy_loc1 loc > 12) ||
+      (Loc.connection v.d.locs enemy_loc1 loc > 12) ||
       (hq_kind v enemy_org2 loc |> Option.is_none) ||
-      (Loc.Id.(loc = v.mm.loc))
+      (Loc.Id.(loc = v.s.mm.loc))
     in
     let ally_loc = gen_loc @@ fun loc ->
-      (Org.loc_connection v.orgs v.locs Org.cia loc > 10) ||
+      (Org.loc_connection v.d.orgs v.d.locs Org.cia loc > 10) ||
       (hq_kind v ally_org loc |> Option.is_none)
     in
     { enemy_org1; enemy_org2; ally_org; enemy_loc1; enemy_loc2; ally_loc }
@@ -258,7 +264,7 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
       | Some (roles, agents) -> roles, agents, orgs
       | None -> loop orgs (n+1)
     in
-    loop v.orgs 0
+    loop v.d.orgs 0
   in
   let orgs =
     if Difficulty.(v.world.difficulty < Regional_conflict) then
@@ -271,10 +277,10 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
     else
       orgs
   in
-  {v with orgs; roles; agents; events; double_agents}
+  {v with d={v.d with orgs; roles; agents; events; double_agents}}
 
 let create_known_hqs (v:t) =
-  let orgs, locs = v.orgs, v.locs in
+  let orgs, locs = v.d.orgs, v.d.locs in
   (* All hqs known to cia *)
   let hqs, orgs, locs =
     Org.S.loc_fold (fun org_id loc_id _ _ ((hqs, orgs, locs) as acc) ->
@@ -308,7 +314,7 @@ let create_known_hqs (v:t) =
         match hq_kind v org_id loc_id with
         | None -> acc
         | Some _ ->
-            let dist = Org.loc_connection v.orgs v.locs org_id loc_id in
+            let dist = Org.loc_connection v.d.orgs v.d.locs org_id loc_id in
             if dist < min_dist then (dist, Some loc_id, min_loc)
             else acc)
       locs
@@ -348,7 +354,7 @@ let create_known_hqs (v:t) =
     orgs
     (hqs, locs)
   in
-  {v with hqs; locs}
+  {v with d={v.d with hqs; locs}}
 
 let create_red_herrings (s:Services.t) (v:t) =
   let add_herring (agents, roles) _ =
@@ -356,7 +362,7 @@ let create_red_herrings (s:Services.t) (v:t) =
       (fun () ->
         let org_id = Utils.do_while
           (fun () -> Org.random s.random)
-          (fun org_id -> Org.Id.(v.mm.org = org_id))
+          (fun org_id -> Org.Id.(v.s.mm.org = org_id))
         in
         let loc_id = Utils.do_while
           (fun () -> Loc.random s.random)
@@ -367,19 +373,19 @@ let create_red_herrings (s:Services.t) (v:t) =
         |> Option.is_some)
     in
     let agent_id, agents =
-      Agent.S.get_or_gen s org_id loc_id agents v.orgs ~mm_agent:v.mm
+      Agent.S.get_or_gen s org_id loc_id agents v.d.orgs ~mm_agent:v.s.mm
     in
-    let roles = Role.S.make_red_herring s.random agent_id v.events roles in
+    let roles = Role.S.make_red_herring s.random agent_id v.d.events roles in
     agents, roles
   in
   let num_to_add = Difficulty.to_enum v.world.difficulty * 4
   in
   let agents, roles =
     Iter.fold add_herring
-      (v.agents, v.roles)
+      (v.d.agents, v.d.roles)
       Iter.(0 -- (num_to_add - 1))
   in
-  {v with agents; roles}
+  {v with d={v.d with agents; roles}}
 
 let time_pass (s:Services.t) time = ()
 

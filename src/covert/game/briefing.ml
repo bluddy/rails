@@ -55,14 +55,14 @@ let create (s:Services.t) (case:Case.t) mode =
   | Crime_start ->
       let pani = briefing_create s in
       let page, plot_num = 0, 9 in
-      let pattern = Printf.sprintf "*PL%02d%d%d" (Crime.Id.to_int case.crime) plot_num page in
+      let pattern = Printf.sprintf "*PL%02d%d%d" (Crime.Id.to_int @@ Case.crime case) plot_num page in
       let text = get_text_ s `Plot pattern
         |> Option.get_exn_or @@ Printf.sprintf "missing text %s" pattern in
       { case; pani; srv=s; mode; text=Pattern{text; pattern}; }
   | Crime_step_start ->
       let pani = briefing_create s in
       let letter = if Case.failed_other_steps case then 'A' else 'a' in
-      let pattern = Printf.sprintf "*PL%02d%d%c" (Crime.Id.to_int case.crime) (Crime.Step.Id.to_int case.step) letter in
+      let pattern = Printf.sprintf "*PL%02d%d%c" (Crime.Id.to_int @@ Case.crime case) (Crime.Step.Id.to_int @@ Case.step case) letter in
       let text = get_text_ s `Plot pattern
         |> Option.get_exn_or @@ Printf.sprintf "missing text %s" pattern in
       { case; pani; srv=s; mode; text=Pattern{text; pattern}; }
@@ -70,13 +70,13 @@ let create (s:Services.t) (case:Case.t) mode =
       let pani = briefing_create s in
       let text = Printf.sprintf
         "We have indications that an operation is in preparation somehwere in %s."
-          (Region.show case.region)
+          (Region.show @@ Case.region case)
       in
       let text = match org_name with
       | Some org_s -> Printf.sprintf "%s The %s is known to be involved." text org_s
       | None -> text
       in
-      let has_double_agents = Loc.Set.not_empty case.double_agents in
+      let has_double_agents = Loc.Set.not_empty @@ Case.double_agents case in
       let text2 = "Your mission is to prevent this operation from succeeding\
                   and to capture as many of the participants as possible."
       in

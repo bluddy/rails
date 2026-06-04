@@ -85,7 +85,7 @@ let handle_event _win v (event:Event.t) time =
               |> Case.step_and_recreate_if_needed v.srv world
               |> Case.update_events_roles_agents v.srv world
             in
-            let known_org = Org.S.find_one_known case.orgs |> Option.map (Org.S.get_name case.orgs) in
+            let known_org = Org.S.find_one_known (Case.orgs case) |> Option.map (Org.S.get_name @@ Case.orgs case) in
             let case = case
               |> Case.create_known_hqs
               |> Case.create_red_herrings v.srv
