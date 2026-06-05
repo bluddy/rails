@@ -387,5 +387,5 @@ let create_red_herrings (s:Services.t) (v:t) =
   in
   {v with d={v.d with agents; roles}}
 
-let time_pass (s:Services.t) time = ()
+let time_pass (s:Services.t) minutes = ()
 
