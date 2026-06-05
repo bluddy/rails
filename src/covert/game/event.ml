@@ -30,11 +30,29 @@ let from_stream ~num_events s =
   []
   Iter.(0 -- (num_events - 1)) |> List.rev
 
-let check_process_event roles agents v = match v.status with
-  | Ready ->
-      let agent = Agent.S.of_role v.role roles agents |> Option.get_exn_or "oops" in
-      if Agent.is_double_agent agent && v.efficiency = 0 then false else
-      true
+let is_ready v = match v.status with Ready -> true | _ -> false
 
-  | _ -> false
+module S = struct
+  let event_has_prev_ready_same_role_ event_id v =
+    let event = Map.find event_id v in
+    let rec loop n =
+      if Id.(event_id = n) then false else
+      let event2 = Map.find n v in
+      if is_ready event2 && Role.Id.(event.role = event2.role) then true
+      else loop @@ Id.of_int (Id.to_int n+1)
+    in
+    loop @@ Id.of_int 0
 
+  let check_process_event event_id roles agents v =
+    let event = Map.find event_id v in
+    match event.status with
+    | Ready ->
+        let agent = Agent.S.of_role event.role roles agents |> Option.get_exn_or "oops" in
+        if Agent.is_double_agent agent && event.efficiency = 0 then false else
+        if event_has_prev_ready_same_role_ event_id v then false else
+
+        true
+
+    | _ -> false
+
+end
