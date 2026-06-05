@@ -3,26 +3,7 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 module String = Engine.String
 module Gen = Engine.My_gen
 
-type tick =
-  | Ready
-  | Tick of int
-  [@@deriving yojson,show]
-
-type t = {
-  role: Role.Id.t;
-  tick: tick;
-  num_id: int;
-  text: string;
-  bits: int;
-  item_bits: int;
-  efficiency: int;
-} [@@deriving yojson, show]
-
-module Id = Event_id
-
-module Map = Event_id.Map
-
-type map = t Map.t [@@deriving yojson]
+include Event_d
 
 let from_stream ~num_events s =
   Iter.fold (fun acc _ ->
@@ -36,7 +17,7 @@ let from_stream ~num_events s =
     let efficiency = Gen.get_wordi s in
     let event = {
       role;
-      tick=Ready;
+      status=Ready;
       num_id;
       text;
       bits;
@@ -48,4 +29,12 @@ let from_stream ~num_events s =
   )
   []
   Iter.(0 -- (num_events - 1)) |> List.rev
+
+let check_process_event roles agents v = match v.status with
+  | Ready ->
+      let agent = Agent.S.of_role v.role roles agents |> Option.get_exn_or "oops" in
+      if Agent.is_double_agent agent && v.efficiency = 0 then false else
+      true
+
+  | _ -> false
 

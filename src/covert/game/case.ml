@@ -4,7 +4,7 @@ module C = Constants
 
 include Case_d
 
-let hq_kind v org_id loc_id =
+let hq_kind (v:t) org_id loc_id =
   Hq.get_kind org_id loc_id v.d.locs v.d.orgs v.d.roles v.d.agents v.s.mm v.world
 
 let hq_known_to_org org1_id org2_id loc_id v =

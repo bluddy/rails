@@ -35,7 +35,7 @@ let update minutes v =
   let day_in_month = hours / 24 + 1 in
   {v with minutes; hour_in_day; day_in_month}
 
-let time_date_print v =
+let print v =
   let mins_in_hour = v.minutes mod 60 in
   let hours = hours_of_min v.minutes in
   let hours_in_day = v.hour_in_day in

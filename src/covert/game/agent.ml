@@ -3,29 +3,7 @@ open! Containers
 
 module Names = Agent_names
 
-type status =
-  | Arrested
-  | In_hiding
-  | Double_agent
-  | Escaped
-  | Exchanged
-  | Out_of_hiding
-  | At_large of {anxiety: int}
-  | In_custody
-  [@@deriving yojson]
-
-type t = {
-  gender: Gender.t;
-  org: Org.Id.t;
-  name: string;
-  last_name: string;
-  id_code: int; (* Used to generate the name, sex and picture *)
-  loc: Loc.Id.t;
-  known: Known_data.Set.t;
-  roles: Role.Set.t;
-  roles_known: Role.Set.t;
-  status: status;
-} [@@deriving yojson]
+include Agent_d
 
 let gender_name_of_code org_id x orgs =
   let gender = x land 1 in
@@ -52,26 +30,18 @@ let create ?(known=Known_data.Set.empty) id_code org_id loc_id orgs =
     id_code;
     loc=loc_id;
     known;
-    roles=Role.Set.empty;
-    roles_known=Role.Set.empty;
+    roles=Role_d.Set.empty;
+    roles_known=Role_d.Set.empty;
     status=At_large {anxiety=0};
   }
 
-module Id = Agent_id
-
 let mastermind = Id.of_int 0
 
-module Map = Utils.Map.Make(struct
-  type t = Id.t [@@deriving yojson, ord]
-end)
-
-type map = t Map.t [@@deriving yojson]
-
 let add_role role_id v =
-  {v with roles=Role.Set.add role_id v.roles}
+  {v with roles=Role_d.Set.add role_id v.roles}
 
 let add_role_known role_id v =
-  {v with roles_known=Role.Set.add role_id v.roles_known}
+  {v with roles_known=Role_d.Set.add role_id v.roles_known}
 
 let add_known_data known v =
   {v with known=Known_data.Set.add known v.known}
@@ -85,6 +55,8 @@ let reduce_anxiety factor v = match v.status with
       let anxiety = anxiety - anxiety/factor in
       {v with status=At_large{anxiety}}
   | _ -> v
+
+let is_double_agent v = match v.status with Double_agent -> true | _ -> false
 
 module S = struct
 
@@ -105,8 +77,8 @@ module S = struct
 
   let of_role role_id roles agents =
     try
-      let role = Role.Map.find role_id roles in
-      let agent_id = role.Role.agent in
+      let role = Role_d.Map.find role_id roles in
+      let agent_id = role.Role_d.agent in
       let agent = Map.find agent_id agents in
       Some agent
     with

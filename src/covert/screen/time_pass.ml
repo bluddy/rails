@@ -22,7 +22,7 @@ let render_timebox win (x, y) =
 
 let render_time win (s:Services.t) ((x, y) as loc) (v:Case.t) =
   let city_s = (Loc.Map.find v.cur_loc v.d.locs).city in
-  let time_s = Utils.time_date_print ~minutes:v.time_minutes ~months:v.world.time_months in
+  let time_s = Time.print v.time in
   render_timebox win loc;
   let write =
     Fonts.Render.write s.win s.fonts ~color:Ega.bgreen ~idx:`Large in
