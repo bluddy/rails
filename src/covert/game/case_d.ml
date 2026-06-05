@@ -24,8 +24,7 @@ type t = {
   s: setup;
   world: World.t;
   d: data;
-
-  time_minutes: int;
+  time: Time.t;
   cur_loc: Loc.Id.t;
   cur_org: Org.Id.t;
   enemy_anxiety: int;
@@ -41,4 +40,3 @@ let roles v = v.d.roles
 let hqs v = v.d.hqs
 let events v = v.d.events
 let actions v = v.d.actions
-

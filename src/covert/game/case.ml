@@ -60,7 +60,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
     };
     world=w;
 
-    time_minutes=0;
+    time=Time.default;
     cur_loc=Loc.washington;
     cur_org=Org.cia;
     enemy_anxiety=0;
@@ -387,5 +387,20 @@ let create_red_herrings (s:Services.t) (v:t) =
   in
   {v with d={v.d with agents; roles}}
 
-let time_pass (s:Services.t) minutes = ()
+let time_pass (s:Services.t) ?(force_tick=false) minutes (v:t) =
+  let do_tick, time =
+    let time = v.time in
+    let time' = Time.update minutes time in
+    Time.should_do_tick time time' || force_tick, time'
+  in
+  if do_tick then
+    let time = Time.do_tick time in
+    let factor = Difficulty.to_enum v.world.difficulty + 3 in
+    let agents = Agent.S.reduce_anxiety factor v.d.agents in
+    let enemy_anxiety = v.enemy_anxiety - v.enemy_anxiety/factor in
+    let v = {v with time; d={v.d with agents}; enemy_anxiety} in
+    v
+  else
+    {v with time}
+
 

@@ -10,7 +10,7 @@ type status =
   | Escaped
   | Exchanged
   | Out_of_hiding
-  | At_large
+  | At_large of {anxiety: int}
   | In_custody
   [@@deriving yojson]
 
@@ -25,7 +25,6 @@ type t = {
   roles: Role.Set.t;
   roles_known: Role.Set.t;
   status: status;
-  anxiety: int;
 } [@@deriving yojson]
 
 let gender_name_of_code org_id x orgs =
@@ -55,8 +54,7 @@ let create ?(known=Known_data.Set.empty) id_code org_id loc_id orgs =
     known;
     roles=Role.Set.empty;
     roles_known=Role.Set.empty;
-    status=At_large;
-    anxiety=0;
+    status=At_large {anxiety=0};
   }
 
 module Id = Agent_id
@@ -81,6 +79,12 @@ let add_known_data known v =
 (* Should be rarely used *)
 let remove_known_data known v =
   {v with known=Known_data.Set.remove known v.known}
+
+let reduce_anxiety factor v = match v.status with
+  | At_large {anxiety} ->
+      let anxiety = anxiety - anxiety/factor in
+      {v with status=At_large{anxiety}}
+  | _ -> v
 
 module S = struct
 
@@ -138,5 +142,7 @@ module S = struct
         let agents = Map.add agent_id agent agents in
         Printf.printf "New agent %s: %s\n" (Id.show agent_id) (yojson_of_t agent |> Yojson.Safe.to_string);
         agent_id, agents
+
+  let reduce_anxiety factor v = Map.map (reduce_anxiety factor) v
 
 end
