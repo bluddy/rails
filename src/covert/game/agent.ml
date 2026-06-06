@@ -58,6 +58,8 @@ let reduce_anxiety factor v = match v.status with
 
 let is_double_agent v = match v.status with Double_agent -> true | _ -> false
 
+let is_at_large v = match v.status with At_large _ -> true | _ -> false
+
 module S = struct
 
   let do_agent_ agent_id agents fn =

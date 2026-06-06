@@ -63,10 +63,19 @@ module S = struct
         let agent = Agent.S.of_role event.role roles agents |> Option.get_exn_or "oops" in
         if Agent.is_double_agent agent && event.efficiency = 0 then false else
         if event_has_prev_ready_same_role_ event_id v then false else
-        if has_role event then
+        begin match event.kind with
+        | With_role {role; _} ->
+          let agent = Agent.S.of_role role roles agents |> Option.get_exn_or "oops" in
+          let flag = match agent.status with
+            | Agent.At_large _ -> false
+            | Agent.Double_agent -> false
+            | _ when not event.use_anxiety -> false
+            | _ -> true
+          in
           true
-        else
+        | _ ->
           true
+        end
 
     | _ -> false
 
