@@ -15,6 +15,20 @@ let from_stream ~num_events s =
     let bits = Gen.get_wordi s in
     let item_bits = Gen.get_wordi s in
     let efficiency = Gen.get_wordi s in
+    let test_add bit prop kind =
+      if bits land bit > 0 then Kind.Set.add prop kind else kind
+    in
+    let kind = Kind.Set.empty
+    |> test_add 0x100 Kind.Rcv_msg
+    |> test_add 0x200 Kind.Sent_msg
+    |> test_add 0x400 Kind.Send_package
+    |> test_add 0x800 Kind.Meeting
+    |> test_add 0x1000 Kind.Use_anxiety
+    |> test_add 0x2000 Kind.Misc_action
+    |> test_add 0x8000 Kind.Event_known
+    in
+    let rcv_role = bits land 0xFF in
+    let rcv_role = if rcv_role = 0 then None else Some (Role.Id.of_int rcv_role) in
     let event = {
       role;
       status=Ready;
@@ -23,8 +37,10 @@ let from_stream ~num_events s =
       bits;
       item_bits;
       efficiency;
+      kind;
+      rcv_role;
     } in
-    print_endline @@ show event;
+    print_endline @@ (yojson_of_t event |> Yojson.Safe.to_string);
     event::acc
   )
   []
