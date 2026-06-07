@@ -55,7 +55,7 @@ end)
 
 type map = t Map.t [@@deriving yojson]
 
-let create_action time kind events roles (agents:Agent.map) =
+let create time kind events roles (agents:Agent.map) =
   let time = time.Time.minutes in
   let send = match kind with
     | Event_based event_id ->
@@ -79,5 +79,9 @@ let create_action time kind events roles (agents:Agent.map) =
 
 module S = struct
 
+  let create time kind events roles agents v =
+    let action = create time kind events roles agents in
+    let id = Map.cardinal v |> Id.of_int in
+    Map.add id action v
 
 end

@@ -65,5 +65,13 @@ let time_pass (s:Services.t) ?(force_tick=false) minutes (v:t) =
     | _ -> acc
     ) v msgs
   in
+  let old_actions = actions v in
+  let actions = List.fold_left (fun acc -> function
+    | `Come_out_of_hiding agent_id ->
+        Action.S.create v.time (Action.Agent_out_of_hiding agent_id) (events v) (roles v) (agents v) acc
+    | _ -> acc)
+    (actions v) msgs
+  in
+  {v with d={v.d with actions}}
 
 
