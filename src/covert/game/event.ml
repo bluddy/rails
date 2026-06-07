@@ -5,6 +5,8 @@ module Gen = Engine.My_gen
 
 include Event_d
 
+(* Note: last event is Terminal kind *)
+
 let from_stream ~num_events s =
   Iter.fold (fun acc _ ->
     let role = Gen.get_bytei s |> Role.Id.of_int in
@@ -104,7 +106,7 @@ module S = struct
           | _ -> (`None, event_to_run)
           end
 
-        | Misc ->
+        | Misc | Terminal ->
             if num_actions > 5 then
               begin match agent.status with
               | At_large _ | Double_agent -> (`None, `Ok)
