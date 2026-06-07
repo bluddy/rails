@@ -81,14 +81,14 @@ let handle_event _win v (event:Event.t) time =
         begin match status with
         | `Activate info ->
             let world = World.default info in
-            let case = Case.create v.srv world
-              |> Case.step_and_recreate_if_needed v.srv world
-              |> Case.update_events_roles_agents v.srv world
+            let case = Case_init.create v.srv world
+              |> Case_init.step_and_recreate_if_needed v.srv world
+              |> Case_init.update_events_roles_agents v.srv world
             in
             let known_org = Org.S.find_one_known (Case.orgs case) |> Option.map (Org.S.get_name @@ Case.orgs case) in
             let case = case
-              |> Case.create_known_hqs
-              |> Case.create_red_herrings v.srv
+              |> Case_init.create_known_hqs
+              |> Case_init.create_red_herrings v.srv
             in
             let modes =
               let open Briefing in

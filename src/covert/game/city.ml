@@ -42,13 +42,6 @@ type t =
   | WashingtonDC
   [@@deriving show{with_path=false}, enum]
 
-let show = function
-  | LosAngeles -> "Los Angeles"
-  | MexicoCity -> "Mexico City"
-  | TelAviv -> "Tel Aviv"
-  | WashingtonDC -> "Washington, D.C."
-  | x -> show x
-
 let iter_all f =
   let open Iter in
   iter (fun city_idx -> of_enum city_idx |> Option.get_exn_or "oops" |> f) @@

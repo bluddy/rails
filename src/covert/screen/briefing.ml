@@ -61,7 +61,7 @@ let create (s:Services.t) (case:Case.t) mode =
       { case; pani; srv=s; mode; text=Pattern{text; pattern}; }
   | Crime_step_start ->
       let pani = briefing_create s in
-      let letter = if Case.failed_other_steps case then 'A' else 'a' in
+      let letter = if Case_init.failed_other_steps case then 'A' else 'a' in
       let pattern = Printf.sprintf "*PL%02d%d%c" (Crime.Id.to_int @@ Case.crime case) (Crime.Step.Id.to_int @@ Case.step case) letter in
       let text = get_text_ s `Plot pattern
         |> Option.get_exn_or @@ Printf.sprintf "missing text %s" pattern in

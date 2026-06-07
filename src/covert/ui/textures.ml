@@ -14,7 +14,11 @@ module Cities = struct
     let h = Hashtbl.create 10 in
     City.iter_all (fun city ->
       let city_s = City.show city |> String.uppercase_ascii |> String.take 8 in
-      let img = Hashtbl.find res.Resources.pics city_s in
+      let img =
+        try
+          Hashtbl.find res.Resources.pics city_s
+        with Not_found -> failwith @@ Printf.sprintf "Failed to find %s" city_s
+      in
       let tex = R.Texture.make win img in
       Hashtbl.replace h city tex
     );

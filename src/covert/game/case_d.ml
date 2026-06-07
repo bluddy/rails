@@ -6,14 +6,14 @@ type setup = {
   failed_steps: Crime.Step.Set.t;
   step: Crime.Step.t;
   region: Region.t;
-  mm: Agent.t;
+  mm: Agent_d.t;
 } [@@deriving yojson]
 
 type data = {
   locs: Loc.map;
   orgs: Org.map;
   double_agents: Loc.Set.t;
-  agents: Agent.map;
+  agents: Agent_d.map;
   roles: Role.map;
   hqs: Hq.map;
   events: Event.map;
@@ -28,6 +28,8 @@ type t = {
   cur_loc: Loc.Id.t;
   cur_org: Org.Id.t;
   enemy_anxiety: int;
+  agent_autoescape: Agent_d.Id.t option; (* we won't roll for this agent *)
+  agent_jailbreak: Agent_d.Id.t option;
 } [@@deriving yojson]
 
 let step v = v.s.step
@@ -40,3 +42,4 @@ let roles v = v.d.roles
 let hqs v = v.d.hqs
 let events v = v.d.events
 let actions v = v.d.actions
+
