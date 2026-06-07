@@ -46,7 +46,7 @@ module S = struct
 
   (* Emulate this test in code *)
 
-  let check_process_event event_id roles agents v =
+  let check_process_event event_id roles agents ~num_actions v =
     let event_has_prev_ready_same_role_ event_id v =
       let event = Map.find event_id v in
       let rec loop n =
@@ -58,25 +58,56 @@ module S = struct
       loop @@ Id.of_int 0
     in
     let event = Map.find event_id v in
+    let cant_run = (`None, `Cant_run) in
     match event.status with
     | Ready ->
-        let agent = Agent.S.of_role event.role roles agents |> Option.get_exn_or "oops" in
-        if Agent.is_double_agent agent && event.efficiency = 0 then false else
-        if event_has_prev_ready_same_role_ event_id v then false else
+        let agent_id, agent = Agent.S.of_role event.role roles agents |> Option.get_exn_or "oops" in
+        if Agent.is_double_agent agent && event.efficiency = 0 then cant_run else
+        if event_has_prev_ready_same_role_ event_id v then cant_run else
         begin match event.kind with
         | With_role {role; _} ->
-          let agent = Agent.S.of_role role roles agents |> Option.get_exn_or "oops" in
-          let flag = match agent.status with
+          let role_id = role in
+          let rcv_agent_id, rcv_agent = Agent.S.of_role role roles agents |> Option.get_exn_or "oops" in
+          let flag = match rcv_agent.status with
             | Agent.At_large _ -> false
             | Agent.Double_agent -> false
             | _ when not event.use_anxiety -> false
             | _ -> true
           in
-          true
-        | _ ->
-          true
+          let problem_event =
+            Map.find_pred (fun _ event2 ->
+              Role.Id.(event2.role = role_id) && event2.num_id <> event.num_id && is_ready event2)
+              v
+          in
+          if Option.is_some problem_event && not flag then cant_run else
+          let event_to_run =
+            Map.find_pred (fun _ event2 ->
+              Role.Id.(event2.role = role_id) && event2.num_id = event.num_id)
+              v
+            |> function
+            | Some event_id -> `Must_run event_id
+            | None -> `Cant_run
+          in
+
+          (* NOTE: In OG, there was a bug here that prevented an agent from
+             coming out of hiding due to the order: we checked arrested first *)
+          begin match agent.status, rcv_agent.status with
+          | In_hiding, Arrested -> (`Come_out_of_hiding(agent_id), event_to_run)
+          | Arrested, In_hiding -> (`Come_out_of_hiding(rcv_agent_id), event_to_run)
+          | Agent.Arrested, _ -> (`Check_escape(event_id, agent_id), `Cant_run)
+          | _, Agent.Arrested -> (`Check_escape(event_id, rcv_agent_id), `Cant_run)
+          | _ -> (`None, event_to_run)
+          end
+
+        | Misc ->
+            if num_actions > 5 then
+              begin match agent.status with
+              | At_large _ | Double_agent -> (`None, `Ok)
+              | _ -> (`Check_escape(event_id, agent_id), `Cant_run)
+              end
+            else cant_run
         end
 
-    | _ -> false
+    | _ -> cant_run
 
 end

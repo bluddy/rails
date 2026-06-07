@@ -82,7 +82,7 @@ module S = struct
       let role = Role_d.Map.find role_id roles in
       let agent_id = role.Role_d.agent in
       let agent = Map.find agent_id agents in
-      Some agent
+      Some (agent_id, agent)
     with
     Not_found -> None
 
