@@ -50,6 +50,8 @@ let add_known_data known v =
 let remove_known_data known v =
   {v with known=Known_data.Set.remove known v.known}
 
+let is_known known v = Known_data.Set.mem known v.known
+
 let reduce_anxiety factor v = match v.status with
   | At_large {anxiety} ->
       let anxiety = anxiety - anxiety/factor in
@@ -59,6 +61,8 @@ let reduce_anxiety factor v = match v.status with
 let is_double_agent v = match v.status with Double_agent -> true | _ -> false
 
 let is_at_large v = match v.status with At_large _ -> true | _ -> false
+
+let is_arrested v = match v.status with Arrested -> true | _ -> false
 
 module S = struct
 
