@@ -42,4 +42,5 @@ let roles v = v.d.roles
 let hqs v = v.d.hqs
 let events v = v.d.events
 let actions v = v.d.actions
+let agents v = v.d.agents
 
