@@ -2,18 +2,18 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
 type kind =
-  | Default
-  | Travel
-  | Break_in
-  | Item_confiscate
-  | Item_spotted
-  | Agent_turn
-  | Agent_hide
-  | Agent_arrest
-  | Agent_move
-  | Agent_escape
-  | Agent_exchange
-  | Agent_out_of_hiding
+  | Event_based of Event.Id.t
+  | Travel of Loc.Id.t
+  | Break_in of Org.Id.t * Loc.Id.t
+  | Item_confiscate of Item.Id.t
+  | Item_spotted of Item.Id.t * Loc.Id.t
+  | Agent_turn of Agent.Id.t
+  | Agent_hide of Agent.Id.t
+  | Agent_arrest of Agent.Id.t
+  | Agent_leave of Agent.Id.t * Loc.Id.t
+  | Agent_escape of Agent.Id.t
+  | Agent_exchange of Agent.Id.t
+  | Agent_out_of_hiding of Agent.Id.t
   [@@deriving yojson]
 
 type known = [
@@ -28,17 +28,23 @@ module KnownSet = Utils.Set.Make(struct
   type t = known [@@deriving yojson, ord]
 end)
 
+type rcv = {
+  rcv_agent: Agent.Id.t;
+  rcv_loc: Loc.Id.t;
+} [@@deriving yojson]
+
+type send = {
+  send_agent: Agent.Id.t;
+  status: Agent.status;
+  send_loc: Loc.Id.t;
+  rcv: rcv option;
+} [@@deriving yojson]
+
 type t = {
   kind: kind;
   time: int;
-  (* low bit 0/1 send/rcv *)
-  event: Event.Id.t option;
   known: KnownSet.t;
-  (* agent status/anxiety in OG *)
-  agent_send: Agent.Id.t;
-  loc_send: Loc.Id.t;
-  agent_rcv: Agent.Id.t;
-  loc_rcv: Loc.Id.t;
+  send: send option;
 } [@@deriving yojson]
 
 module Id = Engine.Int_id.Make()
@@ -49,3 +55,29 @@ end)
 
 type map = t Map.t [@@deriving yojson]
 
+let create_action time kind events roles (agents:Agent.map) =
+  let time = time.Time.minutes in
+  let send = match kind with
+    | Event_based event_id ->
+        let agent_id = Event.S.to_role events event_id |> Role.S.to_agent roles in
+        let agent = Agent.Map.find agent_id agents in
+        let send_loc = agent.loc in
+        let status = agent.status in
+        let event = Event.Map.find event_id events in
+        let rcv = match event.kind with
+          | With_role {role;_} ->
+              let rcv_agent_id = Role.S.to_agent roles role in
+              let rcv_agent = Agent.Map.find rcv_agent_id agents in
+              let rcv_loc = rcv_agent.loc in
+              Some {rcv_agent=rcv_agent_id; rcv_loc}
+          | _ -> None
+        in
+        Some {send_agent=agent_id; status; send_loc; rcv}
+    | _ -> None
+  in
+  {kind; time; known=KnownSet.empty; send}
+
+module S = struct
+
+
+end

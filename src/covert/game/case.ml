@@ -35,32 +35,35 @@ let time_pass (s:Services.t) ?(force_tick=false) minutes (v:t) =
     let time' = Time.update minutes time in
     Time.should_do_tick time time' || force_tick, time'
   in
-  if do_tick then
-    let v =
-      let time = Time.do_tick time in
-      let factor = Difficulty.to_enum v.world.difficulty + 3 in
-      let agents = Agent.S.reduce_anxiety factor v.d.agents in
-      let enemy_anxiety = v.enemy_anxiety - v.enemy_anxiety/factor in
-      let agent_autoescape = None in
-      {v with time; d={v.d with agents}; enemy_anxiety; agent_autoescape}
+  if not do_tick then {v with time} else
+  let v =
+    let time = Time.do_tick time in
+    let factor = Difficulty.to_enum v.world.difficulty + 3 in
+    let agents = Agent.S.reduce_anxiety factor v.d.agents in
+    let enemy_anxiety = v.enemy_anxiety - v.enemy_anxiety/factor in
+    let agent_autoescape = None in
+    {v with time; d={v.d with agents}; enemy_anxiety; agent_autoescape}
+  in
+  let num_actions = Action.Map.cardinal (actions v) in
+  let msgs, event_run_cnt = Event.Map.fold_not_last (fun event_id _ (msgs, cnt) ->
+    let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
+    let msgs = match fst ret with
+    | `None -> msgs
+    | x -> x::msgs
     in
-    let num_actions = Action.Map.cardinal (actions v) in
-    let msgs, event_run_cnt = Event.Map.fold_not_last (fun event_id _ (msgs, cnt) ->
-      let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
-      let msgs = match fst ret with
-      | `None -> msgs
-      | x -> x::msgs
-      in
-      let cnt = match snd ret with
-      | `Cant_run -> cnt
-      | _ -> cnt + 1
-      in
-      msgs, cnt)
-      (events v)
-      ([], 0)
+    let cnt = match snd ret with
+    | `Cant_run -> cnt
+    | _ -> cnt + 1
     in
-    v
-  else
-    {v with time}
+    msgs, cnt)
+    (events v)
+    ([], 0)
+  in
+  let msgs = List.rev msgs in
+  let v = List.fold_left (fun acc -> function
+    | `Check_escape(_, agent_id) -> check_escape_jail s agent_id v
+    | _ -> acc
+    ) v msgs
+  in
 
 

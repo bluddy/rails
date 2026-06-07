@@ -51,6 +51,8 @@ let is_ready v = match v.status with Ready -> true | _ -> false
 
 module S = struct
 
+  let to_role events event_id = (Map.find event_id events).role
+
   (* Emulate this test in code *)
 
   let check_process_event event_id roles agents ~num_actions v =

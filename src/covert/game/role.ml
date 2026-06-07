@@ -67,39 +67,41 @@ let random r v =
 
 module S = struct
 
-let make_red_herring r agent events v =
-  let add role v =
-    let id = Map.cardinal v |> Id.of_int in
-    Map.add id role v
-  in
-  let find_clue_rand clue_rand v =
-    Map.find_pred (fun _ role -> role.clue_rand land 0x7e = clue_rand land 0x7e) v
-  in
-  let discover_val, clue_seed = Utils.do_while
-    (fun () ->
-      let discover_val = Random.int_range 3 6 r in
-      let clue_seed = Random.int 32767 r in
-      discover_val, clue_seed)
-    (fun (_, clue_seed) ->
-      find_clue_rand clue_seed v |> Option.is_some)
-  in
-  let num_events = Event_id.Map.cardinal events in
-  let tick = Random.int (num_events/2) r + 4 in
-  let clue_rand = Random.int 7 r in
-  let rank = Rank.random r in
-  let role = {
-    agent;
-    discover_val;
-    name="Red Herring";
-    clue_seed;
-    bits=0;
-    known=Known_data.Set.empty;
-    clue_rand;
-    rank;
-    ctr={tick; discovery_val=0};
-    some_num=0;
-  }
-  in
-  add role v
+  let to_agent v role_id = (Map.find role_id v).agent
+
+  let make_red_herring r agent events v =
+    let add role v =
+      let id = Map.cardinal v |> Id.of_int in
+      Map.add id role v
+    in
+    let find_clue_rand clue_rand v =
+      Map.find_pred (fun _ role -> role.clue_rand land 0x7e = clue_rand land 0x7e) v
+    in
+    let discover_val, clue_seed = Utils.do_while
+      (fun () ->
+        let discover_val = Random.int_range 3 6 r in
+        let clue_seed = Random.int 32767 r in
+        discover_val, clue_seed)
+      (fun (_, clue_seed) ->
+        find_clue_rand clue_seed v |> Option.is_some)
+    in
+    let num_events = Event_id.Map.cardinal events in
+    let tick = Random.int (num_events/2) r + 4 in
+    let clue_rand = Random.int 7 r in
+    let rank = Rank.random r in
+    let role = {
+      agent;
+      discover_val;
+      name="Red Herring";
+      clue_seed;
+      bits=0;
+      known=Known_data.Set.empty;
+      clue_rand;
+      rank;
+      ctr={tick; discovery_val=0};
+      some_num=0;
+    }
+    in
+    add role v
 
 end
