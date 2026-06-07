@@ -18,8 +18,13 @@ let from_stream ~num_events s =
     let use_anxiety = bits land 0x1000 > 0 in
     let kind =
       if bits land 0x2000 > 0 then Misc else
+      if Role.Id.(role = of_int 255) then Terminal else
       let role = bits land 0xFF |> Role.Id.of_int in
-      let inter = if bits land 0x800 > 0 then Meet else (assert (bits land 0x200 > 0); Msg) in
+      let inter = if bits land 0x800 > 0 then Meet else begin
+        assert (bits land 0x200 > 0);
+        Msg
+        end
+      in
       let send_rcv = if bits land 0x100 > 0 then Rcv else Send in
       With_role {inter; send_rcv; role}
     in

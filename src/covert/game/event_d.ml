@@ -18,6 +18,7 @@ type kind =
     role: Role.Id.t;
   }
   | Misc
+  | Terminal
   [@@deriving yojson]
 
 type t = {
