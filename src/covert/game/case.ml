@@ -10,6 +10,8 @@ let hq_kind (v:t) org_id loc_id =
 let hq_known_to_org org1_id org2_id loc_id v =
   Hq.known_to_org org1_id org2_id loc_id v.d.locs v.d.orgs v.d.roles v.d.agents v.s.mm v.world
 
+let clear_autoescape v = {v with agent_autoescape=None}
+
 let check_escape_jail (s:Services.t) agent_id v =
   let pass_test = match v.agent_autoescape with
   | Some agent when Agent.Id.(agent = agent_id) -> true
@@ -35,7 +37,9 @@ let time_pass (s:Services.t) ?(force_tick=false) minutes (v:t) =
     let time' = Time.update minutes time in
     Time.should_do_tick time time' || force_tick, time'
   in
-  if not do_tick then {v with time} else
+  let v = {v with time} in
+  if not do_tick then v else
+  let old_actions = actions v in
   let v =
     let time = Time.do_tick time in
     let factor = Difficulty.to_enum v.world.difficulty + 3 in
@@ -44,34 +48,59 @@ let time_pass (s:Services.t) ?(force_tick=false) minutes (v:t) =
     let agent_autoescape = None in
     {v with time; d={v.d with agents}; enemy_anxiety; agent_autoescape}
   in
+  (* TODO: make handling of actions immediate: handle msg should act per msg *)
   let num_actions = Action.Map.cardinal (actions v) in
-  let msgs, event_run_cnt = Event.Map.fold_not_last (fun event_id _ (msgs, cnt) ->
-    let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
-    let msgs = match fst ret with
-    | `None -> msgs
-    | x -> x::msgs
+  let msgs, event_run_cnt =
+    Event.Map.fold_not_last (fun event_id _ (msgs, cnt) ->
+      let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
+      let msgs = match fst ret with
+      | `None -> msgs
+      | x -> x::msgs
+      in
+      let cnt = match snd ret with
+      | `Cant_run -> cnt
+      | _ -> cnt + 1
+      in
+      msgs, cnt)
+      (events v)
+      ([], 0)
+  in
+  let handle_msgs msgs v =
+    let msgs = List.rev msgs in
+    let v = List.fold_left (fun acc -> function
+      | `Check_escape(_, agent_id) -> check_escape_jail s agent_id v
+      | _ -> acc
+      ) v msgs
     in
-    let cnt = match snd ret with
-    | `Cant_run -> cnt
-    | _ -> cnt + 1
+    let actions = List.fold_left (fun acc -> function
+      | `Come_out_of_hiding agent_id ->
+          Action.S.create v.time (Action.Agent_out_of_hiding agent_id) (events v) (roles v) (agents v) acc
+      | _ -> acc)
+      (actions v) msgs
     in
-    msgs, cnt)
-    (events v)
-    ([], 0)
+    {v with d={v.d with actions}}
   in
-  let msgs = List.rev msgs in
-  let v = List.fold_left (fun acc -> function
-    | `Check_escape(_, agent_id) -> check_escape_jail s agent_id v
-    | _ -> acc
-    ) v msgs
+  let v = handle_msgs msgs v in
+  if Random.int 10 s.random >= Difficulty.to_enum v.world.difficulty + 4
+    && Action.Map.cardinal (actions v) > 5
+    && event_run_cnt <> 0 && not force_tick then v else
+  let v, event_run_cnt =
+    if event_run_cnt <= Difficulty.to_enum v.world.difficulty then
+      let v = clear_autoescape v in
+      let num_actions = Action.Map.cardinal (actions v) in
+      let msgs, cnt, _ =
+        Event.Map.fold_not_last (fun event_id _ ((msgs, cnt, can_run) as acc) ->
+          if can_run then acc else
+          let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
+          let msgs = match fst ret with `None -> msgs | x -> x::msgs in
+          let cnt, can_run = match snd ret with `Cant_run -> cnt, can_run | _ -> 1, true in
+          msgs, cnt, can_run)
+          (events v)
+          ([], event_run_cnt, false)
+      in
+      handle_msgs msgs v, cnt
+    else
+      v, event_run_cnt
   in
-  let old_actions = actions v in
-  let actions = List.fold_left (fun acc -> function
-    | `Come_out_of_hiding agent_id ->
-        Action.S.create v.time (Action.Agent_out_of_hiding agent_id) (events v) (roles v) (agents v) acc
-    | _ -> acc)
-    (actions v) msgs
-  in
-  {v with d={v.d with actions}}
-
+  v
 
