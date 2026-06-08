@@ -69,6 +69,10 @@ module S = struct
 
   let to_agent v role_id = (Map.find role_id v).agent
 
+  let random_with_diff r diff v =
+    let max = Map.cardinal v - (Difficulty.to_enum diff) / 4 in
+    Random.int max r |> Id.of_int
+
   let make_red_herring r agent events v =
     let add role v =
       let id = Map.cardinal v |> Id.of_int in

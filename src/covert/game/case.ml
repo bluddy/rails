@@ -31,7 +31,7 @@ let check_escape_jail (s:Services.t) agent_id v =
     else
       v
 
-let time_pass (s:Services.t) ?(force_tick=false) minutes (v:t) =
+let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   let do_tick, time =
     let time = v.time in
     let time' = Time.update minutes time in
@@ -88,6 +88,27 @@ let time_pass (s:Services.t) ?(force_tick=false) minutes (v:t) =
       v, cnt
     else
       v, event_run_cnt
+  in
+  let rec loop n =
+    if n >= 999 then None else
+    let rand_role = Role.S.random_with_diff s.random (difficulty v) (roles v) in
+    let rand_agent = Role.S.to_agent (roles v) rand_role  in
+    match v.agent_autoescape with
+    | Some id when Agent.Id.(id = rand_agent) -> loop (n+1)
+    | _ -> Some rand_agent
+  in
+  let s_agent_id = loop 0 in
+  let check_fail () = v in (* TODO *)
+  if Option.is_none s_agent_id
+    || Action.Map.cardinal (actions v) <= 8 then check_fail () else
+  let agent_id = Option.get_exn_or "agent" s_agent_id in
+  let agent = Agent.Map.find agent_id (agents v) in
+  if Loc.Id.(v.cur_loc = agent.loc) && Org.Id.(v.cur_org = agent.org) && not sleeping then check_fail () else
+  let role_not_done = Event.Map.find_pred (fun event_id event ->
+    let role_agent_id = Event.S.to_role (events v) event_id |> Role.S.to_agent (roles v) in
+    Agent.Id.(agent_id = role_agent_id) && Event.is_ready event)
+    (events v)
+    |> Option.is_some
   in
   v
 
