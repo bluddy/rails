@@ -104,11 +104,13 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   let agent_id = Option.get_exn_or "agent" s_agent_id in
   let agent = Agent.Map.find agent_id (agents v) in
   if Loc.Id.(v.cur_loc = agent.loc) && Org.Id.(v.cur_org = agent.org) && not sleeping then check_fail () else
-  let role_not_done = Event.Map.find_pred (fun event_id event ->
+  let role_done = Event.Map.find_pred (fun event_id event ->
     let role_agent_id = Event.S.to_role (events v) event_id |> Role.S.to_agent (roles v) in
     Agent.Id.(agent_id = role_agent_id) && Event.is_ready event)
     (events v)
-    |> Option.is_some
+    |> Option.is_none
   in
+  if not role_done && (event_run_cnt > 0 || Option.is_some v.agent_autoescape) then check_fail () else
+  (* TODO: go into hiding excatly once. rephrase: this is the target *)
   v
 
