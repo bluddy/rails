@@ -70,25 +70,27 @@ let is_arrested v = match v.status with Arrested -> true | _ -> false
 
 let go_into_hiding v = {v with status=In_hiding}
 
+let go_free v = {v with status=At_large{anxiety=0}}
+
 module S = struct
 
-  let do_agent_ agent_id agents fn =
+  let update_agent agent_id agents fn =
     Map.update agent_id (Option.map fn) agents
 
   let add_role agent_id role_id agents =
-    do_agent_ agent_id agents @@ add_role role_id
+    update_agent agent_id agents @@ add_role role_id
 
   let add_role_known agent_id role_id agents =
-    do_agent_ agent_id agents @@ add_role_known role_id
+    update_agent agent_id agents @@ add_role_known role_id
 
   let add_known_data agent_id known agents =
-    do_agent_ agent_id agents @@ add_known_data known
+    update_agent agent_id agents @@ add_known_data known
 
   let remove_known_data agent_id known agents =
-    do_agent_ agent_id agents @@ remove_known_data known
+    update_agent agent_id agents @@ remove_known_data known
 
   let go_into_hiding agent_id agents =
-    do_agent_ agent_id agents @@ go_into_hiding
+    update_agent agent_id agents @@ go_into_hiding
 
   let of_role role_id roles agents =
     try

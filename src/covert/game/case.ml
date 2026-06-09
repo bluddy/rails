@@ -56,7 +56,9 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
         let actions =
           Action.S.create v.time (Action.Agent_out_of_hiding agent_id) (events v) (roles v) (agents v) (actions v)
         in
-        {v with d={v.d with actions}}
+        (* Note: OG didn't do this. *)
+        let agents = Agent.S.update_agent agent_id (agents v) @@ Agent.go_free in
+        {v with d={v.d with actions; agents}}
     | _ -> v
   in
   let v, event_run_cnt =
