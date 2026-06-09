@@ -17,4 +17,3 @@ module Set = Utils.Set.Make(struct
   type t = data [@@deriving yojson]
   let compare = compare_data
 end)
-

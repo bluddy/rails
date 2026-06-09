@@ -52,6 +52,10 @@ let remove_known_data known v =
 
 let is_known known v = Known_data.Set.mem known v.known
 
+let check_known l v = Known_data.Set.mem_any l v.known
+
+let is_known_any v = Known_data.Set.not_empty v.known
+
 let reduce_anxiety factor v = match v.status with
   | At_large {anxiety} ->
       let anxiety = anxiety - anxiety/factor in
@@ -63,6 +67,8 @@ let is_double_agent v = match v.status with Double_agent -> true | _ -> false
 let is_at_large v = match v.status with At_large _ -> true | _ -> false
 
 let is_arrested v = match v.status with Arrested -> true | _ -> false
+
+let go_into_hiding v = {v with status=In_hiding}
 
 module S = struct
 
@@ -80,6 +86,9 @@ module S = struct
 
   let remove_known_data agent_id known agents =
     do_agent_ agent_id agents @@ remove_known_data known
+
+  let go_into_hiding agent_id agents =
+    do_agent_ agent_id agents @@ go_into_hiding
 
   let of_role role_id roles agents =
     try

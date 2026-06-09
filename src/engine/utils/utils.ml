@@ -68,6 +68,8 @@ module Set = struct
 
     let not_empty v = not (is_empty v)
 
+    let mem_any l v = List.fold_left (fun acc x -> acc || mem x v) false l
+
     let t_of_yojson (json:Yojson.Safe.t) =
       list_of_yojson O.t_of_yojson json |> of_list
 

@@ -5,12 +5,14 @@ module C = Constants
 include Case_d
 
 let hq_kind (v:t) org_id loc_id =
-  Hq.get_kind org_id loc_id v.d.locs v.d.orgs v.d.roles v.d.agents v.s.mm v.world
+  Hq.get_kind org_id loc_id v.d.locs (orgs v) (roles v) (agents v) v.s.mm v.world
 
 let hq_known_to_org org1_id org2_id loc_id v =
-  Hq.known_to_org org1_id org2_id loc_id v.d.locs v.d.orgs v.d.roles v.d.agents v.s.mm v.world
+  Hq.known_to_org org1_id org2_id loc_id (locs v) (orgs v) (roles v) (agents v) v.s.mm v.world
 
 let clear_autoescape v = {v with agent_autoescape=None}
+
+let create_action time kind v = Action.S.create time kind (events v) (roles v) (agents v) (actions v)
 
 let check_escape_jail (s:Services.t) agent_id v =
   let pass_test = match v.agent_autoescape with
@@ -48,7 +50,6 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     let agent_autoescape = None in
     {v with time; d={v.d with agents}; enemy_anxiety; agent_autoescape}
   in
-  (* TODO: make handling of actions immediate: handle msg should act per msg *)
   let handle_msg msg v = match msg with
     | `Check_escape(_, agent_id) -> check_escape_jail s agent_id v
     | `Come_out_of_hiding agent_id ->
@@ -70,9 +71,12 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   in
   if Random.int 10 s.random >= Difficulty.to_enum v.world.difficulty + 4
     && Action.Map.cardinal (actions v) > 5
-    && event_run_cnt <> 0 && not force_tick then v else
+    && event_run_cnt > 0
+    && not force_tick
+    then v else
   let v, event_run_cnt =
     if event_run_cnt <= Difficulty.to_enum v.world.difficulty then
+      (* Update event_run_cnt *)
       let v = clear_autoescape v in
       let num_actions = Action.Map.cardinal (actions v) in
       let v, cnt, _ =
@@ -89,28 +93,42 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     else
       v, event_run_cnt
   in
-  let rec loop n =
-    if n >= 999 then None else
-    let rand_role = Role.S.random_with_diff s.random (difficulty v) (roles v) in
-    let rand_agent = Role.S.to_agent (roles v) rand_role  in
-    match v.agent_autoescape with
-    | Some id when Agent.Id.(id = rand_agent) -> loop (n+1)
-    | _ -> Some rand_agent
+  let rec agent_hiding_loop ~already_hid v =
+    let rec find_random_agent n =
+      if n >= 999 then None else
+      let rand_role = Role.S.random_with_diff s.random (difficulty v) (roles v) in
+      let rand_agent = Role.S.to_agent (roles v) rand_role  in
+      match v.agent_autoescape with
+      | Some id when Agent.Id.(id = rand_agent) -> find_random_agent (n+1)
+      | _ -> Some rand_agent
+    in
+    match find_random_agent 0 with
+    | Some agent_id when Action.Map.cardinal (actions v) > 8 ->
+      let agent = Agent.Map.find agent_id (agents v) in
+      if Loc.Id.(v.cur_loc <> agent.loc)
+        || Org.Id.(v.cur_org <> agent.org)
+        || sleeping then
+        let role_done = Event.Map.find_pred (fun event_id event ->
+          let role_agent_id = Event.S.to_role (events v) event_id |> Role.S.to_agent (roles v) in
+          Agent.Id.(agent_id = role_agent_id) && Event.is_ready event)
+          (events v)
+          |> Option.is_none
+        in
+        if (role_done || event_run_cnt = 0 && Option.is_none v.agent_autoescape)
+           && (already_hid
+            || Agent.check_known [`Known_loc; `Known_org; `Known_name; `Known_photo] agent) then
+            let agents = Agent.S.go_into_hiding agent_id (agents v) in
+            let actions =
+              let bulletin = Agent.is_known_any agent in
+              let kind = Action.Agent_hide {agent=agent_id; bulletin} in
+              create_action v.time kind v
+            in
+            let v = {v with d={v.d with agents; actions}} in
+            agent_hiding_loop ~already_hid:true v
+        else v
+      else v
+    | _ -> v
   in
-  let s_agent_id = loop 0 in
-  let check_fail () = v in (* TODO *)
-  if Option.is_none s_agent_id
-    || Action.Map.cardinal (actions v) <= 8 then check_fail () else
-  let agent_id = Option.get_exn_or "agent" s_agent_id in
-  let agent = Agent.Map.find agent_id (agents v) in
-  if Loc.Id.(v.cur_loc = agent.loc) && Org.Id.(v.cur_org = agent.org) && not sleeping then check_fail () else
-  let role_done = Event.Map.find_pred (fun event_id event ->
-    let role_agent_id = Event.S.to_role (events v) event_id |> Role.S.to_agent (roles v) in
-    Agent.Id.(agent_id = role_agent_id) && Event.is_ready event)
-    (events v)
-    |> Option.is_none
-  in
-  if not role_done && (event_run_cnt > 0 || Option.is_some v.agent_autoescape) then check_fail () else
-  (* TODO: go into hiding excatly once. rephrase: this is the target *)
+  let v = agent_hiding_loop ~already_hid:false v in
   v
 

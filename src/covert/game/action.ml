@@ -8,7 +8,7 @@ type kind =
   | Item_confiscate of Item.Id.t
   | Item_spotted of Item.Id.t * Loc.Id.t
   | Agent_turn of Agent.Id.t
-  | Agent_hide of Agent.Id.t
+  | Agent_hide of {agent: Agent.Id.t; bulletin: bool}
   | Agent_arrest of Agent.Id.t
   | Agent_leave of Agent.Id.t * Loc.Id.t
   | Agent_escape of Agent.Id.t
