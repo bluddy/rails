@@ -17,12 +17,18 @@ let make agent discover_val name bits clue_rand rank some_num =
     rank;
     some_num;
     ctr= {
-      tick= -1;
+      tick=None;
       discovery_val=0;
     };
 }
 
 let first = Id.of_int 0
+
+let ctr_tick v = v.ctr.tick
+let ctr_discovery_val v = v.ctr.discovery_val
+let update_tick tick ctr = {ctr with tick}
+let update_ctr_tick tick v = {v with ctr={v.ctr with tick}}
+let update_ctr_discovery discovery_val v = {v with ctr={v.ctr with discovery_val}}
 
 let loc_bit v =
   let bits = v.bits in
@@ -69,6 +75,10 @@ module S = struct
 
   let to_agent v role_id = (Map.find role_id v).agent
 
+  let update event_id fn v = Map.update event_id (Option.map fn) v
+
+  let update_ctr event_id fn v = update event_id (fun v -> {v with ctr=fn v.ctr}) v
+
   let random_with_diff r diff v =
     let max = Map.cardinal v - (Difficulty.to_enum diff) / 4 in
     Random.int max r |> Id.of_int
@@ -102,7 +112,7 @@ module S = struct
       known=Known_data.Set.empty;
       clue_rand;
       rank;
-      ctr={tick; discovery_val=0};
+      ctr={tick=Some tick; discovery_val=0};
       some_num=0;
     }
     in

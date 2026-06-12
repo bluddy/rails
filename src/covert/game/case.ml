@@ -40,7 +40,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     Time.should_do_tick time time' || force_tick, time'
   in
   let v = {v with time} in
-  if not do_tick then v else
+  if not do_tick then v, `None else
   let old_actions = actions v in
   let v =
     let time = Time.do_tick time in
@@ -74,8 +74,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   if Random.int 10 s.random >= Difficulty.to_enum v.world.difficulty + 4
     && Action.Map.cardinal (actions v) > 5
     && event_run_cnt > 0
-    && not force_tick
-    then v else
+    && not force_tick then v, `None else
   let v, event_run_cnt =
     if event_run_cnt <= Difficulty.to_enum v.world.difficulty then
       (* Update event_run_cnt *)
@@ -134,24 +133,42 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   in
   let v, ret = agent_hiding_loop ~already_hid:false v in
   match ret with
-  | `GenFailed when event_run_cnt = 0
+  | `GenFailed when event_run_cnt = 0 -> v, `Case_over
   | _ when time.minutes > 40000 (* one month *) -> v, `Case_over
   | _ when force_tick -> v, `None
   | _ ->
   let rec random_event_loop v =
-    let event_id = Event.S.random (events v) in
+    let event_id = Event.S.random s.random (events v) in
     let num_actions = Action.S.num (actions v) in
     let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
     let v = handle_msg (fst ret) v in
     match snd ret with
-    | `Cant_run -> random_event v
+    | `Cant_run -> random_event_loop v
     | `Ok -> failwith "don't know what to do with ok here" (* TODO *)
     | `Must_run run_event_id -> v, event_id, run_event_id
   in
   let v, event_id, run_event_id = random_event_loop v in
   let event = Event.Map.find event_id (events v) in
-  
-
-
+  let v =
+  if Event.has_role event then
+    if not event.use_anxiety &&
+      (let run_event = Event.Map.find run_event_id (events v) in
+      let agent = Agent.S.of_role run_event.role (roles v) (agents v) |> snd in
+      not @@ Agent.is_at_large agent) then
+        update_events (Event.S.update event_id (Event.set_tick 0)) v
+    else
+      (* long path here *)
+      v
+  else
+    let events = Event.S.update event_id (Event.set_tick time.tick) (events v) in
+    let role_id = Event.S.to_role events event_id in
+    let roles = Role.S.update_ctr role_id (fun ctr -> match ctr.tick with
+      | None -> {ctr with tick=Some time.tick}
+      | _ -> ctr)
+      (roles v)
+    in
+    {v with d={v.d with roles; events}}
+  in
+  v, `None
 
 

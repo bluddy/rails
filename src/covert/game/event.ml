@@ -47,7 +47,7 @@ let from_stream ~num_events s =
   []
   Iter.(0 -- (num_events - 1)) |> List.rev
 
-let is_ready v = match v.status with Ready -> true | _ -> false
+let set_tick tick v = {v with status=Tick tick}
 
 module S = struct
 
@@ -56,9 +56,9 @@ module S = struct
   let num v =
     try (Map.max_binding v |> fst |> Id.to_int) + 1 with Not_found -> 0
 
-  let random r v =
-    let i = Random.int (num v) r |> Id.of_int in
-    Map.find i v
+  let random r v = Random.int (num v) r |> Id.of_int
+
+  let update event_id fn v = Map.update event_id (Option.map fn) v
 
   (* Emulate this test in code *)
 
@@ -77,13 +77,13 @@ module S = struct
     let cant_run = (`None, `Cant_run) in
     match event.status with
     | Ready ->
-        let agent_id, agent = Agent.S.of_role event.role roles agents |> Option.get_exn_or "oops" in
+        let agent_id, agent = Agent.S.of_role event.role roles agents in
         if Agent.is_double_agent agent && event.efficiency = 0 then cant_run else
         if event_has_prev_ready_same_role_ event_id v then cant_run else
         begin match event.kind with
         | With_role {role; _} ->
           let role_id = role in
-          let rcv_agent_id, rcv_agent = Agent.S.of_role role roles agents |> Option.get_exn_or "oops" in
+          let rcv_agent_id, rcv_agent = Agent.S.of_role role roles agents in
           let flag = match rcv_agent.status with
             | Agent.At_large _ -> false
             | Agent.Double_agent -> false

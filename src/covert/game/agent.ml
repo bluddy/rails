@@ -97,9 +97,9 @@ module S = struct
       let role = Role_d.Map.find role_id roles in
       let agent_id = role.Role_d.agent in
       let agent = Map.find agent_id agents in
-      Some (agent_id, agent)
+      (agent_id, agent)
     with
-    Not_found -> None
+    Not_found -> failwith @@ Printf.sprintf "Couldn't find agent of role %s" (Role.Id.show role_id)
 
   let to_loc agents agent_id = (Map.find agent_id agents).loc
 

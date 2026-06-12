@@ -45,3 +45,5 @@ let actions v = v.d.actions
 let agents v = v.d.agents
 let difficulty v = v.world.difficulty
 
+let update_events fn v = {v with d={v.d with events=fn v.d.events}}
+

@@ -5,7 +5,7 @@ type t = {
   minutes: int;
   hour_in_day: int;
   day_in_month: int;
-  event_tick: int;
+  tick: int;
   months: int;
 } [@@deriving yojson]
 
@@ -13,7 +13,7 @@ let default = {
   minutes=0;
   day_in_month=0;
   hour_in_day=0;
-  event_tick= -1;
+  tick= -1;
   months=0;
 }
 
@@ -26,7 +26,7 @@ let hour_in_day minutes =
 let should_do_tick v v' =
   (v.hour_in_day < 12 && v'.hour_in_day >= 12) || (v.day_in_month <> v'.day_in_month)
 
-let do_tick v = {v with event_tick=v.event_tick + 1}
+let do_tick v = {v with tick=v.tick + 1}
 
 let update minutes v =
   let minutes = v.minutes + minutes in

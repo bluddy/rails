@@ -2,7 +2,7 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
 type ctr = {
-  tick: int;
+  tick: int option;
   discovery_val: int;
 } [@@deriving yojson, show]
 
@@ -35,3 +35,4 @@ module Set = Utils.Set.Make(struct
 end)
 
 type map = t Map.t [@@deriving yojson]
+

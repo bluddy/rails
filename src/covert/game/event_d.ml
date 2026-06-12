@@ -43,3 +43,6 @@ let has_role event = match event.kind with
   | With_role _ -> true
   | _ -> false
 
+let is_ready event = match event.status with Ready -> true | _ -> false
+
+
