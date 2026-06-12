@@ -84,4 +84,6 @@ module S = struct
     let id = Map.cardinal v |> Id.of_int in
     Map.add id action v
 
+  let num v =
+    try (Map.max_binding v |> fst |> Id.to_int) + 1 with Not_found -> 0
 end

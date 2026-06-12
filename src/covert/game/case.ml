@@ -95,6 +95,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     else
       v, event_run_cnt
   in
+  (* If we already hid, higher chance of another agent hiding *)
   let rec agent_hiding_loop ~already_hid v =
     let rec find_random_agent n =
       if n >= 999 then None else
@@ -127,10 +128,30 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
             in
             let v = {v with d={v.d with agents; actions}} in
             agent_hiding_loop ~already_hid:true v
-        else v
-      else v
-    | _ -> v
+        else v, `GenSuccess
+      else v, `GenSuccess
+    | _ -> v, `GenFailed
   in
-  let v = agent_hiding_loop ~already_hid:false v in
-  v
+  let v, ret = agent_hiding_loop ~already_hid:false v in
+  match ret with
+  | `GenFailed when event_run_cnt = 0
+  | _ when time.minutes > 40000 (* one month *) -> v, `Case_over
+  | _ when force_tick -> v, `None
+  | _ ->
+  let rec random_event_loop v =
+    let event_id = Event.S.random (events v) in
+    let num_actions = Action.S.num (actions v) in
+    let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
+    let v = handle_msg (fst ret) v in
+    match snd ret with
+    | `Cant_run -> random_event v
+    | `Ok -> failwith "don't know what to do with ok here" (* TODO *)
+    | `Must_run run_event_id -> v, event_id, run_event_id
+  in
+  let v, event_id, run_event_id = random_event_loop v in
+  let event = Event.Map.find event_id (events v) in
+  
+
+
+
 

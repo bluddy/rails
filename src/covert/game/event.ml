@@ -53,6 +53,13 @@ module S = struct
 
   let to_role events event_id = (Map.find event_id events).role
 
+  let num v =
+    try (Map.max_binding v |> fst |> Id.to_int) + 1 with Not_found -> 0
+
+  let random r v =
+    let i = Random.int (num v) r |> Id.of_int in
+    Map.find i v
+
   (* Emulate this test in code *)
 
   let check_process_event event_id roles agents ~num_actions v =
