@@ -30,7 +30,7 @@ type t = {
   item_bits: int;
   efficiency: int;
   kind: kind;
-  use_anxiety: bool;
+  incapacitated_ok: bool; (* OK to have agent out of action *)
 } [@@deriving yojson]
 
 module Id = Event_id

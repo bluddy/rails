@@ -151,10 +151,10 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   let event = Event.Map.find event_id (events v) in
   let v =
   if Event.has_role event then
-    if not event.use_anxiety &&
-      (let run_event = Event.Map.find run_event_id (events v) in
-      let agent = Agent.S.of_role run_event.role (roles v) (agents v) |> snd in
-      not @@ Agent.is_at_large agent) then
+    if event.incapacitated_ok &&
+      (Event.S.to_role (events v) run_event_id
+      |> Agent.S.of_role (roles v) (agents v)
+      |> snd |> Agent.is_at_large |> not) then
         update_events (Event.S.update event_id (Event.set_tick 0)) v
     else
       (* long path here *)

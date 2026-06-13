@@ -92,7 +92,7 @@ module S = struct
   let go_into_hiding agent_id agents =
     update_agent agent_id agents @@ go_into_hiding
 
-  let of_role role_id roles agents =
+  let of_role roles agents role_id =
     try
       let role = Role_d.Map.find role_id roles in
       let agent_id = role.Role_d.agent in

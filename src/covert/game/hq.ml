@@ -78,7 +78,7 @@ let get_kind org_id loc_id locs orgs roles agents mm world =
   (* Hardcoded *)
   let hq_type = match hq_type, world.World.difficulty with
   | None, Difficulty.Local_disturbance when Loc.Id.(loc_id = Loc.washington) ->
-      begin match Agent.S.of_role Role.first roles agents |> (fun a -> (snd a).Agent.org) with
+      begin match Agent.S.of_role roles agents Role.first |> (fun a -> (snd a).Agent.org) with
       | org when Org.Id.(org = org_id) -> Some Hideout
       | _ -> None
       end

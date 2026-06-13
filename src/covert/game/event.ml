@@ -17,7 +17,7 @@ let from_stream ~num_events s =
     let bits = Gen.get_wordi s in
     let item_bits = Gen.get_wordi s in
     let efficiency = Gen.get_wordi s in
-    let use_anxiety = bits land 0x1000 > 0 in
+    let incapacitated_ok = bits land 0x1000 > 0 in
     let kind =
       if bits land 0x2000 > 0 then Misc else
       if Role.Id.(role = of_int 255) then Terminal else
@@ -39,7 +39,7 @@ let from_stream ~num_events s =
       item_bits;
       efficiency;
       kind;
-      use_anxiety;
+      incapacitated_ok;
     } in
     print_endline @@ (yojson_of_t event |> Yojson.Safe.to_string);
     event::acc
@@ -77,17 +77,17 @@ module S = struct
     let cant_run = (`None, `Cant_run) in
     match event.status with
     | Ready ->
-        let agent_id, agent = Agent.S.of_role event.role roles agents in
+        let agent_id, agent = Agent.S.of_role roles agents event.role in
         if Agent.is_double_agent agent && event.efficiency = 0 then cant_run else
         if event_has_prev_ready_same_role_ event_id v then cant_run else
         begin match event.kind with
         | With_role {role; _} ->
           let role_id = role in
-          let rcv_agent_id, rcv_agent = Agent.S.of_role role roles agents in
+          let rcv_agent_id, rcv_agent = Agent.S.of_role roles agents role in
           let flag = match rcv_agent.status with
             | Agent.At_large _ -> false
             | Agent.Double_agent -> false
-            | _ when not event.use_anxiety -> false
+            | _ when not event.incapacitated_ok -> false
             | _ -> true
           in
           let problem_event =
