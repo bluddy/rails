@@ -42,6 +42,10 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   let v = {v with time} in
   if not do_tick then v, `None else
   let old_actions = actions v in
+  let check_process_event event_id actions =
+    let num_actions = Action.S.num actions in
+    Event.S.check_process_event event_id (roles v) (agents v) ~num_actions @@ events v
+  in
   let v =
     let time = Time.do_tick time in
     let factor = Difficulty.to_enum v.world.difficulty + 3 in
@@ -63,8 +67,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   in
   let v, event_run_cnt =
     Event.Map.fold_not_last (fun event_id _ (v, cnt) ->
-      let num_actions = Action.Map.cardinal (actions v) in
-      let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
+      let ret = check_process_event event_id (actions v) in
       let v = handle_msg (fst ret) v in
       let cnt = match snd ret with `Cant_run -> cnt | _ -> cnt + 1 in
       v, cnt)
@@ -79,11 +82,10 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     if event_run_cnt <= Difficulty.to_enum v.world.difficulty then
       (* Update event_run_cnt *)
       let v = clear_autoescape v in
-      let num_actions = Action.Map.cardinal (actions v) in
       let v, cnt, _ =
         Event.Map.fold_not_last (fun event_id _ ((v, cnt, can_run) as acc) ->
           if can_run then acc else
-          let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
+          let ret = check_process_event event_id (actions v) in
           let v = handle_msg (fst ret) v in
           let cnt, can_run = match snd ret with `Cant_run -> cnt, can_run | _ -> 1, true in
           v, cnt, can_run)
@@ -138,9 +140,8 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   | _ when force_tick -> v, `None
   | _ ->
   let rec random_event_loop v =
-    let event_id = Event.S.random s.random (events v) in
-    let num_actions = Action.S.num (actions v) in
-    let ret = Event.S.check_process_event event_id (roles v) (agents v) ~num_actions (events v) in
+    let event_id = Event.S.random s.random @@ events v in
+    let ret = check_process_event event_id @@ actions v in
     let v = handle_msg (fst ret) v in
     match snd ret with
     | `Cant_run -> random_event_loop v
@@ -148,17 +149,17 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     | `Must_run run_event_id -> v, event_id, run_event_id
   in
   let v, event_id, run_event_id = random_event_loop v in
-  let event = Event.Map.find event_id (events v) in
+  let event = Event.Map.find event_id @@ events v in
   let v =
     if Event.has_role event then
       if event.incapacitated_ok &&
         (Event.S.to_role (events v) run_event_id
-        |> Agent.S.of_role (roles v) (agents v)
-        |> snd |> Agent.is_at_large |> not) then
-          update_events (Event.S.update event_id (Event.set_tick 0)) v
+        |> Agent.S.of_role (roles v) (agents v) |> snd
+        |> Agent.is_at_large |> not) then
+          update_events (Event.S.update event_id @@ Event.set_tick 0) v
       else
         (* long path here *)
-        let run_event = Event.Map.find run_event_id (events v) in
+        let run_event = Event.Map.find run_event_id @@ events v in
         if Event.is_ready run_event then
           v
         else
@@ -169,7 +170,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
       let roles = Role.S.update_ctr role_id (fun ctr -> match ctr.tick with
         | None -> {ctr with tick=Some time.tick}
         | _ -> ctr)
-        (roles v)
+        @@ roles v
       in
       {v with d={v.d with roles; events}}
   in
