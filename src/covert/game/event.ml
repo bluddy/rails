@@ -47,8 +47,6 @@ let from_stream ~num_events s =
   []
   Iter.(0 -- (num_events - 1)) |> List.rev
 
-let set_tick tick v = {v with status=Tick tick}
-
 module S = struct
 
   let to_role events event_id = (Map.find event_id events).role

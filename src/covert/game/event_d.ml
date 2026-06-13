@@ -44,5 +44,9 @@ let has_role event = match event.kind with
   | _ -> false
 
 let is_ready event = match event.status with Ready -> true | _ -> false
+let status v = v.status
+let update_status status v = {v with status}
+let set_tick tick v = {v with status=Tick tick}
+
 
 

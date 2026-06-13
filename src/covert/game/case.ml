@@ -150,24 +150,28 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   let v, event_id, run_event_id = random_event_loop v in
   let event = Event.Map.find event_id (events v) in
   let v =
-  if Event.has_role event then
-    if event.incapacitated_ok &&
-      (Event.S.to_role (events v) run_event_id
-      |> Agent.S.of_role (roles v) (agents v)
-      |> snd |> Agent.is_at_large |> not) then
-        update_events (Event.S.update event_id (Event.set_tick 0)) v
+    if Event.has_role event then
+      if event.incapacitated_ok &&
+        (Event.S.to_role (events v) run_event_id
+        |> Agent.S.of_role (roles v) (agents v)
+        |> snd |> Agent.is_at_large |> not) then
+          update_events (Event.S.update event_id (Event.set_tick 0)) v
+      else
+        (* long path here *)
+        let run_event = Event.Map.find run_event_id (events v) in
+        if Event.is_ready run_event then
+          v
+        else
+          update_events (Event.S.update event_id @@ Event.update_status run_event.status) v
     else
-      (* long path here *)
-      v
-  else
-    let events = Event.S.update event_id (Event.set_tick time.tick) (events v) in
-    let role_id = Event.S.to_role events event_id in
-    let roles = Role.S.update_ctr role_id (fun ctr -> match ctr.tick with
-      | None -> {ctr with tick=Some time.tick}
-      | _ -> ctr)
-      (roles v)
-    in
-    {v with d={v.d with roles; events}}
+      let events = Event.S.update event_id (Event.set_tick time.tick) (events v) in
+      let role_id = Event.S.to_role events event_id in
+      let roles = Role.S.update_ctr role_id (fun ctr -> match ctr.tick with
+        | None -> {ctr with tick=Some time.tick}
+        | _ -> ctr)
+        (roles v)
+      in
+      {v with d={v.d with roles; events}}
   in
   v, `None
 
