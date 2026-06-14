@@ -185,8 +185,19 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
             in
             set_events events v
           in
+          let event_to_agent event_id =
+            Event.S.to_role (events v) event_id |> Role.S.to_agent (roles v)
+          in
+          let v =
+            if Agent.Id.(event_to_agent event_id = event_to_agent run_event_id) then
+              let events = (events v)
+                |> Event.S.update event_id (Event.update_status Unused)
+                |> Event.S.update event_id (Event.update_status Unused)
+              in
+              set_events events v
+            else v
+          in
           v
-          
         else
           update_events (Event.S.update event_id @@ Event.update_status run_event.status) v
     else
