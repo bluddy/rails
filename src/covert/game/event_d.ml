@@ -2,7 +2,8 @@ open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 type status =
-  | Ready
+  | Ready (* 999 in OG *)
+  | Unused (* -1 in OG *)
   | Tick of int
   [@@deriving yojson,show]
 
