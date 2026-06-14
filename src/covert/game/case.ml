@@ -175,7 +175,18 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
             |> set_tick_and_ctr_tick event_id
             |> set_tick_and_ctr_tick run_event_id
           in
+          let v =
+            let events =
+              Event.S.with_same_num_id event_id (events v)
+              |> List.filter (fun (id, _) -> Event.Id.(id <> event_id && id <> run_event_id))
+              |> List.fold_left (fun acc (id, _) ->
+                  Event.S.update id (Event.update_status Unused) acc)
+                (events v)
+            in
+            set_events events v
+          in
           v
+          
         else
           update_events (Event.S.update event_id @@ Event.update_status run_event.status) v
     else

@@ -58,6 +58,11 @@ module S = struct
 
   let update event_id fn v = Map.update event_id (Option.map fn) v
 
+  let with_same_num_id event_id v =
+    let event = Map.find event_id v in
+    let num_id = event.num_id in
+    Map.filter (fun _ event -> event.num_id = num_id) v |> Map.to_list
+
   (* Emulate this test in code *)
 
   let check_process_event event_id roles agents ~num_actions v =
