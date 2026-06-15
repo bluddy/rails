@@ -198,6 +198,7 @@ let load_from_file crime_type_num =
   let num_events = Gen.get_wordi s in
   let roles = Role.from_stream ~num_roles s in
   let events = Event.from_stream ~num_events s in
-  roles, events
+  let items = Item.from_stream s in
+  roles, events, items
 
 

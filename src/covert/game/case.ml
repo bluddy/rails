@@ -203,6 +203,17 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     else
       set_tick_and_ctr_tick event_id v
   in
+  Event.Map.fold (fun id event acc ->
+    if Event.check_tick event time.tick then
+      let action = create_action time (Action.Event_based id) v in
+      List.fold_left (fun acc item_id ->
+      )
+      acc
+      v.item.rcv
+
+
+    else acc)
+  v.events
   v, `None
 
 

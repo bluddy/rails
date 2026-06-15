@@ -22,13 +22,18 @@ type kind =
   | Terminal
   [@@deriving yojson]
 
+type items = {
+   rcv: Item.Id.t list;
+   send: Item.Id.t list;
+  } [@@deriving yojson]
+
 type t = {
   role: Role.Id.t;
   status: status;
   num_id: int;
   text: string;
   bits: int;
-  item_bits: int;
+  items: items;
   efficiency: int;
   kind: kind;
   incapacitated_ok: bool; (* OK to have agent out of action *)

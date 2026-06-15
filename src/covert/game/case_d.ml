@@ -18,6 +18,7 @@ type data = {
   hqs: Hq.map;
   events: Event.map;
   actions: Action.map;
+  items: Item.map;
 } [@@deriving yojson]
 
 type t = {

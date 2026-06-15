@@ -624,3 +624,10 @@ let stream_of_file_seek offset filename =
   let stream = My_gen.of_stringi str in
   stream
 
+let bits_to_int_list bits =
+  let rec loop n l =
+    if bits land (1 lsl n) > 0 then loop (n+1) @@ n::l
+    else loop (n+1) l
+  in
+  loop 0 []
+

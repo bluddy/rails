@@ -16,6 +16,10 @@ let from_stream ~num_events s =
     let text = Gen.take 32 s |> Gen.to_stringi |> String.remove_nulls in
     let bits = Gen.get_wordi s in
     let item_bits = Gen.get_wordi s in
+    let rcv_items = item_bits land 0xFF
+    |> Utils.bits_to_int_list |> List.map Item.Id.of_int in
+    let send_items = (item_bits land 0xFF00) lsr 8
+    |> Utils.bits_to_int_list |> List.map Item.Id.of_int in
     let efficiency = Gen.get_wordi s in
     let incapacitated_ok = bits land 0x1000 > 0 in
     let kind =
@@ -36,7 +40,7 @@ let from_stream ~num_events s =
       num_id;
       text;
       bits;
-      item_bits;
+      items={rcv=rcv_items; send=send_items};
       efficiency;
       kind;
       incapacitated_ok;
