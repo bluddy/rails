@@ -6,9 +6,11 @@ module Gen = Engine.My_gen
 type t = {
   name: string;
   img: int;
-  agent: Agent.Id.t;
+  agent: Agent_id.t;
 }
 [@@deriving yojson]
+
+let set_agent agent_id v = {v with agent=agent_id}
 
 module Id = Engine.Int_id.Make()
 
@@ -28,3 +30,6 @@ module Map = Utils.Map.Make(struct
 
 type map = t Map.t [@@deriving yojson]
 
+module S = struct
+  let update item_id items fn = Map.update item_id (Option.map fn) items
+end
