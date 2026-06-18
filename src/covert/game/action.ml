@@ -8,7 +8,7 @@ type kind =
   | Item_confiscate of Item.Id.t
   | Item_spotted of Item.Id.t * Loc.Id.t
   | Agent_turn of Agent.Id.t
-  | Agent_hide of {agent: Agent.Id.t; bulletin: bool}
+  | Agent_hide of Agent.Id.t
   | Agent_arrest of Agent.Id.t
   | Agent_leave of Agent.Id.t * Loc.Id.t
   | Agent_escape of Agent.Id.t
@@ -45,6 +45,7 @@ type t = {
   time: int;
   known: KnownSet.t;
   send: send option;
+  bulletin: bool; (* whether we find out about this *)
 } [@@deriving yojson]
 
 module Id = Engine.Int_id.Make()
@@ -55,7 +56,7 @@ end)
 
 type map = t Map.t [@@deriving yojson]
 
-let create time kind events roles (agents:Agent.map) =
+let create ?(bulletin=false) time kind events roles (agents:Agent.map) =
   let time = time.Time.minutes in
   let send = match kind with
     | Event_based event_id ->
@@ -75,12 +76,12 @@ let create time kind events roles (agents:Agent.map) =
         Some {send_agent=agent_id; status; send_loc; rcv}
     | _ -> None
   in
-  {kind; time; known=KnownSet.empty; send}
+  {kind; time; known=KnownSet.empty; send; bulletin}
 
 module S = struct
 
-  let create time kind events roles agents v =
-    let action = create time kind events roles agents in
+  let create ?bulletin time kind events roles agents v =
+    let action = create ?bulletin time kind events roles agents in
     let id = Map.cardinal v |> Id.of_int in
     Map.add id action v
 
