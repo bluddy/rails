@@ -27,9 +27,12 @@ let from_stream s =
   []
   Iter.(0 -- 3) |> List.rev
 
-module Map = Utils.Map.Make(struct
+module Map = struct
+  include Utils.Map.Make(struct
     type t = Id.t [@@deriving yojson, ord]
   end)
+  let of_ordered_list l = List.mapi (fun i x -> Id.of_int i, x) l |> of_list
+end
 
 type map = t Map.t [@@deriving yojson]
 

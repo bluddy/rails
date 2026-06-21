@@ -33,18 +33,26 @@ type t = {
   agent_jailbreak: Agent_d.Id.t option;
 } [@@deriving yojson]
 
-let step v = v.s.step
-let region v = v.s.region
-let crime v = v.s.crime
-let orgs v = v.d.orgs
-let locs v = v.d.locs
-let double_agents v = v.d.double_agents
-let roles v = v.d.roles
-let hqs v = v.d.hqs
-let events v = v.d.events
-let actions v = v.d.actions
-let agents v = v.d.agents
-let difficulty v = v.world.difficulty
-let set_events events v = {v with d={v.d with events}}
-let update_events fn v = set_events (fn v.d.events) v
+module G = struct
+  let step v = v.s.step
+  let region v = v.s.region
+  let crime v = v.s.crime
+  let orgs v = v.d.orgs
+  let locs v = v.d.locs
+  let double_agents v = v.d.double_agents
+  let roles v = v.d.roles
+  let hqs v = v.d.hqs
+  let events v = v.d.events
+  let actions v = v.d.actions
+  let agents v = v.d.agents
+  let difficulty v = v.world.difficulty
+  let items v = v.d.items
+end
+module U = struct
+  let events events v = {v with d={v.d with events}}
+  let actions actions v = {v with d={v.d with actions}}
+  let items items v = {v with d={v.d with items}}
+end
+
+let update_events fn v = U.events (fn v.d.events) v
 

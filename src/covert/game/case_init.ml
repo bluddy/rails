@@ -68,6 +68,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
       locs;
       orgs;
       actions=Action.Map.empty;
+      items=Item.Map.empty;
     };
   }
 
@@ -194,6 +195,7 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
   let roles, events, items = Crime.load_from_file typ in
   let roles = Role.Map.of_ordered_list roles in
   let events = Event.Map.of_ordered_list events in
+  let items = Item.Map.of_ordered_list items in
   let diff_num = Difficulty.to_enum world.World.difficulty in
   let double_agents =
     Iter.fold (fun acc _ ->
@@ -272,7 +274,7 @@ let update_events_roles_agents (s:Services.t) world (v:t) =
     else
       orgs
   in
-  {v with d={v.d with orgs; roles; agents; events; double_agents}}
+  {v with d={v.d with orgs; roles; agents; events; items; double_agents}}
 
 let create_known_hqs (v:t) =
   let orgs, locs = v.d.orgs, v.d.locs in
