@@ -204,34 +204,41 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     else
       set_tick_and_ctr_tick event_id v
   in
+  let handle_agent_items event_id event actions items =
+    let actions = create_action time (Action.Event_based event_id) v actions in
+    let agent_id = Event.S.to_role (G.events v) event_id |> Role.S.to_agent (G.roles v) in
+    let actions, items =
+      List.fold_left (fun ((actions: Action.map), items) item_id ->
+        let items = Item.S.update item_id items (Item.set_agent agent_id) in
+        let bulletin = Random.int 2 s.random >= Difficulty.to_enum (G.difficulty v)
+                      && Event.is_misc event
+                      && Action.S.num (G.actions v) > 5
+        in
+        let loc = Agent.S.to_loc (G.agents v) agent_id in
+        let actions = create_action ~bulletin time (Action.Item_spotted(item_id, loc)) v actions
+        in
+        actions, items)
+      (actions, items)
+      event.items.rcv
+    in
+    let items = List.fold_left (fun items item_id ->
+      Item.S.update item_id items @@ Item.clear_agent)
+      items
+      event.items.send
+    in
+    (actions, items)
+  in
+  let bulletins = [] in (* temporary *)
   let actions, items =
-    Event.Map.fold (fun event_id event ((actions, items) as acc) ->
+    Event.Map.fold (fun event_id event ((actions, items, bulletins) as acc) ->
       if Event.check_tick event time.tick then
-        let actions = create_action time (Action.Event_based event_id) v actions in
-        let agent_id = Event.S.to_role (G.events v) event_id |> Role.S.to_agent (G.roles v) in
-        let actions, items =
-          List.fold_left (fun ((actions: Action.map), items) item_id ->
-            let items = Item.S.update item_id items (Item.set_agent agent_id) in
-            let bulletin = Random.int 2 s.random >= Difficulty.to_enum (G.difficulty v)
-                          && Event.is_misc event
-                          && Action.S.num (G.actions v) > 5
-            in
-            let loc = Agent.S.to_loc (G.agents v) agent_id in
-            let actions = create_action ~bulletin time (Action.Item_spotted(item_id, loc)) v actions
-            in
-            actions, items)
-          (actions, items)
-          event.items.rcv
-        in
-        let items = List.fold_left (fun items item_id ->
-          Item.S.update item_id items @@ Item.clear_agent)
-          items
-          event.items.send
-        in
-        (actions, items)
+        let actions, items = handle_agent_items event_id event actions items in
+        match event.kind with
+        | With_role w_role -> acc
+        | _ -> acc
       else acc)
       (G.events v)
-      (G.actions v, G.items v)
+      (G.actions v, G.items v, bulletins)
   in
   let v = v |> U.actions actions |> U.items items in
   v, `None
