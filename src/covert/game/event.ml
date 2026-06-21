@@ -53,6 +53,14 @@ let from_stream ~num_events s =
 
 let check_tick v tick = match v.status with Tick t when t=tick -> true | _ -> false
 
+let to_text dta roles agents orgs v =
+  let teltron = "Teltron #42" in
+  let agent_id = v.role |> Role.S.to_agent roles in
+  let org = agent_id |> Agent.S.to_org agents |> fun id -> Org.Map.find id orgs in
+  let loc = agent_id |> Agent.S.to_loc agents |> fun id -> Loc.Map.find id locs in
+  ()
+
+
 module S = struct
 
   let to_role events event_id = (Map.find event_id events).role

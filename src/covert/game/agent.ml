@@ -103,6 +103,8 @@ module S = struct
 
   let to_loc agents agent_id = (Map.find agent_id agents).loc
 
+  let to_org agents agent_id = (Map.find agent_id agents).org
+
   let get org_id loc_id agents =
     Map.find_pred (fun _ agent ->
       Org.Id.(agent.org = org_id) && Loc.Id.(agent.loc = loc_id))
