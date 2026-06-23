@@ -1,5 +1,7 @@
 open! Containers
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
+module String = Engine.String
+module Gen = Engine.My_gen
 
 type status =
   | Ready (* 999 in OG *)
@@ -55,4 +57,47 @@ let update_status status v = {v with status}
 let set_tick tick v = {v with status=Tick tick}
 let is_misc event = match event.kind with Misc -> true | _ -> false
 
+let from_stream ~num_events s =
+  Iter.fold (fun acc _ ->
+    let role = Gen.get_bytei s |> Role.Id.of_int in
+    let _junk = Gen.get_bytei s in
+    let _tick_or_status = Gen.get_wordi s in
+    let num_id = Gen.get_wordi s in
+    let text = Gen.take 32 s |> Gen.to_stringi |> String.remove_nulls in
+    let bits = Gen.get_wordi s in
+    let item_bits = Gen.get_wordi s in
+    let rcv_items = item_bits land 0xFF
+    |> Utils.bits_to_int_list |> List.map Item.Id.of_int in
+    let send_items = (item_bits land 0xFF00) lsr 8
+    |> Utils.bits_to_int_list |> List.map Item.Id.of_int in
+    let efficiency = Gen.get_wordi s in
+    let incapacitated_ok = bits land 0x1000 > 0 in
+    let kind =
+      if bits land 0x2000 > 0 then Misc else
+      if Role.Id.(role = of_int 255) then Terminal else
+      let role = bits land 0xFF |> Role.Id.of_int in
+      let inter = if bits land 0x800 > 0 then Meet else begin
+        assert (bits land 0x200 > 0);
+        Msg
+        end
+      in
+      let send_rcv = if bits land 0x100 > 0 then Rcv else Send in
+      With_role {inter; send_rcv; role}
+    in
+    let event = {
+      role;
+      status=Ready;
+      num_id;
+      text;
+      bits;
+      items={rcv=rcv_items; send=send_items};
+      efficiency;
+      kind;
+      incapacitated_ok;
+    } in
+    print_endline @@ (yojson_of_t event |> Yojson.Safe.to_string);
+    event::acc
+  )
+  []
+  Iter.(0 -- (num_events - 1)) |> List.rev
 

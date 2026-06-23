@@ -1,6 +1,24 @@
 open Containers
 open Re
 
+module Pattern = struct
+
+  type t =
+    | Victim
+    | SndOrg
+    | RcvOrg
+    | SndLoc
+    | RcvLoc
+    | HlpOrg
+    | Object
+      [@@deriving show]
+
+  let show v = show v
+  |> String.uppercase_ascii
+  |> (^) "$"
+
+end
+
 let get_lines ~pat =
   let pat_r = compile (seq [
     seq [bol; str pat; eol];

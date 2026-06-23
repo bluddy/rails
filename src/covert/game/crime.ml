@@ -182,7 +182,7 @@ module Step = struct
     let crime, step = G_Id.to_int crime, Id.to_int step in
     crimes.(crime).step_types.(step)
 
-  let get_objs crime step =
+  let get_victim_and_obj crime step =
     let crime, step = G_Id.to_int crime, Id.to_int step in
     let idx1 = step * 2 in
     let idx2 = idx1 + 1 in
@@ -197,7 +197,7 @@ let load_from_file crime_type_num =
   let num_roles = Gen.get_wordi s in
   let num_events = Gen.get_wordi s in
   let roles = Role.from_stream ~num_roles s in
-  let events = Event.from_stream ~num_events s in
+  let events = Event_d.from_stream ~num_events s in
   let items = Item.from_stream s in
   roles, events, items
 
