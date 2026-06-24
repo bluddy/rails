@@ -3,6 +3,7 @@ open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
 include Event_d
 
+module Subst = Subst_engine
 module Pat = Subst_engine.Pattern
 
 (* Note: last event is Terminal kind *)
@@ -14,20 +15,17 @@ let gen_msg_num crime step v =
   let type_ = Crime.Step.get_type crime step in
   Printf.sprintf "*MSG%02d%02d" event_idx type_
 
-let to_text dta crime step roles agents orgs locs v =
+let to_text text_dta crime step roles agents orgs locs v =
   let victim, obj = Crime.Step.get_victim_and_obj crime step in
-  let l = [Pat.Victim, victim; Pat.Object, obj] in
+  let pats = [Pat.Victim, victim; Pat.Object, obj] in
   let agent_id = v.role |> Role.S.to_agent roles in
   let org = agent_id |> Agent.S.to_org agents |> fun id -> Org.Map.find id orgs in
-  let l = (Pat.SndOrg, org.Org.name)::l in
+  let pats = (Pat.SndOrg, org.Org.name)::pats in
   let loc = agent_id |> Agent.S.to_loc agents |> fun id -> Loc.Map.find id locs in
-  let l = (Pat.SndLoc, loc.Loc.city)::l in
-  let num_id = v.num_id in
-  let type_ = Crime.Step.get_type crime step in
+  let pats = (Pat.SndLoc, loc.Loc.city)::pats in
   let msg_num = gen_msg_num crime step v in
-
-  ()
-
+  let s = Subst.get_lines ~pat:msg_num text_dta |> Option.get_exn_or "Text not found" in
+  Subst.subst_pat pats s
 
 module S = struct
 
