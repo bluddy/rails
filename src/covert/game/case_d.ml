@@ -52,6 +52,7 @@ module U = struct
   let events events v = {v with d={v.d with events}}
   let actions actions v = {v with d={v.d with actions}}
   let items items v = {v with d={v.d with items}}
+  let orgs orgs v = {v with d={v.d with orgs}}
 end
 
 let update_events fn v = U.events (fn v.d.events) v

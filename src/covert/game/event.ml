@@ -15,17 +15,19 @@ let gen_msg_num crime step v =
   let type_ = Crime.Step.get_type crime step in
   Printf.sprintf "*MSG%02d%02d" event_idx type_
 
-let to_text text_dta crime step roles agents orgs locs v =
+let to_text res crime step roles agents orgs locs v =
   let victim, obj = Crime.Step.get_victim_and_obj crime step in
   let pats = [Pat.Victim, victim; Pat.Object, obj] in
   let agent_id = v.role |> Role.S.to_agent roles in
-  let org = agent_id |> Agent.S.to_org agents |> fun id -> Org.Map.find id orgs in
+  let org_id = agent_id |> Agent.S.to_org agents in
+  let org = Org.Map.find org_id orgs in
   let pats = (Pat.SndOrg, org.Org.name)::pats in
   let loc = agent_id |> Agent.S.to_loc agents |> fun id -> Loc.Map.find id locs in
   let pats = (Pat.SndLoc, loc.Loc.city)::pats in
   let msg_num = gen_msg_num crime step v in
-  let s = Subst.get_lines ~pat:msg_num text_dta |> Option.get_exn_or "Text not found" in
-  Subst.subst_pat pats s
+  let text = Hashtbl.find res.Resources.text `Text in
+  let s = Subst.get_lines ~pat:msg_num text |> Option.get_exn_or "Text not found" in
+  Subst.subst_pat pats s, org_id
 
 module S = struct
 

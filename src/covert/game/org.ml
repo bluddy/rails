@@ -106,10 +106,10 @@ let add_known v = {v with known_involved=true}
 
 module S = struct
 
-  let do_ org_id orgs fn =
+  let update org_id orgs fn =
     Map.update org_id (Option.map fn) orgs
 
-  let add_known org_id orgs = do_ org_id orgs add_known
+  let add_known org_id orgs = update org_id orgs add_known
 
   let find_one_known orgs =
     Map.find_pred (fun _ org -> org.known_involved) orgs

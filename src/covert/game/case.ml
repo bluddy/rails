@@ -15,6 +15,9 @@ let clear_autoescape v = {v with agent_autoescape=None}
 let create_action ?bulletin time kind v actions =
   Action.S.create ?bulletin time kind (G.events v) (G.roles v) (G.agents v) actions
 
+let event_to_text (s:Services.t) event v =
+  Event.to_text s.resources (G.crime v) (G.step v) (G.roles v) (G.agents v) (G.orgs v) (G.locs v) event
+
 let check_escape_jail (s:Services.t) agent_id v =
   let pass_test = match v.agent_autoescape with
   | Some agent when Agent.Id.(agent = agent_id) -> true
@@ -229,18 +232,21 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     (actions, items)
   in
   let bulletins = [] in (* temporary *)
-  let actions, items, bulletins =
-    Event.Map.fold (fun event_id event ((actions, items, bulletins) as acc) ->
+  let actions, items, orgs, bulletins =
+    Event.Map.fold (fun event_id event ((actions, items, orgs, bulletins) as acc) ->
       if Event.check_tick event time.tick then
         let actions, items = handle_agent_items event_id event actions items in
         match event.kind with
         | With_role w_role -> acc
-        | _ -> acc
+        | _ ->
+            let text, org_id = event_to_text s event v in
+            let orgs = Org.S.add_known org_id orgs in
+            (actions, items, orgs, (Bulletin_d.Text text)::bulletins)
       else acc)
       (G.events v)
-      (G.actions v, G.items v, bulletins)
+      (G.actions v, G.items v, G.orgs v, bulletins)
   in
-  let v = v |> U.actions actions |> U.items items in
+  let v = v |> U.actions actions |> U.items items |> U.orgs orgs in
   v, `None
 
 
