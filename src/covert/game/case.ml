@@ -229,7 +229,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     (actions, items)
   in
   let bulletins = [] in (* temporary *)
-  let actions, items =
+  let actions, items, bulletins =
     Event.Map.fold (fun event_id event ((actions, items, bulletins) as acc) ->
       if Event.check_tick event time.tick then
         let actions, items = handle_agent_items event_id event actions items in
