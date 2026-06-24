@@ -231,22 +231,38 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     in
     (actions, items)
   in
-  let bulletins = [] in (* temporary *)
-  let actions, items, orgs, bulletins =
-    Event.Map.fold (fun event_id event ((actions, items, orgs, bulletins) as acc) ->
+  let handle_msg_bulletin event locs orgs actions roles agents bs =
+    match event.Event.kind with
+    | Terminal -> failwith "terminal event encountered" 
+    | Misc ->
+        let text, org_id = event_to_text s event v in
+        let orgs = Org.S.add_known org_id orgs in
+        let bs = (Bulletin_d.Text text)::bs in
+        locs, orgs, bs
+    | With_role {inter=Msg; rcv_role;_} when Action.S.num actions > 5 ->
+        let loc_id = event.role |> Role.S.to_agent roles |> Agent.S.to_loc agents in
+        let locs = Loc.S.incr_activity loc_id locs in
+        let rand2 = Random.int 2 s.random in
+        if rand2 = 0 then
+          let bs = (Bulletin_d.Satellite_from loc_id)::bs in
+          locs, orgs, bs
+        else
+          let rcv_loc_id = rcv_role |> Role.S.to_agent roles |> Agent.S.to_loc agents in
+          let bs = (Bulletin_d.Satellite_to rcv_loc_id)::bs in
+          locs, orgs, bs
+    | _ -> locs, orgs, bs
+  in
+  let bs = [] in (* temporary *)
+  let v, bs =
+    Event.Map.fold (fun event_id event ((v, bs) as acc) ->
       if Event.check_tick event time.tick then
-        let actions, items = handle_agent_items event_id event actions items in
-        match event.kind with
-        | With_role w_role -> acc
-        | _ ->
-            let text, org_id = event_to_text s event v in
-            let orgs = Org.S.add_known org_id orgs in
-            (actions, items, orgs, (Bulletin_d.Text text)::bulletins)
+        let actions, items = handle_agent_items event_id event (G.actions v) (G.items v) in
+        let locs, orgs, bs = handle_msg_bulletin event (G.locs v) (G.orgs v) (G.actions v) (G.roles v) (G.agents v) bs in
+        acc (* TODO fix *)
       else acc)
       (G.events v)
-      (G.actions v, G.items v, G.orgs v, bulletins)
+      (v, bs)
   in
-  let v = v |> U.actions actions |> U.items items |> U.orgs orgs in
   v, `None
 
 

@@ -13,12 +13,12 @@ type info =
   | EmptyBits (* not sure what this signifies *)
 
 type interaction = Meet | Msg [@@deriving yojson]
-type send_rcv = Send | Rcv [@@deriving yojson]
+type tx = Send | Rcv [@@deriving yojson]
 type kind =
   | With_role of {
     inter: interaction;
-    send_rcv: send_rcv;
-    role: Role.Id.t;
+    tx: tx;
+    rcv_role: Role.Id.t;
   }
   | Misc
   | Terminal
@@ -75,14 +75,14 @@ let from_stream ~num_events s =
     let kind =
       if bits land 0x2000 > 0 then Misc else
       if Role.Id.(role = of_int 255) then Terminal else
-      let role = bits land 0xFF |> Role.Id.of_int in
+      let rcv_role = bits land 0xFF |> Role.Id.of_int in
       let inter = if bits land 0x800 > 0 then Meet else begin
         assert (bits land 0x200 > 0);
         Msg
         end
       in
-      let send_rcv = if bits land 0x100 > 0 then Rcv else Send in
-      With_role {inter; send_rcv; role}
+      let tx = if bits land 0x100 > 0 then Rcv else Send in
+      With_role {inter; tx; rcv_role}
     in
     let event = {
       role;

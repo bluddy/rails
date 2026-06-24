@@ -66,9 +66,9 @@ module S = struct
         if Agent.is_double_agent agent && event.efficiency = 0 then cant_run else
         if event_has_prev_ready_same_role_ event_id v then cant_run else
         begin match event.kind with
-        | With_role {role; _} ->
-          let role_id = role in
-          let rcv_agent_id, rcv_agent = Agent.S.of_role roles agents role in
+        | With_role {rcv_role; _} ->
+          let role_id = rcv_role in
+          let rcv_agent_id, rcv_agent = Agent.S.of_role roles agents rcv_role in
           let flag = match rcv_agent.status with
             | Agent.At_large _ -> false
             | Agent.Double_agent -> false

@@ -21,6 +21,8 @@ let random r = Random.int C.num_locs r |> Id.of_int
 
 let washington = Id.of_int 1
 
+let incr_activity v = {v with activity=v.activity + 1}
+
 module Map = struct
   include Utils.Map.Make(struct
   type t = Id.t [@@deriving yojson]
@@ -75,9 +77,12 @@ let add_known_hq org_id v =
   {v with known_hqs=Org_id.Set.add org_id v.known_hqs}
 
 module S = struct
-  let update_ loc_id locs fn =
+  let update loc_id locs fn =
     Map.update loc_id (Option.map fn) locs
 
   let add_known_hq loc_id org_id v =
-    update_ loc_id v (add_known_hq org_id)
+    update loc_id v (add_known_hq org_id)
+
+  let incr_activity loc_id v =
+    update loc_id v @@ incr_activity
 end

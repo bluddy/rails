@@ -6,3 +6,5 @@ type t =
   | Agent_hiding of {name: string}
   | Item_spotted of {item: Item.Id.t; loc: Loc.Id.t}
   | Text of string
+  | Satellite_from of Loc.Id.t
+  | Satellite_to of Loc.Id.t

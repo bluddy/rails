@@ -66,8 +66,8 @@ let create ?(bulletin=false) time kind events roles (agents:Agent.map) =
         let status = agent.status in
         let event = Event.Map.find event_id events in
         let rcv = match event.kind with
-          | With_role {role;_} ->
-              let rcv_agent_id = Role.S.to_agent roles role in
+          | With_role {rcv_role;_} ->
+              let rcv_agent_id = Role.S.to_agent roles rcv_role in
               let rcv_agent = Agent.Map.find rcv_agent_id agents in
               let rcv_loc = rcv_agent.loc in
               Some {rcv_agent=rcv_agent_id; rcv_loc}
