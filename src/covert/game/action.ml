@@ -24,9 +24,14 @@ type known = [
   | `Known_loc
 ] [@@deriving yojson, ord]
 
-module KnownSet = Utils.Set.Make(struct
+module KnownSet = struct
+  include Utils.Set.Make(struct
   type t = known [@@deriving yojson, ord]
 end)
+
+  let all = [`Decoded; `Known_time; `Known_name; `Known_org; `Known_loc]
+    |> of_list
+end
 
 type rcv = {
   rcv_agent: Agent.Id.t;
@@ -87,4 +92,13 @@ module S = struct
 
   let num v =
     try (Map.max_binding v |> fst |> Id.to_int) + 1 with Not_found -> 0
+
+  let update action_id actions fn =
+    Map.update action_id (Option.map fn) actions
+end
+
+module G = struct
+  let rcv agent = match agent.send with
+    | Some {rcv=Some r; _} -> Some r
+    | _ -> None
 end

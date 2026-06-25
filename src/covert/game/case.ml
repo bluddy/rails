@@ -252,13 +252,52 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
           locs, orgs, bs
     | _ -> locs, orgs, bs
   in
+  let should_reveal_clue event_id event time roles agents hqs =
+    let agent_id = event.Event.role |> Role.S.to_agent roles in
+    let agent = Agent.Map.find agent_id agents in
+    let loc_id, org_id = agent.Agent.loc, agent.org in
+    let hq, hqs = Hq.S.get_or_gen org_id loc_id hqs in
+    let reveal_clue =
+      Agent.is_double_agent agent ||
+      not (Agent.is_arrested agent) && hq.num_wiretaps > Random.int 50 s.random 
+    in
+    if reveal_clue then
+      Action.Map.fold (fun action_id action (actions, bs) ->
+        match action.kind with
+        | Event_based event_id2 when Event.Id.(event_id2 = event_id)
+          && action.time = time.minutes ->
+            let actions = Action.S.update action_id actions @@ fun action -> {action with known=KnownSet.all} in
+            let agents = if not @@ Agent.is_double_agent agent then agents else
+              match Action.G.rcv action with
+              | Some {rcv_agent; _} ->
+                  agents
+                  |> Agent.S.add_known_data rcv_agent `Known_loc
+                  |> Agent.S.add_known_data rcv_agent `Known_org
+                  |> fun agents -> begin match event.kind with
+                    | With_role {rcv_role;_} ->
+                        Agent.S.add_role_known rcv_agent rcv_role agents
+                    | _ -> agents
+                  end
+              | _ -> agents
+            in
+            let src = if Agent.is_double_agent agent then `Double_agent else `Wiretap in
+            acc
+      )
+      actions
+      (actions, bs)
+
+    reveal_clue, hqs
+  in
   let bs = [] in (* temporary *)
   let v, bs =
     Event.Map.fold (fun event_id event ((v, bs) as acc) ->
       if Event.check_tick event time.tick then
         let actions, items = handle_agent_items event_id event (G.actions v) (G.items v) in
         let locs, orgs, bs = handle_msg_bulletin event (G.locs v) (G.orgs v) (G.actions v) (G.roles v) (G.agents v) bs in
-        acc (* TODO fix *)
+        if Event.has_role event then
+          let reveal_clue, hqs = should_reveal_clue event (G.roles v) (G.agents v) (G.hqs v) in
+          acc
+        else acc
       else acc)
       (G.events v)
       (v, bs)

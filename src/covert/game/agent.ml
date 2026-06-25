@@ -74,6 +74,19 @@ let go_free v = {v with status=At_large{anxiety=0}}
 
 module S = struct
 
+  let name_if_known agent_id v =
+    let agent = Map.find agent_id v in
+    if is_known `Known_name agent then
+      Printf.sprintf "%s %s" agent.name agent.last_name
+    else
+      let i = Id.to_int agent_id mod 26 in
+      let c = Char.to_int 'A' + i |> Char.of_int |> Option.get_exn_or "oops" in
+      Printf.sprintf "Agent %c" c
+
+  let is_known known agent_id v =
+    let agent = Map.find agent_id v in
+    is_known known agent
+
   let update_agent agent_id agents fn =
     Map.update agent_id (Option.map fn) agents
 

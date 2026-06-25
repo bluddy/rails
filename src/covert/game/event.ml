@@ -54,7 +54,7 @@ module S = struct
         if Id.(event_id = n) then false else
         let event2 = Map.find n v in
         if is_ready event2 && Role.Id.(event.role = event2.role) then true
-        else loop @@ Id.of_int (Id.to_int n+1)
+        else loop @@ Id.of_int @@ Id.to_int n+1
       in
       loop @@ Id.of_int 0
     in
