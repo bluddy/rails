@@ -83,6 +83,40 @@ let create ?(bulletin=false) time kind events roles (agents:Agent.map) =
   in
   {kind; time; known=KnownSet.empty; send; bulletin}
 
+let send_loc_eq_rcv_loc v =
+  match v.send with
+  | Some send -> begin match send.rcv with
+      | Some rcv ->
+          Loc.Id.(send.send_loc = rcv.rcv_loc)
+      | _ -> false
+      end
+  | _ -> false
+
+let add_known known v = {v with known=KnownSet.add known v.known}
+
+let add_known l v = List.fold_left (fun acc x -> add_known x acc) v l
+
+module G = struct
+  let send_loc v = match v.send with
+    | Some s -> s.send_loc
+    | None -> failwith "no send loc"
+
+  let rcv_loc v = match v.send with
+    | Some s -> begin match s.rcv with
+      | Some r -> r.rcv_loc
+      | None -> failwith "no rcv loc"
+    end
+    | None -> failwith "no send loc"
+
+  let rcv agent = match agent.send with
+    | Some {rcv=Some r; _} -> Some r
+    | _ -> None
+end
+
+module U = struct
+  let known_all v = {v with known=KnownSet.all}
+end
+
 module S = struct
 
   let create ?bulletin time kind events roles agents v =
@@ -95,10 +129,13 @@ module S = struct
 
   let update action_id actions fn =
     Map.update action_id (Option.map fn) actions
+
+  let add_known l action_id actions = update action_id actions @@ add_known l
+
+  (* let print_summary_event_based action_id actions = *)
+  (*   let action = Map.find action_id actions in *)
+  (*   match action.kind with *)
+  (*   | Event_based event_id -> () *)
+  (*   | _ -> () *)
 end
 
-module G = struct
-  let rcv agent = match agent.send with
-    | Some {rcv=Some r; _} -> Some r
-    | _ -> None
-end

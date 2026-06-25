@@ -56,6 +56,7 @@ let status v = v.status
 let update_status status v = {v with status}
 let set_tick tick v = {v with status=Tick tick}
 let is_misc event = match event.kind with Misc -> true | _ -> false
+let is_meeting event = match event.kind with With_role {inter=Meet;_} -> true | _ -> false
 
 let from_stream ~num_events s =
   Iter.fold (fun acc _ ->

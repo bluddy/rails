@@ -1,6 +1,7 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 module C = Constants
+module Bul = Bulletin_d
 
 include Case_d
 
@@ -252,56 +253,96 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
           locs, orgs, bs
     | _ -> locs, orgs, bs
   in
-  let should_reveal_clue event_id event time roles agents hqs =
-    let agent_id = event.Event.role |> Role.S.to_agent roles in
-    let agent = Agent.Map.find agent_id agents in
+  let handle_reveal_action event_id event actions v bs =
+    let agent_id = event.Event.role |> Role.S.to_agent (G.roles v) in
+    let agent = Agent.Map.find agent_id (G.agents v) in
     let loc_id, org_id = agent.Agent.loc, agent.org in
-    let hq, hqs = Hq.S.get_or_gen org_id loc_id hqs in
-    let reveal_clue =
+    let hq, hqs = Hq.S.get_or_gen org_id loc_id (G.hqs v) in
+    let reveal_action =
       Agent.is_double_agent agent ||
       not (Agent.is_arrested agent) && hq.num_wiretaps > Random.int 50 s.random 
     in
-    if reveal_clue then
-      Action.Map.fold (fun action_id action (actions, bs) ->
-        match action.kind with
-        | Event_based event_id2 when Event.Id.(event_id2 = event_id)
-          && action.time = time.minutes ->
-            let actions = Action.S.update action_id actions @@ fun action -> {action with known=KnownSet.all} in
-            let agents = if not @@ Agent.is_double_agent agent then agents else
-              match Action.G.rcv action with
-              | Some {rcv_agent; _} ->
-                  agents
-                  |> Agent.S.add_known_data rcv_agent `Known_loc
-                  |> Agent.S.add_known_data rcv_agent `Known_org
-                  |> fun agents -> begin match event.kind with
-                    | With_role {rcv_role;_} ->
-                        Agent.S.add_role_known rcv_agent rcv_role agents
-                    | _ -> agents
-                  end
-              | _ -> agents
+    (* TODO: may need action_event_based_print_summary *)
+    let actions, agents, bs =
+      if reveal_action then
+        Action.Map.fold (fun action_id action ((actions, agents, bs) as acc) ->
+          match action.Action.kind with
+          | Event_based event_id2 when Event.Id.(event_id2 = event_id)
+            && action.time = v.time.Time.minutes ->
+              let actions = Action.S.update action_id actions @@ Action.U.known_all in
+              let double = Agent.is_double_agent agent in
+              let agents =
+                let add_known_role rcv_agent agents = match event.kind with
+                  | With_role {rcv_role;_} ->
+                      Agent.S.add_role_known rcv_agent rcv_role agents
+                  | _ -> agents
+                in
+                match Action.G.rcv action with
+                | Some {rcv_agent; _} when double ->
+                    agents
+                    |> Agent.S.add_known_data rcv_agent `Known_loc
+                    |> Agent.S.add_known_data rcv_agent `Known_org
+                    |> add_known_role rcv_agent
+                | Some {rcv_agent; _} when Event.is_meeting event ->
+                    add_known_role rcv_agent agents
+                | _ -> agents
+              in
+              let src = if double then `Double_agent else `Wiretap in
+              let agent = if double then `Gender(agent.gender) else `Name(Agent.S.name_if_known agent_id agents) in
+              let event_text = if double || Event.is_meeting event then
+                  event_to_text s event v |> fst |> Option.some
+                else None
+              in
+              let bs = Bul.Action_reveal {src; agent; org=org_id; loc=loc_id; event_text}::bs in
+              actions, agents, bs
+          | _ -> acc)
+        actions
+        (actions, (G.agents v), bs)
+      else
+        actions, (G.agents v), bs
+    in
+    actions, agents, hqs, bs
+  in
+  let handle_arrival event_id event actions agents roles bs =
+    let agent_id = event.Event.role |> Role.S.to_agent roles in
+    match event.kind with
+    | With_role {inter=Meet; tx=Rcv; _} when Agent.S.is_known `Known_photo agent_id agents ->
+      Action.Map.fold (fun action_id action ((actions, bs) as acc) ->
+        match action.Action.kind with
+        | Event_based event_id2 when Event.Id.(event_id2 = event_id) &&
+          not @@ Action.send_loc_eq_rcv_loc action ->
+            let bs =
+              let loc_home = Action.G.send_loc action in
+              let loc_trip = Action.G.rcv_loc action in
+              let name = Agent.S.name_if_known agent_id agents in
+              Bul.Airport_surveillance {loc_home; loc_trip; name}::bs
             in
-            let src = if Agent.is_double_agent agent then `Double_agent else `Wiretap in
-            acc
-      )
+            let actions = Action.S.add_known [`Known_loc; `Known_time] action_id actions in
+            actions, bs
+        | _ -> acc)
       actions
       (actions, bs)
-
-    reveal_clue, hqs
+    | _ -> actions, bs
   in
-  let bs = [] in (* temporary *)
+  let bs = [] in
   let v, bs =
     Event.Map.fold (fun event_id event ((v, bs) as acc) ->
       if Event.check_tick event time.tick then
         let actions, items = handle_agent_items event_id event (G.actions v) (G.items v) in
         let locs, orgs, bs = handle_msg_bulletin event (G.locs v) (G.orgs v) (G.actions v) (G.roles v) (G.agents v) bs in
-        if Event.has_role event then
-          let reveal_clue, hqs = should_reveal_clue event (G.roles v) (G.agents v) (G.hqs v) in
-          acc
-        else acc
+        let actions, agents, hqs, bs =
+          if Event.has_role event then
+            handle_reveal_action event_id event actions v bs
+          else
+            actions, (G.agents v), (G.hqs v), bs
+        in
+        let actions, bs = handle_arrival event_id event actions agents (G.roles v) bs in
+        {v with d={v.d with actions; items; locs; orgs; agents; hqs}}, bs
       else acc)
       (G.events v)
       (v, bs)
   in
+  (* TODO: agent moving *)
   v, `None
 
 
