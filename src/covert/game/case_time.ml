@@ -365,3 +365,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   let agents, actions, bs = handle_agent_relocate (G.agents v) (G.roles v) (G.actions v) bs in
   {v with d={v.d with agents; actions}}, bs, `None
 
+let time_pass (s:Services.t) ?force_tick ~sleeping minutes (v:t) =
+  let v, bs, status = time_pass s ?force_tick ~sleeping minutes v in
+  v, List.rev bs, status
+
