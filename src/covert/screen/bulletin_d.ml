@@ -16,10 +16,11 @@ type t =
         loc: Loc.Id.t;
         event_text: string option;
       }
-  | Airport_surveillance of
+  | Agent_visit of
       {
         loc_home: Loc.Id.t;
         loc_trip: Loc.Id.t;
         name: string;
       }
+  | Agent_leave of { name: string; old_loc: Loc.Id.t; }
 

@@ -40,6 +40,8 @@ let mastermind = Id.of_int 0
 let add_role role_id v =
   {v with roles=Role_d.Set.add role_id v.roles}
 
+let has_role v = Role_d.Set.not_empty v.roles
+
 let add_role_known role_id v =
   {v with roles_known=Role_d.Set.add role_id v.roles_known}
 
@@ -72,6 +74,15 @@ let go_into_hiding v = {v with status=In_hiding}
 
 let go_free v = {v with status=At_large{anxiety=0}}
 
+module G = struct
+  let anxiety v = match v.status with
+    | At_large {anxiety;_} -> anxiety
+    | _ -> 0
+end
+module U = struct
+  let loc loc_id v = {v with loc=loc_id}
+end
+
 module S = struct
 
   let name_if_known agent_id v =
@@ -87,23 +98,23 @@ module S = struct
     let agent = Map.find agent_id v in
     is_known known agent
 
-  let update_agent agent_id agents fn =
+  let update agent_id fn agents =
     Map.update agent_id (Option.map fn) agents
 
   let add_role agent_id role_id agents =
-    update_agent agent_id agents @@ add_role role_id
+    update agent_id (add_role role_id) agents
 
   let add_role_known agent_id role_id agents =
-    update_agent agent_id agents @@ add_role_known role_id
+    update agent_id (add_role_known role_id) agents
 
   let add_known_data agent_id known agents =
-    update_agent agent_id agents @@ add_known_data known
+    update agent_id (add_known_data known) agents
 
   let remove_known_data agent_id known agents =
-    update_agent agent_id agents @@ remove_known_data known
+    update agent_id (remove_known_data known) agents
 
   let go_into_hiding agent_id agents =
-    update_agent agent_id agents @@ go_into_hiding
+    update agent_id (go_into_hiding) agents
 
   let of_role roles agents role_id =
     try
@@ -149,6 +160,8 @@ module S = struct
         Printf.printf "New agent %s: %s\n" (Id.show agent_id) (yojson_of_t agent |> Yojson.Safe.to_string);
         agent_id, agents
 
-  let reduce_anxiety factor v = Map.map (reduce_anxiety factor) v
+  let reduce_anxiety_all factor v = Map.map (reduce_anxiety factor) v
+
+  let reduce_anxiety factor agent_id v = update agent_id (reduce_anxiety factor) v
 
 end

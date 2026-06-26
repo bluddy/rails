@@ -54,7 +54,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
   let v =
     let time = Time.do_tick time in
     let factor = Difficulty.to_enum v.world.difficulty + 3 in
-    let agents = Agent.S.reduce_anxiety factor v.d.agents in
+    let agents = Agent.S.reduce_anxiety_all factor @@ G.agents v in
     let enemy_anxiety = v.enemy_anxiety - v.enemy_anxiety/factor in
     let agent_autoescape = None in
     {v with time; d={v.d with agents}; enemy_anxiety; agent_autoescape}
@@ -66,7 +66,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
           Action.S.create v.time (Action.Agent_out_of_hiding agent_id) (G.events v) (G.roles v) (G.agents v) (G.actions v)
         in
         (* Note: OG didn't do this. *)
-        let agents = Agent.S.update_agent agent_id (G.agents v) @@ Agent.go_free in
+        let agents = Agent.S.update agent_id Agent.go_free (G.agents v) in
         {v with d={v.d with actions; agents}}
     | _ -> v
   in
@@ -315,7 +315,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
               let loc_home = Action.G.send_loc action in
               let loc_trip = Action.G.rcv_loc action in
               let name = Agent.S.name_if_known agent_id agents in
-              Bul.Airport_surveillance {loc_home; loc_trip; name}::bs
+              Bul.Agent_visit {loc_home; loc_trip; name}::bs
             in
             let actions = Action.S.add_known [`Known_loc; `Known_time] action_id actions in
             actions, bs
@@ -342,7 +342,54 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
       (G.events v)
       (v, bs)
   in
-  (* TODO: agent moving *)
-  v, `None
-
+  let handle_agent_relocate agents roles actions bs =
+    let agents, actions, bs, _ =
+      Role.Map.fold (fun role_id role ((agents, actions, bs, moved) as acc) ->
+        let agent_id = Role.S.to_agent roles role_id in
+        let agent = Agent.Map.find agent_id agents in
+        if not moved
+          && role.Role.can_relocate
+          && Agent.is_known `Known_loc agent
+          && Agent.G.anxiety agent > Random.int (128/(Difficulty.to_enum v.world.difficulty + 1)) s.random
+          && Loc.Id.(v.cur_loc <> agent.loc) then
+          let rec try_loop n =
+            if n >= 4 then acc else
+            let dest_loc_id = Loc.random s.random in
+            let hq_kind = hq_kind v (agent.org) dest_loc_id in
+            if Option.is_none hq_kind then try_loop (n+1) else
+            let agents, success = match Agent.S.get (agent.org) dest_loc_id agents with
+              | Some try_agent_id ->
+                  let try_agent = Agent.Map.find try_agent_id agents in
+                  if Agent.has_role try_agent || Agent.is_known_any try_agent then
+                    agents, false
+                  else
+                    Agent.Map.remove agent_id agents, true
+              | None -> agents, true
+            in
+            if not success then try_loop (n+1) else
+            let old_loc_id = agent.loc in
+            let agents = agents
+              |> Agent.S.update agent_id
+                (fun agent -> agent
+                |> Agent.U.loc dest_loc_id
+                |> Agent.remove_known_data `Known_loc
+                |> Agent.reduce_anxiety 2)
+            in
+            let name = Agent.S.name_if_known agent_id agents in
+            let bs = Bul.Agent_leave {name; old_loc=old_loc_id}::bs in
+            let actions =
+              let kind = Action.Agent_leave(agent_id, old_loc_id) in
+              create_action v.time kind v actions
+            in
+            agents, actions, bs, true
+          in
+          try_loop 0
+        else acc)
+      roles
+      (agents, actions, bs, false)
+    in
+    agents, actions, bs
+  in
+  let agents, actions, bs = handle_agent_relocate (G.agents v) (G.roles v) (G.actions v) bs in
+  {v with d={v.d with agents; actions}}, bs
 
