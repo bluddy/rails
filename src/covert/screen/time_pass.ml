@@ -3,6 +3,13 @@ open! Containers
 module Ega = Engine.Ega
 module R = Engine.Renderer
 
+let fps = 20
+let wait_time = 1000/fps
+
+type t = {
+  last_update: int;
+}
+
 let render_timebox win (x, y) =
   let x2, y2 = x + 159, y + 25 in
   let top, text_h = 3, 8 in
@@ -35,4 +42,10 @@ let render_time win (s:Services.t) ((x, y) as loc) (v:Case.t) =
     write ~x ~y time_s
   in
   ()
+
+let handle_event event time v = match event with
+  | Engine.Event.Tick when time - v.last_update < wait_time -> v
+  | Engine.Event.Tick -> {v with last_update=time}
+  | _ -> v
+
 
