@@ -16,6 +16,7 @@ type t = {
   clue_rand: int;
   rank: Rank.t;
   some_num: int;
+  can_relocate: bool;
   ctr: ctr;
 } [@@deriving yojson, show]
 

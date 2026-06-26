@@ -5,7 +5,7 @@ module String = Engine.String
 
 include Role_d
 
-let make agent discover_val name bits clue_rand rank some_num =
+let make agent discover_val name bits clue_rand rank some_num can_relocate =
   {
     agent;
     discover_val;
@@ -20,6 +20,7 @@ let make agent discover_val name bits clue_rand rank some_num =
       tick=None;
       discovery_val=0;
     };
+    can_relocate;
 }
 
 let first = Id.of_int 0
@@ -60,7 +61,8 @@ let from_stream ~num_roles s =
     let clue_rand = Gen.get_wordi s in
     let rank = Gen.get_wordi s |> Rank.of_enum |> Option.get_exn_or "invalid rank" in
     let some_num = Gen.get_wordi s in
-    let role = make agent discover_val name bits clue_rand rank some_num in
+    let can_relocate = bits land 0x8 > 0 in
+    let role = make agent discover_val name bits clue_rand rank some_num can_relocate in
     print_endline @@ show role;
     role::acc
   )
@@ -114,6 +116,7 @@ module S = struct
       rank;
       ctr={tick=Some tick; discovery_val=0};
       some_num=0;
+      can_relocate=false;
     }
     in
     add role v
