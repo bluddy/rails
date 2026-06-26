@@ -13,8 +13,8 @@ let hq_known_to_org org1_id org2_id loc_id v =
 
 let clear_autoescape v = {v with agent_autoescape=None}
 
-let create_action ?bulletin time kind v actions =
-  Action.S.create ?bulletin time kind (G.events v) (G.roles v) (G.agents v) actions
+let create_action time kind v actions =
+  Action.S.create time kind (G.events v) (G.roles v) (G.agents v) actions
 
 let event_to_text (s:Services.t) event v =
   Event.to_text s.resources (G.crime v) (G.step v) (G.roles v) (G.agents v) (G.orgs v) (G.locs v) event
@@ -45,8 +45,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     Time.should_do_tick time time' || force_tick, time'
   in
   let v = {v with time} in
-  if not do_tick then v, `None else
-  let old_actions = G.actions v in
+  if not do_tick then v, [], `None else
   let check_process_event event_id actions =
     let num_actions = Action.S.num actions in
     Event.S.check_process_event event_id (G.roles v) (G.agents v) ~num_actions @@ G.events v
@@ -59,50 +58,53 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     let agent_autoescape = None in
     {v with time; d={v.d with agents}; enemy_anxiety; agent_autoescape}
   in
-  let handle_msg msg v = match msg with
-    | `Check_escape(_, agent_id) -> check_escape_jail s agent_id v
+  let handle_msg msg v bs = match msg with
+    | `Check_escape(_, agent_id) -> check_escape_jail s agent_id v, bs
     | `Come_out_of_hiding agent_id ->
-        let actions =
-          Action.S.create v.time (Action.Agent_out_of_hiding agent_id) (G.events v) (G.roles v) (G.agents v) (G.actions v)
+        let actions = create_action v.time (Action.Agent_out_of_hiding agent_id) v (G.actions v) in
+        let bs =
+          let name = Agent.S.name_if_known agent_id (G.agents v) in
+          Bul.Agent_out_of_hiding {name}::bs
         in
         (* Note: OG didn't do this. *)
         let agents = Agent.S.update agent_id Agent.go_free (G.agents v) in
-        {v with d={v.d with actions; agents}}
-    | _ -> v
+        {v with d={v.d with actions; agents}}, bs
+    | _ -> v, bs
   in
-  let v, event_run_cnt =
-    Event.Map.fold_not_last (fun event_id _ (v, cnt) ->
+  let bs = [] in
+  let v, bs, event_run_cnt =
+    Event.Map.fold_not_last (fun event_id _ (v, bs, cnt) ->
       let ret = check_process_event event_id (G.actions v) in
-      let v = handle_msg (fst ret) v in
+      let v, bs = handle_msg (fst ret) v bs in
       let cnt = match snd ret with `Cant_run -> cnt | _ -> cnt + 1 in
-      v, cnt)
+      v, bs, cnt)
       (G.events v)
-      (v, 0)
+      (v, bs, 0)
   in
   if Random.int 10 s.random >= Difficulty.to_enum v.world.difficulty + 4
     && Action.Map.cardinal (G.actions v) > 5
     && event_run_cnt > 0
-    && not force_tick then v, `None else
-  let v, event_run_cnt =
+    && not force_tick then v, bs, `None else
+  let v, bs, event_run_cnt =
     if event_run_cnt <= Difficulty.to_enum v.world.difficulty then
       (* Update event_run_cnt *)
       let v = clear_autoescape v in
-      let v, cnt, _ =
-        Event.Map.fold_not_last (fun event_id _ ((v, cnt, can_run) as acc) ->
+      let v, cnt, bs, _ =
+        Event.Map.fold_not_last (fun event_id _ ((v, cnt, bs, can_run) as acc) ->
           if can_run then acc else
           let ret = check_process_event event_id (G.actions v) in
-          let v = handle_msg (fst ret) v in
+          let v, bs = handle_msg (fst ret) v bs in
           let cnt, can_run = match snd ret with `Cant_run -> cnt, can_run | _ -> 1, true in
-          v, cnt, can_run)
+          v, cnt, bs, can_run)
           (G.events v)
-          (v, event_run_cnt, false)
+          (v, event_run_cnt, bs, false)
       in
-      v, cnt
+      v, bs, cnt
     else
-      v, event_run_cnt
+      v, bs, event_run_cnt
   in
-  (* If we already hid, higher chance of another agent hiding *)
-  let rec agent_hiding_loop ~already_hid v =
+  let rec agent_hiding_loop ~already_hid v bs =
+    (* If we already hid, higher chance of another agent hiding *)
     let rec find_random_agent n =
       if n >= 999 then None else
       let rand_role = Role.S.random_with_diff s.random (G.difficulty v) (G.roles v) in
@@ -127,33 +129,36 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
            && (already_hid
             || Agent.check_known [`Known_loc; `Known_org; `Known_name; `Known_photo] agent) then
             let agents = Agent.S.go_into_hiding agent_id (G.agents v) in
+            let bs =
+              let name = Agent.S.name_if_known agent_id agents in
+              if Agent.is_known_any agent then Bul.Agent_hiding {name}::bs else bs
+            in
             let actions =
-              let bulletin = Agent.is_known_any agent in
               let kind = Action.Agent_hide agent_id in
-              create_action ~bulletin v.time kind v @@ G.actions v
+              create_action v.time kind v @@ G.actions v
             in
             let v = {v with d={v.d with agents; actions}} in
-            agent_hiding_loop ~already_hid:true v
-        else v, `GenSuccess
-      else v, `GenSuccess
-    | _ -> v, `GenFailed
+            agent_hiding_loop ~already_hid:true v bs
+        else v, bs, `GenSuccess
+      else v, bs, `GenSuccess
+    | _ -> v, bs, `GenFailed
   in
-  let v, ret = agent_hiding_loop ~already_hid:false v in
+  let v, bs, ret = agent_hiding_loop ~already_hid:false v bs in
   match ret with
-  | `GenFailed when event_run_cnt = 0 -> v, `Case_over
-  | _ when time.minutes > 40000 (* one month *) -> v, `Case_over
-  | _ when force_tick -> v, `None
+  | `GenFailed when event_run_cnt = 0 -> v, bs, `Case_over
+  | _ when time.minutes > 40000 (* one month *) -> v, bs, `Case_over
+  | _ when force_tick -> v, bs, `None
   | _ ->
-  let rec random_event_loop v =
+  let rec random_event_loop v bs =
     let event_id = Event.S.random s.random @@ G.events v in
     let ret = check_process_event event_id @@ G.actions v in
-    let v = handle_msg (fst ret) v in
+    let v, bs = handle_msg (fst ret) v bs in
     match snd ret with
-    | `Cant_run -> random_event_loop v
+    | `Cant_run -> random_event_loop v bs
     | `Ok -> failwith "don't know what to do with ok here" (* TODO *)
-    | `Must_run run_event_id -> v, event_id, run_event_id
+    | `Must_run run_event_id -> v, event_id, run_event_id, bs
   in
-  let v, event_id, run_event_id = random_event_loop v in
+  let v, event_id, run_event_id, bs = random_event_loop v bs in
   let event = Event.Map.find event_id @@ G.events v in
   let set_tick_and_ctr_tick event_id v =
     let events = Event.S.update event_id (Event.set_tick time.tick) @@ G.events v in
@@ -208,21 +213,22 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     else
       set_tick_and_ctr_tick event_id v
   in
-  let handle_agent_items event_id event actions items =
+  let handle_agent_items event_id event actions items bs =
     let actions = create_action time (Action.Event_based event_id) v actions in
     let agent_id = Event.S.to_role (G.events v) event_id |> Role.S.to_agent (G.roles v) in
-    let actions, items =
-      List.fold_left (fun ((actions: Action.map), items) item_id ->
+    let actions, items, bs =
+      List.fold_left (fun (actions, items, bs) item_id ->
         let items = Item.S.update item_id items (Item.set_agent agent_id) in
         let bulletin = Random.int 2 s.random >= Difficulty.to_enum (G.difficulty v)
                       && Event.is_misc event
                       && Action.S.num (G.actions v) > 5
         in
         let loc = Agent.S.to_loc (G.agents v) agent_id in
-        let actions = create_action ~bulletin time (Action.Item_spotted(item_id, loc)) v actions
+        let bs = if bulletin then Bul.Item_spotted{item=item_id; loc}::bs else bs in
+        let actions = create_action time (Action.Item_spotted(item_id, loc)) v actions
         in
-        actions, items)
-      (actions, items)
+        actions, items, bs)
+      (actions, items, bs)
       event.items.rcv
     in
     let items = List.fold_left (fun items item_id ->
@@ -230,7 +236,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
       items
       event.items.send
     in
-    (actions, items)
+    actions, items, bs
   in
   let handle_msg_bulletin event locs orgs actions roles agents bs =
     match event.Event.kind with
@@ -324,11 +330,10 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
       (actions, bs)
     | _ -> actions, bs
   in
-  let bs = [] in
   let v, bs =
     Event.Map.fold (fun event_id event ((v, bs) as acc) ->
       if Event.check_tick event time.tick then
-        let actions, items = handle_agent_items event_id event (G.actions v) (G.items v) in
+        let actions, items, bs = handle_agent_items event_id event (G.actions v) (G.items v) bs in
         let locs, orgs, bs = handle_msg_bulletin event (G.locs v) (G.orgs v) (G.actions v) (G.roles v) (G.agents v) bs in
         let actions, agents, hqs, bs =
           if Event.has_role event then
@@ -391,5 +396,5 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
     agents, actions, bs
   in
   let agents, actions, bs = handle_agent_relocate (G.agents v) (G.roles v) (G.actions v) bs in
-  {v with d={v.d with agents; actions}}, bs
+  {v with d={v.d with agents; actions}}, bs, `None
 
