@@ -12,7 +12,7 @@ type module_t =
   | Intro of Intro.t
   | Start_menu of Start_menu.t
   | Briefing of Briefing.t
-  | Time_pass
+  | Time_pass of Time_pass.t
   (*
   | Investigate
   | Driving

@@ -9,13 +9,13 @@ let update_time minutes (v:t) =
   let time = Time.update minutes v.time in
   {v with time}
 
-let do_tick (s:Services.t) ~sleeping (v:t) =
+let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
   let check_process_event event_id actions =
     let num_actions = Action.S.num actions in
     Event.S.check_process_event event_id (G.roles v) (G.agents v) ~num_actions @@ G.events v
   in
+  let time = Time.do_tick v.time in
   let v =
-    let time = Time.do_tick v.time in
     let factor = Difficulty.to_enum v.world.difficulty + 3 in
     let agents = Agent.S.reduce_anxiety_all factor @@ G.agents v in
     let enemy_anxiety = v.enemy_anxiety - v.enemy_anxiety/factor in
@@ -362,13 +362,13 @@ let do_tick (s:Services.t) ~sleeping (v:t) =
   let agents, actions, bs = handle_agent_relocate (G.agents v) (G.roles v) (G.actions v) bs in
   {v with d={v.d with agents; actions}}, bs, `None
 
-let time_pass_big (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
+let time_pass_big (s:Services.t) ?(force_tick=false) ?sleeping minutes (v:t) =
   let time = v.time in
   let v = update_time minutes v in
   let todo_tick = Time.should_do_tick time v.time || force_tick in
   if not todo_tick then
     v, [], `None
   else
-    let v, bs, status = do_tick s ~sleeping v in
+    let v, bs, status = do_tick s ~force_tick ?sleeping v in
     v, List.rev bs, status
 

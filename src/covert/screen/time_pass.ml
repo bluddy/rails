@@ -7,7 +7,10 @@ let fps = 20
 let wait_time = 1000/fps
 
 type t = {
+  minutes: int; (* to update *)
   last_update: int;
+  case: Case.t;
+  s: Services.t;
 }
 
 let render_timebox win (x, y) =
@@ -43,9 +46,27 @@ let render_time win (s:Services.t) ((x, y) as loc) (v:Case.t) =
   in
   ()
 
+  (* We spread the time_pass_handle_actions logic over state *)
+  (* TODO: handle bulletins, case end *)
 let handle_event event time v = match event with
-  | Engine.Event.Tick when time - v.last_update < wait_time -> v
-  | Engine.Event.Tick -> {v with last_update=time}
-  | _ -> v
+  | Engine.Event.Tick when time - v.last_update < wait_time -> v, `Stay
+  | Engine.Event.Tick when v.minutes >= 60 ->
+      let rec loop case minutes =
+        if minutes >= 60 then
+          let case, bs, status = Case_time.time_pass_big v.s 60 case in
+          let minutes = minutes - 60 in
+          if Action.S.num (Case.G.actions case) <= 5 then
+            loop case minutes
+          else
+            case, minutes
+        else
+          case, minutes
+      in
+      let case, minutes = loop v.case v.minutes in
+      {v with case; minutes; last_update=time}, `Stay
+  | Tick when v.minutes > 0 ->
+      let case, bs, status = Case_time.time_pass_big v.s 30 v.case in
+      {v with case; minutes=0; last_update=time}, `Exit
+  | _ -> v, `Exit
 
 
