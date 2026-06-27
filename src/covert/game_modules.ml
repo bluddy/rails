@@ -13,6 +13,7 @@ type module_t =
   | Start_menu of Start_menu.t
   | Briefing of Briefing.t
   | Time_pass of Time_pass.t
+  | Case_init_clue_gen of Services.t * Case.t
   (*
   | Investigate
   | Driving
@@ -62,7 +63,15 @@ let handle_event _win v (event:Event.t) time =
   (* Handle an input event, starting with the UI.
      (Store the win in closure so we can create the full game state when needed 
    *)
-  let state, quit =
+  let std_handler state handle_fn build_fn =
+    let state2, status = handle_fn event time state in
+    let v = if state2 =!= state then {v with mode=build_fn state2} else v in
+    begin match status with
+    | `Stay -> v, `Stay
+    | `Exit -> next_mode v, `Stay
+    end
+  in
+  let v, quit =
     match v.mode with
     | Intro state ->
         let state2, status = if Event.is_tick event then
@@ -104,20 +113,32 @@ let handle_event _win v (event:Event.t) time =
         | `Exit -> v, `Stay
         end
     | Briefing state ->
-        let state2, status = Briefing.handle_event event time state in
-        let v = if state2 =!= state then {v with mode=Briefing state2} else v in
-        begin match status with
-        | `Stay -> v, `Stay
-        | `Exit -> next_mode v, `Stay
-        end
-
+        std_handler state Briefing.handle_event (fun s -> Briefing s)
+    | Time_pass state ->
+        std_handler state Time_pass.handle_event (fun s -> Time_pass s)
+    | Case_init_clue_gen (s, case) ->
+        if Action.S.num (Case.G.actions case) <= 5 then
+          set_modes v
+            [
+              Time_pass(Time_pass.create s case 180);
+              Case_init_clue_gen (s, case);
+            ], `Stay
+        else
+          let loc = Utils.do_while
+            (fun () -> Loc.random s.random)
+            (Case.double_agent_at_loc case)
+          in
+          (* TODO: gen clues *)
+          v, `Stay
   in
-  state, quit
+  v, quit
 
 let render win v = match v.mode with
   | Intro state -> Intro.render win state
   | Start_menu state -> Start_menu.render v.srv state
   | Briefing state -> Briefing.render win state
+  | Time_pass state -> Time_pass.render win state
+  | Case_init_clue_gen _ -> () (* no render *)
 
 let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());

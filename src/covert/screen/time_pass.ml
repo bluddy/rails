@@ -13,7 +13,15 @@ type t = {
   s: Services.t;
 }
 
-let render_timebox win (x, y) =
+let create s case minutes =
+  {
+    minutes;
+    last_update=0;
+    case;
+    s;
+  }
+
+let render_timebox_ win (x, y) =
   let x2, y2 = x + 159, y + 25 in
   let top, text_h = 3, 8 in
   R.draw_rect2 win ~x ~y ~x2 ~y2 ~color:Ega.dgray ~fill:true;
@@ -33,7 +41,7 @@ let render_timebox win (x, y) =
 let render_time win (s:Services.t) ((x, y) as loc) (v:Case.t) =
   let city_s = (Loc.Map.find v.cur_loc v.d.locs).city in
   let time_s = Time.print v.time in
-  render_timebox win loc;
+  render_timebox_ win loc;
   let write =
     Fonts.Render.write s.win s.fonts ~color:Ega.bgreen ~idx:`Large in
   let _write_city =
@@ -68,5 +76,9 @@ let handle_event event time v = match event with
       let case, bs, status = Case_time.time_pass_big v.s 30 v.case in
       {v with case; minutes=0; last_update=time}, `Exit
   | _ -> v, `Exit
+
+let render win v =
+  let loc = 0, 174 in
+  render_time win v.s loc v.case
 
 

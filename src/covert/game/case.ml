@@ -19,6 +19,9 @@ let create_action time kind v actions =
 let event_to_text (s:Services.t) event v =
   Event.to_text s.resources (G.crime v) (G.step v) (G.roles v) (G.agents v) (G.orgs v) (G.locs v) event
 
+let double_agent_at_loc v loc =
+  Loc.Set.mem loc (G.double_agents v)
+
 let check_escape_jail (s:Services.t) agent_id v =
   let pass_test = match v.agent_autoescape with
   | Some agent when Agent.Id.(agent = agent_id) -> true
