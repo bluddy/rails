@@ -278,7 +278,7 @@ let time_pass (s:Services.t) ?(force_tick=false) ~sleeping minutes (v:t) =
           match action.Action.kind with
           | Event_based event_id2 when Event.Id.(event_id2 = event_id)
             && action.time = v.time.Time.minutes ->
-              let actions = Action.S.update action_id actions @@ Action.U.known_all in
+              let actions = Action.S.update action_id Action.U.known_all actions in
               let double = Agent.is_double_agent agent in
               let agents =
                 let add_known_role rcv_agent agents = match event.kind with

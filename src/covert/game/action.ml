@@ -49,7 +49,7 @@ type t = {
   kind: kind;
   time: int;
   known: KnownSet.t;
-  send: send option;
+  send: send option; (* only used for event_based *)
 } [@@deriving yojson]
 
 module Id = Engine.Int_id.Make()
@@ -126,10 +126,10 @@ module S = struct
   let num v =
     try (Map.max_binding v |> fst |> Id.to_int) + 1 with Not_found -> 0
 
-  let update action_id actions fn =
+  let update action_id fn actions =
     Map.update action_id (Option.map fn) actions
 
-  let add_known l action_id actions = update action_id actions @@ add_known l
+  let add_known l action_id actions = update action_id (add_known l) actions
 
   (* let print_summary_event_based action_id actions = *)
   (*   let action = Map.find action_id actions in *)
