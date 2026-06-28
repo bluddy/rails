@@ -312,52 +312,59 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
       (v, bs)
   in
   let handle_agent_relocate agents roles actions bs =
-    let agents, actions, bs, _ =
-      Role.Map.fold (fun role_id role ((agents, actions, bs, moved) as acc) ->
+    let agent_to_move =
+      Role.Map.find_pred_v (fun role_id role ->
         let agent_id = Role.S.to_agent roles role_id in
         let agent = Agent.Map.find agent_id agents in
-        if not moved
-          && role.Role.can_relocate
+        if role.Role.can_relocate
           && Agent.is_known `Known_loc agent
           && Agent.G.anxiety agent > Random.int (128/(Difficulty.to_enum v.world.difficulty + 1)) s.random
           && Loc.Id.(v.cur_loc <> agent.loc) then
           let rec try_loop n =
-            if n >= 4 then acc else
+            if n >= 4 then None else
             let dest_loc_id = Loc.random s.random in
             let hq_kind = hq_kind v (agent.org) dest_loc_id in
             if Option.is_none hq_kind then try_loop (n+1) else
-            let agents, success = match Agent.S.get (agent.org) dest_loc_id agents with
-              | Some try_agent_id ->
-                  let try_agent = Agent.Map.find try_agent_id agents in
-                  if Agent.has_role try_agent || Agent.is_known_any try_agent then
-                    agents, false
+            let remove_agent, ok = match Agent.S.get agent.org dest_loc_id agents with
+              | Some problem_agent_id ->
+                  let problem_agent = Agent.Map.find problem_agent_id agents in
+                  if Agent.has_role problem_agent || Agent.is_known_any problem_agent then
+                    None, false
                   else
-                    Agent.Map.remove agent_id agents, true
-              | None -> agents, true
+                    Some problem_agent_id, true
+              | None -> None, true
             in
-            if not success then try_loop (n+1) else
-            let old_loc_id = agent.loc in
-            let agents = agents
-              |> Agent.S.update agent_id
-                (fun agent -> agent
-                |> Agent.U.loc dest_loc_id
-                |> Agent.remove_known_data `Known_loc
-                |> Agent.reduce_anxiety 2)
-            in
-            let name = Agent.S.name_if_known agent_id agents in
-            let bs = Bul.Agent_leave {name; old_loc=old_loc_id}::bs in
-            let actions =
-              let kind = Action.Agent_leave(agent_id, old_loc_id) in
-              create_action v.time kind v actions
-            in
-            agents, actions, bs, true
+            if not ok then try_loop (n+1)
+            else
+              Some (agent_id, dest_loc_id, remove_agent)
           in
           try_loop 0
-        else acc)
+        else None)
       roles
-      (agents, actions, bs, false)
     in
-    agents, actions, bs
+    match agent_to_move with
+    | None -> agents, actions, bs
+    | Some (agent_id, dest_loc_id, agent_to_remove) ->
+        let agents = match agent_to_remove with
+         | Some agent_id -> Agent.Map.remove agent_id agents
+         | None -> agents
+        in
+        let agent = Agent.Map.find agent_id agents in
+        let old_loc_id = agent.loc in
+        let agents = agents
+          |> Agent.S.update agent_id
+            (fun agent -> agent
+            |> Agent.U.loc dest_loc_id
+            |> Agent.remove_known_data `Known_loc
+            |> Agent.reduce_anxiety 2)
+        in
+        let name = Agent.S.name_if_known agent_id agents in
+        let bs = Bul.Agent_leave {name; old_loc=old_loc_id}::bs in
+        let actions =
+          let kind = Action.Agent_leave(agent_id, old_loc_id) in
+          create_action v.time kind v actions
+        in
+        agents, actions, bs
   in
   let agents, actions, bs = handle_agent_relocate (G.agents v) (G.roles v) (G.actions v) bs in
   {v with d={v.d with agents; actions}}, bs, `None

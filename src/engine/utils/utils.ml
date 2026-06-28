@@ -192,8 +192,8 @@ module Map = struct
       let exception Found in
       try
         iter (fun k value -> match p k value with
-          | Some x ->
-              result := Some (k, x);
+          | Some _ as a ->
+              result := a;
               raise Found
           | None -> ())
           v;
