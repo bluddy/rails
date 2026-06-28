@@ -9,6 +9,9 @@ let update_time minutes (v:t) =
   let time = Time.update minutes v.time in
   {v with time}
 
+  (* This is the main time-waiting function. It processes many things
+     that could happen while time passes
+  *)
 let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
   let check_process_event event_id actions =
     let num_actions = Action.S.num actions in
