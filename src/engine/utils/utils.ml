@@ -177,6 +177,7 @@ module Map = struct
       empty
       iter
 
+      (* Early termination, return key *)
     let find_pred p v =
       let exception Found of key in
       try
@@ -184,6 +185,21 @@ module Map = struct
         None
       with
       | Found x -> Some x
+
+      (* Early termination, return key + a processed value *)
+    let find_pred_v p v =
+      let result = ref None in
+      let exception Found in
+      try
+        iter (fun k value -> match p k value with
+          | Some x ->
+              result := Some (k, x);
+              raise Found
+          | None -> ())
+          v;
+        None
+      with
+      | Found -> !result
 
   end
 end
