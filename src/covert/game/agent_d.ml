@@ -22,6 +22,7 @@ type t = {
   known: Known_data.Set.t;
   roles: Role_d.Set.t;
   roles_known: Role_d.Set.t;
+  clue_factor: int;
   status: status;
 } [@@deriving yojson]
 

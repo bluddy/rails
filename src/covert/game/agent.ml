@@ -32,6 +32,7 @@ let create ?(known=Known_data.Set.empty) id_code org_id loc_id orgs =
     known;
     roles=Role_d.Set.empty;
     roles_known=Role_d.Set.empty;
+    clue_factor=0;
     status=At_large {anxiety=0};
   }
 
