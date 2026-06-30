@@ -25,11 +25,16 @@ let make agent discover_val name bits clue_rand rank some_num can_relocate =
 
 let first = Id.of_int 0
 
-let ctr_tick v = v.ctr.tick
-let ctr_discovery_val v = v.ctr.discovery_val
-let update_tick tick ctr = {ctr with tick}
-let update_ctr_tick tick v = {v with ctr={v.ctr with tick}}
-let update_ctr_discovery discovery_val v = {v with ctr={v.ctr with discovery_val}}
+module G = struct
+  let ctr_tick v = v.ctr.tick
+  let ctr_discovery_val v = v.ctr.discovery_val
+end
+module U = struct
+  let tick tick ctr = {ctr with tick}
+  let ctr_tick tick v = {v with ctr={v.ctr with tick}}
+  let ctr_discovery discovery_val v = {v with ctr={v.ctr with discovery_val}}
+  let ctr_discovery_div n v = {v with ctr={v.ctr with discovery_val=v.ctr.discovery_val / n}}
+end
 
 let loc_bit v =
   let bits = v.bits in
@@ -77,9 +82,9 @@ module S = struct
 
   let to_agent v role_id = (Map.find role_id v).agent
 
-  let update event_id fn v = Map.update event_id (Option.map fn) v
+  let update role_id fn v = Map.update role_id (Option.map fn) v
 
-  let update_ctr event_id fn v = update event_id (fun v -> {v with ctr=fn v.ctr}) v
+  let update_ctr role_id fn v = update role_id (fun v -> {v with ctr=fn v.ctr}) v
 
   let random_with_diff r diff v =
     let max = Map.cardinal v - (Difficulty.to_enum diff) / 4 in

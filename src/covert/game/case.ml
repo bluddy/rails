@@ -41,11 +41,21 @@ let check_escape_jail (s:Services.t) agent_id v =
     else
       v
 
-let agent_remove_known_data agent_id known agents =
+let agent_remove_known_data agent_id known agents roles events =
   let agents = let open Agent in
     agents
     |> S.remove_known_data agent_id known
     |> S.update agent_id (U.discover_val_div_factor 2)
   in
-  Event.
+  let roles =
+    Event.Map.fold (fun _ event roles ->
+      let role_agent_id = event.Event.role |> Role.S.to_agent roles in
+      if Agent.Id.(role_agent_id <> agent_id) then roles else
+      Role.S.update event.role (Role.U.ctr_discovery_div 2) roles
+    )
+    events
+    roles
+  in
+  agents, roles
+
 
