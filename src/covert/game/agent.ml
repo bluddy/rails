@@ -32,7 +32,7 @@ let create ?(known=Known_data.Set.empty) id_code org_id loc_id orgs =
     known;
     roles=Role_d.Set.empty;
     roles_known=Role_d.Set.empty;
-    clue_factor=0;
+    discover_val=0;
     status=At_large {anxiety=0};
   }
 
@@ -79,9 +79,13 @@ module G = struct
   let anxiety v = match v.status with
     | At_large {anxiety;_} -> anxiety
     | _ -> 0
+
+  let discover_val v = v.discover_val
 end
 module U = struct
   let loc loc_id v = {v with loc=loc_id}
+  let discover_val n v = {v with discover_val=n}
+  let discover_val_div_factor n v = {v with discover_val=v.discover_val/n}
 end
 
 module S = struct
