@@ -173,7 +173,7 @@ let make_agent_for_role_ (s:Services.t) role_id chosen roles agents (v:t) =
     in
     (* Some hardcoded stuff *)
     let agents = if Role.hardcoded_action_bit1 role then
-        Agent.S.remove_known_data (Agent.Id.of_int 16) `Known_photo agents
+        Agent.S.remove_known_data_ (Agent.Id.of_int 16) `Known_photo agents
       else
         agents
     in

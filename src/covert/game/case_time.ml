@@ -314,7 +314,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
       (G.events v)
       (v, bs)
   in
-  let handle_agent_relocate agents roles actions bs =
+  let handle_agent_relocate agents roles events actions bs =
     let agent_to_move =
       Role.Map.find_pred_v (fun role_id role ->
         let agent_id = Role.S.to_agent roles role_id in
@@ -346,7 +346,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
       roles
     in
     match agent_to_move with
-    | None -> agents, actions, bs
+    | None -> agents, roles, actions, bs
     | Some (agent_id, dest_loc_id, agent_to_remove) ->
         let agents = match agent_to_remove with
          | Some agent_id -> Agent.Map.remove agent_id agents
@@ -359,19 +359,19 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
             (fun agent -> agent
             |> Agent.U.loc dest_loc_id
             (* TODO: agent_delete_known_data has more stuff *)
-            |> Agent.remove_known_data `Known_loc
             |> Agent.reduce_anxiety 2)
         in
+        let agents, roles = agent_remove_known_data agent_id `Known_loc roles events agents in
         let name = Agent.S.name_if_known agent_id agents in
         let bs = Bul.Agent_leave {name; old_loc=old_loc_id}::bs in
         let actions =
           let kind = Action.Agent_leave(agent_id, old_loc_id) in
           create_action v.time kind v actions
         in
-        agents, actions, bs
+        agents, roles, actions, bs
   in
-  let agents, actions, bs = handle_agent_relocate (G.agents v) (G.roles v) (G.actions v) bs in
-  {v with d={v.d with agents; actions}}, bs, `None
+  let agents, roles, actions, bs = handle_agent_relocate (G.agents v) (G.roles v) (G.events v) (G.actions v) bs in
+  {v with d={v.d with agents; actions; roles}}, bs, `None
 
 let time_pass_big (s:Services.t) ?(force_tick=false) ?sleeping minutes (v:t) =
   let time = v.time in

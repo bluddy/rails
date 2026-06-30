@@ -78,6 +78,13 @@ let random r v =
   let length = Map.cardinal v in
   Random.int length r |> Id.of_int
 
+let add_known_data known v =
+  {v with known=Known_data.Set.add known v.known}
+
+(* Should be rarely used *)
+let remove_known_data_ known v =
+  {v with known=Known_data.Set.remove known v.known}
+
 module S = struct
 
   let to_agent v role_id = (Map.find role_id v).agent

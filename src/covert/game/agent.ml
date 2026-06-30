@@ -50,7 +50,7 @@ let add_known_data known v =
   {v with known=Known_data.Set.add known v.known}
 
 (* Should be rarely used *)
-let remove_known_data known v =
+let remove_known_data_ known v =
   {v with known=Known_data.Set.remove known v.known}
 
 let is_known known v = Known_data.Set.mem known v.known
@@ -115,8 +115,9 @@ module S = struct
   let add_known_data agent_id known agents =
     update agent_id (add_known_data known) agents
 
-  let remove_known_data agent_id known agents =
-    update agent_id (remove_known_data known) agents
+  (* This shouldn't be used directly *)
+  let remove_known_data_ agent_id known agents =
+    update agent_id (remove_known_data_ known) agents
 
   let go_into_hiding agent_id agents =
     update agent_id (go_into_hiding) agents
