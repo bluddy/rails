@@ -358,6 +358,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
           |> Agent.S.update agent_id
             (fun agent -> agent
             |> Agent.U.loc dest_loc_id
+            (* TODO: agent_delete_known_data has more stuff *)
             |> Agent.remove_known_data `Known_loc
             |> Agent.reduce_anxiety 2)
         in
