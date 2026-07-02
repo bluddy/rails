@@ -70,6 +70,8 @@ module Set = struct
 
     let mem_any l v = List.fold_left (fun acc x -> acc || mem x v) false l
 
+    let mem_all l v = List.fold_left (fun acc x -> acc && mem x v) true l
+
     let t_of_yojson (json:Yojson.Safe.t) =
       list_of_yojson O.t_of_yojson json |> of_list
 

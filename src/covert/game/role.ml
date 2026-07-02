@@ -26,14 +26,17 @@ let make agent discover_val name bits clue_rand rank some_num can_relocate =
 let first = Id.of_int 0
 
 module G = struct
+  let known v = v.known
+  let discover v = v.discover_val
   let ctr_tick v = v.ctr.tick
-  let ctr_discovery_val v = v.ctr.discovery_val
+  let ctr_discovery v = v.ctr.discovery_val
 end
 module U = struct
   let tick tick ctr = {ctr with tick}
   let ctr_tick tick v = {v with ctr={v.ctr with tick}}
   let ctr_discovery discovery_val v = {v with ctr={v.ctr with discovery_val}}
   let ctr_discovery_div n v = {v with ctr={v.ctr with discovery_val=v.ctr.discovery_val / n}}
+  let ctr_discovery_add n v = {v with ctr={v.ctr with discovery_val=v.ctr.discovery_val + n}}
 end
 
 let loc_bit v =
@@ -84,6 +87,8 @@ let add_known_data known v =
 (* Should be rarely used *)
 let remove_known_data_ known v =
   {v with known=Known_data.Set.remove known v.known}
+
+let check_known_all l v = Known_data.Set.mem_all l v.known
 
 module S = struct
 
