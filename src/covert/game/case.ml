@@ -45,7 +45,7 @@ let agent_remove_known_data agent_id known roles events agents =
   let agents = let open Agent in
     agents
     |> S.remove_known_data_ agent_id known
-    |> S.update agent_id (U.discover_val_div_factor 2)
+    |> S.update agent_id (U.discover_val_div 2)
   in
   let roles =
     Event.Map.fold (fun _ event roles ->

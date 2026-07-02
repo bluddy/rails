@@ -85,7 +85,8 @@ end
 module U = struct
   let loc loc_id v = {v with loc=loc_id}
   let discover_val n v = {v with discover_val=n}
-  let discover_val_div_factor n v = {v with discover_val=v.discover_val/n}
+  let discover_val_div n v = {v with discover_val=v.discover_val/n}
+  let discover_val_add n v = {v with discover_val=v.discover_val + n}
 end
 
 module S = struct

@@ -18,6 +18,7 @@ let clue_gen ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (v:t) =
     let diff_factor = 10000 / ((G.difficulty v |> Difficulty.to_enum) + 2) / clue_div_dist  in
     let diff_factor_2 = diff_factor * diff_factor in
     let discover_val = ((Agent.G.discover_val agent / 2) + diff_factor + 1) / diff_factor_2 in
+    let agents = Agent.S.update agent_id (Agent.U.discover_val discover_val) agents in
     let roles =
       Role.Set.fold (fun role_id (roles as acc) ->
         let role = Role.Map.find role_id roles in
