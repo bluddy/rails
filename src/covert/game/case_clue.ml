@@ -7,7 +7,11 @@ open Case
 let clue_mark_discovered_create role_id src_org_id loc_id roles =
   let role = Role.Map.find role_id roles in
   if Known_data.Set.all_standard role.Role.known then None else
-    Some ()
+  let rec try_loop () =
+    ()
+  in
+  let v = try_loop () in
+  Some ()
 
 let clue_gen ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (v:t) =
   let agents, orgs, locs, roles = G.agents v, G.orgs v, G.locs v, G.roles v in

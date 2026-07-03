@@ -1,6 +1,6 @@
 open! Containers
 
-type data = [
+type t = [
   | `Known_photo
   | `Known_name
   | `Known_org
@@ -11,19 +11,9 @@ type data = [
   | `Known_rank
   | `Known_recruit_loc
   | `Known_recruited_by
-][@@deriving eq, ord, yojson, show]
+][@@deriving eq, enum, ord, yojson, show]
 
-let to_base2 = function
-  | `Known_photo -> 1
-  | `Known_name -> 2
-  | `Known_org -> 4
-  | `Known_loc -> 8
-  | `Known_involved -> 0x10
-  | `Known_extra -> 0x20
-  | `Known_jailbreak -> 0x40
-  | `Known_rank -> 0x100
-  | `Known_recruit_loc -> 0x200
-  | `Known_recruited_by -> 0x400
+let to_base2 v = 1 lsl (to_enum v)
 
 let clue_discover_vals = [
     0; 1; 1; 2;
@@ -40,8 +30,9 @@ let standard = [`Known_loc; `Known_org; `Known_name; `Known_photo; `Known_involv
 
 module Set = struct
   include Utils.Set.Make(struct
+    type data = t [@@deriving yojson]
     type t = data [@@deriving yojson]
-    let compare = compare_data
+    let compare = compare
   end)
 
   let to_base2 v = fold (fun x acc -> acc + to_base2 x) v 0
