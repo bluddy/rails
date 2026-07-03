@@ -36,6 +36,8 @@ let clue_discover_vals = [
     3; 4; 4; 5;
   ] |> Array.of_list
 
+let standard = [`Known_loc; `Known_org; `Known_name; `Known_photo; `Known_involved]
+
 module Set = struct
   include Utils.Set.Make(struct
     type t = data [@@deriving yojson]
@@ -50,5 +52,8 @@ module Set = struct
   let to_discover_val v =
     let base2 = to_base2 v in
     clue_discover_vals.(base2)
+
+  let all_standard v = mem_all standard v
+
 end
 

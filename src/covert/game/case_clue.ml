@@ -4,6 +4,11 @@ module C = Constants
 
 open Case
 
+let clue_mark_discovered_create role_id src_org_id loc_id roles =
+  let role = Role.Map.find role_id roles in
+  if Known_data.Set.all_standard role.Role.known then None else
+    Some ()
+
 let clue_gen ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (v:t) =
   let agents, orgs, locs, roles = G.agents v, G.orgs v, G.locs v, G.roles v in
   let clue_amt = clue_amt + 1 in
@@ -31,7 +36,7 @@ let clue_gen ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (v:t) =
               let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
               let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
               if disc <= needed_val then role else
-              if Role.check_known_all [`Known_loc; `Known_org; `Known_name; `Known_photo; `Known_involved] role then role else
+              if Known_data.Set.all_standard role.known then role else
               (* TODO: reveal clue *)
               loop role
             in
