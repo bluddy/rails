@@ -78,10 +78,12 @@ let from_stream ~num_roles s =
   Iter.(0 -- (num_roles - 1)) |> List.rev
 
 let random r v =
-  let length = Map.cardinal v in
-  Random.int length r |> Id.of_int
+  let max, _ = Map.max_binding v in
+  Random.int ((Id.to_int max) + 1) r |> Id.of_int
 
-let add_known_data known v =
+let check_known l v = Known_data.Set.mem_any l v.known
+
+let add_known known v =
   {v with known=Known_data.Set.add known v.known}
 
 (* Should be rarely used *)

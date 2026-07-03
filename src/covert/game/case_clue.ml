@@ -4,10 +4,17 @@ module C = Constants
 
 open Case
 
-let clue_mark_discovered_create role_id src_org_id loc_id roles =
+let clue_mark_discovered_create random role_id src_org_id loc_id roles =
   let role = Role.Map.find role_id roles in
   if Known_data.Set.all_standard role.Role.known then None else
   let rec try_loop () =
+    let known_new = Known_data.random random in
+    let known_new =
+      if Difficulty.(difficulty = Local_disturbance) &&
+        not @@ Role.check_known [`Known_involved] role.known then
+          `Known_involved
+      else known_new
+    in
     ()
   in
   let v = try_loop () in

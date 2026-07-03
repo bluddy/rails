@@ -28,6 +28,11 @@ let clue_discover_vals = [
 
 let standard = [`Known_loc; `Known_org; `Known_name; `Known_photo; `Known_involved]
 
+let random ?(max=`Known_involved) r =
+  let max = to_enum max in
+  Random.int (max + 1) r
+  |> of_enum |> Option.get_exn_or "oops"
+
 module Set = struct
   include Utils.Set.Make(struct
     type data = t [@@deriving yojson]
