@@ -13,7 +13,7 @@ type t = {
   clue_seed: int;
   bits: int;
   known: Known_data.Set.t; [@opaque]
-  clue_rand: int;
+  clue_rand: int; (* 0-6 *)
   rank: Rank.t;
   some_num: int;
   can_relocate: bool;
