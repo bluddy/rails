@@ -14,11 +14,19 @@ type means =
 let means_list = Iter.map (fun i -> means_of_enum i |> Option.get_exn_or "oops")
   Iter.(0 -- (means_to_enum Local_authorities)) |> Iter.to_list
 
+type connect =
+  | Face of Agent_d.Id.t
+  | Agent of Agent_d.Id.t
+  | Org of Org.Id.t
+  | Loc of Loc.Id.t
+  | Role of Role_d.Id.t
+  [@@deriving yojson]
+
 type t = {
   org: Org.Id.t;
   loc: Loc.Id.t;
   role: Role.Id.t;
-  connect: int * int;
+  connect: connect;
   rand_seed: int;
   discovery_val: int;
 } [@@deriving yojson]
