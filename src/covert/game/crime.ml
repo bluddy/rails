@@ -138,7 +138,7 @@ let random r = Random.int_range 1 (Array.length crimes - 1) r
 
 let check_org_support crime_id org_id orgs =
   let org = Org.Map.find org_id orgs in
-  let bits = Org.get_bits org in
+  let bits = Org.G.bits org in
   let crime = crimes.(Id.to_int crime_id) in
   bits land crime.org_bits > 0
 

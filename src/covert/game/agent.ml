@@ -11,7 +11,7 @@ let gender_name_of_code org_id x orgs =
   let last_name_idx = (x lsr 5) land 0xF in
   let name_arr = if gender = 0 then Names.female_names else Names.male_names in
   let org = Org.Map.find org_id orgs in
-  let name_offset = Org.get_name_offset org in
+  let name_offset = Org.G.name_offset org in
   let name, last_name =
       name_arr.(name_offset + name_idx),
       Names.last_names.(name_offset + last_name_idx)

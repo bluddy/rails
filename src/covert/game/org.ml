@@ -48,9 +48,15 @@ end
 
 let global_id_of_id id orgs = (Map.find id orgs).global_id
 
-let get_name_offset v = v.agent_name_offset
-let get_global_id v = v.global_id
-let get_bits v = v.bits
+module G = struct
+  let name_offset v = v.agent_name_offset
+  let global_id v = v.global_id
+  let bits v = v.bits
+end
+
+let incr_activity v = {v with activity=v.activity+1}
+
+let add_known v = {v with known_involved=true}
 
 let connection orgs org1 org2 =
   let org1_d = Map.find org1 orgs in
@@ -102,14 +108,14 @@ let from_stream num_orgs s =
   []
   Iter.(0 -- (num_orgs - 1)) |> List.rev
 
-let add_known v = {v with known_involved=true}
-
 module S = struct
 
-  let update org_id orgs fn =
+  let update org_id fn orgs =
     Map.update org_id (Option.map fn) orgs
 
-  let add_known org_id orgs = update org_id orgs add_known
+  let add_known org_id orgs = update org_id add_known orgs 
+
+  let incr_activity org_id orgs = update org_id (fun org -> {org with activity=org.activity+1}) orgs
 
   let find_one_known orgs =
     Map.find_pred (fun _ org -> org.known_involved) orgs

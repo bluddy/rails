@@ -4,10 +4,6 @@ module C = Constants
 
 open Case
 
-let clue_create org_id loc_id role_id known roles locs orgs clues =
-  ()
-
-
 let clue_find_to_discover random role_id roles (v:t) =
   let role = Role.Map.find role_id roles in
   if Known_data.Set.all_standard role.Role.known then None else

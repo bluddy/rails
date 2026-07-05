@@ -79,7 +79,7 @@ module Clue_icons = struct
       let x, y = i*32 + 96, 174 in
       let tex = slice win face_img x y 32 26 in
       Hashtbl.replace hash (`Icon means) tex)
-    Clue.means_list;
+    Clue_d.means_list;
 end
 
 module Plane_imgs = struct

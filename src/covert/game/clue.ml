@@ -1,44 +1,35 @@
-open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
-type means =
-  | Photo
-  | Wiretap
-  | Surveillance
-  | File_search
-  | Local_informant
-  | Interpol_db
-  | Local_authorities
-  [@@deriving enum]
+include Clue_d
 
-let means_list = Iter.map (fun i -> means_of_enum i |> Option.get_exn_or "oops")
-  Iter.(0 -- (means_to_enum Local_authorities)) |> Iter.to_list
-
-type connect =
-  | Face of Agent_d.Id.t
-  | Agent of Agent_d.Id.t
-  | Org of Org.Id.t
-  | Loc of Loc.Id.t
-  | Role of Role_d.Id.t
-  [@@deriving yojson]
-
-type t = {
-  org: Org.Id.t;
-  loc: Loc.Id.t;
-  role: Role.Id.t;
-  connect: connect;
-  rand_seed: int;
-  discovery_val: int;
-} [@@deriving yojson]
-
-module Id = Engine.Int_id.Make()
-
-module Map = struct
-  include Utils.Map.Make(struct 
-    type t = Id.t [@@deriving yojson]
-    let compare = Id.compare
-  end)
-end
-
-type map = t Map.t
+let create org_id loc_id role_id known roles locs orgs agents clues =
+  let agent_id = Role.S.to_agent roles role_id in
+  let connect = match known with
+  | `Known_face -> Connect_face agent_id
+  | `Known_agent -> Connect_agent agent_id
+  | `Known_org -> Connect_org (Agent.S.to_org agents agent_id)
+  | `Known_role -> Connect_role role_id
+  | `Known_loc -> Connect_loc (Agent.S.to_loc agents agent_id)
+  in
+  let orgs = match known with
+  | `Known_org ->
+      let org_id = Agent.S.to_org agents agent_id in
+      orgs
+      |> Org.S.incr_activity org_id
+      |> Org.S.add_known org_id
+  | _ -> orgs
+  in
+  let locs = match known with
+  | `Known_loc -> Loc.S.incr_activity (Agent.S.to_loc agents agent_id) locs
+  | _ -> locs
+  in
+  let clue = {
+    org=org_id;
+    loc=loc_id;
+    role=role_id;
+    connect;
+    name_idx=0;
+  }
+  in
+  clue, orgs, locs
 
