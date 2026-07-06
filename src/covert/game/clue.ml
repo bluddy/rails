@@ -2,6 +2,25 @@ open! Containers
 
 include Clue_d
 
+let create_text role_id difficulty roles agents =
+  let role = Role.Map.find role_id roles in
+  let clue_random = (role.Role.clue_seed land 0xFF) / 2 in
+  if Role.S.test_with_diff_div_4 difficulty role_id roles then
+    let agent_id = Role.S.to_agent roles role_id in
+    let id_code = (Agent.Map.find agent_id agents).id_code in
+    let v1 = (id_code lsr 3) mod 4 in
+    let v2 = id_code mod 6 in
+    let pat = Printf.sprintf "*C0%d0%d" v1 v2 in
+
+    
+    
+  else
+    clue_random + role.clue_rand * 256
+
+
+
+
+
 let create org_id loc_id role_id known roles locs orgs agents clues =
   let agent_id = Role.S.to_agent roles role_id in
   let connect = match known with

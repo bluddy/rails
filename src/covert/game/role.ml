@@ -94,6 +94,8 @@ let check_known_all l v = Known_data.Set.mem_all l v.known
 
 module S = struct
 
+  let num v = (Map.max_binding v |> fst |> Id.to_int) + 1
+
   let to_agent v role_id = (Map.find role_id v).agent
 
   let update role_id fn v = Map.update role_id (Option.map fn) v
@@ -101,8 +103,12 @@ module S = struct
   let update_ctr role_id fn v = update role_id (fun v -> {v with ctr=fn v.ctr}) v
 
   let random_with_diff r diff v =
-    let max = Map.cardinal v - (Difficulty.to_enum diff) / 4 in
+    let max = num v - (Difficulty.to_enum diff) / 4 in
     Random.int max r |> Id.of_int
+
+  let test_with_diff_div_4 diff role_id v =
+    let test_num = num v - (Difficulty.to_enum diff) / 4 in
+    Id.to_int role_id >= test_num
 
   let make_red_herring r agent events v =
     let add role v =
