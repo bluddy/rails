@@ -684,26 +684,29 @@ let ai_track_routines ?(force_create=false) ~stocks ~params ~player_net_worth ~t
     else v
   in
   let random_city () =
-      let rec empty_city_loop () =
+      let rec empty_city_loop n =
+        if n >= 100 then None else
         let city_idx = Cities.random random cities in
         if LocMap.mem city_idx v.ai_of_city then
-          empty_city_loop ()
+          empty_city_loop (n + 1)
         else
-          city_idx
+          Some city_idx
       in
-      empty_city_loop ()
+      empty_city_loop 0
   in
   (* Earn 2x in random routes *)
   let v = earn_random_route v in
   let v = earn_random_route v in
-  let city = random_city () in
-  if Trackmap.has_track city tracks then `Update v else (* Proceed only if no track at city *)
-  let first_ai = Owner.Map.is_empty v.ais in
-  match _random_ai_or_none random v with
-  | None ->
-    _try_to_create_ai ~force:force_create ~tilemap ~stations ~params ~city ~stocks ~first_ai random v
-  | Some ai_idx ->
-    _try_to_build_station ~tilemap ~stations ~tracks ~params ~city ~cities ~ai_idx ~stocks ~player_net_worth random v
+  match random_city () with
+  | None -> `Update v
+  | Some city ->
+    if Trackmap.has_track city tracks then `Update v else (* Proceed only if no track at city *)
+    let first_ai = Owner.Map.is_empty v.ais in
+    match _random_ai_or_none random v with
+    | None ->
+      _try_to_create_ai ~force:force_create ~tilemap ~stations ~params ~city ~stocks ~first_ai random v
+    | Some ai_idx ->
+      _try_to_build_station ~tilemap ~stations ~tracks ~params ~city ~cities ~ai_idx ~stocks ~player_net_worth random v
 
 let _ai_financial_decision ~ai_idx ~stocks ~cycle ~player_cash ~(params:Params.t) v =
   (* Player-owned ais don't make financial decisions *)
