@@ -12,7 +12,7 @@ let mode : actions ref = ref `Game
 let dump = ref false
 let debugger = ref false
 let zoom = ref 3
-let adjust_ar = ref false
+let adjust_ar = ref true
 let shader = ref "test"
 let audio = ref true
 
@@ -35,7 +35,7 @@ let arglist =
     "--debug", Set debugger, "Run the debugger";
     "--load", Int (set_slot `LoadGame), "Load a save file";
     "--zoom", Int (fun x -> zoom := x), "Set zoom (default =3)";
-    "--adjust-ar", Set adjust_ar, "Adjust aspect ratio";
+    "--no-adjust-ar", Clear adjust_ar, "Adjust aspect ratio";
     "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
     "--no-audio", Clear audio, "Disable audio";
   ]
