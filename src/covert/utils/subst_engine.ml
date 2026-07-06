@@ -11,7 +11,12 @@ module Pattern = struct
     | RcvLoc
     | HlpOrg
     | Object
-      [@@deriving show, eq]
+    | Key
+    | Name
+    | Org
+    | City
+    | Role
+    [@@deriving show, eq]
 
   let show v = show v
   |> String.uppercase_ascii
@@ -25,6 +30,11 @@ module Pattern = struct
     | "$RCVLOC" -> Some RcvLoc
     | "$HLPORG" -> Some HlpOrg
     | "$OBJECT" -> Some Object
+    | "$KEY" -> Some Key
+    | "$NAME" -> Some Name
+    | "$ORG" -> Some Org
+    | "$CITY" -> Some City
+    | "$ROLE" -> Some Role
     | _ -> None
 end
 
