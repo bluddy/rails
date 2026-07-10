@@ -3,8 +3,6 @@ open! Containers
 include Clue_d
 module Sub= Subst_engine
 
-
-
 let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   let role = Role.Map.find role_id roles in
   let clue_random = (role.Role.clue_seed land 0xFF) / 2 in
@@ -26,7 +24,7 @@ let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   in
   num + clue_random
 
-let create org_id (s:Services.t) diff loc_id role_id known roles locs orgs agents clues =
+let create org_id (s:Services.t) diff loc_id role_id known roles locs orgs agents _clues =
   let agent_id = Role.S.to_agent roles role_id in
   let connect = match known with
   | `Known_face -> Connect_face agent_id
@@ -47,6 +45,7 @@ let create org_id (s:Services.t) diff loc_id role_id known roles locs orgs agent
   | `Known_loc -> Loc.S.incr_activity (Agent.S.to_loc agents agent_id) locs
   | _ -> locs
   in
+  let roles = Role.S.add_known (known :> Known_data.t) role_id roles in
   let name_idx = create_name_idx_ s role_id diff roles agents in
   let clue = {
     org=org_id;

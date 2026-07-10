@@ -1,11 +1,11 @@
 open! Containers
 
 type t = [
-  | `Known_photo
-  | `Known_name
+  | `Known_face
+  | `Known_agent
   | `Known_org
   | `Known_loc
-  | `Known_involved
+  | `Known_role
   | `Known_extra
   | `Known_jailbreak
   | `Known_rank
@@ -26,9 +26,9 @@ let clue_discover_vals = [
     3; 4; 4; 5;
   ] |> Array.of_list
 
-let standard = [`Known_loc; `Known_org; `Known_name; `Known_photo; `Known_involved]
+let standard = [`Known_loc; `Known_org; `Known_agent; `Known_face; `Known_role]
 
-let random ?(max=`Known_involved) r =
+let random ?(max=`Known_role) r =
   let max = to_enum max in
   Random.int (max + 1) r
   |> of_enum |> Option.get_exn_or "oops"
@@ -42,8 +42,7 @@ module Set = struct
 
   let to_base2 v = fold (fun x acc -> acc + to_base2 x) v 0
 
-  let known_discover_set = [`Known_loc; `Known_org; `Known_name; `Known_photo; `Known_involved]
-    |> of_list
+  let known_discover_set = standard |> of_list
 
   let to_discover_val v =
     let base2 = to_base2 v in

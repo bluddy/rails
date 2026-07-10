@@ -8,7 +8,7 @@ let clue_find_to_discover random role_id roles (v:t) =
   let role = Role.Map.find role_id roles in
   if Known_data.Set.all_standard role.Role.known then None else
   if Difficulty.lowest (G.difficulty v) &&
-    not @@ Role.check_known [`Known_involved] role then Some `Known_involved else
+    not @@ Role.check_known [`Known_role] role then Some `Known_role else
   if role.clue_rand = 2 (* From OG *)
     && Difficulty.(G.difficulty v < Regional_conflict)
     && not @@ Role.check_known [`Known_loc] role then Some `Known_loc else

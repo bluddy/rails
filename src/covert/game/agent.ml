@@ -93,7 +93,7 @@ module S = struct
 
   let name_if_known agent_id v =
     let agent = Map.find agent_id v in
-    if is_known `Known_name agent then
+    if is_known `Known_agent agent then
       Printf.sprintf "%s %s" agent.name agent.last_name
     else
       let i = Id.to_int agent_id mod 26 in

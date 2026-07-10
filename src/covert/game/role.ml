@@ -102,6 +102,8 @@ module S = struct
 
   let update_ctr role_id fn v = update role_id (fun v -> {v with ctr=fn v.ctr}) v
 
+  let add_known known role_id roles = update role_id (add_known known) roles
+
   let random_with_diff r diff v =
     let max = num v - (Difficulty.to_enum diff) / 4 in
     Random.int max r |> Id.of_int

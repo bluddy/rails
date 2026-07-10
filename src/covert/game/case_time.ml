@@ -94,7 +94,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
         in
         if (role_done || event_run_cnt = 0 && Option.is_none v.agent_autoescape)
            && (already_hid
-            || Agent.check_known [`Known_loc; `Known_org; `Known_name; `Known_photo] agent) then
+            || Agent.check_known [`Known_loc; `Known_org; `Known_agent; `Known_face] agent) then
             let agents = Agent.S.go_into_hiding agent_id (G.agents v) in
             let bs =
               let name = Agent.S.name_if_known agent_id agents in
@@ -279,7 +279,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
   let handle_arrival event_id event actions agents roles bs =
     let agent_id = event.Event.role |> Role.S.to_agent roles in
     match event.kind with
-    | With_role {inter=Meet; tx=Rcv; _} when Agent.S.is_known `Known_photo agent_id agents ->
+    | With_role {inter=Meet; tx=Rcv; _} when Agent.S.is_known `Known_face agent_id agents ->
       Action.Map.fold (fun action_id action ((actions, bs) as acc) ->
         match action.Action.kind with
         | Event_based event_id2 when Event.Id.(event_id2 = event_id) &&
