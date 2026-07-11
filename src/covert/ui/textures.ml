@@ -112,7 +112,7 @@ module Images = struct
     | `Sneak_in
     | `Training
     | `Paper_clip
-    | `Left_file 
+    | `Left_file
     | `Right_file
     | `Some_box
   ]
