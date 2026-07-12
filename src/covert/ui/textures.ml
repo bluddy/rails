@@ -75,11 +75,11 @@ module Clue_icons = struct
     let hash = Hashtbl.create 10 in
     let face_img = Hashtbl.find res.Resources.pics "FACES" in
 
-    List.iteri (fun i means ->
+    List.iteri (fun i method_ ->
       let x, y = i*32 + 96, 174 in
       let tex = slice win face_img x y 32 26 in
-      Hashtbl.replace hash (`Icon means) tex)
-    Clue_d.means_list;
+      Hashtbl.replace hash (`Icon method_) tex)
+    Clue_d.Method.list;
 end
 
 module Plane_imgs = struct

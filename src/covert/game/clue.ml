@@ -3,6 +3,29 @@ open! Containers
 include Clue_d
 module Sub= Subst_engine
 
+let text_of_name_idx_ name_idx =
+  let bottom = name_idx lsr 8 in
+  let offset = ((name_idx lsr 4) land 0x7) lsl 1 + (bottom land 0xF) lsl 4 in
+  let num = name_idx land 0x3F + 1 in
+  let suffix = match bottom land 0xF with
+    | 5 -> "00"
+    | 6 -> "000"
+    | _ -> ""
+  in
+  Printf.sprintf "%s%d%s" (Clue_d.names.(offset)) num suffix
+
+let clue_text (s:Services.t) clue_idx clues =
+  let clue = Map.find clue_idx clues in
+  let to_pat = function
+    | Connect_face _ -> 0
+    | Connect_agent _ -> 1
+    | Connect_org _ -> 2
+    | Connect_loc _ -> 3
+    | Connect_role _ -> 4
+  in
+  let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_idx) mod 16) (to_pat clue.connect) in
+  ()
+
 let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   let role = Role.Map.find role_id roles in
   let clue_random = (role.Role.clue_seed land 0xFF) / 2 in

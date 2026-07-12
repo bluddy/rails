@@ -1,7 +1,29 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
-type means =
+let names = [
+  "Ford Escort #"; "Chevy Nova #"; "Toyota Tercel #";
+  "VW Golf #"; "Mazda RX7 #"; "Honda Civic #";
+  "Peugeot #"; (* OG is Peugot *) "Chrysler #"; "Walther PPK #";
+  "Smith&Wesson 9mm #"; "Berreta M92S #"; "Browning 9mm #";
+  "Hechler&Koch VP #"; "Luger 9mm #"; "Colt 45 #";
+  "357 Magnum #"; "Rue Laverne "; "HochStrasse ";
+  "Main St. "; "Webley Ct. "; "Holmley Park ";
+  "ObensGrabbe "; "La Paz Blvd. "; "North Ave. ";
+  "PanAm #"; "United #"; "Sabena #";
+  "Lufthansa #"; "El Al #"; "KLM #";
+  "SwissAir #"; "BOAC #"; "W.Union #";
+  "RCA #"; "Telex #"; "AmTel #"; "InterTel #";
+  "SatComm #"; "TelTron #"; "Comlink #";
+  ""; ""; ""; ""; ""; ""; ""; ""; ""; ""; ""; ""; ""; ""; ""; "";
+  "Swiss Passport #"; "InterPol ID#";
+  "Bahamian Passport #"; "Gold Card #"; "Swedish Passport #";
+  "Green Card #"; "VISTA Card #"; "Liberian Passport #";
+] |> Array.of_list
+
+module Method = struct
+
+type t =
   | Photo
   | Wiretap
   | Surveillance
@@ -9,10 +31,21 @@ type means =
   | Local_informant
   | Interpol_db
   | Local_authorities
-  [@@deriving enum]
+  [@@deriving enum, yojson]
 
-let means_list = Iter.map (fun i -> means_of_enum i |> Option.get_exn_or "oops")
-  Iter.(0 -- (means_to_enum Local_authorities)) |> Iter.to_list
+let show = function
+  | Photo -> "Clandestine Photo"
+  | Wiretap -> "Electronic Wiretap"
+  | Surveillance -> "Covert Surveillance"
+  | File_search -> "File Record Search"
+  | Local_informant -> "Local Informant"
+  | Interpol_db -> "INTERPOL Database" (* Data Base in OG *)
+  | Local_authorities -> "Local Authorities"
+
+let list = Iter.map (fun i -> of_enum i |> Option.get_exn_or "oops")
+  Iter.(0 -- (to_enum Local_authorities)) |> Iter.to_list
+
+end
 
 type connect =
   | Connect_face of Agent_d.Id.t
@@ -40,4 +73,5 @@ module Map = struct
   end)
 end
 
-type map = t Map.t
+type map = t Map.t [@@deriving yojson]
+

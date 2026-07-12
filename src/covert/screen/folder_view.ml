@@ -27,8 +27,21 @@ let render_folder win (s:Services.t) color text =
   Fonts.Render.write win s.fonts ~color:Ega.black ~x:(240-w/2) ~y:4 text;
   ()
 
+let render_clue win (s:Services.t) (case:Case.t) clue_id =
+  render_folder win s Ega.bblue "Clue";
+  let clue = Clue.Map.find clue_id @@ Case.G.clues case in
+  let org = Org.Map.find clue.org @@ Case.G.orgs case in
+  let loc = Loc.Map.find clue.loc @@ Case.G.locs case in
+  let src_txt = Printf.sprintf "Source: %s/%s" org.name loc.city in
+  Fonts.Render.write win s.fonts ~color:Ega.gray ~x:16 ~y:17 src_txt;
 
-let create (s:Services.t) clue_id (case:Case.t) = ()
+
+
+
+
+let create_clue (s:Services.t) clue_id (case:Case.t) = ()
+
+
   
 
 

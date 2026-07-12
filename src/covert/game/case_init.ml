@@ -69,6 +69,7 @@ let create (srv:Services.t) ?last_crime_choice (w:World.t) =
       orgs;
       actions=Action.Map.empty;
       items=Item.Map.empty;
+      clues=Clue.Map.empty;
     };
   }
 
