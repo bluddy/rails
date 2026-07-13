@@ -1,7 +1,7 @@
 open! Containers
 
 include Clue_d
-module Sub= Subst_engine
+module Sub = Subst_engine
 
 let text_of_name_idx_ name_idx =
   let bottom = name_idx lsr 8 in
@@ -14,17 +14,48 @@ let text_of_name_idx_ name_idx =
   in
   Printf.sprintf "%s%d%s" (Clue_d.names.(offset)) num suffix
 
-let clue_text (s:Services.t) clue_idx clues =
+let clue_text (s:Services.t) diff crime_type clue_idx orgs agents roles locs clues =
   let clue = Map.find clue_idx clues in
-  let to_pat = function
-    | Connect_face _ -> 0
-    | Connect_agent _ -> 1
-    | Connect_org _ -> 2
-    | Connect_loc _ -> 3
-    | Connect_role _ -> 4
+  let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_idx) mod 16) @@ Connect.to_enum clue.connect in
+  let clue_name = text_of_name_idx_ clue.name_idx in
+  let pats = [(Sub.Pattern.Victim, clue_name)] in
+  let cur_agent_face = match clue.connect with
+    | Face agent_id -> Some agent_id
+    | _ -> None
   in
-  let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_idx) mod 16) (to_pat clue.connect) in
-  ()
+  let pats = match clue.connect with
+    | Connect.Agent agent_id ->
+        let name = Agent.S.name agent_id agents in
+        (Sub.Pattern.SndOrg, name)::pats
+    | Org org_id ->
+        let org = Org.Map.find org_id orgs in
+        (Sub.Pattern.RcvOrg, org.Org.name)::pats
+    | Loc loc_id ->
+        let loc = Loc.Map.find loc_id locs in
+        (Sub.Pattern.SndLoc, loc.Loc.city)::pats
+    | _ -> pats
+  in
+  let skip_chars, pat = match clue.connect with
+    | Connect.Role role_id when Role.S.test_with_diff_div_4 diff role_id roles ->
+        let id_code =
+          let agent_id = Role.S.to_agent roles role_id in
+          Agent.Map.find agent_id agents |> Agent.G.id_code
+        in
+        let pat = Printf.sprintf "*C0%d0%d" (id_code / 32) (id_code / 6) in
+        2, pat
+    | Role role_id ->
+        let pat = Printf.sprintf "*C%02d%02d" crime_type (Role.Id.to_int role_id) in
+        2, pat
+    | _ -> 1, pat
+  in
+  let txt =
+    let clue_txt = Hashtbl.find s.resources.text `Clues in
+    Sub.get_lines ~pat clue_txt |> Option.get_exn_or "Clue text not found"
+    |> Sub.subst_pat pats
+  in
+  let clue_method = (Char.to_int txt.[0]) land 0xF |> Method.of_enum |> Option.get_exn_or "oops" in
+  let txt = String.drop skip_chars txt in
+  txt, clue_method, cur_agent_face
 
 let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   let role = Role.Map.find role_id roles in
@@ -50,11 +81,11 @@ let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
 let create org_id (s:Services.t) diff loc_id role_id known roles locs orgs agents _clues =
   let agent_id = Role.S.to_agent roles role_id in
   let connect = match known with
-  | `Known_face -> Connect_face agent_id
-  | `Known_agent -> Connect_agent agent_id
-  | `Known_org -> Connect_org (Agent.S.to_org agents agent_id)
-  | `Known_role -> Connect_role role_id
-  | `Known_loc -> Connect_loc (Agent.S.to_loc agents agent_id)
+  | `Known_face -> Connect.Face agent_id
+  | `Known_agent -> Agent agent_id
+  | `Known_org -> Org (Agent.S.to_org agents agent_id)
+  | `Known_role -> Role role_id
+  | `Known_loc -> Loc (Agent.S.to_loc agents agent_id)
   in
   let orgs = match known with
   | `Known_org ->

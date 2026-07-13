@@ -38,6 +38,9 @@ let create ?(known=Known_data.Set.empty) id_code org_id loc_id orgs =
 
 let mastermind = Id.of_int 0
 
+let print_name v =
+  Printf.sprintf "%s %s" v.name v.last_name
+
 let add_role role_id v =
   {v with roles=Role_d.Set.add role_id v.roles}
 
@@ -76,6 +79,7 @@ let go_into_hiding v = {v with status=In_hiding}
 let go_free v = {v with status=At_large{anxiety=0}}
 
 module G = struct
+  let id_code v = v.id_code
   let anxiety v = match v.status with
     | At_large {anxiety;_} -> anxiety
     | _ -> 0
@@ -91,10 +95,14 @@ end
 
 module S = struct
 
+  let name agent_id v =
+    let agent = Map.find agent_id v in
+    print_name agent
+
   let name_if_known agent_id v =
     let agent = Map.find agent_id v in
     if is_known `Known_agent agent then
-      Printf.sprintf "%s %s" agent.name agent.last_name
+      print_name agent
     else
       let i = Id.to_int agent_id mod 26 in
       let c = Char.to_int 'A' + i |> Char.of_int |> Option.get_exn_or "oops" in

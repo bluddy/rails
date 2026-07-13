@@ -47,19 +47,28 @@ let list = Iter.map (fun i -> of_enum i |> Option.get_exn_or "oops")
 
 end
 
-type connect =
-  | Connect_face of Agent_d.Id.t
-  | Connect_agent of Agent_d.Id.t
-  | Connect_org of Org.Id.t
-  | Connect_loc of Loc.Id.t
-  | Connect_role of Role_d.Id.t
-  [@@deriving yojson]
+module Connect = struct
+  type t =
+    | Face of Agent_d.Id.t
+    | Agent of Agent_d.Id.t
+    | Org of Org.Id.t
+    | Loc of Loc.Id.t
+    | Role of Role_d.Id.t
+    [@@deriving yojson]
+
+  let to_enum = function
+    | Face _ -> 0
+    | Agent _ -> 1
+    | Org _ -> 2
+    | Loc _ -> 3
+    | Role _ -> 4
+end
 
 type t = {
   org: Org.Id.t;
   loc: Loc.Id.t;
   role: Role.Id.t;
-  connect: connect;
+  connect: Connect.t;
   name_idx: int; (* index into name offset *)
   (* discovery_val: int; seems unused *)
 } [@@deriving yojson]
