@@ -3,15 +3,17 @@ module String = Engine.String
 module Gen = Engine.My_gen
 module C = Constants
 
+module Type = Engine.Int_id.Make()
+
 type t = {
   title: string;
   org_bits: int; (* bitmask right now. there are 4 bit values *)
-  step_types: int array; (* steps in crime *)
+  step_types: Type.t array; (* steps in crime *)
   objects: string array;
 }
 
 let make title org_bits step_types objects =
-  let step_types = Array.of_list step_types in
+  let step_types = Array.of_list step_types |> Array.map Type.of_int in
   let objects = Array.of_list objects in
   {org_bits; step_types; objects; title}
 
@@ -191,8 +193,8 @@ module Step = struct
 
 end
 
-let load_from_file crime_type_num =
-  let filename = Printf.sprintf "./data/covert/CRIME%d.DTA" crime_type_num in
+let load_from_file crime_type =
+  let filename = Printf.sprintf "./data/covert/CRIME%d.DTA" (Type.to_int crime_type) in
   let s = Utils.stream_of_file filename in
   let num_roles = Gen.get_wordi s in
   let num_events = Gen.get_wordi s in

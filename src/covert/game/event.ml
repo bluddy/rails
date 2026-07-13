@@ -13,7 +13,7 @@ let check_tick v tick = match v.status with Tick t when t=tick -> true | _ -> fa
 let gen_msg_num crime step v =
   let event_idx = v.num_id in
   let type_ = Crime.Step.get_type crime step in
-  Printf.sprintf "*MSG%02d%02d" event_idx type_
+  Printf.sprintf "*MSG%02d%02d" event_idx @@ Crime.Type.to_int type_
 
 let to_text res crime step roles agents orgs locs v =
   let victim, obj = Crime.Step.get_victim_and_obj crime step in

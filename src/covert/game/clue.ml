@@ -46,7 +46,7 @@ let clue_text (s:Services.t) clue_idx (case:Case_d.t) =
         let pat = Printf.sprintf "*C0%d0%d" (id_code / 32) (id_code / 6) in
         2, pat
     | Role role_id ->
-        let pat = Printf.sprintf "*C%02d%02d" (Case_d.crime_type case) (Role.Id.to_int role_id) in
+        let pat = Printf.sprintf "*C%02d%02d" (Case_d.crime_type case |> Crime.Type.to_int) (Role.Id.to_int role_id) in
         2, pat
     | _ -> 1, pat
   in
