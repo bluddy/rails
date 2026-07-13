@@ -19,7 +19,7 @@ type data = {
   events: Event_d.map;
   actions: Action.map;
   items: Item.map;
-  clues: Clue.map;
+  clues: Clue_d.map;
 } [@@deriving yojson]
 
 type t = {
@@ -58,4 +58,5 @@ module U = struct
 end
 
 let update_events fn v = U.events (fn v.d.events) v
+let crime_type v = Crime.Step.get_type v.s.crime v.s.step
 

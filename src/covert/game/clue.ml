@@ -14,8 +14,8 @@ let text_of_name_idx_ name_idx =
   in
   Printf.sprintf "%s%d%s" (Clue_d.names.(offset)) num suffix
 
-let clue_text (s:Services.t) diff crime_type clue_idx orgs agents roles locs clues =
-  let clue = Map.find clue_idx clues in
+let clue_text (s:Services.t) clue_idx (case:Case_d.t) =
+  let clue = Map.find clue_idx @@ Case_d.G.clues case in
   let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_idx) mod 16) @@ Connect.to_enum clue.connect in
   let clue_name = text_of_name_idx_ clue.name_idx in
   let pats = [(Sub.Pattern.Victim, clue_name)] in
@@ -23,18 +23,20 @@ let clue_text (s:Services.t) diff crime_type clue_idx orgs agents roles locs clu
     | Face agent_id -> Some agent_id
     | _ -> None
   in
+  let agents = Case_d.G.agents case in
   let pats = match clue.connect with
     | Connect.Agent agent_id ->
         let name = Agent.S.name agent_id agents in
         (Sub.Pattern.SndOrg, name)::pats
     | Org org_id ->
-        let org = Org.Map.find org_id orgs in
+        let org = Org.Map.find org_id @@ Case_d.G.orgs case in
         (Sub.Pattern.RcvOrg, org.Org.name)::pats
     | Loc loc_id ->
-        let loc = Loc.Map.find loc_id locs in
+        let loc = Loc.Map.find loc_id @@ Case_d.G.locs case in
         (Sub.Pattern.SndLoc, loc.Loc.city)::pats
     | _ -> pats
   in
+  let roles, diff = Case_d.G.roles case, Case.G.difficulty case in
   let skip_chars, pat = match clue.connect with
     | Connect.Role role_id when Role.S.test_with_diff_div_4 diff role_id roles ->
         let id_code =
@@ -44,7 +46,7 @@ let clue_text (s:Services.t) diff crime_type clue_idx orgs agents roles locs clu
         let pat = Printf.sprintf "*C0%d0%d" (id_code / 32) (id_code / 6) in
         2, pat
     | Role role_id ->
-        let pat = Printf.sprintf "*C%02d%02d" crime_type (Role.Id.to_int role_id) in
+        let pat = Printf.sprintf "*C%02d%02d" (Case_d.crime_type case) (Role.Id.to_int role_id) in
         2, pat
     | _ -> 1, pat
   in
