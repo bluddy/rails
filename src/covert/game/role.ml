@@ -94,7 +94,10 @@ let check_known_all l v = Known_data.Set.mem_all l v.known
 
 module S = struct
 
-  let num v = (Map.max_binding v |> fst |> Id.to_int) + 1
+  let num v =
+    try
+      (Map.max_binding v |> fst |> Id.to_int) + 1
+    with Not_found -> 0
 
   let to_agent v role_id = (Map.find role_id v).agent
 

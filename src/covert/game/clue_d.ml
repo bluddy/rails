@@ -70,6 +70,7 @@ type t = {
   role: Role.Id.t;
   connect: Connect.t;
   name_idx: int; (* index into name offset *)
+  method_: Method.t;
   (* discovery_val: int; seems unused *)
 } [@@deriving yojson]
 
@@ -80,6 +81,7 @@ module Map = struct
     type t = Id.t [@@deriving yojson]
     let compare = Id.compare
   end)
+  let num v = try (max_binding v |> fst |> Id.to_int) + 1 with Not_found -> 0
 end
 
 type map = t Map.t [@@deriving yojson]

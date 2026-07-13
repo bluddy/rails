@@ -14,9 +14,9 @@ let text_of_name_idx_ name_idx =
   in
   Printf.sprintf "%s%d%s" (Clue_d.names.(offset)) num suffix
 
-let clue_text (s:Services.t) clue_idx (case:Case_d.t) =
-  let clue = Map.find clue_idx @@ Case_d.G.clues case in
-  let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_idx) mod 16) @@ Connect.to_enum clue.connect in
+let get_text (s:Services.t) clue_id (case:Case_d.t) =
+  let clue = Map.find clue_id @@ Case_d.G.clues case in
+  let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_id) mod 16) @@ Connect.to_enum clue.connect in
   let clue_name = text_of_name_idx_ clue.name_idx in
   let pats = [(Sub.Pattern.Victim, clue_name)] in
   let cur_agent_face = match clue.connect with
@@ -80,7 +80,10 @@ let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   in
   num + clue_random
 
-let create org_id (s:Services.t) diff loc_id role_id known roles locs orgs agents _clues =
+let create org_id (s:Services.t) loc_id role_id method_ known case =
+  let roles, agents, orgs, locs, clues, diff =
+    let open Case_d in
+    G.roles case, G.agents case, G.orgs case, G.locs case, G.clues case, G.difficulty case in
   let agent_id = Role.S.to_agent roles role_id in
   let connect = match known with
   | `Known_face -> Connect.Face agent_id
@@ -109,7 +112,66 @@ let create org_id (s:Services.t) diff loc_id role_id known roles locs orgs agent
     role=role_id;
     connect;
     name_idx;
+    method_;
   }
   in
-  clue, orgs, locs
+  let clue_id = Map.num clues |> Id.of_int in
+  let clues = Map.add clue_id clue clues in
+  clue_id, {case with d={case.d with clues; locs; orgs}}
+
+let known_to_discover random role_id roles (case:Case_d.t) =
+  let role = Role.Map.find role_id roles in
+  if Known_data.Set.all_standard role.Role.known then None else
+  if Difficulty.lowest (Case_d.G.difficulty case) &&
+    not @@ Role.check_known [`Known_role] role then Some `Known_role else
+  if role.clue_rand = 2 (* From OG *)
+    && Difficulty.(Case_d.G.difficulty case < Regional_conflict)
+    && not @@ Role.check_known [`Known_loc] role then Some `Known_loc else
+  let known = Utils.do_while
+    (fun () -> Known_data.random random)
+    (fun known -> Role.check_known [known] role)
+  in
+  Some known
+
+let generate ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (case:Case_d.t) =
+  let open Case_d in
+  let agents, orgs, locs, roles = G.agents case, G.orgs case, G.locs case, G.roles case in
+  let clue_amt = clue_amt + 1 in
+  Agent.Map.fold (fun agent_id agent (chosen_agent, agents, roles) ->
+    let org_id = Agent.S.to_org agents agent_id in
+    let loc_id = Agent.S.to_loc agents agent_id in
+    let org_to_cia_dist = Org.connection orgs org_id in_org_id in
+    let loc_to_agent_loc_dist = Loc.connection locs loc_id in_loc_id in
+    let chosen_agent = if org_to_cia_dist = 0 && loc_to_agent_loc_dist = 0 then Some agent_id else chosen_agent in
+    let clue_div_dist = (clue_amt / ((loc_to_agent_loc_dist + 2) * (org_to_cia_dist + 2))) / 256 in
+    let clue_div_dist2 = (clue_amt / ((loc_to_agent_loc_dist + 6) * (org_to_cia_dist + 3))) / 64 in
+    let diff_factor = 10000 / ((G.difficulty case |> Difficulty.to_enum) + 2) / clue_div_dist  in
+    let diff_factor_2 = diff_factor * diff_factor in
+    let discover_val = ((Agent.G.discover_val agent / 2) + diff_factor + 1) / diff_factor_2 in
+    let agents = Agent.S.update agent_id (Agent.U.discover_val discover_val) agents in
+    let roles =
+      Role.Set.fold (fun role_id (roles as acc) ->
+        let role = Role.Map.find role_id roles in
+        match Role.G.ctr_tick role with
+        | Some tick when tick <= case.time.tick ->
+            let w = 5000/((G.difficulty case |> Difficulty.to_enum) + 3) in
+            let role = Role.U.ctr_discovery_add (w / clue_div_dist2) role in
+            let rec loop role =
+              let needed_val = Known_data.Set.to_discover_val (Role.G.known role) in
+              let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
+              let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
+              if disc <= needed_val then role else
+              if Known_data.Set.all_standard role.known then role else
+              (* TODO: reveal clue *)
+              loop role
+            in
+            let role = loop role in
+            Role.Map.add role_id role roles
+        | _ -> acc)
+      agent.roles
+      roles
+    in
+    chosen_agent, agents, roles)
+  agents
+  (None, agents, roles)
 

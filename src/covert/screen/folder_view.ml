@@ -33,7 +33,17 @@ let render_clue win (s:Services.t) (case:Case.t) clue_id =
   let org = Org.Map.find clue.org @@ Case.G.orgs case in
   let loc = Loc.Map.find clue.loc @@ Case.G.locs case in
   let src_txt = Printf.sprintf "Source: %s/%s" org.name loc.city in
-  Fonts.Render.write win s.fonts ~color:Ega.gray ~x:16 ~y:17 src_txt;
+  let y = 17 in
+  Fonts.Render.write win s.fonts ~color:Ega.gray ~x:16 ~y src_txt;
+  let txt, method_, cur_agent_face = Clue.get_text s clue_id case in
+  let txt = Utils.add_newlines ~width:42 txt in
+  let y = y + 8 in
+  let _, h = Fonts.get_w_h s.fonts txt in
+  Fonts.Render.write win s.fonts ~color:Ega.black ~x:16 ~y txt;
+  let y = y + h in
+
+
+
 
 
 
