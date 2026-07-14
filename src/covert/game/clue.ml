@@ -19,10 +19,6 @@ let get_text (s:Services.t) clue_id (case:Case_d.t) =
   let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_id) mod 16) @@ Connect.to_enum clue.connect in
   let clue_name = text_of_name_idx_ clue.name_idx in
   let pats = [(Sub.Pattern.Victim, clue_name)] in
-  let cur_agent_face = match clue.connect with
-    | Face agent_id -> Some agent_id
-    | _ -> None
-  in
   let agents = Case_d.G.agents case in
   let pats = match clue.connect with
     | Connect.Agent agent_id ->
@@ -57,7 +53,7 @@ let get_text (s:Services.t) clue_id (case:Case_d.t) =
   in
   let clue_method = (Char.to_int txt.[0]) land 0xF |> Method.of_enum |> Option.get_exn_or "oops" in
   let txt = String.drop skip_chars txt in
-  txt, clue_method, cur_agent_face
+  txt, clue_method
 
 let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   let role = Role.Map.find role_id roles in

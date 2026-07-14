@@ -36,7 +36,7 @@ let render_clue win (s:Services.t) (case:Case.t) clue_id =
   let x = 16 in
   let y = 17 in
   Fonts.Render.write win s.fonts ~color:Ega.gray ~x ~y src_txt;
-  let txt, method_, cur_agent_face = Clue.get_text s clue_id case in
+  let txt, method_ = Clue.get_text s clue_id case in
   let txt = Utils.add_newlines ~width:40 txt in
   let y = y + 8 in
   let _, h = Fonts.get_w_h s.fonts txt in
@@ -49,9 +49,10 @@ let render_clue win (s:Services.t) (case:Case.t) clue_id =
   in
   let txt = Printf.sprintf "Method: %s" (Clue.Method.show method_) in
   Fonts.Render.write win s.fonts ~color:Ega.gray ~x ~y txt;
-  let texture = match clue.connect with
-    | Clue.Connect.Face _ -> ()
-    | _ -> Hashtbl.find s.textures.clue_methods method_
-  in
+  match clue.connect with
+    | Clue.Connect.Face agent_id -> ()
+    | _ ->
+        let tex = Hashtbl.find s.textures.clue_methods method_ in
+        R.Texture.render ~x:272 ~y:16 win tex;
   ()
 
