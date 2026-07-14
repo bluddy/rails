@@ -64,13 +64,22 @@ module Connect = struct
     | Role _ -> 4
 end
 
+module Source = struct
+  type t =
+    | Wiretap
+    | Files
+    | Wall_safe
+    | Floor_safe
+    [@@deriving yojson, eq]
+end
+
 type t = {
   org: Org.Id.t;
   loc: Loc.Id.t;
   role: Role.Id.t;
   connect: Connect.t;
   name_idx: int; (* index into name offset *)
-  method_: Method.t;
+  src: Source.t;
   (* discovery_val: int; seems unused *)
 } [@@deriving yojson]
 

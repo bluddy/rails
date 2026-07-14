@@ -33,25 +33,25 @@ let render_clue win (s:Services.t) (case:Case.t) clue_id =
   let org = Org.Map.find clue.org @@ Case.G.orgs case in
   let loc = Loc.Map.find clue.loc @@ Case.G.locs case in
   let src_txt = Printf.sprintf "Source: %s/%s" org.name loc.city in
+  let x = 16 in
   let y = 17 in
-  Fonts.Render.write win s.fonts ~color:Ega.gray ~x:16 ~y src_txt;
+  Fonts.Render.write win s.fonts ~color:Ega.gray ~x ~y src_txt;
   let txt, method_, cur_agent_face = Clue.get_text s clue_id case in
-  let txt = Utils.add_newlines ~width:42 txt in
+  let txt = Utils.add_newlines ~width:40 txt in
   let y = y + 8 in
   let _, h = Fonts.get_w_h s.fonts txt in
-  Fonts.Render.write win s.fonts ~color:Ega.black ~x:16 ~y txt;
+  Fonts.Render.write win s.fonts ~color:Ega.black ~x ~y txt;
   let y = y + h in
-
-
-
-
-
-
-
-
-let create_clue (s:Services.t) clue_id (case:Case.t) = ()
-
-
-  
-
+  let method_ = match clue.src with
+    | _ when Org.Id.(clue.org = Org.cia) -> method_
+    | Wiretap -> Clue.Method.Wiretap
+    | _ -> Clue.Method.Photo
+  in
+  let txt = Printf.sprintf "Method: %s" (Clue.Method.show method_) in
+  Fonts.Render.write win s.fonts ~color:Ega.gray ~x ~y txt;
+  let texture = match clue.connect with
+    | Clue.Connect.Face _ -> ()
+    | _ -> Hashtbl.find s.textures.clue_methods method_
+  in
+  ()
 

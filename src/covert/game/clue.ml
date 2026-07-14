@@ -80,7 +80,7 @@ let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   in
   num + clue_random
 
-let create org_id (s:Services.t) loc_id role_id method_ known case =
+let create org_id (s:Services.t) loc_id role_id source known case =
   let roles, agents, orgs, locs, clues, diff =
     let open Case_d in
     G.roles case, G.agents case, G.orgs case, G.locs case, G.clues case, G.difficulty case in
@@ -112,7 +112,7 @@ let create org_id (s:Services.t) loc_id role_id method_ known case =
     role=role_id;
     connect;
     name_idx;
-    method_;
+    src=source;
   }
   in
   let clue_id = Map.num clues |> Id.of_int in
@@ -162,7 +162,9 @@ let generate ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (case:Case_d.t) =
               let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
               if disc <= needed_val then role else
               if Known_data.Set.all_standard role.known then role else
-              (* TODO: reveal clue *)
+              (* TODO: reveal clue
+                 if clue_org is cia, clue method, else wiretap/photo
+               *)
               loop role
             in
             let role = loop role in

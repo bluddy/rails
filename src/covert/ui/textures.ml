@@ -70,7 +70,7 @@ module Face_parts = struct
     hash
 end
 
-module Clue_icons = struct
+module Clue_methods = struct
   let add_all win res =
     let hash = Hashtbl.create 10 in
     let face_img = Hashtbl.find res.Resources.pics "FACES" in
@@ -78,8 +78,9 @@ module Clue_icons = struct
     List.iteri (fun i method_ ->
       let x, y = i*32 + 96, 174 in
       let tex = slice win face_img x y 32 26 in
-      Hashtbl.replace hash (`Icon method_) tex)
+      Hashtbl.replace hash method_ tex)
     Clue_d.Method.list;
+    hash
 end
 
 module Plane_imgs = struct
@@ -151,6 +152,7 @@ type t = {
   cities: (City.t, R.Texture.t) Hashtbl.t;
   car_frames: (int, R.Texture.t) Hashtbl.t;
   images: (Images.t, R.Texture.t) Hashtbl.t;
+  clue_methods: (Clue_d.Method.t, R.Texture.t) Hashtbl.t;
 }
 
 let of_resources win res =
@@ -158,10 +160,12 @@ let of_resources win res =
   let cities = Cities.add win res in
   let car_frames = Car_frames.add win res in
   let images = Images.add win res in
+  let clue_methods = Clue_methods.add_all win res in
   {
     pixel;
     cities;
     car_frames;
     images;
+    clue_methods;
   }
 
