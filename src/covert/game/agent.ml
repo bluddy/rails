@@ -6,34 +6,33 @@ module Names = Agent_names
 include Agent_d
 
 let gender_name_of_code org_id x orgs =
-  let gender = x land 1 in
   let name_idx = (x lsr 1) land 0xF in
   let last_name_idx = (x lsr 5) land 0xF in
-  let name_arr = if gender = 0 then Names.female_names else Names.male_names in
+  let gender = Gender.of_code x in
+  let name_arr = match gender with `Female -> Names.female_names | _ -> Names.male_names in
   let org = Org.Map.find org_id orgs in
   let name_offset = Org.G.name_offset org in
   let name, last_name =
       name_arr.(name_offset + name_idx),
       Names.last_names.(name_offset + last_name_idx)
   in
-  let gender = if gender = 0 then `Female else `Male in
   gender, name, last_name
 
   (* name_offset comes from org *)
 let create ?(known=Known_data.Set.empty) id_code org_id loc_id orgs =
-  let gender, name, last_name = gender_name_of_code org_id id_code orgs in
+  let _, name, last_name = gender_name_of_code org_id id_code orgs in
+  let face = Agent_d.Face.of_code id_code in
   {
-    gender;
     org=org_id;
     name;
     last_name;
-    id_code;
     loc=loc_id;
     known;
     roles=Role_d.Set.empty;
     roles_known=Role_d.Set.empty;
     discover_val=0;
     status=At_large {anxiety=0};
+    face;
   }
 
 let mastermind = Id.of_int 0
@@ -79,7 +78,8 @@ let go_into_hiding v = {v with status=In_hiding}
 let go_free v = {v with status=At_large{anxiety=0}}
 
 module G = struct
-  let id_code v = v.id_code
+  let id_code v = v.face.id
+  let gender v = v.face.gender
   let anxiety v = match v.status with
     | At_large {anxiety;_} -> anxiety
     | _ -> 0
@@ -164,7 +164,7 @@ module S = struct
         in
         let known = if is_mm then mm_agent.known else Known_data.Set.empty in
         let id_code =
-          if is_mm then mm_agent.id_code
+          if is_mm then mm_agent.face.id
           else
             let id_code = Random.int 32766 s.random in
             let male = Random.int 3 s.random > 0 in

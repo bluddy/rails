@@ -41,22 +41,36 @@ end
 
 module Face_parts = struct
 
+  type t = [`Male | `Female] * [ `Head | `Mouth | `Nose | `Eyes | `Hair | `Neck ] * int
+
   let add_all win res =
     let hash = Hashtbl.create 10 in
     let face_img = Hashtbl.find res.Resources.pics "FACES" in
     let facef_img = Hashtbl.find res.Resources.pics "FACESF" in
 
-    let add_faces img const =
+    let add_faces img j ?(head=false) const =
       let handle i =
-        let x = (i mod 8) * 32 + 1 in
-        let y = i/8 * 35 + 1 in
-        let tex = slice win img x y 30 33 in
-        Hashtbl.replace hash (const i) tex
+        let x, y = i * 32, j * 35 in
+        slice win img x y 30 33
       in
-      Iter.iter handle Iter.(0 -- 39)
+      let l = Iter.map handle Iter.(0 -- 7) |> Iter.to_list in
+      let add i tex = Hashtbl.replace hash (const i) tex in
+      if head then
+        let l = [List.nth l 0; List.nth l 4] in
+        List.iteri add l
+      else
+        List.iteri add l
     in
-    add_faces face_img (fun x -> `Male_face x);
-    add_faces facef_img (fun x -> `Female_face x);
+    add_faces face_img 0 (fun x -> `Male, `Hair, x);
+    add_faces face_img 1 (fun x -> `Male, `Eyes, x);
+    add_faces face_img 2 (fun x -> `Male, `Nose, x);
+    add_faces face_img 3 (fun x -> `Male, `Mouth, x);
+    add_faces face_img 4 ~head:true (fun x -> `Male, `Head, x);
+    add_faces facef_img 0 (fun x -> `Female, `Hair, x);
+    add_faces facef_img 1 (fun x -> `Female, `Eyes, x);
+    add_faces facef_img 2 (fun x -> `Female, `Nose, x);
+    add_faces facef_img 3 (fun x -> `Female, `Mouth, x);
+    add_faces facef_img 4 ~head:true (fun x -> `Female, `Head, x);
 
     let add_neck img const =
       let handle i =
@@ -65,8 +79,8 @@ module Face_parts = struct
       in
       Iter.iter handle Iter.(0 -- 3)
     in
-    add_neck face_img (fun x -> `Male_neck x);
-    add_neck face_img (fun x -> `Female_neck x);
+    add_neck face_img (fun x -> `Male, `Neck, x);
+    add_neck face_img (fun x -> `Female, `Neck, x);
     hash
 end
 
@@ -153,6 +167,7 @@ type t = {
   car_frames: (int, R.Texture.t) Hashtbl.t;
   images: (Images.t, R.Texture.t) Hashtbl.t;
   clue_methods: (Clue_d.Method.t, R.Texture.t) Hashtbl.t;
+  face_parts: (Face_parts.t, R.Texture.t) Hashtbl.t;
 }
 
 let of_resources win res =
@@ -161,11 +176,13 @@ let of_resources win res =
   let car_frames = Car_frames.add win res in
   let images = Images.add win res in
   let clue_methods = Clue_methods.add_all win res in
+  let face_parts = Face_parts.add_all win res in
   {
     pixel;
     cities;
     car_frames;
     images;
     clue_methods;
+    face_parts;
   }
 

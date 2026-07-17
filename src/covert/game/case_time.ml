@@ -261,7 +261,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
                 | _ -> agents
               in
               let src = if double then `Double_agent else `Wiretap in
-              let agent = if double then `Gender(agent.gender) else `Name(Agent.S.name_if_known agent_id agents) in
+              let agent = if double then `Gender(Agent.G.gender agent) else `Name(Agent.S.name_if_known agent_id agents) in
               let event_text = if double || Event.is_meeting event then
                   event_to_text s event v |> fst |> Option.some
                 else None

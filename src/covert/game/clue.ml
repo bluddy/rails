@@ -61,7 +61,7 @@ let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
   let num =
     if Role.S.test_with_diff_div_4 difficulty role_id roles then
       let agent_id = Role.S.to_agent roles role_id in
-      let id_code = (Agent.Map.find agent_id agents).Agent.id_code in
+      let id_code = Agent.Map.find agent_id agents |> Agent.G.id_code in
       let v1 = (id_code lsr 3) mod 4 in
       let v2 = id_code mod 6 in
       let pat = Printf.sprintf "*C0%d0%d" v1 v2 in
