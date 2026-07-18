@@ -54,7 +54,7 @@ module Connect = struct
     | Org of Org.Id.t
     | Loc of Loc.Id.t
     | Role of Role_d.Id.t
-    [@@deriving yojson]
+    [@@deriving yojson, eq]
 
   let to_enum = function
     | Face _ -> 0
@@ -62,6 +62,9 @@ module Connect = struct
     | Org _ -> 2
     | Loc _ -> 3
     | Role _ -> 4
+
+  let (=) = equal
+  let (<>) x y = not @@ equal x y
 end
 
 module Source = struct
@@ -78,7 +81,7 @@ type t = {
   loc: Loc.Id.t;
   role: Role.Id.t;
   connect: Connect.t;
-  name_idx: int; (* index into name offset *)
+  id: int; (* index into name offset *)
   src: Source.t;
   (* discovery_val: int; seems unused *)
 } [@@deriving yojson]

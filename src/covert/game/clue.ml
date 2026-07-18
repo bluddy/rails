@@ -3,10 +3,12 @@ open! Containers
 include Clue_d
 module Sub = Subst_engine
 
-let text_of_name_idx_ name_idx =
-  let bottom = name_idx lsr 8 in
-  let offset = ((name_idx lsr 4) land 0x7) lsl 1 + (bottom land 0xF) lsl 4 in
-  let num = name_idx land 0x3F + 1 in
+let is_connect_role v = match v.connect with | Connect.Role _ -> true | _ -> false
+
+let text_of_name_idx_ id =
+  let bottom = id lsr 8 in
+  let offset = ((id lsr 4) land 0x7) lsl 1 + (bottom land 0xF) lsl 4 in
+  let num = id land 0x3F + 1 in
   let suffix = match bottom land 0xF with
     | 5 -> "00"
     | 6 -> "000"
@@ -17,7 +19,7 @@ let text_of_name_idx_ name_idx =
 let get_text (s:Services.t) clue_id (case:Case_d.t) =
   let clue = Map.find clue_id @@ Case_d.G.clues case in
   let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_id) mod 16) @@ Connect.to_enum clue.connect in
-  let clue_name = text_of_name_idx_ clue.name_idx in
+  let clue_name = text_of_name_idx_ clue.id in
   let pats = [(Sub.Pattern.Victim, clue_name)] in
   let agents = Case_d.G.agents case in
   let pats = match clue.connect with
@@ -55,7 +57,7 @@ let get_text (s:Services.t) clue_id (case:Case_d.t) =
   let txt = String.drop skip_chars txt in
   txt, clue_method
 
-let create_name_idx_ (s:Services.t) role_id difficulty roles agents =
+let create_id (s:Services.t) role_id difficulty roles agents =
   let role = Role.Map.find role_id roles in
   let clue_random = (role.Role.clue_seed land 0xFF) / 2 in
   let num =
@@ -101,13 +103,13 @@ let create org_id (s:Services.t) loc_id role_id source known case =
   | _ -> locs
   in
   let roles = Role.S.add_known (known :> Known_data.t) role_id roles in
-  let name_idx = create_name_idx_ s role_id diff roles agents in
+  let id = create_id s role_id diff roles agents in
   let clue = {
     org=org_id;
     loc=loc_id;
     role=role_id;
     connect;
-    name_idx;
+    id;
     src=source;
   }
   in

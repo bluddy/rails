@@ -49,10 +49,51 @@ let render_clue win (s:Services.t) (case:Case.t) clue_id =
   in
   let txt = Printf.sprintf "Method: %s" (Clue.Method.show method_) in
   Fonts.Render.write win s.fonts ~color:Ega.gray ~x ~y txt;
-  match clue.connect with
-    | Clue.Connect.Face agent_id -> ()
+  begin match clue.connect with
+    | Clue.Connect.Face agent_id ->
+        let face = Agent.Map.find agent_id (Case.G.agents case) |> Agent.G.face in
+        Face.render_photo win s face 264 18;
+        let tex = Hashtbl.find s.textures.images `Paper_clip in
+        R.Texture.render ~x:299 ~y:46 win tex
     | _ ->
         let tex = Hashtbl.find s.textures.clue_methods method_ in
-        R.Texture.render ~x:272 ~y:16 win tex;
+        R.Texture.render ~x:272 ~y:16 win tex
+  end;
+  Fonts.Render.write win s.fonts ~color:Ega.red ~x:16 ~y:66 "Related Clues:";
+  let same_name, connects =
+    Clue.Map.fold (fun clue_id2 clue2 ((same_name, connects) as acc) ->
+      if Clue.Id.(clue_id = clue_id2) then acc else
+      if clue.id = clue2.Clue.id then (clue_id2::same_name, connects) else
+      if Clue.Connect.(clue.connect = clue2.connect) then (same_name, clue_id2::connects) else
+      acc)
+    (Case.G.clues case)
+    ([], [])
+  in
+  let draw_frame x y =
+    R.draw_rect win ~x ~y ~w:304 ~h:(200 - y) ~color:Ega.white ~fill:true;
+    let x2 = 304 + x in
+    R.draw_line win ~x1:(x+1) ~y1:y ~x2 ~y2:y ~color:Ega.gray;
+    R.draw_line win ~x1:x2 ~y1:y ~x2 ~y2:199 ~color:Ega.dgray;
+    R.draw_line win ~x1:x ~y1:(y+1) ~x2:x ~y2:199 ~color:Ega.gray;
+  in
+  if List.is_empty same_name && List.is_empty connects then
+    Fonts.Render.write win s.fonts ~color:Ega.black ~x:16 ~y:72 "...none" else
+
+  List.fold_left (fun clue_id (y, y_section) ->
+    let x = Random.int_range 4 16 s.random in (* TODO: Must move to state *)
+    draw_frame x (y-2);
+    let clue = Clue.Map.find clue_id (Case.G.clues case) in
+    let text =
+      if Clue.is_connect_role clue then
+        Clue.get_text s clue_id case |> fst
+      else
+        Clue.get_summary_text s clue_id case
+    in
+    ()
+  )
+  (76, 73)
+
+
+
   ()
 
