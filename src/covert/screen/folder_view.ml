@@ -77,7 +77,7 @@ let create_clue (s:Services.t) (case:Case.t) clue_id =
   {method_; clue_id; clue; text; related; case}
 
 
-let render_clue win (s:Services.t) v =
+let render win (s:Services.t) v =
   render_folder win s Ega.bblue "Clue";
   let clue = v.clue in
   let org = Org.Map.find clue.org @@ Case.G.orgs v.case in
