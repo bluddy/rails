@@ -5,21 +5,16 @@ module Sub = Subst_engine
 
 let is_connect_role v = match v.connect with | Connect.Role _ -> true | _ -> false
 
-let text_of_name_idx_ id =
-  let bottom = id lsr 8 in
-  let offset = ((id lsr 4) land 0x7) lsl 1 + (bottom land 0xF) lsl 4 in
-  let num = id land 0x3F + 1 in
-  let suffix = match bottom land 0xF with
-    | 5 -> "00"
-    | 6 -> "000"
-    | _ -> ""
-  in
-  Printf.sprintf "%s%d%s" (Clue_d.names.(offset)) num suffix
+let get_summary_text (s:Services.t) clue_id (case:Case_d.t) = (* Obtain a shorter text summary *)
+  let clue = Map.find clue_id @@ Case_d.G.clues case in
+  let clue_name = Name.get_text clue.id in
+  let connect_words = Connect_word.get_text clue.id clue.connect in
+  ()
 
 let get_text (s:Services.t) clue_id (case:Case_d.t) =
   let clue = Map.find clue_id @@ Case_d.G.clues case in
   let pat = Printf.sprintf "*C%d%d" ((Id.to_int clue_id) mod 16) @@ Connect.to_enum clue.connect in
-  let clue_name = text_of_name_idx_ clue.id in
+  let clue_name = Name.get_text clue.id in
   let pats = [(Sub.Pattern.Victim, clue_name)] in
   let agents = Case_d.G.agents case in
   let pats = match clue.connect with
