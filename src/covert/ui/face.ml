@@ -19,7 +19,7 @@ let draw_face win (s:Services.t) (face:Agent.Face.t) x y =
   render `Hair face.hair;
   ()
 
-let render_photo win (s:Services.t) (face:Agent.Face.t) x y =
+let render_photo win (s:Services.t) ?(with_clip=false) (face:Agent.Face.t) x y =
   R.draw_rect win ~x:(x-2) ~y:(y-2) ~w:54 ~h:56 ~color:Ega.gray ~fill:false;
   R.draw_rect win ~x:(x-1) ~y:(y-1) ~w:52 ~h:54 ~color:Ega.white ~fill:true;
   R.draw_rect win ~x:(x+2) ~y:(y+2) ~w:46 ~h:45 ~color:Ega.black ~fill:false;
@@ -27,6 +27,10 @@ let render_photo win (s:Services.t) (face:Agent.Face.t) x y =
   R.draw_rect win ~x:(x+3) ~y:(y+3) ~w:44 ~h:43 ~color:bg_color ~fill:true;
   draw_face win s face (x+13) (y+3);
   draw_neck win s face (x+3) (y+28);
+  if with_clip then begin
+    let tex = Hashtbl.find s.textures.images `Paper_clip in
+    R.Texture.render ~x:(x+35) ~y:(y+28) win tex
+  end;
   ()
 
 

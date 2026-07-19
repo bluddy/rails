@@ -6,20 +6,13 @@ module Sub = Subst_engine
 let is_connect_role v = match v.connect with | Connect.Role _ -> true | _ -> false
 
 (* For a non-role, we can get a short summary *)
+(* NOTE: We get rid of the adjustment of the org known and current face.
+   This stuff can be done elsewhere.
+ *)
 let get_summary_text_non_role clue_id (case:Case_d.t) = (* Obtain a shorter text summary *)
   let clue = Map.find clue_id @@ Case_d.G.clues case in
-  let connect_text () =
-    let case = match clue.connect with
-      | Org org_id ->
-          let orgs = Org.S.add_known org_id @@ Case.G.orgs case in
-          Case.U.orgs orgs case
-      | _ -> case
-    in
-    let face = match clue.connect with
-      | Connect.Face agent_id -> Some agent_id
-      | _ -> None
-    in
-    let txt = match clue.connect with
+  let connect_text =
+    match clue.connect with
     | Connect.Face _ -> "this face."
     | Agent agent_id ->
         let agent = Agent.Map.find agent_id @@ Case.G.agents case in
@@ -31,14 +24,10 @@ let get_summary_text_non_role clue_id (case:Case_d.t) = (* Obtain a shorter text
         let loc = Loc.Map.find loc_id @@ Case.G.locs case in
         loc.city
     | Role _ -> failwith "Role not expected here"
-    in
-    txt, face, case
   in
   let clue_name = Name.get_text clue.id in
   let connect_words = Connect_word.get_text clue.id clue.connect in
-  let con_text, face, case = connect_text () in
-  let txt = Printf.sprintf "%s %s %s" clue_name connect_words con_text in
-  txt, face, case
+  Printf.sprintf "%s %s %s" clue_name connect_words connect_text
 
 let get_text (s:Services.t) clue_id (case:Case_d.t) =
   let clue = Map.find clue_id @@ Case_d.G.clues case in
