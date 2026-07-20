@@ -91,7 +91,7 @@ let create_id (s:Services.t) role_id difficulty roles agents =
   in
   num + clue_random
 
-let create (s:Services.t) org_id loc_id role_id source known case =
+let create (s:Services.t) org_id loc_id role_id source (known: Known_data.standard) case =
   let roles, agents, orgs, locs, clues, diff =
     let open Case_d in
     G.roles case, G.agents case, G.orgs case, G.locs case, G.clues case, G.difficulty case in
@@ -140,7 +140,7 @@ let known_to_discover random role_id roles (case:Case_d.t) : Known_data.standard
     && not @@ Role.check_known [`Known_loc] role then Some `Known_loc else
   let known = Utils.do_while
     (fun () -> Known_data.random_standard random)
-    (fun known -> Role.check_known [known] role)
+    (fun known -> Role.check_known [(known :> Known_data.t)] role)
   in
   Some known
 
@@ -176,9 +176,9 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
               let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
               let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
               if disc <= needed_val then (case, clue_acc) else
-              if Known_data.Set.all_standard role.known then (case, clue_acc)
-              else
-                let known = known_to_discover s.random role_id roles case in
+              match known_to_discover s.random role_id roles case with
+              | None -> case, clue_acc
+              | Some known ->
                 let clue_id, case = create s org_id loc_id role_id clue_src known case in
                 loop case (clue_id::clue_acc)
             in

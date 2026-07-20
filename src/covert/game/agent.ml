@@ -78,6 +78,7 @@ let go_into_hiding v = {v with status=In_hiding}
 let go_free v = {v with status=At_large{anxiety=0}}
 
 module G = struct
+  let face v = v.face
   let id_code v = v.face.id
   let gender v = v.face.gender
   let anxiety v = match v.status with
