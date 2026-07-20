@@ -51,10 +51,12 @@ module G = struct
   let clues v = v.d.clues
 end
 module U = struct
+  let agents agents v = {v with d={v.d with agents}}
   let events events v = {v with d={v.d with events}}
   let actions actions v = {v with d={v.d with actions}}
   let items items v = {v with d={v.d with items}}
   let orgs orgs v = {v with d={v.d with orgs}}
+  let roles roles v = {v with d={v.d with roles}}
 end
 
 let update_events fn v = U.events (fn v.d.events) v

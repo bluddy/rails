@@ -1,5 +1,13 @@
 open! Containers
 
+type standard = [
+  | `Known_face
+  | `Known_agent
+  | `Known_org
+  | `Known_loc
+  | `Known_role
+][@@deriving enum]
+
 type t = [
   | `Known_face
   | `Known_agent
@@ -32,6 +40,8 @@ let random ?(max=`Known_role) r =
   let max = to_enum max in
   Random.int (max + 1) r
   |> of_enum |> Option.get_exn_or "oops"
+
+let random_standard r = Random.choose_return standard r
 
 module Set = struct
   include Utils.Set.Make(struct

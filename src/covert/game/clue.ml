@@ -91,7 +91,7 @@ let create_id (s:Services.t) role_id difficulty roles agents =
   in
   num + clue_random
 
-let create org_id (s:Services.t) loc_id role_id source known case =
+let create (s:Services.t) org_id loc_id role_id source known case =
   let roles, agents, orgs, locs, clues, diff =
     let open Case_d in
     G.roles case, G.agents case, G.orgs case, G.locs case, G.clues case, G.difficulty case in
@@ -128,9 +128,9 @@ let create org_id (s:Services.t) loc_id role_id source known case =
   in
   let clue_id = Map.num clues |> Id.of_int in
   let clues = Map.add clue_id clue clues in
-  clue_id, {case with d={case.d with clues; locs; orgs}}
+  clue_id, {case with d={case.d with clues; locs; orgs; roles}}
 
-let known_to_discover random role_id roles (case:Case_d.t) =
+let known_to_discover random role_id roles (case:Case_d.t) : Known_data.standard option =
   let role = Role.Map.find role_id roles in
   if Known_data.Set.all_standard role.Role.known then None else
   if Difficulty.lowest (Case_d.G.difficulty case) &&
@@ -139,16 +139,16 @@ let known_to_discover random role_id roles (case:Case_d.t) =
     && Difficulty.(Case_d.G.difficulty case < Regional_conflict)
     && not @@ Role.check_known [`Known_loc] role then Some `Known_loc else
   let known = Utils.do_while
-    (fun () -> Known_data.random random)
+    (fun () -> Known_data.random_standard random)
     (fun known -> Role.check_known [known] role)
   in
   Some known
 
-let generate ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (case:Case_d.t) =
+let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (case:Case_d.t) =
   let open Case_d in
-  let agents, orgs, locs, roles = G.agents case, G.orgs case, G.locs case, G.roles case in
   let clue_amt = clue_amt + 1 in
-  Agent.Map.fold (fun agent_id agent (chosen_agent, agents, roles) ->
+  Agent.Map.fold (fun agent_id agent (chosen_agent, case, clue_ids) ->
+    let agents, orgs, locs = G.agents case, G.orgs case, G.locs case in
     let org_id = Agent.S.to_org agents agent_id in
     let loc_id = Agent.S.to_loc agents agent_id in
     let org_to_cia_dist = Org.connection orgs org_id in_org_id in
@@ -159,32 +159,38 @@ let generate ?(in_org_id=Org.cia) in_loc_id clue_amt clue_type (case:Case_d.t) =
     let diff_factor = 10000 / ((G.difficulty case |> Difficulty.to_enum) + 2) / clue_div_dist  in
     let diff_factor_2 = diff_factor * diff_factor in
     let discover_val = ((Agent.G.discover_val agent / 2) + diff_factor + 1) / diff_factor_2 in
-    let agents = Agent.S.update agent_id (Agent.U.discover_val discover_val) agents in
-    let roles =
-      Role.Set.fold (fun role_id (roles as acc) ->
+    let agents = Agent.S.update agent_id (Agent.U.discover_val discover_val) (G.agents case) in
+    let case = U.agents agents case in
+    let case, clue_ids =
+      Role.Set.fold (fun role_id (case, clue_ids as acc) ->
+        let roles = G.roles case in
         let role = Role.Map.find role_id roles in
         match Role.G.ctr_tick role with
         | Some tick when tick <= case.time.tick ->
-            let w = 5000/((G.difficulty case |> Difficulty.to_enum) + 3) in
-            let role = Role.U.ctr_discovery_add (w / clue_div_dist2) role in
-            let rec loop role =
-              let needed_val = Known_data.Set.to_discover_val (Role.G.known role) in
+            let w = 5000 / ((G.difficulty case |> Difficulty.to_enum) + 3) in
+            let roles = Role.S.ctr_discovery_add role_id (w / clue_div_dist2) roles in
+            let case = U.roles roles case in
+            let rec loop case clue_acc =
+              let role = Role.Map.find role_id @@ G.roles case in
+              let needed_val = Known_data.Set.to_discover_val @@ Role.G.known role in
               let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
               let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
-              if disc <= needed_val then role else
-              if Known_data.Set.all_standard role.known then role else
-              (* TODO: reveal clue
-                 if clue_org is cia, clue method, else wiretap/photo
-               *)
-              loop role
+              if disc <= needed_val then (case, clue_acc) else
+              if Known_data.Set.all_standard role.known then (case, clue_acc)
+              else
+                let known = known_to_discover s.random role_id roles case in
+                let clue_id, case = create s org_id loc_id role_id clue_src known case in
+                loop case (clue_id::clue_acc)
             in
-            let role = loop role in
-            Role.Map.add role_id role roles
+            loop case clue_ids
         | _ -> acc)
       agent.roles
-      roles
+      (case, clue_ids)
     in
-    chosen_agent, agents, roles)
-  agents
-  (None, agents, roles)
+    chosen_agent, case, clue_ids)
+  (G.agents case)
+  (None, case, [])
 
+(* TODO: reveal clue
+    if clue_org is cia, clue method, else wiretap/photo
+  *)

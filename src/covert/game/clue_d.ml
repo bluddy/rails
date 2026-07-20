@@ -106,6 +106,7 @@ end
 
 module Source = struct
   type t =
+    | Information
     | Wiretap
     | Files
     | Wall_safe

@@ -103,6 +103,8 @@ module S = struct
 
   let update role_id fn v = Map.update role_id (Option.map fn) v
 
+  let ctr_discovery_add role_id n v = update role_id (fun v -> U.ctr_discovery_add n v) v
+
   let update_ctr role_id fn v = update role_id (fun v -> {v with ctr=fn v.ctr}) v
 
   let add_known known role_id roles = update role_id (add_known known) roles
