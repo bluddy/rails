@@ -147,13 +147,12 @@ let known_to_discover random role_id roles (case:Case_d.t) : Known_data.standard
 let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (case:Case_d.t) =
   let open Case_d in
   let clue_amt = clue_amt + 1 in
-  Agent.Map.fold (fun agent_id agent (chosen_agent, case, clue_ids) ->
+  Agent.Map.fold (fun agent_id agent (case, clue_ids) ->
     let agents, orgs, locs = G.agents case, G.orgs case, G.locs case in
     let org_id = Agent.S.to_org agents agent_id in
     let loc_id = Agent.S.to_loc agents agent_id in
     let org_to_cia_dist = Org.connection orgs org_id in_org_id in
     let loc_to_agent_loc_dist = Loc.connection locs loc_id in_loc_id in
-    let chosen_agent = if org_to_cia_dist = 0 && loc_to_agent_loc_dist = 0 then Some agent_id else chosen_agent in
     let clue_div_dist = (clue_amt / ((loc_to_agent_loc_dist + 2) * (org_to_cia_dist + 2))) / 256 in
     let clue_div_dist2 = (clue_amt / ((loc_to_agent_loc_dist + 6) * (org_to_cia_dist + 3))) / 64 in
     let diff_factor = 10000 / ((G.difficulty case |> Difficulty.to_enum) + 2) / clue_div_dist  in
@@ -187,10 +186,7 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
       agent.roles
       (case, clue_ids)
     in
-    chosen_agent, case, clue_ids)
+    case, clue_ids)
   (G.agents case)
-  (None, case, [])
+  (case, [])
 
-(* TODO: reveal clue
-    if clue_org is cia, clue method, else wiretap/photo
-  *)
