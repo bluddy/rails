@@ -147,46 +147,58 @@ let known_to_discover random role_id roles (case:Case_d.t) : Known_data.standard
 let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (case:Case_d.t) =
   let open Case_d in
   let clue_amt = clue_amt + 1 in
-  Agent.Map.fold (fun agent_id agent (case, clue_ids) ->
-    let agents, orgs, locs = G.agents case, G.orgs case, G.locs case in
-    let org_id = Agent.S.to_org agents agent_id in
-    let loc_id = Agent.S.to_loc agents agent_id in
-    let org_to_cia_dist = Org.connection orgs org_id in_org_id in
-    let loc_to_agent_loc_dist = Loc.connection locs loc_id in_loc_id in
-    let clue_div_dist = (clue_amt / ((loc_to_agent_loc_dist + 2) * (org_to_cia_dist + 2))) / 256 in
-    let clue_div_dist2 = (clue_amt / ((loc_to_agent_loc_dist + 6) * (org_to_cia_dist + 3))) / 64 in
-    let diff_factor = 10000 / ((G.difficulty case |> Difficulty.to_enum) + 2) / clue_div_dist  in
-    let diff_factor_2 = diff_factor * diff_factor in
-    let discover_val = ((Agent.G.discover_val agent / 2) + diff_factor + 1) / diff_factor_2 in
-    let agents = Agent.S.update agent_id (Agent.U.discover_val discover_val) (G.agents case) in
-    let case = U.agents agents case in
-    let case, clue_ids =
-      Role.Set.fold (fun role_id (case, clue_ids as acc) ->
-        let roles = G.roles case in
-        let role = Role.Map.find role_id roles in
-        match Role.G.ctr_tick role with
-        | Some tick when tick <= case.time.tick ->
-            let w = 5000 / ((G.difficulty case |> Difficulty.to_enum) + 3) in
-            let roles = Role.S.ctr_discovery_add role_id (w / clue_div_dist2) roles in
-            let case = U.roles roles case in
-            let rec loop case clue_acc =
-              let role = Role.Map.find role_id @@ G.roles case in
-              let needed_val = Known_data.Set.to_discover_val @@ Role.G.known role in
-              let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
-              let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
-              if disc <= needed_val then (case, clue_acc) else
-              match known_to_discover s.random role_id roles case with
-              | None -> case, clue_acc
-              | Some known ->
-                let clue_id, case = create s org_id loc_id role_id clue_src known case in
-                loop case (clue_id::clue_acc)
-            in
-            loop case clue_ids
-        | _ -> acc)
-      agent.roles
-      (case, clue_ids)
-    in
-    case, clue_ids)
-  (G.agents case)
-  (case, [])
+  let case, display_clue_ids =
+    Agent.Map.fold (fun agent_id agent (case, clue_ids) ->
+      let agents, orgs, locs = G.agents case, G.orgs case, G.locs case in
+      let org_id = Agent.S.to_org agents agent_id in
+      let loc_id = Agent.S.to_loc agents agent_id in
+      let org_to_agent_org_dist = Org.connection orgs org_id in_org_id in
+      let loc_to_agent_loc_dist = Loc.connection locs loc_id in_loc_id in
+      let clue_div_dist = (clue_amt / ((loc_to_agent_loc_dist + 2) * (org_to_agent_org_dist + 2))) / 256 in
+      let clue_div_dist2 = (clue_amt / ((loc_to_agent_loc_dist + 6) * (org_to_agent_org_dist + 3))) / 64 in
+      let diff_factor = 10000 / ((G.difficulty case |> Difficulty.to_enum) + 2) / clue_div_dist  in
+      let diff_factor_2 = diff_factor * diff_factor in
+      let discover_val = ((Agent.G.discover_val agent / 2) + diff_factor + 1) / diff_factor_2 in
+      let agents = Agent.S.update agent_id (Agent.U.discover_val discover_val) (G.agents case) in
+      let case = U.agents agents case in
+      let case, clue_ids =
+        Role.Set.fold (fun role_id (case, clue_ids as acc) ->
+          let roles = G.roles case in
+          let role = Role.Map.find role_id roles in
+          match Role.G.ctr_tick role with
+          | Some tick when tick <= case.time.tick ->
+              let w = 5000 / ((G.difficulty case |> Difficulty.to_enum) + 3) in
+              let roles = Role.S.ctr_discovery_add role_id (w / clue_div_dist2) roles in
+              let case = U.roles roles case in
+              let rec loop case clue_acc =
+                let role = Role.Map.find role_id @@ G.roles case in
+                let needed_val = Known_data.Set.to_discover_val @@ Role.G.known role in
+                let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
+                let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
+                if disc <= needed_val then (case, clue_acc) else
+                match known_to_discover s.random role_id roles case with
+                | None -> case, clue_acc
+                | Some known ->
+                  let clue_id, case = create s org_id loc_id role_id clue_src known case in
+                  loop case (clue_id::clue_acc)
+              in
+              loop case clue_ids
+          | _ -> acc)
+        agent.roles
+        (case, clue_ids)
+      in
+      let acc = case, clue_ids in
+      let agent = Agent.Map.find agent_id @@ G.agents case in
+      if Known_data.Set.is_empty agent.known
+         && org_to_agent_org_dist = 0
+         && loc_to_agent_loc_dist = 0 then acc else
+
+
+
+        )
+    (G.agents case)
+    (case, [])
+  in
+
+  ()
 
