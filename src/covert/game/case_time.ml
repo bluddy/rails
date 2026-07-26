@@ -181,7 +181,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
       set_tick_and_ctr_tick event_id v
   in
   let handle_agent_items event_id event actions items bs =
-    let actions = create_action time (Action.Event_based event_id) v actions in
+    let actions = create_action time (Action.Event_based (event_id, Action.default_send)) v actions in
     let agent_id = Event.S.to_role (G.events v) event_id |> Role.S.to_agent (G.roles v) in
     let actions, items, bs =
       List.fold_left (fun (actions, items, bs) item_id ->
@@ -240,7 +240,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
       if reveal_action then
         Action.Map.fold (fun action_id action ((actions, agents, bs) as acc) ->
           match action.Action.kind with
-          | Event_based event_id2 when Event.Id.(event_id2 = event_id)
+          | Event_based (event_id2, _) when Event.Id.(event_id2 = event_id)
             && action.time = v.time.Time.minutes ->
               let actions = Action.S.update action_id Action.U.known_all actions in
               let double = Agent.is_double_agent agent in
@@ -282,7 +282,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
     | With_role {inter=Meet; tx=Rcv; _} when Agent.S.is_known `Known_face agent_id agents ->
       Action.Map.fold (fun action_id action ((actions, bs) as acc) ->
         match action.Action.kind with
-        | Event_based event_id2 when Event.Id.(event_id2 = event_id) &&
+        | Event_based (event_id2, _) when Event.Id.(event_id2 = event_id) &&
           not @@ Action.send_loc_eq_rcv_loc action ->
             let bs =
               let loc_home = Action.G.send_loc action in
