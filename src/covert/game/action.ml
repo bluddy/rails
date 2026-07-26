@@ -37,26 +37,33 @@ type kind =
   [@@deriving yojson]
 
 type known = [
-  | `Decoded
   | `Known_time
   | `Known_name
   | `Known_org
   | `Known_loc
-] [@@deriving yojson, ord]
+] [@@deriving yojson, ord, enum]
+
+let to_base2 v = 1 lsl (known_to_enum v)
 
 module KnownSet = struct
   include Utils.Set.Make(struct
-  type t = known [@@deriving yojson, ord]
-end)
+    type t = known [@@deriving yojson, ord]
+  end)
 
-  let all = [`Decoded; `Known_time; `Known_name; `Known_org; `Known_loc]
-    |> of_list
+  let all = [`Known_time; `Known_name; `Known_org; `Known_loc] |> of_list
+
+  let to_base2 v = fold (fun x acc -> acc + to_base2 x) v 0
+
+  let to_discover_val v =
+    let base2 = to_base2 v in
+    Known_data.clue_discover_vals.(base2)
 end
 
 type t = {
   kind: kind;
   time: int;
   known: KnownSet.t;
+  decoded: bool;
 } [@@deriving yojson]
 
 module Id = Engine.Int_id.Make()
@@ -90,7 +97,7 @@ let create time kind events roles (agents:Agent.map) =
         Event_based (event_id, send)
     | _ -> kind
   in
-  {kind; time; known=KnownSet.empty}
+  {kind; time; known=KnownSet.empty; decoded=false}
 
 let send_loc_eq_rcv_loc v =
   match v.kind with
