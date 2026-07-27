@@ -212,7 +212,13 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
                 | Some rcv ->
                     let rcv_agent = Agent.Map.find rcv.rcv_agent (Case.G.agents case) in
                     let new_agent_id, agents = Agent_c.get_or_gen s rcv_agent.org rcv_agent.loc case in
-                    let known = Action.KnownSet.(inter action.known (of_list [`Known_agent; `Known_org]) |> to_list) in
+                    let known =
+                      Action.KnownSet.to_list action.known
+                      |> List.filter_map (function
+                        | `Known_agent -> Some `Known_agent
+                        | `Known_org -> Some `Known_org
+                        | _ -> None)
+                    in
                     let agents = Agent.S.add_known new_agent_id (known :> Known_data.t list) agents in
                     agents
                 | None -> agents
