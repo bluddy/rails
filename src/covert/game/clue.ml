@@ -192,47 +192,49 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
       let agent = Agent.Map.find agent_id @@ G.agents case in
       if Known_data.Set.is_empty agent.known
          && org_to_agent_org_dist = 0 && loc_to_agent_loc_dist = 0 then acc else
-      let ctr = 2 in
-      Action.Map.fold (fun action_id (action:Action.t) ctr ->
-        match action.kind with
-        | Event_based (event_id, send) when Agent.Id.(send.send_agent = agent_id) ->
-            let discover_val = Action.KnownSet.to_discover_val action.known in
-            let z = discover_val * 2 + ctr in
-            let event = Event.Map.find event_id (Case.G.events case) in
-            let role_id = Event.S.to_role (Case.G.events case) event_id in
-            let role = Role.Map.find role_id (Case.G.roles case) in
-            let disc_val = (agent.discover_val * role.discover_val) / 96 in
-            let test = disc_val > z in
-            let known_all = Action.KnownSet.(equal all action.known) in
-            if not test || known_all then
-              let ctr = ctr + 1 in
-              (* NOTE: OG checks for 0xF00 bits here, we don't know if they're necessary. *)
-              if Action.KnownSet.mem_any [`Known_agent; `Known_org; `Known_loc] action.known then
-                match send.rcv with
-                | Some rcv ->
-                    let rcv_agent = Agent.Map.find rcv.rcv_agent (Case.G.agents case) in
-                    let new_agent_id, agents = Agent_c.get_or_gen s rcv_agent.org rcv_agent.loc case in
-                    let known =
-                      Action.KnownSet.to_list action.known
-                      |> List.filter_map (function
-                        | `Known_agent -> Some `Known_agent
-                        | `Known_org -> Some `Known_org
-                        | _ -> None)
-                    in
-                    let agents = Agent.S.add_known new_agent_id (known :> Known_data.t list) agents in
-                    agents
-                | None -> agents
+      let ctr, agents =
+        Action.Map.fold (fun action_id (action:Action.t) ((ctr, agents) as acc) ->
+          match action.kind with
+          | Event_based (event_id, send) when Agent.Id.(send.send_agent = agent_id) ->
+              let discover_val = Action.KnownSet.to_discover_val action.known in
+              let z = discover_val * 2 + ctr in
+              let event = Event.Map.find event_id (Case.G.events case) in
+              let role_id = Event.S.to_role (Case.G.events case) event_id in
+              let role = Role.Map.find role_id (Case.G.roles case) in
+              let disc_val = (agent.discover_val * role.discover_val) / 96 in
+              let test = disc_val > z in
+              let known_all = Action.KnownSet.(equal all action.known) in
+              if not test || known_all then
+                let ctr = ctr + 1 in
+                (* NOTE: OG checks for 0xF00 bits here, we don't know if they're necessary. *)
+                if Action.KnownSet.mem_any [`Known_agent; `Known_org; `Known_loc] action.known then
+                  match send.rcv with
+                  | Some rcv ->
+                      let rcv_agent = Agent.Map.find rcv.rcv_agent (Case.G.agents case) in
+                      let new_agent_id, agents = Agent_c.get_or_gen s rcv_agent.org rcv_agent.loc case in
+                      let known =
+                        Action.KnownSet.to_list action.known
+                        |> List.filter_map (function
+                          | `Known_agent -> Some `Known_agent
+                          | `Known_org -> Some `Known_org
+                          | `Known_loc when Loc.Id.(rcv.rcv_loc = rcv_agent.loc) -> Some `Known_loc
+                          | _ -> None)
+                      in
+                      let agents = Agent.S.add_known new_agent_id (known :> Known_data.t list) agents in
+                      ctr, agents
+                  | None -> acc
+                else
+                  acc
               else
                 acc
-            else
-              acc
-        | _ -> acc)
-      (Case.G.actions case)
-      ctr
-    )
+          | _ -> acc)
+        (Case.G.actions case)
+        (2, G.agents case)
+      in
+      let case = Case.U.agents agents case in
+      case, clue_ids)
     (G.agents case)
     (case, [])
   in
-
   ()
 
