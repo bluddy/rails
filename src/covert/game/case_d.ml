@@ -17,7 +17,7 @@ type data = {
   roles: Role.map;
   hqs: Hq.map;
   events: Event_d.map;
-  actions: Action.map;
+  actions: Action_d.map;
   items: Item.map;
   clues: Clue_d.map;
 } [@@deriving yojson]
@@ -49,6 +49,7 @@ module G = struct
   let difficulty v = v.world.difficulty
   let items v = v.d.items
   let clues v = v.d.clues
+  let mm v = v.s.mm
 end
 module U = struct
   let agents agents v = {v with d={v.d with agents}}

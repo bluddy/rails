@@ -206,7 +206,14 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
             let known_all = Action.KnownSet.(equal all action.known) in
             if not test || known_all then
               let ctr = ctr + 1 in
-              acc
+              (* NOTE: OG checks for 0xF00 bits here, we don't know if they're necessary. *)
+              if Action.KnownSet.mem_any action.known [`Known_name; `Known_org; `Known_loc] then
+                match send.rcv with
+                | Some rcv ->
+                    let rcv_agent = Agent.Map.find rcv.rcv_agent (Case.G.agents case) in
+
+              else
+                acc
             else
               acc
         | _ -> acc)
