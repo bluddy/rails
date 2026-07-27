@@ -17,7 +17,7 @@ type data = {
   roles: Role.map;
   hqs: Hq.map;
   events: Event_d.map;
-  actions: Action_d.map;
+  actions: Action.map;
   items: Item.map;
   clues: Clue_d.map;
 } [@@deriving yojson]

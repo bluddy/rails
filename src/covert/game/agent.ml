@@ -48,8 +48,8 @@ let has_role v = Role_d.Set.not_empty v.roles
 let add_role_known role_id v =
   {v with roles_known=Role_d.Set.add role_id v.roles_known}
 
-let add_known_data known v =
-  {v with known=Known_data.Set.add known v.known}
+let add_known known v =
+  {v with known=Known_data.Set.add_list v.known known}
 
 (* Should be rarely used *)
 let remove_known_data_ known v =
@@ -122,8 +122,8 @@ module S = struct
   let add_role_known agent_id role_id agents =
     update agent_id (add_role_known role_id) agents
 
-  let add_known_data agent_id known agents =
-    update agent_id (add_known_data known) agents
+  let add_known agent_id known agents =
+    update agent_id (add_known known) agents
 
   (* This shouldn't be used directly *)
   let remove_known_data_ agent_id known agents =

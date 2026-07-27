@@ -38,7 +38,7 @@ type kind =
 
 type known = [
   | `Known_time
-  | `Known_name
+  | `Known_agent
   | `Known_org
   | `Known_loc
 ] [@@deriving yojson, ord, enum]
@@ -50,7 +50,7 @@ module KnownSet = struct
     type t = known [@@deriving yojson, ord]
   end)
 
-  let all = [`Known_time; `Known_name; `Known_org; `Known_loc] |> of_list
+  let all = [`Known_time; `Known_agent; `Known_org; `Known_loc] |> of_list
 
   let to_base2 v = fold (fun x acc -> acc + to_base2 x) v 0
 

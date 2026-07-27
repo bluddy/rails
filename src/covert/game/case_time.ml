@@ -253,8 +253,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
                 match Action.G.rcv action with
                 | Some {rcv_agent; _} when double ->
                     agents
-                    |> Agent.S.add_known_data rcv_agent `Known_loc
-                    |> Agent.S.add_known_data rcv_agent `Known_org
+                    |> Agent.S.add_known rcv_agent [`Known_loc; `Known_org]
                     |> add_known_role rcv_agent
                 | Some {rcv_agent; _} when Event.is_meeting event ->
                     add_known_role rcv_agent agents
