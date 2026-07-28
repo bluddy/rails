@@ -144,10 +144,21 @@ let known_to_discover random role_id roles (case:Case_d.t) : Known_data.standard
   in
   Some known
 
+type find_out =
+  | Discover_clue of {
+      clue: Id.t;
+      case: Case.t;
+    }
+  | Discover_agent_info of {
+      agent: Agent.Id.t;
+      case: Case.t;
+    }
+
+
 let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (case:Case_d.t) =
   let open Case_d in
   let clue_amt = clue_amt + 1 in
-  let case, display_clue_ids =
+  let case, discover =
     Agent.Map.fold (fun agent_id agent (case, clue_ids) ->
       let agents, orgs, locs = G.agents case, G.orgs case, G.locs case in
       let org_id = Agent.S.to_org agents agent_id in
@@ -170,30 +181,30 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
               let w = 5000 / ((G.difficulty case |> Difficulty.to_enum) + 3) in
               let roles = Role.S.ctr_discovery_add role_id (w / clue_div_dist2) roles in
               let case = U.roles roles case in
-              let rec loop case clue_acc =
+              let rec loop case disc_acc =
                 let role = Role.Map.find role_id @@ G.roles case in
                 let needed_val = Known_data.Set.to_discover_val @@ Role.G.known role in
                 let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
                 let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
-                if disc <= needed_val then (case, clue_acc) else
+                if disc <= needed_val then (case, disc_acc) else
                 match known_to_discover s.random role_id roles case with
-                | None -> case, clue_acc
+                | None -> case, disc_acc
                 | Some known ->
                   let clue_id, case = create s org_id loc_id role_id clue_src known case in
-                  loop case (clue_id::clue_acc)
+                  let discover = Discover_clue {clue=clue_id; case} in
+                  loop case (discover::disc_acc)
               in
               loop case clue_ids
           | _ -> acc)
         agent.roles
         (case, clue_ids)
       in
-      let case, clue_ids = discover_in_role case in
-      let acc = case, clue_ids in
+      let case, discover = discover_in_role case in
       let agent = Agent.Map.find agent_id @@ G.agents case in
       if Known_data.Set.is_empty agent.known
-         && org_to_agent_org_dist = 0 && loc_to_agent_loc_dist = 0 then acc else
-      let ctr, agents =
-        Action.Map.fold (fun action_id (action:Action.t) ((ctr, agents) as acc) ->
+         && org_to_agent_org_dist = 0 && loc_to_agent_loc_dist = 0 then case, discover else
+      let _, discover, agents =
+        Action.Map.fold (fun action_id (action:Action.t) ((ctr, discover, agents) as acc) ->
           match action.kind with
           | Event_based (event_id, send) when Agent.Id.(send.send_agent = agent_id) ->
               let discover_val = Action.KnownSet.to_discover_val action.known in
@@ -202,9 +213,9 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
               let role_id = Event.S.to_role (Case.G.events case) event_id in
               let role = Role.Map.find role_id (Case.G.roles case) in
               let disc_val = (agent.discover_val * role.discover_val) / 96 in
-              let test = disc_val > z in
+              let pass_test = disc_val > z in
               let known_all = Action.KnownSet.(equal all action.known) in
-              if not test || known_all then
+              if not pass_test || known_all then
                 let ctr = ctr + 1 in
                 (* NOTE: OG checks for 0xF00 bits here, we don't know if they're necessary. *)
                 if Action.KnownSet.mem_any [`Known_agent; `Known_org; `Known_loc] action.known then
@@ -223,13 +234,25 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
                       let agents = Agent.S.add_known new_agent_id (known :> Known_data.t list) agents in
                       ctr, agents
                   | None -> acc
-                else
-                  acc
+                else acc
               else
+                let known =
+                  Utils.do_while
+                  (fun () -> Action.Known.random s.random) 
+                  (fun known -> Action.is_known known action)
+                in
+                let is_meeting = Event.is_meeting event in
+                let first_knowledge = Action.Known.Set.is_empty action.known in
+                let discover = Discover_agent_info{
+                  agent=agent_id;
+                  is_meeting; first_knowledge;
+                }
+                in
                 acc
+
           | _ -> acc)
         (Case.G.actions case)
-        (2, G.agents case)
+        (2, discover, G.agents case)
       in
       let case = Case.U.agents agents case in
       case, clue_ids)

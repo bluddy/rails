@@ -36,33 +36,42 @@ type kind =
   | Agent_out_of_hiding of Agent.Id.t
   [@@deriving yojson]
 
-type known = [
+module Known = struct
+
+type t = [
   | `Known_time
   | `Known_agent
   | `Known_org
   | `Known_loc
 ] [@@deriving yojson, ord, enum]
 
-let to_base2 v = 1 lsl (known_to_enum v)
+  let to_base2 v = 1 lsl (to_enum v)
 
-module KnownSet = struct
-  include Utils.Set.Make(struct
-    type t = known [@@deriving yojson, ord]
-  end)
+  module Set = struct
+    include Utils.Set.Make(struct
+      type known = t [@@deriving yojson, ord]
+      type t = known [@@deriving yojson, ord]
+    end)
 
-  let all = [`Known_time; `Known_agent; `Known_org; `Known_loc] |> of_list
+    let all = [`Known_time; `Known_agent; `Known_org; `Known_loc]
 
-  let to_base2 v = fold (fun x acc -> acc + to_base2 x) v 0
+    let random r = Random.choose_return all r
 
-  let to_discover_val v =
-    let base2 = to_base2 v in
-    Known_data.clue_discover_vals.(base2)
+    let all = all |> of_list
+
+    let to_base2 v = fold (fun x acc -> acc + to_base2 x) v 0
+
+    let to_discover_val v =
+      let base2 = to_base2 v in
+      Known_data.clue_discover_vals.(base2)
+
+  end
 end
 
 type t = {
   kind: kind;
   time: int;
-  known: KnownSet.t;
+  known: Known.Set.t;
   decoded: bool;
 } [@@deriving yojson]
 
@@ -97,7 +106,7 @@ let create time kind events roles (agents:Agent.map) =
         Event_based (event_id, send)
     | _ -> kind
   in
-  {kind; time; known=KnownSet.empty; decoded=false}
+  {kind; time; known=Known.Set.empty; decoded=false}
 
 let send_loc_eq_rcv_loc v =
   match v.kind with
@@ -107,9 +116,11 @@ let send_loc_eq_rcv_loc v =
     end
   | _ -> false
 
-let add_known known v = {v with known=KnownSet.add known v.known}
+let add_known known v = {v with known=Known.Set.add known v.known}
 
 let add_known l v = List.fold_left (fun acc x -> add_known x acc) v l
+
+let is_known k v = Known.Set.mem k v.known
 
 module G = struct
   let send_loc v = match v.kind with
