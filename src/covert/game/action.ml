@@ -47,15 +47,15 @@ type t = [
 
   let to_base2 v = 1 lsl (to_enum v)
 
+  let all = [`Known_time; `Known_agent; `Known_org; `Known_loc]
+
+  let random r = Random.choose_return all r
+
   module Set = struct
     include Utils.Set.Make(struct
       type known = t [@@deriving yojson, ord]
       type t = known [@@deriving yojson, ord]
     end)
-
-    let all = [`Known_time; `Known_agent; `Known_org; `Known_loc]
-
-    let random r = Random.choose_return all r
 
     let all = all |> of_list
 
@@ -144,7 +144,7 @@ module G = struct
 end
 
 module U = struct
-  let known_all v = {v with known=KnownSet.all}
+  let known_all v = {v with known=Known.Set.all}
 end
 
 module S = struct
