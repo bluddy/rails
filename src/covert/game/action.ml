@@ -1,28 +1,25 @@
 open! Ppx_yojson_conv_lib.Yojson_conv.Primitives
 open! Containers
 
-type rcv = {
-  rcv_agent: Agent.Id.t;
-  rcv_loc: Loc.Id.t;
-} [@@deriving yojson]
-
-type send = {
-  send_agent: Agent.Id.t;
+type event_based = {
   status: Agent.status;
-  send_loc: Loc.Id.t;
-  rcv: rcv option;
+  agent1: Agent.Id.t;
+  loc1: Loc.Id.t;
+  agent2: Agent.Id.t;
+  loc2: Loc.Id.t;
 } [@@deriving yojson]
 
 (* Used only for initial value *)
 let default_send = {
-  send_agent=Agent.Id.of_int @@ -1;
   status=Arrested;
-  send_loc=Loc.Id.of_int @@ -1;
-  rcv=None;
+  agent1=Agent.Id.of_int @@ -1;
+  loc1=Loc.Id.of_int @@ -1;
+  agent2=Agent.Id.of_int @@ -1;
+  loc2=Loc.Id.of_int @@ -1;
 }
 
 type kind =
-  | Event_based of Event.Id.t * send
+  | Event_based of Event.Id.t * event_based
   | Travel of Loc.Id.t
   | Break_in of Org.Id.t * Loc.Id.t
   | Item_confiscate of Item.Id.t
@@ -75,7 +72,11 @@ type t = {
   decoded: bool;
 } [@@deriving yojson]
 
-module Id = Engine.Int_id.Make()
+module Id = struct
+  include Engine.Int_id.Make()
+  let prev v = (to_int v) - 1 |> of_int
+  let next v = (to_int v) + 1 |> of_int
+end
 
 module Map = Utils.Map.Make(struct
   type t = Id.t [@@deriving yojson, ord]
@@ -90,30 +91,27 @@ let create time kind events roles (agents:Agent.map) =
         let send =
           let agent_id = Event.S.to_role events event_id |> Role.S.to_agent roles in
           let agent = Agent.Map.find agent_id agents in
-          let send_loc = agent.loc in
+          let loc1 = agent.loc in
           let status = agent.status in
           let event = Event.Map.find event_id events in
-          let rcv = match event.kind with
+          let agent2_id, loc2 = match event.kind with
             | With_role {rcv_role;_} ->
-                let rcv_agent_id = Role.S.to_agent roles rcv_role in
-                let rcv_agent = Agent.Map.find rcv_agent_id agents in
-                let rcv_loc = rcv_agent.loc in
-                Some {rcv_agent=rcv_agent_id; rcv_loc}
-            | _ -> None
+                let agent2_id = Role.S.to_agent roles rcv_role in
+                let agent2 = Agent.Map.find agent2_id agents in
+                let loc2 = agent2.loc in
+                agent2_id, loc2
+            | _ -> failwith "Invalid event for event-based action"
           in
-          {send_agent=agent_id; status; send_loc; rcv}
+          {agent1=agent_id; status; loc1; loc2; agent2=agent2_id}
         in
         Event_based (event_id, send)
     | _ -> kind
   in
   {kind; time; known=Known.Set.empty; decoded=false}
 
-let send_loc_eq_rcv_loc v =
+let loc1_eq_loc2 v =
   match v.kind with
-  | Event_based (_, send) -> begin match send.rcv with
-    | Some rcv -> Loc.Id.(send.send_loc = rcv.rcv_loc)
-    | _ -> false
-    end
+  | Event_based (_, send) -> Loc.Id.(send.loc1 = send.loc2)
   | _ -> false
 
 let add_known known v = {v with known=Known.Set.add known v.known}
@@ -123,23 +121,20 @@ let add_known l v = List.fold_left (fun acc x -> add_known x acc) v l
 let is_known k v = Known.Set.mem k v.known
 
 module G = struct
-  let send_loc v = match v.kind with
-    | Event_based (_, s) -> s.send_loc
-    | _ -> failwith "no send loc"
-
-  let send_agent v = match v.kind with
-    | Event_based (_, s) -> Some s.send_agent
+  let loc1 v = match v.kind with
+    | Event_based (_, s) -> Some s.loc1
     | _ -> None
 
-  let rcv_loc v = match v.kind with
-    | Event_based (_, s) -> begin match s.rcv with
-      | Some r -> r.rcv_loc
-      | None -> failwith "no rcv loc"
-    end
-    | _ -> failwith "no send loc"
+  let agent1 v = match v.kind with
+    | Event_based (_, s) -> Some s.agent1
+    | _ -> None
 
-  let rcv agent = match agent.kind with
-    | Event_based (_, s) -> s.rcv
+  let loc2 v = match v.kind with
+    | Event_based (_, s) -> Some s.loc2
+    | _ -> None
+
+  let agent2 agent = match agent.kind with
+    | Event_based (_, s) -> Some s.agent2
     | _ -> None
 end
 
@@ -161,10 +156,17 @@ module S = struct
 
   let add_known l action_id actions = update action_id (add_known l) actions
 
-  (* let print_summary_event_based action_id actions = *)
-  (*   let action = Map.find action_id actions in *)
-  (*   match action.kind with *)
-  (*   | Event_based event_id -> () *)
-  (*   | _ -> () *)
+  (* Find the next or prev entry with the same time *)
+  let same_time_idx action_id v =
+    let time = (Map.find action_id v).time in
+    let prev_id, next_id = Id.prev action_id, Id.next action_id in
+    let other_id = match Map.get prev_id v with
+      | Some x when x.time = time -> Some prev_id
+      | _ -> match Map.get next_id v with
+          | Some x when x.time = time -> Some next_id
+          | _ -> None
+    in
+    other_id
+
 end
 

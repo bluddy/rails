@@ -250,13 +250,13 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
                       Agent.S.add_role_known rcv_agent rcv_role agents
                   | _ -> agents
                 in
-                match Action.G.rcv action with
-                | Some {rcv_agent; _} when double ->
+                match Action.G.agent2 action with
+                | Some agent2 when double ->
                     agents
-                    |> Agent.S.add_known rcv_agent [`Known_loc; `Known_org]
-                    |> add_known_role rcv_agent
-                | Some {rcv_agent; _} when Event.is_meeting event ->
-                    add_known_role rcv_agent agents
+                    |> Agent.S.add_known agent2 [`Known_loc; `Known_org]
+                    |> add_known_role agent2
+                | Some agent2 when Event.is_meeting event ->
+                    add_known_role agent2 agents
                 | _ -> agents
               in
               let src = if double then `Double_agent else `Wiretap in
@@ -282,10 +282,10 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
       Action.Map.fold (fun action_id action ((actions, bs) as acc) ->
         match action.Action.kind with
         | Event_based (event_id2, _) when Event.Id.(event_id2 = event_id) &&
-          not @@ Action.send_loc_eq_rcv_loc action ->
+          not @@ Action.loc1_eq_loc2 action ->
             let bs =
-              let loc_home = Action.G.send_loc action in
-              let loc_trip = Action.G.rcv_loc action in
+              let loc_home = Action.G.loc1 action |> Option.get_exn_or "oops" in
+              let loc_trip = Action.G.loc2 action |> Option.get_exn_or "oops" in
               let name = Agent.S.name_if_known agent_id agents in
               Bul.Agent_visit {loc_home; loc_trip; name}::bs
             in
