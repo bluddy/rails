@@ -229,7 +229,7 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
                       | `Known_loc when Loc.Id.(send.loc2 = agent2.loc) -> Some `Known_loc
                       | _ -> None)
                   in
-                  let agents = Agent.S.add_known new_agent_id (known :> Known_data.t list) agents in
+                  let agents = Agent.S.add_known known new_agent_id agents in
                   ctr, agents
                 else acc
               else

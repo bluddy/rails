@@ -57,6 +57,8 @@ let remove_known_data_ known v =
 
 let is_known known v = Known_data.Set.mem known v.known
 
+let is_known_all l v = Known_data.Set.mem_all l v.known
+
 let check_known l v = Known_data.Set.mem_any l v.known
 
 let is_known_any v = Known_data.Set.not_empty v.known
@@ -81,11 +83,13 @@ module G = struct
   let face v = v.face
   let id_code v = v.face.id
   let gender v = v.face.gender
+  let known v = v.known
   let anxiety v = match v.status with
     | At_large {anxiety;_} -> anxiety
     | _ -> 0
 
   let discover_val v = v.discover_val
+  let loc v = v.loc
 end
 module U = struct
   let loc loc_id v = {v with loc=loc_id}
@@ -96,25 +100,36 @@ end
 
 module S = struct
 
-  let name agent_id v =
+  let update agent_id fn agents =
+    Map.update agent_id (Option.map fn) agents
+
+  let with_agent agent_id fn v =
     let agent = Map.find agent_id v in
-    print_name agent
+    fn agent
+
+  let name agent_id v =
+    with_agent agent_id print_name v
+
+  module G = struct
+    let known agent_id v = with_agent agent_id G.known v
+    let loc agent_id v = with_agent agent_id G.loc v
+  end
 
   let name_if_known agent_id v =
-    let agent = Map.find agent_id v in
+    with_agent agent_id (fun agent ->
     if is_known `Known_agent agent then
       print_name agent
     else
       let i = Id.to_int agent_id mod 26 in
       let c = Char.to_int 'A' + i |> Char.of_int |> Option.get_exn_or "oops" in
-      Printf.sprintf "Agent %c" c
+      Printf.sprintf "Agent %c" c)
+    v
 
   let is_known known agent_id v =
-    let agent = Map.find agent_id v in
-    is_known known agent
+    with_agent agent_id (is_known known) v
 
-  let update agent_id fn agents =
-    Map.update agent_id (Option.map fn) agents
+  let is_known_all known agent_id v =
+    with_agent agent_id (is_known_all known) v
 
   let add_role agent_id role_id agents =
     update agent_id (add_role role_id) agents
@@ -122,7 +137,7 @@ module S = struct
   let add_role_known agent_id role_id agents =
     update agent_id (add_role_known role_id) agents
 
-  let add_known agent_id known agents =
+  let add_known known agent_id agents =
     update agent_id (add_known known) agents
 
   (* This shouldn't be used directly *)

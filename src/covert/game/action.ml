@@ -3,9 +3,9 @@ open! Containers
 
 type event_based = {
   status: Agent.status;
-  agent1: Agent.Id.t;
+  agent1: Agent.Id.t; (* relates to pair's action info *)
   loc1: Loc.Id.t;
-  agent2: Agent.Id.t;
+  agent2: Agent.Id.t; (* relates to this action info *)
   loc2: Loc.Id.t;
 } [@@deriving yojson]
 
@@ -120,7 +120,10 @@ let add_known l v = List.fold_left (fun acc x -> add_known x acc) v l
 
 let is_known k v = Known.Set.mem k v.known
 
+let is_known_all l v = Known.Set.mem_all l v.known
+
 module G = struct
+  let known v = v.known
   let loc1 v = match v.kind with
     | Event_based (_, s) -> Some s.loc1
     | _ -> None
@@ -151,10 +154,25 @@ module S = struct
 
   let num v = try (Map.max_binding v |> fst |> Id.to_int) + 1 with Not_found -> 0
 
-  let update action_id fn actions =
-    Map.update action_id (Option.map fn) actions
+  let update action_id fn v =
+    Map.update action_id (Option.map fn) v
+
+  let with_action action_id fn v =
+    let action = Map.find action_id v in
+    fn action
+
+  module G = struct
+    let known action_id v = with_action action_id G.known v
+    let loc2 action_id v = with_action action_id G.loc2 v
+  end
 
   let add_known l action_id actions = update action_id (add_known l) actions
+
+  let is_known known action_id v =
+    with_action action_id (is_known known) v
+
+  let is_known_all known action_id v =
+    with_action action_id (is_known_all known) v
 
   (* Find the next or prev entry with the same time *)
   let same_time_idx action_id v =

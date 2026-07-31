@@ -253,7 +253,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
                 match Action.G.agent2 action with
                 | Some agent2 when double ->
                     agents
-                    |> Agent.S.add_known agent2 [`Known_loc; `Known_org]
+                    |> Agent.S.add_known [`Known_loc; `Known_org] agent2
                     |> add_known_role agent2
                 | Some agent2 when Event.is_meeting event ->
                     add_known_role agent2 agents
