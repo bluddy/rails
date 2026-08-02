@@ -19,6 +19,8 @@ let default = {
 
 let hours_of_min minutes = minutes / 60
 
+let day_of_month hours = hours / 24 + 1
+
 let hour_in_day minutes =
   let hours = hours_of_min minutes in
   hours mod 24
@@ -42,7 +44,12 @@ let print v =
   let hours_am_pm = ((hours_in_day + 11) mod 12) + 1 in
   let am_pm = if hours_in_day < 12 then 'A' else 'P' in
   let month_of_year = v.months mod 12 |> Utils.str_of_month in
-  let day_of_month = hours / 24 + 1 in
+  let day_of_month = day_of_month hours in
   Printf.sprintf "%02d:%02d %cM %s %02d"
     hours_am_pm mins_in_hour am_pm month_of_year day_of_month
+
+let print_month_day v =
+  let month_of_year = v.months mod 12 |> Utils.str_of_month in
+  let day_of_month = hours_of_min v.minutes |> day_of_month in
+  Printf.sprintf "%s %d" month_of_year day_of_month
 

@@ -49,6 +49,7 @@ end
 let global_id_of_id id orgs = (Map.find id orgs).global_id
 
 module G = struct
+  let name v = v.name
   let name_offset v = v.agent_name_offset
   let global_id v = v.global_id
   let bits v = v.bits

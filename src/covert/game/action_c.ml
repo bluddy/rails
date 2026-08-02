@@ -48,8 +48,42 @@ let propagate_known action_id (case:Case_d.t) =
     {case with d={case.d with agents; actions}}
 
   | _ -> case
-  
-  
+
+let get_text action_id (case: Case_d.t) =
+  let actions, events, agents, orgs, locs =
+    Case.G.(actions case, events case, agents case, orgs case, locs case) in
+  let action = Action.Map.find action_id actions in
+  match action.kind with
+  | Event_based (event_id, ev) ->
+      let agent_id, loc_id = ev.agent2, ev.loc2 in (* Action talks about agent 2 *)
+      let event = Event.Map.find event_id events in
+      let name =
+        if Action.is_known `Known_agent action then
+          Agent.S.name_if_known agent_id agents
+        else "someone"
+      in
+      let org =
+        if Action.is_known `Known_org action then
+          let org = Agent.S.to_org agents agent_id |> fun org_id -> Org.Map.find org_id orgs |> Org.G.name in
+          " of the "^org
+        else ""
+      in
+      let loc =
+        if Action.is_known `Known_loc action then
+          let loc = Loc.Map.find loc_id locs |> Loc.G.city in
+          " in "^loc
+        else ""
+      in
+      let time =
+        if Action.is_known `Known_time action then
+          let time = Time.print_month_day case.time in
+          " on "^time
+        else ""
+      in
+      Printf.sprintf "%s %s %s %s %s." event.text name org loc time
+
+  | _ -> ""
+
 
 
 
