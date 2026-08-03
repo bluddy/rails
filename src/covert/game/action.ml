@@ -120,6 +120,8 @@ let add_known l v = List.fold_left (fun acc x -> add_known x acc) v l
 
 let is_known k v = Known.Set.mem k v.known
 
+let is_known_any l v = Known.Set.mem_any l v.known
+
 let is_known_all l v = Known.Set.mem_all l v.known
 
 module G = struct
@@ -170,6 +172,9 @@ module S = struct
 
   let is_known known action_id v =
     with_action action_id (is_known known) v
+
+  let is_known_any l action_id v =
+    with_action action_id (is_known_any l) v
 
   let is_known_all known action_id v =
     with_action action_id (is_known_all known) v

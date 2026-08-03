@@ -45,6 +45,8 @@ let add_role role_id v =
 
 let has_role v = Role_d.Set.not_empty v.roles
 
+let has_known_role role v = Role_d.Set.mem role v.roles_known
+
 let add_role_known role_id v =
   {v with roles_known=Role_d.Set.add role_id v.roles_known}
 
@@ -130,6 +132,9 @@ module S = struct
 
   let is_known_all known agent_id v =
     with_agent agent_id (is_known_all known) v
+
+  let has_known_role role agent_id v =
+    with_agent agent_id (has_known_role role) v
 
   let add_role agent_id role_id agents =
     update agent_id (add_role role_id) agents
