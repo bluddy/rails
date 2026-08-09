@@ -184,18 +184,18 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
               let w = 5000 / ((G.difficulty case |> Difficulty.to_enum) + 3) in
               let roles = Role.S.ctr_discovery_add role_id (w / clue_div_dist2) roles in
               let case = U.roles roles case in
-              let rec loop disc_acc case =
+              let rec loop discover case =
                 let role = Role.Map.find role_id @@ G.roles case in
                 let needed_val = Known_data.Set.to_discover_val @@ Role.G.known role in
                 let needed_val = (needed_val + 2) * (needed_val + 2) * 32 in
                 let disc = Role.G.ctr_discovery role * ((Role.G.discover role) + 2) in
-                if disc <= needed_val then (disc_acc, case) else
+                if disc <= needed_val then discover, case else
                 match known_to_discover s.random role_id roles case with
-                | None -> case, disc_acc
+                | None -> discover, case
                 | Some known ->
                   let clue_id, case = create s org_id loc_id role_id clue_src known case in
-                  let discover = Discover_clue {clue=clue_id; case} in
-                  loop (discover::disc_acc) case
+                  let discover = Discover_clue {clue=clue_id; case} :: discover in
+                  loop discover case
               in
               loop discover case
           | _ -> acc)
@@ -205,9 +205,9 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
       let discover, case = discover_in_role case in
       let agent = Agent.Map.find agent_id @@ G.agents case in
       if Known_data.Set.is_empty agent.known
-         && org_to_agent_org_dist = 0 && loc_to_agent_loc_dist = 0 then case, discover else
+         && org_to_agent_org_dist = 0 && loc_to_agent_loc_dist = 0 then discover, case else
       let _, discover, case =
-        Action.Map.fold (fun action_id (action:Action.t) ((ctr, discover, case) as acc) ->
+        Action.Map.fold (fun action_id (action:Action.t) (ctr, discover, case as acc) ->
           let rec loop (ctr, discover, case) = match action.kind with
             | Event_based (event_id, send) when Agent.Id.(send.agent1 = agent_id) ->
                 let discover_val = Action.Known.Set.to_discover_val action.known in
@@ -225,15 +225,15 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
                     let agent2 = Agent.Map.find send.agent2 (Case.G.agents case) in
                     let new_agent_id, agents = Agent_c.get_or_gen s agent2.org agent2.loc case in
                     let known =
-                      Action.Known.Set.to_list action.known
-                      |> List.filter_map (function
+                      Action.Known.Set.to_list action.known |> List.filter_map (function
                         | `Known_agent -> Some `Known_agent
                         | `Known_org -> Some `Known_org
                         | `Known_loc when Loc.Id.(send.loc2 = agent2.loc) -> Some `Known_loc
                         | _ -> None)
                     in
                     let agents = Agent.S.add_known known new_agent_id agents in
-                    ctr, discover ,agents
+                    let case = case |> Case.U.agents agents in
+                    (ctr, discover, case)
                   else acc
                 else
                   let known =
@@ -261,10 +261,11 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
                   let case =
                     if Difficulty.(Case.G.difficulty case < National_threat) &&
                       org_to_agent_org_dist + loc_to_agent_loc_dist = 0 &&
-                      Action.S.is_known_all [`Known_agent; `Known_org; `Known_loc; `Known_time] action_id @@ Case.G.action case then
+                      Action.S.is_known_all [`Known_agent; `Known_org; `Known_loc; `Known_time] action_id @@ Case_d.G.actions case then
                         let agents = Agent.S.add_role_known agent_id role_id agents in
                         let actions = Action.S.add_known [`Known_agent; `Known_org; `Known_loc; `Known_time] action_id actions in
                         case |> Case.U.agents agents |> Case.U.actions actions
+                    else case
                   in
                   loop (ctr, discover, case)
           | _ -> acc
@@ -273,9 +274,9 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
         (Case.G.actions case)
         (2, discover, case)
       in
-      case, clue_ids)
+      discover, case)
     (G.agents case)
-    (case, [])
+    ([], case)
   in
   ()
 
