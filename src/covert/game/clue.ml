@@ -206,77 +206,82 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
       let agent = Agent.Map.find agent_id @@ G.agents case in
       if Known_data.Set.is_empty agent.known
          && org_to_agent_org_dist = 0 && loc_to_agent_loc_dist = 0 then discover, case else
-      let _, discover, case =
-        Action.Map.fold (fun action_id (action:Action.t) (ctr, discover, case as acc) ->
-          let rec loop (ctr, discover, case) = match action.kind with
-            | Event_based (event_id, send) when Agent.Id.(send.agent1 = agent_id) ->
-                let discover_val = Action.Known.Set.to_discover_val action.known in
-                let z = discover_val * 2 + ctr in
-                let event = Event.Map.find event_id (Case.G.events case) in
-                let role_id = Event.S.to_role (Case.G.events case) event_id in
-                let role = Role.Map.find role_id (Case.G.roles case) in
-                let disc_val = (agent.discover_val * role.discover_val) / 96 in
-                let pass_test = disc_val > z in
-                let known_all = Action.Known.Set.(equal all action.known) in
-                if not pass_test || known_all then
-                  let ctr = ctr + 1 in
-                  (* NOTE: OG checks for 0xF00 bits here, we don't know if they're necessary. *)
-                  if Action.Known.Set.mem_any [`Known_agent; `Known_org; `Known_loc] action.known then
-                    let agent2 = Agent.Map.find send.agent2 (Case.G.agents case) in
-                    let new_agent_id, agents = Agent_c.get_or_gen s agent2.org agent2.loc case in
-                    let known =
-                      Action.Known.Set.to_list action.known |> List.filter_map (function
-                        | `Known_agent -> Some `Known_agent
-                        | `Known_org -> Some `Known_org
-                        | `Known_loc when Loc.Id.(send.loc2 = agent2.loc) -> Some `Known_loc
-                        | _ -> None)
-                    in
-                    let agents = Agent.S.add_known known new_agent_id agents in
-                    let case = case |> Case.U.agents agents in
-                    (ctr, discover, case)
-                  else acc
-                else
-                  let known =
-                    Utils.do_while
-                    (fun () -> Action.Known.random s.random) 
-                    (fun known -> Action.is_known known action)
-                  in
-                  let case = Action_c.propagate_known action_id case in
-                  (* TODO: check 0xFFF on event.bits *)
-                  let agents, actions = match known with
-                    | `Known_agent -> Agent.S.add_known [`Known_agent] agent_id @@ Case.G.agents case, Case.G.actions case
-                    | _ -> Case.G.agents case, Action.S.add_known [known] action_id @@ Case.G.actions case
-                  in
-                  let case = case |> Case.U.actions actions |> Case.U.agents agents in
-                  let discover = Discover_action_info {
-                    agent=agent_id; event=event_id; action=action_id; case; known;
-                  }::discover in
-                  let case =
-                    let agents = Agent.S.add_known [`Known_role] agent_id @@ Case.G.agents case in
-                    Case.U.agents agents case
-                  in
+
+      let discover_action_info discover case =
+        let _, discover, case =
+          Action.Map.fold (fun action_id (action:Action.t) acc ->
+            let rec loop (ctr, discover, case) = match action.kind with
+              | Event_based (event_id, send) when Agent.Id.(send.agent1 = agent_id) ->
+                  let discover_val = Action.Known.Set.to_discover_val action.known in
+                  let z = discover_val * 2 + ctr in
                   let role_id = Event.S.to_role (Case.G.events case) event_id in
-                  if Agent.S.has_known_role role_id agent_id agents then loop (ctr, discover, case) else
-                  (* TODO: check 0xFFF on event.bits *)
-                  let case =
-                    if Difficulty.(Case.G.difficulty case < National_threat) &&
-                      org_to_agent_org_dist + loc_to_agent_loc_dist = 0 &&
-                      Action.S.is_known_all [`Known_agent; `Known_org; `Known_loc; `Known_time] action_id @@ Case_d.G.actions case then
-                        let agents = Agent.S.add_role_known agent_id role_id agents in
-                        let actions = Action.S.add_known [`Known_agent; `Known_org; `Known_loc; `Known_time] action_id actions in
-                        case |> Case.U.agents agents |> Case.U.actions actions
-                    else case
-                  in
-                  loop (ctr, discover, case)
-          | _ -> acc
-          in
-          loop acc)
-        (Case.G.actions case)
-        (2, discover, case)
+                  let role = Role.Map.find role_id (Case.G.roles case) in
+                  let disc_val = (agent.discover_val * role.discover_val) / 96 in
+                  let pass_test = disc_val > z in
+                  let known_all = Action.Known.Set.(equal all action.known) in
+                  if not pass_test || known_all then
+                    let ctr = ctr + 1 in
+                    (* NOTE: OG checks for 0xF00 bits here, we don't know if they're necessary. *)
+                    if Action.Known.Set.mem_any [`Known_agent; `Known_org; `Known_loc] action.known then
+                      let agent2 = Agent.Map.find send.agent2 (Case.G.agents case) in
+                      let new_agent_id, agents = Agent_c.get_or_gen s agent2.org agent2.loc case in
+                      let known =
+                        Action.Known.Set.to_list action.known |> List.filter_map (function
+                          | `Known_agent -> Some `Known_agent
+                          | `Known_org -> Some `Known_org
+                          | `Known_loc when Loc.Id.(send.loc2 = agent2.loc) -> Some `Known_loc
+                          | _ -> None)
+                      in
+                      let agents = Agent.S.add_known known new_agent_id agents in
+                      let case = case |> Case.U.agents agents in
+                      (ctr, discover, case)
+                    else acc
+                  else
+                    let known =
+                      Utils.do_while
+                      (fun () -> Action.Known.random s.random) 
+                      (fun known -> Action.is_known known action)
+                    in
+                    let case = Action_c.propagate_known action_id case in
+                    (* TODO: check 0xFFF on event.bits *)
+                    let agents, actions = match known with
+                      | `Known_agent -> Agent.S.add_known [`Known_agent] agent_id @@ Case.G.agents case, Case.G.actions case
+                      | _ -> Case.G.agents case, Action.S.add_known [known] action_id @@ Case.G.actions case
+                    in
+                    let case = case |> Case.U.actions actions |> Case.U.agents agents in
+                    let discover = Discover_action_info {
+                      agent=agent_id; event=event_id; action=action_id; case; known;
+                    }::discover in
+                    let case =
+                      let agents = Agent.S.add_known [`Known_role] agent_id @@ Case.G.agents case in
+                      Case.U.agents agents case
+                    in
+                    let role_id = Event.S.to_role (Case.G.events case) event_id in
+                    if Agent.S.has_known_role role_id agent_id agents then loop (ctr, discover, case) else
+                    (* TODO: check 0xFFF on event.bits *)
+                    let case =
+                      if Difficulty.(Case.G.difficulty case < National_threat) &&
+                        org_to_agent_org_dist + loc_to_agent_loc_dist = 0 &&
+                        Action.S.is_known_all [`Known_agent; `Known_org; `Known_loc; `Known_time] action_id @@ Case_d.G.actions case then
+                          let agents = Agent.S.add_role_known agent_id role_id agents in
+                          let actions = Action.S.add_known [`Known_agent; `Known_org; `Known_loc; `Known_time] action_id actions in
+                          case |> Case.U.agents agents |> Case.U.actions actions
+                      else case
+                    in
+                    loop (ctr, discover, case)
+            | _ -> acc
+            in
+            loop acc)
+          (Case.G.actions case)
+          (2, discover, case)
+        in
+        discover, case
       in
+      let discover, case = discover_action_info discover case in
+      let ret_val = List.fold_left (fun acc -> function Discover_clue _ -> acc + 1 | _ -> acc) 0 discover in
       discover, case)
     (G.agents case)
     ([], case)
   in
-  ()
+  discover, case
 
