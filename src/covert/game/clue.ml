@@ -279,6 +279,26 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
       in
       let discover, case = discover_action_info discover case in
       let ret_val = List.fold_left (fun acc -> function Discover_clue _ -> acc + 1 | _ -> acc) 0 discover in
+      let known_test = Agent.G.known agent in
+      let todo =
+        if Known_data.Set.is_empty agent.known
+          && let discover_val = Known_data.Set.to_discover_in_parts agent.known in
+            Agent.G.discover_val agent > discover_val
+          && not @@ Agent.is_known_all [`Known_recruit_loc; `Known_recruited_by; `Known_loc; `Known_org; `Known_rank; `Known_agent; `Known_face] agent then
+            if Org.Id.(Agent.G.org agent = in_org_id) && not (Agent.is_known `Known_org agent) then
+              `Known_test (Known_data.Set.add `Known_org known_test)
+            else
+              if Loc.Id.(Agent.G.loc agent = in_loc_id)
+                && Known_data.Set.mem `Known_loc known_test then
+                  `Known_test (Known_data.Set.add `Known_loc known_test)
+              else
+                `Gen_data
+        else
+          `Known_test known_test
+      in
+      match todo with
+      | `Known_test known_test when Known_data.Set.(known_test <> Agent.G.known agent) ->
+
       discover, case)
     (G.agents case)
     ([], case)
