@@ -58,6 +58,7 @@ module U = struct
   let items items v = {v with d={v.d with items}}
   let orgs orgs v = {v with d={v.d with orgs}}
   let roles roles v = {v with d={v.d with roles}}
+  let locs locs v = {v with d={v.d with locs}}
 end
 
 let update_events fn v = U.events (fn v.d.events) v

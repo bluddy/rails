@@ -92,6 +92,7 @@ module G = struct
 
   let discover_val v = v.discover_val
   let loc v = v.loc
+  let org v = v.org
 end
 module U = struct
   let loc loc_id v = {v with loc=loc_id}

@@ -156,6 +156,11 @@ type find_out =
       case: Case.t;
       known: Action.Known.t;
     }
+  | Discover_agent_info of {
+    agent: Agent.Id.t;
+    known: Known_data.t;
+    case: Case.t;
+  }
 
 
 let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (case:Case_d.t) =
@@ -285,7 +290,7 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
           if Known_data.Set.is_empty known_test
             && let discover_val = Known_data.Set.to_discover_in_parts known_test in
               Agent.G.discover_val agent > discover_val
-            && Known_data.Set.(known_test <> Known_data.Set.subset_70f) then
+            && Known_data.Set.(not @@ equal known_test Known_data.Set.subset_70f) then
               if Org.Id.(Agent.G.org agent = in_org_id)
                 && not (Known_data.Set.mem `Known_org known_test) then
                 `Known_test (Known_data.Set.add `Known_org known_test)
@@ -313,13 +318,31 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
             in
             let known_test = Known_data.Set.union rand_known known_test in
             loop known_test
-        | `Known_test known_test when Known_data.Set.(known_test <> Agent.G.known agent) ->
-            ()
+
+        | `Known_test known_test when Known_data.Set.(not @@ equal known_test @@ Agent.G.known agent) ->
+            let new_known = Known_data.Set.diff known_test @@ Agent.G.known agent in
+            Known_data.Set.fold (fun known (discover, case) ->
+              let discover = Discover_agent_info {case; agent=agent_id; known}::discover in
+              let agents = Agent.S.add_known [known] agent_id @@ Case.G.agents case in
+              let case = Case.U.agents agents case in
+              let case = match known with
+                | `Known_loc ->
+                    let locs = Loc.S.incr_activity (Agent.G.loc agent) @@ Case.G.locs case in
+                    Case.U.locs locs case
+                | `Known_org ->
+                    let orgs = Org.S.incr_activity (Agent.G.org agent) @@ Case.G.orgs case in
+                    Case.U.orgs orgs case
+                | _ -> case
+              in
+              discover, case)
+            new_known
+            (discover, case)
         in
-        loop (Agent.G.known agent)
+    let discover, case = loop (Agent.G.known agent) in
+    discover, case
 
+    )
 
-      discover, case)
     (G.agents case)
     ([], case)
   in
