@@ -1,3 +1,5 @@
+
+
 # Rails
 
 An OCaml remake of [Railroad Tycoon](https://en.wikipedia.org/wiki/Railroad_Tycoon_(video_game)) (1990). Build railroads, manage trains, compete with AI rivals, and grow your empire across historical regions.
@@ -68,5 +70,4 @@ dune build @doc
 MIT — see [LICENSE](LICENSE).
 
 ## Future
-Unlike the original, the game is built with fronted-backend separation, so in theory it could be made to support >1 player.
-
+Unlike the original, the game is built with frontend-backend separation, so in theory it could be made to support >1 player.
