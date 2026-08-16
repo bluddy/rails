@@ -59,6 +59,8 @@ let random ?(max=`Known_role) r =
 
 let random_standard r : standard = Random.choose_return standard r
 
+let random_any r = random ~max:`Known_recruited_by r
+
 module Set = struct
   include Utils.Set.Make(struct
     type data = t [@@deriving yojson]
@@ -81,6 +83,11 @@ module Set = struct
     clue_discover_vals.(base2_higher + base2_lower)
 
   let all_standard v = mem_all standard_t v
+
+  let subset_70f = [
+    `Known_face ; `Known_agent ; `Known_org ; `Known_loc ;
+    `Known_rank ; `Known_recruit_loc ; `Known_recruited_by
+  ] |> of_list
 
 end
 
