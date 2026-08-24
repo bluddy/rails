@@ -337,12 +337,11 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
               discover, case)
             new_known
             (discover, case)
+
+        | _ -> discover, case
         in
-    let discover, case = loop (Agent.G.known agent) in
-    discover, case
-
-    )
-
+    let discover, case = loop @@ Agent.G.known agent in
+    discover, case)
     (G.agents case)
     ([], case)
   in
