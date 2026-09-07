@@ -3,6 +3,8 @@ open! Containers
 include Clue_d
 module Sub = Subst_engine
 
+module List = Utils.List
+
 let is_connect_role v = match v.connect with | Connect.Role _ -> true | _ -> false
 
 (* For a non-role, we can get a short summary *)
@@ -283,7 +285,6 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
         discover, case
       in
       let discover, case = discover_action_info discover case in
-      let ret_val = List.fold_left (fun acc -> function Discover_clue _ -> acc + 1 | _ -> acc) 0 discover in
 
       let rec loop known_test =
         let todo =
@@ -341,6 +342,13 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
         | _ -> discover, case
         in
     let discover, case = loop @@ Agent.G.known agent in
+    let num_discovers = List.sum (function
+      | Discover_clue _
+      | Discover_agent_info _ -> 1
+      | _ -> 0) discover
+    in
+    if num_discovers > 0 then
+
     discover, case)
     (G.agents case)
     ([], case)
