@@ -342,13 +342,25 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
         | _ -> discover, case
         in
     let discover, case = loop @@ Agent.G.known agent in
-    let num_discovers = List.sum (function
+    let num_discover = List.sum (function
       | Discover_clue _
       | Discover_agent_info _ -> 1
-      | _ -> 0) discover
+      | _ -> 0)
+      discover
     in
-    if num_discovers > 0 then
-
+    if num_discover = 0 then
+      let roles = G.roles case in
+      let role_id = Role.random s.random roles in
+      let agent_id = Role.S.to_agent roles role_id in
+      let rand = Random.int (8 - (Difficulty.enum @@ Case.G.difficulty case)) in
+      match rand with
+      | 0 -> ()
+      | 1 -> ()
+      | 2 -> ()
+      | 3 -> ()
+      | 5 | 7 -> ()
+      | 4 | 6 -> ()
+    else
     discover, case)
     (G.agents case)
     ([], case)
