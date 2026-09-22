@@ -76,6 +76,8 @@ let from_stream num_locs s =
 let add_known_hq org_id v =
   {v with known_hqs=Org_id.Set.add org_id v.known_hqs}
 
+let has_known_hq org_id v = Org_id.Set.mem org_id v.known_hqs
+
 module G = struct
   let city v = v.city
 end
@@ -84,9 +86,12 @@ module S = struct
   let update loc_id locs fn =
     Map.update loc_id (Option.map fn) locs
 
-  let add_known_hq loc_id org_id v =
-    update loc_id v (add_known_hq org_id)
+  let with_loc loc_id fn v = Map.find loc_id v |> fn
 
-  let incr_activity loc_id v =
-    update loc_id v @@ incr_activity
+  let add_known_hq loc_id org_id v = update loc_id v @@ add_known_hq org_id
+
+  let has_known_hq loc_id org_id v = with_loc loc_id (has_known_hq org_id) v
+
+  let incr_activity loc_id v = update loc_id v @@ incr_activity
+
 end

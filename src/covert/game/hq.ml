@@ -106,11 +106,11 @@ module S = struct
         let hq = create org_id loc_id in
         hq, Map.add (org_id, loc_id) hq hqs
 
-  let do_update_ hq_id hqs fn =
+  let update hq_id fn hqs =
     Map.update hq_id (Option.map fn) hqs
 
   let add_known hq_id known hqs =
-    do_update_ hq_id hqs @@ add_known known
+    update hq_id (add_known known) hqs
 
 end
 

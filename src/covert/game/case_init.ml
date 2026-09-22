@@ -282,7 +282,7 @@ let create_known_hqs (v:t) =
   (* All hqs known to cia *)
   let hqs, orgs, locs =
     Org.S.loc_fold (fun org_id loc_id _ _ ((hqs, orgs, locs) as acc) ->
-      let known = Case.hq_known_to_org Org.cia org_id loc_id v in
+      let known = Hq_c.hq_known_to_org Org.cia org_id loc_id v in
       if known || Org.Id.(org_id = Org.local_contact) then
         let hq = Hq.create org_id loc_id |> Hq.add_known `Known_org in
         let hqs = Hq.Map.add (org_id, loc_id) hq hqs in
@@ -322,7 +322,7 @@ let create_known_hqs (v:t) =
   in
   let count_known_to_cia org_id =
     Loc.Map.fold (fun loc_id _ ctr ->
-      let known = Case.hq_known_to_org Org.cia org_id loc_id v in
+      let known = Hq_c.hq_known_to_org Org.cia org_id loc_id v in
       if known then ctr + 1 else ctr)
     locs 0
   in

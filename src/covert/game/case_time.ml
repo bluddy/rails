@@ -325,7 +325,7 @@ let do_tick (s:Services.t) ?(force_tick=false) ?(sleeping=false) (v:t) =
           let rec try_loop n =
             if n >= 4 then None else
             let dest_loc_id = Loc.random s.random in
-            let hq_kind = hq_kind v (agent.org) dest_loc_id in
+            let hq_kind = Hq_c.kind v (agent.org) dest_loc_id in
             if Option.is_none hq_kind then try_loop (n+1) else
             let remove_agent, ok = match Agent.S.get agent.org dest_loc_id agents with
               | Some problem_agent_id ->

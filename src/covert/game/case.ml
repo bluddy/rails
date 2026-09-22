@@ -5,11 +5,6 @@ module Bul = Bulletin_d
 
 include Case_d
 
-let hq_kind (v:t) org_id loc_id =
-  Hq.get_kind org_id loc_id v.d.locs (G.orgs v) (G.roles v) (G.agents v) v.s.mm v.world
-
-let hq_known_to_org org1_id org2_id loc_id v =
-  Hq.known_to_org org1_id org2_id loc_id (G.locs v) (G.orgs v) (G.roles v) (G.agents v) v.s.mm v.world
 
 let clear_autoescape v = {v with agent_autoescape=None}
 

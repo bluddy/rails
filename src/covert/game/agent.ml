@@ -106,9 +106,7 @@ module S = struct
   let update agent_id fn agents =
     Map.update agent_id (Option.map fn) agents
 
-  let with_agent agent_id fn v =
-    let agent = Map.find agent_id v in
-    fn agent
+  let with_agent agent_id fn v = Map.find agent_id v |> fn
 
   let name agent_id v =
     with_agent agent_id print_name v

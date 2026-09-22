@@ -5,6 +5,8 @@ module Sub = Subst_engine
 
 module List = Utils.List
 
+module G = Case_d.G
+
 let is_connect_role v = match v.connect with | Connect.Role _ -> true | _ -> false
 
 (* For a non-role, we can get a short summary *)
@@ -95,7 +97,6 @@ let create_id (s:Services.t) role_id difficulty roles agents =
 
 let create (s:Services.t) org_id loc_id role_id source (known: Known_data.standard) case =
   let roles, agents, orgs, locs, clues, diff =
-    let open Case_d in
     G.roles case, G.agents case, G.orgs case, G.locs case, G.clues case, G.difficulty case in
   let agent_id = Role.S.to_agent roles role_id in
   let connect = match known with
@@ -354,14 +355,47 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
       let agent_id = Role.S.to_agent roles role_id in
       let rand = Random.int (8 - (Difficulty.enum @@ Case.G.difficulty case)) in
       match rand with
-      | 0 -> ()
-      | 1 -> ()
+      | 0 ->
+          let loc_id = Agent.S.to_loc agents agent_id in
+          Loc.S.incr_activity loc_id locs
+      | 1 ->
+          let org_id = Agent.S.to_org agents agent_id in
+          Org.S.add_known org_id orgs
+          |> Org.S.incr_activity org_id
       | 2 -> ()
-      | 3 -> ()
-      | 5 | 7 -> ()
-      | 4 | 6 -> ()
+      | 3 ->
+          Agent.S.add_known [`Known_agent] agent_id agents
+
+
+      | 4| 5 | 6| 7 ->
+          let role_id2 = Role.random s.random roles in
+          let agent_id = Role.S.to_agent roles role_id2 in
+          let loc_id, org_id = match rand with
+          | 5 | 7 ->
+            let org_id = Agent.S.to_org agents agent_id in
+            case.cur_loc, org_id
+          | 4 | 6 ->
+            let loc_id = Agent.S.to_loc agents agent_id in
+            loc_id, case.cur_org
+          in
+          let hq_known_to_org = Hq_c.hq_known_to_org case.cur_org org_id loc_id case in
+          if hq_known_to_org &&
+             not @@ Loc.S.has_known_hq loc_id org_id (G.locs case) &&
+             Hq_c.kind case org_id loc_id |> Option.is_some
+          then
+            let locs = Loc.S.add_known_hq loc_id org_id locs in
+            let _, hqs = Hq.S.get_or_gen org_id loc_id (G.hqs case) in
+            let hqs = Hq.S.add_known (org_id, loc_id) `Known_org hqs in
+            locs, hqs
+            
+          else
+
+
+          ()
+
+
     else
-    discover, case)
+      discover, case)
     (G.agents case)
     ([], case)
   in
