@@ -1,0 +1,198 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. 0.1.0)'
+        required: false
+        default: 'dev'
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux (AppImage & Tarball)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libgl1-mesa-dev libasound2-dev libpulse-dev
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.x
+
+      - name: Install OPAM dependencies
+        run: |
+          opam install . --deps-only --with-test
+
+      - name: Run tests
+        run: |
+          opam exec -- dune runtest
+
+      - name: Build release binary
+        run: |
+          opam exec -- dune build -p rails --profile release
+
+      - name: Determine Version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ inputs.version }}"
+          else
+            VER="${{ github.ref_name }}"
+          fi
+          VER="${VER#v}"
+          echo "val=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Package AppImage and Tarball
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.val }}"
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          APPIMAGETOOL="$(pwd)/appimagetool-x86_64.AppImage" ./packaging/linux/build_appimage.sh _build/default/src/rails_run.exe "rails-${VERSION}-linux-x86_64.AppImage"
+          ./packaging/linux/build_tarball.sh _build/default/src/rails_run.exe "$VERSION" "rails-${VERSION}-linux-x86_64.tar.gz"
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            rails-*-linux-x86_64.AppImage
+            rails-*-linux-x86_64.tar.gz
+
+  build-windows:
+    name: Build Windows (Zip with SDL DLLs)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.x
+
+      - name: Install OPAM dependencies
+        shell: bash
+        run: |
+          opam install . --deps-only
+
+      - name: Build release binary
+        shell: bash
+        run: |
+          opam exec -- dune build -p rails --profile release
+
+      - name: Determine Version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ inputs.version }}"
+          else
+            VER="${{ github.ref_name }}"
+          fi
+          VER="${VER#v}"
+          echo "val=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Package Windows Release with SDL DLLs
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.val }}"
+          ./packaging/windows/package_windows.sh _build/default/src/rails_run.exe "$VERSION" "rails-${VERSION}-windows-x86_64.zip"
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: rails-*-windows-x86_64.zip
+
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+          - os: macos-13
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew install sdl2 sdl2_mixer
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.x
+
+      - name: Install OPAM dependencies
+        run: |
+          opam install . --deps-only
+
+      - name: Build release binary
+        run: |
+          opam exec -- dune build -p rails --profile release
+
+      - name: Determine Version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ inputs.version }}"
+          else
+            VER="${{ github.ref_name }}"
+          fi
+          VER="${VER#v}"
+          echo "val=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Package macOS Release Bundle
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.val }}"
+          ./packaging/macos/package_macos.sh _build/default/src/rails_run.exe "$VERSION" "${{ matrix.arch }}" "rails-${VERSION}-macos-${{ matrix.arch }}.zip"
+
+      - name: Upload macOS Artifact (${{ matrix.arch }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-package
+          path: rails-*-macos-${{ matrix.arch }}.zip
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Publish Release to GitHub
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        with:
+          files: release-artifacts/**/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false

@@ -36,9 +36,12 @@ let init () =
   Sdl.init Sdl.Init.audio |> ignore;
   Mixer.open_audio 48000 Mixer.default_format 2 1024 |> ignore;
   let get_files_of_dir dirname =
-    let files = Utils.files_of_dir dirname in
-    List.filter (fun file ->
-    String.equal (Filename.extension file) ".ogg") files
+    let real_dir = Paths.find_asset_dir dirname in
+    if not (Sys.file_exists real_dir && Sys.is_directory real_dir) then []
+    else
+      let files = Utils.files_of_dir real_dir in
+      List.filter (fun file ->
+      String.equal (Filename.extension file) ".ogg") files
   in
   let sound_files = get_files_of_dir "sound" in
   let sounds =
@@ -97,6 +100,7 @@ let handle_tick v =
   )
 
 let pani_create ?dump ?debug ?input ?sound ?exit_on_done sound_engine filename =
+  let filename = Paths.resolve_data_path filename in
   let sound = match sound with
     | None -> None
     | Some sound ->

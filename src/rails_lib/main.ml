@@ -15,6 +15,8 @@ let zoom = ref 3
 let adjust_ar = ref true
 let shader = ref "test"
 let audio = ref true
+let debug_modules = ref []
+let list_modules = ref false
 
 let set v f =
   file := f;
@@ -32,16 +34,40 @@ let arglist =
     "--pani", String (set `Pani), "Run the PANI file";
     "--city", String (set `City), "Dump city info file";
     "--dump", Set dump, "Dump the file";
-    "--debug", Set debugger, "Run the debugger";
+    "--debug", Set debugger, "Enable debug mode and logging";
+    "--debug-module", String (fun s -> debug_modules := s :: !debug_modules), "Enable debug logging for specific module(s) (comma-separated, e.g. train,backend)";
+    "--list-debug-modules", Set list_modules, "List all available logging modules and exit";
     "--load", Int (set_slot `LoadGame), "Load a save file";
     "--zoom", Int (fun x -> zoom := x), "Set zoom (default =3)";
     "--no-adjust-ar", Clear adjust_ar, "Adjust aspect ratio";
     "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
     "--no-audio", Clear audio, "Disable audio";
+    "--data-dir", String (fun s -> Unix.putenv "RAILS_DATA_DIR" s), "Path to directory containing game data files";
   ]
+
+let check_data () =
+  let required = [ "EASTUS.PIC"; "WESTUS.PIC"; "CITIES0.DTA"; "SPRITES.PIC"; "TRACKS.PIC"; "TITLEM.PAN"; "FONTS.RR" ] in
+  match Engine.Paths.check_data_files required with
+  | Ok () -> ()
+  | Error (missing, dir) ->
+      let msg =
+        Printf.sprintf
+          "Railroad Tycoon data files not found!\n\n\
+           Checked directory:\n  %s\n\n\
+           Missing file:\n  %s\n\n\
+           Please place the original DOS Railroad Tycoon files (*.PIC, *.PAN, *.DTA, FONTS.RR)\n\
+           into the 'data' directory (or run with --data-dir <path>)."
+          dir missing
+      in
+      Engine.Paths.report_fatal_error ~title:"Railroad Tycoon - Missing Game Data" ~message:msg;
+      exit 1
 
 let main () =
   parse arglist (fun _ -> ()) "Usage";
+  if !list_modules then begin
+    Game_modules.list_logging_modules ();
+    exit 0
+  end;
   match !mode with
   | `Font -> Fonts.main !file
   | `Pic  -> Engine.Pic.png_of_file !file | `Cat -> Engine.Cat_file.of_file ~dump:true !file |> ignore
@@ -53,6 +79,10 @@ let main () =
   | `Pani ->
       Mainloop.main @@ Pani_render.standalone ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
-  | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
+  | `Game ->
+      check_data ();
+      Game_modules.run ~debug:!debugger ~debug_modules:!debug_modules ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
+  | `LoadGame ->
+      check_data ();
+      Game_modules.run ~debug:!debugger ~debug_modules:!debug_modules ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
 

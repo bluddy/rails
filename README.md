@@ -7,17 +7,28 @@ An OCaml remake of [Railroad Tycoon](https://en.wikipedia.org/wiki/Railroad_Tyco
 
 See [FEATURES.md](docs/FEATURES.md) for a full list of implemented features.
 
-## Prerequisites
+## Quick Start (Precompiled Releases)
+
+Precompiled packages are available on the [Releases](https://github.com/bluddy/rails/releases) page for Windows, Linux, and macOS:
+
+1. Download the release archive for your OS:
+   - **Windows**: `rails-*-windows-x86_64.zip` (includes all required SDL2 & codec DLLs)
+   - **Linux**: `rails-*-linux-x86_64.AppImage` (or `.tar.gz`)
+   - **macOS**: `rails-*-macos-arm64.zip` / `x86_64.zip`
+2. Copy your original Railroad Tycoon DOS files (`*.PIC`, `*.PAN`, `*.DTA`) into the `data/` folder next to the executable/AppImage.
+3. Launch the game (`rails.exe` on Windows, double-click the `.AppImage` on Linux, or open `Rails.app` on macOS).
+
+## Prerequisites for Building from Source
 
 - OCaml 5.x with opam
-- Original Railroad Tycoon files.
-  (Unfortunately Railroad Tycoon is not available for sale digitally, so you'll need to buy it off of ebay and such.)
+- SDL2 and SDL2_mixer development libraries
+- Original Railroad Tycoon DOS files
 
 ## Data Files
 
-The game expects original game assets in `./data/`.
+The game expects original game assets in `./data/` (or specified via `--data-dir <path>`).
 
-## Installation
+## Installation from Source
 
 ```bash
 opam install . --deps-only
@@ -45,6 +56,11 @@ dune exec rails -- --zoom 3 --shader crt-hyllian2 --adjust-ar
 | `--zoom N` | Display zoom, multiply the original 320x200 resolution (default: 3) |
 | `--shader NAME` | Shader from `shaders/*.glsl` (test, crt-hyllian, vga-1080p, etc.) |
 | `--adjust-ar` | Adjust aspect ratio (rectangular pixels like DOS)|
+| `--no-audio` | Disable audio playback |
+| `--data-dir PATH` | Custom path to folder containing original game data |
+| `--debug` | Enable global debug logging |
+| `--debug-module MOD` | Enable debug logging for specific module(s) (comma-separated, e.g. `train,backend`) |
+| `--list-debug-modules` | List all available logging modules and exit |
 
 ## Project structure
 

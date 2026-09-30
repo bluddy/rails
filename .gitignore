@@ -1,8 +1,14 @@
 _build/
+venv/
 *.PIC
 *.PAN
 *.DTA
 *.png
+!packaging/*.png
+!packaging/*.ico
+!packaging/*.icns
+!data/SPRITES_extra.png
+!data/TRACKS_extra.png
 data/
 game*.sav
 hof.dat

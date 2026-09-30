@@ -14,7 +14,7 @@ let update_map _win v map =
 let default_state win sound : State.t =
   let resources = Resources.load_all () in
   let textures = Textures.of_resources win resources in
-  let fonts = Fonts.load "./data/FONTS.RR" win in
+  let fonts = Fonts.load (Engine.Paths.data_file "FONTS.RR") win in
   let backend = Backend.default in
   let map_tex = Hashtbl.find textures.misc `Advert in
   let ui = Main_ui.default win fonts Region.WestUS in
@@ -185,9 +185,42 @@ let render win (s:State.t) = match s.mode with
 
   | Game -> Main_ui.render win s s.ui
 
-let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
+let setup_logging ?(debug = false) ?(debug_modules = []) () =
   Logs.set_reporter (Logs_fmt.reporter ());
-  Logs.set_level (Some Debug);
+  let default_level = if debug then Some Logs.Debug else Some Logs.Warning in
+  Logs.set_level default_level;
+  if not (List.is_empty debug_modules) then begin
+    let requested =
+      List.concat_map (String.split_on_char ',') debug_modules
+      |> List.map String.trim
+      |> List.map String.lowercase_ascii
+      |> List.filter (fun s -> not (String.equal s ""))
+    in
+    List.iter (fun src ->
+      let name = String.lowercase_ascii (Logs.Src.name src) in
+      let matches =
+        List.exists (fun req ->
+          String.equal req "all"
+          || String.equal name req
+          || String.starts_with ~prefix:(req ^ "_") name
+          || String.starts_with ~prefix:(req ^ ".") name
+        ) requested
+      in
+      if matches then begin
+        Logs.Src.set_level src (Some Logs.Debug);
+        Printf.printf "[LOG] Enabled debug logging for module: %s\n" (Logs.Src.name src)
+      end
+    ) (Logs.Src.list ())
+  end
+
+let list_logging_modules () =
+  let srcs = Logs.Src.list () in
+  let names = List.map Logs.Src.name srcs |> List.sort_uniq ~cmp:String.compare in
+  Printf.printf "Available logging modules (%d total):\n" (List.length names);
+  List.iter (fun name -> Printf.printf "  - %s\n" name) names
+
+let run ?(debug = false) ?(debug_modules = []) ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
+  setup_logging ~debug ~debug_modules ();
 
   Printf.printf "Loading resources...";
   print_newline ();
@@ -214,6 +247,6 @@ let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
       render=render win;
     }
   in
-  let shader_file = Printf.sprintf "shaders/%s.glsl" shader in
+  let shader_file = Engine.Paths.find_asset_file (Printf.sprintf "shaders/%s.glsl" shader) in
   Mainloop.main ~zoom ~adjust_ar init_fn ~shader_file
 

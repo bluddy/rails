@@ -1,8 +1,7 @@
 open Containers
 
 module Pic = Engine.Pic
-
-let dir = "./data/"
+module Paths = Engine.Paths
 
 let map_names =
   let open Region in
@@ -14,7 +13,7 @@ let map_names =
   ]
 
 let load_pics () =
-  let load_ndarray ~transparent s = Pic.img_of_file ~transparent (dir ^ s) in
+  let load_ndarray ~transparent s = Pic.img_of_file ~transparent (Paths.data_file s) in
   let transparent = [
     (* E and C versions are for England and Europe *)
     "SPRITES.PIC"; "CSPRITES.PIC"; "ESPRITES.PIC"; "SPRITES_extra.png";
@@ -55,7 +54,7 @@ type t = {
 
 let load_all () =
   let res_maps =
-    List.map (fun (region,s) -> region, dir ^ s
+    List.map (fun (region,s) -> region, Paths.data_file s
       |> Tilemap.ndarray_of_file) map_names
   in
   let res_cities = List.map Mapgen.load_city_list Region.regions |> 
