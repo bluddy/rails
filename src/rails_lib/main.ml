@@ -38,7 +38,7 @@ let arglist =
     "--no-adjust-ar", Clear adjust_ar, "Adjust aspect ratio";
     "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
     "--no-audio", Clear audio, "Disable audio";
-    "--data-dir", String (fun s -> Engine.Paths.set_data_dir s), "Path to directory containing game data files";
+    "--data-dir", String (fun s -> Unix.putenv "RAILS_DATA_DIR" s), "Path to directory containing game data files";
   ]
 
 let check_data () =

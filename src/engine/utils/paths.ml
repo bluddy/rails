@@ -27,21 +27,14 @@ let file_exists path =
 
 (** Candidate directories to search for assets (shaders, sound, music) *)
 let asset_search_dirs () =
-  let candidates = ref [] in
-  let add dir =
-    if not (List.mem ~eq:String.equal dir !candidates) then
-      candidates := !candidates @ [dir]
-  in
-  (* 1. Explicit environment variable *)
-  Option.iter add (get_env_opt "RAILS_ASSETS_DIR");
-  (* 2. Current working directory *)
-  add ".";
-  (* 3. Next to executable *)
-  add exe_dir;
-  (* 4. Standard Linux / AppDir hierarchy (<exe_dir>/../share/rails) *)
-  add (Filename.concat (Filename.concat exe_dir "..") "share/rails");
-  add (Filename.concat (Filename.concat exe_dir "..") "share/games/rails");
-  !candidates
+  let env_dir = Option.to_list (get_env_opt "RAILS_ASSETS_DIR") in
+  let static_dirs = [
+    ".";
+    exe_dir;
+    Filename.concat (Filename.concat exe_dir "..") "share/rails";
+    Filename.concat (Filename.concat exe_dir "..") "share/games/rails";
+  ] in
+  List.uniq ~eq:String.equal (env_dir @ static_dirs)
 
 let find_asset_dir sub_dir =
   match get_env_opt (Printf.sprintf "RAILS_%s_DIR" (String.uppercase_ascii sub_dir)) with
@@ -68,11 +61,6 @@ let find_asset_file sub_path =
   | Some base -> Filename.concat base sub_path
   | None -> sub_path
 
-let custom_data_dir = ref None
-
-let set_data_dir path =
-  custom_data_dir := Some path
-
 let user_data_dir () =
   if Sys.win32 then
     match get_env_opt "APPDATA" with
@@ -91,41 +79,43 @@ let user_data_dir () =
     | None -> None
   else None
 
-let get_data_dir () =
-  match !custom_data_dir with
+let data_search_dirs () =
+  let appimage_data =
+    Option.map
+      (fun p -> Filename.concat (Filename.dirname p) "data")
+      (get_env_opt "APPIMAGE")
+  in
+  let owd_data =
+    Option.map
+      (fun owd -> Filename.concat owd "data")
+      (get_env_opt "OWD")
+  in
+  let candidates =
+    List.filter_map Fun.id [
+      appimage_data;
+      owd_data;
+      Some "data";
+      Some "./data";
+      Some (Filename.concat exe_dir "data");
+      Some (Filename.concat (Filename.concat exe_dir "..") "share/rails/data");
+      user_data_dir ();
+    ]
+  in
+  List.uniq ~eq:String.equal candidates
+
+let get_data_dir ?custom_dir () =
+  match custom_dir with
   | Some d -> d
   | None ->
-    let candidates = ref [] in
-    let add dir =
-      if not (List.mem ~eq:String.equal dir !candidates) then
-        candidates := !candidates @ [dir]
-    in
-    (* 1. Explicit environment variable *)
-    Option.iter add (get_env_opt "RAILS_DATA_DIR");
-    (* 2. AppImage origin directory (if running as AppImage) *)
-    (match get_env_opt "APPIMAGE" with
-     | Some appimage_path ->
-       add (Filename.concat (Filename.dirname appimage_path) "data")
-     | None -> ());
-    (match get_env_opt "OWD" with
-     | Some owd -> add (Filename.concat owd "data")
-     | None -> ());
-    (* 3. Current working directory ./data *)
-    add "data";
-    add "./data";
-    (* 4. Next to executable *)
-    add (Filename.concat exe_dir "data");
-    (* 5. Bundled fallback inside AppDir *)
-    add (Filename.concat (Filename.concat exe_dir "..") "share/rails/data");
-    (* 6. User data dir *)
-    Option.iter add (user_data_dir ());
-
-    let found = List.find_opt is_directory !candidates in
-    match found with
+    match get_env_opt "RAILS_DATA_DIR" with
     | Some d -> d
-    | None -> "./data"
+    | None ->
+      let dirs = data_search_dirs () in
+      match List.find_opt is_directory dirs with
+      | Some d -> d
+      | None -> "./data"
 
-let resolve_data_path filename =
+let resolve_data_path ?data_dir filename =
   let clean_name =
     if String.starts_with ~prefix:"./data/" filename then
       String.sub filename 7 (String.length filename - 7)
@@ -134,13 +124,19 @@ let resolve_data_path filename =
     else
       filename
   in
-  let dir = get_data_dir () in
+  let dir = match data_dir with
+    | Some d -> d
+    | None -> get_data_dir ()
+  in
   Filename.concat dir clean_name
 
 let data_file = resolve_data_path
 
-let check_data_files required_files =
-  let dir = get_data_dir () in
+let check_data_files ?data_dir required_files =
+  let dir = match data_dir with
+    | Some d -> d
+    | None -> get_data_dir ()
+  in
   if not (is_directory dir) then
     Error ("data directory", dir)
   else
