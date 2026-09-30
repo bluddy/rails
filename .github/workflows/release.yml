@@ -17,7 +17,7 @@ permissions:
 jobs:
   build-linux:
     name: Build Linux (AppImage & Tarball)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libgl1-mesa-dev libasound2-dev libpulse-dev
+          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libgl1-mesa-dev libasound2-dev libpulse-dev libfuse2t64
 
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
