@@ -20,6 +20,8 @@ COMMAND-LINE OPTIONS:
   --no-audio       Disable sound and music
   --load N         Load save slot N (0-9)
   --data-dir PATH  Custom path to original game data files
+  --debug          Enable global debug logging
+  --debug-module M Enable debug logging for specific module(s) (e.g. train,backend)
 
 PROJECT & SOURCE:
 -----------------

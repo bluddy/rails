@@ -22,7 +22,7 @@ type window = {
 
 let format = Sdl.Pixel.format_rgba8888
 
-let do_hide_cursor = false  (* It's buggy on WSL *)
+let do_hide_cursor = true  (* It's buggy on WSL *)
 
 let get_exn = function
   | Ok x -> x

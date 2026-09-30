@@ -58,6 +58,9 @@ dune exec rails -- --zoom 3 --shader crt-hyllian2 --adjust-ar
 | `--adjust-ar` | Adjust aspect ratio (rectangular pixels like DOS)|
 | `--no-audio` | Disable audio playback |
 | `--data-dir PATH` | Custom path to folder containing original game data |
+| `--debug` | Enable global debug logging |
+| `--debug-module MOD` | Enable debug logging for specific module(s) (comma-separated, e.g. `train,backend`) |
+| `--list-debug-modules` | List all available logging modules and exit |
 
 ## Project structure
 
