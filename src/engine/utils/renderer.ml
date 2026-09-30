@@ -47,6 +47,7 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
 
   Opengl.init ();
 
+  let shader_file = Option.map Paths.find_asset_file shader_file in
   let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
   print_endline s;
   let shader_prog = Opengl.create shader_file in

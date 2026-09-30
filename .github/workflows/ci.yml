@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - 'v*'
+  pull_request:
+
+jobs:
+  test-linux:
+    name: Test (Linux)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libgl1-mesa-dev libasound2-dev libpulse-dev
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.x
+
+      - name: Install OPAM dependencies
+        run: |
+          opam install . --deps-only --with-test
+
+      - name: Build
+        run: |
+          opam exec -- dune build
+
+      - name: Run tests
+        run: |
+          opam exec -- dune runtest

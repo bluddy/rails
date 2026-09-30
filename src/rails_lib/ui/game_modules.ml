@@ -14,7 +14,7 @@ let update_map _win v map =
 let default_state win sound : State.t =
   let resources = Resources.load_all () in
   let textures = Textures.of_resources win resources in
-  let fonts = Fonts.load "./data/FONTS.RR" win in
+  let fonts = Fonts.load (Engine.Paths.data_file "FONTS.RR") win in
   let backend = Backend.default in
   let map_tex = Hashtbl.find textures.misc `Advert in
   let ui = Main_ui.default win fonts Region.WestUS in
@@ -214,6 +214,6 @@ let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
       render=render win;
     }
   in
-  let shader_file = Printf.sprintf "shaders/%s.glsl" shader in
+  let shader_file = Engine.Paths.find_asset_file (Printf.sprintf "shaders/%s.glsl" shader) in
   Mainloop.main ~zoom ~adjust_ar init_fn ~shader_file
 

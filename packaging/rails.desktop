@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Railroad Tycoon
+GenericName=Railroad Simulation Game
+Comment=OCaml remake of Railroad Tycoon (1990)
+Exec=rails %F
+Icon=rails
+Categories=Game;Simulation;StrategyGame;
+Terminal=false
+StartupNotify=true

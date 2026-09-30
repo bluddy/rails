@@ -38,7 +38,25 @@ let arglist =
     "--no-adjust-ar", Clear adjust_ar, "Adjust aspect ratio";
     "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
     "--no-audio", Clear audio, "Disable audio";
+    "--data-dir", String (fun s -> Engine.Paths.set_data_dir s), "Path to directory containing game data files";
   ]
+
+let check_data () =
+  let required = [ "EASTUS.PIC"; "WESTUS.PIC"; "CITIES0.DTA"; "SPRITES.PIC"; "TRACKS.PIC"; "TITLEM.PAN"; "FONTS.RR" ] in
+  match Engine.Paths.check_data_files required with
+  | Ok () -> ()
+  | Error (missing, dir) ->
+      let msg =
+        Printf.sprintf
+          "Railroad Tycoon data files not found!\n\n\
+           Checked directory:\n  %s\n\n\
+           Missing file:\n  %s\n\n\
+           Please place the original DOS Railroad Tycoon files (*.PIC, *.PAN, *.DTA, FONTS.RR)\n\
+           into the 'data' directory (or run with --data-dir <path>)."
+          dir missing
+      in
+      Engine.Paths.report_fatal_error ~title:"Railroad Tycoon - Missing Game Data" ~message:msg;
+      exit 1
 
 let main () =
   parse arglist (fun _ -> ()) "Usage";
@@ -53,6 +71,10 @@ let main () =
   | `Pani ->
       Mainloop.main @@ Pani_render.standalone ~filename:!file
   | `City -> Mapgen.load_city_list WestUS |> ignore
-  | `Game -> Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
-  | `LoadGame -> Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
+  | `Game ->
+      check_data ();
+      Game_modules.run ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
+  | `LoadGame ->
+      check_data ();
+      Game_modules.run ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
 

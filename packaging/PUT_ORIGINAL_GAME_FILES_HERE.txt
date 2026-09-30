@@ -1,0 +1,17 @@
+Railroad Tycoon Remake - Game Data Folder
+=========================================
+
+To play the game, you need the original DOS Railroad Tycoon files.
+Please place the following original game files directly into this 'data' folder:
+
+Required files:
+- *.PIC (e.g. EASTUS.PIC, WESTUS.PIC, BRITAIN.PIC, EUROPE.PIC,
+         SPRITES.PIC, TRACKS.PIC, STATION.PIC, LOCOS.PIC, FACES.PIC,
+         LOGO.PIC, PAGE0.PIC through PAGE9.PIC, TITLE.PIC, etc.)
+- *.PAN (e.g. TITLEM.PAN, WOOD2.PAN, IRONM.PAN, FLOODM.PAN,
+         ENGFLDM.PAN, WRECKM.PAN)
+- *.DTA (e.g. CITIES0.DTA, CITIES1.DTA, CITIES2.DTA, CITIES3.DTA)
+
+(Note: FONTS.RR, SPRITES_extra.png, and TRACKS_extra.png are already included).
+
+Once the original files are in this folder, launch the game!
