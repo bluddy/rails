@@ -112,17 +112,19 @@ jobs:
           tar --force-local -xzf "$TMP_DIR/mixer-mingw.tar.gz" -C "$TMP_DIR"
           cp -rf "$TMP_DIR"/SDL2_mixer-2.8.0/x86_64-w64-mingw32/* "$MINGW_SYSROOT/"
 
-          # Fix prefix, libdir, includedir in .pc files
+          # Fix prefix, libdir, includedir and normalize Libs for OCaml linking.
+          # We only link -lSDL2 and -lSDL2_mixer; removing -lmingw32, -lSDL2main, -mwindows, -Dmain=SDL_main
+          # prevents hijacking the entry point (which causes undefined reference to wWinMain) and flexlink errors.
           sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
           sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
           sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
-          # Remove -mwindows: it causes flexlink (OCaml Windows linker) to fail with unknown option
-          sed -i 's/-mwindows//g' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's|^Libs:.*|Libs: -L${libdir} -lSDL2|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's/-Dmain=SDL_main//g' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
 
           sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
           sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
           sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
-          sed -i 's/-mwindows//g' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+          sed -i 's|^Libs:.*|Libs: -L${libdir} -lSDL2_mixer|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
 
           # Copy .pc files to Cygwin default pkgconfig search paths
           mkdir -p "$CYG_ROOT/usr/lib/pkgconfig" "$CYG_ROOT/lib/pkgconfig"
