@@ -116,10 +116,13 @@ jobs:
           sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
           sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
           sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          # Remove -mwindows: it causes flexlink (OCaml Windows linker) to fail with unknown option
+          sed -i 's/-mwindows//g' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
 
           sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
           sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
           sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+          sed -i 's/-mwindows//g' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
 
           # Copy .pc files to Cygwin default pkgconfig search paths
           mkdir -p "$CYG_ROOT/usr/lib/pkgconfig" "$CYG_ROOT/lib/pkgconfig"
