@@ -25,6 +25,7 @@ depends: [
   "fmt"
   "logs"
   "re"
+  "camlzip"
   "ppx_import"
   "ppx_deriving"
   "ppx_hash"

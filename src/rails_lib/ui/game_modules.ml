@@ -231,7 +231,14 @@ let run ?(debug = false) ?(debug_modules = []) ?load ~zoom ~adjust_ar ~audio ~sh
     let state = match load with
       | Some slot ->
           Printf.printf "Loading from slot %d...\n" slot;
-          Load_game.load_game slot win sound
+          begin match Load_game.load_game slot win sound with
+          | Ok s -> s
+          | Error err ->
+              Printf.eprintf "Error loading save from slot %d: %s\nFalling back to intro menu.\n" slot err;
+              let s = default_state win sound in
+              let state = Intro.make s in
+              {s with mode=Intro state}
+          end
 
       | None ->
         (* New game. Use a basic default state *)
