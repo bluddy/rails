@@ -91,21 +91,48 @@ jobs:
         run: |
           opam install . --depext-only -y
 
-      - name: Configure MinGW pkg-config
+      - name: Configure MinGW SDL2 and pkg-config
         shell: bash
         run: |
           CYG_ROOT="C:/.opam/.cygwin/root"
+          MINGW_SYSROOT="$CYG_ROOT/usr/x86_64-w64-mingw32/sys-root/mingw"
+          mkdir -p "$MINGW_SYSROOT"
+
+          TMP_DIR="${RUNNER_TEMP:-/tmp}/sdl_dev"
+          mkdir -p "$TMP_DIR"
+
+          echo "==> Downloading official SDL2 2.30.10 MinGW dev libraries..."
+          curl -sL "https://github.com/libsdl-org/SDL/releases/download/release-2.30.10/SDL2-devel-2.30.10-mingw.tar.gz" -o "$TMP_DIR/sdl2-mingw.tar.gz"
+          tar -xzf "$TMP_DIR/sdl2-mingw.tar.gz" -C "$TMP_DIR"
+          cp -rf "$TMP_DIR"/SDL2-2.30.10/x86_64-w64-mingw32/* "$MINGW_SYSROOT/"
+
+          echo "==> Downloading official SDL2_mixer 2.8.0 MinGW dev libraries..."
+          curl -sL "https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-devel-2.8.0-mingw.tar.gz" -o "$TMP_DIR/mixer-mingw.tar.gz"
+          tar -xzf "$TMP_DIR/mixer-mingw.tar.gz" -C "$TMP_DIR"
+          cp -rf "$TMP_DIR"/SDL2_mixer-2.8.0/x86_64-w64-mingw32/* "$MINGW_SYSROOT/"
+
+          # Fix prefix, libdir, includedir in .pc files
+          sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+
+          sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+          sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+          sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+
+          # Copy .pc files to Cygwin default pkgconfig search paths
           mkdir -p "$CYG_ROOT/usr/lib/pkgconfig" "$CYG_ROOT/lib/pkgconfig"
-          if [ -d "$CYG_ROOT/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig" ]; then
-            cp -v "$CYG_ROOT"/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig/*.pc "$CYG_ROOT/usr/lib/pkgconfig/" || true
-            cp -v "$CYG_ROOT"/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig/*.pc "$CYG_ROOT/lib/pkgconfig/" || true
-            echo "Copied MinGW .pc files to Cygwin pkgconfig dirs:"
-            ls -la "$CYG_ROOT/usr/lib/pkgconfig/"
-          fi
+          cp -v "$MINGW_SYSROOT"/lib/pkgconfig/*.pc "$CYG_ROOT/usr/lib/pkgconfig/" || true
+          cp -v "$MINGW_SYSROOT"/lib/pkgconfig/*.pc "$CYG_ROOT/lib/pkgconfig/" || true
+          echo "MinGW .pc files configured in Cygwin:"
+          ls -la "$CYG_ROOT/usr/lib/pkgconfig/"
+
+          # Add profile.d script for Cygwin bash shells
           mkdir -p "$CYG_ROOT/etc/profile.d"
           cat << 'EOF' > "$CYG_ROOT/etc/profile.d/mingw-pkgconfig.sh"
           export PKG_CONFIG_PATH="/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig:$PKG_CONFIG_PATH"
           EOF
+          rm -rf "$TMP_DIR"
 
       - name: Install OPAM dependencies
         shell: bash
