@@ -98,17 +98,18 @@ jobs:
           MINGW_SYSROOT="$CYG_ROOT/usr/x86_64-w64-mingw32/sys-root/mingw"
           mkdir -p "$MINGW_SYSROOT"
 
-          TMP_DIR="${RUNNER_TEMP:-/tmp}/sdl_dev"
+          TMP_DIR="./tmp_sdl_dev"
+          rm -rf "$TMP_DIR"
           mkdir -p "$TMP_DIR"
 
           echo "==> Downloading official SDL2 2.30.10 MinGW dev libraries..."
           curl -sL "https://github.com/libsdl-org/SDL/releases/download/release-2.30.10/SDL2-devel-2.30.10-mingw.tar.gz" -o "$TMP_DIR/sdl2-mingw.tar.gz"
-          tar -xzf "$TMP_DIR/sdl2-mingw.tar.gz" -C "$TMP_DIR"
+          tar --force-local -xzf "$TMP_DIR/sdl2-mingw.tar.gz" -C "$TMP_DIR"
           cp -rf "$TMP_DIR"/SDL2-2.30.10/x86_64-w64-mingw32/* "$MINGW_SYSROOT/"
 
           echo "==> Downloading official SDL2_mixer 2.8.0 MinGW dev libraries..."
           curl -sL "https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-devel-2.8.0-mingw.tar.gz" -o "$TMP_DIR/mixer-mingw.tar.gz"
-          tar -xzf "$TMP_DIR/mixer-mingw.tar.gz" -C "$TMP_DIR"
+          tar --force-local -xzf "$TMP_DIR/mixer-mingw.tar.gz" -C "$TMP_DIR"
           cp -rf "$TMP_DIR"/SDL2_mixer-2.8.0/x86_64-w64-mingw32/* "$MINGW_SYSROOT/"
 
           # Fix prefix, libdir, includedir in .pc files
