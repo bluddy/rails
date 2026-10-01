@@ -61,11 +61,19 @@ if [ ! -f "$STAGE_DIR/rails/SDL2_mixer.dll" ]; then
     fi
 fi
 
-# If running under MSYS2/Mingw, also look for mingw runtime DLLs (e.g. pthread)
+# Look for mingw runtime DLLs in MSYS2 or Cygwin MinGW locations
 for lib in libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll; do
-    if command -v cygpath >/dev/null 2>&1 && [ -f "/mingw64/bin/$lib" ]; then
-        cp "/mingw64/bin/$lib" "$STAGE_DIR/rails/" 2>/dev/null || true
-    fi
+    for dir in \
+        /mingw64/bin \
+        /c/.opam/.cygwin/root/usr/x86_64-w64-mingw32/sys-root/mingw/bin \
+        "C:/.opam/.cygwin/root/usr/x86_64-w64-mingw32/sys-root/mingw/bin" \
+        /usr/x86_64-w64-mingw32/sys-root/mingw/bin; do
+        if [ -f "$dir/$lib" ]; then
+            echo "==> Bundling $lib from $dir"
+            cp "$dir/$lib" "$STAGE_DIR/rails/" 2>/dev/null || true
+            break
+        fi
+    done
 done
 
 rm -rf "$TMP_SDL"

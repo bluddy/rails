@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '[0-9]*'
   workflow_dispatch:
     inputs:
       version:
@@ -85,13 +86,40 @@ jobs:
         with:
           ocaml-compiler: 5.2.x
 
+      - name: Install system dependencies (depexts)
+        shell: bash
+        run: |
+          opam install . --depext-only -y
+
+      - name: Configure MinGW pkg-config
+        shell: bash
+        run: |
+          CYG_ROOT="C:/.opam/.cygwin/root"
+          mkdir -p "$CYG_ROOT/usr/lib/pkgconfig" "$CYG_ROOT/lib/pkgconfig"
+          if [ -d "$CYG_ROOT/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig" ]; then
+            cp -v "$CYG_ROOT"/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig/*.pc "$CYG_ROOT/usr/lib/pkgconfig/" || true
+            cp -v "$CYG_ROOT"/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig/*.pc "$CYG_ROOT/lib/pkgconfig/" || true
+            echo "Copied MinGW .pc files to Cygwin pkgconfig dirs:"
+            ls -la "$CYG_ROOT/usr/lib/pkgconfig/"
+          fi
+          mkdir -p "$CYG_ROOT/etc/profile.d"
+          cat << 'EOF' > "$CYG_ROOT/etc/profile.d/mingw-pkgconfig.sh"
+          export PKG_CONFIG_PATH="/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig:$PKG_CONFIG_PATH"
+          EOF
+
       - name: Install OPAM dependencies
         shell: bash
+        env:
+          MSYS2_ENV_CONV_EXCL: "PKG_CONFIG_PATH"
+          PKG_CONFIG_PATH: "/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig"
         run: |
           opam install . --deps-only
 
       - name: Build release binary
         shell: bash
+        env:
+          MSYS2_ENV_CONV_EXCL: "PKG_CONFIG_PATH"
+          PKG_CONFIG_PATH: "/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig"
         run: |
           opam exec -- dune build -p rails --profile release
 
@@ -127,8 +155,6 @@ jobs:
         include:
           - os: macos-14
             arch: arm64
-          - os: macos-13
-            arch: x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -177,6 +203,7 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
+    if: always() && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && !contains(needs.*.result, 'cancelled') && (needs.build-linux.result == 'success' || needs.build-windows.result == 'success' || needs.build-macos.result == 'success')
     needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
     steps:
@@ -190,8 +217,9 @@ jobs:
 
       - name: Publish Release to GitHub
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          name: Release ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
           files: release-artifacts/**/*
           generate_release_notes: true
           draft: false
