@@ -78,7 +78,7 @@ fi
 rm -rf "$TMP_SDL"
 
 # 3. Look for mingw runtime DLLs
-for lib in libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll; do
+for lib in libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll libffi-6.dll; do
     for dir in \
         /usr/x86_64-w64-mingw32/sys-root/mingw/bin \
         /c/.opam/.cygwin/root/usr/x86_64-w64-mingw32/sys-root/mingw/bin \
