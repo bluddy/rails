@@ -36,7 +36,7 @@ if [ -f "packaging/rails.ico" ]; then
     cp "packaging/rails.ico" "$STAGE_DIR/rails/"
 fi
 
-# 1. Check if SDL2.dll and SDL2_mixer.dll already exist in MinGW sysroot
+# 1. Check if SDL2.dll already exists in MinGW sysroot
 for dir in \
     /usr/x86_64-w64-mingw32/sys-root/mingw/bin \
     /c/.opam/.cygwin/root/usr/x86_64-w64-mingw32/sys-root/mingw/bin \
@@ -45,10 +45,6 @@ for dir in \
     if [ ! -f "$STAGE_DIR/rails/SDL2.dll" ] && [ -f "$dir/SDL2.dll" ]; then
         echo "==> Using SDL2.dll from $dir"
         cp "$dir/SDL2.dll" "$STAGE_DIR/rails/"
-    fi
-    if [ ! -f "$STAGE_DIR/rails/SDL2_mixer.dll" ] && [ -f "$dir/SDL2_mixer.dll" ]; then
-        echo "==> Using SDL2_mixer.dll from $dir"
-        cp "$dir/SDL2_mixer.dll" "$STAGE_DIR/rails/"
     fi
 done
 

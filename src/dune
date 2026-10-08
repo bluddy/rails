@@ -5,6 +5,9 @@
   (name rails_run)
   (libraries rails_lib)
   (modes exe)
+  (foreign_stubs
+   (language c)
+   (names preload_dll))
   )
 
 (executable
