@@ -26,6 +26,12 @@ jobs:
         with:
           ocaml-compiler: 5.2.x
 
+      # tsdl-mixer 0.6 on opam has no Windows DLL support (hardcodes the Linux
+      # .so name). Pin to the fixed branch until it is released to opam.
+      - name: Pin tsdl-mixer to Windows-compatible branch
+        run: |
+          opam pin add tsdl-mixer "git+https://github.com/bluddy/tsdl-mixer.git#fix-windows-dll-search" -y
+
       - name: Install OPAM dependencies
         run: |
           opam install . --deps-only --with-test

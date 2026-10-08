@@ -33,6 +33,17 @@ jobs:
         with:
           ocaml-compiler: 5.2.x
 
+      # tsdl-mixer 0.6 on opam has NO Windows DLL support: its library lookup
+      # matches only on Build_config.system and hardcodes libSDL2_mixer-2.0.so.0
+      # on non-macOS, so Windows builds fail at startup with
+      # "Cannot find libSDL2_mixer-2.0.so.0". The Windows support and the
+      # exe-directory search fix are merged on the tsdl-mixer git branch but
+      # not yet released to opam. Remove this pin once tsdl-mixer >= 0.7 is out.
+      - name: Pin tsdl-mixer to Windows-compatible branch
+        shell: bash
+        run: |
+          opam pin add tsdl-mixer "git+https://github.com/bluddy/tsdl-mixer.git#fix-windows-dll-search" -y
+
       - name: Install OPAM dependencies
         run: |
           opam install . --deps-only --with-test
@@ -140,6 +151,21 @@ jobs:
           EOF
           rm -rf "$TMP_DIR"
 
+      # tsdl-mixer 0.6 on opam has NO Windows DLL support: its library lookup
+      # matches only on Build_config.system and hardcodes libSDL2_mixer-2.0.so.0
+      # on non-macOS, so Windows builds fail at startup with
+      # "Cannot find libSDL2_mixer-2.0.so.0". The Windows support and the
+      # exe-directory search fix are on the tsdl-mixer git branch but not yet
+      # released to opam. Pinned here (after MinGW SDL is configured, since
+      # building tsdl requires sdl2.pc). Remove once tsdl-mixer >= 0.7 is out.
+      - name: Pin tsdl-mixer to Windows-compatible branch
+        shell: bash
+        env:
+          MSYS2_ENV_CONV_EXCL: "PKG_CONFIG_PATH"
+          PKG_CONFIG_PATH: "/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig"
+        run: |
+          opam pin add tsdl-mixer "git+https://github.com/bluddy/tsdl-mixer.git#fix-windows-dll-search" -y
+
       - name: Install OPAM dependencies
         shell: bash
         env:
@@ -201,6 +227,17 @@ jobs:
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5.2.x
+
+      # tsdl-mixer 0.6 on opam has NO Windows DLL support: its library lookup
+      # matches only on Build_config.system and hardcodes libSDL2_mixer-2.0.so.0
+      # on non-macOS, so Windows builds fail at startup with
+      # "Cannot find libSDL2_mixer-2.0.so.0". The Windows support and the
+      # exe-directory search fix are merged on the tsdl-mixer git branch but
+      # not yet released to opam. Remove this pin once tsdl-mixer >= 0.7 is out.
+      - name: Pin tsdl-mixer to Windows-compatible branch
+        shell: bash
+        run: |
+          opam pin add tsdl-mixer "git+https://github.com/bluddy/tsdl-mixer.git#fix-windows-dll-search" -y
 
       - name: Install OPAM dependencies
         run: |
