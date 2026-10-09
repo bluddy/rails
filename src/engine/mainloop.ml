@@ -9,11 +9,8 @@ type 'a t = {
   render: 'a -> unit;
 }
 
-let main ?(zoom=3) ?(adjust_ar=false) ?shader_file init_fn =
-  let zoom = float_of_int zoom in
-  let zoom_x, zoom_y = zoom, zoom in
-  let zoom_y = if adjust_ar then zoom_y *. 1.2 else zoom_y in
-  let win = R.create 320 200 ~zoom_x ~zoom_y ?shader_file in
+let main ?zoom ?(adjust_ar=false) ?(shader=R.No_shader) init_fn =
+  let win = R.create 320 200 ?zoom ~adjust_ar ~shader in
   let event = Sdl.Event.create () in
   let some_event = Some event in (* For reducing allocation with SDL *)
 
@@ -32,9 +29,19 @@ let main ?(zoom=3) ?(adjust_ar=false) ?shader_file init_fn =
 
   let rec update_loop data  =
     let rec event_loop data =
+      let polled = Sdl.poll_event some_event in
+      (* Keep window metrics in sync after fullscreen toggles / resizes *)
+      if polled then begin
+        match Sdl.Event.(enum (get event typ)) with
+        | `Window_event
+          when Sdl.Event.(get event window_event_id)
+               = Sdl.Event.window_event_size_changed ->
+            R.sync_window_size win
+        | _ -> ()
+      end;
       let event =
         (* convert to our Event.t *)
-        if Sdl.poll_event some_event then Event.of_sdl event ~zoom_x ~zoom_y
+        if polled then Event.of_sdl event ~zoom_x:win.zoom_x ~zoom_y:win.zoom_y
         else Event.NoEvent
       in
       match event with
@@ -42,6 +49,12 @@ let main ?(zoom=3) ?(adjust_ar=false) ?shader_file init_fn =
       | NoEvent -> data, `Stay
       | EventNotRelevant ->
           (* Get rid of events we don't care about *)
+          event_loop data
+      | Key {down=true; repeat=0; key=Enter; modifiers}
+        when Event.Modifiers.mem modifiers `Alt ->
+          (* Alt+Enter: toggle fullscreen (window-level concern, handled
+             before the game sees the event) *)
+          R.toggle_fullscreen win;
           event_loop data
       | _ ->
         let time = Sdl.get_ticks () |> Int32.to_int in

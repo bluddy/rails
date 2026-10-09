@@ -219,7 +219,7 @@ let list_logging_modules () =
   Printf.printf "Available logging modules (%d total):\n" (List.length names);
   List.iter (fun name -> Printf.printf "  - %s\n" name) names
 
-let run ?(debug = false) ?(debug_modules = []) ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
+let run ?(debug = false) ?(debug_modules = []) ?load ?zoom ~adjust_ar ~audio ~shader () : unit =
   setup_logging ~debug ~debug_modules ();
 
   Printf.printf "Loading resources...";
@@ -254,6 +254,5 @@ let run ?(debug = false) ?(debug_modules = []) ?load ~zoom ~adjust_ar ~audio ~sh
       render=render win;
     }
   in
-  let shader_file = Engine.Paths.find_asset_file (Printf.sprintf "shaders/%s.glsl" shader) in
-  Mainloop.main ~zoom ~adjust_ar init_fn ~shader_file
+  Mainloop.main ?zoom ~adjust_ar init_fn ~shader
 

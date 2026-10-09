@@ -9,16 +9,22 @@ type opengl_state = {
 }
 
 type window = {
-  zoom_x: float;
-  zoom_y: float;
+  mutable zoom_x: float;
+  mutable zoom_y: float;
   inner_w: int;
   inner_h: int;
-  out_w: int;
-  out_h: int;
+  mutable out_w: int;
+  mutable out_h: int;
   window: Sdl.window;
   opengl: opengl_state;
   shader_prog: Opengl.t option; (* program is an int *)
 }
+
+(** How to pick the display shader *)
+type shader_setting =
+  | Default (** choose the EGA shader variant matching the screen size *)
+  | Named of string (** explicit shader name, from [shaders/<name>.glsl] *)
+  | No_shader (** raw pixel rendering, no shader *)
 
 let format = Sdl.Pixel.format_rgba8888
 
@@ -32,11 +38,60 @@ let clear_screen (_win:window) =
   Tgl3.Gl.clear_color 0. 0. 0. 1.;
   Tgl3.Gl.clear Tgl3.Gl.color_buffer_bit
 
-let create ?shader_file w h ~zoom_x ~zoom_y =
+(* The original game ran in EGA; pick the shader variant tuned for the
+   height of the output we render to. *)
+let ega_shader_for_height h =
+  if h <= 720 then "ega-720p"
+  else if h <= 1080 then "ega-1080p"
+  else if h <= 1440 then "ega-1440p"
+  else "ega-4k"
+
+let create ?zoom ?(adjust_ar = false) ?(shader = No_shader) w h =
+  Sdl.init Sdl.Init.video |> get_exn;
+  (* Desktop resolution, for auto zoom / auto shader selection *)
+  let desktop =
+    match Sdl.get_desktop_display_mode 0 with
+    | Ok m -> Some (m.dm_w, m.dm_h)
+    | Error _ -> None
+  in
+  let ar = if adjust_ar then 1.2 else 1.0 in
+  let zoom_i =
+    match zoom with
+    | Some z -> Stdlib.max 1 z
+    | None ->
+      (* Largest integer scale that fits in ~90% of the desktop, leaving
+         room for the title bar and taskbar. Fall back to 3 (=960x600). *)
+      begin match desktop with
+      | Some (dw, dh) ->
+        let zw = float_of_int dw *. 0.9 /. float_of_int w in
+        let zh = float_of_int dh *. 0.9 /. (float_of_int h *. ar) in
+        let z = Stdlib.(if zw < zh then zw else zh) in
+        Stdlib.max 1 (int_of_float z)
+      | None -> 3
+      end
+  in
+  let zoom_x = float_of_int zoom_i in
+  let zoom_y = zoom_x *. ar in
   let out_w = Int.of_float @@ zoom_x *. Float.of_int w in
   let out_h = Int.of_float @@ zoom_y *. Float.of_int h in
-
-  Sdl.init Sdl.Init.video |> get_exn;
+  let shader_file =
+    match shader with
+    | No_shader -> None
+    | Named name ->
+        Some (Paths.find_asset_file (Printf.sprintf "shaders/%s.glsl" name))
+    | Default ->
+        let name =
+          match desktop with
+          | Some (_, dh) -> ega_shader_for_height dh
+          | None -> "ega-1080p"
+        in
+        Some (Paths.find_asset_file (Printf.sprintf "shaders/%s.glsl" name))
+  in
+  (match desktop with
+  | Some (dw, dh) ->
+      Printf.printf "Display %dx%d: window %dx%d (zoom %d)\n%!" dw dh out_w
+        out_h zoom_i
+  | None -> Printf.printf "Window %dx%d (zoom %d)\n%!" out_w out_h zoom_i);
   Sdl.gl_set_attribute Sdl.Gl.context_profile_mask Sdl.Gl.context_profile_core |> ignore;
   Sdl.gl_set_attribute Sdl.Gl.context_major_version 3 |> ignore;
   Sdl.gl_set_attribute Sdl.Gl.context_minor_version 3 |> ignore;
@@ -47,7 +102,6 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
 
   Opengl.init ();
 
-  let shader_file = Option.map Paths.find_asset_file shader_file in
   let s = match shader_file with None -> "No shader file. Default render" | Some f -> "Using shader file "^f in
   print_endline s;
   let shader_prog = Opengl.create shader_file in
@@ -75,6 +129,31 @@ let create ?shader_file w h ~zoom_x ~zoom_y =
     opengl;
     shader_prog = Some shader_prog;
   }
+
+(** Re-read the real window size into the window record. Needed after a
+    fullscreen toggle so mouse mapping and shader output size stay correct. *)
+let sync_window_size win =
+  let w, h = Sdl.get_window_size win.window in
+  if w <> win.out_w || h <> win.out_h then begin
+    win.out_w <- w;
+    win.out_h <- h;
+    win.zoom_x <- float_of_int w /. float_of_int win.inner_w;
+    win.zoom_y <- float_of_int h /. float_of_int win.inner_h
+  end
+
+let toggle_fullscreen win =
+  let flags = Sdl.get_window_flags win.window in
+  let is_fs = Sdl.Window.test flags Sdl.Window.fullscreen in
+  let res =
+    if is_fs then Sdl.set_window_fullscreen win.window Sdl.Window.windowed
+    else Sdl.set_window_fullscreen win.window Sdl.Window.fullscreen_desktop
+  in
+  match res with
+  | Error (`Msg m) -> Printf.eprintf "Fullscreen toggle failed: %s\n%!" m
+  | Ok () ->
+      sync_window_size win;
+      Printf.printf "Fullscreen: %b (window %dx%d)\n%!" (not is_fs) win.out_w
+        win.out_h
 
 let zoom _win x = x
   (* win.zoom *. Float.of_int x |> Int.of_float *)
