@@ -73,8 +73,8 @@ if [ ! -f "$STAGE_DIR/rails/SDL2_mixer.dll" ]; then
 fi
 rm -rf "$TMP_SDL"
 
-# 3. Look for mingw runtime DLLs
-for lib in libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll libffi-6.dll; do
+# 3. Look for mingw runtime DLLs (zlib1.dll is required by camlzip)
+for lib in libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll libffi-6.dll zlib1.dll; do
     for dir in \
         /usr/x86_64-w64-mingw32/sys-root/mingw/bin \
         /c/.opam/.cygwin/root/usr/x86_64-w64-mingw32/sys-root/mingw/bin \
