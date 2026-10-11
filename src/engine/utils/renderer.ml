@@ -111,7 +111,7 @@ let create ?zoom ?(adjust_ar = false) ?(shader = No_shader) w h =
     | _ -> print_endline "Failed to hide cursor"
   in
   if do_hide_cursor then hide_cursor ();
-  Sdl.set_window_grab window true;
+  (* Sdl.set_window_grab window true; *)
 
   let framebuffer_tex = Opengl.create_texture w h in
   let transition_tex  = Opengl.create_streaming_texture w h in
