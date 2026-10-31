@@ -21,7 +21,7 @@
  (synopsis "OCaml-based remake of Railroad Tycoon")
  (description "Requires original files")
  (depends ocaml dune iter containers containers-data gen imagelib tgls tsdl tsdl-mixer owl-base
-          ocamlgraph fmt logs re
+          ocamlgraph fmt logs re camlzip
           ppx_import ppx_deriving ppx_hash ppx_yojson_conv ppx_expect ppx_inline_test ppx_update
           ppx_deriving_variant_string
           )

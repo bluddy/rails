@@ -11,15 +11,30 @@ type slot = {
 type 'state t = {
   menu: (slot, 'state) Menu.MsgBox.t;
   action: [`Save | `Load];
+  error_modal: (unit, 'state) Menu.MsgBox.t option;
 }
 
 module Header = struct
   type t = {
-    version: int;
+    version: int [@default 1];
     save_title: string;
   } [@@deriving yojson]
 
-  let title_of_str s = (Yojson.Safe.from_string s |> t_of_yojson ).save_title
+  let of_string str =
+    try
+      Ok (Yojson.Safe.from_string str |> t_of_yojson)
+    with exn ->
+      Error (Printexc.to_string exn)
+
+  let of_string_opt str =
+    match of_string str with
+    | Ok h -> Some h
+    | Error _ -> None
+
+  let title_of_str s =
+    match of_string s with
+    | Ok h -> h.save_title
+    | Error _ -> "[CORRUPTED SAVE]"
 end
 
 let save_game_of_i i = sp "game%d.sav" i
@@ -48,12 +63,13 @@ let make_entries () =
   let entries =
     List.map (function
       | `Full (file, i) ->
-        let s = IO.File.read_exn file in
-        let s = match String.split s ~by:"====" with
-          | header::_ ->
-              Header.title_of_str header
-          | _ ->
-              invalid_arg "bad header"
+        let s =
+          match Save_compression.read_save_file file with
+          | Error _ -> "[CORRUPTED SAVE]"
+          | Ok raw ->
+            match String.split raw ~by:"====" with
+            | header::_ -> Header.title_of_str header
+            | _ -> "[CORRUPTED SAVE]"
         in
         {header=Some s; slot=i}
       | `Empty i -> {header=None; slot=i})

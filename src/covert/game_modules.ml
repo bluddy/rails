@@ -140,7 +140,7 @@ let render win v = match v.mode with
   | Time_pass state -> Time_pass.render win state
   | Case_init_clue_gen _ -> () (* no render *)
 
-let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
+let run ?load ?zoom ~adjust_ar ~audio ~shader () : unit =
   Logs.set_reporter (Logs_fmt.reporter ());
   Logs.set_level (Some Logs.Info);
 
@@ -170,6 +170,5 @@ let run ?load ~zoom ~adjust_ar ~audio ~shader () : unit =
       render=render win;
     }
   in
-  let shader_file = Printf.sprintf "shaders/%s.glsl" shader in
-  Mainloop.main ~zoom ~adjust_ar init_fn ~shader_file
+  Mainloop.main ?zoom ~adjust_ar init_fn ~shader
 

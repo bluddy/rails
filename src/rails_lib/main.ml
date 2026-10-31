@@ -3,6 +3,7 @@ open Arg
 module Pani_render = Engine.Pani_render
 module Pani = Engine.Pani
 module Mainloop = Engine.Mainloop
+module Renderer = Engine.Renderer
 
 type actions = [ `Font | `Pic | `Cat | `Pani | `City | `Game | `LoadGame]
 
@@ -11,9 +12,9 @@ let file_slot = ref 0
 let mode : actions ref = ref `Game
 let dump = ref false
 let debugger = ref false
-let zoom = ref 3
+let zoom = ref (None : int option)
 let adjust_ar = ref true
-let shader = ref "test"
+let shader = ref Renderer.Default
 let audio = ref true
 let debug_modules = ref []
 let list_modules = ref false
@@ -38,9 +39,10 @@ let arglist =
     "--debug-module", String (fun s -> debug_modules := s :: !debug_modules), "Enable debug logging for specific module(s) (comma-separated, e.g. train,backend)";
     "--list-debug-modules", Set list_modules, "List all available logging modules and exit";
     "--load", Int (set_slot `LoadGame), "Load a save file";
-    "--zoom", Int (fun x -> zoom := x), "Set zoom (default =3)";
-    "--no-adjust-ar", Clear adjust_ar, "Adjust aspect ratio";
-    "--shader", String (fun s -> shader := s), "Shader name (default=test, looks in shaders/*.glsl)";
+    "--zoom", Int (fun x -> zoom := Some x), "Display zoom multiplier (default: largest that fits the screen)";
+    "--no-adjust-ar", Clear adjust_ar, "Disable rectangular pixel aspect ratio adjustment";
+    "--shader", String (fun s -> shader := Renderer.Named s), "Shader name (default: EGA shader matched to screen size, looks in shaders/*.glsl)";
+    "--no-shader", Unit (fun () -> shader := Renderer.No_shader), "Disable shaders (raw pixels)";
     "--no-audio", Clear audio, "Disable audio";
     "--data-dir", String (fun s -> Unix.putenv "RAILS_DATA_DIR" s), "Path to directory containing game data files";
   ]
@@ -81,8 +83,8 @@ let main () =
   | `City -> Mapgen.load_city_list WestUS |> ignore
   | `Game ->
       check_data ();
-      Game_modules.run ~debug:!debugger ~debug_modules:!debug_modules ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
+      Game_modules.run ~debug:!debugger ~debug_modules:!debug_modules ?zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
   | `LoadGame ->
       check_data ();
-      Game_modules.run ~debug:!debugger ~debug_modules:!debug_modules ~load:!file_slot ~zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
+      Game_modules.run ~debug:!debugger ~debug_modules:!debug_modules ~load:!file_slot ?zoom:!zoom ~adjust_ar:!adjust_ar ~audio:!audio ~shader:!shader ()
 

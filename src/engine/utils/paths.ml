@@ -117,9 +117,11 @@ let get_data_dir ?custom_dir () =
 
 let resolve_data_path ?data_dir filename =
   let clean_name =
-    if String.starts_with ~prefix:"./data/" filename then
+    if String.starts_with ~prefix:"./data/" filename
+       || String.starts_with ~prefix:".\\data\\" filename then
       String.sub filename 7 (String.length filename - 7)
-    else if String.starts_with ~prefix:"data/" filename then
+    else if String.starts_with ~prefix:"data/" filename
+            || String.starts_with ~prefix:"data\\" filename then
       String.sub filename 5 (String.length filename - 5)
     else
       filename

@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '[0-9]*'
   workflow_dispatch:
     inputs:
       version:
@@ -17,7 +18,7 @@ permissions:
 jobs:
   build-linux:
     name: Build Linux (AppImage & Tarball)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,12 +26,23 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libgl1-mesa-dev libasound2-dev libpulse-dev
+          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libgl1-mesa-dev libasound2-dev libpulse-dev libfuse2t64
 
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5.2.x
+
+      # tsdl-mixer 0.6 on opam has NO Windows DLL support: its library lookup
+      # matches only on Build_config.system and hardcodes libSDL2_mixer-2.0.so.0
+      # on non-macOS, so Windows builds fail at startup with
+      # "Cannot find libSDL2_mixer-2.0.so.0". The Windows support and the
+      # exe-directory search fix are merged on the tsdl-mixer git branch but
+      # not yet released to opam. Remove this pin once tsdl-mixer >= 0.7 is out.
+      - name: Pin tsdl-mixer to Windows-compatible branch
+        shell: bash
+        run: |
+          opam pin add tsdl-mixer "git+https://github.com/bluddy/tsdl-mixer.git#fix-windows-dll-search" -y
 
       - name: Install OPAM dependencies
         run: |
@@ -85,13 +97,88 @@ jobs:
         with:
           ocaml-compiler: 5.2.x
 
+      - name: Install system dependencies (depexts)
+        shell: bash
+        run: |
+          opam install . --depext-only -y
+
+      - name: Configure MinGW SDL2 and pkg-config
+        shell: bash
+        run: |
+          CYG_ROOT="C:/.opam/.cygwin/root"
+          MINGW_SYSROOT="$CYG_ROOT/usr/x86_64-w64-mingw32/sys-root/mingw"
+          mkdir -p "$MINGW_SYSROOT"
+
+          TMP_DIR="./tmp_sdl_dev"
+          rm -rf "$TMP_DIR"
+          mkdir -p "$TMP_DIR"
+
+          echo "==> Downloading official SDL2 2.30.10 MinGW dev libraries..."
+          curl -sL "https://github.com/libsdl-org/SDL/releases/download/release-2.30.10/SDL2-devel-2.30.10-mingw.tar.gz" -o "$TMP_DIR/sdl2-mingw.tar.gz"
+          tar --force-local -xzf "$TMP_DIR/sdl2-mingw.tar.gz" -C "$TMP_DIR"
+          cp -rf "$TMP_DIR"/SDL2-2.30.10/x86_64-w64-mingw32/* "$MINGW_SYSROOT/"
+
+          echo "==> Downloading official SDL2_mixer 2.8.0 MinGW dev libraries..."
+          curl -sL "https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-devel-2.8.0-mingw.tar.gz" -o "$TMP_DIR/mixer-mingw.tar.gz"
+          tar --force-local -xzf "$TMP_DIR/mixer-mingw.tar.gz" -C "$TMP_DIR"
+          cp -rf "$TMP_DIR"/SDL2_mixer-2.8.0/x86_64-w64-mingw32/* "$MINGW_SYSROOT/"
+
+          # Fix prefix, libdir, includedir and normalize Libs for OCaml linking.
+          # We only link -lSDL2 and -lSDL2_mixer; removing -lmingw32, -lSDL2main, -mwindows, -Dmain=SDL_main
+          # prevents hijacking the entry point (which causes undefined reference to wWinMain) and flexlink errors.
+          sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's|^Libs:.*|Libs: -L${libdir} -lSDL2|' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+          sed -i 's/-Dmain=SDL_main//g' "$MINGW_SYSROOT/lib/pkgconfig/sdl2.pc"
+
+          sed -i 's|^prefix=.*|prefix=/usr/x86_64-w64-mingw32/sys-root/mingw|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+          sed -i 's|^libdir=.*|libdir=${prefix}/lib|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+          sed -i 's|^includedir=.*|includedir=${prefix}/include|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+          sed -i 's|^Libs:.*|Libs: -L${libdir} -lSDL2_mixer|' "$MINGW_SYSROOT/lib/pkgconfig/SDL2_mixer.pc"
+
+          # Copy .pc files to Cygwin default pkgconfig search paths
+          mkdir -p "$CYG_ROOT/usr/lib/pkgconfig" "$CYG_ROOT/lib/pkgconfig"
+          cp -v "$MINGW_SYSROOT"/lib/pkgconfig/*.pc "$CYG_ROOT/usr/lib/pkgconfig/" || true
+          cp -v "$MINGW_SYSROOT"/lib/pkgconfig/*.pc "$CYG_ROOT/lib/pkgconfig/" || true
+          echo "MinGW .pc files configured in Cygwin:"
+          ls -la "$CYG_ROOT/usr/lib/pkgconfig/"
+
+          # Add profile.d script for Cygwin bash shells
+          mkdir -p "$CYG_ROOT/etc/profile.d"
+          cat << 'EOF' > "$CYG_ROOT/etc/profile.d/mingw-pkgconfig.sh"
+          export PKG_CONFIG_PATH="/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig:$PKG_CONFIG_PATH"
+          EOF
+          rm -rf "$TMP_DIR"
+
+      # tsdl-mixer 0.6 on opam has NO Windows DLL support: its library lookup
+      # matches only on Build_config.system and hardcodes libSDL2_mixer-2.0.so.0
+      # on non-macOS, so Windows builds fail at startup with
+      # "Cannot find libSDL2_mixer-2.0.so.0". The Windows support and the
+      # exe-directory search fix are on the tsdl-mixer git branch but not yet
+      # released to opam. Pinned here (after MinGW SDL is configured, since
+      # building tsdl requires sdl2.pc). Remove once tsdl-mixer >= 0.7 is out.
+      - name: Pin tsdl-mixer to Windows-compatible branch
+        shell: bash
+        env:
+          MSYS2_ENV_CONV_EXCL: "PKG_CONFIG_PATH"
+          PKG_CONFIG_PATH: "/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig"
+        run: |
+          opam pin add tsdl-mixer "git+https://github.com/bluddy/tsdl-mixer.git#fix-windows-dll-search" -y
+
       - name: Install OPAM dependencies
         shell: bash
+        env:
+          MSYS2_ENV_CONV_EXCL: "PKG_CONFIG_PATH"
+          PKG_CONFIG_PATH: "/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig"
         run: |
           opam install . --deps-only
 
       - name: Build release binary
         shell: bash
+        env:
+          MSYS2_ENV_CONV_EXCL: "PKG_CONFIG_PATH"
+          PKG_CONFIG_PATH: "/usr/x86_64-w64-mingw32/sys-root/mingw/lib/pkgconfig:/usr/x86_64-w64-mingw32/sys-root/mingw/share/pkgconfig"
         run: |
           opam exec -- dune build -p rails --profile release
 
@@ -127,8 +214,6 @@ jobs:
         include:
           - os: macos-14
             arch: arm64
-          - os: macos-13
-            arch: x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -142,6 +227,17 @@ jobs:
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5.2.x
+
+      # tsdl-mixer 0.6 on opam has NO Windows DLL support: its library lookup
+      # matches only on Build_config.system and hardcodes libSDL2_mixer-2.0.so.0
+      # on non-macOS, so Windows builds fail at startup with
+      # "Cannot find libSDL2_mixer-2.0.so.0". The Windows support and the
+      # exe-directory search fix are merged on the tsdl-mixer git branch but
+      # not yet released to opam. Remove this pin once tsdl-mixer >= 0.7 is out.
+      - name: Pin tsdl-mixer to Windows-compatible branch
+        shell: bash
+        run: |
+          opam pin add tsdl-mixer "git+https://github.com/bluddy/tsdl-mixer.git#fix-windows-dll-search" -y
 
       - name: Install OPAM dependencies
         run: |
@@ -177,6 +273,7 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
+    if: always() && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && !contains(needs.*.result, 'cancelled') && (needs.build-linux.result == 'success' || needs.build-windows.result == 'success' || needs.build-macos.result == 'success')
     needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
     steps:
@@ -190,8 +287,9 @@ jobs:
 
       - name: Publish Release to GitHub
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          name: Release ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
           files: release-artifacts/**/*
           generate_release_notes: true
           draft: false
