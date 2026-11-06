@@ -30,6 +30,11 @@ let default = {
 let get_height v = v.height
 let get_width v = v.width
 
+(*
+  Mapping:
+
+*)
+
 type pixel =
   | Slum_pixel     (* 0 *)
   | Ocean_pixel
@@ -211,21 +216,21 @@ let tile_of_pixel_xy x y ~region ~pixel v =
       | City_pixel, 3 -> PowerPlant
       | _ -> simple_mapping pixel
       end
-  | EastUS | WestUS -> begin match pixel, xy_random with
-    | River_pixel, (0 | 2) -> Tile.Landing(water_dirs ~edge:false ~f:is_water)
-    | River_pixel, _ -> River(water_dirs ~edge:false ~f:is_water)
-    | Farm_pixel, 0 -> GrainElev
-    | Farm_pixel, 3 -> Ranch
-    | Village_pixel, 0 -> Stockyard
-    | Village_pixel, 1 -> Factory
-    | Village_pixel, 2 -> FoodProc
-    | Village_pixel, 3 -> PaperMill
-    | City_pixel, 0 -> SteelMill
-    | City_pixel, 1 -> Factory
-    | City_pixel, 2 -> Refinery
-    | City_pixel, 3 -> PowerPlant
-    | _ -> simple_mapping pixel
-      end
+    | EastUS | WestUS -> begin match pixel, xy_random with
+      | River_pixel, (0 | 2) -> Tile.Landing(water_dirs ~edge:false ~f:is_water)
+      | River_pixel, _ -> River(water_dirs ~edge:false ~f:is_water)
+      | Farm_pixel, 0 -> GrainElev
+      | Farm_pixel, 3 -> Ranch
+      | Village_pixel, 0 -> Stockyard
+      | Village_pixel, 1 -> Factory
+      | Village_pixel, 2 -> FoodProc
+      | Village_pixel, 3 -> PaperMill
+      | City_pixel, 0 -> SteelMill
+      | City_pixel, 1 -> Factory
+      | City_pixel, 2 -> Refinery
+      | City_pixel, 3 -> PowerPlant
+      | _ -> simple_mapping pixel
+        end
   in
   let upper_3bits = (xy_random lsr 5) land 7 in
   let mid_2bits = (xy_random lsr 3) land 3 in
@@ -236,8 +241,11 @@ let tile_of_pixel_xy x y ~region ~pixel v =
       let x = x + low_2bits in
       let next_2bits = (seed lsr 4) land 3 in
       let y = y / 2 + next_2bits in
-      if x land 2 = y land 3 then Tile.OilWell
-      else if x land 3 = y land 3 then LumberMill
+      if x land 2 = y land 3 then match region with
+        | Europe -> Tile.SheepFarm
+        | Britain -> SaltMine
+        | _ -> OilWell
+      else if Region.is_us region && x land 3 = y land 3 then LumberMill
       else CoalMine
   | Farm_pixel | Clear_pixel when upper_3bits = mid_2bits && low_3bits = 0 ->
         complex_mapping pixel mid_2bits
