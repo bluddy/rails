@@ -387,8 +387,8 @@ let generate (s:Services.t) ?(in_org_id=Org.cia) in_loc_id clue_amt clue_src (ca
             let _, hqs = Hq.S.get_or_gen org_id loc_id (G.hqs case) in
             let hqs = Hq.S.add_known (org_id, loc_id) `Known_org hqs in
             locs, hqs
-            
           else
+            locs, hqs
 
 
           ()
