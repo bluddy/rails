@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Generate multi-platform icons (PNG, ICO, ICNS) from data/LOGO.png
+Generate multi-platform icons (PNG, ICO, ICNS) from packaging/icon_src.png
 """
 from PIL import Image
 import os
 
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-logo_path = os.path.join(root_dir, "data", "LOGO.png")
 packaging_dir = os.path.join(root_dir, "packaging")
+logo_path = os.path.join(packaging_dir, "icon_src.png")
 
 if not os.path.exists(logo_path):
     print(f"Error: {logo_path} not found")
@@ -15,19 +15,14 @@ if not os.path.exists(logo_path):
 
 im = Image.open(logo_path).convert("RGBA")
 
-# Create a 256x256 square image with black background (matching DOS palette background)
+# Crop a square anchored at the bottom (removing excess top area) and centered horizontally
+crop_size = 232
+x0 = 46  # centered on logo + both MICRO PROSE boxcars (x=46..278)
+y0 = im.height - crop_size  # bottom-anchored (y=9..241)
+cropped = im.crop((x0, y0, x0 + crop_size, y0 + crop_size))
+
 size = 256
-square = Image.new("RGBA", (size, size), (0, 0, 0, 255))
-
-# Scale logo to fit width (256 x 160)
-aspect = im.size[1] / im.size[0]
-new_w = size
-new_h = int(size * aspect)
-resized_logo = im.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-# Paste centered vertically
-y_offset = (size - new_h) // 2
-square.paste(resized_logo, (0, y_offset))
+square = cropped.resize((size, size), Image.Resampling.NEAREST)
 
 # Save 256x256 PNG
 png_path = os.path.join(packaging_dir, "rails.png")

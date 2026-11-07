@@ -22,7 +22,7 @@ let start_year = function
 
 let money_symbol = function
   | EastUS | WestUS -> '$'
-  | Britain | Europe -> '#' 
+  | Britain | Europe -> '\\'
 
 let is_us = function
   | EastUS
