@@ -461,7 +461,7 @@ let handle_tick (s:State.t) v time =
           `Stay, ChooseEngine, None, []
 
       | _ ->
-          `Stay, v.screen, None, []
+          `Stay, v.screen, v.car_menu, []
     in
     let v = [%up {v with menu; screen; car_menu}] in
     exit, v, bk_action
